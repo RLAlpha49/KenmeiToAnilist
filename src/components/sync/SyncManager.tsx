@@ -211,6 +211,7 @@ const SyncManager: React.FC<SyncManagerProps> = ({
                 id="incrementalSync"
                 checked={incrementalSync}
                 onCheckedChange={onIncrementalSyncChange}
+                data-testid="switch"
               />
               <Label htmlFor="incrementalSync" className="text-sm">
                 Use incremental progress updates

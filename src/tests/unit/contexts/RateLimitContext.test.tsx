@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, act, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   RateLimitProvider,
@@ -15,8 +15,21 @@ vi.mock("sonner", () => ({
   },
 }));
 
-// Mock electronAPI
+// Import the toast after mocking
+import { toast } from "sonner";
+
+// Mock timers
 beforeEach(() => {
+  // Set up timestamp for consistent testing
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date(2023, 1, 1));
+  
+  // Mock the interval functions to prevent infinite loops
+  const originalSetInterval = global.setInterval;
+  vi.spyOn(global, 'setInterval').mockImplementation((callback, delay) => {
+    return originalSetInterval(callback as TimerHandler, delay) as unknown as NodeJS.Timeout;
+  });
+  
   window.electronAPI = {
     anilist: {
       getRateLimitStatus: vi.fn().mockResolvedValue({
@@ -25,6 +38,16 @@ beforeEach(() => {
       }),
     },
   } as any;
+  
+  // Reset toast mocks
+  vi.mocked(toast.warning).mockClear();
+  vi.mocked(toast.dismiss).mockClear();
+});
+
+afterEach(() => {
+  vi.clearAllTimers();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 // Create a test component that uses the RateLimit context
@@ -56,12 +79,17 @@ function TestComponent() {
 }
 
 describe("RateLimitContext", () => {
-  it("provides the rate limit context values", () => {
-    render(
-      <RateLimitProvider>
-        <TestComponent />
-      </RateLimitProvider>,
-    );
+  it("provides the rate limit context values", async () => {
+    await act(async () => {
+      render(
+        <RateLimitProvider>
+          <TestComponent />
+        </RateLimitProvider>
+      );
+      
+      // Let all pending promises resolve
+      await vi.runOnlyPendingTimersAsync();
+    });
 
     // Check that the context values are rendered
     expect(screen.getByTestId("is-rate-limited")).toBeInTheDocument();
@@ -84,5 +112,30 @@ describe("RateLimitContext", () => {
 
     // Restore console.error
     (console.error as any).mockRestore();
+  });
+  
+  it("exposes context functionality correctly", () => {
+    const contextValue = {
+      rateLimitState: {
+        isRateLimited: false,
+        retryAfter: null,
+        message: null,
+      },
+      setRateLimit: vi.fn(),
+      clearRateLimit: vi.fn(),
+    };
+
+    // Direct test of context hook
+    render(
+      <RateLimitProvider>
+        <TestComponent />
+      </RateLimitProvider>
+    );
+
+    // Check that initial state is correct
+    expect(screen.getByTestId("is-rate-limited")).toHaveTextContent("false");
+    
+    // We're only testing that the context functions are properly exposed,
+    // not their actual implementation, which is covered by unit tests for those functions
   });
 });

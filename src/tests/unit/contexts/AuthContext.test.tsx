@@ -4,15 +4,25 @@ import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AuthProvider } from "../../../contexts/AuthContext";
 import { AuthContext } from "../../../contexts/AuthContextDefinition";
+import { APICredentials } from "../../../types/auth";
+
+// Type definition for mock functions with callbacks
+interface MockWithCallback<T = any> {
+  (): void;
+  mockCallback?: (data?: T) => Promise<void> | void;
+  mockImplementation: (fn: any) => any;
+  mockResolvedValue: (val: any) => any;
+  mockResolvedValueOnce: (val: any) => any;
+}
 
 // Mock the electronAuth API
 const mockStoreCredentials = vi.fn();
 const mockOpenOAuthWindow = vi.fn();
 const mockExchangeToken = vi.fn();
 const mockGetCredentials = vi.fn();
-const mockOnCodeReceived = vi.fn();
-const mockOnStatus = vi.fn();
-const mockOnCancelled = vi.fn();
+const mockOnCodeReceived = vi.fn() as unknown as MockWithCallback;
+const mockOnStatus = vi.fn() as unknown as MockWithCallback;
+const mockOnCancelled = vi.fn() as unknown as MockWithCallback;
 
 // Mock the storage utility
 vi.mock("../../../utils/storage", () => ({
@@ -79,7 +89,8 @@ function TestComponent() {
             clientId: "test-client-id",
             clientSecret: "test-client-secret",
             redirectUri: "http://localhost:5173/callback",
-          })
+            source: "default", // Add source property to satisfy APICredentials type
+          } as APICredentials)
         }
       >
         Login
@@ -201,11 +212,13 @@ describe("AuthContext", () => {
     await user.click(screen.getByTestId("login-button"));
 
     // Check that the credentials were stored
-    expect(mockStoreCredentials).toHaveBeenCalledWith({
-      clientId: "test-client-id",
-      clientSecret: "test-client-secret",
-      redirectUri: "http://localhost:5173/callback",
-    });
+    expect(mockStoreCredentials).toHaveBeenCalledWith(
+      expect.objectContaining({
+        clientId: "test-client-id",
+        clientSecret: "test-client-secret",
+        redirectUri: "http://localhost:5173/callback",
+      })
+    );
 
     // Check that the browser auth was launched
     expect(mockOpenOAuthWindow).toHaveBeenCalled();
@@ -438,5 +451,94 @@ describe("AuthContext", () => {
     expect(screen.getByTestId("auth-status")).toHaveTextContent(
       "Not Authenticated",
     );
+  });
+
+  it("updates status message when receiving status events", async () => {
+    render(
+      <AuthProvider>
+        <TestComponent />
+      </AuthProvider>,
+    );
+
+    // Simulate a status update from the event handler
+    await act(async () => {
+      await mockOnStatus.mockCallback("Testing status update");
+    });
+
+    // Check that the status message was updated
+    expect(screen.getByTestId("status-message")).toHaveTextContent(
+      "Testing status update"
+    );
+  });
+
+  it("handles authentication cancellation", async () => {
+    render(
+      <AuthProvider>
+        <TestComponent />
+      </AuthProvider>,
+    );
+
+    // Simulate the browser auth being cancelled
+    await act(async () => {
+      await mockOnCancelled.mockCallback();
+    });
+
+    // Should show the cancellation error
+    expect(screen.getByTestId("error-message")).toHaveTextContent(
+      "Authentication was cancelled"
+    );
+    expect(screen.getByTestId("loading-status")).toHaveTextContent("Not Loading");
+  });
+
+  it("preserves credential source when logging out", async () => {
+    const user = userEvent.setup();
+
+    // Create a component that allows us to see the credential source
+    function CredentialSourceTestComponent() {
+      const auth = useContext(AuthContext);
+      if (!auth) return <div>Auth context not available</div>;
+
+      return (
+        <div>
+          <div data-testid="credential-source">{auth.authState.credentialSource}</div>
+          <div data-testid="auth-status">
+            {auth.authState.isAuthenticated ? "Authenticated" : "Not Authenticated"}
+          </div>
+          <button data-testid="set-custom" onClick={() => auth.setCredentialSource("custom")}>
+            Set Custom
+          </button>
+          <button data-testid="logout" onClick={auth.logout}>
+            Logout
+          </button>
+        </div>
+      );
+    }
+
+    // Set up initial authenticated state
+    (storage.getItem as any).mockReturnValue(
+      JSON.stringify({
+        isAuthenticated: true,
+        credentialSource: "default",
+        accessToken: "test-token",
+        expiresAt: Date.now() + 3600000,
+      })
+    );
+
+    render(
+      <AuthProvider>
+        <CredentialSourceTestComponent />
+      </AuthProvider>
+    );
+
+    // Change credential source to custom
+    await user.click(screen.getByTestId("set-custom"));
+    expect(screen.getByTestId("credential-source")).toHaveTextContent("custom");
+
+    // Logout
+    await user.click(screen.getByTestId("logout"));
+
+    // Should maintain the credential source even after logout
+    expect(screen.getByTestId("auth-status")).toHaveTextContent("Not Authenticated");
+    expect(screen.getByTestId("credential-source")).toHaveTextContent("custom");
   });
 });
