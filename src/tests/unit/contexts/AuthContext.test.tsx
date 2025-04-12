@@ -217,7 +217,7 @@ describe("AuthContext", () => {
         clientId: "test-client-id",
         clientSecret: "test-client-secret",
         redirectUri: "http://localhost:5173/callback",
-      })
+      }),
     );
 
     // Check that the browser auth was launched
@@ -467,7 +467,7 @@ describe("AuthContext", () => {
 
     // Check that the status message was updated
     expect(screen.getByTestId("status-message")).toHaveTextContent(
-      "Testing status update"
+      "Testing status update",
     );
   });
 
@@ -485,9 +485,11 @@ describe("AuthContext", () => {
 
     // Should show the cancellation error
     expect(screen.getByTestId("error-message")).toHaveTextContent(
-      "Authentication was cancelled"
+      "Authentication was cancelled",
     );
-    expect(screen.getByTestId("loading-status")).toHaveTextContent("Not Loading");
+    expect(screen.getByTestId("loading-status")).toHaveTextContent(
+      "Not Loading",
+    );
   });
 
   it("preserves credential source when logging out", async () => {
@@ -500,11 +502,18 @@ describe("AuthContext", () => {
 
       return (
         <div>
-          <div data-testid="credential-source">{auth.authState.credentialSource}</div>
-          <div data-testid="auth-status">
-            {auth.authState.isAuthenticated ? "Authenticated" : "Not Authenticated"}
+          <div data-testid="credential-source">
+            {auth.authState.credentialSource}
           </div>
-          <button data-testid="set-custom" onClick={() => auth.setCredentialSource("custom")}>
+          <div data-testid="auth-status">
+            {auth.authState.isAuthenticated
+              ? "Authenticated"
+              : "Not Authenticated"}
+          </div>
+          <button
+            data-testid="set-custom"
+            onClick={() => auth.setCredentialSource("custom")}
+          >
             Set Custom
           </button>
           <button data-testid="logout" onClick={auth.logout}>
@@ -521,13 +530,13 @@ describe("AuthContext", () => {
         credentialSource: "default",
         accessToken: "test-token",
         expiresAt: Date.now() + 3600000,
-      })
+      }),
     );
 
     render(
       <AuthProvider>
         <CredentialSourceTestComponent />
-      </AuthProvider>
+      </AuthProvider>,
     );
 
     // Change credential source to custom
@@ -538,7 +547,9 @@ describe("AuthContext", () => {
     await user.click(screen.getByTestId("logout"));
 
     // Should maintain the credential source even after logout
-    expect(screen.getByTestId("auth-status")).toHaveTextContent("Not Authenticated");
+    expect(screen.getByTestId("auth-status")).toHaveTextContent(
+      "Not Authenticated",
+    );
     expect(screen.getByTestId("credential-source")).toHaveTextContent("custom");
   });
 });

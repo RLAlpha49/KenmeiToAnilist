@@ -23,13 +23,16 @@ beforeEach(() => {
   // Set up timestamp for consistent testing
   vi.useFakeTimers();
   vi.setSystemTime(new Date(2023, 1, 1));
-  
+
   // Mock the interval functions to prevent infinite loops
   const originalSetInterval = global.setInterval;
-  vi.spyOn(global, 'setInterval').mockImplementation((callback, delay) => {
-    return originalSetInterval(callback as TimerHandler, delay) as unknown as NodeJS.Timeout;
+  vi.spyOn(global, "setInterval").mockImplementation((callback, delay) => {
+    return originalSetInterval(
+      callback as TimerHandler,
+      delay,
+    ) as unknown as NodeJS.Timeout;
   });
-  
+
   window.electronAPI = {
     anilist: {
       getRateLimitStatus: vi.fn().mockResolvedValue({
@@ -38,7 +41,7 @@ beforeEach(() => {
       }),
     },
   } as any;
-  
+
   // Reset toast mocks
   vi.mocked(toast.warning).mockClear();
   vi.mocked(toast.dismiss).mockClear();
@@ -84,9 +87,9 @@ describe("RateLimitContext", () => {
       render(
         <RateLimitProvider>
           <TestComponent />
-        </RateLimitProvider>
+        </RateLimitProvider>,
       );
-      
+
       // Let all pending promises resolve
       await vi.runOnlyPendingTimersAsync();
     });
@@ -113,7 +116,7 @@ describe("RateLimitContext", () => {
     // Restore console.error
     (console.error as any).mockRestore();
   });
-  
+
   it("exposes context functionality correctly", () => {
     const contextValue = {
       rateLimitState: {
@@ -129,12 +132,12 @@ describe("RateLimitContext", () => {
     render(
       <RateLimitProvider>
         <TestComponent />
-      </RateLimitProvider>
+      </RateLimitProvider>,
     );
 
     // Check that initial state is correct
     expect(screen.getByTestId("is-rate-limited")).toHaveTextContent("false");
-    
+
     // We're only testing that the context functions are properly exposed,
     // not their actual implementation, which is covered by unit tests for those functions
   });
