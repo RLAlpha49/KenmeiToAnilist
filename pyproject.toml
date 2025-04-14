@@ -9,7 +9,7 @@ package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.10"
-Pillow = "^11.1.0"
+Pillow = "^11.2.1"
 customtkinter = "^5.2.2"
 CTkToolTip = "^0.8"
 requests = "^2.32.3"
