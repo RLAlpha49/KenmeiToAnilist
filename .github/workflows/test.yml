@@ -153,7 +153,9 @@ jobs:
       - name: Get build workflow run ID
         id: get-workflow-run
         run: |
-          $runId = gh api repos/${{ github.repository }}/actions/workflows/build.yml/runs --jq '.workflow_runs[] | select(.head_branch == "${{ github.ref_name }}") | select(.conclusion == "success") | .id' | Select-Object -First 1
+          $runId = gh api \
+            repos/${{ github.repository }}/actions/workflows/build.yml/runs \
+            --jq '.workflow_runs[] | select(.head_sha == "${{ github.sha }}") | select(.conclusion == "success") | .id' | Select-Object -First 1
           echo "run_id=$runId" >> $env:GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -199,7 +201,8 @@ jobs:
       - name: Get build workflow run ID
         id: get-workflow-run
         run: |
-          runId=$(gh api repos/${{ github.repository }}/actions/workflows/build.yml/runs --jq '.workflow_runs[] | select(.head_branch == "${{ github.ref_name }}") | select(.conclusion == "success") | .id' | head -n 1)
+          runId=$(gh api repos/${{ github.repository }}/actions/workflows/build.yml/runs \
+            --jq '.workflow_runs[] | select(.head_sha == "${{ github.sha }}") | select(.conclusion == "success") | .id' | head -n 1)
           echo "run_id=$runId" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -256,7 +259,8 @@ jobs:
       - name: Get build workflow run ID
         id: get-workflow-run
         run: |
-          runId=$(gh api repos/${{ github.repository }}/actions/workflows/build.yml/runs --jq '.workflow_runs[] | select(.head_branch == "${{ github.ref_name }}") | select(.conclusion == "success") | .id' | head -n 1)
+          runId=$(gh api repos/${{ github.repository }}/actions/workflows/build.yml/runs \
+            --jq '.workflow_runs[] | select(.head_sha == "${{ github.sha }}") | select(.conclusion == "success") | .id' | head -n 1)
           echo "run_id=$runId" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
