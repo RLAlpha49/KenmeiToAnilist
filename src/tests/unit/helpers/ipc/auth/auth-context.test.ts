@@ -69,6 +69,7 @@ describe("auth-context", () => {
         clientId: "testId",
         clientSecret: "testSecret",
         source: "custom",
+        redirectUri: "https://example.com/callback",
       };
       const source = "custom";
       const tokenParams = {

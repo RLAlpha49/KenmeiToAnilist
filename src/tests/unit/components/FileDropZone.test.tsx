@@ -1,15 +1,8 @@
 import * as React from "react";
-import {
-  render,
-  screen,
-  fireEvent,
-  act,
-  waitFor,
-} from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { FileDropZone } from "../../../components/import/FileDropZone";
 import { ErrorType } from "../../../utils/errorHandling";
-import { parseKenmeiCsvExport } from "../../../api/kenmei/parser";
 
 // Mock the parseKenmeiCsvExport function
 vi.mock("../../../api/kenmei/parser", () => ({
@@ -451,7 +444,7 @@ describe("FileDropZone", () => {
       return 123;
     });
 
-    const { container, rerender } = render(
+    const { container } = render(
       <FileDropZone onFileLoaded={onFileLoaded} onError={onError} />,
     );
 

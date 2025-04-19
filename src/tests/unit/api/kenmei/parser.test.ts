@@ -1,11 +1,11 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   parseKenmeiExport,
   processKenmeiMangaBatches,
   parseKenmeiCsvExport,
   extractMangaMetadata,
 } from "@/api/kenmei/parser";
-import { KenmeiManga, KenmeiStatus } from "@/api/kenmei/types";
+import { KenmeiManga } from "@/api/kenmei/types";
 
 describe("parser", () => {
   describe("parseKenmeiExport", () => {

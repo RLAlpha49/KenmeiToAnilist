@@ -135,7 +135,7 @@ test("Complete end-to-end flow", async () => {
     // Step 2: Navigate to import page and import manga
     await navigateTo(page, "/import");
     await page.waitForTimeout(1000);
-    const _importPageInfo = await debugPageContent(page);
+    await debugPageContent(page);
 
     // Find and click the file select button
     const fileButtonSelectors = [
@@ -146,17 +146,15 @@ test("Complete end-to-end flow", async () => {
       "button",
     ];
 
-    let _fileButtonClicked = false;
     for (const selector of fileButtonSelectors) {
       try {
         const button = await page.$(selector);
         if (button) {
           await button.click();
-          _fileButtonClicked = true;
           await page.waitForTimeout(500);
           break;
         }
-      } catch (_error) {
+      } catch {
         // Try next selector
       }
     }
@@ -170,17 +168,15 @@ test("Complete end-to-end flow", async () => {
       "button",
     ];
 
-    let _importButtonClicked = false;
     for (const selector of importButtonSelectors) {
       try {
         const button = await page.$(selector);
         if (button) {
           await button.click();
-          _importButtonClicked = true;
           await page.waitForTimeout(1000);
           break;
         }
-      } catch (_error) {
+      } catch {
         // Try next selector
       }
     }
@@ -188,7 +184,7 @@ test("Complete end-to-end flow", async () => {
     // Step 3: Navigate to matching page
     await navigateTo(page, "/matching");
     await page.waitForTimeout(1000);
-    const _matchingPageInfo = await debugPageContent(page);
+    await debugPageContent(page);
 
     // Look for auto-match button
     const autoMatchButtonSelectors = [
@@ -198,17 +194,15 @@ test("Complete end-to-end flow", async () => {
       "button",
     ];
 
-    let _autoMatchButtonClicked = false;
     for (const selector of autoMatchButtonSelectors) {
       try {
         const button = await page.$(selector);
         if (button) {
           await button.click();
-          _autoMatchButtonClicked = true;
           await page.waitForTimeout(2000);
           break;
         }
-      } catch (_error) {
+      } catch {
         // Try next selector
       }
     }
@@ -221,23 +215,21 @@ test("Complete end-to-end flow", async () => {
       "button",
     ];
 
-    let _continueButtonClicked = false;
     for (const selector of continueButtonSelectors) {
       try {
         const button = await page.$(selector);
         if (button) {
           await button.click();
-          _continueButtonClicked = true;
           await page.waitForTimeout(1000);
           break;
         }
-      } catch (_error) {
+      } catch {
         // Try next selector
       }
     }
 
     // Step 5: On sync page, start sync
-    const _syncPageInfo = await debugPageContent(page);
+    await debugPageContent(page);
 
     // Look for sync button
     const syncButtonSelectors = [
@@ -247,17 +239,15 @@ test("Complete end-to-end flow", async () => {
       "button",
     ];
 
-    let _syncButtonClicked = false;
     for (const selector of syncButtonSelectors) {
       try {
         const button = await page.$(selector);
         if (button) {
           await button.click();
-          _syncButtonClicked = true;
           await page.waitForTimeout(3000);
           break;
         }
-      } catch (_error) {
+      } catch {
         // Try next selector
       }
     }
@@ -272,21 +262,16 @@ test("Complete end-to-end flow", async () => {
       'text="Complete"',
     ];
 
-    let _syncSuccess = false;
     for (const selector of successSelectors) {
       try {
         const element = await page.$(selector);
         if (element) {
-          _syncSuccess = true;
           break;
         }
-      } catch (_error) {
+      } catch {
         // Try next selector
       }
     }
-  } catch (error) {
-    // Re-throw the error to be handled by the test framework
-    throw error;
   } finally {
     await electronApp.close();
   }

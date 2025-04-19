@@ -1,5 +1,5 @@
 import * as React from "react";
-import { render, RenderOptions } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { ReactElement, ReactNode } from "react";
 import { ThemeProvider } from "next-themes";
 import { vi } from "vitest";

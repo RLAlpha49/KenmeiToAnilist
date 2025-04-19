@@ -1,11 +1,10 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import {
   normalizeString,
   calculateSimilarity,
   scoreMatch,
   findBestMatches,
   DEFAULT_MATCH_CONFIG,
-  MatchEngineConfig,
   processBatchMatches,
 } from "@/api/matching/match-engine";
 import { mockKenmeiManga, mockAniListManga } from "@/tests/fixtures/manga";
@@ -16,7 +15,6 @@ describe("Match Engine", () => {
   // Enhanced test fixtures with alternative titles and synonyms
   let testKenmeiManga: KenmeiManga;
   let testAniListManga: AniListManga;
-  let testConfig: MatchEngineConfig;
 
   beforeEach(() => {
     // Create a copy of the basic fixtures with additional properties for testing
@@ -33,8 +31,6 @@ describe("Match Engine", () => {
       ...mockAniListManga[0],
       synonyms: ["Wan Pīsu", "The Great Pirate Era"],
     };
-
-    testConfig = { ...DEFAULT_MATCH_CONFIG };
   });
 
   describe("normalizeString", () => {

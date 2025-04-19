@@ -1,8 +1,9 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MangaSearchPanel } from "../../../components/matching/MangaSearchPanel";
 import * as mangaSearchService from "../../../api/matching/manga-search-service";
+import { KenmeiStatus } from "@/api/kenmei/types";
 
 // Mock the manga search service
 vi.mock("../../../api/matching/manga-search-service", () => ({
@@ -14,10 +15,12 @@ describe("MangaSearchPanel", () => {
   const mockKenmeiManga = {
     id: 1,
     title: "Test Manga Title",
-    status: "reading",
+    status: "reading" as KenmeiStatus,
     chapters_read: 10,
     created_at: "2023-01-01T00:00:00Z",
     updated_at: "2023-05-10T00:00:00Z",
+    score: 8,
+    url: "https://example.com/manga/1",
   };
 
   const mockSearchResults = [
@@ -27,6 +30,7 @@ describe("MangaSearchPanel", () => {
         title: {
           romaji: "Test Manga Title",
           english: "Test Manga English Title",
+          native: "Test Manga Native Title",
         },
         description: "Test description",
         coverImage: {
@@ -47,6 +51,7 @@ describe("MangaSearchPanel", () => {
         title: {
           romaji: "Another Test Manga",
           english: "Another Test Title",
+          native: "Another Test Title",
         },
         description: "Another test description",
         coverImage: {
@@ -92,7 +97,9 @@ describe("MangaSearchPanel", () => {
 
     // Assert
     expect(screen.getByText("Test Manga Title")).toBeInTheDocument();
-    expect(screen.getByText("reading • 10 chapters read")).toBeInTheDocument();
+    expect(
+      screen.getByText(/reading\s*•\s*10\s*chapters read/),
+    ).toBeInTheDocument();
   });
 
   it("calls onClose when close button is clicked", () => {

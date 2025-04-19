@@ -1,4 +1,3 @@
-import * as React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useMatchingProcess } from "../../../hooks/useMatchingProcess";
@@ -7,50 +6,41 @@ import { useMatchingProcess } from "../../../hooks/useMatchingProcess";
 vi.mock("../../../api/matching/manga-search-service", () => ({
   batchMatchManga: vi
     .fn()
-    .mockImplementation(
-      async (
-        mangaList,
-        token,
-        options,
-        progressCallback,
-        _cancellationCallback,
-        _signal,
-      ) => {
-        // Simulate some progress updates
-        if (progressCallback) {
-          // Call with initial progress
-          progressCallback(1, mangaList.length, mangaList[0]?.title || "");
+    .mockImplementation(async (mangaList, progressCallback) => {
+      // Simulate some progress updates
+      if (progressCallback) {
+        // Call with initial progress
+        progressCallback(1, mangaList.length, mangaList[0]?.title || "");
 
-          // Call with final progress
-          progressCallback(
-            mangaList.length,
-            mangaList.length,
-            mangaList[mangaList.length - 1]?.title || "",
-          );
-        }
+        // Call with final progress
+        progressCallback(
+          mangaList.length,
+          mangaList.length,
+          mangaList[mangaList.length - 1]?.title || "",
+        );
+      }
 
-        // Return mock results
-        return mangaList.map((manga) => ({
-          kenmeiManga: manga,
-          status: "pending",
-          anilistMatches: [
-            {
-              score: 90,
-              manga: {
-                id: 101,
-                title: {
-                  english: `${manga.title} English`,
-                  romaji: `${manga.title} Romaji`,
-                  native: "テストマンガ",
-                },
-                format: "MANGA",
+      // Return mock results
+      return mangaList.map((manga: KenmeiManga) => ({
+        kenmeiManga: manga,
+        status: "pending",
+        anilistMatches: [
+          {
+            score: 90,
+            manga: {
+              id: 101,
+              title: {
+                english: `${manga.title} English`,
+                romaji: `${manga.title} Romaji`,
+                native: "テストマンガ",
               },
+              format: "MANGA",
             },
-          ],
-          needsReview: true,
-        }));
-      },
-    ),
+          },
+        ],
+        needsReview: true,
+      }));
+    }),
   // Mock cache debugger methods
   cacheDebugger: {
     getCacheStatus: vi.fn().mockReturnValue({
@@ -114,7 +104,7 @@ import {
   batchMatchManga,
   cacheDebugger,
 } from "../../../api/matching/manga-search-service";
-import { storage, mergeMatchResults } from "../../../utils/storage";
+import { KenmeiManga } from "../../../utils/storage";
 
 describe("useMatchingProcess", () => {
   // Mock KenmeiManga data
@@ -122,14 +112,22 @@ describe("useMatchingProcess", () => {
     {
       id: 1,
       title: "Test Manga 1",
-      status: "reading",
+      status: "reading" as const,
       chapters_read: 10,
+      score: 0,
+      url: "https://example.com/1",
+      created_at: "2023-01-01T00:00:00Z",
+      updated_at: "2023-01-02T00:00:00Z",
     },
     {
       id: 2,
       title: "Test Manga 2",
-      status: "completed",
+      status: "completed" as const,
       chapters_read: 20,
+      score: 0,
+      url: "https://example.com/2",
+      created_at: "2023-01-01T00:00:00Z",
+      updated_at: "2023-01-02T00:00:00Z",
     },
   ];
 
@@ -201,33 +199,29 @@ describe("useMatchingProcess", () => {
   it("starts matching process correctly", async () => {
     // Create a new mock implementation just for this test
     const originalMock = batchMatchManga;
-    const mockImplementation = vi
-      .fn()
-      .mockImplementation(
-        async (mangaList, token, options, progressCallback) => {
-          // Return mock results
-          return mangaList.map((manga) => ({
-            kenmeiManga: manga,
-            status: "pending",
-            anilistMatches: [
-              {
-                score: 90,
-                manga: {
-                  id: 101,
-                  title: {
-                    english: `${manga.title} English`,
-                    romaji: `${manga.title} Romaji`,
-                    native: "テストマンガ",
-                  },
-                  format: "MANGA",
-                },
+    const mockImplementation = vi.fn().mockImplementation(async (mangaList) => {
+      // Return mock results
+      return mangaList.map((manga: KenmeiManga) => ({
+        kenmeiManga: manga,
+        status: "pending",
+        anilistMatches: [
+          {
+            score: 90,
+            manga: {
+              id: 101,
+              title: {
+                english: `${manga.title} English`,
+                romaji: `${manga.title} Romaji`,
+                native: "テストマンガ",
               },
-            ],
-            needsReview: true,
-          }));
-        },
-      );
-    batchMatchManga.mockImplementation(mockImplementation);
+              format: "MANGA",
+            },
+          },
+        ],
+        needsReview: true,
+      }));
+    });
+    (batchMatchManga as any).mockImplementation(mockImplementation);
 
     const { result } = renderHook(() =>
       useMatchingProcess({ accessToken: mockAccessToken }),
@@ -265,7 +259,7 @@ describe("useMatchingProcess", () => {
     expect(result.current.isLoading).toBe(false);
 
     // Check that global state is updated
-    expect(window.matchingProcessState.isRunning).toBe(false);
+    expect(window.matchingProcessState?.isRunning).toBe(false);
 
     // Check that AbortController was created
     expect(window.activeAbortController).not.toBeNull();
@@ -275,7 +269,7 @@ describe("useMatchingProcess", () => {
     expect(cacheDebugger.forceSyncCaches).toHaveBeenCalled();
 
     // Restore the original mock
-    batchMatchManga.mockImplementation(originalMock);
+    (batchMatchManga as any).mockImplementation(originalMock);
   });
 
   it("handles errors when no access token is provided", async () => {
@@ -302,7 +296,7 @@ describe("useMatchingProcess", () => {
     );
 
     // Start matching process
-    let startPromise;
+    let startPromise: Promise<void>;
     await act(async () => {
       startPromise = result.current.startMatching(mockMangaList);
     });
@@ -363,13 +357,13 @@ describe("useMatchingProcess", () => {
       result.current.setIsCacheClearing(true);
       result.current.setCacheClearingCount(1);
       // Call forceClearCache directly to simulate the behavior
-      const success = await cacheDebugger.forceClearCache();
+      const success = await (cacheDebugger as any).forceClearCache();
       result.current.setIsCacheClearing(false);
       expect(success).toBe(true);
     });
 
     // Check that cache clearing was called
-    expect(cacheDebugger.forceClearCache).toHaveBeenCalled();
+    expect((cacheDebugger as any).forceClearCache).toHaveBeenCalled();
   });
 
   it("reuses existing process if one is already running", async () => {
@@ -379,7 +373,11 @@ describe("useMatchingProcess", () => {
       progress: { current: 5, total: 10, currentTitle: "Running Manga" },
       statusMessage: "Matching in progress...",
       detailMessage: "Processing manga...",
-      timeEstimate: null,
+      timeEstimate: {
+        startTime: Date.now(),
+        averageTimePerManga: 1000,
+        estimatedRemainingSeconds: 10,
+      },
       lastUpdated: Date.now(),
     };
 
@@ -412,6 +410,11 @@ describe("useMatchingProcess", () => {
       progress: { current: 5, total: 10, currentTitle: "Test Manga" },
       statusMessage: "Processing manga...",
       detailMessage: "Matching in progress...",
+      timeEstimate: {
+        startTime: Date.now(),
+        averageTimePerManga: 1000,
+        estimatedRemainingSeconds: 10,
+      },
       lastUpdated: Date.now(),
     };
 
@@ -443,7 +446,12 @@ describe("useMatchingProcess", () => {
   it("updates progress correctly through callbacks", async () => {
     // Mock batchMatchManga to call progress callback with specific values
     (batchMatchManga as any).mockImplementationOnce(
-      async (mangaList, token, options, progressCallback) => {
+      async (
+        mangaList: KenmeiManga[],
+        token: string,
+        options: any,
+        progressCallback: any,
+      ) => {
         // Call with 30% progress
         progressCallback(3, 10, "Progress Manga");
         return [];
@@ -454,8 +462,14 @@ describe("useMatchingProcess", () => {
       useMatchingProcess({ accessToken: mockAccessToken }),
     );
 
+    const setMatchResults = vi.fn();
+
     await act(async () => {
-      await result.current.startMatching(mockMangaList);
+      await result.current.startMatching(
+        mockMangaList as any,
+        false,
+        setMatchResults,
+      );
     });
 
     // Progress should be updated
@@ -466,7 +480,7 @@ describe("useMatchingProcess", () => {
     });
 
     // Global state should be updated
-    expect(window.matchingProcessState.progress).toEqual({
+    expect(window.matchingProcessState?.progress).toEqual({
       current: 3,
       total: 10,
       currentTitle: "Progress Manga",

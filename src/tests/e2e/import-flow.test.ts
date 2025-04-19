@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test } from "@playwright/test";
 import {
   launchElectronApp,
   navigateTo,
@@ -152,7 +152,7 @@ test("Kenmei import flow", async () => {
         await importLink.click();
         await page.waitForTimeout(1000);
       }
-    } catch (_error) {
+    } catch {
       // Continue test even if home page navigation fails
     }
 
@@ -188,13 +188,13 @@ test("Kenmei import flow", async () => {
         if (contentCheck.containsImport) {
           routeWorked = true;
         }
-      } catch (_error) {
+      } catch {
         // Try next route
       }
     }
 
     // Debug page content for troubleshooting
-    const _pageInfo = await debugPageContent(page);
+    await debugPageContent(page);
 
     // Check if we're on the import page with very flexible criteria
     const importPageSelectors = [
@@ -231,7 +231,7 @@ test("Kenmei import flow", async () => {
           onImportPage = true;
           break;
         }
-      } catch (error) {
+      } catch {
         // Continue to next selector
       }
     }
@@ -282,7 +282,7 @@ test("Kenmei import flow", async () => {
           await page.waitForTimeout(1000);
           break;
         }
-      } catch (error) {
+      } catch {
         // Try next selector
       }
     }
@@ -304,7 +304,7 @@ test("Kenmei import flow", async () => {
           if (importButtonAfterClick) {
             break;
           }
-        } catch (error) {
+        } catch {
           // Try next button
         }
       }
@@ -325,7 +325,7 @@ test("Kenmei import flow", async () => {
     // If we haven't already clicked buttons, try the import buttons
     let importButtonClicked = false;
 
-    if (!fileButtonClicked || true) {
+    if (!fileButtonClicked) {
       // Always try to find an import button
       for (const selector of importButtonSelectors) {
         if (importButtonClicked) break;
@@ -340,7 +340,7 @@ test("Kenmei import flow", async () => {
             await page.waitForTimeout(1000);
             break;
           }
-        } catch (error) {
+        } catch {
           // Try next selector
         }
       }
@@ -354,13 +354,11 @@ test("Kenmei import flow", async () => {
 
           // Wait a moment to see if anything happens
           await page.waitForTimeout(1000);
-        } catch (error) {
+        } catch {
           // Try next button
         }
       }
     }
-  } catch (error) {
-    throw error;
   } finally {
     // Close the application
     await electronApp.close();

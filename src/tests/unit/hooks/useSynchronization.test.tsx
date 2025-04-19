@@ -1,4 +1,3 @@
-import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useSynchronization } from "../../../hooks/useSynchronization";
@@ -7,7 +6,7 @@ import { useSynchronization } from "../../../hooks/useSynchronization";
 vi.mock("../../../api/anilist/sync-service", () => ({
   syncMangaBatch: vi
     .fn()
-    .mockImplementation(async (entries, token, progressCallback, signal) => {
+    .mockImplementation(async (entries, token, progressCallback) => {
       // Call the progress callback with mock progress
       if (progressCallback) {
         progressCallback({
@@ -67,7 +66,7 @@ describe("useSynchronization", () => {
     const { result } = renderHook(() => useSynchronization());
 
     // Check initial state
-    const [state, _] = result.current;
+    const [state] = result.current;
     expect(state.isActive).toBe(false);
     expect(state.progress).toBeNull();
     expect(state.report).toBeNull();
@@ -87,7 +86,7 @@ describe("useSynchronization", () => {
 
     // Start synchronization and force state update immediately
     await act(async () => {
-      const [_, actions] = result.current;
+      const [, actions] = result.current;
 
       // Create a promise that can be resolved immediately to control test flow
       const syncPromise = actions.startSync(mockEntries, mockToken);
@@ -106,7 +105,7 @@ describe("useSynchronization", () => {
 
     // Since the mock implementation of syncMangaBatch completes immediately,
     // the state will be updated with the final report and isActive will be false
-    const [state, _] = result.current;
+    const [state] = result.current;
 
     // Check report
     expect(state.report).not.toBeNull();
@@ -129,12 +128,12 @@ describe("useSynchronization", () => {
 
     // Try to start synchronization with empty entries
     await act(async () => {
-      const [_, actions] = result.current;
+      const [, actions] = result.current;
       await actions.startSync([], "test-token");
     });
 
     // Check that sync was not started and error was set
-    const [state, _] = result.current;
+    const [state] = result.current;
     expect(state.isActive).toBe(false);
     expect(state.error).toBe("No entries to synchronize");
     expect(syncMangaBatch).not.toHaveBeenCalled();
@@ -145,12 +144,12 @@ describe("useSynchronization", () => {
 
     // Try to start synchronization with empty token
     await act(async () => {
-      const [_, actions] = result.current;
+      const [, actions] = result.current;
       await actions.startSync([{ id: 1 }] as any, "");
     });
 
     // Check that sync was not started and error was set
-    const [state, _] = result.current;
+    const [state] = result.current;
     expect(state.isActive).toBe(false);
     expect(state.error).toBe("No authentication token available");
     expect(syncMangaBatch).not.toHaveBeenCalled();
@@ -166,45 +165,53 @@ describe("useSynchronization", () => {
       abort: mockAbort,
     })) as any;
 
-    // When we cancel, we want to test if the state updates correctly
-    // so we make syncMangaBatch not resolve immediately
+    // Mock syncMangaBatch to resolve when abort is called
+    let abortHandler: (() => void) | null = null;
     (syncMangaBatch as any).mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          // This will never resolve during the test, simulating an ongoing sync
-          setTimeout(
-            () =>
-              resolve({ totalEntries: 1, successfulUpdates: 1, errors: [] }),
-            10000,
-          );
-        }),
+      (entries: any, token: any, progressCallback: any, signal: any) => {
+        return new Promise((resolve) => {
+          abortHandler = () =>
+            resolve({
+              totalEntries: entries.length,
+              successfulUpdates: 0,
+              failedUpdates: 0,
+              skippedEntries: 0,
+              errors: [],
+              timestamp: new Date(),
+            });
+          if (signal) {
+            Object.defineProperty(signal, "aborted", {
+              get: () => false,
+            });
+          }
+        });
+      },
     );
 
     const { result } = renderHook(() => useSynchronization());
 
     // Start synchronization
-    let syncPromise: Promise<void>;
     await act(async () => {
-      const [_, actions] = result.current;
-      // Store the promise but don't await it so the sync starts but doesn't complete
-      syncPromise = actions.startSync([{ id: 1 }] as any, "test-token");
+      const [, actions] = result.current;
+      actions.startSync([{ id: 1 }] as any, "test-token");
     });
 
     // At this point, sync should be active
     expect(result.current[0].isActive).toBe(true);
     expect(result.current[0].abortController).not.toBeNull();
 
-    // Cancel synchronization
+    // Cancel synchronization (simulate abort)
     await act(async () => {
-      const [_, actions] = result.current;
+      const [, actions] = result.current;
       actions.cancelSync();
+      if (abortHandler) abortHandler();
     });
 
     // Check that abort was called
     expect(mockAbort).toHaveBeenCalled();
 
     // Check that state was reset properly
-    const [state, _] = result.current;
+    const [state] = result.current;
     expect(state.isActive).toBe(false);
     expect(state.abortController).toBeNull();
     expect(state.error).toBe("Synchronization cancelled by user");
@@ -215,18 +222,18 @@ describe("useSynchronization", () => {
 
     // Set up mock report with errors
     await act(async () => {
-      const [_, actions] = result.current;
+      const [, actions] = result.current;
       await actions.startSync([{ id: 1 }] as any, "test-token");
     });
 
     // Export errors
     await act(async () => {
-      const [_, actions] = result.current;
+      const [, actions] = result.current;
       actions.exportErrors();
     });
 
     // Check that export function was called with the report
-    const [state, _] = result.current;
+    const [state] = result.current;
     expect(exportSyncErrorLog).toHaveBeenCalledWith(state.report);
   });
 
@@ -235,18 +242,18 @@ describe("useSynchronization", () => {
 
     // Set up mock report
     await act(async () => {
-      const [_, actions] = result.current;
+      const [, actions] = result.current;
       await actions.startSync([{ id: 1 }] as any, "test-token");
     });
 
     // Export report
     await act(async () => {
-      const [_, actions] = result.current;
+      const [, actions] = result.current;
       actions.exportReport();
     });
 
     // Check that export function was called with the report
-    const [state, _] = result.current;
+    const [state] = result.current;
     expect(exportSyncReport).toHaveBeenCalledWith(state.report);
   });
 
@@ -255,18 +262,18 @@ describe("useSynchronization", () => {
 
     // Set up some state
     await act(async () => {
-      const [_, actions] = result.current;
+      const [, actions] = result.current;
       await actions.startSync([{ id: 1 }] as any, "test-token");
     });
 
     // Reset state
     await act(async () => {
-      const [_, actions] = result.current;
+      const [, actions] = result.current;
       actions.reset();
     });
 
     // Check that state was reset to initial values
-    const [state, _] = result.current;
+    const [state] = result.current;
     expect(state.isActive).toBe(false);
     expect(state.progress).toBeNull();
     expect(state.report).toBeNull();

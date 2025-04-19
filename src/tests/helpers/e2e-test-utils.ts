@@ -17,14 +17,14 @@ export async function launchElectronApp(timeout = 60000): Promise<{
   try {
     // Find the latest build of your application
     latestBuild = findLatestBuild();
-    console.log("Found build directory:", latestBuild);
+    //console.log("Found build directory:", latestBuild);
     appInfo = parseElectronApp(latestBuild);
   } catch (error) {
     console.error("Error finding latest build:", error);
 
     // Fallback mechanism based on platform
     const platform = process.platform;
-    console.log("Attempting fallback for platform:", platform);
+    //console.log("Attempting fallback for platform:", platform);
 
     // Create a manual appInfo object
     if (platform === "darwin") {
@@ -41,7 +41,7 @@ export async function launchElectronApp(timeout = 60000): Promise<{
       // Try to find any .app bundle in out directory if none of the specific paths work
       for (const appPath of possibleAppPaths) {
         if (fs.existsSync(appPath)) {
-          console.log(`Found app at ${appPath}`);
+          //console.log(`Found app at ${appPath}`);
           const executable = `${appPath}/Contents/MacOS/Kenmei-to-Anilist`;
           if (fs.existsSync(executable)) {
             appInfo = {
@@ -50,16 +50,16 @@ export async function launchElectronApp(timeout = 60000): Promise<{
             };
             break;
           } else {
-            console.log(
-              `Found app bundle but executable not at expected path: ${executable}`,
-            );
+            //console.log(
+            //  `Found app bundle but executable not at expected path: ${executable}`,
+            //);
             // Try to find any executable in the MacOS directory
             const macOsDir = `${appPath}/Contents/MacOS`;
             if (fs.existsSync(macOsDir)) {
               const files = fs.readdirSync(macOsDir);
               if (files.length > 0) {
                 const execPath = path.join(macOsDir, files[0]);
-                console.log(`Found potential executable: ${execPath}`);
+                //console.log(`Found potential executable: ${execPath}`);
                 appInfo = {
                   executable: execPath,
                   main: "",
@@ -73,7 +73,7 @@ export async function launchElectronApp(timeout = 60000): Promise<{
 
       // Last resort: search for any .app in the out directory
       if (!appInfo) {
-        console.log("Searching for any .app bundle in out directory");
+        //console.log("Searching for any .app bundle in out directory");
         let foundApp = false;
         if (fs.existsSync("out")) {
           const findAppBundle = (dir: string) => {
@@ -82,14 +82,14 @@ export async function launchElectronApp(timeout = 60000): Promise<{
               const fullPath = path.join(dir, entry.name);
               if (entry.isDirectory()) {
                 if (entry.name.endsWith(".app")) {
-                  console.log(`Found .app bundle: ${fullPath}`);
+                  //console.log(`Found .app bundle: ${fullPath}`);
                   // Look for executable in MacOS directory
                   const macOsDir = path.join(fullPath, "Contents", "MacOS");
                   if (fs.existsSync(macOsDir)) {
                     const files = fs.readdirSync(macOsDir);
                     if (files.length > 0) {
                       const execPath = path.join(macOsDir, files[0]);
-                      console.log(`Found executable: ${execPath}`);
+                      //console.log(`Found executable: ${execPath}`);
                       appInfo = {
                         executable: execPath,
                         main: "",
@@ -125,7 +125,7 @@ export async function launchElectronApp(timeout = 60000): Promise<{
 
       for (const appPath of possibleAppPaths) {
         if (fs.existsSync(appPath)) {
-          console.log(`Found app at ${appPath}`);
+          //console.log(`Found app at ${appPath}`);
           appInfo = {
             executable: appPath,
             main: "",
@@ -136,7 +136,7 @@ export async function launchElectronApp(timeout = 60000): Promise<{
 
       // Last resort: search for any .exe in the out directory
       if (!appInfo) {
-        console.log("Searching for any .exe in out directory");
+        //console.log("Searching for any .exe in out directory");
         let foundExe = false;
         if (fs.existsSync("out")) {
           const findExe = (dir: string) => {
@@ -144,7 +144,7 @@ export async function launchElectronApp(timeout = 60000): Promise<{
             for (const entry of entries) {
               const fullPath = path.join(dir, entry.name);
               if (entry.isFile() && entry.name.endsWith(".exe")) {
-                console.log(`Found exe: ${fullPath}`);
+                //console.log(`Found exe: ${fullPath}`);
                 appInfo = {
                   executable: fullPath,
                   main: "",
@@ -192,14 +192,14 @@ export async function launchElectronApp(timeout = 60000): Promise<{
       // Try to find the app executable with more detailed logging
       for (const appPath of possibleAppPaths) {
         try {
-          console.log(`Checking if ${appPath} exists...`);
+          //console.log(`Checking if ${appPath} exists...`);
           if (fs.existsSync(appPath)) {
-            console.log(`Found app at ${appPath}`);
+            //console.log(`Found app at ${appPath}`);
             // If it's a .deb file, we can't use it directly
             if (appPath.endsWith(".deb")) {
-              console.log(
-                "Found .deb file but can't use it directly for E2E tests",
-              );
+              //console.log(
+              //  "Found .deb file but can't use it directly for E2E tests",
+              //);
               continue;
             }
 
@@ -207,16 +207,16 @@ export async function launchElectronApp(timeout = 60000): Promise<{
             try {
               const stats = fs.statSync(appPath);
               const isExecutable = !!(stats.mode & 0o111);
-              console.log(`${appPath} executable permission: ${isExecutable}`);
+              //console.log(`${appPath} executable permission: ${isExecutable}`);
 
               if (!isExecutable) {
-                console.log(
-                  `${appPath} exists but is not executable, attempting to make it executable`,
-                );
+                //console.log(
+                //  `${appPath} exists but is not executable, attempting to make it executable`,
+                //);
                 try {
                   // Try to make the file executable
                   fs.chmodSync(appPath, 0o755);
-                  console.log(`Changed permissions for ${appPath}`);
+                  //console.log(`Changed permissions for ${appPath}`);
                 } catch (chmodErr) {
                   console.error(
                     `Failed to make ${appPath} executable:`,
@@ -244,7 +244,7 @@ export async function launchElectronApp(timeout = 60000): Promise<{
 
       // Last resort: search for any executable file in the out directory
       if (!appInfo) {
-        console.log("Searching for any executable in out directory");
+        //console.log("Searching for any executable in out directory");
         let foundExecutable = false;
         if (fs.existsSync("out")) {
           const findExecutable = (dir: string) => {
@@ -265,15 +265,15 @@ export async function launchElectronApp(timeout = 60000): Promise<{
                         entry.name.toLowerCase().includes("anilist");
 
                       if (isExecutable || isLikelyElectron) {
-                        console.log(
-                          `Found potential executable: ${fullPath} (executable: ${isExecutable}, likely electron: ${isLikelyElectron})`,
-                        );
+                        //console.log(
+                        //  `Found potential executable: ${fullPath} (executable: ${isExecutable}, likely electron: ${isLikelyElectron})`,
+                        //);
 
                         // If it's not executable but looks like our app, try to make it executable
                         if (!isExecutable && isLikelyElectron) {
                           try {
                             fs.chmodSync(fullPath, 0o755);
-                            console.log(`Made ${fullPath} executable`);
+                            //console.log(`Made ${fullPath} executable`);
                           } catch (chmodErr) {
                             console.error(
                               `Failed to make ${fullPath} executable:`,
@@ -359,24 +359,24 @@ export async function launchElectronApp(timeout = 60000): Promise<{
   }
 
   // Launch Electron app
-  console.log(`Attempting to launch Electron app with:
-  - executablePath: ${appInfo.executable}
-  - args: ${appInfo.main ? [appInfo.main] : []}
-  - timeout: ${timeout}
-  `);
+  //console.log(`Attempting to launch Electron app with:
+  //- executablePath: ${appInfo.executable}
+  //- args: ${appInfo.main ? [appInfo.main] : []}
+  //- timeout: ${timeout}
+  //`);
 
   // Additional verification before launch
   try {
     const executableExists = fs.existsSync(appInfo.executable);
-    console.log(`Executable exists check: ${executableExists}`);
+    //console.log(`Executable exists check: ${executableExists}`);
 
     if (executableExists) {
-      const stats = fs.statSync(appInfo.executable);
-      console.log(`Executable stats:
-      - size: ${stats.size} bytes
-      - permissions: ${stats.mode.toString(8)}
-      - is executable: ${!!(stats.mode & 0o111)}
-      `);
+      //const stats = fs.statSync(appInfo.executable);
+      //console.log(`Executable stats:
+      //- size: ${stats.size} bytes
+      //- permissions: ${stats.mode.toString(8)}
+      //- is executable: ${!!(stats.mode & 0o111)}
+      //`);
     }
   } catch (err) {
     console.error(`Error verifying executable before launch:`, err);
@@ -394,20 +394,20 @@ export async function launchElectronApp(timeout = 60000): Promise<{
 
     // On Linux in CI, we need additional args to run headless
     if (process.platform === "linux") {
-      console.log("Adding Linux-specific electron launch args");
+      //console.log("Adding Linux-specific electron launch args");
 
       // Handle spaces in paths - check if we need to escape the path
       if (appInfo.executable.includes(" ")) {
-        console.log("Path contains spaces, attempting to normalize path");
+        //console.log("Path contains spaces, attempting to normalize path");
         try {
           const normalizedPath = path.normalize(appInfo.executable);
-          console.log(`Normalized path: ${normalizedPath}`);
+          //console.log(`Normalized path: ${normalizedPath}`);
           launchOptions.executablePath = normalizedPath;
 
           // If the main arg also has spaces, normalize it too
           if (appInfo.main && appInfo.main.includes(" ")) {
             const normalizedMainPath = path.normalize(appInfo.main);
-            console.log(`Normalized main path: ${normalizedMainPath}`);
+            //console.log(`Normalized main path: ${normalizedMainPath}`);
             launchOptions.args = [normalizedMainPath];
           }
         } catch (normErr) {
@@ -425,26 +425,26 @@ export async function launchElectronApp(timeout = 60000): Promise<{
 
       // Add CI environment detection
       if (process.env.CI) {
-        console.log("Running in CI environment, adding additional args");
+        //console.log("Running in CI environment, adding additional args");
         launchOptions.args.push("--headless");
       }
     }
 
-    console.log(
-      `Final launch options: ${JSON.stringify(launchOptions, null, 2)}`,
-    );
+    //console.log(
+    //  `Final launch options: ${JSON.stringify(launchOptions, null, 2)}`,
+    //);
 
     electronApp = await electron.launch(launchOptions);
   } catch (error) {
     console.error(`Failed to launch Electron app: ${error}`);
 
     if (process.platform === "linux") {
-      console.log(
-        "Trying to make the executable executable one more time before failing",
-      );
+      //console.log(
+      //  "Trying to make the executable executable one more time before failing",
+      //);
       try {
         fs.chmodSync(appInfo.executable, 0o755);
-        console.log(`Changed permissions for ${appInfo.executable} to 755`);
+        //console.log(`Changed permissions for ${appInfo.executable} to 755`);
 
         // Create launch options again for retry
         const retryLaunchOptions = {
@@ -461,12 +461,12 @@ export async function launchElectronApp(timeout = 60000): Promise<{
         // Try launching one more time
         try {
           electronApp = await electron.launch(retryLaunchOptions);
-          console.log("Second launch attempt succeeded!");
+          //console.log("Second launch attempt succeeded!");
         } catch (secondError) {
           console.error(`Second launch attempt also failed: ${secondError}`);
 
           // Last resort: try with minimal configuration
-          console.log("Making one final attempt with minimal configuration");
+          //console.log("Making one final attempt with minimal configuration");
           try {
             const minimalOptions = {
               executablePath: appInfo.executable,
@@ -474,7 +474,7 @@ export async function launchElectronApp(timeout = 60000): Promise<{
               args: ["--no-sandbox", "--disable-gpu"],
             };
             electronApp = await electron.launch(minimalOptions);
-            console.log("Final attempt succeeded!");
+            //console.log("Final attempt succeeded!");
           } catch (finalError) {
             console.error(
               `All launch attempts failed. Final error: ${finalError}`,
@@ -509,7 +509,7 @@ export async function launchElectronApp(timeout = 60000): Promise<{
       await page.waitForSelector(selector, { timeout: 10000 });
       appDetected = true;
       break;
-    } catch (error) {
+    } catch {
       // Continue to next selector
     }
   }
@@ -608,7 +608,7 @@ export async function navigateTo(page: Page, route: string): Promise<void> {
           break;
         }
       }
-    } catch (error) {
+    } catch {
       // Navigation via click failed, continue with other methods
     }
 
@@ -634,7 +634,7 @@ export async function safeClick(
         await element.click();
         return true;
       }
-    } catch (error) {
+    } catch {
       // Continue to next selector
     }
   }
@@ -657,7 +657,7 @@ export async function safeSelectOption(
         await page.selectOption(selector, optionValue);
         return true;
       }
-    } catch (error) {
+    } catch {
       // Continue to next selector
     }
   }
@@ -749,7 +749,7 @@ export async function verifyLocalStorage(
           const value = JSON.parse(item);
           // We can't pass the function directly, so we use a string representation of the check
           return eval(check)(value);
-        } catch (e) {
+        } catch {
           return false;
         }
       },
@@ -759,7 +759,7 @@ export async function verifyLocalStorage(
         check: expectedValueCheck.toString(),
       },
     );
-  } catch (error) {
+  } catch {
     return false;
   }
 }

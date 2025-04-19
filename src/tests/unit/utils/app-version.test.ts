@@ -18,13 +18,13 @@ describe("app-version utility", () => {
 
   afterEach(() => {
     // Restore original env after each test
-    import.meta.env = originalEnv;
+    (import.meta.env as any) = originalEnv;
   });
 
   describe("getAppVersion", () => {
     it("returns version from environment variable if available", () => {
       // Set up mock environment variable
-      import.meta.env.VITE_APP_VERSION = "2.3.4";
+      (import.meta.env as any).VITE_APP_VERSION = "2.3.4";
 
       // Check that the function returns the expected version
       expect(getAppVersion()).toBe("2.3.4");
@@ -32,7 +32,7 @@ describe("app-version utility", () => {
 
     it("returns default version when environment variable is not set", () => {
       // Remove environment variable
-      import.meta.env.VITE_APP_VERSION = undefined;
+      (import.meta.env as any).VITE_APP_VERSION = undefined;
 
       // Get the actual value returned by the function
       const result = getAppVersion();
@@ -46,7 +46,7 @@ describe("app-version utility", () => {
   describe("getFormattedAppVersion", () => {
     it("returns version with v prefix", () => {
       // Set up mock environment variable
-      import.meta.env.VITE_APP_VERSION = "2.3.4";
+      (import.meta.env as any).VITE_APP_VERSION = "2.3.4";
 
       // Check that the function returns the expected formatted version
       expect(getFormattedAppVersion()).toBe("v2.3.4");
@@ -54,7 +54,7 @@ describe("app-version utility", () => {
 
     it("works with default version when environment variable is not set", () => {
       // Remove environment variable
-      import.meta.env.VITE_APP_VERSION = undefined;
+      (import.meta.env as any).VITE_APP_VERSION = undefined;
 
       // Get the formatted version
       const result = getFormattedAppVersion();

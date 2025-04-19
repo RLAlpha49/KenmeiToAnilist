@@ -1,8 +1,9 @@
 import React from "react";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MangaMatchingPanel } from "../../../components/matching/MangaMatchingPanel";
 import { MatchStatus } from "../../../api/anilist/types";
+import { KenmeiStatus } from "@/api/kenmei/types";
 
 // Mock framer-motion to prevent animation issues in tests
 vi.mock("framer-motion", () => ({
@@ -19,11 +20,32 @@ vi.mock("framer-motion", () => ({
 }));
 
 // Mock electron API
-vi.mock("electron", () => ({}), { virtual: true });
+vi.mock("electron", () => ({}));
 if (typeof window !== "undefined") {
   window.electronAPI = {
+    window: {
+      minimize: vi.fn(),
+      maximize: vi.fn(),
+      close: vi.fn(),
+    },
+    theme: {
+      setTheme: vi.fn(),
+      getTheme: vi.fn(),
+    },
+    anilist: {
+      getRateLimitStatus: vi.fn(),
+      request: vi.fn(),
+      exchangeToken: vi.fn(),
+      clearCache: vi.fn(),
+    },
     shell: {
       openExternal: vi.fn(),
+    },
+    electronStore: {
+      getItem: vi.fn(),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
     },
   };
 }
@@ -32,13 +54,19 @@ describe("MangaMatchingPanel", () => {
   // Mock data
   const mockMatches = [
     {
-      id: "1",
-      status: "matched",
+      id: 1,
+      status: "matched" as MatchStatus,
       kenmeiManga: {
-        id: "1",
+        id: 1,
         title: "Manga 1",
-        chapters_read: 10,
+        status: "reading" as KenmeiStatus,
+        score: 8,
         url: "https://www.kenmei.co/series/manga-1",
+        chapters_read: 10,
+        volumes_read: 2,
+        notes: "Test notes",
+        created_at: "2023-01-01T00:00:00Z",
+        updated_at: "2023-05-10T00:00:00Z",
       },
       anilistMatches: [
         {
@@ -48,6 +76,7 @@ describe("MangaMatchingPanel", () => {
             title: {
               english: "English Manga 1",
               romaji: "English Manga 1",
+              native: "English Manga 1",
             },
             coverImage: { large: "https://example.com/image1.jpg" },
             format: "MANGA",
@@ -61,22 +90,29 @@ describe("MangaMatchingPanel", () => {
         title: {
           english: "English Manga 1",
           romaji: "English Manga 1",
+          native: "English Manga 1",
         },
         coverImage: { large: "https://example.com/image1.jpg" },
         format: "MANGA",
         status: "RELEASING",
         description: "Description 1",
       },
-      matchDate: new Date().toISOString(),
+      matchDate: new Date().toISOString() as unknown as Date,
     },
     {
-      id: "2",
-      status: "pending",
+      id: 2,
+      status: "pending" as MatchStatus,
       kenmeiManga: {
-        id: "2",
+        id: 2,
         title: "Manga 2",
-        chapters_read: 5,
+        status: "reading" as KenmeiStatus,
+        score: 8,
         url: "https://www.kenmei.co/series/manga-2",
+        chapters_read: 5,
+        volumes_read: 2,
+        notes: "Test notes",
+        created_at: "2023-01-01T00:00:00Z",
+        updated_at: "2023-05-10T00:00:00Z",
       },
       anilistMatches: [
         {
@@ -86,6 +122,7 @@ describe("MangaMatchingPanel", () => {
             title: {
               english: "English Manga 2",
               romaji: "English Manga 2",
+              native: "English Manga 2",
             },
             coverImage: { large: "https://example.com/image2.jpg" },
             format: "MANGA",
@@ -100,6 +137,7 @@ describe("MangaMatchingPanel", () => {
             title: {
               english: "English Similar Manga 2",
               romaji: "English Similar Manga 2",
+              native: "English Similar Manga 2",
             },
             coverImage: { large: "https://example.com/image2b.jpg" },
             format: "MANGA",
@@ -108,30 +146,42 @@ describe("MangaMatchingPanel", () => {
           },
         },
       ],
-      selectedMatch: null,
-      matchDate: new Date().toISOString(),
+      selectedMatch: undefined,
+      matchDate: new Date().toISOString() as unknown as Date,
     },
     {
-      id: "3",
-      status: "skipped",
+      id: 3,
+      status: "skipped" as MatchStatus,
       kenmeiManga: {
-        id: "3",
+        id: 3,
         title: "Manga 3",
-        chapters_read: 0,
+        status: "reading" as KenmeiStatus,
+        score: 8,
         url: "https://www.kenmei.co/series/manga-3",
+        chapters_read: 0,
+        volumes_read: 0,
+        notes: "Test notes",
+        created_at: "2023-01-01T00:00:00Z",
+        updated_at: "2023-05-10T00:00:00Z",
       },
       anilistMatches: [],
-      selectedMatch: null,
-      matchDate: new Date().toISOString(),
+      selectedMatch: undefined,
+      matchDate: new Date().toISOString() as unknown as Date,
     },
     {
-      id: "4",
-      status: "manual",
+      id: 4,
+      status: "manual" as MatchStatus,
       kenmeiManga: {
-        id: "4",
+        id: 4,
         title: "Manga 4",
-        chapters_read: 20,
+        status: "reading" as KenmeiStatus,
+        score: 8,
         url: "https://www.kenmei.co/series/manga-4",
+        chapters_read: 20,
+        volumes_read: 0,
+        notes: "Test notes",
+        created_at: "2023-01-01T00:00:00Z",
+        updated_at: "2023-05-10T00:00:00Z",
       },
       anilistMatches: [
         {
@@ -141,6 +191,7 @@ describe("MangaMatchingPanel", () => {
             title: {
               english: "English Manga 4",
               romaji: "English Manga 4",
+              native: "English Manga 4",
             },
             coverImage: { large: "https://example.com/image4.jpg" },
             format: "MANGA",
@@ -154,13 +205,14 @@ describe("MangaMatchingPanel", () => {
         title: {
           english: "English Manga 4",
           romaji: "English Manga 4",
+          native: "English Manga 4",
         },
         coverImage: { large: "https://example.com/image4.jpg" },
         format: "MANGA",
         status: "RELEASING",
         description: "Description 4",
       },
-      matchDate: new Date().toISOString(),
+      matchDate: new Date().toISOString() as unknown as Date,
     },
   ];
 

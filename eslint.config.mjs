@@ -23,15 +23,16 @@ export default [
       ".vite/**",
       "out/**",
 
+      // Test output
+      "playwright-report/**",
+      "coverage/**",
+
       // Node modules
       "node_modules/**",
 
       // Configuration files that use CommonJS
       "**/*.config.js",
       "forge.config.js",
-
-      // Problematic test files
-      "src/tests/helpers/test-utils.ts",
     ],
   },
   {
@@ -60,23 +61,8 @@ export default [
   {
     files: ["**/*.test.{ts,tsx}", "**/tests/**/*.{ts,tsx}"],
     rules: {
-      // Allow unused variables in test files
-      "@typescript-eslint/no-unused-vars": "off",
-
       // Allow any type in test files
       "@typescript-eslint/no-explicit-any": "off",
-
-      // Allow useless catch clauses in test files
-      "no-useless-catch": "off",
-
-      // Allow constant conditions in test files
-      "no-constant-condition": "off",
-
-      // Allow constant binary expressions in test files
-      "no-constant-binary-expression": "off",
-
-      // Ensure React is in scope when using JSX
-      "react/react-in-jsx-scope": "error",
     },
   },
 ];

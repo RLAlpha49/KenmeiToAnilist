@@ -35,13 +35,14 @@ describe("export-utils", () => {
   describe("exportSyncErrorLog", () => {
     it("creates a JSON file with error data and triggers download", () => {
       const report: SyncReport = {
-        timestamp: new Date().getTime(),
+        timestamp: new Date().getTime() as any,
         totalEntries: 10,
         successfulUpdates: 8,
         failedUpdates: 2,
+        skippedEntries: 0,
         errors: [
-          { id: "1", title: "Test Anime 1", error: "Test error 1" },
-          { id: "2", title: "Test Anime 2", error: "Test error 2" },
+          { mediaId: 1, error: "Test error 1" },
+          { mediaId: 2, error: "Test error 2" },
         ],
       };
 
@@ -56,10 +57,11 @@ describe("export-utils", () => {
         .spyOn(console, "warn")
         .mockImplementation(() => {});
       const report: SyncReport = {
-        timestamp: new Date().getTime(),
+        timestamp: new Date().getTime() as any,
         totalEntries: 10,
         successfulUpdates: 10,
         failedUpdates: 0,
+        skippedEntries: 0,
         errors: [],
       };
 
@@ -78,11 +80,12 @@ describe("export-utils", () => {
       });
 
       const report: SyncReport = {
-        timestamp: new Date().getTime(),
+        timestamp: new Date().getTime() as any,
         totalEntries: 10,
         successfulUpdates: 8,
         failedUpdates: 2,
-        errors: [{ id: "1", title: "Test Anime 1", error: "Test error 1" }],
+        skippedEntries: 0,
+        errors: [{ mediaId: 1, error: "Test error 1" }],
       };
 
       exportSyncErrorLog(report);
@@ -97,13 +100,14 @@ describe("export-utils", () => {
   describe("exportSyncReport", () => {
     it("creates a JSON file with sync report data and triggers download", () => {
       const report: SyncReport = {
-        timestamp: new Date().getTime(),
+        timestamp: new Date().getTime() as any,
         totalEntries: 10,
         successfulUpdates: 8,
         failedUpdates: 2,
+        skippedEntries: 0,
         errors: [
-          { id: "1", title: "Test Anime 1", error: "Test error 1" },
-          { id: "2", title: "Test Anime 2", error: "Test error 2" },
+          { mediaId: 1, error: "Test error 1" },
+          { mediaId: 2, error: "Test error 2" },
         ],
       };
 
@@ -132,10 +136,11 @@ describe("export-utils", () => {
       });
 
       const report: SyncReport = {
-        timestamp: new Date().getTime(),
+        timestamp: new Date().getTime() as any,
         totalEntries: 10,
         successfulUpdates: 10,
         failedUpdates: 0,
+        skippedEntries: 0,
         errors: [],
       };
 
@@ -151,10 +156,11 @@ describe("export-utils", () => {
   describe("saveSyncReportToHistory and getSyncHistory", () => {
     it("saves a sync report to localStorage", () => {
       const report: SyncReport = {
-        timestamp: new Date().getTime(),
+        timestamp: new Date().getTime() as any,
         totalEntries: 10,
         successfulUpdates: 10,
         failedUpdates: 0,
+        skippedEntries: 0,
         errors: [],
       };
 
@@ -169,10 +175,11 @@ describe("export-utils", () => {
       // Add 12 reports
       for (let i = 0; i < 12; i++) {
         const report: SyncReport = {
-          timestamp: new Date().getTime() + i,
+          timestamp: (new Date().getTime() + i) as any,
           totalEntries: 10,
           successfulUpdates: 10,
           failedUpdates: 0,
+          skippedEntries: 0,
           errors: [],
         };
         saveSyncReportToHistory(report);
@@ -194,11 +201,12 @@ describe("export-utils", () => {
 
     it("retrieves sync history from localStorage", () => {
       const report: SyncReport = {
-        timestamp: new Date().getTime(),
+        timestamp: new Date().getTime() as any,
         totalEntries: 10,
         successfulUpdates: 8,
         failedUpdates: 2,
-        errors: [{ id: "1", title: "Test", error: "Error" }],
+        skippedEntries: 0,
+        errors: [{ mediaId: 1, error: "Error" }],
       };
 
       saveSyncReportToHistory(report);
@@ -219,10 +227,11 @@ describe("export-utils", () => {
       });
 
       const report: SyncReport = {
-        timestamp: new Date().getTime(),
+        timestamp: new Date().getTime() as any,
         totalEntries: 10,
         successfulUpdates: 10,
         failedUpdates: 0,
+        skippedEntries: 0,
         errors: [],
       };
 
@@ -290,7 +299,7 @@ describe("export-utils", () => {
     });
 
     it("handles empty data gracefully", () => {
-      exportDataToFile(null);
+      exportDataToFile(null as any);
 
       expect(mockAppendChild).toHaveBeenCalled();
       expect(mockRemoveChild).toHaveBeenCalled();

@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { Mock } from "vitest";
 import { AniListManga } from "@/api/anilist/types";
 
 // We need to get access to the private functions,

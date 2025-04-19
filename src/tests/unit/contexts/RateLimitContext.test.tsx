@@ -1,7 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, act, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, act } from "@testing-library/react";
 import {
   RateLimitProvider,
   useRateLimit,
@@ -118,16 +117,6 @@ describe("RateLimitContext", () => {
   });
 
   it("exposes context functionality correctly", () => {
-    const contextValue = {
-      rateLimitState: {
-        isRateLimited: false,
-        retryAfter: null,
-        message: null,
-      },
-      setRateLimit: vi.fn(),
-      clearRateLimit: vi.fn(),
-    };
-
     // Direct test of context hook
     render(
       <RateLimitProvider>

@@ -5,9 +5,6 @@ import {
   deleteMangaEntry,
   syncMangaBatch,
   retryFailedUpdates,
-  SyncResult,
-  SyncProgress,
-  SyncReport,
 } from "@/api/anilist/sync-service";
 import { AniListMediaEntry, MediaListStatus } from "@/api/anilist/types";
 

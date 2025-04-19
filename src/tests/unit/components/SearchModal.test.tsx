@@ -2,6 +2,7 @@ import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { SearchModal } from "../../../components/matching/SearchModal";
+import { KenmeiStatus } from "@/api/kenmei/types";
 
 // We need to mock the MangaSearchPanel component since it's a complex component
 vi.mock("../../../components/matching/MangaSearchPanel", () => ({
@@ -27,7 +28,7 @@ describe("SearchModal", () => {
   const mockSearchTarget = {
     id: 1,
     title: "Test Manga",
-    status: "reading",
+    status: "reading" as KenmeiStatus,
     chapters_read: 10,
     volume: 2,
     score: 8,
@@ -38,6 +39,7 @@ describe("SearchModal", () => {
     notes: "",
     created_at: "2023-01-01T00:00:00Z",
     updated_at: "2023-05-10T00:00:00Z",
+    url: "https://example.com/test-manga",
   };
 
   it("renders when isOpen is true and searchTarget exists", () => {
@@ -67,7 +69,7 @@ describe("SearchModal", () => {
     const onSelectMatch = vi.fn();
 
     // Act
-    const { container } = render(
+    render(
       <SearchModal
         isOpen={false}
         searchTarget={mockSearchTarget}

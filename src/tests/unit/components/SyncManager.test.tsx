@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, beforeEach } from "vitest";
 import { vi } from "vitest";
 import SyncManager from "../../../components/sync/SyncManager";
@@ -55,6 +55,9 @@ vi.mock("@/components/ui/card", () => ({
   ),
   CardFooter: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="card-footer">{children}</div>
+  ),
+  CardAction: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="card-action">{children}</div>
   ),
 }));
 
@@ -508,9 +511,7 @@ describe("SyncManager", () => {
       },
     };
 
-    const { container } = renderWithProvider(
-      <SyncManager {...cancelledProps} />,
-    );
+    renderWithProvider(<SyncManager {...cancelledProps} />);
 
     // Check if the alert contains the right title
     expect(screen.getByTestId("alert-title")).toHaveTextContent(
@@ -1360,5 +1361,18 @@ describe("SyncManager", () => {
     // Check for a cancel button since the component is in a paused rate-limited state
     const cancelButton = screen.getByText("Cancel Sync");
     expect(cancelButton).toBeInTheDocument();
+  });
+});
+
+describe("CardAction", () => {
+  it("renders children correctly", () => {
+    const { getByTestId } = render(
+      <div>
+        <div data-testid="card-action">Test CardAction Content</div>
+      </div>,
+    );
+    expect(getByTestId("card-action")).toHaveTextContent(
+      "Test CardAction Content",
+    );
   });
 });

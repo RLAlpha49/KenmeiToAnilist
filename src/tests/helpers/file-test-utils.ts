@@ -146,7 +146,7 @@ export function mockFileReaderResult(file: File, result: string | ArrayBuffer) {
     onload: ((this: FileReader, ev: ProgressEvent<FileReader>) => any) | null =
       null;
     result: string | ArrayBuffer | null = null;
-    readAsText(file: Blob): void {
+    readAsText(): void {
       setTimeout(() => {
         this.result = result;
         if (this.onload) {
@@ -157,7 +157,7 @@ export function mockFileReaderResult(file: File, result: string | ArrayBuffer) {
         }
       }, 0);
     }
-    readAsArrayBuffer(file: Blob): void {
+    readAsArrayBuffer(): void {
       setTimeout(() => {
         this.result = result;
         if (this.onload) {

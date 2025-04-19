@@ -167,7 +167,7 @@ test("Manga matching flow", async () => {
         await matchingLink.click();
         await page.waitForTimeout(1000);
       }
-    } catch (error) {
+    } catch {
       // Continue with direct navigation
     }
 
@@ -198,13 +198,13 @@ test("Manga matching flow", async () => {
         if (contentCheck.containsMatch && contentCheck.containsManga) {
           routeWorked = true;
         }
-      } catch (error) {
+      } catch {
         // Try next route
       }
     }
 
     // Debug page content to help identify UI elements
-    const pageInfo = await debugPageContent(page);
+    await debugPageContent(page);
 
     // Check if we're on the matching page with much more flexible criteria
     const matchingPageSelectors = [
@@ -237,7 +237,7 @@ test("Manga matching flow", async () => {
           onMatchingPage = true;
           break;
         }
-      } catch (error) {
+      } catch {
         // Continue to next selector
       }
     }
@@ -259,27 +259,19 @@ test("Manga matching flow", async () => {
       }
     }
 
-    // Skip the strict assertion that would fail the test
-    // Instead, log a warning but continue with the test
-    if (!onMatchingPage) {
-      // Removed console.log warning
-    }
-
     // Check for the manga count display
     const mangaCountSelectors = [
       'div:has-text("3 manga to match")',
       'div:has-text("3 manga waiting")',
     ];
 
-    let foundMangaCount = false;
     for (const selector of mangaCountSelectors) {
       try {
         const element = await page.$(selector);
         if (element) {
-          foundMangaCount = true;
           break;
         }
-      } catch (error) {
+      } catch {
         // Continue to next selector
       }
     }
@@ -321,7 +313,7 @@ test("Manga matching flow", async () => {
             onResultsPage = true;
             break;
           }
-        } catch (error) {
+        } catch {
           // Continue to next selector
         }
       }
@@ -345,15 +337,13 @@ test("Manga matching flow", async () => {
         'div:has-text("2 manga matched")',
       ];
 
-      let foundMatchedCount = false;
       for (const selector of matchedCountSelectors) {
         try {
           const element = await page.$(selector);
           if (element) {
-            foundMatchedCount = true;
             break;
           }
-        } catch (error) {
+        } catch {
           // Continue to next selector
         }
       }
@@ -365,15 +355,13 @@ test("Manga matching flow", async () => {
         'div:has-text("1 manga needs")',
       ];
 
-      let foundUnmatchedCount = false;
       for (const selector of unmatchedCountSelectors) {
         try {
           const element = await page.$(selector);
           if (element) {
-            foundUnmatchedCount = true;
             break;
           }
-        } catch (error) {
+        } catch {
           // Continue to next selector
         }
       }
@@ -385,15 +373,13 @@ test("Manga matching flow", async () => {
         'li:has-text("Bleach")',
       ];
 
-      let foundUnmatchedManga = false;
       for (const selector of unmatchedMangaSelectors) {
         try {
           const element = await page.$(selector);
           if (element) {
-            foundUnmatchedManga = true;
             break;
           }
-        } catch (error) {
+        } catch {
           // Continue to next selector
         }
       }
@@ -413,7 +399,7 @@ test("Manga matching flow", async () => {
           if (manualMatchButton) {
             break;
           }
-        } catch (error) {
+        } catch {
           // Continue to next selector
         }
       }
@@ -435,7 +421,7 @@ test("Manga matching flow", async () => {
             await page.waitForSelector(selector, { timeout: 5000 });
             dialogFound = true;
             break;
-          } catch (error) {
+          } catch {
             // Continue to next selector
           }
         }
@@ -444,7 +430,7 @@ test("Manga matching flow", async () => {
 
         // Set up mock for manual search response for Bleach
         await electronApp.evaluate(({ ipcMain }) => {
-          ipcMain.handle("anilist:search-manga", async (event, { query }) => {
+          ipcMain.handle("anilist:search-manga", async () => {
             // Return real Bleach results for manual search
             return [
               {
@@ -545,8 +531,8 @@ test("Manga matching flow", async () => {
                     allMatched = true;
                     break;
                   }
-                } catch (error) {
-                  // Removed console.log statement
+                } catch {
+                  // Continue to next selector
                 }
               }
 
@@ -566,14 +552,14 @@ test("Manga matching flow", async () => {
                       unmatchedFound = true;
                       break;
                     }
-                  } catch (error) {
-                    // Removed console.log statement
+                  } catch {
+                    // Continue to next selector
                   }
                 }
 
                 allMatched = !unmatchedFound;
                 if (allMatched) {
-                  // Removed console.log statement
+                  // Continue to next selector
                 }
               }
 
@@ -613,33 +599,30 @@ test("Manga matching flow", async () => {
                       onSyncPage = true;
                       break;
                     }
-                  } catch (error) {
-                    // Removed console.log statement
+                  } catch {
+                    // Continue to next selector
                   }
                 }
 
                 expect(onSyncPage).toBe(true);
               } else {
-                // Removed console.log statement
+                // Continue to next selector
               }
             } else {
-              // Removed console.log statement
+              // Continue to next selector
             }
           } else {
-            // Removed console.log statement
+            // Continue to next selector
           }
         } else {
-          // Removed console.log statement
+          // Continue to next selector
         }
       } else {
-        // Removed console.log statement
+        // Continue to next selector
       }
     } else {
-      // Removed console.log statement
+      // Continue to next selector
     }
-  } catch (error) {
-    // Removed console.error statement
-    throw error;
   } finally {
     await electronApp.close();
   }

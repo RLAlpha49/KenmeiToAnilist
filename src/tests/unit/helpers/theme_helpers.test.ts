@@ -7,7 +7,6 @@ import {
   updateDocumentTheme,
 } from "@/helpers/theme_helpers";
 import { storage } from "@/utils/storage";
-import { ThemeMode } from "@/types/theme-mode";
 
 // Mock the storage module
 vi.mock("@/utils/storage", () => ({

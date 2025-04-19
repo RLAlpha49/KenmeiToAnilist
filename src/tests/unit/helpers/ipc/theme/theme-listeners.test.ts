@@ -1,8 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Define ThemeSource type locally since it's not exported from electron
-type ThemeSource = "system" | "light" | "dark";
-
 // Mock the electron module before any imports
 vi.mock("electron", () => ({
   ipcMain: {

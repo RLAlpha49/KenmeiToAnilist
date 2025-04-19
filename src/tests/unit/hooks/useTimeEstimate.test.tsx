@@ -1,4 +1,3 @@
-import * as React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useTimeEstimate } from "../../../hooks/useTimeEstimate";
@@ -10,21 +9,26 @@ interface Global {
 
 // Define window types
 interface MatchingProcessState {
-  timeEstimate: TimeEstimate | null;
+  isRunning: boolean;
+  progress: {
+    current: number;
+    total: number;
+    currentTitle: string;
+  };
+  statusMessage: string;
+  detailMessage: string | null;
+  timeEstimate: {
+    startTime: number;
+    averageTimePerManga: number;
+    estimatedRemainingSeconds: number;
+  };
   lastUpdated: number;
-  [key: string]: unknown;
-}
-
-interface TimeEstimate {
-  startTime: number;
-  averageTimePerManga: number;
-  estimatedRemainingSeconds: number;
 }
 
 // Extend the window interface
 declare global {
   interface Window {
-    matchingProcessState: MatchingProcessState;
+    matchingProcessState?: MatchingProcessState | undefined;
   }
 }
 
@@ -47,14 +51,14 @@ describe("useTimeEstimate", () => {
     window.matchingProcessState = {
       timeEstimate: null,
       lastUpdated: 0,
-    } as MatchingProcessState;
+    } as unknown as MatchingProcessState;
   });
 
   afterEach(() => {
     // Restore the original implementation
     vi.restoreAllMocks();
     Date.now = originalDateNow;
-    delete (global as unknown as Global).advanceTime;
+    (global as unknown as Global).advanceTime = undefined as any;
   });
 
   it("initializes with correct initial state", () => {
@@ -173,10 +177,10 @@ describe("useTimeEstimate", () => {
     });
 
     // Check that global state was updated
-    expect(window.matchingProcessState.timeEstimate).toEqual(
+    expect(window.matchingProcessState?.timeEstimate).toEqual(
       result.current.timeEstimate,
     );
-    expect(window.matchingProcessState.lastUpdated).toBe(Date.now());
+    expect(window.matchingProcessState?.lastUpdated).toBe(Date.now());
   });
 
   it("caps estimated time at 24 hours", () => {

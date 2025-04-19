@@ -1,7 +1,8 @@
 import React from "react";
-import { render, screen, fireEvent, within } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { RematchOptions } from "../../../components/matching/RematchOptions";
+import { MangaMatchResult } from "@/api/anilist/types";
 
 // Mock framer-motion to prevent animation issues in tests
 vi.mock("framer-motion", () => ({
@@ -21,48 +22,117 @@ describe("RematchOptions", () => {
     skipped: true,
     matched: false,
     manual: false,
+    unmatched: false,
   };
 
-  const mockMatchResults = [
+  const mockMatchResults: MangaMatchResult[] = [
     {
-      id: 1,
       status: "pending",
-      kenmeiManga: { title: "Manga 1" },
+      kenmeiManga: {
+        id: 1,
+        title: "Manga 1",
+        status: "reading",
+        score: 8,
+        url: "https://example.com/manga-1",
+        chapters_read: 10,
+        volumes_read: 2,
+        notes: "Test notes",
+        created_at: "2023-01-01T00:00:00Z",
+        updated_at: "2023-05-10T00:00:00Z",
+      },
       anilistMatches: [],
-      selectedMatch: null,
-      matchDate: new Date().toISOString(),
+      selectedMatch: undefined,
+      matchDate: new Date().toISOString() as unknown as Date,
     },
     {
-      id: 2,
       status: "pending",
-      kenmeiManga: { title: "Manga 2" },
+      kenmeiManga: {
+        id: 2,
+        title: "Manga 2",
+        status: "reading",
+        score: 8,
+        url: "https://example.com/manga-2",
+        chapters_read: 10,
+        volumes_read: 2,
+        notes: "Test notes",
+        created_at: "2023-01-01T00:00:00Z",
+        updated_at: "2023-05-10T00:00:00Z",
+      },
       anilistMatches: [],
-      selectedMatch: null,
-      matchDate: new Date().toISOString(),
+      selectedMatch: undefined,
+      matchDate: new Date().toISOString() as unknown as Date,
     },
     {
-      id: 3,
       status: "skipped",
-      kenmeiManga: { title: "Manga 3" },
+      kenmeiManga: {
+        id: 3,
+        title: "Manga 3",
+        status: "reading",
+        score: 8,
+        url: "https://example.com/manga-3",
+        chapters_read: 10,
+        volumes_read: 2,
+        notes: "Test notes",
+        created_at: "2023-01-01T00:00:00Z",
+        updated_at: "2023-05-10T00:00:00Z",
+      },
       anilistMatches: [],
-      selectedMatch: null,
-      matchDate: new Date().toISOString(),
+      selectedMatch: undefined,
+      matchDate: new Date().toISOString() as unknown as Date,
     },
     {
-      id: 4,
       status: "matched",
-      kenmeiManga: { title: "Manga 4" },
+      kenmeiManga: {
+        id: 4,
+        title: "Manga 4",
+        status: "reading",
+        score: 8,
+        url: "https://example.com/manga-4",
+        chapters_read: 10,
+        volumes_read: 2,
+        notes: "Test notes",
+        created_at: "2023-01-01T00:00:00Z",
+        updated_at: "2023-05-10T00:00:00Z",
+      },
       anilistMatches: [],
-      selectedMatch: { id: 100 },
-      matchDate: new Date().toISOString(),
+      selectedMatch: {
+        id: 100,
+        title: {
+          romaji: "Test title",
+          english: "Test title",
+          native: "Test title",
+        },
+        format: "MANGA",
+        status: "reading",
+      },
+      matchDate: new Date().toISOString() as unknown as Date,
     },
     {
-      id: 5,
       status: "manual",
-      kenmeiManga: { title: "Manga 5" },
+      kenmeiManga: {
+        id: 5,
+        title: "Manga 5",
+        status: "reading",
+        score: 8,
+        url: "https://example.com/manga-5",
+        chapters_read: 10,
+        volumes_read: 2,
+        notes: "Test notes",
+        created_at: "2023-01-01T00:00:00Z",
+        updated_at: "2023-05-10T00:00:00Z",
+      },
       anilistMatches: [],
-      selectedMatch: { id: 200 },
-      matchDate: new Date().toISOString(),
+      selectedMatch: {
+        id: 200,
+        title: {
+          romaji: "Test title",
+          english: "Test title",
+          native: "Test title",
+        },
+        format: "MANGA",
+        status: "reading",
+      },
+      matchDate: new Date().toISOString() as unknown as Date,
     },
   ];
 
@@ -91,7 +161,7 @@ describe("RematchOptions", () => {
 
   it("renders with correct status counts", () => {
     // Arrange & Act
-    const { container } = renderComponent();
+    renderComponent();
 
     // Assert
     expect(screen.getByText("Rematch Options")).toBeInTheDocument();
@@ -177,6 +247,7 @@ describe("RematchOptions", () => {
       skipped: true,
       matched: false,
       manual: false,
+      unmatched: false,
     });
   });
 
@@ -218,6 +289,7 @@ describe("RematchOptions", () => {
       skipped: false,
       matched: false,
       manual: false,
+      unmatched: false,
     };
 
     render(

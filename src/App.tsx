@@ -20,9 +20,13 @@ export default function App() {
   );
 }
 
-const root = createRoot(document.getElementById("app")!);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-);
+// Mount the application if the root container is available
+const container = document.getElementById("app");
+if (container) {
+  const root = createRoot(container);
+  root.render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>,
+  );
+}

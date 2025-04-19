@@ -1,12 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
+import * as storageModule from "@/utils/storage";
+const {
   storage,
+  storageCache,
   STORAGE_KEYS,
+  CURRENT_CACHE_VERSION,
   saveKenmeiData,
+  getKenmeiData,
   getImportStats,
+  getSavedMatchResults,
+  mergeMatchResults,
   getSyncConfig,
   saveSyncConfig,
-} from "@/utils/storage";
+  DEFAULT_SYNC_CONFIG,
+} = storageModule;
+import type { KenmeiData, MatchResult, SyncConfig } from "@/utils/storage";
 
 describe("storage utility", () => {
   // Mock localStorage
@@ -30,17 +38,9 @@ describe("storage utility", () => {
 
   // Mock electronStore
   const electronStoreMock = {
-    getItem: vi
-      .fn()
-      .mockImplementation((_key: string) => Promise.resolve(null)),
-    setItem: vi
-      .fn()
-      .mockImplementation((_key: string, _value: string) =>
-        Promise.resolve(true),
-      ),
-    removeItem: vi
-      .fn()
-      .mockImplementation((_key: string) => Promise.resolve(true)),
+    getItem: vi.fn().mockImplementation(() => Promise.resolve(null)),
+    setItem: vi.fn().mockImplementation(() => Promise.resolve(true)),
+    removeItem: vi.fn().mockImplementation(() => Promise.resolve(true)),
     clear: vi.fn().mockImplementation(() => Promise.resolve(true)),
   };
 
@@ -61,6 +61,10 @@ describe("storage utility", () => {
 
     // Set up console.error mock
     console.error = consoleErrorMock;
+
+    // Clear in-memory cache and localStorage
+    Object.keys(storageCache).forEach((key) => delete storageCache[key]);
+    localStorage.clear();
   });
 
   afterEach(() => {
@@ -263,7 +267,7 @@ describe("storage utility", () => {
         // Spy on storage.setItem
         const setItemSpy = vi.spyOn(storage, "setItem");
 
-        saveKenmeiData(mockData);
+        saveKenmeiData(mockData as KenmeiData);
 
         // Check that data was saved
         expect(setItemSpy).toHaveBeenCalledWith(
@@ -353,7 +357,7 @@ describe("storage utility", () => {
 
         const setItemSpy = vi.spyOn(storage, "setItem");
 
-        saveSyncConfig(mockConfig);
+        saveSyncConfig(mockConfig as SyncConfig);
 
         expect(setItemSpy).toHaveBeenCalledWith(
           STORAGE_KEYS.SYNC_CONFIG,
@@ -388,5 +392,340 @@ describe("storage utility", () => {
         expect(result).toHaveProperty("overwriteExisting");
       });
     });
+
+    describe("Kenmei data retrieval", () => {
+      it("getKenmeiData returns null when no data is found", () => {
+        expect(getKenmeiData()).toBeNull();
+      });
+
+      it("getKenmeiData returns saved data", () => {
+        const sample: KenmeiData = {
+          manga: [
+            {
+              id: 1,
+              title: "Test",
+              status: "reading",
+              score: 5,
+              chapters_read: 10,
+              volumes_read: 1,
+              notes: "",
+              created_at: "",
+              updated_at: "",
+            },
+          ],
+        };
+        saveKenmeiData(sample);
+        expect(getKenmeiData()).toEqual(sample);
+      });
+    });
+
+    describe("match results storage and merging", () => {
+      const dummyResult: MatchResult = {
+        kenmeiManga: {
+          id: 1,
+          title: "X",
+          status: "pending",
+          score: 0,
+          chapters_read: 0,
+          volumes_read: 0,
+          notes: "",
+          created_at: "",
+          updated_at: "",
+        },
+        status: "pending",
+      };
+
+      it("getSavedMatchResults returns null if no version key", () => {
+        expect(getSavedMatchResults()).toBeNull();
+      });
+
+      it("getSavedMatchResults returns null on version mismatch", () => {
+        storage.setItem(
+          STORAGE_KEYS.CACHE_VERSION,
+          (CURRENT_CACHE_VERSION + 1).toString(),
+        );
+        storage.setItem(
+          STORAGE_KEYS.MATCH_RESULTS,
+          JSON.stringify([dummyResult]),
+        );
+        expect(getSavedMatchResults()).toBeNull();
+      });
+
+      it("getSavedMatchResults returns data when version matches", () => {
+        storage.setItem(
+          STORAGE_KEYS.CACHE_VERSION,
+          CURRENT_CACHE_VERSION.toString(),
+        );
+        storage.setItem(
+          STORAGE_KEYS.MATCH_RESULTS,
+          JSON.stringify([dummyResult]),
+        );
+        const results = getSavedMatchResults();
+        expect(results).toEqual([dummyResult]);
+      });
+
+      it("mergeMatchResults returns newResults if no existing data", () => {
+        const merged = mergeMatchResults([dummyResult]);
+        expect(merged).toEqual([dummyResult]);
+      });
+
+      it("mergeMatchResults preserves existing match status, selectedMatch, and matchDate", () => {
+        const existing: MatchResult[] = [
+          {
+            kenmeiManga: {
+              id: "20",
+              title: "Match",
+              status: "pending",
+              score: 0,
+              chapters_read: 0,
+              volumes_read: 0,
+              notes: "",
+              created_at: "",
+              updated_at: "",
+            },
+            status: "complete",
+            selectedMatch: { id: 1, title: { english: "E" } },
+            matchDate: "2023-01-01",
+          },
+        ];
+        // Simulate saved match results in storage
+        storage.setItem(
+          STORAGE_KEYS.CACHE_VERSION,
+          CURRENT_CACHE_VERSION.toString(),
+        );
+        storage.setItem(STORAGE_KEYS.MATCH_RESULTS, JSON.stringify(existing));
+        const newResults = [
+          {
+            ...existing[0],
+            status: "pending",
+            anilistMatches: [],
+            selectedMatch: undefined,
+          },
+        ];
+        const merged = mergeMatchResults(newResults as any);
+        expect(merged[0].status).toBe("complete");
+        expect(merged[0].selectedMatch).toEqual(existing[0].selectedMatch);
+        expect(merged[0].matchDate).toBe(existing[0].matchDate);
+      });
+    });
+  });
+});
+
+describe("storage utility functions", () => {
+  beforeEach(() => {
+    // Clear localStorage and cache before each test
+    localStorage.clear();
+    Object.keys(storageCache).forEach((key) => delete storageCache[key]);
+    vi.restoreAllMocks();
+  });
+
+  it("getItem returns null when no value is present", () => {
+    expect(storage.getItem("missing")).toBeNull();
+  });
+
+  it("setItem stores value in localStorage and cache, and getItem retrieves from cache", () => {
+    storage.setItem("foo", "bar");
+    expect(localStorage.getItem("foo")).toBe("bar");
+    expect(storageCache["foo"]).toBe("bar");
+    // Clear localStorage to ensure retrieval from cache
+    localStorage.clear();
+    expect(storage.getItem("foo")).toBe("bar");
+  });
+
+  it("removeItem deletes value from localStorage and cache", () => {
+    storage.setItem("key", "value");
+    expect(localStorage.getItem("key")).toBe("value");
+    expect(storageCache["key"]).toBe("value");
+    storage.removeItem("key");
+    expect(localStorage.getItem("key")).toBeNull();
+    expect(storageCache["key"]).toBeUndefined();
+  });
+
+  it("clear removes all data from localStorage and cache", () => {
+    storage.setItem("a", "1");
+    storage.setItem("b", "2");
+    expect(localStorage.getItem("a")).toBe("1");
+    expect(localStorage.getItem("b")).toBe("2");
+    storage.clear();
+    expect(localStorage.getItem("a")).toBeNull();
+    expect(localStorage.getItem("b")).toBeNull();
+    expect(Object.keys(storageCache)).toHaveLength(0);
+  });
+});
+
+describe("Kenmei data persistence", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    Object.keys(storageCache).forEach((key) => delete storageCache[key]);
+    vi.restoreAllMocks();
+  });
+
+  it("saveKenmeiData and getKenmeiData work correctly", () => {
+    const data = {
+      manga: [
+        {
+          id: "1",
+          title: "One",
+          status: "reading",
+          score: 5,
+          chapters_read: 10,
+          volumes_read: 1,
+          notes: "",
+          created_at: "2023-01-01",
+          updated_at: "2023-01-02",
+        },
+        {
+          id: "2",
+          title: "Two",
+          status: "completed",
+          score: 8,
+          chapters_read: 20,
+          volumes_read: 2,
+          notes: "",
+          created_at: "2023-02-01",
+          updated_at: "2023-02-02",
+        },
+      ],
+    };
+    saveKenmeiData(data);
+    const stored = localStorage.getItem(STORAGE_KEYS.KENMEI_DATA);
+    expect(stored).toBe(JSON.stringify(data));
+
+    const loaded = getKenmeiData();
+    expect(loaded).toEqual(data);
+
+    const statsRaw = localStorage.getItem(STORAGE_KEYS.IMPORT_STATS);
+    expect(statsRaw).toBeTruthy();
+    const stats = getImportStats();
+    expect(stats).toHaveProperty("total", 2);
+    expect(stats?.statusCounts).toEqual({ reading: 1, completed: 1 });
+
+    // verify cache version key was set
+    expect(localStorage.getItem(STORAGE_KEYS.CACHE_VERSION)).toBe(
+      CURRENT_CACHE_VERSION.toString(),
+    );
+  });
+
+  it("getSavedMatchResults returns null when no data is present", () => {
+    // No cache version or results set
+    expect(getSavedMatchResults()).toBeNull();
+  });
+
+  it("getSavedMatchResults returns parsed data when version matches", () => {
+    const mockResults = [
+      {
+        kenmeiManga: {
+          id: "5",
+          title: "T",
+          status: "pending",
+          score: 0,
+          chapters_read: 0,
+          volumes_read: 0,
+          notes: "",
+          created_at: "",
+          updated_at: "",
+        },
+        status: "pending",
+      },
+    ];
+    // Mock storage.getItem to return version and results
+    const spy = vi
+      .spyOn(storage, "getItem")
+      .mockReturnValueOnce(CURRENT_CACHE_VERSION.toString())
+      .mockReturnValueOnce(JSON.stringify(mockResults));
+    const result = getSavedMatchResults();
+    expect(spy).toHaveBeenCalledWith(STORAGE_KEYS.CACHE_VERSION);
+    expect(spy).toHaveBeenCalledWith(STORAGE_KEYS.MATCH_RESULTS);
+    expect(result).toEqual(mockResults);
+  });
+});
+
+describe("mergeMatchResults function", () => {
+  const dummyResult: MatchResult = {
+    kenmeiManga: {
+      id: 1,
+      title: "X",
+      status: "pending",
+      score: 0,
+      chapters_read: 0,
+      volumes_read: 0,
+      notes: "",
+      created_at: "",
+      updated_at: "",
+    },
+    status: "pending",
+  };
+  beforeEach(() => {
+    localStorage.clear();
+    Object.keys(storageCache).forEach((key) => delete storageCache[key]);
+    vi.restoreAllMocks();
+  });
+
+  it("returns newResults if no existing results to merge", () => {
+    // No storage setup, should return new results as is
+    const newResults = [dummyResult];
+    const merged = mergeMatchResults(newResults as any);
+    expect(merged).toBe(newResults);
+  });
+
+  it("preserves existing match status, selectedMatch, and matchDate", () => {
+    const existing: MatchResult[] = [
+      {
+        kenmeiManga: {
+          id: "20",
+          title: "Match",
+          status: "pending",
+          score: 0,
+          chapters_read: 0,
+          volumes_read: 0,
+          notes: "",
+          created_at: "",
+          updated_at: "",
+        },
+        status: "complete",
+        selectedMatch: { id: 1, title: { english: "E" } },
+        matchDate: "2023-01-01",
+      },
+    ];
+    // Simulate saved match results in storage
+    storage.setItem(
+      STORAGE_KEYS.CACHE_VERSION,
+      CURRENT_CACHE_VERSION.toString(),
+    );
+    storage.setItem(STORAGE_KEYS.MATCH_RESULTS, JSON.stringify(existing));
+    const newResults = [
+      {
+        ...existing[0],
+        status: "pending",
+        anilistMatches: [],
+        selectedMatch: undefined,
+      },
+    ];
+    const merged = mergeMatchResults(newResults as any);
+    expect(merged[0].status).toBe("complete");
+    expect(merged[0].selectedMatch).toEqual(existing[0].selectedMatch);
+    expect(merged[0].matchDate).toBe(existing[0].matchDate);
+  });
+});
+
+describe("sync configuration persistence", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    Object.keys(storageCache).forEach((key) => delete storageCache[key]);
+    vi.restoreAllMocks();
+  });
+
+  it("getSyncConfig returns default config when none is saved", () => {
+    expect(getSyncConfig()).toEqual(DEFAULT_SYNC_CONFIG);
+  });
+
+  it("saveSyncConfig and getSyncConfig store and retrieve the sync configuration", () => {
+    const customConfig = {
+      ...DEFAULT_SYNC_CONFIG,
+      prioritizeAniListStatus: true,
+    };
+    saveSyncConfig(customConfig as any);
+    const loadedConfig = getSyncConfig();
+    expect(loadedConfig).toEqual(customConfig);
   });
 });

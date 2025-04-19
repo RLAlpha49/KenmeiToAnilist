@@ -117,8 +117,6 @@ test("Settings page functionality", async () => {
       createNotificationEvent("Backup successfully restored");
       createNotificationEvent("Settings reset to defaults");
     });
-  } catch (error) {
-    throw error;
   } finally {
     await electronApp.close();
   }

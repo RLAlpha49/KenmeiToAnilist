@@ -1,11 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { Mock } from "vitest";
-import { mockAniListManga } from "@/tests/fixtures/manga";
-import {
-  AniListManga,
-  MangaMatchResult,
-  MediaListStatus,
-} from "@/api/anilist/types";
+import { AniListManga } from "@/api/anilist/types";
 import { KenmeiManga, KenmeiStatus } from "@/api/kenmei/types";
 import * as matchEngine from "@/api/matching/match-engine";
 import { MatchEngineConfig } from "@/api/matching/match-engine";
@@ -283,7 +278,7 @@ describe("Manga Search Service", () => {
       await vi.runAllTimersAsync();
 
       try {
-        const matches = await searchPromise;
+        await searchPromise;
         // Verify the API was called
         expect(mockSearchManga).toHaveBeenCalled();
 
@@ -303,7 +298,7 @@ describe("Manga Search Service", () => {
       clearMangaCache();
 
       // Mock the search function to throw when aborted
-      mockSearchManga.mockImplementationOnce((...args) => {
+      mockSearchManga.mockImplementationOnce(() => {
         if (controller.signal.aborted) {
           const error = new DOMException(
             "The operation was aborted",

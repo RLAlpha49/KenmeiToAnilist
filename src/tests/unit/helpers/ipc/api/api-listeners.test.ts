@@ -318,7 +318,15 @@ describe("api-listeners", () => {
         variables,
       );
       await vi.runAllTimersAsync();
-      const result = await resultPromise;
+      const result = (await resultPromise) as {
+        success: boolean;
+        error?: {
+          status: number;
+          statusText: string;
+          errors: { message: string }[];
+          message: string;
+        };
+      };
 
       // Assert
       expect(result.success).toBe(false);
@@ -411,7 +419,15 @@ describe("api-listeners", () => {
       // Act
       const resultPromise = mockHandlers["anilist:exchangeToken"]({}, params);
       await vi.runAllTimersAsync();
-      const result = await resultPromise;
+      const result = (await resultPromise) as {
+        success: boolean;
+        error?: {
+          status: number;
+          statusText: string;
+          errors: { message: string }[];
+          message: string;
+        };
+      };
 
       // Assert
       expect(result.success).toBe(false);
@@ -460,7 +476,15 @@ describe("api-listeners", () => {
       // Act
       const resultPromise = mockHandlers["shell:openExternal"]({}, url);
       await vi.runAllTimersAsync();
-      const result = await resultPromise;
+      const result = (await resultPromise) as {
+        success: boolean;
+        error?: {
+          status: number;
+          statusText: string;
+          errors: { message: string }[];
+          message: string;
+        };
+      };
 
       // Assert
       expect(shell.openExternal).toHaveBeenCalledWith(url);

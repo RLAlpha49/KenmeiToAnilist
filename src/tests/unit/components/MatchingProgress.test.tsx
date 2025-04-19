@@ -14,6 +14,8 @@ describe("MatchingProgressPanel", () => {
   const mockTimeEstimate = {
     estimatedRemainingSeconds: 120,
     averageProcessingTimeMs: 500,
+    startTime: new Date().getTime(),
+    averageTimePerManga: 500,
   };
 
   it("renders basic progress correctly", () => {

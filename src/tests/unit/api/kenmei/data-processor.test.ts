@@ -14,7 +14,7 @@ import * as parser from "@/api/kenmei/parser";
 
 // Mock dependencies
 vi.mock("@/api/kenmei/parser", () => ({
-  parseKenmeiExport: vi.fn((content) => {
+  parseKenmeiExport: vi.fn(() => {
     // Return a simple parsed structure for testing
     return {
       export_date: "2023-05-01",
@@ -59,7 +59,7 @@ vi.mock("@/api/kenmei/status-mapper", () => ({
       return mapping[status];
     }
 
-    return defaultMap[status] || "PLANNING";
+    return defaultMap[status as keyof typeof defaultMap] || "PLANNING";
   }),
 }));
 
@@ -142,12 +142,10 @@ describe("data-processor", () => {
         english: "Test Manga",
         native: "テストマンガ",
       },
-      type: "MANGA",
       format: "MANGA",
       status: "RELEASING",
-      startYear: 2020,
-      chapters: null,
-      volumes: null,
+      chapters: undefined,
+      volumes: undefined,
       coverImage: { large: "https://example.com/cover.jpg" },
     };
 
@@ -318,7 +316,7 @@ describe("data-processor", () => {
     });
 
     it("should handle empty manga list", async () => {
-      const processFn = vi.fn(async (batch: KenmeiManga[]) => {
+      const processFn = vi.fn(async () => {
         return [];
       });
 

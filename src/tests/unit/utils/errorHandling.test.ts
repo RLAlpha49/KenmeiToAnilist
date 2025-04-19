@@ -153,8 +153,8 @@ describe("errorHandling", () => {
 
       // Verify we caught the TimeoutError
       expect(caughtError).not.toBeNull();
-      expect(caughtError.name).toBe("TimeoutError");
-      expect(caughtError.message).toBe("Request timed out");
+      expect((caughtError as Error).name).toBe("TimeoutError");
+      expect((caughtError as Error).message).toBe("Request timed out");
 
       // Ensure the mock was called with signal
       expect(global.fetch).toHaveBeenCalledWith(

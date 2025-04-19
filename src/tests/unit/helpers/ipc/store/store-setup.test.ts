@@ -40,7 +40,6 @@ vi.mock("electron-store", () => {
 // Import after mocks are set up
 import { setupStoreIPC } from "@/helpers/ipc/store/store-setup";
 import { ipcMain } from "electron";
-import Store from "electron-store";
 
 describe("store-setup", () => {
   // Store handlers that ipcMain.handle registers
@@ -49,7 +48,7 @@ describe("store-setup", () => {
     (event: unknown, ...args: unknown[]) => unknown
   >;
   // Get mock store functions
-  let mockStoreFunctions: Record<string, jest.Mock>;
+  let mockStoreFunctions: Record<string, ReturnType<typeof vi.fn>>;
 
   beforeEach(() => {
     // Clear all mocks before each test

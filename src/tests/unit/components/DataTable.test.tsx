@@ -1,6 +1,6 @@
 import React from "react";
-import { render, screen, fireEvent, within, act } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, act } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
 import { DataTable } from "../../../components/import/DataTable";
 import { KenmeiMangaItem } from "../../../types/kenmei";
 

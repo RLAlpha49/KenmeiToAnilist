@@ -128,7 +128,7 @@ jobs:
         id: check-updates
         run: |
           # Capture ncu output for updates
-          NCU_OUTPUT=$(ncu --configFilePath config/.ncurc.json)
+          NCU_OUTPUT=$(ncu)
 
           # Add to step summary
           echo "## 📦 Package Updates Available" >> $GITHUB_STEP_SUMMARY
@@ -139,7 +139,7 @@ jobs:
           echo "To update all packages, run: npm run update" >> $GITHUB_STEP_SUMMARY
 
           # Capture update info in structured format
-          UPDATE_INFO=$(ncu --configFilePath config/.ncurc.json --jsonUpgraded)
+          UPDATE_INFO=$(ncu --jsonUpgraded)
           echo "update_info<<EOF" >> $GITHUB_OUTPUT
           echo "$UPDATE_INFO" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -247,7 +247,7 @@ jobs:
           if [ "${{ steps.check-updates.outputs.has_updates }}" = "true" ]; then
             # Update packages
             echo "[INFO] Updating packages to latest versions on branch $PR_BRANCH"
-            ncu --configFilePath config/.ncurc.json -u
+            ncu -u
             
             # Install updated packages
             echo "[INFO] Installing updated packages"

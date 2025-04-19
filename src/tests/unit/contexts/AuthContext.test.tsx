@@ -126,17 +126,17 @@ describe("AuthContext", () => {
           redirectUri: "http://localhost:5173/callback",
         },
       }),
-      onCodeReceived: mockOnCodeReceived.mockImplementation((callback) => {
+      onCodeReceived: mockOnCodeReceived.mockImplementation((callback: any) => {
         // Store the callback for later use in tests
         mockOnCodeReceived.mockCallback = callback;
         return () => {}; // Return unsubscribe function
       }),
-      onStatus: mockOnStatus.mockImplementation((callback) => {
+      onStatus: mockOnStatus.mockImplementation((callback: any) => {
         // Store the callback for later use in tests
         mockOnStatus.mockCallback = callback;
         return () => {}; // Return unsubscribe function
       }),
-      onCancelled: mockOnCancelled.mockImplementation((callback) => {
+      onCancelled: mockOnCancelled.mockImplementation((callback: any) => {
         // Store the callback for later use in tests
         mockOnCancelled.mockCallback = callback;
         return () => {}; // Return unsubscribe function
@@ -272,7 +272,7 @@ describe("AuthContext", () => {
 
     // Simulate receiving the OAuth code callback
     await act(async () => {
-      await mockOnCodeReceived.mockCallback({ code: "test-auth-code" });
+      await mockOnCodeReceived.mockCallback?.({ code: "test-auth-code" });
     });
 
     // Should have called the token exchange with the correct parameters
@@ -307,7 +307,7 @@ describe("AuthContext", () => {
 
     // Simulate receiving the OAuth code callback
     await act(async () => {
-      await mockOnCodeReceived.mockCallback({ code: "invalid-auth-code" });
+      await mockOnCodeReceived.mockCallback?.({ code: "invalid-auth-code" });
     });
 
     // Should show the error
@@ -462,7 +462,7 @@ describe("AuthContext", () => {
 
     // Simulate a status update from the event handler
     await act(async () => {
-      await mockOnStatus.mockCallback("Testing status update");
+      await mockOnStatus.mockCallback?.("Testing status update");
     });
 
     // Check that the status message was updated
@@ -480,7 +480,7 @@ describe("AuthContext", () => {
 
     // Simulate the browser auth being cancelled
     await act(async () => {
-      await mockOnCancelled.mockCallback();
+      await mockOnCancelled.mockCallback?.();
     });
 
     // Should show the cancellation error

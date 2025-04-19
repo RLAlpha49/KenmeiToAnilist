@@ -1,4 +1,3 @@
-import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useMatchHandlers } from "../../../hooks/useMatchHandlers";
@@ -28,15 +27,11 @@ describe("useMatchHandlers", () => {
     title: "Test Manga",
     status: "reading",
     chapters_read: 10,
-    volume: 2,
     score: 8,
-    reading_status: "reading",
-    times_reread: 0,
-    start_date: "2023-01-01",
-    end_date: null,
     notes: "",
     created_at: "2023-01-01T00:00:00Z",
     updated_at: "2023-05-10T00:00:00Z",
+    url: "https://example.com/test-manga",
   };
 
   const mockMatchResult: MangaMatchResult = {
@@ -44,7 +39,7 @@ describe("useMatchHandlers", () => {
     status: "pending",
     anilistMatches: [
       {
-        score: 90,
+        confidence: 90,
         manga: {
           id: 101,
           title: {
@@ -68,7 +63,7 @@ describe("useMatchHandlers", () => {
         },
       },
       {
-        score: 80,
+        confidence: 80,
         manga: {
           id: 102,
           title: {
@@ -92,7 +87,6 @@ describe("useMatchHandlers", () => {
         },
       },
     ],
-    needsReview: true,
   };
 
   // Mock state functions
@@ -237,7 +231,7 @@ describe("useMatchHandlers", () => {
     expect(updatedResults.length).toBe(1);
     expect(updatedResults[0].status).toBe("matched");
     expect(updatedResults[0].selectedMatch).toEqual(
-      mockMatchResult.anilistMatches[0].manga,
+      mockMatchResult.anilistMatches?.[0]?.manga,
     );
     expect(updatedResults[0].matchDate).toBeInstanceOf(Date);
 
@@ -272,7 +266,7 @@ describe("useMatchHandlers", () => {
     act(() => {
       result.current.handleAcceptMatch({
         isBatchOperation: true,
-        matches: batchMatches,
+        matches: batchMatches as MangaMatchResult[],
       });
     });
 
@@ -344,7 +338,7 @@ describe("useMatchHandlers", () => {
     act(() => {
       result.current.handleRejectMatch({
         isBatchOperation: true,
-        matches: batchMatches,
+        matches: batchMatches as MangaMatchResult[],
       });
     });
 
@@ -379,7 +373,7 @@ describe("useMatchHandlers", () => {
 
     // Verify the update - should have selected the second match
     expect(updatedResults[0].selectedMatch).toEqual(
-      mockMatchResult.anilistMatches[1].manga,
+      mockMatchResult.anilistMatches?.[1]?.manga,
     );
 
     // Status should still be pending since we didn't auto-accept
@@ -409,7 +403,7 @@ describe("useMatchHandlers", () => {
 
     // Verify the update - should have selected the second match
     expect(updatedResults[0].selectedMatch).toEqual(
-      mockMatchResult.anilistMatches[1].manga,
+      mockMatchResult.anilistMatches?.[1]?.manga,
     );
 
     // Status should be matched since we auto-accepted
