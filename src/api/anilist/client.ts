@@ -1060,6 +1060,7 @@ function processMediaListCollectionChunk(
         status: entry.status,
         progress: entry.progress,
         score: entry.score,
+        private: entry.private,
         title: entry.media.title,
       };
     });
@@ -1067,3 +1068,20 @@ function processMediaListCollectionChunk(
 
   return entriesProcessed;
 }
+
+// Export internal helpers for testing
+export const __test__ = {
+  initializeSearchCache,
+  persistSearchCache,
+  generateCacheKey,
+  isCacheValid,
+  searchCache,
+  searchCacheInitialized: () => searchCacheInitialized,
+  setSearchCacheInitialized: (val: boolean) => {
+    searchCacheInitialized = val;
+  },
+  processMediaListCollectionChunk,
+  fetchCompleteUserMediaList,
+  getAuthenticatedUserID,
+  getUserMangaList,
+};

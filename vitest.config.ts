@@ -35,6 +35,8 @@ export default defineConfig({
         "**/types.ts",
         "**/src/config/**",
         "**/src/pages/**",
+        "**/@check-coverage.mjs",
+        "**/playwright-report/**",
       ],
       all: true,
       thresholds: {
