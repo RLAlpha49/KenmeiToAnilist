@@ -1,4 +1,4 @@
-name: Test Suite
+name: CI Suite
 
 on:
   push:
@@ -13,17 +13,14 @@ jobs:
       cache-key: ${{ steps.cache-key.outputs.key }}
     steps:
       - uses: actions/checkout@v4
-
       - name: Generate cache key
         id: cache-key
         run: echo "key=node-modules-${{ hashFiles('**/package-lock.json') }}" >> $GITHUB_OUTPUT
-
       - name: Use Node.js 22.x
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
           cache: "npm"
-
       - name: Cache dependencies
         id: cache-deps
         uses: actions/cache@v4
@@ -32,7 +29,6 @@ jobs:
             node_modules
             ~/.npm
           key: ${{ steps.cache-key.outputs.key }}
-
       - name: Install dependencies
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: npm ci
@@ -42,12 +38,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Use Node.js 22.x
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-
       - name: Restore cached dependencies
         uses: actions/cache@v4
         with:
@@ -55,7 +49,6 @@ jobs:
             node_modules
             ~/.npm
           key: ${{ needs.setup.outputs.cache-key }}
-
       - name: Run unit tests
         run: npm run test
 
@@ -69,18 +62,14 @@ jobs:
         with:
           node-version: 22.x
           cache: "npm"
-
       - name: Install dependencies
         run: npm ci
-
       - name: Run tests with coverage
         run: npm run test:coverage
         continue-on-error: true
-
       - name: Check coverage thresholds
         run: npm run test:check-coverage
         continue-on-error: true
-
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
@@ -90,48 +79,77 @@ jobs:
           fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
         continue-on-error: true
-
       - name: Archive code coverage results
         uses: actions/upload-artifact@v4
         with:
           name: code-coverage-report
           path: coverage/
 
-  wait-for-windows:
-    runs-on: ubuntu-latest
+  build-windows:
+    name: Build Windows Artifacts
+    needs: setup
+    runs-on: windows-latest
     steps:
-      - name: Wait for Windows build workflow to complete
-        uses: lewagon/wait-on-check-action@v1.3.4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          ref: ${{ github.ref }}
-          check-name: "Build Windows Artifacts"
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 10
+          node-version: "22"
+      - name: Install Dependencies
+        run: npm install
+      - name: Build Application
+        run: npm run make
+      - name: Upload Windows Build Artifacts (.exe and .msi)
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: out
 
-  wait-for-macos:
-    runs-on: ubuntu-latest
+  build-macos:
+    name: Build macOS Artifacts
+    needs: setup
+    runs-on: macos-latest
     steps:
-      - name: Wait for macOS build workflow to complete
-        uses: lewagon/wait-on-check-action@v1.3.4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          ref: ${{ github.ref }}
-          check-name: "Build macOS Artifacts"
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 10
+          node-version: "22"
+      - name: Install Dependencies
+        run: npm install
+      - name: Build Application
+        run: npm run make
+      - name: Upload macOS Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: out
 
-  wait-for-linux:
+  build-linux:
+    name: Build Linux Artifacts
+    needs: setup
     runs-on: ubuntu-latest
     steps:
-      - name: Wait for Linux build workflow to complete
-        uses: lewagon/wait-on-check-action@v1.3.4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          ref: ${{ github.ref }}
-          check-name: "Build Linux Artifacts"
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 10
+          node-version: "22"
+      - name: Install Dependencies
+        run: npm install
+      - name: Build Application
+        run: npm run make
+      - name: Upload Linux Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: out
 
   e2e-test-windows:
-    needs: [setup, wait-for-windows]
+    needs: build-windows
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -139,34 +157,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-      - name: Restore cached dependencies
-        id: cache-deps
-        uses: actions/cache@v4
-        with:
-          path: |
-            node_modules
-            ~/.npm
-          key: ${{ needs.setup.outputs.cache-key }}
-      - name: Install dependencies
-        if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: npm ci
-      - name: Get build workflow run ID
-        id: get-workflow-run
-        run: |
-          $runId = gh api \
-            repos/${{ github.repository }}/actions/workflows/build.yml/runs \
-            --jq '.workflow_runs[] | select(.head_sha == "${{ github.sha }}") | select(.conclusion == "success") | .id' | Select-Object -First 1
-          echo "run_id=$runId" >> $env:GITHUB_OUTPUT
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Download Windows build artifacts
         uses: actions/download-artifact@v4
         with:
           name: windows-build
           path: out
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ steps.get-workflow-run.outputs.run_id }}
-
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
       - name: Run E2E tests
@@ -179,7 +174,7 @@ jobs:
           path: playwright-report/
 
   e2e-test-macos:
-    needs: [setup, wait-for-macos]
+    needs: build-macos
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -187,36 +182,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-      - name: Restore cached dependencies
-        id: cache-deps
-        uses: actions/cache@v4
-        with:
-          path: |
-            node_modules
-            ~/.npm
-          key: ${{ needs.setup.outputs.cache-key }}
-      - name: Install dependencies
-        if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: npm ci
-      - name: Get build workflow run ID
-        id: get-workflow-run
-        run: |
-          runId=$(gh api repos/${{ github.repository }}/actions/workflows/build.yml/runs \
-            --jq '.workflow_runs[] | select(.head_sha == "${{ github.sha }}") | select(.conclusion == "success") | .id' | head -n 1)
-          echo "run_id=$runId" >> $GITHUB_OUTPUT
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Download macOS build artifacts
         uses: actions/download-artifact@v4
         with:
           name: macos-build
           path: out
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ steps.get-workflow-run.outputs.run_id }}
-
       - name: Set executable permissions
         run: |
-          # Find all app bundles and make only the MacOS directory executables runnable
           find out -name "*.app" -type d | while read app; do
             if [ -d "$app/Contents/MacOS" ]; then
               echo "Setting permissions for $app/Contents/MacOS"
@@ -224,7 +196,6 @@ jobs:
               ls -la "$app/Contents/MacOS/"
             fi
           done
-
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
       - name: Run E2E tests
@@ -237,7 +208,7 @@ jobs:
           path: playwright-report/
 
   e2e-test-linux:
-    needs: [setup, wait-for-linux]
+    needs: build-linux
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -245,33 +216,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-      - name: Restore cached dependencies
-        id: cache-deps
-        uses: actions/cache@v4
-        with:
-          path: |
-            node_modules
-            ~/.npm
-          key: ${{ needs.setup.outputs.cache-key }}
-      - name: Install dependencies
-        if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: npm ci
-      - name: Get build workflow run ID
-        id: get-workflow-run
-        run: |
-          runId=$(gh api repos/${{ github.repository }}/actions/workflows/build.yml/runs \
-            --jq '.workflow_runs[] | select(.head_sha == "${{ github.sha }}") | select(.conclusion == "success") | .id' | head -n 1)
-          echo "run_id=$runId" >> $GITHUB_OUTPUT
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Download Linux build artifacts
         uses: actions/download-artifact@v4
         with:
           name: linux-build
           path: out
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ steps.get-workflow-run.outputs.run_id }}
-
       - name: Debug Linux structure
         run: |
           echo "Directory contents:"
@@ -280,34 +229,23 @@ jobs:
           find out -type d | sort
           echo "Check if the actual electron app exists:"
           find out -type f -executable || echo "No executable files found"
-
       - name: Set executable permissions
         run: |
-          # Make all Electron app executables runnable 
           find out -type f -name "kenmei-to-anilist" -o -name "chrome_crashpad_handler" -o -name "chrome-sandbox" | xargs -I{} chmod +x {}
-
-          # Make the main app directory executable files runnable - this is critical
           if [ -d "out/Kenmei to Anilist-linux-x64" ]; then
             echo "Making all files in main app directory executable"
             find "out/Kenmei to Anilist-linux-x64" -type f -exec chmod +x {} \;
           fi
-
-          # For any unpacked .asar files
           if [ -d "out/Kenmei to Anilist-linux-x64/resources/app.asar.unpacked" ]; then
             echo "Making unpacked asar binaries executable"
             find "out/Kenmei to Anilist-linux-x64/resources/app.asar.unpacked" -type f -not -path "*/node_modules/*" -exec chmod +x {} \;
           fi
-
-          # Making the DEB file executable if it exists
           if [ -f "out/make/deb/x64/kenmei-to-anilist_3.0.0_amd64.deb" ]; then
             echo "Making DEB file executable"
             chmod +x "out/make/deb/x64/kenmei-to-anilist_3.0.0_amd64.deb"
           fi
-
-          # List updated executable files
           echo "Executable files after permission update:"
           find out -type f -executable | sort
-
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
@@ -329,22 +267,17 @@ jobs:
             libpango-1.0-0 \
             libcairo2 \
             libasound2-plugins
-
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
-
       - name: Run E2E tests
         run: |
-          # Attempt 1: Run with Xvfb
           echo "Attempting to run tests with Xvfb..."
           export DISPLAY=:99
           Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
           npm run test:e2e || {
             echo "Xvfb approach failed, trying alternative with xvfb-run..."
-            # Attempt 2: Try with xvfb-run utility
             xvfb-run --auto-servernum npm run test:e2e || {
               echo "xvfb-run approach failed, trying with ELECTRON_NO_ATTACH_CONSOLE=1..."
-              # Attempt 3: Try with environment variable for headless mode
               ELECTRON_NO_ATTACH_CONSOLE=1 DISPLAY=:99 npm run test:e2e
             }
           }
