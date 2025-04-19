@@ -1,0 +1,55 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Project Structure Guide
+
+This rule provides an overview of the directory layout, entry points, and naming conventions for the KenmeiToAnilist project.
+
+## Directory Layout
+
+- **root**: contains configuration files and project metadata, including:
+  - `[index.html](mdc:index.html)`: root HTML for the renderer process
+  - `package.json`, `tsconfig.json`, `vite.*.config.*`: Vite and application configurations
+  - `.env`, `.gitignore`, `.cursor/`, etc.
+- **src/**: main application source
+  - `api/`: API modules for data interaction:
+    - `anilist/`, `kenmei/`, `matching/`
+  - `assets/`: static assets (fonts, images)
+  - `components/`: React components organized by feature:
+    - `import/`, `layout/`, `matching/`, `sync/`, `ui/`
+  - `config/`: application-specific configuration
+  - `contexts/`: React context providers
+  - `helpers/`: utility functions and IPC handlers:
+    - `ipc/api`, `ipc/auth`, `ipc/file`, `ipc/store`, `ipc/system`, `ipc/theme`, `ipc/window`
+  - `hooks/`: custom React hooks
+  - `layouts/`: layout components
+  - `pages/`: top-level pages
+  - `routes/`: client-side routing definitions
+  - `styles/`: global and utility styles
+  - `tests/`: test suites and mocks
+  - `types/`: TypeScript definitions
+  - `utils/`: general utility functions
+- **build outputs**:
+  - `.vite/`: intermediate build artifacts
+  - `out/`: packaged application outputs
+  - `coverage/`: test coverage reports
+
+## Entry Points
+
+- **Main process**: configured via `[vite.main.config.ts](mdc:vite.main.config.ts)`
+- **Preload script**: configured via `[vite.preload.config.ts](mdc:vite.preload.config.ts)`
+- **Renderer process**: entry defined in `[vite.renderer.config.mts](mdc:vite.renderer.config.mts)`
+
+## Naming Conventions
+
+- File and directory names use kebab-case
+- React component files and names use PascalCase and match the directory structure
+- Custom hooks prefixed with `use` (e.g., `useAuth.ts`)
+- Context providers suffixed with `Provider`
+
+## Examples
+
+- `[src/components/layout/NavBar.tsx](mdc:src/components/layout/NavBar.tsx)` exports `const NavBar`
+- `[src/helpers/ipc/api/index.ts](mdc:src/helpers/ipc/api/index.ts)` handles API IPC calls
