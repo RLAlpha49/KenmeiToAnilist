@@ -162,6 +162,8 @@ jobs:
         with:
           name: windows-build
           path: out
+      - name: Install dependencies
+        run: npm ci
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
       - name: Run E2E tests
@@ -187,6 +189,8 @@ jobs:
         with:
           name: macos-build
           path: out
+      - name: Install dependencies
+        run: npm ci
       - name: Set executable permissions
         run: |
           find out -name "*.app" -type d | while read app; do
@@ -221,6 +225,8 @@ jobs:
         with:
           name: linux-build
           path: out
+      - name: Install dependencies
+        run: npm ci
       - name: Debug Linux structure
         run: |
           echo "Directory contents:"
