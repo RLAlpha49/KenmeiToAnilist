@@ -1,0 +1,304 @@
+---
+description: This rule enforces comprehensive, high-quality TSDoc/JSDoc comments for all exported symbols in the codebase. It ensures every documentation block includes a `@source` tag, and that unused exports are marked with `@internal` to maintain a clean and clear public API. Follow this rule to keep documentation consistent, discoverable, and professional.
+globs: 
+alwaysApply: false
+---
+# TSDoc/JSDoc Best Practices
+
+## 🚨 ABSOLUTELY EVERYTHING MUST BE EXPORTED 🚨
+
+**EVERY function, class, type, interface, constant, and symbol—without exception—MUST be exported.**
+
+- If a symbol is not already exported, you MUST export it.
+- You MUST add the `@internal` tag to its documentation block **only if you are updating it to be exported** (i.e., it was not previously exported).
+- **If a symbol is already declared with `declare`, do NOT switch it to `export`. Leave it as `declare`.**
+- Do NOT add `@internal` to things that are already exported or declared.
+- This rule applies to ALL code, regardless of whether the symbol is used, unused, or only for internal/testing purposes.
+- **If a type, interface, or declaration cannot be exported inline (e.g., global augmentations), you MUST export it at the end of the file for documentation purposes.**
+
+> **This is the most important rule: _Nothing should remain unexported!_**
+
+## Overview
+
+Proper documentation is essential for code maintainability, discoverability, and collaboration. This rule provides detailed guidance for writing TSDoc/JSDoc comments in TypeScript and JavaScript files, ensuring that all exported symbols are well-documented and that the public API remains clean and clear. 📝
+
+## Export/Declare/@internal Checklist
+
+| Symbol Type                | Already exported? | Already declared? | Action Required                |
+|----------------------------|-------------------|-------------------|-------------------------------|
+| Function/Class/Type/Interface/Const | No                | No                | Export it. Add `@internal`  |
+| Function/Class/Type/Interface/Const | Yes               | -                 | Do nothing. Do NOT add `@internal`. |
+| Any Symbol                 | -                 | Yes               | Leave as `declare`. Do NOT change to `export`. Do NOT add `@internal`. |
+| Global/Ambient Declaration | -                 | -                 | Export at end of file for documentation if not exported inline. |
+| Utility/internal function or type (e.g., compareVersions, GitHubRelease) | No | No | Export it. Add `@internal` |
+
+## General Guidelines
+
+- **🚨 EXPORT EVERYTHING (MANDATORY):**
+  - Every function, class, type, interface, and constant **must** be exported. If it was not already exported, make it exported and add the `@internal` tag to its documentation block **only if you are updating it to be exported**.
+  - _No exceptions. No symbol should remain unexported._
+  - **If a symbol is already declared with `declare`, do NOT switch it to `export`. Leave it as `declare`.**
+  - Do NOT add `@internal` to things that are already exported or declared.
+  - This ensures all symbols are discoverable and can be referenced or tested as needed.
+  - **If a type, interface, or declaration cannot be exported inline (e.g., global augmentations or ambient declarations), you MUST export it at the end of the file for documentation purposes.**
+- **Document Everything Exported:**
+  - Every exported function, class, type, interface, and constant **must** have a comprehensive TSDoc/JSDoc comment block.
+  - This helps other developers understand the purpose, usage, and behavior of each symbol.
+- **Consistency:**
+  - Use TSDoc syntax for TypeScript files and JSDoc for JavaScript files, but maintain a consistent style throughout the codebase.
+- **Clarity and Brevity:**
+  - Write clear, concise, and informative comments. Avoid redundancy and unnecessary verbosity.
+- **Describe Purpose and Usage:**
+  - Each comment should explain what the symbol does, why it exists, and how it should be used.
+- **Parameters and Return Values:**
+  - Always document parameters with `@param` and return values with `@returns`.
+- **Side Effects and Exceptions:**
+  - If a function has side effects or can throw exceptions, document them with `@remarks` and `@throws`.
+- **Usage Examples:**
+  - Provide usage examples with `@example` where relevant, especially for complex or non-obvious functionality.
+
+## Required Tags and Their Explanations
+
+- **@source**
+  - _Purpose:_ Indicates the source of the documentation block, required for every exported symbol.
+  - _How to use:_ Place `@source` at the bottom of every TSDoc/JSDoc comment for exported symbols.
+  - _Why:_ This tag helps trace documentation back to its origin and ensures consistency across the codebase.
+
+- **@internal**
+  - _Purpose:_ Marks an exported symbol as internal if it is not referenced anywhere else in the codebase and you are updating it to be exported.
+  - _How to use:_ Add `@internal` to the documentation block of any export that is not used elsewhere **only if you are changing it from non-exported to exported** (e.g., only exported for testing or documentation purposes).
+  - _Why:_ Keeps the public API clean by indicating which exports are not intended for external use.
+
+- **@param**
+  - _Purpose:_ Documents each parameter of a function or method.
+  - _How to use:_ For each parameter, add a line with `@param <name> - <description>`.
+  - _Why:_ Clarifies the expected input for functions, improving usability and reducing errors.
+
+- **@returns**
+  - _Purpose:_ Describes the return value of a function or method.
+  - _How to use:_ Add a line with `@returns <description>`.
+  - _Why:_ Helps users understand what to expect from a function call.
+
+- **@throws**
+  - _Purpose:_ Documents any exceptions that a function might throw.
+  - _How to use:_ Add a line with `@throws <description of the error condition>`.
+  - _Why:_ Makes error handling requirements explicit.
+
+- **@example**
+  - _Purpose:_ Provides a code example demonstrating usage.
+  - _How to use:_ Add a code block under `@example` showing typical or recommended usage.
+  - _Why:_ Helps users quickly understand how to use the symbol in practice.
+
+- **@remarks**
+  - _Purpose:_ Adds additional notes or important information about the symbol.
+  - _How to use:_ Use `@remarks` for caveats, side effects, or other noteworthy details.
+  - _Why:_ Ensures important context is not overlooked.
+
+## Module-Level Comments
+
+- **Placement:**
+  - Every module (file) must begin with a TSDoc/JSDoc comment block placed **above all imports**.
+- **Required Tags:**
+  - `@packageDocumentation`: Indicates this is the main documentation for the file/module.
+  - `@module`: Specifies the module name (usually the file name without extension).
+  - `@description`: Provides a concise summary of the module's purpose.
+- **No @source tag:**
+  - Do **not** include `@source` in the module-level comment.
+- **Why:**
+  - Module-level comments provide context for the file as a whole, making it easier to understand its role in the project.
+
+## Exporting Best Practices
+
+- **🚨 EXPORT ABSOLUTELY EVERYTHING:**
+  - All functions, types, interfaces, constants, and symbols **must** be exported. If a symbol is not already exported, make it exported and add the `@internal` tag to its documentation block **only if you are updating it to be exported**.
+  - _No symbol should remain unexported, ever._
+  - **If a symbol is already declared with `declare`, do NOT switch it to `export`. Leave it as `declare`.**
+  - Do NOT add `@internal` to things that are already exported or declared.
+  - **If a type, interface, or declaration cannot be exported inline (e.g., global augmentations or ambient declarations), you MUST export it at the end of the file for documentation purposes.**
+- **Mark Unused Exports:**
+  - Add `@internal` to its documentation **only if you are updating it to be exported**.
+- **Avoid Unnecessary Exports:**
+  - Do not export symbols that are not used or needed for testing, type-checking, or public API. However, if you do export them for completeness, always mark them as `@internal` **only if you are updating them to be exported**.
+
+## Examples
+
+### 1. Exporting a new interface/type (not previously exported)
+
+```ts
+/**
+ * Represents a user profile.
+ *
+ * @source
+ */
+export interface UserProfile {
+  id: string;
+  name: string;
+}
+```
+
+### 2. Already exported interface/type (do nothing, do NOT add @internal)
+
+```ts
+/**
+ * Represents a user session.
+ *
+ * @source
+ */
+export interface UserSession {
+  token: string;
+}
+```
+
+### 3. Exporting a previously non-exported, unused symbol (add @internal)
+
+```ts
+/**
+ * Internal helper for formatting.
+ *
+ * @internal
+ * @source
+ */
+export interface InternalFormatter {
+  format: (input: string) => string;
+}
+```
+
+### 4. Declared symbol (leave as declare, do NOT export or add @internal)
+
+```ts
+/**
+ * Magic constant for the dev server URL.
+ *
+ * @source
+ */
+declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
+```
+
+### 5. Exporting at the end of the file for documentation (for ambient/global types)
+
+```ts
+// ...other code...
+
+/**
+ * Exporting interfaces/types at the end of the file for documentation purposes.
+ * If you have a global or ambient declaration, export it here as well.
+ *
+ * @source
+ */
+export type { ThemeModeContext, ElectronWindow };
+```
+
+### 6. Documenting function parameters and return values
+
+```ts
+/**
+ * Adds two numbers together.
+ *
+ * @param a - The first number.
+ * @param b - The second number.
+ * @returns The sum of `a` and `b`.
+ * @source
+ */
+export const add = (a: number, b: number): number => a + b;
+```
+
+### 7. Documenting thrown exceptions
+
+```ts
+/**
+ * Parses a JSON string.
+ *
+ * @param input - The JSON string to parse.
+ * @returns The parsed object.
+ * @throws If the input is not valid JSON.
+ * @source
+ */
+export const parseJson = (input: string): object => {
+  return JSON.parse(input);
+};
+```
+
+### 8. Documenting usage examples
+
+```ts
+/**
+ * Multiplies two numbers.
+ *
+ * @param x - The first number.
+ * @param y - The second number.
+ * @returns The product of `x` and `y`.
+ * @example
+ * ```ts
+ * multiply(2, 3); // 6
+ * ```
+ * @source
+ */
+export const multiply = (x: number, y: number): number => x * y;
+```
+
+### 9. Documenting remarks and side effects
+
+```ts
+/**
+ * Increments a counter.
+ *
+ * @remarks
+ * This function mutates the input object.
+ * @param counter - The counter object.
+ * @returns The incremented value.
+ * @source
+ */
+export const increment = (counter: { value: number }): number => {
+  counter.value++;
+  return counter.value;
+};
+```
+
+### 10. Module-level comment
+
+```ts
+/**
+ * @packageDocumentation
+ * @module math
+ * @description Utility functions for mathematical operations.
+ */
+```
+
+### 11. Exporting internal utility functions and types (e.g., compareVersions, GitHubRelease)
+
+```ts
+/**
+ * Minimal fields used from the GitHub Release API response.
+ *
+ * @source
+ * @internal
+ */
+export type GitHubRelease = {
+  draft: boolean;
+  prerelease: boolean;
+  tag_name: string;
+  html_url: string;
+};
+
+/**
+ * Compares two version strings (e.g., '1.2.3').
+ *
+ * @param v1 - The first version string.
+ * @param v2 - The second version string.
+ * @returns 1 if v1 > v2, -1 if v1 < v2, 0 if equal.
+ * @source
+ * @internal
+ */
+export function compareVersions(v1: string, v2: string): number {
+  // ...implementation...
+}
+```
+
+> **REMEMBER:** _If you find a symbol that is not exported, you MUST export it and add `@internal` if it is not referenced elsewhere or you are updating it to be exported. If it cannot be exported inline, export it at the end of the file for documentation! Do NOT change `declare` to `export`._
+
+## References
+- [TSDoc Standard](mdc:https:/tsdoc.org/pages/tags)
+
+
+
+- [JSDoc Guide](mdc:https:/jsdoc.app)

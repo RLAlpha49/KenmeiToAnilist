@@ -49,6 +49,8 @@
     "@param",
     "@returns",
     "@throws",
-    "@deprecated"
+    "@deprecated",
+    "@internal",
+    "@remarks"
   ]
 }
