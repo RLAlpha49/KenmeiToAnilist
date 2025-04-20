@@ -1,15 +1,42 @@
 /**
+ * @packageDocumentation
+ * @module app-version
+ * @description Utility functions and types for accessing and comparing the application version, checking for updates, and determining version status.
+ */
+
+/**
  * App version utility
  * Provides a centralized way to access the application version throughout the app
  */
 
 // For renderer process (React)
+/**
+ * Gets the application version for the renderer process (React).
+ *
+ * @returns The current application version as a string.
+ * @example
+ * ```ts
+ * const version = getAppVersion();
+ * ```
+ * @source
+ */
 export const getAppVersion = (): string => {
   // In renderer process, get from env variable set by the main process
   return import.meta.env.VITE_APP_VERSION || "1.0.0";
 };
 
 // For main process (Electron) - use dynamic import since app is only available in main
+/**
+ * Gets the application version for the Electron main process.
+ *
+ * @returns A promise that resolves to the current application version as a string.
+ * @throws If the Electron app module is not available or fetching the version fails.
+ * @example
+ * ```ts
+ * const version = await getAppVersionElectron();
+ * ```
+ * @source
+ */
 export const getAppVersionElectron = async (): Promise<string> => {
   try {
     // Only import app in Electron main process
@@ -26,17 +53,46 @@ export const getAppVersionElectron = async (): Promise<string> => {
 };
 
 // Use this to display version with v prefix
+/**
+ * Gets the formatted application version with a 'v' prefix.
+ *
+ * @returns The formatted version string (e.g., 'v1.0.0').
+ * @example
+ * ```ts
+ * const formatted = getFormattedAppVersion(); // 'v1.0.0'
+ * ```
+ * @source
+ */
 export const getFormattedAppVersion = (): string => {
   return `v${getAppVersion()}`;
 };
 
 // Check for updates by comparing current version with the latest GitHub release
+/**
+ * Information about an available update.
+ *
+ * @source
+ */
 export interface UpdateInfo {
   hasUpdate: boolean;
   latestVersion: string;
   releaseUrl: string;
 }
 
+/**
+ * Checks for updates by comparing the current version with the latest GitHub release.
+ *
+ * @returns A promise that resolves to an UpdateInfo object.
+ * @throws If the GitHub API request fails.
+ * @example
+ * ```ts
+ * const update = await checkForUpdates();
+ * if (update.hasUpdate) {
+ *   // Notify user
+ * }
+ * ```
+ * @source
+ */
 export async function checkForUpdates(): Promise<UpdateInfo> {
   try {
     const response = await fetch(
@@ -76,8 +132,16 @@ export async function checkForUpdates(): Promise<UpdateInfo> {
   }
 }
 
-// Simple version comparison utility
-function compareVersions(v1: string, v2: string): number {
+/**
+ * Compares two version strings (e.g., '1.2.3').
+ *
+ * @param v1 - The first version string.
+ * @param v2 - The second version string.
+ * @returns 1 if v1 > v2, -1 if v1 < v2, 0 if equal.
+ * @internal
+ * @source
+ */
+export function compareVersions(v1: string, v2: string): number {
   const v1Parts = v1.split(".").map(Number);
   const v2Parts = v2.split(".").map(Number);
 
@@ -93,13 +157,24 @@ function compareVersions(v1: string, v2: string): number {
 }
 
 // Version status type
+/**
+ * Represents the status of the application version.
+ *
+ * @source
+ */
 export type AppVersionStatus =
   | { status: "stable"; latestVersion: string; releaseUrl: string }
   | { status: "beta"; latestVersion: string; releaseUrl: string }
   | { status: "development"; latestVersion: string; releaseUrl: string };
 
 // Type for GitHub Release API response (minimal fields used)
-type GitHubRelease = {
+/**
+ * Minimal fields used from the GitHub Release API response.
+ *
+ * @internal
+ * @source
+ */
+export type GitHubRelease = {
   draft: boolean;
   prerelease: boolean;
   tag_name: string;
@@ -109,6 +184,17 @@ type GitHubRelease = {
 /**
  * Checks the app version status (stable, beta, development) by comparing the current version
  * to the latest stable and prerelease versions on GitHub.
+ *
+ * @returns A promise that resolves to the app version status.
+ * @throws If the GitHub API request fails.
+ * @example
+ * ```ts
+ * const status = await getAppVersionStatus();
+ * if (status.status === 'stable') {
+ *   // ...
+ * }
+ * ```
+ * @source
  */
 export async function getAppVersionStatus(): Promise<AppVersionStatus> {
   const currentVersion = getAppVersion();

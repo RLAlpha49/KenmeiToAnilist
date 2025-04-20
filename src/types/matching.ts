@@ -1,3 +1,9 @@
+/**
+ * @packageDocumentation
+ * @module matching-types
+ * @description TypeScript types and interfaces for manga matching, progress, errors, and handler props.
+ */
+
 import { KenmeiManga } from "../api/kenmei/types";
 import { MangaMatchResult } from "../api/anilist/types";
 
@@ -24,7 +30,17 @@ declare global {
   }
 }
 
-// Define a type for API errors
+/**
+ * Represents an API error object.
+ *
+ * @property name - The error name.
+ * @property message - The error message.
+ * @property status - The HTTP status code.
+ * @property statusText - The HTTP status text.
+ * @property stack - The error stack trace.
+ * @property errors - An array of error messages.
+ * @source
+ */
 export interface ApiError {
   name?: string;
   message?: string;
@@ -35,21 +51,44 @@ export interface ApiError {
   [key: string]: unknown;
 }
 
-// Interface for the progress state
+/**
+ * Represents the progress state of the matching process.
+ *
+ * @property current - The current progress count.
+ * @property total - The total number of items to process.
+ * @property currentTitle - The title currently being processed.
+ * @source
+ */
 export interface MatchingProgress {
   current: number;
   total: number;
   currentTitle: string | undefined;
 }
 
-// Interface for time estimate
+/**
+ * Represents a time estimate for the matching process.
+ *
+ * @property startTime - The timestamp when the process started.
+ * @property averageTimePerManga - The average time per manga in seconds.
+ * @property estimatedRemainingSeconds - The estimated seconds remaining.
+ * @source
+ */
 export interface TimeEstimate {
   startTime: number;
   averageTimePerManga: number;
   estimatedRemainingSeconds: number;
 }
 
-// Interface for status filter options
+/**
+ * Represents status filter options for the matching UI.
+ *
+ * @property pending - Whether to show pending items.
+ * @property skipped - Whether to show skipped items.
+ * @property matched - Whether to show matched items.
+ * @property manual - Whether to show manually matched items.
+ * @property unmatched - Whether to show unmatched items.
+ * @source
+ */
 export interface StatusFilterOptions {
   pending: boolean;
   skipped: boolean;
@@ -58,7 +97,16 @@ export interface StatusFilterOptions {
   unmatched: boolean;
 }
 
-// Props for components that receive match handlers
+/**
+ * Props for components that receive match handler functions.
+ *
+ * @property onManualSearch - Handler for manual search action.
+ * @property onAcceptMatch - Handler for accepting a match.
+ * @property onRejectMatch - Handler for rejecting a match.
+ * @property onSelectAlternative - Handler for selecting an alternative match.
+ * @property onResetToPending - Handler for resetting a match to pending.
+ * @source
+ */
 export interface MatchHandlersProps {
   onManualSearch: (manga: KenmeiManga) => void;
   onAcceptMatch: (match: MangaMatchResult) => void;

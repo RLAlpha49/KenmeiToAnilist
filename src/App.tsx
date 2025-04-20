@@ -1,3 +1,8 @@
+/**
+ * @packageDocumentation
+ * @module App
+ * @description Main React application entry point. Sets up providers and mounts the router for the KenmeiToAnilist app.
+ */
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { router } from "./routes/router";
@@ -7,6 +12,14 @@ import { SonnerProvider } from "./components/ui/sonner-provider";
 import { RateLimitProvider } from "./contexts/RateLimitContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 
+/**
+ * The main application component for KenmeiToAnilist.
+ *
+ * Sets up theme, authentication, rate limit, and notification providers, and renders the router.
+ *
+ * @returns The root React element for the application.
+ * @source
+ */
 export default function App() {
   return (
     <ThemeProvider>

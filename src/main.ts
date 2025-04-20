@@ -1,3 +1,9 @@
+/**
+ * @packageDocumentation
+ * @module main
+ * @description Electron main process entry point. Handles window creation, Sentry initialization, Windows installer events, and environment setup for the renderer process.
+ */
+
 import { app, BrowserWindow } from "electron";
 import registerListeners from "./helpers/ipc/listeners-register";
 import squirrelStartup from "electron-squirrel-startup";
@@ -22,7 +28,13 @@ Sentry.init({
 if (process.platform === "win32") {
   const squirrelCommand = process.argv[1];
 
-  // Check if we're running under Windows installer setup
+  /**
+   * Handles Windows Squirrel installer events (install, update, uninstall, obsolete).
+   *
+   * @returns True if a Squirrel event was handled and the app should quit, false otherwise.
+   * @remarks
+   * This function is only relevant on Windows platforms when using Squirrel for installation.
+   */
   const handleSquirrelEvent = () => {
     if (process.argv.length === 1) {
       return false;
@@ -75,6 +87,12 @@ const inDevelopment = process.env.NODE_ENV === "development";
 // Make app version available to the renderer process
 process.env.VITE_APP_VERSION = app.getVersion();
 
+/**
+ * Creates the main application window and registers IPC listeners.
+ *
+ * @remarks
+ * Sets up the preload script, window options, and loads the appropriate URL or file depending on environment.
+ */
 function createWindow() {
   const preload = path.join(__dirname, "preload.js");
   const mainWindow = new BrowserWindow({
@@ -100,6 +118,13 @@ function createWindow() {
   }
 }
 
+/**
+ * Installs development extensions (e.g., React Developer Tools) in development mode.
+ *
+ * @returns A promise that resolves when extensions are installed.
+ * @remarks
+ * Only runs in development mode. Logs errors to the console if installation fails.
+ */
 async function installExtensions() {
   try {
     const result = await installExtension(REACT_DEVELOPER_TOOLS);
@@ -124,3 +149,5 @@ app.on("activate", () => {
   }
 });
 //osX only ends
+
+export { createWindow, installExtensions };

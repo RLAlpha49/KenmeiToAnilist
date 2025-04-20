@@ -1,11 +1,22 @@
 /**
- * Utilities for exporting data to files
+ * @packageDocumentation
+ * @module export-utils
+ * @description Utilities for exporting sync reports, error logs, and arbitrary data to files or localStorage.
  */
 
 import { SyncReport } from "../api/anilist/sync-service";
 
 /**
- * Exports sync error logs to a JSON file
+ * Exports sync error logs to a JSON file.
+ *
+ * @param report - The sync report containing errors to export.
+ * @remarks
+ * If there are no errors, a warning is logged and no file is exported.
+ * @example
+ * ```ts
+ * exportSyncErrorLog(report);
+ * ```
+ * @source
  */
 export function exportSyncErrorLog(report: SyncReport): void {
   if (!report || !report.errors.length) {
@@ -54,7 +65,16 @@ export function exportSyncErrorLog(report: SyncReport): void {
 }
 
 /**
- * Exports a full sync report to a JSON file
+ * Exports a full sync report to a JSON file.
+ *
+ * @param report - The sync report to export.
+ * @remarks
+ * If the report is missing, a warning is logged and no file is exported.
+ * @example
+ * ```ts
+ * exportSyncReport(report);
+ * ```
+ * @source
  */
 export function exportSyncReport(report: SyncReport): void {
   if (!report) {
@@ -94,7 +114,16 @@ export function exportSyncReport(report: SyncReport): void {
 }
 
 /**
- * Saves a sync report to localStorage for later reference
+ * Saves a sync report to localStorage for later reference.
+ *
+ * @param report - The sync report to save.
+ * @remarks
+ * Keeps up to 10 most recent reports in history.
+ * @example
+ * ```ts
+ * saveSyncReportToHistory(report);
+ * ```
+ * @source
  */
 export function saveSyncReportToHistory(report: SyncReport): void {
   try {
@@ -118,7 +147,14 @@ export function saveSyncReportToHistory(report: SyncReport): void {
 }
 
 /**
- * Gets sync history from localStorage
+ * Gets sync history from localStorage.
+ *
+ * @returns An array of previously saved sync reports.
+ * @example
+ * ```ts
+ * const history = getSyncHistory();
+ * ```
+ * @source
  */
 export function getSyncHistory(): SyncReport[] {
   try {
@@ -137,7 +173,15 @@ export function getSyncHistory(): SyncReport[] {
 }
 
 /**
- * Creates and downloads a JSON file with the provided data
+ * Creates and downloads a JSON file with the provided data.
+ *
+ * @param data - The data to export as JSON.
+ * @param filename - The name of the file to download (default: 'export.json').
+ * @example
+ * ```ts
+ * downloadJson({ foo: 'bar' }, 'myfile.json');
+ * ```
+ * @source
  */
 export function downloadJson<T extends Record<string, unknown>>(
   data: T,
@@ -165,7 +209,15 @@ export function downloadJson<T extends Record<string, unknown>>(
 }
 
 /**
- * Exports data to a JSON file with the given filename
+ * Exports data to a JSON file with the given filename.
+ *
+ * @param data - The data to export as JSON.
+ * @param filename - The name of the file to download (default: 'export.json').
+ * @example
+ * ```ts
+ * exportDataToFile({ foo: 'bar' }, 'myfile.json');
+ * ```
+ * @source
  */
 export function exportDataToFile<T extends Record<string, unknown>>(
   data: T,

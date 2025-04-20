@@ -1,4 +1,10 @@
 /**
+ * @packageDocumentation
+ * @module timeUtils
+ * @description Utility functions for formatting time values into human-readable strings.
+ */
+
+/**
  * Format seconds into a human-readable time string
  */
 export const formatTimeRemaining = (seconds: number): string => {

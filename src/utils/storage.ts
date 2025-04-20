@@ -1,4 +1,8 @@
-// Define the window interface for TypeScript
+/**
+ * @packageDocumentation
+ * @module storage
+ * @description Storage utilities for Kenmei data, sync configuration, and match results. Provides abstraction over localStorage and electron-store for persistence and migration.
+ */
 declare global {
   interface Window {
     electronStore: {
@@ -10,7 +14,11 @@ declare global {
   }
 }
 
-// Define proper types for the Kenmei data structure
+/**
+ * Represents a manga entry in Kenmei.
+ *
+ * @source
+ */
 export interface KenmeiManga {
   id: string | number;
   title: string;
@@ -23,17 +31,32 @@ export interface KenmeiManga {
   updated_at: string;
 }
 
+/**
+ * Represents the Kenmei data structure.
+ *
+ * @source
+ */
 export interface KenmeiData {
   manga?: KenmeiManga[];
   // Add other data properties as needed
 }
 
+/**
+ * Represents import statistics for Kenmei data.
+ *
+ * @source
+ */
 export interface ImportStats {
   total: number;
   timestamp: string;
   statusCounts: Record<string, number>;
 }
 
+/**
+ * Represents an AniList match for a manga entry.
+ *
+ * @source
+ */
 export interface AnilistMatch {
   id: number;
   title: {
@@ -50,6 +73,11 @@ export interface AnilistMatch {
   matchConfidence?: number;
 }
 
+/**
+ * Represents a match result between Kenmei and AniList.
+ *
+ * @source
+ */
 export interface MatchResult {
   kenmeiManga: KenmeiManga;
   anilistMatches?: AnilistMatch[];
@@ -58,12 +86,17 @@ export interface MatchResult {
   matchDate?: string;
 }
 
-// Cache to avoid redundant storage operations
+/**
+ * In-memory cache for storage values to avoid redundant operations.
+ *
+ * @source
+ */
 export const storageCache: Record<string, string> = {};
 
 /**
- * Storage utility to abstract storage operations
- * This replaces direct localStorage usage with electron-store for persistence
+ * Storage utility to abstract storage operations. Replaces direct localStorage usage with electron-store for persistence.
+ *
+ * @source
  */
 export const storage = {
   /**
@@ -202,7 +235,11 @@ export const storage = {
   },
 };
 
-// Storage keys
+/**
+ * Storage keys used for Kenmei data, import stats, match results, and configuration.
+ *
+ * @source
+ */
 export const STORAGE_KEYS = {
   KENMEI_DATA: "kenmei_data",
   IMPORT_STATS: "import_stats",
@@ -212,10 +249,18 @@ export const STORAGE_KEYS = {
   SYNC_CONFIG: "sync_config",
 };
 
-// Current cache version - increment this when incompatible changes are made to the data structure
+/**
+ * The current cache version. Increment this when incompatible changes are made to the data structure.
+ *
+ * @source
+ */
 export const CURRENT_CACHE_VERSION = 1;
 
-// Define the sync configuration type
+/**
+ * Sync configuration options for the application.
+ *
+ * @source
+ */
 export type SyncConfig = {
   prioritizeAniListStatus: boolean;
   prioritizeAniListProgress: boolean;
@@ -231,6 +276,11 @@ export type SyncConfig = {
   overwriteExisting: boolean;
 };
 
+/**
+ * The default sync configuration.
+ *
+ * @source
+ */
 export const DEFAULT_SYNC_CONFIG: SyncConfig = {
   prioritizeAniListStatus: false,
   prioritizeAniListProgress: true,
@@ -247,8 +297,14 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
 };
 
 /**
- * Save Kenmei manga data to storage
- * @param data The Kenmei data to save
+ * Saves Kenmei manga data to storage and updates import stats and cache version.
+ *
+ * @param data - The Kenmei data to save.
+ * @example
+ * ```ts
+ * saveKenmeiData(data);
+ * ```
+ * @source
  */
 export function saveKenmeiData(data: KenmeiData): void {
   try {
@@ -276,8 +332,14 @@ export function saveKenmeiData(data: KenmeiData): void {
 }
 
 /**
- * Get Kenmei manga data from storage
- * @returns The saved Kenmei data or null if not found
+ * Gets Kenmei manga data from storage.
+ *
+ * @returns The saved Kenmei data or null if not found.
+ * @example
+ * ```ts
+ * const data = getKenmeiData();
+ * ```
+ * @source
  */
 export function getKenmeiData(): KenmeiData | null {
   try {
@@ -290,8 +352,14 @@ export function getKenmeiData(): KenmeiData | null {
 }
 
 /**
- * Get import statistics from storage
- * @returns The import stats or null if not found
+ * Gets import statistics from storage.
+ *
+ * @returns The import stats or null if not found.
+ * @example
+ * ```ts
+ * const stats = getImportStats();
+ * ```
+ * @source
  */
 export function getImportStats(): ImportStats | null {
   try {
@@ -304,11 +372,15 @@ export function getImportStats(): ImportStats | null {
 }
 
 /**
+ * @internal
  * Calculate status counts from Kenmei data
  * @param data The Kenmei data
  * @returns An object with counts for each status
+ * @source
  */
-function getStatusCountsFromData(data: KenmeiData): Record<string, number> {
+export function getStatusCountsFromData(
+  data: KenmeiData,
+): Record<string, number> {
   if (!data?.manga?.length) return {};
 
   return data.manga.reduce(
@@ -322,8 +394,14 @@ function getStatusCountsFromData(data: KenmeiData): Record<string, number> {
 }
 
 /**
- * Get saved match results from storage
- * @returns The saved match results or null if not found or incompatible
+ * Gets saved match results from storage, checking cache version compatibility.
+ *
+ * @returns The saved match results or null if not found or incompatible.
+ * @example
+ * ```ts
+ * const results = getSavedMatchResults();
+ * ```
+ * @source
  */
 export function getSavedMatchResults(): MatchResult[] | null {
   try {
@@ -348,9 +426,15 @@ export function getSavedMatchResults(): MatchResult[] | null {
 }
 
 /**
- * Merge new match results with existing ones to preserve user progress
- * @param newResults The new matching results
- * @returns Merged results with preserved user progress
+ * Merges new match results with existing ones to preserve user progress.
+ *
+ * @param newResults - The new matching results.
+ * @returns Merged results with preserved user progress.
+ * @example
+ * ```ts
+ * const merged = mergeMatchResults(newResults);
+ * ```
+ * @source
  */
 export function mergeMatchResults(newResults: MatchResult[]): MatchResult[] {
   try {
@@ -480,8 +564,14 @@ export function mergeMatchResults(newResults: MatchResult[]): MatchResult[] {
 }
 
 /**
- * Save sync configuration to storage
- * @param config The sync configuration to save
+ * Saves sync configuration to storage.
+ *
+ * @param config - The sync configuration to save.
+ * @example
+ * ```ts
+ * saveSyncConfig(config);
+ * ```
+ * @source
  */
 export function saveSyncConfig(config: SyncConfig): void {
   try {
@@ -492,8 +582,14 @@ export function saveSyncConfig(config: SyncConfig): void {
 }
 
 /**
- * Get sync configuration from storage
- * @returns The saved sync configuration or default config if not found
+ * Gets sync configuration from storage.
+ *
+ * @returns The saved sync configuration or default config if not found.
+ * @example
+ * ```ts
+ * const config = getSyncConfig();
+ * ```
+ * @source
  */
 export function getSyncConfig(): SyncConfig {
   try {
