@@ -23,7 +23,7 @@ jobs:
           cache: "npm"
 
       - name: Install Dependencies
-        run: npm ci
+        run: npm ci --force
 
       - name: Generate TypeDoc Documentation
         run: npm run docs

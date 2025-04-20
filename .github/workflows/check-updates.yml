@@ -24,7 +24,7 @@ jobs:
         with:
           node-version: 22
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --force
       - name: Install npm-check-updates and tools
         run: |
           npm install -g npm-check-updates

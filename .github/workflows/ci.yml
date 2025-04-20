@@ -31,7 +31,7 @@ jobs:
           key: ${{ steps.cache-key.outputs.key }}
       - name: Install dependencies
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: npm ci
+        run: npm ci --force
 
   unit-test:
     needs: setup
@@ -63,7 +63,7 @@ jobs:
           node-version: 22.x
           cache: "npm"
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --force
       - name: Run tests with coverage
         run: npm run test:coverage
         continue-on-error: true
@@ -163,7 +163,7 @@ jobs:
           name: windows-build
           path: out
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --force
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
       - name: Run E2E tests
@@ -190,7 +190,7 @@ jobs:
           name: macos-build
           path: out
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --force
       - name: Set executable permissions
         run: |
           find out -name "*.app" -type d | while read app; do
@@ -226,7 +226,7 @@ jobs:
           name: linux-build
           path: out
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --force
       - name: Debug Linux structure
         run: |
           echo "Directory contents:"
