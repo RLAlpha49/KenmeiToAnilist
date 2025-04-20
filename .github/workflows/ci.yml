@@ -1,0 +1,295 @@
+name: CI Suite
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      cache-key: ${{ steps.cache-key.outputs.key }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate cache key
+        id: cache-key
+        run: echo "key=node-modules-${{ hashFiles('**/package-lock.json') }}" >> $GITHUB_OUTPUT
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: "npm"
+      - name: Cache dependencies
+        id: cache-deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ~/.npm
+          key: ${{ steps.cache-key.outputs.key }}
+      - name: Install dependencies
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: npm ci
+
+  unit-test:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+      - name: Restore cached dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ~/.npm
+          key: ${{ needs.setup.outputs.cache-key }}
+      - name: Run unit tests
+        run: npm run test
+
+  coverage:
+    name: Code Coverage
+    needs: [setup, unit-test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci
+      - name: Run tests with coverage
+        run: npm run test:coverage
+        continue-on-error: true
+      - name: Check coverage thresholds
+        run: npm run test:check-coverage
+        continue-on-error: true
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+        continue-on-error: true
+      - name: Archive code coverage results
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-report
+          path: coverage/
+
+  build-windows:
+    name: Build Windows Artifacts
+    needs: setup
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Dependencies
+        run: npm install
+      - name: Build Application
+        run: npm run make
+      - name: Upload Windows Build Artifacts (.exe and .msi)
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: out
+
+  build-macos:
+    name: Build macOS Artifacts
+    needs: setup
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Dependencies
+        run: npm install
+      - name: Build Application
+        run: npm run make
+      - name: Upload macOS Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: out
+
+  build-linux:
+    name: Build Linux Artifacts
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Dependencies
+        run: npm install
+      - name: Build Application
+        run: npm run make
+      - name: Upload Linux Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: out
+
+  e2e-test-windows:
+    needs: build-windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+      - name: Download Windows build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-build
+          path: out
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+      - name: Run E2E tests
+        run: npm run test:e2e
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-windows
+          path: playwright-report/
+
+  e2e-test-macos:
+    needs: build-macos
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+      - name: Download macOS build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-build
+          path: out
+      - name: Install dependencies
+        run: npm ci
+      - name: Set executable permissions
+        run: |
+          find out -name "*.app" -type d | while read app; do
+            if [ -d "$app/Contents/MacOS" ]; then
+              echo "Setting permissions for $app/Contents/MacOS"
+              chmod +x "$app/Contents/MacOS/"*
+              ls -la "$app/Contents/MacOS/"
+            fi
+          done
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+      - name: Run E2E tests
+        run: npm run test:e2e
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-macos
+          path: playwright-report/
+
+  e2e-test-linux:
+    needs: build-linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+      - name: Download Linux build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-build
+          path: out
+      - name: Install dependencies
+        run: npm ci
+      - name: Debug Linux structure
+        run: |
+          echo "Directory contents:"
+          find out -type f | sort
+          echo "Directory structure:"
+          find out -type d | sort
+          echo "Check if the actual electron app exists:"
+          find out -type f -executable || echo "No executable files found"
+      - name: Set executable permissions
+        run: |
+          find out -type f -name "kenmei-to-anilist" -o -name "chrome_crashpad_handler" -o -name "chrome-sandbox" | xargs -I{} chmod +x {}
+          if [ -d "out/Kenmei to Anilist-linux-x64" ]; then
+            echo "Making all files in main app directory executable"
+            find "out/Kenmei to Anilist-linux-x64" -type f -exec chmod +x {} \;
+          fi
+          if [ -d "out/Kenmei to Anilist-linux-x64/resources/app.asar.unpacked" ]; then
+            echo "Making unpacked asar binaries executable"
+            find "out/Kenmei to Anilist-linux-x64/resources/app.asar.unpacked" -type f -not -path "*/node_modules/*" -exec chmod +x {} \;
+          fi
+          if [ -f "out/make/deb/x64/kenmei-to-anilist_3.0.0_amd64.deb" ]; then
+            echo "Making DEB file executable"
+            chmod +x "out/make/deb/x64/kenmei-to-anilist_3.0.0_amd64.deb"
+          fi
+          echo "Executable files after permission update:"
+          find out -type f -executable | sort
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgtk-3-0 \
+            libnotify-dev \
+            libnss3 \
+            libxss1 \
+            libpulse0 \
+            libxtst6 \
+            xvfb \
+            libgbm-dev \
+            libxkbcommon-x11-0 \
+            xauth \
+            libatk-bridge2.0-0 \
+            libcups2 \
+            libdrm2 \
+            libatspi2.0-0 \
+            libpango-1.0-0 \
+            libcairo2 \
+            libasound2-plugins
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+      - name: Run E2E tests
+        run: |
+          echo "Attempting to run tests with Xvfb..."
+          export DISPLAY=:99
+          Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+          npm run test:e2e || {
+            echo "Xvfb approach failed, trying alternative with xvfb-run..."
+            xvfb-run --auto-servernum npm run test:e2e || {
+              echo "xvfb-run approach failed, trying with ELECTRON_NO_ATTACH_CONSOLE=1..."
+              ELECTRON_NO_ATTACH_CONSOLE=1 DISPLAY=:99 npm run test:e2e
+            }
+          }
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-linux
+          path: playwright-report/

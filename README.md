@@ -1,66 +1,138 @@
-<div align="center">
+# Kenmei to Anilist
 
-![Anilist-Manga-Updater-Logo2](https://github.com/RLAlpha49/Anilist-Manga-Updater/assets/75044176/80dad30b-982d-4bbe-a66c-72f351757701)
+![App Icon](./src/assets/k2a-icon-512x512.png)
 
-<h1 align="center">Anilist-Manga-Updater</h1>
-</div>
+> Effortlessly migrate and synchronize your manga library from Kenmei to AniList with a beautiful, modern desktop app. 🚀
 
-## Getting Started
+---
 
-Download the latest release and run the .exe file given.
+## 📸 Screenshots
 
-To run the exe file for Linux, you will need to use Wine or another Windows emulator.
+- **Home Page**  
+  ![Home Page Screenshot](./demo/home-page.png)
+- **Import Kenmei CSV**  
+  ![Import Screenshot](./demo/import-page.png)
+- **Smart Matching**  
+  ![Matching Screenshot](./demo/review-page.png)
+- **Sync to AniList**  
+  ![Sync Screenshot](./demo/sync-page.png)
+- **Settings**  
+  ![Settings Screenshot](./demo/settings-page.png)
 
-P.S. Due to compiling Python files using pyinstaller, certain antivirus programs give a false positive. You may need to exclude the exe file in your antivirus.\
-You could also run the files yourself. Just download the ZIP file of the source code, extract it, get dependency through [poetry](https://python-poetry.org/docs/) or other methods (This project uses poetry for dependency management, but is not required), and run the main.py file.
+---
 
-Most buttons and objects when hovered have tooltips connected which explains the functionality and other information regarding them. Please check them if you are confused on what things do, or just contact me.
+## ✨ Features
+
+- **Import from Kenmei**: Easily import your entire manga collection from a Kenmei CSV export.
+- **Smart Matching**: An algorithm matches your manga to AniList entries.
+- **One-Click Sync**: Synchronize your collection to AniList with a single click after reviewing matches.
+- **Auto-Pause Manga**: Automatically pause manga that haven't been updated within a customizable time period.
+- **Flexible Configuration**: Customize how synchronization works with priority settings for status, progress, and scores.
+- **Modern UI/UX**: Built with React, TailwindCSS, and Radix UI for a beautiful, accessible experience.
+
+---
+
+## 🛠️ How It Works
+
+1. **Import**: Export your manga library from Kenmei as a CSV and import it into the app.
+2. **Match**: The app automatically matches your manga to AniList entries. Review and adjust matches as needed.
+3. **Review**: See a summary of your collection and any issues before syncing.
+4. **Sync**: With one click, sync your collection to AniList, including status, progress, and privacy settings.
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
 
-#### Getting list from [Kenmei](https://www.kenmei.co)
-
-1. In settings under the dashboard you can export your list as a .csv file.
-   ![Screenshot 2023-11-12 000629](https://github.com/RLAlpha49/Anilist-Manga-Updater/assets/75044176/07e7da8e-8e6c-44c7-85a8-4117fab05afb)
-   | `Kenmei` Export
-
-2. Import this file into the program with the browse button
-    - (Optional) There is a second button for a "Previous" export file. This is for if you have already run the program before, import the previous export file as the file you used last time and your current one as the one you want to run now. This will find the difference between the 2 and only update what was different.
-       - This speeds up the program a lot, however, you need to have run the program once before to do this.
+- [Node.js](https://nodejs.org/) (v18+ recommended)
+- [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
 
 ### Installation
 
-1. You will need to set up an API in Anilist connected to your account. (In Settings under the developer tab)
-    - Name the new client whatever you would like, I chose "MangaUpdater"
-    - Set the redirect URL to "<https://anilist.co/api/v2/oauth/pin>"
-    - A benefit to each person making their API client is that as long as none of the authentication information is shared, you are the sole person who has access to the account with that authentication
-2. When running the program it will ask you for the following client ID and secret values generated from the API client. (They are saved to the config.json file)
-    - DO NOT share the ID or Secret values, someone can get full access to your account.
-3. The script may need you to reauthenticate if the token is invalid.
+```bash
+# Clone the repository
+git clone https://github.com/RLAlpha49/KenmeiToAnilist.git
+cd KenmeiToAnilist
 
-![Screenshot 2023-11-15 165937](https://github.com/RLAlpha49/Anilist-Manga-Updater/assets/75044176/4b69cf6f-a98c-4dbc-ad03-bab83c9a8d35)
-| `Anilist` API Settings
+# Install dependencies
+npm install
+# or
+yarn install
+```
 
-<!-- USAGE EXAMPLES -->
-## Usage
+### Running the App (Development)
 
-![Capture](https://github.com/RLAlpha49/Anilist-Manga-Updater/assets/75044176/7f5273fb-a305-4ac9-8251-e61b26bebe97)
+```bash
+npm start
+# or
+yarn start
+```
 
-| `GUI.py` GUI At Startup
+### Building for Production
 
-Currently, I use this script to update my manga list from my [Kenmei](https://www.kenmei.co) account.
-If you have any features you would like added, please let me know.
+```bash
+npm run make
+# or
+yarn make
+```
 
-The script outputs 3 different text files when finished.
+### Environment Variables
 
-- One which has manga that was found to have multiple different IDs associated with it. (usually due to the name being found as a direct match in English or Romaji and others which has matches in synonyms)
-  - This file also gives the Anilist links to the manga so that they can be individually checked.
-- The second one is manga which was found to not have any English, Romaji, or synonym name matches. (Most times this is due to translations of titles being different from the input sources and Anilist)
-  - You can then search these names separately on Anilist to see if you can get any results.
-- The third is in a sub directory which keeps track of how many chapters are updated each time you run the program.
+Create a `.env` file in the root if you want to override AniList credentials:
 
-<!-- CONTACT -->
-## Contact
+```env
+VITE_ANILIST_CLIENT_ID=your-client-id
+VITE_ANILIST_CLIENT_SECRET=your-client-secret
+```
 
-[Discord - alpha49](https://discordid.netlify.app/?id=251479989378220044)\
-[Anilist - Alpha49](https://anilist.co/user/Alpha49/)
+> Default values are set in `src/config/anilist.ts`. You can also configure credentials in the app's Settings page.
+
+---
+
+## 📦 Usage
+
+1. **Export from Kenmei**: In Kenmei, export your manga library as a CSV file.
+2. **Import in App**: Drag and drop or select your CSV file in the Import page.
+3. **Review & Match**: The app will auto-match your manga. Review and adjust any mismatches.
+4. **Sync to AniList**: Click sync to update your AniList library.
+5. **Configure Settings**: Adjust sync options, privacy, and credentials in the Settings page.
+
+---
+
+## 🏗️ Tech Stack
+
+- **Electron** – Desktop app framework
+- **React** – UI library
+- **TypeScript** – Type safety
+- **TailwindCSS** – Utility-first CSS
+- **Radix UI** – Accessible UI primitives
+- **Vite** – Fast build tool
+- **Vitest** – Unit testing
+- **Playwright** – End-to-end testing
+
+---
+
+## 🧪 Testing
+
+- **Unit Tests**: `npm run test:unit` or `yarn test:unit`
+- **E2E Tests**: `npm run test:e2e` or `yarn test:e2e`
+- **All Tests**: `npm run test:all` or `yarn test:all`
+- **Coverage**: `npm run test:coverage`
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+
+- Fork the repo and create your branch
+- Follow the code style
+- Open a pull request with a clear description
+- For major changes, open an issue first to discuss
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License. See [LICENSE](./LICENSE) for details.

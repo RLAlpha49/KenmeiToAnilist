@@ -1,1 +1,0 @@
-::: AnilistMangaUpdater.Utils.Config

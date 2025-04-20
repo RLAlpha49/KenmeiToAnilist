@@ -1,0 +1,77 @@
+name: Delete Old Artifacts
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete artifacts from non-latest build workflow runs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ARTIFACT_DELETE_TOKEN: ${{ secrets.ARTIFACT_DELETE_TOKEN }}
+        run: |
+          #!/bin/bash
+          set -euo pipefail
+
+          echo "Cleaning up build artifacts not associated with the latest commit on branch '$GITHUB_REF_NAME'"
+
+          # The repository in form "owner/repo"
+          owner_repo="${GITHUB_REPOSITORY}"
+          # Extract branch name from ref (refs/heads/branch)
+          branch="${GITHUB_REF##*/}"
+          # Current commit SHA triggering this workflow
+          current_sha="${GITHUB_SHA}"
+
+          echo "Repository: $owner_repo"
+          echo "Branch: $branch"
+          echo "Current commit: $current_sha"
+
+          # List workflow runs for this branch
+          runs_json=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${owner_repo}/actions/runs?branch=${branch}&per_page=100")
+
+          # Filter for workflow runs that are completed and that do not match the current commit
+          delete_run_ids=$(echo "$runs_json" | jq --raw-output --arg current_sha "$current_sha" '.workflow_runs[] | select(.head_sha != $current_sha and .status=="completed") | .id')
+
+          if [ -z "$delete_run_ids" ]; then
+            echo "No older, completed workflow runs found to clean up."
+            exit 0
+          fi
+
+          for run_id in $delete_run_ids; do
+            echo "Processing workflow run ID: $run_id"
+
+            # Get the workflow name for this run
+            workflow_json=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/${owner_repo}/actions/runs/${run_id}")
+            workflow_name=$(echo "$workflow_json" | jq --raw-output '.name')
+            
+            # Skip if not the build workflow
+            if [[ "$workflow_name" != "CI Suite" ]]; then
+              echo "Skipping workflow '$workflow_name' as it's not the CI workflow"
+              continue
+            fi
+
+            echo "Found build workflow run: $run_id ($workflow_name)"
+
+            # List artifacts in this workflow run
+            artifacts_json=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/${owner_repo}/actions/runs/${run_id}/artifacts")
+            artifact_ids=$(echo "$artifacts_json" | jq --raw-output '.artifacts[] | .id')
+
+            if [ -z "$artifact_ids" ]; then
+              echo "No artifacts found for run $run_id"
+              continue
+            fi
+
+            for artifact_id in $artifact_ids; do
+              echo "Deleting artifact ID: $artifact_id from build run $run_id"
+              curl -s -X DELETE -H "Authorization: token ${ARTIFACT_DELETE_TOKEN}" \
+                "https://api.github.com/repos/${owner_repo}/actions/artifacts/${artifact_id}"
+            done
+          done
