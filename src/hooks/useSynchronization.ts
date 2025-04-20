@@ -387,7 +387,7 @@ export function useSynchronization(): [
         isActive: false,
         abortController: null,
         // Set a special error string for cancellation
-        error: "cancelled",
+        error: "Synchronization cancelled by user",
         // Preserve the current report if any (partial results)
         report: prev.report || null,
       }));

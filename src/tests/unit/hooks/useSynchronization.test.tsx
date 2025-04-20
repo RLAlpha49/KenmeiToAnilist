@@ -101,6 +101,7 @@ describe("useSynchronization", () => {
       mockToken,
       expect.any(Function),
       expect.any(Object), // AbortSignal
+      expect.any(Array), // displayOrderMediaIds
     );
 
     // Since the mock implementation of syncMangaBatch completes immediately,

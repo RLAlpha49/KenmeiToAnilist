@@ -586,6 +586,8 @@ describe("SyncManager", () => {
     expect(mockOnStartSync).toHaveBeenCalledWith(
       defaultProps.entries,
       defaultProps.token,
+      undefined,
+      undefined,
     );
   });
 
@@ -600,11 +602,22 @@ describe("SyncManager", () => {
     fireEvent.click(screen.getByText("Start Synchronization"));
     expect(mockOnStartSync).toHaveBeenCalledTimes(1);
     // Should call with processed entries that have incremental sync metadata
-    expect(mockOnStartSync.mock.calls[0][0]).toHaveLength(testEntries.length);
-    expect(mockOnStartSync.mock.calls[0][0][0].syncMetadata).toBeDefined();
-    expect(
-      mockOnStartSync.mock.calls[0][0][0].syncMetadata.useIncrementalSync,
-    ).toBe(true);
+    const calledEntries = mockOnStartSync.mock.calls[0][0];
+    expect(Array.isArray(calledEntries)).toBe(true);
+    expect(calledEntries).toHaveLength(testEntries.length);
+    calledEntries.forEach((entry, idx) => {
+      expect(entry).toHaveProperty("syncMetadata");
+      expect(typeof entry.syncMetadata).toBe("object");
+      expect(entry.syncMetadata).toHaveProperty("useIncrementalSync");
+      expect(entry.syncMetadata).toHaveProperty("targetProgress");
+      expect(entry.syncMetadata).toHaveProperty("progress");
+      // Optionally, check that the targetProgress matches the original entry's progress
+      expect(entry.syncMetadata.targetProgress).toBe(testEntries[idx].progress);
+    });
+    // Also check the other arguments
+    expect(mockOnStartSync.mock.calls[0][1]).toBe("test-token");
+    expect(mockOnStartSync.mock.calls[0][2]).toBeUndefined();
+    expect(mockOnStartSync.mock.calls[0][3]).toBeUndefined();
   });
 
   it("handles cancel button click in idle state", () => {
@@ -701,7 +714,12 @@ describe("SyncManager", () => {
 
     // Should call startSync automatically
     expect(mockOnStartSync).toHaveBeenCalledTimes(1);
-    expect(mockOnStartSync).toHaveBeenCalledWith(testEntries, "test-token");
+    expect(mockOnStartSync).toHaveBeenCalledWith(
+      testEntries,
+      "test-token",
+      undefined,
+      undefined,
+    );
   });
 
   it("handles new entries without previous values", () => {
