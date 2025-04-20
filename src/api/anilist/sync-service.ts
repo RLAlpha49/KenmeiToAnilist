@@ -545,12 +545,45 @@ export async function syncMangaBatch(
   token: string,
   onProgress?: (progress: SyncProgress) => void,
   abortSignal?: AbortSignal,
+  displayOrderMediaIds?: number[],
 ): Promise<SyncReport> {
   const results: SyncResult[] = [];
   const errors: { mediaId: number; error: string }[] = [];
 
+  // Group entries by mediaId for handling incremental sync properly
+  const entriesByMediaId: Record<number, AniListMediaEntry[]> = {};
+
+  // Organize entries by mediaId
+  entries.forEach((entry) => {
+    if (entry.syncMetadata?.useIncrementalSync) {
+      const stepCount = 3;
+      for (let step = 1; step <= stepCount; step++) {
+        const stepEntry = { ...entry };
+        stepEntry.syncMetadata = {
+          ...entry.syncMetadata,
+          step: step,
+        };
+        if (!entriesByMediaId[entry.mediaId]) {
+          entriesByMediaId[entry.mediaId] = [];
+        }
+        entriesByMediaId[entry.mediaId].push(stepEntry);
+      }
+    } else {
+      if (!entriesByMediaId[entry.mediaId]) {
+        entriesByMediaId[entry.mediaId] = [];
+      }
+      entriesByMediaId[entry.mediaId].push(entry);
+    }
+  });
+
+  // Use displayOrderMediaIds if provided, else fallback to Object.keys
+  const userOrderMediaIds: number[] =
+    displayOrderMediaIds && displayOrderMediaIds.length > 0
+      ? displayOrderMediaIds
+      : Object.keys(entriesByMediaId).map(Number);
+
   const progress: SyncProgress = {
-    total: entries.length,
+    total: userOrderMediaIds.length,
     completed: 0,
     successful: 0,
     failed: 0,
@@ -562,78 +595,50 @@ export async function syncMangaBatch(
     retryAfter: null,
   };
 
-  // Send initial progress update
   if (onProgress) {
     onProgress({ ...progress });
   }
 
-  // Group entries by mediaId for handling incremental sync properly
-  const entriesByMediaId: Record<number, AniListMediaEntry[]> = {};
-
-  // Organize entries by mediaId
-  entries.forEach((entry) => {
-    // For incremental sync entries, we need to process them step by step
-    if (entry.syncMetadata?.useIncrementalSync) {
-      // Create entry objects for each step
-      const stepCount = 3; // We use 3 steps for incremental sync
-
-      // Create a separate entry for each step
-      for (let step = 1; step <= stepCount; step++) {
-        const stepEntry = { ...entry };
-
-        // Update the syncMetadata for this step
-        stepEntry.syncMetadata = {
-          ...entry.syncMetadata,
-          step: step,
-        };
-
-        // Add to the group
-        if (!entriesByMediaId[entry.mediaId]) {
-          entriesByMediaId[entry.mediaId] = [];
-        }
-        entriesByMediaId[entry.mediaId].push(stepEntry);
-      }
-    } else {
-      // Regular non-incremental entry
-      if (!entriesByMediaId[entry.mediaId]) {
-        entriesByMediaId[entry.mediaId] = [];
-      }
-      entriesByMediaId[entry.mediaId].push(entry);
-    }
-  });
-
-  // Track API calls completed for internal progress
   let apiCallsCompleted = 0;
 
-  // Process all entries grouped by mediaId
-  for (const [mediaId, entriesForMediaId] of Object.entries(entriesByMediaId)) {
-    // Check for cancellation at the start of each manga processing
+  // Track which manga have been completed in user order
+  const completedMediaIds = new Set<number>();
+  let completedCount = 0; // NEW: Track completed manga count
+
+  for (const mediaIdNum of userOrderMediaIds) {
+    const entriesForMediaId = entriesByMediaId[mediaIdNum];
+    const mediaIdStr = String(mediaIdNum);
+    if (!entriesForMediaId) continue; // skip if not present
+
+    // DEBUG: Log start of manga sync
+    console.log(
+      `[SYNC] Starting manga ${mediaIdNum} (${completedCount + 1} of ${progress.total})`,
+    );
+    console.log(`[SYNC] userOrderMediaIds:`, userOrderMediaIds);
+    console.log(`[SYNC] completedMediaIds:`, Array.from(completedMediaIds));
+
     if (abortSignal?.aborted) {
       console.log("Sync operation aborted by user");
-      break; // Immediately exit the loop without processing remaining entries
+      break;
     }
 
-    // Sort entries by step for incremental sync
-    entriesForMediaId.sort((a, b) => {
+    entriesForMediaId.sort((a: AniListMediaEntry, b: AniListMediaEntry) => {
       const stepA = a.syncMetadata?.step || 0;
       const stepB = b.syncMetadata?.step || 0;
       return stepA - stepB;
     });
 
-    // Get the first entry for this mediaId to access media details
     const firstEntry = entriesForMediaId[0];
     const isIncremental =
       entriesForMediaId.length > 1 &&
       firstEntry.syncMetadata?.useIncrementalSync;
 
-    // Update progress with current entry info - this stays the same for all steps
     progress.currentEntry = {
-      mediaId: parseInt(mediaId),
-      title: firstEntry.title || `Manga #${mediaId}`,
+      mediaId: Number(mediaIdStr),
+      title: firstEntry.title || `Manga #${mediaIdStr}`,
       coverImage: firstEntry.coverImage || "",
     };
 
-    // Set step information for incremental sync
     if (isIncremental) {
       progress.totalSteps = entriesForMediaId.length;
     } else {
@@ -641,87 +646,66 @@ export async function syncMangaBatch(
       progress.totalSteps = null;
     }
 
-    // Process all required steps/entries for this manga
     let entrySuccess = true;
     let entryError: string | undefined;
 
     for (let i = 0; i < entriesForMediaId.length; i++) {
-      // Check for cancellation before each step
       if (abortSignal?.aborted) {
         console.log("Sync operation aborted by user");
-        break; // Exit the loop for this manga's steps
+        break;
       }
-
       const entry = entriesForMediaId[i];
-
-      // Set current step in progress for incremental sync
       if (isIncremental) {
         progress.currentStep = entry.syncMetadata?.step || i + 1;
       }
-
-      // Update UI to show what we're working on
       if (onProgress) {
+        // Do not update completed here; only after manga is finished
+        // DEBUG: Log progress update
+        console.log(
+          `[PROGRESS] Updating progress: completed=${progress.completed}, total=${progress.total}, currentMediaId=${mediaIdNum}, currentStep=${progress.currentStep}, isIncremental=${isIncremental}`,
+        );
         onProgress({ ...progress });
       }
-
       try {
-        // Apply rate limiting
         if (apiCallsCompleted > 0) {
           await new Promise((resolve) => setTimeout(resolve, REQUEST_INTERVAL));
         }
-
-        // Perform update
         const result = await updateMangaEntry(entry, token);
         results.push(result);
         apiCallsCompleted++;
-
-        // Handle rate limiting with countdown
         if (result.rateLimited && result.retryAfter) {
-          // Update progress to show rate limiting
           progress.rateLimited = true;
           progress.retryAfter = result.retryAfter;
-
-          // Send progress update to show rate limiting status
           if (onProgress) {
+            console.log(
+              `[PROGRESS] Rate limited: retryAfter=${result.retryAfter}`,
+            );
             onProgress({ ...progress });
           }
-
-          // Set up countdown timer
           const retryAfterMs = result.retryAfter;
           const startTime = Date.now();
           const endTime = startTime + retryAfterMs;
-
-          // Update countdown every second
           const countdownInterval = setInterval(() => {
             const currentTime = Date.now();
             const remainingMs = Math.max(0, endTime - currentTime);
-
             progress.retryAfter = remainingMs;
-
             if (onProgress) {
               onProgress({ ...progress });
             }
-
             if (remainingMs <= 0 || abortSignal?.aborted) {
               clearInterval(countdownInterval);
             }
           }, 1000);
-
-          // Wait for the retry time
           await new Promise((resolve) => {
             const timeoutId = setTimeout(() => {
               clearInterval(countdownInterval);
               progress.rateLimited = false;
               progress.retryAfter = null;
-
               if (onProgress) {
                 onProgress({ ...progress });
               }
-
               resolve(null);
             }, retryAfterMs);
-
-            // If aborted, clear the timeout
             if (abortSignal) {
               abortSignal.addEventListener("abort", () => {
                 clearTimeout(timeoutId);
@@ -730,69 +714,59 @@ export async function syncMangaBatch(
               });
             }
           });
-
-          // Retry this entry (decrement i so we try again)
           i--;
           continue;
         }
-
-        // Track success/failure
         if (!result.success) {
           entrySuccess = false;
           entryError = result.error;
-          // For incremental sync, break on first failure
           if (isIncremental) break;
         }
       } catch (error) {
         apiCallsCompleted++;
         entrySuccess = false;
         entryError = error instanceof Error ? error.message : String(error);
-
-        const errorOpId = `err-${mediaId}-${entry.syncMetadata?.step || 0}-${Date.now().toString(36).substring(4, 10)}`;
+        const errorOpId = `err-${mediaIdStr}-${entriesForMediaId[i].syncMetadata?.step || 0}-${Date.now().toString(36).substring(4, 10)}`;
         console.error(
-          `❌ [${errorOpId}] Error updating entry ${mediaId}:`,
+          `❌ [${errorOpId}] Error updating entry ${mediaIdStr}:`,
           error,
         );
-
-        // Log more detailed info about the entry that failed
         console.error(`   [${errorOpId}] Entry details:`, {
-          mediaId: entry.mediaId,
-          title: entry.title,
-          status: entry.status,
-          progress: entry.progress,
-          score: entry.score,
+          mediaId: entriesForMediaId[i].mediaId,
+          title: entriesForMediaId[i].title,
+          status: entriesForMediaId[i].status,
+          progress: entriesForMediaId[i].progress,
+          score: entriesForMediaId[i].score,
           incremental: isIncremental,
-          step: entry.syncMetadata?.step || "N/A",
+          step: entriesForMediaId[i].syncMetadata?.step || "N/A",
         });
-
-        // For incremental sync, break on first error
         if (isIncremental) break;
       }
     }
-
-    // Update progress counters based on the overall entry success
-    progress.completed++;
+    // Mark this manga as completed in user order
+    completedMediaIds.add(Number(mediaIdStr));
+    completedCount++;
+    progress.completed = completedCount;
+    // DEBUG: Log after completing manga
+    console.log(
+      `[COMPLETE] Finished manga ${mediaIdNum}: completed=${progress.completed}, total=${progress.total}`,
+    );
     if (entrySuccess) {
       progress.successful++;
     } else {
       progress.failed++;
       errors.push({
-        mediaId: parseInt(mediaId),
+        mediaId: Number(mediaIdStr),
         error: entryError || "Unknown error",
       });
     }
-
-    // Clear current entry after all steps are processed
     progress.currentEntry = null;
     progress.currentStep = null;
-
-    // Send progress update
     if (onProgress) {
       onProgress({ ...progress });
     }
   }
 
-  // Create final report
   const report: SyncReport = {
     totalEntries: entries.length,
     successfulUpdates: progress.successful,

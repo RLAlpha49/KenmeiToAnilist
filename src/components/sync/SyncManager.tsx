@@ -37,12 +37,18 @@ interface SyncManagerProps {
     error: string | null;
   };
   syncActions?: {
-    startSync: (entries: AniListMediaEntry[], token: string) => Promise<void>;
+    startSync: (
+      entries: AniListMediaEntry[],
+      token: string,
+      _?: undefined,
+      displayOrderMediaIds?: number[],
+    ) => Promise<void>;
     cancelSync: () => void;
   };
   // Add incremental sync option
   incrementalSync?: boolean;
   onIncrementalSyncChange?: (value: boolean) => void;
+  displayOrderMediaIds?: number[];
 }
 
 const SyncManager: React.FC<SyncManagerProps> = ({
@@ -55,10 +61,11 @@ const SyncManager: React.FC<SyncManagerProps> = ({
   syncActions,
   incrementalSync = false,
   onIncrementalSyncChange,
+  displayOrderMediaIds,
 }) => {
   const { rateLimitState } = useRateLimit();
 
-  // Calculate progress percentage based on the hook's state
+  // Use progress from sync-service, fallback to default
   const progress = syncState?.progress || {
     total: entries.length,
     completed: 0,
@@ -72,20 +79,18 @@ const SyncManager: React.FC<SyncManagerProps> = ({
     retryAfter: null,
   };
 
-  // Calculate true entry count for display purposes
-  const totalEntries = entries.length;
-  const completedEntries =
-    syncState?.isActive && incrementalSync
-      ? Math.min(
-          progress.currentEntry
-            ? entries.findIndex(
-                (entry) => entry.mediaId === progress.currentEntry?.mediaId,
-              ) + 1
-            : 0,
-          entries.length,
-        )
-      : progress.completed;
+  console.log("[SyncManager] Progress:", progress);
 
+  // DEBUG: Log progress object from sync-service
+  React.useEffect(() => {
+    if (syncState?.progress) {
+      console.log("[SyncManager] Progress update:", syncState.progress);
+    }
+  }, [syncState?.progress]);
+
+  // Use progress.completed and progress.total directly
+  const completedEntries = progress.completed;
+  const totalEntries = progress.total;
   const progressPercentage =
     totalEntries > 0 ? Math.floor((completedEntries / totalEntries) * 100) : 0;
 
@@ -102,29 +107,32 @@ const SyncManager: React.FC<SyncManagerProps> = ({
   // Handle start synchronization
   const handleStartSync = async () => {
     if (syncActions?.startSync) {
-      // Process entries for incremental sync if enabled
       if (incrementalSync) {
-        // Create new entries array with incremental sync metadata
         const processedEntries = entries.map((entry) => {
-          // Get previous progress, treating null as 0 for new entries
           const previousProgress = entry.previousValues?.progress || 0;
           const targetProgress = entry.progress;
-
           return {
             ...entry,
             syncMetadata: {
-              // Use incremental sync if progress difference is more than 1
               useIncrementalSync: targetProgress - previousProgress > 1,
               targetProgress,
-              // For first request, just increment by 1 if using incremental
               progress: previousProgress + 1,
             },
           };
         });
-
-        await syncActions.startSync(processedEntries, token);
+        await syncActions.startSync(
+          processedEntries,
+          token,
+          undefined,
+          displayOrderMediaIds,
+        );
       } else {
-        await syncActions.startSync(entries, token);
+        await syncActions.startSync(
+          entries,
+          token,
+          undefined,
+          displayOrderMediaIds,
+        );
       }
     }
   };
@@ -160,8 +168,8 @@ const SyncManager: React.FC<SyncManagerProps> = ({
       <CardHeader>
         <CardTitle>AniList Synchronization</CardTitle>
         <CardDescription>
-          Updating {entries.length} manga{" "}
-          {entries.length === 1 ? "entry" : "entries"} with changes to your
+          Updating {totalEntries} manga{" "}
+          {totalEntries === 1 ? "entry" : "entries"} with changes to your
           AniList account
         </CardDescription>
       </CardHeader>
@@ -358,44 +366,42 @@ const SyncManager: React.FC<SyncManagerProps> = ({
                               )}
                             </div>
                           </div>
-
-                          {(entries[completedEntries].score ||
-                            entries[completedEntries].previousValues
-                              ?.score) && (
-                            <div className="flex items-center justify-between">
-                              <span className="text-slate-500">Score:</span>
-                              <div className="flex items-center">
-                                <span className="text-slate-500">
-                                  {entries[completedEntries].previousValues
-                                    ?.score || "None"}
-                                </span>
-                                {entries[completedEntries].score !==
-                                  entries[completedEntries].previousValues
-                                    ?.score && (
-                                  <>
-                                    <svg
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      width="12"
-                                      height="12"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      className="mx-1 text-blue-400"
-                                    >
-                                      <path d="M5 12h14"></path>
-                                      <path d="m12 5 7 7-7 7"></path>
-                                    </svg>
-                                    <span className="font-medium text-blue-600 dark:text-blue-400">
-                                      {entries[completedEntries].score}
-                                    </span>
-                                  </>
-                                )}
-                              </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500">Score:</span>
+                            <div className="flex items-center">
+                              <span className="text-slate-500">
+                                {entries[completedEntries].previousValues
+                                  ?.score !== undefined
+                                  ? entries[completedEntries].previousValues
+                                      .score
+                                  : "None"}
+                              </span>
+                              {entries[completedEntries].score !==
+                                entries[completedEntries].previousValues
+                                  ?.score && (
+                                <>
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="12"
+                                    height="12"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="mx-1 text-blue-400"
+                                  >
+                                    <path d="M5 12h14"></path>
+                                    <path d="m12 5 7 7-7 7"></path>
+                                  </svg>
+                                  <span className="font-medium text-blue-600 dark:text-blue-400">
+                                    {entries[completedEntries].score}
+                                  </span>
+                                </>
+                              )}
                             </div>
-                          )}
+                          </div>
                         </div>
                       ) : (
                         <div className="py-0.5">

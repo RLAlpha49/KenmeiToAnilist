@@ -539,9 +539,9 @@ export function SyncPage() {
     });
   }, [filteredMangaMatches, sortOption, userLibrary, syncConfig]);
 
-  // Transform manga matches into AniList media entries for syncing
-  const entriesToSync = useMemo(() => {
-    return sortedMangaMatches
+  // Compute all entries to sync (unfiltered, all with changes)
+  const allEntriesToSync = useMemo(() => {
+    return mangaMatches
       .filter(
         (match) => match.status === "matched" || match.status === "manual",
       )
@@ -550,35 +550,25 @@ export function SyncPage() {
         // Get Kenmei data
         const kenmei = match.kenmeiManga;
         const anilist = match.selectedMatch!;
-
-        // Check if we have existing user data for this title
         const userEntry = userLibrary[anilist.id];
-
-        // If the title is already COMPLETED in AniList and we want to preserve completed status, don't update it
         if (
           userEntry &&
           userEntry.status === "COMPLETED" &&
           syncConfig.preserveCompletedStatus
         ) {
-          return null; // Skip this entry completely
+          return null;
         }
-
-        // Check if manga should be auto-paused due to inactivity
         let calculatedStatus: MediaListStatus;
-
         if (
           syncConfig.autoPauseInactive &&
           kenmei.status.toLowerCase() !== "completed" &&
           kenmei.status.toLowerCase() !== "dropped" &&
           kenmei.updated_at
         ) {
-          // Calculate how many days since the last update
           const lastUpdated = new Date(kenmei.updated_at);
           const daysSinceUpdate = Math.floor(
             (Date.now() - lastUpdated.getTime()) / (1000 * 60 * 60 * 24),
           );
-
-          // If manga hasn't been updated for the threshold period, set to PAUSED
           if (daysSinceUpdate >= syncConfig.autoPauseThreshold) {
             calculatedStatus = "PAUSED";
           } else {
@@ -587,16 +577,11 @@ export function SyncPage() {
         } else {
           calculatedStatus = STATUS_MAPPING[kenmei.status];
         }
-
-        // Always set the private property regardless of the status
-        // Ensure it's never undefined by providing a fallback value
         const privateStatus = userEntry
           ? syncConfig.setPrivate
             ? true
             : userEntry.private || false
           : syncConfig.setPrivate;
-
-        // Otherwise create the AniList entry normally
         const entry: AniListMediaEntry = {
           mediaId: anilist.id,
           status:
@@ -611,10 +596,8 @@ export function SyncPage() {
                 ? userEntry.progress
                 : kenmei.chapters_read || 0
               : kenmei.chapters_read || 0,
-          // IMPORTANT: Always explicitly include private property to avoid it being undefined
           private: privateStatus,
-          score: kenmei.score || 0, // Default value before applying rules
-          // Add metadata for the SyncManager to access previous values
+          score: kenmei.score || 0,
           previousValues: userEntry
             ? {
                 status: userEntry.status,
@@ -626,39 +609,45 @@ export function SyncPage() {
           title: anilist.title.romaji || kenmei.title,
           coverImage: anilist.coverImage?.large || anilist.coverImage?.medium,
         };
-
-        // Apply score prioritization rules
         if (userEntry && kenmei.score > 0) {
-          // Convert both scores to numbers for consistent comparison
           const anilistScore = Number(userEntry.score || 0);
           const kenmeiScore = Number(kenmei.score);
-
-          // Only prioritize AniList scores if they're greater than 0 and prioritization is enabled
           if (
             (syncConfig.prioritizeAniListScore && anilistScore > 0) ||
             anilistScore === kenmeiScore ||
             Math.abs(kenmeiScore - anilistScore) < 0.5
           ) {
-            entry.score = userEntry.score || kenmei.score; // Keep the existing score if it exists
+            entry.score = userEntry.score || kenmei.score;
           }
         }
-
-        // Final check to ensure private property is set
         if (entry.private === undefined) {
           entry.private = syncConfig.setPrivate || false;
         }
-
         return entry;
       })
-      .filter((entry) => entry !== null) as AniListMediaEntry[]; // Filter out null entries
-  }, [sortedMangaMatches, userLibrary, syncConfig]);
+      .filter((entry) => entry !== null) as AniListMediaEntry[];
+  }, [mangaMatches, userLibrary, syncConfig]);
+
+  // Only sync entries with actual changes
+  const hasChanges = (entry: AniListMediaEntry) => {
+    if (!entry.previousValues) return true; // new entry
+    return (
+      entry.status !== entry.previousValues.status ||
+      entry.progress !== entry.previousValues.progress ||
+      entry.score !== entry.previousValues.score ||
+      entry.private !== entry.previousValues.private
+    );
+  };
+  const entriesWithChanges = useMemo(
+    () => allEntriesToSync.filter(hasChanges),
+    [allEntriesToSync],
+  );
 
   // Modify handleStartSync to only change the view, not start synchronization
   const handleStartSync = () => {
-    if (entriesToSync.length === 0) {
+    if (entriesWithChanges.length === 0) {
       return;
     }
-
     setViewMode("sync");
   };
 
@@ -670,8 +659,13 @@ export function SyncPage() {
   // Handle sync cancellation
   const handleCancel = () => {
     if (viewMode === "sync") {
+      // If sync has not started, go back to preview
+      if (!state.isActive && !state.report) {
+        setViewMode("preview");
+        return;
+      }
       actions.cancelSync();
-      setViewMode("preview");
+      setViewMode("results");
       return;
     }
 
@@ -2598,7 +2592,7 @@ export function SyncPage() {
                   </Button>
                   <Button
                     onClick={handleStartSync}
-                    disabled={entriesToSync.length === 0 || libraryLoading}
+                    disabled={entriesWithChanges.length === 0 || libraryLoading}
                     className="relative"
                   >
                     Sync
@@ -2618,7 +2612,7 @@ export function SyncPage() {
             exit="exit"
           >
             <SyncManager
-              entries={entriesToSync}
+              entries={entriesWithChanges}
               token={token || ""}
               onComplete={handleSyncComplete}
               onCancel={handleCancel}
@@ -2626,8 +2620,13 @@ export function SyncPage() {
               syncState={state}
               syncActions={{
                 ...actions,
-                startSync: (entries, token) =>
-                  actions.startSync(entries, token),
+                startSync: (entries, token, _unused, displayOrderMediaIds) =>
+                  actions.startSync(
+                    entries,
+                    token,
+                    _unused,
+                    displayOrderMediaIds,
+                  ),
               }}
               incrementalSync={syncConfig.incrementalSync}
               onIncrementalSyncChange={(value) => {
@@ -2635,48 +2634,56 @@ export function SyncPage() {
                 setSyncConfig(newConfig);
                 saveSyncConfig(newConfig);
               }}
+              displayOrderMediaIds={entriesWithChanges
+                .filter(Boolean)
+                .map((e) => e.mediaId)}
             />
           </motion.div>
         );
 
-      case "results":
-        return state.report ? (
-          <motion.div
-            variants={pageVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-          >
-            <SyncResultsView
-              report={state.report}
-              onClose={handleComplete}
-              onExportErrors={() =>
-                state.report && exportSyncErrorLog(state.report)
-              }
-            />
-          </motion.div>
-        ) : (
-          <motion.div
-            variants={pageVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-          >
-            <Card className="mx-auto w-full max-w-md p-6 text-center">
-              <CardContent>
-                <AlertCircle className="mx-auto mb-4 h-12 w-12 text-red-500" />
-                <h3 className="text-lg font-medium">Synchronization Error</h3>
-                <p className="mt-2 text-sm text-slate-500">
-                  {state.error ||
-                    "An unknown error occurred during synchronization."}
-                </p>
-              </CardContent>
-              <CardFooter className="justify-center">
-                <Button onClick={handleComplete}>Close</Button>
-              </CardFooter>
-            </Card>
-          </motion.div>
-        );
+      case "results": {
+        if (state.report) {
+          return (
+            <motion.div
+              variants={pageVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+            >
+              <SyncResultsView
+                report={state.report}
+                onClose={handleComplete}
+                onExportErrors={() =>
+                  state.report && exportSyncErrorLog(state.report)
+                }
+              />
+            </motion.div>
+          );
+        } else {
+          return (
+            <motion.div
+              variants={pageVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+            >
+              <Card className="mx-auto w-full max-w-md p-6 text-center">
+                <CardContent>
+                  <AlertCircle className="mx-auto mb-4 h-12 w-12 text-red-500" />
+                  <h3 className="text-lg font-medium">Synchronization Error</h3>
+                  <p className="mt-2 text-sm text-slate-500">
+                    {state.error ||
+                      "An unknown error occurred during synchronization."}
+                  </p>
+                </CardContent>
+                <CardFooter className="justify-center">
+                  <Button onClick={handleComplete}>Close</Button>
+                </CardFooter>
+              </Card>
+            </motion.div>
+          );
+        }
+      }
     }
   };
 

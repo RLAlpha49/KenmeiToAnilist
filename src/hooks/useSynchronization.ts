@@ -24,7 +24,12 @@ interface SynchronizationState {
 }
 
 interface SynchronizationActions {
-  startSync: (entries: AniListMediaEntry[], token: string) => Promise<void>;
+  startSync: (
+    entries: AniListMediaEntry[],
+    token: string,
+    _?: undefined,
+    displayOrderMediaIds?: number[],
+  ) => Promise<void>;
   cancelSync: () => void;
   exportErrors: () => void;
   exportReport: () => void;
@@ -48,7 +53,12 @@ export function useSynchronization(): [
 
   // Start a synchronization operation
   const startSync = useCallback(
-    async (entries: AniListMediaEntry[], token: string) => {
+    async (
+      entries: AniListMediaEntry[],
+      token: string,
+      _unused?: undefined,
+      displayOrderMediaIds?: number[],
+    ) => {
       if (state.isActive) {
         console.warn("Sync is already in progress");
         return;
@@ -74,14 +84,18 @@ export function useSynchronization(): [
         // Create new AbortController for this operation
         const abortController = new AbortController();
 
-        // Update state to show sync is active
+        // Always use the full uniqueMediaIds array for displayOrderMediaIds
+        const uniqueMediaIds =
+          displayOrderMediaIds && displayOrderMediaIds.length > 0
+            ? displayOrderMediaIds
+            : Array.from(new Set(entries.map((e) => e.mediaId)));
         setState((prev) => ({
           ...prev,
           isActive: true,
           error: null,
           abortController,
           progress: {
-            total: entries.length,
+            total: uniqueMediaIds.length,
             completed: 0,
             successful: 0,
             failed: 0,
@@ -155,12 +169,13 @@ export function useSynchronization(): [
                     ...prev,
                     progress: {
                       ...progress,
-                      // Just maintain the original total
-                      total: entries.length,
+                      // Always use unique manga count for total
+                      total: uniqueMediaIds.length,
                     },
                   }));
                 },
                 abortController.signal,
+                uniqueMediaIds,
               );
             } else {
               // Initialize with empty report if no regular entries
@@ -177,7 +192,7 @@ export function useSynchronization(): [
               setState((prev) => ({
                 ...prev,
                 progress: {
-                  total: entries.length, // We now count entries, not API requests
+                  total: uniqueMediaIds.length,
                   completed: 0,
                   successful: 0,
                   failed: 0,
@@ -196,7 +211,6 @@ export function useSynchronization(): [
             let successfulUpdates = syncReport.successfulUpdates;
             let failedUpdates = syncReport.failedUpdates;
             const errors = [...syncReport.errors];
-            const totalSteps = entries.length + incrementalEntries.length * 2;
 
             // Create custom progress tracker
             const updateProgress = (
@@ -216,7 +230,7 @@ export function useSynchronization(): [
                 progress: {
                   ...prev.progress!,
                   completed: overallProgress,
-                  total: totalSteps,
+                  total: uniqueMediaIds.length,
                   successful: successfulUpdates,
                   failed: failedUpdates,
                   // Add currentEntry information for UI display
@@ -268,6 +282,7 @@ export function useSynchronization(): [
                     }
                   },
                   abortController.signal,
+                  uniqueMediaIds,
                 );
 
                 // If the operation was aborted during this entry's sync, don't continue processing
@@ -335,6 +350,7 @@ export function useSynchronization(): [
               }));
             },
             abortController.signal,
+            uniqueMediaIds,
           );
         }
 
@@ -369,8 +385,11 @@ export function useSynchronization(): [
       setState((prev) => ({
         ...prev,
         isActive: false,
-        error: "Synchronization cancelled by user",
         abortController: null,
+        // Set a special error string for cancellation
+        error: "cancelled",
+        // Preserve the current report if any (partial results)
+        report: prev.report || null,
       }));
 
       // Add a message to make it clear the operation has been canceled
