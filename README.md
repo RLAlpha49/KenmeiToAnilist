@@ -58,7 +58,7 @@ git clone https://github.com/RLAlpha49/KenmeiToAnilist.git
 cd KenmeiToAnilist
 
 # Install dependencies
-npm install
+npm install --force
 # or
 yarn install
 ```

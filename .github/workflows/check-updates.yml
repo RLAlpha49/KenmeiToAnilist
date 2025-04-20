@@ -27,7 +27,7 @@ jobs:
         run: npm ci --force
       - name: Install npm-check-updates and tools
         run: |
-          npm install -g npm-check-updates
+          npm install --force -g npm-check-updates
           sudo apt-get update
           sudo apt-get install -y jq
 
@@ -251,7 +251,7 @@ jobs:
             
             # Install updated packages
             echo "[INFO] Installing updated packages"
-            npm install
+            npm install --force
 
             # Check for changes and commit them
             git add package.json package-lock.json

@@ -97,7 +97,7 @@ jobs:
         with:
           node-version: "22"
       - name: Install Dependencies
-        run: npm install
+        run: npm install --force
       - name: Build Application
         run: npm run make
       - name: Upload Windows Build Artifacts (.exe and .msi)
@@ -118,7 +118,7 @@ jobs:
         with:
           node-version: "22"
       - name: Install Dependencies
-        run: npm install
+        run: npm install --force
       - name: Build Application
         run: npm run make
       - name: Upload macOS Build Artifacts
@@ -139,7 +139,7 @@ jobs:
         with:
           node-version: "22"
       - name: Install Dependencies
-        run: npm install
+        run: npm install --force
       - name: Build Application
         run: npm run make
       - name: Upload Linux Build Artifacts
