@@ -22,6 +22,7 @@ export default [
       "dist/**",
       ".vite/**",
       "out/**",
+      "docs/**",
 
       // Test output
       "playwright-report/**",
