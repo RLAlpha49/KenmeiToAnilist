@@ -1,6 +1,8 @@
-# Kenmei to Anilist
+<div style="text-align: center;">
+  <img src="./src/assets/k2a-icon-512x512.png" alt="App Icon" width="256" />
+</div>
 
-![App Icon](./src/assets/k2a-icon-512x512.png)
+# Kenmei to Anilist
 
 > Effortlessly migrate and synchronize your manga library from Kenmei to AniList with a beautiful, modern desktop app. 🚀
 
