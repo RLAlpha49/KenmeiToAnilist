@@ -7,6 +7,16 @@ import {
   installExtension,
   REACT_DEVELOPER_TOOLS,
 } from "electron-devtools-installer";
+import * as Sentry from "@sentry/electron/main";
+import "dotenv/config";
+
+// --- Sentry Initialization ---
+Sentry.init({
+  dsn: process.env.SENTRY_DSN || undefined,
+  environment: process.env.NODE_ENV,
+  release: app.getVersion(),
+});
+// --- End Sentry Initialization ---
 
 // Handle Windows Squirrel events
 if (process.platform === "win32") {
@@ -75,7 +85,6 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: true,
       nodeIntegrationInSubFrames: false,
-
       preload: preload,
     },
     titleBarStyle: "hidden",
