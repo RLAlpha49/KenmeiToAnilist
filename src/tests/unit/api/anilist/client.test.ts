@@ -739,16 +739,14 @@ describe("AniList Client", () => {
     it("getAccessToken returns token on success", async () => {
       (window as any).electronAPI = {
         anilist: {
-          exchangeToken: vi
-            .fn()
-            .mockResolvedValue({
-              success: true,
-              token: {
-                access_token: "tok",
-                token_type: "Bearer",
-                expires_in: 3600,
-              },
-            }),
+          exchangeToken: vi.fn().mockResolvedValue({
+            success: true,
+            token: {
+              access_token: "tok",
+              token_type: "Bearer",
+              expires_in: 3600,
+            },
+          }),
         },
       };
       const result = await getAccessToken("id", "secret", "redir", "code");
@@ -772,13 +770,10 @@ describe("AniList Client", () => {
       vi.spyOn(clientModule, "request").mockResolvedValue({
         data: { Page: { media: [{ id: 1 }] } },
       });
-      (global.fetch as any) = vi
-        .fn()
-        .mockResolvedValue({
-          ok: true,
-          json: () =>
-            Promise.resolve({ data: { Page: { media: [{ id: 1 }] } } }),
-        });
+      (global.fetch as any) = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ data: { Page: { media: [{ id: 1 }] } } }),
+      });
       const result = await getMangaByIds([1]);
       expect(result).toEqual([{ id: 1 }]);
     });
@@ -787,27 +782,23 @@ describe("AniList Client", () => {
       vi.spyOn(clientModule, "request").mockResolvedValue({
         data: { data: { Page: { media: [{ id: 2 }] } } },
       });
-      (global.fetch as any) = vi
-        .fn()
-        .mockResolvedValue({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              data: { data: { Page: { media: [{ id: 2 }] } } },
-            }),
-        });
+      (global.fetch as any) = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: { data: { Page: { media: [{ id: 2 }] } } },
+          }),
+      });
       const result = await getMangaByIds([2]);
       expect(result).toEqual([{ id: 2 }]);
     });
 
     it("getMangaByIds returns [] and logs error if response missing data", async () => {
       vi.spyOn(clientModule, "request").mockResolvedValue({ data: undefined });
-      (global.fetch as any) = vi
-        .fn()
-        .mockResolvedValue({
-          ok: true,
-          json: () => Promise.resolve({ data: undefined }),
-        });
+      (global.fetch as any) = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ data: undefined }),
+      });
       const spy = vi.spyOn(console, "error");
       const result = await getMangaByIds([3]);
       expect(result).toEqual([]);
@@ -1179,13 +1170,10 @@ describe("AniList Client", () => {
       vi.spyOn(clientModule, "request").mockResolvedValue({
         data: { Page: { media: [{ id: 1 }] } },
       });
-      (global.fetch as any) = vi
-        .fn()
-        .mockResolvedValue({
-          ok: true,
-          json: () =>
-            Promise.resolve({ data: { Page: { media: [{ id: 1 }] } } }),
-        });
+      (global.fetch as any) = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ data: { Page: { media: [{ id: 1 }] } } }),
+      });
       const result = await getMangaByIds([1]);
       expect(result).toEqual([{ id: 1 }]);
     });
@@ -1193,26 +1181,22 @@ describe("AniList Client", () => {
       vi.spyOn(clientModule, "request").mockResolvedValue({
         data: { data: { Page: { media: [{ id: 2 }] } } },
       });
-      (global.fetch as any) = vi
-        .fn()
-        .mockResolvedValue({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              data: { data: { Page: { media: [{ id: 2 }] } } },
-            }),
-        });
+      (global.fetch as any) = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: { data: { Page: { media: [{ id: 2 }] } } },
+          }),
+      });
       const result = await getMangaByIds([2]);
       expect(result).toEqual([{ id: 2 }]);
     });
     it("getMangaByIds returns [] and logs error if response missing data", async () => {
       vi.spyOn(clientModule, "request").mockResolvedValue({ data: undefined });
-      (global.fetch as any) = vi
-        .fn()
-        .mockResolvedValue({
-          ok: true,
-          json: () => Promise.resolve({ data: undefined }),
-        });
+      (global.fetch as any) = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ data: undefined }),
+      });
       const spy = vi.spyOn(console, "error");
       const result = await getMangaByIds([3]);
       expect(result).toEqual([]);
@@ -1244,13 +1228,10 @@ describe("AniList Client", () => {
       vi.spyOn(clientModule, "request").mockResolvedValue({
         data: { Viewer: { id: 5, name: "A" } },
       });
-      (global.fetch as any) = vi
-        .fn()
-        .mockResolvedValue({
-          ok: true,
-          json: () =>
-            Promise.resolve({ data: { Viewer: { id: 5, name: "A" } } }),
-        });
+      (global.fetch as any) = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ data: { Viewer: { id: 5, name: "A" } } }),
+      });
       const id = await clientModule.__test__.getAuthenticatedUserID("tok");
       expect(id).toBe(5);
     });
@@ -1258,15 +1239,13 @@ describe("AniList Client", () => {
       vi.spyOn(clientModule, "request").mockResolvedValue({
         data: { data: { Viewer: { id: 6, name: "B" } } },
       });
-      (global.fetch as any) = vi
-        .fn()
-        .mockResolvedValue({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              data: { data: { Viewer: { id: 6, name: "B" } } },
-            }),
-        });
+      (global.fetch as any) = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: { data: { Viewer: { id: 6, name: "B" } } },
+          }),
+      });
       const id = await clientModule.__test__.getAuthenticatedUserID("tok");
       expect(id).toBe(6);
     });
@@ -1277,24 +1256,19 @@ describe("AniList Client", () => {
         if (callCount === 1) return Promise.resolve({ data: {} });
         return Promise.resolve({ data: { Viewer: { id: 7, name: "C" } } });
       });
-      (global.fetch as any) = vi
-        .fn()
-        .mockResolvedValue({
-          ok: true,
-          json: () =>
-            Promise.resolve({ data: { Viewer: { id: 7, name: "C" } } }),
-        });
+      (global.fetch as any) = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ data: { Viewer: { id: 7, name: "C" } } }),
+      });
       const id = await clientModule.__test__.getAuthenticatedUserID("tok");
       expect(id).toBe(7);
     });
     it("getAuthenticatedUserID logs and returns undefined if all fail", async () => {
       vi.spyOn(clientModule, "request").mockResolvedValue({ data: {} });
-      (global.fetch as any) = vi
-        .fn()
-        .mockResolvedValue({
-          ok: true,
-          json: () => Promise.resolve({ data: {} }),
-        });
+      (global.fetch as any) = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ data: {} }),
+      });
       const spy = vi.spyOn(console, "error");
       const id = await clientModule.__test__.getAuthenticatedUserID("tok");
       expect(id).toBeUndefined();

@@ -1,7 +1,7 @@
 name: Check for Package Updates
 on:
   push:
-    branches: [electron]
+    branches: [master]
   workflow_dispatch:
     inputs:
       update-packages:
@@ -214,7 +214,7 @@ jobs:
             if git show-ref --verify --quiet refs/heads/$PR_BRANCH; then
               # Delete the local branch to avoid conflicts with remote
               echo "[INFO] Deleting local branch to avoid conflicts with remote"
-              git checkout electron
+              git checkout master
               git branch -D "$PR_BRANCH"
             fi
             
@@ -223,18 +223,18 @@ jobs:
             git checkout -b "$PR_BRANCH" "origin/$PR_BRANCH"
           else
             echo "[INFO] Branch does not exist remotely"
-            # If branch doesn't exist remotely, we need to create it from electron
+            # If branch doesn't exist remotely, we need to create it from master
             
-            # Checkout electron first to ensure we start clean
-            git checkout electron
+            # Checkout master first to ensure we start clean
+            git checkout master
             
             # Check if the branch exists locally
             if git show-ref --verify --quiet refs/heads/$PR_BRANCH; then
               echo "[INFO] Branch $PR_BRANCH exists locally, checking it out"
               git checkout "$PR_BRANCH"
             else
-              # Create our branch from electron
-              echo "[INFO] Creating new branch from electron"
+              # Create our branch from master
+              echo "[INFO] Creating new branch from master"
               git checkout -b "$PR_BRANCH"
             fi
             
@@ -536,7 +536,7 @@ jobs:
           PR_URL=$(gh pr create \
             --title "chore: update npm dependencies" \
             --body-file "$PR_BODY_FILE" \
-            --base electron \
+            --base master \
             --head "$PR_BRANCH")
             
           if [ $? -eq 0 ]; then

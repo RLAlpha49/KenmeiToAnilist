@@ -123,17 +123,6 @@ Potential future improvements like additional tracking services, backup function
   - Write tests for critical application paths
   - Implement CI pipeline for automated testing
 
-## Epic 4: Story List
-
-- Story 6: Deployment and Distribution
-  Status: Planned
-  Requirements:
-
-  - Configure application packaging
-  - Set up auto-updates
-  - Create installation packages for Windows, macOS, and Linux
-  - Implement error tracking and reporting
-
 ## Technology Stack
 
 | Technology        | Description                                                      |

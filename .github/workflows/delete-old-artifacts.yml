@@ -3,7 +3,7 @@ name: Delete Old Artifacts
 on:
   push:
     branches:
-      - electron
+      - master
   workflow_dispatch:
 
 jobs:

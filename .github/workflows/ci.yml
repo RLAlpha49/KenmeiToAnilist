@@ -2,9 +2,9 @@ name: CI Suite
 
 on:
   push:
-    branches: [electron]
+    branches: [master]
   pull_request:
-    branches: [electron]
+    branches: [master]
 
 jobs:
   setup:
