@@ -40,7 +40,7 @@ export interface UpdateInfo {
 export async function checkForUpdates(): Promise<UpdateInfo> {
   try {
     const response = await fetch(
-      "https://api.github.com/repos/RLAlpha49/kenmei-to-anilist/releases/latest",
+      "https://api.github.com/repos/RLAlpha49/KenmeiToAnilist/releases/latest",
     );
 
     if (!response.ok) {
@@ -90,4 +90,69 @@ function compareVersions(v1: string, v2: string): number {
   }
 
   return 0;
+}
+
+// Version status type
+export type AppVersionStatus =
+  | { status: "stable"; latestVersion: string; releaseUrl: string }
+  | { status: "beta"; latestVersion: string; releaseUrl: string }
+  | { status: "development"; latestVersion: string; releaseUrl: string };
+
+// Type for GitHub Release API response (minimal fields used)
+type GitHubRelease = {
+  draft: boolean;
+  prerelease: boolean;
+  tag_name: string;
+  html_url: string;
+};
+
+/**
+ * Checks the app version status (stable, beta, development) by comparing the current version
+ * to the latest stable and prerelease versions on GitHub.
+ */
+export async function getAppVersionStatus(): Promise<AppVersionStatus> {
+  const currentVersion = getAppVersion();
+  try {
+    // Fetch all releases (not just latest)
+    const response = await fetch(
+      "https://api.github.com/repos/RLAlpha49/KenmeiToAnilist/releases?per_page=20",
+    );
+    if (!response.ok) throw new Error("Failed to fetch releases");
+    const releases: GitHubRelease[] = await response.json();
+    // Find the latest stable (not draft, not prerelease)
+    const stableRelease = releases.find((r) => !r.draft && !r.prerelease);
+    // Find the latest prerelease (not draft, prerelease)
+    const betaRelease = releases.find((r) => !r.draft && r.prerelease);
+    // Normalize version tags (remove leading v)
+    const stableTag = stableRelease?.tag_name?.replace(/^v/, "");
+    const betaTag = betaRelease?.tag_name?.replace(/^v/, "");
+    // Compare current version
+    if (stableTag && currentVersion === stableTag && stableRelease) {
+      return {
+        status: "stable",
+        latestVersion: stableTag,
+        releaseUrl: stableRelease.html_url,
+      };
+    }
+    if (betaTag && currentVersion === betaTag && betaRelease) {
+      return {
+        status: "beta",
+        latestVersion: stableTag || betaTag,
+        releaseUrl: betaRelease.html_url,
+      };
+    }
+    // If neither, it's a dev build
+    return {
+      status: "development",
+      latestVersion: stableTag || betaTag || "",
+      releaseUrl: stableRelease?.html_url || betaRelease?.html_url || "",
+    };
+  } catch {
+    // Fallback: treat as development if error
+    return {
+      status: "development",
+      latestVersion: "",
+      releaseUrl: "",
+    };
+  }
 }

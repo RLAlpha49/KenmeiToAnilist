@@ -40,7 +40,11 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "../components/ui/carousel";
-import { getAppVersion } from "../utils/app-version";
+import {
+  getAppVersion,
+  getAppVersionStatus,
+  AppVersionStatus,
+} from "../utils/app-version";
 import Autoplay from "embla-carousel-autoplay";
 
 interface StatsState {
@@ -151,6 +155,20 @@ export function HomePage() {
     totalMatches: 0,
     status: "none",
   });
+
+  // Version status state
+  const [versionStatus, setVersionStatus] = useState<AppVersionStatus | null>(
+    null,
+  );
+  useEffect(() => {
+    let mounted = true;
+    getAppVersionStatus().then((status) => {
+      if (mounted) setVersionStatus(status);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Define interface for match result objects
   interface MatchResult {
@@ -730,12 +748,35 @@ export function HomePage() {
               Kenmei to AniList Sync Tool • Version {getAppVersion()}
             </p>
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-xs font-normal">
-                <div className="flex items-center gap-1">
-                  <span className="h-2 w-2 rounded-full bg-green-500"></span>
+              {versionStatus === null ? (
+                <Badge
+                  variant="outline"
+                  className="bg-gray-100 text-xs font-normal text-gray-600 dark:bg-gray-800/30 dark:text-gray-300"
+                >
+                  Checking...
+                </Badge>
+              ) : versionStatus.status === "stable" ? (
+                <Badge
+                  variant="outline"
+                  className="bg-green-50 text-xs font-normal text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                >
                   Stable Release
-                </div>
-              </Badge>
+                </Badge>
+              ) : versionStatus.status === "beta" ? (
+                <Badge
+                  variant="outline"
+                  className="bg-yellow-50 text-xs font-normal text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
+                >
+                  Beta Release
+                </Badge>
+              ) : (
+                <Badge
+                  variant="outline"
+                  className="bg-blue-50 text-xs font-normal text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                >
+                  Development Build
+                </Badge>
+              )}
               <a
                 href="https://github.com/RLAlpha49/KenmeiToAnilist"
                 target="_blank"

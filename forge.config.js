@@ -33,7 +33,7 @@ const config = {
       config: {
         setupIcon: "./src/assets/k2a-icon-512x512.ico",
         iconUrl:
-          "https://raw.githubusercontent.com/RLAlpha49/Anilist-Manga-Updater/refs/heads/electron/src/assets/k2a-icon-512x512.ico",
+          "https://raw.githubusercontent.com/RLAlpha49/KenmeiToAnilist/refs/heads/electron/src/assets/k2a-icon-512x512.ico",
         setupExe: "Kenmei-to-Anilist-Setup.exe",
         noMsi: false,
         name: "KenmeiToAnilist",
@@ -65,7 +65,7 @@ const config = {
           name: "kenmei-to-anilist",
           productName: "Kenmei to Anilist",
           maintainer: "Alex Pettigrew",
-          homepage: "https://github.com/RLAlpha49/Anilist-Manga-Updater",
+          homepage: "https://github.com/RLAlpha49/KenmeiToAnilist",
           icon: "./src/assets/k2a-icon-512x512.png",
           version: appVersion,
         },

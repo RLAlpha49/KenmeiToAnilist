@@ -43,7 +43,11 @@ import { Switch } from "../components/ui/switch";
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import { motion } from "framer-motion";
-import { getAppVersion } from "../utils/app-version";
+import {
+  getAppVersion,
+  getAppVersionStatus,
+  AppVersionStatus,
+} from "../utils/app-version";
 
 // Animation variants
 const containerVariants = {
@@ -116,6 +120,10 @@ export function SettingsPage() {
       ![1, 7, 14, 30, 60, 90, 180, 365].includes(
         Number(syncConfig.autoPauseThreshold),
       ),
+  );
+  // Version status state
+  const [versionStatus, setVersionStatus] = useState<AppVersionStatus | null>(
+    null,
   );
 
   // Handler for opening external links in the default browser
@@ -305,6 +313,17 @@ export function SettingsPage() {
       }
     }
   }, [customCredentials]);
+
+  // Version status useEffect
+  useEffect(() => {
+    let mounted = true;
+    getAppVersionStatus().then((status) => {
+      if (mounted) setVersionStatus(status);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleLogin = async () => {
     try {
@@ -1470,14 +1489,37 @@ export function SettingsPage() {
                 variant="outline"
                 className="bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
               >
-                Version {getAppVersion() || "1.0.0"}
+                Version {getAppVersion()}
               </Badge>
-              <Badge
-                variant="outline"
-                className="bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300"
-              >
-                Stable
-              </Badge>
+              {versionStatus === null ? (
+                <Badge
+                  variant="outline"
+                  className="bg-gray-100 text-gray-600 dark:bg-gray-800/30 dark:text-gray-300"
+                >
+                  Checking...
+                </Badge>
+              ) : versionStatus.status === "stable" ? (
+                <Badge
+                  variant="outline"
+                  className="bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                >
+                  Stable
+                </Badge>
+              ) : versionStatus.status === "beta" ? (
+                <Badge
+                  variant="outline"
+                  className="bg-yellow-50 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
+                >
+                  Beta
+                </Badge>
+              ) : (
+                <Badge
+                  variant="outline"
+                  className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                >
+                  Development
+                </Badge>
+              )}
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
