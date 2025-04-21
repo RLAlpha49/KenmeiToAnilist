@@ -1,5 +1,7 @@
 /**
- * Hook for managing AniList synchronization
+ * @packageDocumentation
+ * @module useSynchronization
+ * @description Custom React hook for managing AniList synchronization, including batch sync, progress tracking, error handling, and exporting reports in the Kenmei to AniList sync tool.
  */
 
 import { useState, useCallback } from "react";
@@ -15,6 +17,17 @@ import {
   saveSyncReportToHistory,
 } from "../utils/export-utils";
 
+/**
+ * Represents the state of the synchronization process.
+ *
+ * @property isActive - Indicates if a synchronization is currently active.
+ * @property progress - The current progress of the synchronization, or null if not started.
+ * @property report - The final report of the synchronization, or null if not completed.
+ * @property error - Any error message encountered during synchronization, or null if none.
+ * @property abortController - The AbortController used to cancel the sync, or null if not active.
+ *
+ * @source
+ */
 interface SynchronizationState {
   isActive: boolean;
   progress: SyncProgress | null;
@@ -23,6 +36,17 @@ interface SynchronizationState {
   abortController: AbortController | null;
 }
 
+/**
+ * Represents the set of actions available for synchronization.
+ *
+ * @property startSync - Starts the synchronization process.
+ * @property cancelSync - Cancels the ongoing synchronization.
+ * @property exportErrors - Exports the error log from the last sync.
+ * @property exportReport - Exports the full sync report.
+ * @property reset - Resets the synchronization state.
+ *
+ * @source
+ */
 interface SynchronizationActions {
   startSync: (
     entries: AniListMediaEntry[],
@@ -37,7 +61,15 @@ interface SynchronizationActions {
 }
 
 /**
- * Hook that provides methods and state for managing AniList synchronization
+ * Hook that provides methods and state for managing AniList synchronization.
+ *
+ * @returns A tuple containing the synchronization state and an object of synchronization actions.
+ * @example
+ * ```ts
+ * const [syncState, syncActions] = useSynchronization();
+ * syncActions.startSync(entries, token);
+ * ```
+ * @source
  */
 export function useSynchronization(): [
   SynchronizationState,
@@ -51,7 +83,17 @@ export function useSynchronization(): [
     abortController: null,
   });
 
-  // Start a synchronization operation
+  /**
+   * Starts a synchronization operation for the provided AniList media entries.
+   *
+   * @param entries - The AniList media entries to synchronize.
+   * @param token - The AniList authentication token.
+   * @param _unused - (Unused) Reserved for future use.
+   * @param displayOrderMediaIds - Optional array of media IDs to control display order.
+   * @returns A promise that resolves when synchronization is complete.
+   * @throws If the sync operation fails or is aborted.
+   * @source
+   */
   const startSync = useCallback(
     async (
       entries: AniListMediaEntry[],
@@ -377,7 +419,14 @@ export function useSynchronization(): [
     [state.isActive],
   );
 
-  // Cancel active synchronization
+  /**
+   * Cancels the active synchronization operation, aborting all in-progress requests.
+   *
+   * @remarks
+   * If no synchronization is active, this function does nothing.
+   *
+   * @source
+   */
   const cancelSync = useCallback(() => {
     if (state.abortController) {
       console.log("Cancellation requested - aborting all sync operations");
@@ -400,21 +449,39 @@ export function useSynchronization(): [
     }
   }, [state.abortController]);
 
-  // Export errors to file
+  /**
+   * Exports the error log from the last synchronization report to a file.
+   *
+   * @remarks
+   * If no report is available, this function does nothing.
+   *
+   * @source
+   */
   const exportErrors = useCallback(() => {
     if (state.report) {
       exportSyncErrorLog(state.report);
     }
   }, [state.report]);
 
-  // Export full report to file
+  /**
+   * Exports the full synchronization report to a file.
+   *
+   * @remarks
+   * If no report is available, this function does nothing.
+   *
+   * @source
+   */
   const exportReport = useCallback(() => {
     if (state.report) {
       exportSyncReport(state.report);
     }
   }, [state.report]);
 
-  // Reset the synchronization state
+  /**
+   * Resets the synchronization state to its initial values.
+   *
+   * @source
+   */
   const reset = useCallback(() => {
     setState({
       isActive: false,

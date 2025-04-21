@@ -1,6 +1,7 @@
 /**
- * AniList Synchronization Service
- * Handles batch updates and synchronization with AniList API
+ * @packageDocumentation
+ * @module anilist-sync-service
+ * @description AniList Synchronization Service. Handles batch updates, deletions, retries, and synchronization with AniList API.
  */
 
 import { request } from "./client";
@@ -14,6 +15,11 @@ import { AniListMediaEntry } from "./types";
 const MAX_REQUESTS_PER_MINUTE = 28;
 const REQUEST_INTERVAL = 60000 / MAX_REQUESTS_PER_MINUTE; // Time between requests
 
+/**
+ * Result of a single manga sync/update operation.
+ *
+ * @source
+ */
 export interface SyncResult {
   success: boolean;
   mediaId: number;
@@ -23,6 +29,11 @@ export interface SyncResult {
   retryAfter: number | null;
 }
 
+/**
+ * Progress information for a batch sync operation.
+ *
+ * @source
+ */
 export interface SyncProgress {
   total: number;
   completed: number;
@@ -37,9 +48,14 @@ export interface SyncProgress {
   currentStep: number | null;
   totalSteps: number | null;
   rateLimited: boolean;
-  retryAfter: number | null; // Time in milliseconds until next retry
+  retryAfter: number | null;
 }
 
+/**
+ * Report for a completed sync batch.
+ *
+ * @source
+ */
 export interface SyncReport {
   totalEntries: number;
   successfulUpdates: number;
@@ -53,7 +69,12 @@ export interface SyncReport {
 }
 
 /**
- * Update a single manga entry in AniList
+ * Update a single manga entry in AniList.
+ *
+ * @param entry - The AniList media entry to update.
+ * @param token - The user's authentication token.
+ * @returns A promise resolving to a SyncResult object.
+ * @source
  */
 export async function updateMangaEntry(
   entry: AniListMediaEntry,
@@ -427,7 +448,12 @@ export async function updateMangaEntry(
 }
 
 /**
- * Delete a manga entry in AniList
+ * Delete a manga entry in AniList.
+ *
+ * @param entryId - The AniList entry ID to delete.
+ * @param token - The user's authentication token.
+ * @returns A promise resolving to an object indicating success or error.
+ * @source
  */
 export async function deleteMangaEntry(
   entryId: number,
@@ -538,7 +564,15 @@ export async function deleteMangaEntry(
 }
 
 /**
- * Process a batch of manga updates with rate limiting and progress tracking
+ * Process a batch of manga updates with rate limiting and progress tracking.
+ *
+ * @param entries - Array of AniList media entries to sync.
+ * @param token - The user's authentication token.
+ * @param onProgress - Optional callback for progress updates.
+ * @param abortSignal - Optional abort signal to cancel the sync.
+ * @param displayOrderMediaIds - Optional array of media IDs to control sync order.
+ * @returns A promise resolving to a SyncReport object.
+ * @source
  */
 export async function syncMangaBatch(
   entries: AniListMediaEntry[],
@@ -781,7 +815,15 @@ export async function syncMangaBatch(
 }
 
 /**
- * Retry failed updates from a previous sync
+ * Retry failed updates from a previous sync.
+ *
+ * @param entries - Array of AniList media entries.
+ * @param failedMediaIds - Array of media IDs that failed in the previous sync.
+ * @param token - The user's authentication token.
+ * @param onProgress - Optional callback for progress updates.
+ * @param abortSignal - Optional abort signal to cancel the retry.
+ * @returns A promise resolving to a SyncReport object.
+ * @source
  */
 export async function retryFailedUpdates(
   entries: AniListMediaEntry[],

@@ -1,10 +1,23 @@
+/**
+ * @packageDocumentation
+ * @module usePendingManga
+ * @description Custom React hook for managing pending manga that need to be processed in the Kenmei to AniList sync tool.
+ */
 import { useState, useEffect } from "react";
 import { KenmeiManga } from "../api/kenmei/types";
 import { MangaMatchResult } from "../api/anilist/types";
 import { STORAGE_KEYS, storage } from "../utils/storage";
 
 /**
- * Custom hook to manage pending manga that need to be processed
+ * Custom hook to manage pending manga that need to be processed.
+ *
+ * @returns An object containing the pending manga state, setter, and utility functions for managing pending manga.
+ * @example
+ * ```ts
+ * const { pendingManga, savePendingManga, calculatePendingManga, loadPendingManga } = usePendingManga();
+ * savePendingManga(mangaList);
+ * ```
+ * @source
  */
 export const usePendingManga = () => {
   const [pendingManga, setPendingManga] = useState<KenmeiManga[]>([]);
@@ -34,7 +47,10 @@ export const usePendingManga = () => {
   }, [pendingManga]);
 
   /**
-   * Save pending manga to storage
+   * Saves the provided list of pending manga to storage and updates state.
+   *
+   * @param mangaList - The list of Kenmei manga to save as pending.
+   * @source
    */
   const savePendingManga = (mangaList: KenmeiManga[]) => {
     try {
@@ -60,7 +76,12 @@ export const usePendingManga = () => {
   };
 
   /**
-   * Calculate pending manga that still need to be processed
+   * Calculates the list of pending manga that still need to be processed, using title-based and ID-based matching.
+   *
+   * @param processedResults - The list of already processed manga match results.
+   * @param allManga - The complete list of Kenmei manga.
+   * @returns The list of Kenmei manga that are still pending processing.
+   * @source
    */
   const calculatePendingManga = (
     processedResults: MangaMatchResult[],
@@ -158,7 +179,10 @@ export const usePendingManga = () => {
   };
 
   /**
-   * Load pending manga from storage
+   * Loads pending manga from storage, validates them, and updates state.
+   *
+   * @returns The list of valid pending Kenmei manga, or null if none found.
+   * @source
    */
   const loadPendingManga = (): KenmeiManga[] | null => {
     console.log("Checking for pending manga in storage...");

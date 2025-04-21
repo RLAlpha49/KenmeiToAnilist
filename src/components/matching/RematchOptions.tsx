@@ -1,3 +1,8 @@
+/**
+ * @packageDocumentation
+ * @module RematchOptions
+ * @description React component for configuring and triggering rematch operations for manga entries by status.
+ */
 import React from "react";
 import { StatusFilterOptions } from "../../types/matching";
 import { MangaMatchResult } from "../../api/anilist/types";
@@ -15,7 +20,19 @@ import { Alert, AlertTitle, AlertDescription } from "../../components/ui/alert";
 import { RefreshCw, AlertTriangle, RotateCcw, X } from "lucide-react";
 import { motion } from "framer-motion";
 
-interface RematchOptionsProps {
+/**
+ * Props for the RematchOptions component.
+ *
+ * @property selectedStatuses - The current status filter options for rematching.
+ * @property onChangeSelectedStatuses - Callback to update the selected statuses.
+ * @property matchResults - The list of manga match results.
+ * @property rematchWarning - Optional warning message to display.
+ * @property onRematchByStatus - Callback to trigger rematching by selected statuses.
+ * @property onCloseOptions - Callback to close the rematch options panel.
+ * @internal
+ * @source
+ */
+export interface RematchOptionsProps {
   selectedStatuses: StatusFilterOptions;
   onChangeSelectedStatuses: (statuses: StatusFilterOptions) => void;
   matchResults: MangaMatchResult[];
@@ -24,6 +41,13 @@ interface RematchOptionsProps {
   onCloseOptions: () => void;
 }
 
+/**
+ * RematchOptions React component for configuring and triggering rematch operations for manga entries by status.
+ *
+ * @param props - The props for the RematchOptions component.
+ * @returns The rendered rematch options panel React element.
+ * @source
+ */
 export const RematchOptions: React.FC<RematchOptionsProps> = ({
   selectedStatuses,
   onChangeSelectedStatuses,

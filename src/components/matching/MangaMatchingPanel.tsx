@@ -1,3 +1,8 @@
+/**
+ * @packageDocumentation
+ * @module MangaMatchingPanel
+ * @description React component for reviewing, filtering, sorting, and managing manga match results, including manual search, acceptance, rejection, and alternative selection.
+ */
 import React, { useState, useEffect, useRef } from "react";
 import { KenmeiManga } from "../../api/kenmei/types";
 import { MangaMatchResult } from "../../api/anilist/types";
@@ -33,7 +38,19 @@ import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
 // Add AnimatePresence import alongside the existing imports
 import { motion, AnimatePresence } from "framer-motion";
 
-interface MangaMatchingPanelProps {
+/**
+ * Props for the MangaMatchingPanel component.
+ *
+ * @property matches - The list of manga match results to review and manage.
+ * @property onManualSearch - Optional callback to trigger a manual search for a Kenmei manga.
+ * @property onAcceptMatch - Optional callback to accept a match result.
+ * @property onRejectMatch - Optional callback to reject a match result.
+ * @property onSelectAlternative - Optional callback to select an alternative match.
+ * @property onResetToPending - Optional callback to reset a match to pending status.
+ * @internal
+ * @source
+ */
+export interface MangaMatchingPanelProps {
   matches: MangaMatchResult[];
   onManualSearch?: (kenmeiManga: KenmeiManga) => void;
   onAcceptMatch?: (match: MangaMatchResult) => void;
@@ -47,6 +64,13 @@ interface MangaMatchingPanelProps {
   onResetToPending?: (match: MangaMatchResult) => void;
 }
 
+/**
+ * MangaMatchingPanel React component for reviewing, filtering, sorting, and managing manga match results, including manual search, acceptance, rejection, and alternative selection.
+ *
+ * @param props - The props for the MangaMatchingPanel component.
+ * @returns The rendered manga matching panel React element.
+ * @source
+ */
 export function MangaMatchingPanel({
   matches,
   onManualSearch,

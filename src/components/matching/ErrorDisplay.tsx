@@ -1,3 +1,8 @@
+/**
+ * @packageDocumentation
+ * @module ErrorDisplay
+ * @description React component for displaying error information and actions during manga matching failures.
+ */
 import React from "react";
 import { ApiError } from "../../types/matching";
 import { AlertCircle, RefreshCw, Home, Settings, Database } from "lucide-react";
@@ -13,14 +18,33 @@ import { Button } from "../../components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "../../components/ui/alert";
 import { Separator } from "../../components/ui/separator";
 import { motion } from "framer-motion";
-
-interface ErrorDisplayProps {
+/**
+ * Props for the ErrorDisplay component.
+ *
+ * @property error - The main error message to display.
+ * @property detailedError - Optional detailed error object for technical information.
+ * @property onRetry - Callback to retry the matching process.
+ * @property onClearPendingManga - Optional callback to clear pending manga data.
+ * @source
+ */
+export interface ErrorDisplayProps {
   error: string;
   detailedError: ApiError | null;
   onRetry: () => void;
   onClearPendingManga?: () => void;
 }
 
+/**
+ * Displays an error card with details, retry, navigation, and cache management options for manga matching errors.
+ *
+ * @param props - The props for the ErrorDisplay component.
+ * @returns The rendered error display React element.
+ * @source
+ * @example
+ * ```tsx
+ * <ErrorDisplay error="Failed to match manga" detailedError={apiError} onRetry={handleRetry} />
+ * ```
+ */
 export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
   error,
   detailedError,

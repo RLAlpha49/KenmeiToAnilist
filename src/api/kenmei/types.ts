@@ -1,9 +1,16 @@
 /**
- * Types for Kenmei data processing
+ * @packageDocumentation
+ * @module kenmei-types
+ * @description Types for Kenmei data processing, including manga, export, parsing, and status mapping.
  */
 
 import { MediaListStatus } from "../anilist/types";
 
+/**
+ * Kenmei reading status values.
+ *
+ * @source
+ */
 export type KenmeiStatus =
   | "reading"
   | "completed"
@@ -11,6 +18,11 @@ export type KenmeiStatus =
   | "dropped"
   | "plan_to_read";
 
+/**
+ * Represents a Kenmei manga entry.
+ *
+ * @source
+ */
 export interface KenmeiManga {
   id: number;
   title: string;
@@ -30,6 +42,11 @@ export interface KenmeiManga {
   anilistId?: number; // Optional AniList ID for direct fetching
 }
 
+/**
+ * Represents a Kenmei export file structure.
+ *
+ * @source
+ */
 export interface KenmeiExport {
   export_date: string;
   user: {
@@ -39,19 +56,33 @@ export interface KenmeiExport {
   manga: KenmeiManga[];
 }
 
-// Parse options for more flexible parsing
+/**
+ * Options for parsing Kenmei data.
+ *
+ * @source
+ */
 export interface KenmeiParseOptions {
   validateStructure: boolean;
   allowPartialData: boolean;
   defaultStatus: KenmeiStatus;
 }
 
+/**
+ * Default options for parsing Kenmei data.
+ *
+ * @source
+ */
 export const DEFAULT_PARSE_OPTIONS: KenmeiParseOptions = {
   validateStructure: true,
   allowPartialData: false,
   defaultStatus: "plan_to_read",
 };
 
+/**
+ * Represents a match between a Kenmei manga and an AniList manga.
+ *
+ * @source
+ */
 export interface MangaMatch {
   kenmei: KenmeiManga;
   anilist: {
@@ -65,7 +96,11 @@ export interface MangaMatch {
   } | null;
 }
 
-// Status mapping from Kenmei to AniList
+/**
+ * Status mapping from Kenmei to AniList.
+ *
+ * @source
+ */
 export const STATUS_MAPPING: Record<KenmeiStatus, MediaListStatus> = {
   reading: "CURRENT",
   completed: "COMPLETED",
@@ -74,7 +109,11 @@ export const STATUS_MAPPING: Record<KenmeiStatus, MediaListStatus> = {
   plan_to_read: "PLANNING",
 };
 
-// Custom status mapping configuration
+/**
+ * Custom status mapping configuration.
+ *
+ * @source
+ */
 export interface StatusMappingConfig {
   reading: MediaListStatus;
   completed: MediaListStatus;
@@ -83,7 +122,11 @@ export interface StatusMappingConfig {
   plan_to_read: MediaListStatus;
 }
 
-// Validation errors
+/**
+ * Represents a validation error for Kenmei data processing.
+ *
+ * @source
+ */
 export interface ValidationError {
   mangaTitle: string;
   field: string;
@@ -91,7 +134,11 @@ export interface ValidationError {
   index: number;
 }
 
-// Processing result
+/**
+ * Represents the result of processing Kenmei data.
+ *
+ * @source
+ */
 export interface ProcessingResult {
   processedEntries: KenmeiManga[];
   validationErrors: ValidationError[];

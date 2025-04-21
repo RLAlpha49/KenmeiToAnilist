@@ -1,3 +1,8 @@
+/**
+ * @packageDocumentation
+ * @module useMatchingProcess
+ * @description Custom React hook for managing the manga matching process, including batch matching, progress tracking, error handling, and resume/cancel operations in the Kenmei to AniList sync tool.
+ */
 import { useState, useRef, useCallback } from "react";
 import { KenmeiManga } from "../api/kenmei/types";
 import { MangaMatchResult } from "../api/anilist/types";
@@ -12,6 +17,20 @@ import { ApiError, MatchingProgress } from "../types/matching";
 import { useTimeEstimate } from "./useTimeEstimate";
 import { usePendingManga } from "./usePendingManga";
 
+/**
+ * Custom hook to manage the manga matching process, including batch matching, progress tracking, error handling, and resume/cancel operations.
+ *
+ * @param authState - The authentication state containing the AniList access token.
+ * @returns An object containing state, progress, error, and handler functions for the matching process.
+ * @example
+ * ```ts
+ * const {
+ *   isLoading, progress, error, startMatching, handleResumeMatching, handleCancelProcess
+ * } = useMatchingProcess({ accessToken });
+ * startMatching(mangaList);
+ * ```
+ * @source
+ */
 export const useMatchingProcess = (authState: {
   accessToken: string | null;
 }) => {
@@ -58,7 +77,14 @@ export const useMatchingProcess = (authState: {
   const [cacheClearingCount, setCacheClearingCount] = useState(0);
 
   /**
-   * Start the batch matching process
+   * Starts the batch matching process for the provided manga list.
+   *
+   * @param mangaList - The list of Kenmei manga to match.
+   * @param forceSearch - Whether to force a fresh search and bypass cache (default: false).
+   * @param setMatchResults - State setter for updating manga match results (default: no-op).
+   * @returns A promise that resolves when the matching process completes.
+   * @throws If the matching process is cancelled or encounters an error.
+   * @source
    */
   const startMatching = useCallback(
     async (
@@ -471,7 +497,11 @@ export const useMatchingProcess = (authState: {
   );
 
   /**
-   * Resume the matching process from where it left off
+   * Resumes the matching process from where it left off, using pending manga or unmatched results.
+   *
+   * @param matchResults - The current array of manga match results.
+   * @param setMatchResults - State setter for updating manga match results.
+   * @source
    */
   const handleResumeMatching = useCallback(
     (
@@ -573,7 +603,9 @@ export const useMatchingProcess = (authState: {
   );
 
   /**
-   * Cancel resume mode and clear pending manga
+   * Cancels the resume mode and clears pending manga.
+   *
+   * @source
    */
   const handleCancelResume = useCallback(() => {
     if (
@@ -588,7 +620,9 @@ export const useMatchingProcess = (authState: {
   }, [savePendingManga]);
 
   /**
-   * Cancels the matching process
+   * Cancels the matching process, aborting all in-progress operations.
+   *
+   * @source
    */
   const handleCancelProcess = useCallback(() => {
     if (!isCancelling) {
@@ -614,7 +648,9 @@ export const useMatchingProcess = (authState: {
   }, [isCancelling]);
 
   /**
-   * Clear initialization state
+   * Marks the completion of the initialization phase for the matching process.
+   *
+   * @source
    */
   const completeInitialization = useCallback(() => {
     setIsInitializing(false);

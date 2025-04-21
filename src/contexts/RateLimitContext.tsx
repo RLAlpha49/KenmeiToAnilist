@@ -1,3 +1,9 @@
+/**
+ * @packageDocumentation
+ * @module RateLimitContext
+ * @description React context and provider for managing AniList API rate limit state and notifications throughout the application.
+ */
+
 import React, {
   createContext,
   useContext,
@@ -7,12 +13,28 @@ import React, {
 } from "react";
 import { toast } from "sonner";
 
+/**
+ * The shape of the rate limit state managed by the context.
+ *
+ * @property isRateLimited - Whether the API is currently rate limited.
+ * @property retryAfter - The timestamp (ms) when requests can be retried, or null.
+ * @property message - The message to display to the user, or null.
+ * @source
+ */
 interface RateLimitState {
   isRateLimited: boolean;
   retryAfter: number | null;
   message: string | null;
 }
 
+/**
+ * The shape of the rate limit context value provided to consumers.
+ *
+ * @property rateLimitState - The current rate limit state.
+ * @property setRateLimit - Function to set the rate limit state.
+ * @property clearRateLimit - Function to clear the rate limit state.
+ * @source
+ */
 interface RateLimitContextType {
   rateLimitState: RateLimitState;
   setRateLimit: (
@@ -27,6 +49,13 @@ const RateLimitContext = createContext<RateLimitContextType | undefined>(
   undefined,
 );
 
+/**
+ * Provides rate limit context to its children, managing rate limit state and notifications.
+ *
+ * @param children - The React children to be wrapped by the provider.
+ * @returns The rate limit context provider with value for consumers.
+ * @source
+ */
 export function RateLimitProvider({ children }: { children: ReactNode }) {
   const [rateLimitState, setRateLimitState] = useState<RateLimitState>({
     isRateLimited: false,
@@ -157,7 +186,13 @@ export function RateLimitProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// Custom hook to use the rate limit context
+/**
+ * Custom hook to access the rate limit context.
+ *
+ * @returns The current rate limit context value.
+ * @throws If used outside of a RateLimitProvider.
+ * @source
+ */
 export function useRateLimit() {
   const context = useContext(RateLimitContext);
   if (context === undefined) {
@@ -166,7 +201,15 @@ export function useRateLimit() {
   return context;
 }
 
-// RateLimitToast component
+/**
+ * Toast component to display rate limit countdown and message.
+ *
+ * @param message - The message to display to the user.
+ * @param retryAfter - The timestamp (ms) when requests can be retried.
+ * @param onComplete - Callback when the countdown completes.
+ * @returns The rendered toast component.
+ * @source
+ */
 function RateLimitToast({
   message,
   retryAfter,

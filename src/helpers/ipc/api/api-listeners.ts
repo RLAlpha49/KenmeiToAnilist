@@ -1,3 +1,9 @@
+/**
+ * @packageDocumentation
+ * @module api_listeners
+ * @description Registers IPC event listeners for AniList API requests, token exchange, cache, and shell actions in the Electron main process.
+ */
+
 import { ipcMain, shell } from "electron";
 import fetch from "node-fetch";
 
@@ -16,7 +22,14 @@ let lastRequestTime = 0;
 let isRateLimited = false;
 let rateLimitResetTime = 0;
 
-// Simple in-memory cache
+/**
+ * Simple in-memory cache for API responses.
+ *
+ * @template T - The type of cached data.
+ * @property data - The cached data.
+ * @property timestamp - The time the data was cached.
+ * @source
+ */
 interface Cache<T> {
   [key: string]: {
     data: T;
@@ -28,17 +41,25 @@ interface Cache<T> {
 const searchCache: Cache<Record<string, unknown>> = {};
 
 /**
- * Sleep for the specified number of milliseconds
+ * Sleep for the specified number of milliseconds.
+ *
+ * @param ms - The number of milliseconds to sleep.
+ * @returns A promise that resolves after the specified time.
+ * @internal
+ * @source
  */
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Make a GraphQL request to the AniList API
- * @param query GraphQL query or mutation
- * @param variables Variables for the query
- * @param token Optional access token for authenticated requests
- * @param retryCount Current retry attempt (for internal use)
- * @returns Promise resolving to the response data
+ * Make a GraphQL request to the AniList API.
+ *
+ * @param query - GraphQL query or mutation.
+ * @param variables - Variables for the query.
+ * @param token - Optional access token for authenticated requests.
+ * @param retryCount - Current retry attempt (for internal use).
+ * @returns Promise resolving to the response data.
+ * @internal
+ * @source
  */
 async function requestAniList(
   query: string,
@@ -193,7 +214,13 @@ async function requestAniList(
 }
 
 /**
- * Generate a cache key from search parameters
+ * Generate a cache key from search parameters.
+ *
+ * @param query - The GraphQL query string.
+ * @param variables - The variables for the query.
+ * @returns The generated cache key string.
+ * @internal
+ * @source
  */
 function generateCacheKey(
   query: string,
@@ -203,7 +230,13 @@ function generateCacheKey(
 }
 
 /**
- * Check if a cache entry is valid
+ * Check if a cache entry is valid.
+ *
+ * @param cache - The cache object.
+ * @param key - The cache key to check.
+ * @returns True if the cache entry is valid, false otherwise.
+ * @internal
+ * @source
  */
 function isCacheValid<T>(cache: Cache<T>, key: string): boolean {
   const entry = cache[key];
@@ -214,7 +247,9 @@ function isCacheValid<T>(cache: Cache<T>, key: string): boolean {
 }
 
 /**
- * Setup IPC handlers for AniList API requests
+ * Setup IPC handlers for AniList API requests, token exchange, cache, and shell actions.
+ *
+ * @source
  */
 export function setupAniListAPI() {
   // Handle graphQL requests

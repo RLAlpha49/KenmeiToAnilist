@@ -1,14 +1,38 @@
+/**
+ * @packageDocumentation
+ * @module ResumeNotification
+ * @description React component for notifying the user about unfinished manga matching processes and providing resume/cancel actions.
+ */
 import React from "react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { AlertTriangle, Play, XCircle } from "lucide-react";
 
-interface ResumeNotificationProps {
+/**
+ * Props for the ResumeNotification component.
+ *
+ * @property pendingMangaCount - The number of manga pending from a previous session.
+ * @property onResumeMatching - Callback to resume the matching process.
+ * @property onCancelResume - Callback to cancel resuming the matching process.
+ * @source
+ */
+export interface ResumeNotificationProps {
   pendingMangaCount: number;
   onResumeMatching: () => void;
   onCancelResume: () => void;
 }
 
+/**
+ * Displays a notification card if there are unfinished manga matching processes, allowing the user to resume or cancel.
+ *
+ * @param props - The props for the ResumeNotification component.
+ * @returns The rendered resume notification React element, or null if no pending manga.
+ * @source
+ * @example
+ * ```tsx
+ * <ResumeNotification pendingMangaCount={3} onResumeMatching={handleResume} onCancelResume={handleCancel} />
+ * ```
+ */
 export const ResumeNotification: React.FC<ResumeNotificationProps> = ({
   pendingMangaCount,
   onResumeMatching,

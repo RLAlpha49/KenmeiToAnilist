@@ -1,3 +1,9 @@
+/**
+ * @packageDocumentation
+ * @module HomePage
+ * @description Home page component for the Kenmei to AniList sync tool. Displays dashboard, statistics, feature carousel, quick actions, and sync status.
+ */
+
 import React, { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -129,6 +135,13 @@ const featureCards = [
   },
 ];
 
+/**
+ * Home page component for the Kenmei to AniList sync tool.
+ *
+ * Displays dashboard statistics, feature carousel, quick actions, and sync status for the user.
+ *
+ * @source
+ */
 export function HomePage() {
   // Get auth state to check authentication status
   const { authState } = useAuth();

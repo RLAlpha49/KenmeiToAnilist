@@ -1,3 +1,8 @@
+/**
+ * @packageDocumentation
+ * @module SyncManager
+ * @description React component for managing and displaying the synchronization process of manga entries with AniList, including progress, error handling, and incremental sync options.
+ */
 import React, { useEffect } from "react";
 import { SyncProgress, SyncReport } from "../../api/anilist/sync-service";
 import { AniListMediaEntry } from "../../api/anilist/types";
@@ -23,13 +28,28 @@ import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
 import { useRateLimit } from "../../contexts/RateLimitContext";
 
-interface SyncManagerProps {
+/**
+ * Props for the SyncManager component.
+ *
+ * @property entries - The list of AniList media entries to synchronize.
+ * @property token - The AniList authentication token.
+ * @property onComplete - Optional callback invoked when synchronization completes, with the sync report.
+ * @property onCancel - Optional callback invoked when synchronization is cancelled.
+ * @property autoStart - Whether to automatically start synchronization on mount (default: true).
+ * @property syncState - Optional sync state object containing progress, report, and error information.
+ * @property syncActions - Optional sync actions for starting and cancelling sync.
+ * @property incrementalSync - Whether to use incremental sync mode.
+ * @property onIncrementalSyncChange - Callback for toggling incremental sync mode.
+ * @property displayOrderMediaIds - Optional array of media IDs to control display order.
+ * @internal
+ * @source
+ */
+export interface SyncManagerProps {
   entries: AniListMediaEntry[];
   token: string;
   onComplete?: (report: SyncReport) => void;
   onCancel?: () => void;
   autoStart?: boolean;
-  // Add sync state and actions from the hook
   syncState?: {
     isActive: boolean;
     progress: SyncProgress | null;
@@ -45,7 +65,6 @@ interface SyncManagerProps {
     ) => Promise<void>;
     cancelSync: () => void;
   };
-  // Add incremental sync option
   incrementalSync?: boolean;
   onIncrementalSyncChange?: (value: boolean) => void;
   displayOrderMediaIds?: number[];
@@ -645,4 +664,11 @@ const SyncManager: React.FC<SyncManagerProps> = ({
   );
 };
 
+/**
+ * SyncManager React component for managing and displaying the synchronization process of manga entries with AniList.
+ *
+ * @param props - The props for the SyncManager component.
+ * @returns The rendered sync manager React element.
+ * @source
+ */
 export default SyncManager;

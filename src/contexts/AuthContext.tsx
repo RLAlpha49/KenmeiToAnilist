@@ -1,3 +1,9 @@
+/**
+ * @packageDocumentation
+ * @module AuthContext
+ * @description React context provider for authentication state and actions, including login, logout, and credential management.
+ */
+
 import React, { useState, useEffect, ReactNode, useRef } from "react";
 import { storage } from "../utils/storage";
 import {
@@ -8,10 +14,23 @@ import {
 } from "../types/auth";
 import { AuthContext } from "./AuthContextDefinition";
 
+/**
+ * Props for the AuthProvider component.
+ *
+ * @property children - The React children to be wrapped by the provider.
+ * @source
+ */
 interface AuthProviderProps {
   children: ReactNode;
 }
 
+/**
+ * Provides authentication context to its children, managing authentication state and actions.
+ *
+ * @param children - The React children to be wrapped by the provider.
+ * @returns The authentication context provider with value for consumers.
+ * @source
+ */
 export function AuthProvider({ children }: AuthProviderProps) {
   // Add a ref to track previous state for comparison
   const prevAuthStateRef = useRef<string>("");

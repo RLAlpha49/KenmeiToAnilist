@@ -1,3 +1,8 @@
+/**
+ * @packageDocumentation
+ * @module DataTable
+ * @description Displays a paginated, scrollable table of Kenmei manga items with status badges and load more functionality.
+ */
 import React, { useState, useEffect } from "react";
 import { KenmeiMangaItem } from "../../types/kenmei";
 import {
@@ -14,11 +19,34 @@ import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Loader2, ChevronDown } from "lucide-react";
 
-interface DataTableProps {
+/**
+ * Props for the DataTable component.
+ *
+ * @property data - Array of KenmeiMangaItem objects to display in the table
+ * @property itemsPerPage - Optional number of items to show per page (default: 50)
+ *
+ * @internal
+ * @source
+ */
+export interface DataTableProps {
   data: KenmeiMangaItem[];
   itemsPerPage?: number;
 }
 
+/**
+ * Displays a paginated, scrollable table of Kenmei manga items with status badges and load more functionality.
+ *
+ * Shows manga title, status, chapters, volumes, score, and last read date, with dynamic columns based on available data. Supports loading more items and empty state.
+ *
+ * @param data - Array of KenmeiMangaItem objects to display in the table
+ * @param itemsPerPage - Optional number of items to show per page (default: 50)
+ * @returns A React element displaying the manga data table
+ * @example
+ * ```tsx
+ * <DataTable data={myMangaList} itemsPerPage={25} />
+ * ```
+ * @source
+ */
 export function DataTable({ data, itemsPerPage = 50 }: DataTableProps) {
   const [visibleData, setVisibleData] = useState<KenmeiMangaItem[]>([]);
   const [displayCount, setDisplayCount] = useState(itemsPerPage);

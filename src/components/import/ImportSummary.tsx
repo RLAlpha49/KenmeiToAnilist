@@ -1,3 +1,8 @@
+/**
+ * @packageDocumentation
+ * @module ImportSummary
+ * @description React component for displaying a summary of Kenmei import data, including status breakdown and actions to proceed or cancel.
+ */
 import React from "react";
 import { KenmeiExport, KenmeiStatus } from "../../api/kenmei/types";
 import {
@@ -22,13 +27,34 @@ import {
 import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
 
-interface ImportSummaryProps {
+/**
+ * Props for the ImportSummary component.
+ *
+ * @property data - The KenmeiExport data to summarize.
+ * @property onProceed - Callback invoked when the user chooses to proceed with the import.
+ * @property onCancel - Callback invoked when the user cancels the import.
+ * @internal
+ * @source
+ */
+export interface ImportSummaryProps {
   data: KenmeiExport;
   onProceed: () => void;
   onCancel: () => void;
 }
 
-interface StatusCount {
+/**
+ * Status count information for each Kenmei status.
+ *
+ * @property status - The KenmeiStatus value.
+ * @property count - The number of manga entries with this status.
+ * @property icon - The icon to display for this status.
+ * @property label - The label for this status.
+ * @property color - The text color class for this status.
+ * @property bgColor - The background color class for this status.
+ * @source
+ * @internal
+ */
+export interface StatusCount {
   status: KenmeiStatus;
   count: number;
   icon: React.ReactNode;
@@ -37,6 +63,17 @@ interface StatusCount {
   bgColor: string;
 }
 
+/**
+ * ImportSummary React component for displaying a summary of Kenmei import data.
+ *
+ * Shows total manga entries, a breakdown by status, and actions to proceed or cancel the import.
+ *
+ * @param data - The KenmeiExport data to summarize.
+ * @param onProceed - Callback invoked when the user chooses to proceed with the import.
+ * @param onCancel - Callback invoked when the user cancels the import.
+ * @returns The rendered import summary React element.
+ * @source
+ */
 export function ImportSummary({
   data,
   onProceed,

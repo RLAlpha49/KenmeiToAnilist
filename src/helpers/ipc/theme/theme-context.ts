@@ -1,3 +1,9 @@
+/**
+ * @packageDocumentation
+ * @module theme_context
+ * @description Exposes the Electron theme mode context bridge (current, toggle, dark, light, system) to the renderer process.
+ */
+
 import {
   THEME_MODE_CURRENT_CHANNEL,
   THEME_MODE_DARK_CHANNEL,
@@ -6,6 +12,11 @@ import {
   THEME_MODE_TOGGLE_CHANNEL,
 } from "./theme-channels";
 
+/**
+ * Exposes the Electron theme mode context bridge to the renderer process.
+ *
+ * @source
+ */
 export function exposeThemeContext() {
   const { contextBridge, ipcRenderer } = window.require("electron");
   contextBridge.exposeInMainWorld("themeMode", {

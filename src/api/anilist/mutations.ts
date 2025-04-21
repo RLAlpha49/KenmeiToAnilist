@@ -1,8 +1,16 @@
 /**
- * GraphQL mutations for AniList API
+ * @packageDocumentation
+ * @module anilist-mutations
+ * @description GraphQL mutations for AniList API, including dynamic update and delete mutations for manga entries.
  */
 
-// Function to generate a dynamic UPDATE_MANGA_ENTRY mutation with only the required variables
+/**
+ * Generate a dynamic UPDATE_MANGA_ENTRY mutation with only the required variables.
+ *
+ * @param variables - Object containing the variables to include in the mutation.
+ * @returns The GraphQL mutation string for updating a manga entry.
+ * @source
+ */
 export function generateUpdateMangaEntryMutation(
   variables: Record<string, string | number | boolean>,
 ): string {
@@ -45,6 +53,11 @@ mutation (${variableDefinitions.join(", ")}) {
 `;
 }
 
+/**
+ * GraphQL mutation to delete a manga entry by its AniList ID.
+ *
+ * @source
+ */
 export const DELETE_MANGA_ENTRY = `
 mutation ($id: Int) {
   DeleteMediaListEntry(id: $id) {

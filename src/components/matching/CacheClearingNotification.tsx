@@ -1,3 +1,8 @@
+/**
+ * @packageDocumentation
+ * @module CacheClearingNotification
+ * @description Notification component for indicating cache clearing progress for selected manga.
+ */
 import React from "react";
 import { Loader2 } from "lucide-react";
 import {
@@ -9,10 +14,23 @@ import {
 } from "../../components/ui/card";
 import { motion } from "framer-motion";
 
-interface CacheClearingNotificationProps {
+/**
+ * Props for the CacheClearingNotification component.
+ *
+ * @property cacheClearingCount - The number of manga entries being cleared from cache.
+ * @source
+ */
+export interface CacheClearingNotificationProps {
   cacheClearingCount: number;
 }
 
+/**
+ * CacheClearingNotification React component that displays a modal notification while cache is being cleared for selected manga.
+ *
+ * @param cacheClearingCount - The number of manga entries being cleared from cache.
+ * @returns The rendered notification React element.
+ * @source
+ */
 export const CacheClearingNotification: React.FC<
   CacheClearingNotificationProps
 > = ({ cacheClearingCount }) => {

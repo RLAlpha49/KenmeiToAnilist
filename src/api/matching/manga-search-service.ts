@@ -1,6 +1,7 @@
 /**
- * Manga search service for finding AniList matches for Kenmei manga
- * Handles searching, caching, and batch processing to optimize AniList API usage
+ * @packageDocumentation
+ * @module manga-search-service
+ * @description Manga search service for finding AniList matches for Kenmei manga. Handles searching, caching, and batch processing to optimize AniList API usage.
  */
 
 import { KenmeiManga } from "../kenmei/types";
@@ -263,7 +264,11 @@ let lastRequestTime = 0;
 const requestQueue: { resolve: (value: void) => void }[] = [];
 let processingQueue = false;
 
-// Search service configuration
+/**
+ * Search service configuration for manga search and matching.
+ *
+ * @source
+ */
 export interface SearchServiceConfig {
   matchConfig: Partial<MatchEngineConfig>;
   batchSize: number;
@@ -275,6 +280,11 @@ export interface SearchServiceConfig {
   bypassCache?: boolean;
 }
 
+/**
+ * Default configuration for the manga search service.
+ *
+ * @source
+ */
 export const DEFAULT_SEARCH_CONFIG: SearchServiceConfig = {
   matchConfig: DEFAULT_MATCH_CONFIG,
   batchSize: 10,
@@ -1225,7 +1235,14 @@ function rankMangaResults(
 }
 
 /**
- * Search for manga by title with rate limiting
+ * Search for manga by title with rate limiting and caching.
+ *
+ * @param title - The manga title to search for.
+ * @param token - Optional authentication token.
+ * @param config - Optional search service configuration.
+ * @param abortSignal - Optional abort signal to cancel the search.
+ * @returns A promise resolving to an array of MangaMatch objects.
+ * @source
  */
 export async function searchMangaByTitle(
   title: string,
@@ -1525,7 +1542,13 @@ export async function searchMangaByTitle(
 }
 
 /**
- * Match a single Kenmei manga with AniList entries
+ * Match a single Kenmei manga with AniList entries.
+ *
+ * @param kenmeiManga - The Kenmei manga entry to match.
+ * @param token - Optional authentication token.
+ * @param config - Optional search service configuration.
+ * @returns A promise resolving to a MangaMatchResult object.
+ * @source
  */
 export async function matchSingleManga(
   kenmeiManga: KenmeiManga,
@@ -1572,7 +1595,16 @@ export async function matchSingleManga(
 }
 
 /**
- * Process matches for a batch of manga
+ * Process matches for a batch of manga.
+ *
+ * @param mangaList - The list of Kenmei manga entries to match.
+ * @param token - Optional authentication token.
+ * @param config - Optional search service configuration.
+ * @param progressCallback - Optional callback for progress updates.
+ * @param shouldCancel - Optional function to check for cancellation.
+ * @param abortSignal - Optional abort signal to cancel the batch process.
+ * @returns A promise resolving to an array of MangaMatchResult objects.
+ * @source
  */
 export async function batchMatchManga(
   mangaList: KenmeiManga[],
@@ -1969,8 +2001,13 @@ export async function batchMatchManga(
 }
 
 /**
- * Pre-search for common manga titles to populate cache
- * This can be used to speed up subsequent searches
+ * Pre-search for common manga titles to populate cache.
+ *
+ * @param titles - Array of manga titles to preload.
+ * @param token - Optional authentication token.
+ * @param config - Optional search service configuration.
+ * @returns A promise that resolves when preloading is complete.
+ * @source
  */
 export async function preloadCommonManga(
   titles: string[],
@@ -1997,7 +2034,9 @@ export async function preloadCommonManga(
 }
 
 /**
- * Clear the manga cache
+ * Clear the manga cache.
+ *
+ * @source
  */
 export function clearMangaCache(): void {
   Object.keys(mangaCache).forEach((key) => {
@@ -2006,7 +2045,10 @@ export function clearMangaCache(): void {
 }
 
 /**
- * Get cache statistics
+ * Get cache statistics.
+ *
+ * @returns An object containing cache size, entries, and age information.
+ * @source
  */
 export function getCacheStats(): {
   size: number;
@@ -2052,8 +2094,9 @@ export function getCacheStats(): {
 }
 
 /**
- * Debug and troubleshoot the cache status
- * This exposes functions to check and diagnose cache issues
+ * Debug and troubleshoot the cache status. Exposes functions to check and diagnose cache issues.
+ *
+ * @source
  */
 export const cacheDebugger = {
   /**
@@ -2308,7 +2351,14 @@ export const cacheDebugger = {
 };
 
 /**
- * Fetch manga by IDs in batches
+ * Fetch manga by IDs in batches.
+ *
+ * @param ids - Array of AniList manga IDs to fetch.
+ * @param token - Optional authentication token.
+ * @param shouldCancel - Optional function to check for cancellation.
+ * @param abortSignal - Optional abort signal to cancel the fetch.
+ * @returns A promise resolving to an array of AniListManga objects.
+ * @source
  */
 export async function getBatchedMangaIds(
   ids: number[],
@@ -2403,10 +2453,11 @@ function calculateConfidence(searchTitle: string, manga: AniListManga): number {
 }
 
 /**
- * Clear cache for multiple manga titles at once
- * Use this when doing a batch rematch operation with bypassCache=true
- * @param titles List of manga titles to clear from cache
- * @returns Object with count of cleared entries and remaining cache size
+ * Clear cache for multiple manga titles at once. Use this when doing a batch rematch operation with bypassCache=true.
+ *
+ * @param titles - List of manga titles to clear from cache.
+ * @returns Object with count of cleared entries and remaining cache size.
+ * @source
  */
 export function clearCacheForTitles(titles: string[]): {
   clearedCount: number;

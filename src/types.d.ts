@@ -13,7 +13,7 @@ declare const MAIN_WINDOW_VITE_NAME: string;
  * Represents the ImportMeta interface for Vite environment variables.
  * @source
  */
-export interface ImportMeta {
+interface ImportMeta {
   readonly env: {
     [key: string]: string | boolean | undefined;
     readonly VITE_ANILIST_CLIENT_ID: string;
@@ -29,7 +29,7 @@ export interface ImportMeta {
  * Represents the theme mode context for controlling the application's theme.
  * @source
  */
-export interface ThemeModeContext {
+interface ThemeModeContext {
   toggle: () => Promise<boolean>;
   dark: () => Promise<void>;
   light: () => Promise<void>;
@@ -41,7 +41,7 @@ export interface ThemeModeContext {
  * Represents the Electron window controls available in the renderer process.
  * @source
  */
-export interface ElectronWindow {
+interface ElectronWindow {
   minimize: () => Promise<void>;
   maximize: () => Promise<void>;
   close: () => Promise<void>;

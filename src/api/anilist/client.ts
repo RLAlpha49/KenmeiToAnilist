@@ -1,5 +1,7 @@
 /**
- * AniList API client for making GraphQL requests
+ * @packageDocumentation
+ * @module anilist-client
+ * @description AniList API client for making GraphQL requests, including search, advanced search, user manga list, and cache utilities.
  */
 
 import {
@@ -109,11 +111,17 @@ function persistSearchCache(): void {
 initializeSearchCache();
 
 /**
- * Make a request to the AniList API
+ * Make a request to the AniList API.
  *
- * This function supports dynamic mutations where variable declarations may change
- * based on the variables object passed. It also handles both browser and Electron
- * environments.
+ * Supports dynamic mutations where variable declarations may change based on the variables object passed. Handles both browser and Electron environments.
+ *
+ * @param query - The GraphQL query or mutation string.
+ * @param variables - Optional variables for the query.
+ * @param token - Optional authentication token.
+ * @param abortSignal - Optional abort signal to cancel the request.
+ * @param bypassCache - Optional flag to bypass cache.
+ * @returns A promise resolving to an AniListResponse object.
+ * @source
  */
 export async function request<T>(
   query: string,
@@ -280,10 +288,12 @@ export async function request<T>(
 }
 
 /**
- * Get the OAuth URL for AniList authentication
- * @param clientId The OAuth client ID
- * @param redirectUri The redirect URI after authentication
- * @returns The complete OAuth URL
+ * Get the OAuth URL for AniList authentication.
+ *
+ * @param clientId - The OAuth client ID.
+ * @param redirectUri - The redirect URI after authentication.
+ * @returns The complete OAuth URL.
+ * @source
  */
 export function getOAuthUrl(clientId: string, redirectUri: string): string {
   return `https://anilist.co/api/v2/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(
@@ -292,12 +302,14 @@ export function getOAuthUrl(clientId: string, redirectUri: string): string {
 }
 
 /**
- * Exchange an authorization code for an access token through the main process
- * @param clientId The OAuth client ID
- * @param clientSecret The OAuth client secret
- * @param redirectUri The redirect URI used for authentication
- * @param code The authorization code to exchange
- * @returns Promise resolving to the token response
+ * Exchange an authorization code for an access token through the main process.
+ *
+ * @param clientId - The OAuth client ID.
+ * @param clientSecret - The OAuth client secret.
+ * @param redirectUri - The redirect URI used for authentication.
+ * @param code - The authorization code to exchange.
+ * @returns Promise resolving to the token response.
+ * @source
  */
 export async function getAccessToken(
   clientId: string,
@@ -352,13 +364,15 @@ function isCacheValid<T>(cache: Cache<T>, key: string): boolean {
 }
 
 /**
- * Search for manga on AniList
- * @param search Search query
- * @param page Page number
- * @param perPage Results per page
- * @param token Optional access token
- * @param bypassCache Optional parameter to bypass cache
- * @returns Promise resolving to search results
+ * Search for manga on AniList.
+ *
+ * @param search - Search query.
+ * @param page - Page number.
+ * @param perPage - Results per page.
+ * @param token - Optional access token.
+ * @param bypassCache - Optional parameter to bypass cache.
+ * @returns Promise resolving to search results.
+ * @source
  */
 export async function searchManga(
   search: string,
@@ -484,14 +498,16 @@ export async function searchManga(
 }
 
 /**
- * Advanced search for manga with additional filters
- * @param search Search query
- * @param filters Filter options
- * @param page Page number
- * @param perPage Results per page
- * @param token Optional access token
- * @param bypassCache Optional parameter to bypass cache
- * @returns Promise resolving to search results
+ * Advanced search for manga with additional filters.
+ *
+ * @param search - Search query.
+ * @param filters - Filter options.
+ * @param page - Page number.
+ * @param perPage - Results per page.
+ * @param token - Optional access token.
+ * @param bypassCache - Optional parameter to bypass cache.
+ * @returns Promise resolving to search results.
+ * @source
  */
 export async function advancedSearchManga(
   search: string,
@@ -622,8 +638,10 @@ export async function advancedSearchManga(
 }
 
 /**
- * Clear the search cache
- * @param searchQuery Optional search query to clear specific entries
+ * Clear the search cache.
+ *
+ * @param searchQuery - Optional search query to clear specific entries.
+ * @source
  */
 export function clearSearchCache(searchQuery?: string): void {
   if (searchQuery) {
@@ -652,7 +670,13 @@ export function clearSearchCache(searchQuery?: string): void {
 }
 
 /**
- * Get multiple manga by their IDs
+ * Get multiple manga by their IDs.
+ *
+ * @param ids - Array of AniList manga IDs.
+ * @param token - Optional access token.
+ * @param abortSignal - Optional abort signal to cancel the request.
+ * @returns Promise resolving to an array of AniListManga objects.
+ * @source
  */
 export async function getMangaByIds(
   ids: number[],
@@ -693,10 +717,12 @@ export async function getMangaByIds(
 }
 
 /**
- * Gets the current user's manga list from AniList
- * @param token The user's access token
- * @param abortSignal Optional AbortSignal to cancel the request
- * @returns The user's manga list organized by status
+ * Gets the current user's manga list from AniList.
+ *
+ * @param token - The user's access token.
+ * @param abortSignal - Optional AbortSignal to cancel the request.
+ * @returns The user's manga list organized by status.
+ * @source
  */
 export async function getUserMangaList(
   token: string,

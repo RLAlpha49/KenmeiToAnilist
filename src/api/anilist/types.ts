@@ -1,9 +1,16 @@
 /**
- * AniList API type definitions
+ * @packageDocumentation
+ * @module anilist-types
+ * @description AniList API type definitions, including manga, user, response, and matching types.
  */
 
 import { KenmeiManga } from "../kenmei/types";
 
+/**
+ * AniList media list status values.
+ *
+ * @source
+ */
 export type MediaListStatus =
   | "CURRENT"
   | "PLANNING"
@@ -12,6 +19,11 @@ export type MediaListStatus =
   | "PAUSED"
   | "REPEATING";
 
+/**
+ * Represents an AniList manga entry.
+ *
+ * @source
+ */
 export interface AniListManga {
   id: number;
   title: {
@@ -55,6 +67,11 @@ export interface AniListManga {
   };
 }
 
+/**
+ * Represents a user's AniList media entry.
+ *
+ * @source
+ */
 export interface AniListMediaEntry {
   id?: number;
   mediaId: number;
@@ -84,6 +101,11 @@ export interface AniListMediaEntry {
   } | null;
 }
 
+/**
+ * Represents an AniList user.
+ *
+ * @source
+ */
 export interface AniListUser {
   id: number;
   name: string;
@@ -93,7 +115,11 @@ export interface AniListUser {
   };
 }
 
-// GraphQL error interface
+/**
+ * GraphQL error interface.
+ *
+ * @source
+ */
 export interface GraphQLError {
   message: string;
   locations?: Array<{ line: number; column: number }>;
@@ -101,12 +127,21 @@ export interface GraphQLError {
   extensions?: Record<string, unknown>;
 }
 
-// Generic API response format
+/**
+ * Generic API response format.
+ *
+ * @source
+ */
 export interface AniListResponse<T> {
   data: T;
   errors?: GraphQLError[];
 }
 
+/**
+ * Pagination information for AniList API responses.
+ *
+ * @source
+ */
 export interface PageInfo {
   total: number;
   currentPage: number;
@@ -115,6 +150,11 @@ export interface PageInfo {
   perPage: number;
 }
 
+/**
+ * Search result format for AniList API.
+ *
+ * @source
+ */
 export interface SearchResult<T> {
   Page: {
     pageInfo: PageInfo;
@@ -122,7 +162,11 @@ export interface SearchResult<T> {
   };
 }
 
-// Manga match types
+/**
+ * Represents a manga match result with confidence score.
+ *
+ * @source
+ */
 export interface MangaMatch {
   coverImage?:
     | {
@@ -139,8 +183,18 @@ export interface MangaMatch {
   confidence: number;
 }
 
+/**
+ * Status of a manga match operation.
+ *
+ * @source
+ */
 export type MatchStatus = "pending" | "matched" | "manual" | "skipped";
 
+/**
+ * Represents the result of a manga match operation.
+ *
+ * @source
+ */
 export interface MangaMatchResult {
   kenmeiManga: KenmeiManga;
   anilistMatches?: MangaMatch[];
@@ -150,7 +204,9 @@ export interface MangaMatchResult {
 }
 
 /**
- * A simplified representation of a user's AniList media entry
+ * A simplified representation of a user's AniList media entry.
+ *
+ * @source
  */
 export interface UserMediaEntry {
   id: number;
@@ -167,6 +223,8 @@ export interface UserMediaEntry {
 }
 
 /**
- * A map of mediaId to media entries for quick lookup
+ * A map of mediaId to media entries for quick lookup.
+ *
+ * @source
  */
 export type UserMediaList = Record<number, UserMediaEntry>;

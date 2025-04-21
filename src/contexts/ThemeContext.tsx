@@ -1,3 +1,9 @@
+/**
+ * @packageDocumentation
+ * @module ThemeContext
+ * @description React context and provider for managing and accessing theme preferences (dark, light, system) throughout the application.
+ */
+
 import React, {
   createContext,
   useContext,
@@ -13,6 +19,15 @@ import {
   updateDocumentTheme,
 } from "@/helpers/theme_helpers";
 
+/**
+ * The shape of the theme context value provided to consumers.
+ *
+ * @property theme - The current theme preferences (system and local).
+ * @property isDarkMode - Whether dark mode is currently enabled.
+ * @property setThemeMode - Function to set the theme mode.
+ * @property toggleTheme - Function to toggle between dark and light modes.
+ * @source
+ */
 interface ThemeContextType {
   theme: ThemePreferences;
   isDarkMode: boolean;
@@ -22,6 +37,13 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+/**
+ * Provides theme context to its children, managing theme state and updates.
+ *
+ * @param children - The React children to be wrapped by the provider.
+ * @returns The theme context provider with value for consumers.
+ * @source
+ */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<ThemePreferences>({
     system: "light",
@@ -86,6 +108,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * Custom hook to access the theme context.
+ *
+ * @returns The current theme context value.
+ * @throws If used outside of a ThemeProvider.
+ * @source
+ */
 export const useTheme = (): ThemeContextType => {
   const context = useContext(ThemeContext);
   if (context === undefined) {

@@ -1,3 +1,9 @@
+/**
+ * @packageDocumentation
+ * @module ToggleTheme
+ * @description A button component for toggling between light and dark themes, with tooltip and accessible controls.
+ */
+
 import { Moon, Sun } from "lucide-react";
 import React from "react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +15,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+/**
+ * A button for toggling between light and dark themes, with tooltip and accessible controls.
+ *
+ * @returns The rendered toggle theme button component.
+ * @source
+ */
 export default function ToggleTheme() {
   const { isDarkMode, toggleTheme } = useTheme();
 

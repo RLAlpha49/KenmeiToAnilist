@@ -1,3 +1,9 @@
+/**
+ * @packageDocumentation
+ * @module routes
+ * @description Route definitions for the application using TanStack Router. Exports all main routes and the root route tree.
+ */
+
 import { createRoute } from "@tanstack/react-router";
 import { RootRoute } from "./__root";
 import { HomePage } from "../pages/HomePage";
@@ -25,36 +31,66 @@ import { SyncPage } from "../pages/SyncPage";
 // 4. Add to routeTree: RootRoute.addChildren([HomeRoute, NewRoute, ...])
 // 5. Add Link: <Link to="/new">New Page</Link>
 
+/**
+ * Route for the home page ('/').
+ *
+ * @source
+ */
 export const HomeRoute = createRoute({
   getParentRoute: () => RootRoute,
   path: "/",
   component: HomePage,
 });
 
+/**
+ * Route for the import page ('/import').
+ *
+ * @source
+ */
 export const ImportRoute = createRoute({
   getParentRoute: () => RootRoute,
   path: "/import",
   component: ImportPage,
 });
 
+/**
+ * Route for the review/matching page ('/review').
+ *
+ * @source
+ */
 export const ReviewRoute = createRoute({
   getParentRoute: () => RootRoute,
   path: "/review",
   component: MatchingPage,
 });
 
+/**
+ * Route for the sync page ('/sync').
+ *
+ * @source
+ */
 export const SyncRoute = createRoute({
   getParentRoute: () => RootRoute,
   path: "/sync",
   component: SyncPage,
 });
 
+/**
+ * Route for the settings page ('/settings').
+ *
+ * @source
+ */
 export const SettingsRoute = createRoute({
   getParentRoute: () => RootRoute,
   path: "/settings",
   component: SettingsPage,
 });
 
+/**
+ * The root route tree containing all main application routes.
+ *
+ * @source
+ */
 export const rootTree = RootRoute.addChildren([
   HomeRoute,
   ImportRoute,

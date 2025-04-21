@@ -1,3 +1,9 @@
+/**
+ * @packageDocumentation
+ * @module ImportPage
+ * @description Import page component for the Kenmei to AniList sync tool. Handles file upload, import, error handling, and displays import summary and data table.
+ */
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { FileDropZone } from "../components/import/FileDropZone";
@@ -64,6 +70,13 @@ const itemVariants = {
   },
 };
 
+/**
+ * Import page component for the Kenmei to AniList sync tool.
+ *
+ * Handles file upload, import process, error handling, and displays import summary and data table for the user.
+ *
+ * @source
+ */
 export function ImportPage() {
   const navigate = useNavigate();
   const [importData, setImportData] = useState<KenmeiData | null>(null);

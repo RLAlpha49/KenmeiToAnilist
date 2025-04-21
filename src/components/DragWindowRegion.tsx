@@ -1,3 +1,8 @@
+/**
+ * @packageDocumentation
+ * @module DragWindowRegion
+ * @description Provides a draggable window region with window control buttons for Electron apps.
+ */
 import {
   closeWindow,
   maximizeWindow,
@@ -5,10 +10,29 @@ import {
 } from "@/helpers/window_helpers";
 import React, { type ReactNode } from "react";
 
-interface DragWindowRegionProps {
+/**
+ * Props for the DragWindowRegion component.
+ *
+ * @property title - Optional title to display in the draggable region (can be a string or ReactNode)
+ *
+ * @internal
+ * @source
+ */
+export interface DragWindowRegionProps {
   title?: ReactNode;
 }
 
+/**
+ * Provides a draggable window region with minimize, maximize, and close buttons for Electron windows.
+ *
+ * @param title - Optional title to display in the draggable region (can be a string or ReactNode)
+ * @returns A React element containing the draggable region and window control buttons
+ * @example
+ * ```tsx
+ * <DragWindowRegion title="My App" />
+ * ```
+ * @source
+ */
 export default function DragWindowRegion({ title }: DragWindowRegionProps) {
   return (
     <div className="flex w-screen items-stretch justify-between">
@@ -24,7 +48,14 @@ export default function DragWindowRegion({ title }: DragWindowRegionProps) {
   );
 }
 
-function WindowButtons() {
+/**
+ * Renders the window control buttons (minimize, maximize, close) for the Electron window.
+ *
+ * @returns A React element with window control buttons
+ * @internal
+ * @source
+ */
+export function WindowButtons() {
   return (
     <div className="flex">
       <button

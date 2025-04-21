@@ -1,6 +1,17 @@
+/**
+ * @packageDocumentation
+ * @module auth_context
+ * @description Exposes the Electron authentication context bridge (OAuth, credentials, token exchange, event listeners) to the renderer process.
+ */
+
 import { APICredentials } from "@/types/auth";
 import { contextBridge, ipcRenderer } from "electron";
 
+/**
+ * Exposes the Electron authentication context bridge to the renderer process.
+ *
+ * @source
+ */
 export function exposeAuthContext() {
   // For debugging
   console.log("Setting up auth context bridge...");

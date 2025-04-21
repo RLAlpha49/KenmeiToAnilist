@@ -1,3 +1,8 @@
+/**
+ * @packageDocumentation
+ * @module Footer
+ * @description Application footer component with branding, version, social links, and credits.
+ */
 import React from "react";
 import { Github, Heart, Mail } from "lucide-react";
 import { motion } from "framer-motion";
@@ -13,6 +18,12 @@ import { Badge } from "../ui/badge";
 import { getAppVersion } from "../../utils/app-version";
 import appIcon from "../../assets/k2a-icon-512x512.png";
 
+/**
+ * Footer React component that displays the application footer with logo, version, social links, and credits.
+ *
+ * @returns The rendered footer React element.
+ * @source
+ */
 export function Footer() {
   const handleOpenExternal = (url: string) => (e: React.MouseEvent) => {
     e.preventDefault();

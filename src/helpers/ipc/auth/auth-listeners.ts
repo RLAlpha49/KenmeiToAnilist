@@ -1,3 +1,9 @@
+/**
+ * @packageDocumentation
+ * @module auth_listeners
+ * @description Registers IPC event listeners for authentication-related actions (OAuth, credentials, token exchange) in the Electron main process.
+ */
+
 import { BrowserWindow, ipcMain, shell } from "electron";
 import { URL } from "url";
 import * as http from "http";
@@ -11,7 +17,15 @@ let authReject: ((error: Error) => void) | null = null;
 // Use a more reliable default port that doesn't require admin privileges
 const DEFAULT_PORT = 8765;
 
-// Define a proper type for credentials
+/**
+ * Represents authentication credentials for AniList API.
+ *
+ * @property source - The credential source ("default" or "custom").
+ * @property clientId - The client ID string.
+ * @property clientSecret - The client secret string.
+ * @property redirectUri - The redirect URI string.
+ * @source
+ */
 interface AuthCredentials {
   source: "default" | "custom";
   clientId: string;
@@ -332,6 +346,13 @@ export function addAuthEventListeners(mainWindow: BrowserWindow) {
 
 /**
  * Start a temporary HTTP server to handle the OAuth callback
+ *
+ * @param port - The port to listen on.
+ * @param callbackPath - The callback path to watch for.
+ * @param mainWindow - The main Electron browser window instance.
+ * @returns A promise that resolves when the server is started.
+ * @internal
+ * @source
  */
 async function startAuthServer(
   port: string,
@@ -557,6 +578,9 @@ async function startAuthServer(
 
 /**
  * Clean up the auth server and related resources
+ *
+ * @internal
+ * @source
  */
 function cleanupAuthServer() {
   if (authServer) {

@@ -1,7 +1,14 @@
 /**
- * GraphQL queries for AniList API
+ * @packageDocumentation
+ * @module anilist-queries
+ * @description GraphQL queries for AniList API, including user, manga, and advanced search queries.
  */
 
+/**
+ * Query to fetch the current AniList user (Viewer).
+ *
+ * @source
+ */
 export const GET_VIEWER = `
 query {
   Viewer {
@@ -15,6 +22,11 @@ query {
 }
 `;
 
+/**
+ * Query to fetch a user's manga list from AniList.
+ *
+ * @source
+ */
 export const GET_USER_MANGA_LIST = `
 query ($userId: Int, $chunk: Int, $perChunk: Int) {
   MediaListCollection(userId: $userId, type: MANGA, chunk: $chunk, perChunk: $perChunk) {
@@ -44,6 +56,11 @@ query ($userId: Int, $chunk: Int, $perChunk: Int) {
 }
 `;
 
+/**
+ * Query to search for manga by title.
+ *
+ * @source
+ */
 export const SEARCH_MANGA = `
 query ($search: String, $page: Int, $perPage: Int) {
   Page(page: $page, perPage: $perPage) {
@@ -89,6 +106,11 @@ query ($search: String, $page: Int, $perPage: Int) {
 }
 `;
 
+/**
+ * Query to perform an advanced manga search with filters.
+ *
+ * @source
+ */
 export const ADVANCED_SEARCH_MANGA = `
 query ($search: String, $page: Int, $perPage: Int, $genre_in: [String], $tag_in: [String], $format_in: [MediaFormat]) {
   Page(page: $page, perPage: $perPage) {
@@ -134,6 +156,11 @@ query ($search: String, $page: Int, $perPage: Int, $genre_in: [String], $tag_in:
 }
 `;
 
+/**
+ * Query to fetch a single manga by its AniList ID.
+ *
+ * @source
+ */
 export const GET_MANGA_BY_ID = `
 query ($id: Int) {
   Media(id: $id, type: MANGA) {
@@ -163,8 +190,9 @@ query ($id: Int) {
 `;
 
 /**
- * Query to fetch multiple manga by their IDs in a single request
- * Can fetch up to 50 manga at once
+ * Query to fetch multiple manga by their IDs in a single request. Can fetch up to 50 manga at once.
+ *
+ * @source
  */
 export const GET_MANGA_BY_IDS = `
 query ($ids: [Int]) {

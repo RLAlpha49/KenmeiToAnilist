@@ -1,3 +1,9 @@
+/**
+ * @packageDocumentation
+ * @module SettingsPage
+ * @description Settings page component for the Kenmei to AniList sync tool. Handles authentication, sync preferences, data management, and cache clearing.
+ */
+
 import React, { useState, useEffect, useRef } from "react";
 import { ErrorMessage } from "../components/ui/error-message";
 import { ErrorType, createError, AppError } from "../utils/errorHandling";
@@ -74,6 +80,13 @@ const itemVariants = {
   },
 };
 
+/**
+ * Settings page component for the Kenmei to AniList sync tool.
+ *
+ * Handles authentication, sync preferences, data management, and cache clearing for the user.
+ *
+ * @source
+ */
 export function SettingsPage() {
   const {
     authState,

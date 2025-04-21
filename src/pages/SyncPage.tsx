@@ -1,3 +1,9 @@
+/**
+ * @packageDocumentation
+ * @module SyncPage
+ * @description Sync page component for the Kenmei to AniList sync tool. Handles synchronization preview, configuration, execution, and results display.
+ */
+
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuth } from "../hooks/useAuth";
@@ -55,6 +61,13 @@ import {
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu";
 
+/**
+ * Sync page component for the Kenmei to AniList sync tool.
+ *
+ * Handles synchronization preview, configuration, execution, and results display for the user.
+ *
+ * @source
+ */
 export function SyncPage() {
   const navigate = useNavigate();
   const { authState } = useAuth();

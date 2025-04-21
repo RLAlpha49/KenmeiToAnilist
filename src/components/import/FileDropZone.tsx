@@ -1,3 +1,8 @@
+/**
+ * @packageDocumentation
+ * @module FileDropZone
+ * @description React component for uploading and parsing Kenmei CSV export files via drag-and-drop or file selection. Handles validation, progress, and error reporting.
+ */
 import React, { useState, useRef } from "react";
 import { UploadCloud, File, FileText } from "lucide-react";
 import { Button } from "../ui/button";
@@ -6,11 +11,29 @@ import { createError, ErrorType, AppError } from "../../utils/errorHandling";
 import { parseKenmeiCsvExport } from "../../api/kenmei/parser";
 import { Progress } from "../ui/progress";
 
-interface FileDropZoneProps {
+/**
+ * Props for the FileDropZone component.
+ *
+ * @property onFileLoaded - Callback invoked with parsed KenmeiData when a file is successfully loaded and parsed.
+ * @property onError - Callback invoked with an AppError if file loading or parsing fails.
+ * @internal
+ * @source
+ */
+export interface FileDropZoneProps {
   onFileLoaded: (data: KenmeiData) => void;
   onError: (error: AppError) => void;
 }
 
+/**
+ * FileDropZone React component for uploading and parsing Kenmei CSV export files.
+ *
+ * Provides drag-and-drop and file selection UI, validates file type and size, parses the CSV, and reports progress and errors.
+ *
+ * @param onFileLoaded - Callback invoked with parsed KenmeiData when a file is successfully loaded and parsed.
+ * @param onError - Callback invoked with an AppError if file loading or parsing fails.
+ * @returns The rendered file drop zone React element.
+ * @source
+ */
 export function FileDropZone({ onFileLoaded, onError }: FileDropZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);

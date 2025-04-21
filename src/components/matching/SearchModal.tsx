@@ -1,10 +1,26 @@
+/**
+ * @packageDocumentation
+ * @module SearchModal
+ * @description React component for displaying a modal to search and select AniList manga matches for a given Kenmei manga.
+ */
 import React from "react";
 import { KenmeiManga } from "../../api/kenmei/types";
 import { AniListManga } from "../../api/anilist/types";
 import { MangaSearchPanel } from "./MangaSearchPanel";
 import { motion, AnimatePresence } from "framer-motion";
 
-interface SearchModalProps {
+/**
+ * Props for the SearchModal component.
+ *
+ * @property isOpen - Whether the modal is open.
+ * @property searchTarget - The Kenmei manga to search for a match.
+ * @property accessToken - The AniList access token.
+ * @property bypassCache - Whether to bypass the cache for searching.
+ * @property onClose - Callback to close the modal.
+ * @property onSelectMatch - Callback when a manga match is selected.
+ * @source
+ */
+export interface SearchModalProps {
   isOpen: boolean;
   searchTarget?: KenmeiManga;
   accessToken: string;
@@ -13,6 +29,17 @@ interface SearchModalProps {
   onSelectMatch: (manga: AniListManga) => void;
 }
 
+/**
+ * Displays a modal for searching and selecting AniList manga matches for a given Kenmei manga.
+ *
+ * @param props - The props for the SearchModal component.
+ * @returns The rendered search modal React element.
+ * @source
+ * @example
+ * ```tsx
+ * <SearchModal isOpen={isOpen} searchTarget={manga} accessToken={token} bypassCache={false} onClose={handleClose} onSelectMatch={handleSelect} />
+ * ```
+ */
 export const SearchModal: React.FC<SearchModalProps> = ({
   isOpen,
   searchTarget,

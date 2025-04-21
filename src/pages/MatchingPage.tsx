@@ -1,3 +1,9 @@
+/**
+ * @packageDocumentation
+ * @module MatchingPage
+ * @description Matching page component for the Kenmei to AniList sync tool. Handles manga matching, review, rematch, and sync preparation.
+ */
+
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { KenmeiManga } from "../api/kenmei/types";
@@ -62,6 +68,13 @@ const contentVariants = {
   },
 };
 
+/**
+ * Matching page component for the Kenmei to AniList sync tool.
+ *
+ * Handles manga matching, review, rematch, and sync preparation for the user.
+ *
+ * @source
+ */
 export function MatchingPage() {
   const navigate = useNavigate();
   const { authState } = useAuth();

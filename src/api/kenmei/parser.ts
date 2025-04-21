@@ -1,5 +1,7 @@
 /**
- * Parser for Kenmei export files
+ * @packageDocumentation
+ * @module kenmei-parser
+ * @description Parser for Kenmei export files, including JSON and CSV parsing, batch processing, and metadata extraction utilities.
  */
 
 import {
@@ -13,11 +15,13 @@ import {
 } from "./types";
 
 /**
- * Parse a Kenmei export file
- * @param fileContent The content of the Kenmei export file as text
- * @param options Parsing options
- * @returns Parsed Kenmei data
- * @throws Error if the file cannot be parsed
+ * Parse a Kenmei export file.
+ *
+ * @param fileContent - The content of the Kenmei export file as text.
+ * @param options - Parsing options.
+ * @returns Parsed Kenmei data.
+ * @throws Error if the file cannot be parsed.
+ * @source
  */
 export function parseKenmeiExport(
   fileContent: string,
@@ -62,11 +66,13 @@ export function parseKenmeiExport(
 }
 
 /**
- * Process Kenmei manga list in batches
- * @param mangaList List of manga to process
- * @param batchSize Size of each batch
- * @param options Processing options
- * @returns Processing results
+ * Process Kenmei manga list in batches.
+ *
+ * @param mangaList - List of manga to process.
+ * @param batchSize - Size of each batch.
+ * @param options - Processing options.
+ * @returns Processing results.
+ * @source
  */
 export function processKenmeiMangaBatches(
   mangaList: KenmeiManga[],
@@ -191,10 +197,12 @@ function isValidStatus(status: string): boolean {
 }
 
 /**
- * Parse a Kenmei CSV export file
- * @param csvString The content of the CSV file
- * @param options Parsing options
- * @returns Parsed Kenmei data
+ * Parse a Kenmei CSV export file.
+ *
+ * @param csvString - The content of the CSV file.
+ * @param options - Parsing options.
+ * @returns Parsed Kenmei data.
+ * @source
  */
 export const parseKenmeiCsvExport = (
   csvString: string,
@@ -468,8 +476,12 @@ function validateStatus(status: string | undefined): KenmeiStatus {
 }
 
 /**
- * Extract unique metadata from manga entries
- * This is useful for analyzing the dataset and providing statistics
+ * Extract unique metadata from manga entries.
+ * Useful for analyzing the dataset and providing statistics.
+ *
+ * @param manga - Array of KenmeiManga entries.
+ * @returns Object containing total manga, status counts, volume data, average score, and total chapters read.
+ * @source
  */
 export function extractMangaMetadata(manga: KenmeiManga[]): {
   totalManga: number;

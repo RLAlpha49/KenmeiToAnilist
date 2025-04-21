@@ -1,7 +1,21 @@
+/**
+ * @packageDocumentation
+ * @module store_setup
+ * @description Registers IPC event listeners for interacting with the Electron store (get, set, remove, clear) in the main process.
+ */
+
 import { ipcMain } from "electron";
 import Store from "electron-store";
 
-// Define a schema for type safety (optional but recommended)
+/**
+ * Schema for the Electron store, defining the available keys and their types.
+ *
+ * @property authState - The authentication state.
+ * @property useCustomCredentials - Whether custom credentials are used.
+ * @property customCredentials - The custom credentials string.
+ * @property theme - The theme preference string.
+ * @source
+ */
 interface StoreSchema {
   authState: string;
   useCustomCredentials: string;
@@ -12,6 +26,11 @@ interface StoreSchema {
 // Create store instance
 const store = new Store<StoreSchema>();
 
+/**
+ * Registers IPC event listeners for interacting with the Electron store (get, set, remove, clear).
+ *
+ * @source
+ */
 export function setupStoreIPC() {
   // Handle getting an item from the store
   ipcMain.handle("store:getItem", (_, key: string) => {

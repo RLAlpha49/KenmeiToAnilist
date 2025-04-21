@@ -1,6 +1,7 @@
 /**
- * Enhanced manga matching engine for AniList integration
- * Provides robust title matching between Kenmei entries and AniList manga
+ * @packageDocumentation
+ * @module match-engine
+ * @description Enhanced manga matching engine for AniList integration. Provides robust title matching between Kenmei entries and AniList manga.
  */
 
 import { KenmeiManga } from "../kenmei/types";
@@ -8,7 +9,9 @@ import { AniListManga, MangaMatchResult } from "../anilist/types";
 import * as stringSimilarity from "string-similarity";
 
 /**
- * Interface for match engine configuration
+ * Interface for match engine configuration.
+ *
+ * @source
  */
 export interface MatchEngineConfig {
   // Minimum confidence score (0-100) to consider a match as high confidence
@@ -30,7 +33,9 @@ export interface MatchEngineConfig {
 }
 
 /**
- * Default configuration for the match engine
+ * Default configuration for the match engine.
+ *
+ * @source
  */
 export const DEFAULT_MATCH_CONFIG: MatchEngineConfig = {
   confidenceThreshold: 75,
@@ -43,7 +48,12 @@ export const DEFAULT_MATCH_CONFIG: MatchEngineConfig = {
 };
 
 /**
- * Clean and normalize a string for comparison
+ * Cleans and normalizes a string for comparison.
+ *
+ * @param text - The string to normalize.
+ * @param caseSensitive - Whether to preserve case sensitivity.
+ * @returns The normalized string.
+ * @source
  */
 export function normalizeString(text: string, caseSensitive = false): string {
   if (!text) return "";
@@ -62,8 +72,14 @@ export function normalizeString(text: string, caseSensitive = false): string {
 }
 
 /**
- * Calculate string similarity using multiple algorithms for better accuracy
- * Returns a score between 0-100
+ * Calculates string similarity using multiple algorithms for better accuracy.
+ * Returns a score between 0-100.
+ *
+ * @param str1 - The first string to compare.
+ * @param str2 - The second string to compare.
+ * @param config - Optional partial match engine configuration.
+ * @returns Similarity score between 0 and 100.
+ * @source
  */
 export function calculateSimilarity(
   str1: string,
@@ -94,8 +110,14 @@ export function calculateSimilarity(
 }
 
 /**
- * Score a match between a Kenmei manga and an AniList manga entry
- * Returns a score between 0-100 and information about the match
+ * Scores a match between a Kenmei manga and an AniList manga entry.
+ * Returns a score between 0-100 and information about the match.
+ *
+ * @param kenmeiManga - The Kenmei manga entry.
+ * @param anilistManga - The AniList manga entry.
+ * @param config - Optional partial match engine configuration.
+ * @returns An object containing confidence, isExactMatch, and matchedField.
+ * @source
  */
 export function scoreMatch(
   kenmeiManga: KenmeiManga,
@@ -268,7 +290,13 @@ export function scoreMatch(
 }
 
 /**
- * Find the best matches for a Kenmei manga entry from a list of AniList entries
+ * Finds the best matches for a Kenmei manga entry from a list of AniList entries.
+ *
+ * @param kenmeiManga - The Kenmei manga entry to match.
+ * @param anilistMangaList - The list of AniList manga entries to compare against.
+ * @param config - Optional partial match engine configuration.
+ * @returns A MangaMatchResult containing the best matches and status.
+ * @source
  */
 export function findBestMatches(
   kenmeiManga: KenmeiManga,
@@ -327,7 +355,13 @@ export function findBestMatches(
 }
 
 /**
- * Process a batch of manga entries for matching
+ * Processes a batch of manga entries for matching.
+ *
+ * @param kenmeiMangaList - The list of Kenmei manga entries to match.
+ * @param anilistMangaMap - A map of search keys to AniList manga entry arrays.
+ * @param config - Optional partial match engine configuration.
+ * @returns A promise resolving to an array of MangaMatchResult objects.
+ * @source
  */
 export async function processBatchMatches(
   kenmeiMangaList: KenmeiManga[],

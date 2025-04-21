@@ -1,3 +1,8 @@
+/**
+ * @packageDocumentation
+ * @module Header
+ * @description Application header component with logo, navigation, theme toggle, and window controls.
+ */
 import React from "react";
 import { Link } from "@tanstack/react-router";
 import ToggleTheme from "../ToggleTheme";
@@ -33,6 +38,12 @@ import {
 import { motion } from "framer-motion";
 import appIcon from "../../assets/k2a-icon-512x512.png";
 
+/**
+ * Header React component that displays the application header with logo, navigation links, theme toggle, and window controls.
+ *
+ * @returns The rendered header React element.
+ * @source
+ */
 export function Header() {
   return (
     <TooltipProvider>

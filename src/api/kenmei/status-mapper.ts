@@ -1,5 +1,7 @@
 /**
- * Status mapper for Kenmei to AniList conversion
+ * @packageDocumentation
+ * @module status-mapper
+ * @description Status mapper for Kenmei to AniList conversion, including mapping utilities and validation helpers.
  */
 
 import { KenmeiStatus, StatusMappingConfig } from "./types";
@@ -15,10 +17,12 @@ const DEFAULT_STATUS_MAPPING: Record<KenmeiStatus, MediaListStatus> = {
 };
 
 /**
- * Map a Kenmei status to AniList status
- * @param status Kenmei status
- * @param customMapping Optional custom mapping configuration
- * @returns AniList status
+ * Map a Kenmei status to AniList status.
+ *
+ * @param status - Kenmei status.
+ * @param customMapping - Optional custom mapping configuration.
+ * @returns AniList status.
+ * @source
  */
 export function mapKenmeiToAniListStatus(
   status: KenmeiStatus,
@@ -33,10 +37,12 @@ export function mapKenmeiToAniListStatus(
 }
 
 /**
- * Map an AniList status to Kenmei status
- * @param status AniList status
- * @param customMapping Optional custom mapping configuration
- * @returns Kenmei status
+ * Map an AniList status to Kenmei status.
+ *
+ * @param status - AniList status.
+ * @param customMapping - Optional custom mapping configuration.
+ * @returns Kenmei status.
+ * @source
  */
 export function mapAniListToKenmeiStatus(
   status: MediaListStatus,
@@ -75,9 +81,11 @@ export function mapAniListToKenmeiStatus(
 }
 
 /**
- * Create a custom status mapping from user preferences
- * @param preferences User preferences for status mapping
- * @returns Custom status mapping configuration
+ * Create a custom status mapping from user preferences.
+ *
+ * @param preferences - User preferences for status mapping.
+ * @returns Custom status mapping configuration.
+ * @source
  */
 export function createCustomStatusMapping(
   preferences: Record<string, string>,
@@ -181,8 +189,10 @@ function validateAniListStatus(status: string): MediaListStatus | undefined {
 }
 
 /**
- * Get all possible status mappings
- * @returns A record of all possible mappings between Kenmei and AniList statuses
+ * Get all possible status mappings between Kenmei and AniList statuses.
+ *
+ * @returns A record of all possible mappings between Kenmei and AniList statuses.
+ * @source
  */
 export function getAllPossibleStatusMappings(): Record<
   KenmeiStatus,

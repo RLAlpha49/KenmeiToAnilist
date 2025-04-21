@@ -1,3 +1,9 @@
+/**
+ * @packageDocumentation
+ * @module theme_listeners
+ * @description Registers IPC event listeners for theme mode actions (current, toggle, dark, light, system) in the Electron main process.
+ */
+
 import { nativeTheme } from "electron";
 import { ipcMain } from "electron";
 import {
@@ -8,6 +14,11 @@ import {
   THEME_MODE_TOGGLE_CHANNEL,
 } from "./theme-channels";
 
+/**
+ * Registers IPC event listeners for theme mode actions (current, toggle, dark, light, system).
+ *
+ * @source
+ */
 export function addThemeEventListeners() {
   ipcMain.handle(THEME_MODE_CURRENT_CHANNEL, () => nativeTheme.themeSource);
   ipcMain.handle(THEME_MODE_TOGGLE_CHANNEL, () => {

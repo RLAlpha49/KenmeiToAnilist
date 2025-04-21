@@ -1,3 +1,8 @@
+/**
+ * @packageDocumentation
+ * @module MatchingProgressPanel
+ * @description React component for displaying the progress of the manga matching process, including progress bar, status, and time estimate.
+ */
 import React, { ReactNode } from "react";
 import { MatchingProgress, TimeEstimate } from "../../types/matching";
 import { formatTimeRemaining } from "../../utils/timeUtils";
@@ -14,7 +19,22 @@ import { Button } from "../../components/ui/button";
 import { Loader2, RotateCcw, AlertOctagon } from "lucide-react";
 import { motion } from "framer-motion";
 
-interface MatchingProgressProps {
+/**
+ * Props for the MatchingProgressPanel component.
+ *
+ * @property isCancelling - Whether the process is currently being cancelled.
+ * @property progress - The current progress state of the matching process.
+ * @property statusMessage - The main status message to display.
+ * @property detailMessage - Additional detail message to display.
+ * @property timeEstimate - Estimated time remaining for the process.
+ * @property onCancelProcess - Callback to cancel the matching process.
+ * @property bypassCache - Whether to bypass the cache for matching (optional).
+ * @property freshSearch - Whether a fresh search is being performed (optional).
+ * @property disableControls - Whether to disable control buttons (optional).
+ * @internal
+ * @source
+ */
+export interface MatchingProgressProps {
   isCancelling: boolean;
   progress: MatchingProgress;
   statusMessage: string;
@@ -26,6 +46,24 @@ interface MatchingProgressProps {
   disableControls?: boolean;
 }
 
+/**
+ * Displays the progress of the manga matching process, including progress bar, status, and time estimate.
+ *
+ * @param props - The props for the MatchingProgressPanel component.
+ * @returns The rendered matching progress panel React element.
+ * @source
+ * @example
+ * ```tsx
+ * <MatchingProgressPanel
+ *   isCancelling={false}
+ *   progress={progress}
+ *   statusMessage="Matching..."
+ *   detailMessage={detail}
+ *   timeEstimate={estimate}
+ *   onCancelProcess={handleCancel}
+ * />
+ * ```
+ */
 export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
   isCancelling,
   progress,

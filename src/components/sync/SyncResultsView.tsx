@@ -1,3 +1,8 @@
+/**
+ * @packageDocumentation
+ * @module SyncResultsView
+ * @description React component for displaying the results of the AniList synchronization process, including summary statistics and error details.
+ */
 import React from "react";
 import { SyncReport } from "../../api/anilist/sync-service";
 import { CheckCircle, XCircle, Clock, Save, Download } from "lucide-react";
@@ -19,7 +24,15 @@ import {
 } from "../ui/table";
 import { Button } from "../ui/button";
 
-interface SyncResultsViewProps {
+/**
+ * Props for the SyncResultsView component.
+ *
+ * @property report - The synchronization report containing results and errors.
+ * @property onClose - Callback to close the results view.
+ * @property onExportErrors - Optional callback to export the error log.
+ * @source
+ */
+export interface SyncResultsViewProps {
   report: SyncReport;
   onClose: () => void;
   onExportErrors?: () => void;
@@ -158,4 +171,15 @@ const SyncResultsView: React.FC<SyncResultsViewProps> = ({
   );
 };
 
+/**
+ * Displays the results of the AniList synchronization process, including summary statistics, a progress bar, and error details.
+ *
+ * @param props - The props for the SyncResultsView component.
+ * @returns The rendered synchronization results view React element.
+ * @source
+ * @example
+ * ```tsx
+ * <SyncResultsView report={report} onClose={handleClose} onExportErrors={handleExportErrors} />
+ * ```
+ */
 export default SyncResultsView;

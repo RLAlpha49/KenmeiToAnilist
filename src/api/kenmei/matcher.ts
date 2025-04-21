@@ -1,5 +1,7 @@
 /**
- * Matcher for Kenmei manga to AniList entries
+ * @packageDocumentation
+ * @module kenmei-matcher
+ * @description Matcher for Kenmei manga to AniList entries, including similarity scoring and best match finding utilities.
  */
 
 import { KenmeiManga } from "./types";
@@ -7,8 +9,9 @@ import { AniListManga } from "../anilist/types";
 
 /**
  * Calculate string similarity using Levenshtein distance
- * @param str1 First string
- * @param str2 Second string
+ *
+ * @param str1 - First string.
+ * @param str2 - Second string.
  * @returns Similarity score between 0 and 1
  */
 export function calculateSimilarity(str1: string, str2: string): number {
@@ -52,8 +55,9 @@ export function calculateSimilarity(str1: string, str2: string): number {
 
 /**
  * Score a potential match between Kenmei manga and AniList entry
- * @param kenmeiManga The Kenmei manga entry
- * @param anilistManga The AniList manga entry
+ *
+ * @param kenmeiManga - The Kenmei manga entry.
+ * @param anilistManga - The AniList manga entry.
  * @returns Match confidence score between 0 and 1
  */
 export function scoreMatch(
@@ -83,9 +87,10 @@ export function scoreMatch(
 
 /**
  * Find the best match for a Kenmei manga in the AniList entries
- * @param kenmeiManga The Kenmei manga to match
- * @param anilistManga Array of potential AniList matches
- * @param threshold Minimum similarity threshold (0-1)
+ *
+ * @param kenmeiManga - The Kenmei manga to match.
+ * @param anilistManga - Array of potential AniList matches.
+ * @param threshold - Minimum similarity threshold (0-1).
  * @returns The best matching AniList entry and its score, or null if no good match
  */
 export function findBestMatch(

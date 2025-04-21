@@ -1,8 +1,21 @@
+/**
+ * @packageDocumentation
+ * @module useTimeEstimate
+ * @description Custom React hook for tracking and calculating time estimates during batch processes, such as manga synchronization or matching.
+ */
 import { useState, useRef, useCallback } from "react";
 import { TimeEstimate } from "../types/matching";
 
 /**
- * Hook for tracking and calculating time estimates during batch processes
+ * Hook for tracking and calculating time estimates during batch processes.
+ *
+ * @returns An object containing the current time estimate, a function to calculate time estimates, and a function to initialize time tracking.
+ * @example
+ * ```ts
+ * const { timeEstimate, calculateTimeEstimate, initializeTimeTracking } = useTimeEstimate();
+ * calculateTimeEstimate(current, total);
+ * ```
+ * @source
  */
 export const useTimeEstimate = () => {
   // State for time tracking
@@ -19,7 +32,15 @@ export const useTimeEstimate = () => {
   const lastTimeUpdateRef = useRef<number>(0);
 
   /**
-   * Calculate a more stable time estimate using recent processing times
+   * Calculate a more stable time estimate using recent processing times.
+   *
+   * @param current - The current number of items processed.
+   * @param total - The total number of items to process.
+   * @remarks
+   * Uses a moving average of the last 10 processing times to smooth out fluctuations.
+   * Updates the global window.matchingProcessState if available.
+   *
+   * @source
    */
   const calculateTimeEstimate = useCallback(
     (current: number, total: number) => {
@@ -85,7 +106,10 @@ export const useTimeEstimate = () => {
   );
 
   /**
-   * Initialize time tracking for a new process
+   * Initialize time tracking for a new process.
+   *
+   * @returns The initial time estimate object.
+   * @source
    */
   const initializeTimeTracking = useCallback(() => {
     processingStartTimeRef.current = Date.now();

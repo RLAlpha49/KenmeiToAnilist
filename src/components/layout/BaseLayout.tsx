@@ -1,7 +1,19 @@
+/**
+ * @packageDocumentation
+ * @module BaseLayout
+ * @description Main layout component providing header, footer, and content area for the application.
+ */
 import React from "react";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
 
+/**
+ * BaseLayout React component that provides the main application layout with header, footer, and content area.
+ *
+ * @param children - The content to render inside the layout.
+ * @returns The rendered layout React element.
+ * @source
+ */
 export default function BaseLayout({
   children,
 }: {

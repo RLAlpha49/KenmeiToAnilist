@@ -1,8 +1,25 @@
+/**
+ * @packageDocumentation
+ * @module useMatchHandlers
+ * @description Custom React hook providing handler functions for managing manga match results and user interactions in the Kenmei to AniList sync tool.
+ */
+
 import { useCallback } from "react";
 import { KenmeiManga } from "../api/kenmei/types";
 import { AniListManga, MangaMatchResult } from "../api/anilist/types";
 import { STORAGE_KEYS, storage } from "../utils/storage";
 
+/**
+ * Custom React hook providing handler functions for managing manga match results and user interactions.
+ *
+ * @param matchResults - The current array of manga match results.
+ * @param setMatchResults - State setter for updating manga match results.
+ * @param setSearchTarget - State setter for the current Kenmei manga being searched.
+ * @param setIsSearchOpen - State setter for toggling the search panel.
+ * @param setBypassCache - State setter for bypassing cache during manual search.
+ * @returns An object containing handler functions for match management.
+ * @source
+ */
 export const useMatchHandlers = (
   matchResults: MangaMatchResult[],
   setMatchResults: React.Dispatch<React.SetStateAction<MangaMatchResult[]>>,
@@ -13,7 +30,11 @@ export const useMatchHandlers = (
   setBypassCache: React.Dispatch<React.SetStateAction<boolean>>,
 ) => {
   /**
-   * Find the index of a match in the results
+   * Finds the index of a match in the results array by ID or title.
+   *
+   * @param match - The match result or Kenmei manga to find.
+   * @returns The index of the match in the results array, or -1 if not found.
+   * @source
    */
   const findMatchIndex = useCallback(
     (match: MangaMatchResult | KenmeiManga) => {
@@ -67,7 +88,10 @@ export const useMatchHandlers = (
   );
 
   /**
-   * Handle manual search request
+   * Handles a manual search request for a manga, opening the search panel and bypassing cache.
+   *
+   * @param manga - The Kenmei manga to search for.
+   * @source
    */
   const handleManualSearch = useCallback(
     (manga: KenmeiManga) => {
@@ -93,7 +117,10 @@ export const useMatchHandlers = (
   );
 
   /**
-   * Update match results and save to storage
+   * Updates match results state and persists them to storage.
+   *
+   * @param updatedResults - The updated array of manga match results.
+   * @source
    */
   const updateMatchResults = useCallback(
     (updatedResults: MangaMatchResult[]) => {
@@ -115,8 +142,10 @@ export const useMatchHandlers = (
   );
 
   /**
-   * Handle accepting a match
-   * Now supports batch operations for accepting multiple matches at once
+   * Handles accepting a match or batch of matches, updating their status to "matched".
+   *
+   * @param match - The match result or batch operation object to accept.
+   * @source
    */
   const handleAcceptMatch = useCallback(
     (
@@ -171,8 +200,10 @@ export const useMatchHandlers = (
   );
 
   /**
-   * Handle rejecting/skipping a match
-   * Now supports batch operations for skipping multiple matches at once
+   * Handles rejecting/skipping a match or batch of matches, updating their status to "skipped".
+   *
+   * @param match - The match result or batch operation object to reject.
+   * @source
    */
   const handleRejectMatch = useCallback(
     (
@@ -227,7 +258,13 @@ export const useMatchHandlers = (
   );
 
   /**
-   * Handle selecting an alternative match - completely refactored
+   * Handles selecting an alternative match for a manga, optionally auto-accepting or directly accepting it.
+   *
+   * @param match - The match result to update.
+   * @param alternativeIndex - The index of the alternative to select.
+   * @param autoAccept - Whether to automatically accept the selected alternative (default: false).
+   * @param directAccept - Whether to directly accept the alternative without swapping (default: false).
+   * @source
    */
   const handleSelectAlternative = useCallback(
     (
@@ -366,7 +403,10 @@ export const useMatchHandlers = (
   );
 
   /**
-   * Handle resetting a match status back to pending
+   * Handles resetting a match or batch of matches back to the "pending" status.
+   *
+   * @param match - The match result or batch operation object to reset.
+   * @source
    */
   const handleResetToPending = useCallback(
     (
@@ -435,7 +475,10 @@ export const useMatchHandlers = (
   );
 
   /**
-   * Handle selecting a manga from the search panel
+   * Handles selecting a manga from the search panel and updating the match result accordingly.
+   *
+   * @param manga - The AniList manga selected from the search panel.
+   * @source
    */
   const handleSelectSearchMatch = useCallback(
     (manga: AniListManga) => {

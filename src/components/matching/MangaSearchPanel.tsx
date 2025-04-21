@@ -1,3 +1,8 @@
+/**
+ * @packageDocumentation
+ * @module MangaSearchPanel
+ * @description React component for searching and selecting AniList manga matches for a given Kenmei manga, with manual search and result selection features.
+ */
 import React, { useState, useRef, useEffect } from "react";
 import {
   Search,
@@ -18,7 +23,18 @@ const searchTracker = {
   searchInProgress: false,
 };
 
-interface MangaSearchPanelProps {
+/**
+ * Props for the MangaSearchPanel component.
+ *
+ * @property kenmeiManga - The Kenmei manga to search for a match (optional).
+ * @property onClose - Callback to close the search panel.
+ * @property onSelectMatch - Callback when a manga match is selected.
+ * @property token - AniList access token (optional).
+ * @property bypassCache - Whether to bypass the cache for searching (optional).
+ * @internal
+ * @source
+ */
+export interface MangaSearchPanelProps {
   kenmeiManga?: KenmeiManga;
   onClose: () => void;
   onSelectMatch: (manga: AniListManga) => void;
@@ -26,6 +42,13 @@ interface MangaSearchPanelProps {
   bypassCache?: boolean;
 }
 
+/**
+ * MangaSearchPanel React component for searching and selecting AniList manga matches for a given Kenmei manga, with manual search and result selection features.
+ *
+ * @param props - The props for the MangaSearchPanel component.
+ * @returns The rendered manga search panel React element.
+ * @source
+ */
 export function MangaSearchPanel({
   kenmeiManga,
   onClose,
@@ -253,6 +276,23 @@ export function MangaSearchPanel({
     onSelectMatch(manga);
   };
 
+  /**
+   * Displays a panel for searching and selecting AniList manga matches for a given Kenmei manga, supporting manual search and result selection.
+   *
+   * @param props - The props for the MangaSearchPanel component.
+   * @returns The rendered manga search panel React element.
+   * @source
+   * @example
+   * ```tsx
+   * <MangaSearchPanel
+   *   kenmeiManga={manga}
+   *   onClose={handleClose}
+   *   onSelectMatch={handleSelect}
+   *   token={token}
+   *   bypassCache={false}
+   * />
+   * ```
+   */
   return (
     <div
       className="flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-md dark:border-gray-700 dark:bg-gray-800"
