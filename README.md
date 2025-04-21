@@ -1,5 +1,5 @@
-<div style="text-align: center;">
-  <img src="./src/assets/k2a-icon-512x512.png" alt="App Icon" width="256" />
+<div align=center>
+  <img src="./src/assets/k2a-icon-512x512.png" alt="App Icon" width="512" />
 </div>
 
 # Kenmei to Anilist
