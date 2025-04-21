@@ -8,15 +8,23 @@
 // Note: We need to use runtime checks since TypeScript doesn't recognize Vite's import.meta.env
 let clientId = "";
 let clientSecret = "";
+let encryptionKey = "";
 
 try {
   if (typeof import.meta !== "undefined" && import.meta.env) {
     clientId = import.meta.env.VITE_ANILIST_CLIENT_ID || "";
     clientSecret = import.meta.env.VITE_ANILIST_CLIENT_SECRET || "";
+    encryptionKey =
+      (import.meta.env.VITE_ANILIST_ENCRYPTION_KEY as string) || "";
+    if (!encryptionKey) {
+      console.warn(
+        "AniList encryption key is not set in environment variables (VITE_ANILIST_ENCRYPTION_KEY). Using empty string as fallback.",
+      );
+    }
   }
 } catch (error) {
   console.warn(
-    "Could not access environment variables for AniList credentials:",
+    "Could not access environment variables for AniList credentials and encryption key:",
     error,
   );
 }
@@ -49,12 +57,12 @@ export const DEFAULT_ANILIST_CONFIG = {
 /**
  * Settings for secure storage of AniList authentication data.
  *
- * @property encryptionKey - The key used for encrypting stored data.
+ * @property encryptionKey - The key used for encrypting stored data, loaded from the environment variable VITE_ANILIST_ENCRYPTION_KEY.
  * @property storageKey - The key used for storing auth data.
  * @source
  */
 export const AUTH_STORAGE_CONFIG = {
-  encryptionKey: "kenmei-to-anilist-auth", // This would be more secure in a real implementation
+  encryptionKey: encryptionKey,
   storageKey: "anilist-auth-data",
 };
 
@@ -67,7 +75,7 @@ export const AUTH_STORAGE_CONFIG = {
  */
 export const ANILIST_API_ENDPOINTS = {
   graphql: "https://graphql.anilist.co",
-  rateLimit: 90, // Requests per minute
+  rateLimit: 30, // Requests per minute
 };
 
 /**
@@ -79,7 +87,7 @@ export const ANILIST_API_ENDPOINTS = {
  * @source
  */
 export const RATE_LIMIT_CONFIG = {
-  maxRequestsPerMinute: 85, // Keep slightly below the actual limit
+  maxRequestsPerMinute: 18, // Keep slightly below the actual limit
   requestTimeout: 10000, // 10 seconds
-  retryDelay: 60000 / 85, // Time between requests to stay under rate limit
+  retryDelay: 60000 / 18, // Time between requests to stay under rate limit
 };
