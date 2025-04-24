@@ -85,7 +85,7 @@
     "typedoc-theme-hierarchy": "^6.0.0",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.31.0",
-    "vite": "^6.3.2",
+    "vite": "^6.3.3",
     "vitest": "^3.1.2"
   },
   "dependencies": {
@@ -113,7 +113,7 @@
     "electron-store": "^10.0.1",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
-    "framer-motion": "^12.8.0",
+    "framer-motion": "^12.8.2",
     "lucide-react": "^0.503.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
