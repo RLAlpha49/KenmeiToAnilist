@@ -610,12 +610,16 @@ export function SyncPage() {
                 : kenmei.chapters_read || 0
               : kenmei.chapters_read || 0,
           private: privateStatus,
-          score: kenmei.score || 0,
+          score: typeof kenmei.score === "number" ? kenmei.score : 0,
           previousValues: userEntry
             ? {
                 status: userEntry.status,
-                progress: userEntry.progress || 0,
-                score: userEntry.score || 0,
+                progress:
+                  typeof userEntry.progress === "number"
+                    ? userEntry.progress
+                    : 0,
+                score:
+                  typeof userEntry.score === "number" ? userEntry.score : 0,
                 private: userEntry.private || false,
               }
             : null,
@@ -2245,9 +2249,13 @@ export function SyncPage() {
                                                   <span
                                                     className={`text-xs font-medium ${scoreWillChange ? "text-blue-700 dark:text-blue-300" : ""}`}
                                                   >
-                                                    {kenmei.score
-                                                      ? `${kenmei.score}/10`
-                                                      : "None"}
+                                                    {scoreWillChange
+                                                      ? kenmei.score
+                                                        ? `${kenmei.score}/10`
+                                                        : "None"
+                                                      : userEntry?.score
+                                                        ? `${userEntry.score}/10`
+                                                        : "None"}
                                                   </span>
                                                 </div>
                                                 <div className="flex items-center justify-between">

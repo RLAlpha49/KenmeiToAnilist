@@ -390,6 +390,8 @@ const SyncManager: React.FC<SyncManagerProps> = ({
                             <div className="flex items-center">
                               <span className="text-slate-500">
                                 {entries[completedEntries].previousValues
+                                  ?.score !== null &&
+                                entries[completedEntries].previousValues
                                   ?.score !== undefined
                                   ? entries[completedEntries].previousValues
                                       .score
