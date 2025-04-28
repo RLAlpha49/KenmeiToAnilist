@@ -44,7 +44,7 @@
     "@eslint/js": "^9.25.1",
     "@playwright/test": "^1.52.0",
     "@tailwindcss/vite": "^4.1.4",
-    "@tanstack/router-devtools": "^1.117.0",
+    "@tanstack/router-devtools": "^1.117.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
