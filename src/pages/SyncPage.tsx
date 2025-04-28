@@ -647,12 +647,43 @@ export function SyncPage() {
 
   // Only sync entries with actual changes
   const hasChanges = (entry: AniListMediaEntry) => {
-    if (!entry.previousValues) return true; // new entry
+    // New entry: not in userLibrary
+    if (!entry.previousValues) return true;
+
+    // Completed and preserve setting: skip
+    if (
+      entry.previousValues.status === "COMPLETED" &&
+      syncConfig.preserveCompletedStatus
+    ) {
+      return false;
+    }
+
+    // Status change
+    const statusWillChange =
+      !syncConfig.prioritizeAniListStatus &&
+      entry.status !== entry.previousValues.status;
+
+    // Progress change
+    const progressWillChange = syncConfig.prioritizeAniListProgress
+      ? entry.progress > entry.previousValues.progress
+      : entry.progress !== entry.previousValues.progress;
+
+    // Score change
+    const scoreWillChange =
+      !syncConfig.prioritizeAniListScore &&
+      entry.score > 0 &&
+      (entry.previousValues.score === 0 ||
+        Math.abs(entry.score - entry.previousValues.score) >= 0.5);
+
+    // Privacy change
+    const privacyWillChange =
+      syncConfig.setPrivate && !entry.previousValues.private;
+
     return (
-      entry.status !== entry.previousValues.status ||
-      entry.progress !== entry.previousValues.progress ||
-      entry.score !== entry.previousValues.score ||
-      entry.private !== entry.previousValues.private
+      statusWillChange ||
+      progressWillChange ||
+      scoreWillChange ||
+      privacyWillChange
     );
   };
   const entriesWithChanges = useMemo(
@@ -1105,14 +1136,7 @@ export function SyncPage() {
                       Changes Summary
                     </h3>
                     <p className="text-muted-foreground mt-1 text-sm">
-                      {
-                        mangaMatches.filter(
-                          (match) =>
-                            match.status === "matched" ||
-                            match.status === "manual",
-                        ).length
-                      }{" "}
-                      (excluding skipped matches) entries will be synchronized
+                      {entriesWithChanges.length} entries will be synchronized
                       to your AniList account.
                     </p>
 
