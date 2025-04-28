@@ -705,6 +705,7 @@ export function SyncPage() {
   };
 
   // Handle sync cancellation
+  const [wasCancelled, setWasCancelled] = useState(false);
   const handleCancel = () => {
     if (viewMode === "sync") {
       // If sync has not started, go back to preview
@@ -713,21 +714,60 @@ export function SyncPage() {
         return;
       }
       actions.cancelSync();
+      setWasCancelled(true);
       setViewMode("results");
       return;
     }
-
     // Navigate back to the matching page
     navigate({ to: "/review" });
   };
 
   // Handle final completion (after viewing results)
-  const handleComplete = () => {
+  const handleGoHome = () => {
     actions.reset();
-    // We don't need to remove the match results from storage
-    // as they will be preserved for future use
-    // Navigate to the home page
+    setWasCancelled(false);
     navigate({ to: "/" });
+  };
+  // Helper to refresh AniList library
+  const refreshUserLibrary = () => {
+    setLibraryLoading(true);
+    setLibraryError(null);
+    setRetryCount(0);
+    setRateLimit(false, undefined, undefined);
+
+    const controller = new AbortController();
+
+    getUserMangaList(token, controller.signal)
+      .then((library) => {
+        setUserLibrary(library);
+        setLibraryLoading(false);
+      })
+      .catch((error) => {
+        if (error.name !== "AbortError") {
+          if (error.isRateLimited || error.status === 429) {
+            const retryDelay = error.retryAfter ? error.retryAfter : 60;
+            setRateLimit(
+              true,
+              retryDelay,
+              "AniList API rate limit reached. Waiting to retry...",
+            );
+          } else {
+            setLibraryError(
+              error.message ||
+                "Failed to load your AniList library. Synchronization can still proceed without comparison data.",
+            );
+          }
+          setUserLibrary({});
+          setLibraryLoading(false);
+        }
+      });
+  };
+
+  const handleBackToReview = () => {
+    actions.reset();
+    setWasCancelled(false);
+    refreshUserLibrary();
+    setViewMode("preview");
   };
 
   // If any error condition is true, show the appropriate error message
@@ -2687,7 +2727,7 @@ export function SyncPage() {
         );
 
       case "results": {
-        if (state.report) {
+        if (state.report || wasCancelled) {
           return (
             <motion.div
               variants={pageVariants}
@@ -2695,13 +2735,38 @@ export function SyncPage() {
               animate="visible"
               exit="exit"
             >
-              <SyncResultsView
-                report={state.report}
-                onClose={handleComplete}
-                onExportErrors={() =>
-                  state.report && exportSyncErrorLog(state.report)
-                }
-              />
+              {state.report ? (
+                <SyncResultsView
+                  report={state.report}
+                  onClose={handleGoHome}
+                  onExportErrors={() =>
+                    state.report && exportSyncErrorLog(state.report)
+                  }
+                />
+              ) : (
+                <div className="flex min-h-[300px] flex-col items-center justify-center">
+                  <div className="mb-4">
+                    <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
+                  </div>
+                  <div className="text-lg font-medium text-blue-700 dark:text-blue-300">
+                    Loading synchronization results...
+                  </div>
+                </div>
+              )}
+              <div className="mt-6 flex justify-center gap-4">
+                <Button onClick={handleGoHome} variant="default">
+                  Go Home
+                </Button>
+                <Button onClick={handleBackToReview} variant="outline">
+                  Back to Sync Review
+                </Button>
+              </div>
+              {wasCancelled && (
+                <div className="mt-4 text-center text-amber-600 dark:text-amber-400">
+                  Synchronization was cancelled. No further entries will be
+                  processed.
+                </div>
+              )}
             </motion.div>
           );
         } else {
@@ -2721,8 +2786,11 @@ export function SyncPage() {
                       "An unknown error occurred during synchronization."}
                   </p>
                 </CardContent>
-                <CardFooter className="justify-center">
-                  <Button onClick={handleComplete}>Close</Button>
+                <CardFooter className="justify-center gap-4">
+                  <Button onClick={handleGoHome}>Go Home</Button>
+                  <Button onClick={handleBackToReview} variant="outline">
+                    Back to Sync Review
+                  </Button>
                 </CardFooter>
               </Card>
             </motion.div>
