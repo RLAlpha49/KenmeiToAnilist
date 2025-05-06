@@ -180,16 +180,18 @@ export function SyncPage() {
   const getEffectiveStatus = (kenmei: {
     status: string;
     updated_at: string;
+    last_read_at?: string;
   }): MediaListStatus => {
     // Check if manga should be auto-paused due to inactivity
+    const lastActivity = kenmei.last_read_at || kenmei.updated_at;
     if (
       syncConfig.autoPauseInactive &&
       kenmei.status.toLowerCase() !== "completed" &&
       kenmei.status.toLowerCase() !== "dropped" &&
-      kenmei.updated_at
+      lastActivity
     ) {
-      // Calculate how many days since the last update
-      const lastUpdated = new Date(kenmei.updated_at);
+      // Calculate how many days since the last activity
+      const lastUpdated = new Date(lastActivity);
       const daysSinceUpdate = Math.floor(
         (Date.now() - lastUpdated.getTime()) / (1000 * 60 * 60 * 24),
       );
@@ -610,7 +612,14 @@ export function SyncPage() {
                 : kenmei.chapters_read || 0
               : kenmei.chapters_read || 0,
           private: privateStatus,
-          score: typeof kenmei.score === "number" ? kenmei.score : 0,
+          score:
+            userEntry &&
+            syncConfig.prioritizeAniListScore &&
+            userEntry.score > 0
+              ? userEntry.score
+              : typeof kenmei.score === "number"
+                ? kenmei.score
+                : 0,
           previousValues: userEntry
             ? {
                 status: userEntry.status,
@@ -626,17 +635,6 @@ export function SyncPage() {
           title: anilist.title.romaji || kenmei.title,
           coverImage: anilist.coverImage?.large || anilist.coverImage?.medium,
         };
-        if (userEntry && kenmei.score > 0) {
-          const anilistScore = Number(userEntry.score || 0);
-          const kenmeiScore = Number(kenmei.score);
-          if (
-            (syncConfig.prioritizeAniListScore && anilistScore > 0) ||
-            anilistScore === kenmeiScore ||
-            Math.abs(kenmeiScore - anilistScore) < 0.5
-          ) {
-            entry.score = userEntry.score || kenmei.score;
-          }
-        }
         if (entry.private === undefined) {
           entry.private = syncConfig.setPrivate || false;
         }
@@ -659,9 +657,9 @@ export function SyncPage() {
     }
 
     // Status change
-    const statusWillChange =
-      !syncConfig.prioritizeAniListStatus &&
-      entry.status !== entry.previousValues.status;
+    const statusWillChange = syncConfig.prioritizeAniListStatus
+      ? false
+      : entry.status !== entry.previousValues.status;
 
     // Progress change
     const progressWillChange = syncConfig.prioritizeAniListProgress
@@ -669,11 +667,16 @@ export function SyncPage() {
       : entry.progress !== entry.previousValues.progress;
 
     // Score change
+    const anilistScore = Number(entry.previousValues.score || 0);
+    const kenmeiScore = Number(entry.score || 0);
     const scoreWillChange =
-      !syncConfig.prioritizeAniListScore &&
-      entry.score > 0 &&
-      (entry.previousValues.score === 0 ||
-        Math.abs(entry.score - entry.previousValues.score) >= 0.5);
+      entry.previousValues.status === "COMPLETED" &&
+      syncConfig.preserveCompletedStatus
+        ? false
+        : syncConfig.prioritizeAniListScore && anilistScore > 0
+          ? false
+          : kenmeiScore > 0 &&
+            (anilistScore === 0 || Math.abs(kenmeiScore - anilistScore) >= 0.5);
 
     // Privacy change
     const privacyWillChange =

@@ -35,6 +35,7 @@ export interface KenmeiManga {
   volumes_read?: number;
   total_volumes?: number;
   notes?: string;
+  last_read_at?: string;
   created_at: string;
   updated_at: string;
   author?: string;

@@ -311,11 +311,11 @@ export const parseKenmeiCsvExport = (
       const urlValue = findValue(columnMappings.url);
       const notesValue = findValue(columnMappings.notes);
       const dateValue = findValue(columnMappings.date);
-
+      const lastReadAt =
+        entry.last_read_at || entry["last read at"] || undefined;
       // Parse chapter and volume numbers
       const chaptersRead = parseIntSafe(chapterValue);
       const volumesRead = parseIntSafe(volumeValue);
-
       // Convert to proper types
       const mangaEntry: KenmeiManga = {
         id: parseInt(entry.id || "0"),
@@ -333,8 +333,9 @@ export const parseKenmeiCsvExport = (
           ? parseInt(entry.total_volumes)
           : undefined,
         notes: notesValue || "",
-        created_at: dateValue || new Date().toISOString(),
-        updated_at: dateValue || new Date().toISOString(),
+        last_read_at: lastReadAt,
+        created_at: entry.created_at || dateValue || new Date().toISOString(),
+        updated_at: entry.updated_at || dateValue || new Date().toISOString(),
         author: entry.author,
         alternative_titles: entry.alternative_titles
           ? entry.alternative_titles.split(";")

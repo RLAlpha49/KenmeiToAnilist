@@ -23,7 +23,11 @@ import {
   X,
 } from "lucide-react";
 import { DataTable } from "../components/import/DataTable";
-import { saveKenmeiData, getSavedMatchResults } from "../utils/storage";
+import {
+  saveKenmeiData,
+  getSavedMatchResults,
+  MatchResult,
+} from "../utils/storage";
 import {
   Card,
   CardContent,
@@ -120,9 +124,60 @@ export function ImportPage() {
     }, 200);
 
     try {
-      // Save the imported data to local storage
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      saveKenmeiData(importData as any);
+      const normalizedManga = importData.manga.map((item, idx) => ({
+        id: (item as { id?: string | number }).id ?? idx,
+        title: item.title,
+        status: item.status,
+        score: item.score ?? 0,
+        chapters_read: item.chapters_read ?? 0,
+        volumes_read: item.volumes_read ?? 0,
+        notes: item.notes ?? "",
+        created_at: item.created_at ?? new Date().toISOString(),
+        updated_at: item.updated_at ?? new Date().toISOString(),
+        last_read_at: item.last_read_at,
+      }));
+      saveKenmeiData({ manga: normalizedManga });
+
+      const matchResultsRaw = localStorage.getItem("match_results");
+      if (matchResultsRaw) {
+        const matchResults: MatchResult[] = JSON.parse(matchResultsRaw);
+        // Create a map for quick lookup by id or title
+        const mangaById = new Map(
+          normalizedManga.map((m) => [m.id?.toString(), m]),
+        );
+        const mangaByTitle = new Map(
+          normalizedManga.map((m) => [m.title.toLowerCase(), m]),
+        );
+        let updated = false;
+        const updatedResults = matchResults.map((result: MatchResult) => {
+          let newManga = null;
+          if (
+            result.kenmeiManga?.id &&
+            mangaById.has(result.kenmeiManga.id.toString())
+          ) {
+            newManga = mangaById.get(result.kenmeiManga.id.toString());
+          } else if (
+            result.kenmeiManga?.title &&
+            mangaByTitle.has(result.kenmeiManga.title.toLowerCase())
+          ) {
+            newManga = mangaByTitle.get(result.kenmeiManga.title.toLowerCase());
+          }
+          if (newManga) {
+            updated = true;
+            return {
+              ...result,
+              kenmeiManga: { ...result.kenmeiManga, ...newManga },
+            };
+          }
+          return result;
+        });
+        if (updated) {
+          const updatedResultsJson = JSON.stringify(updatedResults);
+          if (window.electronStore) {
+            window.electronStore.setItem("match_results", updatedResultsJson);
+          }
+        }
+      }
 
       // Show success state briefly before redirecting
       setImportSuccess(true);
