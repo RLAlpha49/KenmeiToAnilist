@@ -9,8 +9,7 @@
     "typedoc-plugin-rename-defaults",
     "typedoc-plugin-zod",
     "typedoc-plugin-extras",
-    "typedoc-plugin-inline-sources",
-    "typedoc-plugin-ga"
+    "typedoc-plugin-inline-sources"
   ],
   "theme": "hierarchy",
   "tsconfig": "./tsconfig.json",
@@ -36,7 +35,6 @@
   "placeInternalsInOwningModule": true,
   "hostedBaseUrl": "https://rlalpha49.github.io/KenmeiToAnilist/",
   "useHostedBaseUrlForAbsoluteLinks": true,
-  "gaID": "",
   "customTitle": "Kenmei To Anilist",
   "footerTypedocVersion": true,
   "footerLastModified": true,

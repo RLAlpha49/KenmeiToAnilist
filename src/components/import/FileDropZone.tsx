@@ -29,9 +29,22 @@ export interface FileDropZoneProps {
  *
  * Provides drag-and-drop and file selection UI, validates file type and size, parses the CSV, and reports progress and errors.
  *
- * @param onFileLoaded - Callback invoked with parsed KenmeiData when a file is successfully loaded and parsed.
- * @param onError - Callback invoked with an AppError if file loading or parsing fails.
- * @returns The rendered file drop zone React element.
+ * @remarks
+ * - Validates file extension and size before parsing.
+ * - Shows progress indicator while loading and parsing.
+ * - Calls {@link FileDropZoneProps.onFileLoaded} with parsed KenmeiData on success.
+ * - Calls {@link FileDropZoneProps.onError} with an AppError on failure.
+ *
+ * @param props - {@link FileDropZoneProps}
+ * @returns React.ReactElement
+ *
+ * @example
+ * ```tsx
+ * <FileDropZone
+ *   onFileLoaded={(data) => { ... }}
+ *   onError={(err) => { ... }}
+ * />
+ * ```
  * @source
  */
 export function FileDropZone({ onFileLoaded, onError }: FileDropZoneProps) {

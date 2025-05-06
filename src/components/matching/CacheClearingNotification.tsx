@@ -27,7 +27,7 @@ export interface CacheClearingNotificationProps {
 /**
  * CacheClearingNotification React component that displays a modal notification while cache is being cleared for selected manga.
  *
- * @param cacheClearingCount - The number of manga entries being cleared from cache.
+ * @param props - {@link CacheClearingNotificationProps}
  * @returns The rendered notification React element.
  * @source
  */

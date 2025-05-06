@@ -34,13 +34,16 @@ export interface DataTableProps {
 }
 
 /**
- * Displays a paginated, scrollable table of Kenmei manga items with status badges and load more functionality.
+ * DataTable component.
  *
- * Shows manga title, status, chapters, volumes, score, and last read date, with dynamic columns based on available data. Supports loading more items and empty state.
+ * Renders a paginated, scrollable table of Kenmei manga items with status badges and load more functionality.
  *
- * @param data - Array of KenmeiMangaItem objects to display in the table
- * @param itemsPerPage - Optional number of items to show per page (default: 50)
- * @returns A React element displaying the manga data table
+ * Columns are dynamically shown based on available data (title, status, chapters, volumes, score, last read date).
+ * Includes "Load More" support and an empty state.
+ *
+ * @param props - {@link DataTableProps}
+ * @returns React.ReactElement
+ *
  * @example
  * ```tsx
  * <DataTable data={myMangaList} itemsPerPage={25} />

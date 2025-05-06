@@ -66,12 +66,24 @@ export interface StatusCount {
 /**
  * ImportSummary React component for displaying a summary of Kenmei import data.
  *
- * Shows total manga entries, a breakdown by status, and actions to proceed or cancel the import.
+ * Displays the total number of manga entries, a breakdown by status, and provides actions to proceed or cancel the import.
  *
- * @param data - The KenmeiExport data to summarize.
- * @param onProceed - Callback invoked when the user chooses to proceed with the import.
- * @param onCancel - Callback invoked when the user cancels the import.
- * @returns The rendered import summary React element.
+ * @remarks
+ * - Shows a summary of the provided KenmeiExport data.
+ * - Calls {@link ImportSummaryProps.onProceed} when the user chooses to proceed.
+ * - Calls {@link ImportSummaryProps.onCancel} when the user cancels the import.
+ *
+ * @param props - {@link ImportSummaryProps}
+ * @returns React.ReactElement
+ *
+ * @example
+ * ```tsx
+ * <ImportSummary
+ *   data={kenmeiExportData}
+ *   onProceed={() => { ... }}
+ *   onCancel={() => { ... }}
+ * />
+ * ```
  * @source
  */
 export function ImportSummary({
