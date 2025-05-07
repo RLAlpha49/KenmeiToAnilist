@@ -10,6 +10,7 @@ import {
   generateUpdateMangaEntryMutation,
 } from "./mutations";
 import { AniListMediaEntry } from "./types";
+import { storage, STORAGE_KEYS } from "../../utils/storage";
 
 // Rate limiting constants
 const MAX_REQUESTS_PER_MINUTE = 28;
@@ -809,6 +810,22 @@ export async function syncMangaBatch(
     errors,
     timestamp: new Date(),
   };
+
+  try {
+    const prevStats = JSON.parse(
+      storage.getItem(STORAGE_KEYS.SYNC_STATS) || "{}",
+    );
+    const totalSyncs = (prevStats.totalSyncs || 0) + 1;
+    const syncStats = {
+      lastSyncTime: report.timestamp,
+      entriesSynced: report.successfulUpdates,
+      failedSyncs: report.failedUpdates,
+      totalSyncs,
+    };
+    storage.setItem(STORAGE_KEYS.SYNC_STATS, JSON.stringify(syncStats));
+  } catch (e) {
+    console.error("Failed to save sync stats:", e);
+  }
 
   console.log("Sync completed:", report);
   return report;

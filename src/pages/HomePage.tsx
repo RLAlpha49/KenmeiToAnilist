@@ -7,11 +7,9 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import {
-  BookOpen,
   AlertCircle,
   Clock,
   BarChart2,
-  Activity,
   Download,
   Library,
   RefreshCw,
@@ -21,13 +19,12 @@ import {
   ClipboardCheck,
   ExternalLink,
   ChevronRight,
-  LineChart,
   PanelLeftOpen,
   Settings,
   CheckCheck,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
-import { getImportStats } from "../utils/storage";
+import { getImportStats, storage, STORAGE_KEYS } from "../utils/storage";
 import { motion } from "framer-motion";
 import {
   Card,
@@ -62,6 +59,14 @@ interface StatsState {
   planToRead: number;
   lastSync: string | null;
   syncStatus: string;
+}
+
+// Add type for sync stats
+interface SyncStats {
+  lastSyncTime: string | null;
+  entriesSynced: number;
+  failedSyncs: number;
+  totalSyncs: number;
 }
 
 // Animation variants for staggered children
@@ -173,6 +178,13 @@ export function HomePage() {
   const [versionStatus, setVersionStatus] = useState<AppVersionStatus | null>(
     null,
   );
+  const [syncStats, setSyncStats] = useState<SyncStats>({
+    lastSyncTime: null,
+    entriesSynced: 0,
+    failedSyncs: 0,
+    totalSyncs: 0,
+  });
+
   useEffect(() => {
     let mounted = true;
     getAppVersionStatus().then((status) => {
@@ -201,8 +213,8 @@ export function HomePage() {
     if (importStats) {
       // Update stats from stored data
       const statusCounts = importStats.statusCounts || {};
-      setStats({
-        ...stats,
+      setStats((prev) => ({
+        ...prev,
         total: importStats.total || 0,
         reading: statusCounts.reading || 0,
         completed: statusCounts.completed || 0,
@@ -210,7 +222,7 @@ export function HomePage() {
         onHold: statusCounts.on_hold || 0,
         planToRead: statusCounts.plan_to_read || 0,
         lastSync: importStats.timestamp || null,
-      });
+      }));
     }
 
     // Get match status data
@@ -262,6 +274,25 @@ export function HomePage() {
       }
     } catch (error) {
       console.error("Error retrieving match status:", error);
+    }
+
+    try {
+      const stats = JSON.parse(
+        storage.getItem(STORAGE_KEYS.SYNC_STATS) || "{}",
+      );
+      setSyncStats({
+        lastSyncTime: stats.lastSyncTime || null,
+        entriesSynced: stats.entriesSynced || 0,
+        failedSyncs: stats.failedSyncs || 0,
+        totalSyncs: stats.totalSyncs || 0,
+      });
+    } catch {
+      setSyncStats({
+        lastSyncTime: null,
+        entriesSynced: 0,
+        failedSyncs: 0,
+        totalSyncs: 0,
+      });
     }
   }, []);
 
@@ -395,53 +426,6 @@ export function HomePage() {
         </motion.div>
 
         <motion.div variants={itemVariants}>
-          <Card className="overflow-hidden border-none bg-gradient-to-br from-purple-50 to-fuchsia-50 shadow-md transition-all hover:translate-y-[-3px] hover:shadow-lg dark:from-purple-950/40 dark:to-fuchsia-950/40">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center text-xl text-purple-700 dark:text-purple-400">
-                <div className="mr-2 flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-800/50">
-                  <Activity className="h-5 w-5" />
-                </div>
-                Reading Status
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="relative">
-                <p className="mb-2 text-4xl font-bold text-purple-600 dark:text-purple-400">
-                  {stats.reading}
-                </p>
-                <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
-                  <Badge
-                    variant="outline"
-                    className="bg-green-100/50 text-green-700 shadow-sm dark:bg-green-900/20 dark:text-green-400"
-                  >
-                    {stats.completed} Completed
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className="bg-amber-100/50 text-amber-700 shadow-sm dark:bg-amber-900/20 dark:text-amber-400"
-                  >
-                    {stats.onHold} On Hold
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className="bg-blue-100/50 text-blue-700 shadow-sm dark:bg-blue-900/20 dark:text-blue-400"
-                  >
-                    {stats.planToRead} Plan to Read
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className="bg-red-100/50 text-red-700 shadow-sm dark:bg-red-900/20 dark:text-red-400"
-                  >
-                    {stats.dropped} Dropped
-                  </Badge>
-                </div>
-                <LineChart className="absolute right-0 bottom-0 h-16 w-16 text-purple-500 opacity-20 dark:text-purple-900/50" />
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
           <Card className="overflow-hidden border-none bg-gradient-to-br from-green-50 to-emerald-50 shadow-md transition-all hover:translate-y-[-3px] hover:shadow-lg dark:from-green-950/40 dark:to-emerald-950/40">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center text-xl text-green-700 dark:text-green-400">
@@ -519,10 +503,49 @@ export function HomePage() {
             </CardContent>
           </Card>
         </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card className="overflow-hidden border-none bg-gradient-to-br from-purple-50 to-fuchsia-50 shadow-md transition-all hover:translate-y-[-3px] hover:shadow-lg dark:from-purple-950/40 dark:to-fuchsia-950/40">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center text-xl text-purple-700 dark:text-purple-400">
+                <BarChart2 className="mr-2 h-5 w-5" />
+                Sync Statistics
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-blue-500" />
+                  <span className="text-muted-foreground">Last Sync:</span>
+                  <span className="font-medium">
+                    {syncStats.lastSyncTime
+                      ? formatDate(syncStats.lastSyncTime)
+                      : "Never"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCheck className="h-4 w-4 text-green-500" />
+                  <span className="text-muted-foreground">Entries Synced:</span>
+                  <span className="font-medium">{syncStats.entriesSynced}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-red-500" />
+                  <span className="text-muted-foreground">Failed Syncs:</span>
+                  <span className="font-medium">{syncStats.failedSyncs}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-blue-500" />
+                  <span className="text-muted-foreground">Total Syncs:</span>
+                  <span className="font-medium">{syncStats.totalSyncs}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </motion.div>
 
       <motion.div
-        className="mb-10 grid grid-cols-1 gap-8 lg:grid-cols-2"
+        className="mb-10 grid grid-cols-1 gap-8"
         variants={containerVariants}
         initial="hidden"
         animate="show"
@@ -683,71 +706,6 @@ export function HomePage() {
                     <ChevronRight className="text-muted-foreground mt-1.5 h-4 w-4 flex-shrink-0" />
                   </Link>
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center text-xl">
-                <BarChart2 className="mr-2 h-5 w-5 text-blue-500" />
-                Sync Status
-              </CardTitle>
-              <CardDescription>
-                Information about your synchronization
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between rounded-lg bg-green-50 p-3 dark:bg-green-900/20">
-                  <div className="flex items-center gap-2">
-                    <div className="h-2.5 w-2.5 rounded-full bg-green-500"></div>
-                    <span className="text-sm font-medium text-green-700 dark:text-green-400">
-                      AniList API Status: Online
-                    </span>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                  >
-                    Ready
-                  </Badge>
-                </div>
-
-                <div className="rounded-lg border p-4">
-                  <h3 className="mb-2 text-sm font-medium">Sync Statistics</h3>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="h-4 w-4 text-blue-500" />
-                      <span className="text-muted-foreground">
-                        Total Manga:
-                      </span>
-                      <span className="font-medium">{stats.total}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Activity className="h-4 w-4 text-purple-500" />
-                      <span className="text-muted-foreground">Reading:</span>
-                      <span className="font-medium">{stats.reading}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCheck className="h-4 w-4 text-green-500" />
-                      <span className="text-muted-foreground">Completed:</span>
-                      <span className="font-medium">{stats.completed}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-amber-500" />
-                      <span className="text-muted-foreground">On Hold:</span>
-                      <span className="font-medium">{stats.onHold}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 text-red-500" />
-                      <span className="text-muted-foreground">Dropped:</span>
-                      <span className="font-medium">{stats.dropped}</span>
-                    </div>
-                  </div>
-                </div>
               </div>
             </CardContent>
           </Card>

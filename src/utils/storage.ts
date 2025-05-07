@@ -201,6 +201,7 @@ export const STORAGE_KEYS = {
   PENDING_MANGA: "pending_manga",
   CACHE_VERSION: "cache_version",
   SYNC_CONFIG: "sync_config",
+  SYNC_STATS: "sync_stats",
 };
 
 /**
