@@ -96,7 +96,7 @@
     "electron-store": "^10.0.1",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
-    "framer-motion": "^12.11.3",
+    "framer-motion": "^12.11.4",
     "lucide-react": "^0.510.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
