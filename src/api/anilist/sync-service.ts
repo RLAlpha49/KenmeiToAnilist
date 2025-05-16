@@ -564,6 +564,42 @@ export async function deleteMangaEntry(
   }
 }
 
+function getIncrementalSteps(entry: AniListMediaEntry): number[] {
+  const steps: number[] = [];
+  const prev = entry.previousValues;
+  const progressChanged = prev && entry.progress !== prev.progress;
+  const progressDelta = prev ? entry.progress - prev.progress : 0;
+  const metadataChanged =
+    prev &&
+    (entry.status !== prev.status ||
+      entry.score !== prev.score ||
+      entry.private !== prev.private);
+
+  // Step 1: Only if progress increased by exactly 1
+  if (progressChanged && progressDelta === 1) {
+    steps.push(1);
+  }
+  // Step 1 and 2: If progress increased by more than 1
+  else if (progressChanged && progressDelta > 1) {
+    steps.push(1, 2);
+  }
+  // Step 3: If only metadata changed (not progress), or both progress and metadata changed
+  if (metadataChanged && !progressChanged) {
+    steps.push(3);
+  } else if (metadataChanged && progressChanged) {
+    // If both changed, run progress steps first, then metadata
+    if (progressDelta === 1) {
+      if (!steps.includes(1)) steps.push(1);
+    } else if (progressDelta > 1) {
+      if (!steps.includes(1)) steps.push(1);
+      if (!steps.includes(2)) steps.push(2);
+    }
+    steps.push(3);
+  }
+  // If nothing changed, do nothing
+  return steps;
+}
+
 /**
  * Process a batch of manga updates with rate limiting and progress tracking.
  *
@@ -591,8 +627,8 @@ export async function syncMangaBatch(
   // Organize entries by mediaId
   entries.forEach((entry) => {
     if (entry.syncMetadata?.useIncrementalSync) {
-      const stepCount = 3;
-      for (let step = 1; step <= stepCount; step++) {
+      const steps = getIncrementalSteps(entry);
+      for (const step of steps) {
         const stepEntry = { ...entry };
         stepEntry.syncMetadata = {
           ...entry.syncMetadata,

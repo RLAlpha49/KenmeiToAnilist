@@ -128,7 +128,7 @@ jobs:
         id: check-updates
         run: |
           # Capture ncu output for updates
-          NCU_OUTPUT=$(ncu -x typedoc*)
+          NCU_OUTPUT=$(ncu -x typedoc,typedoc-*,@typedoc/*)
 
           # Add to step summary
           echo "## 📦 Package Updates Available" >> $GITHUB_STEP_SUMMARY
@@ -139,7 +139,7 @@ jobs:
           echo "To update all packages, run: npm run update" >> $GITHUB_STEP_SUMMARY
 
           # Capture update info in structured format
-          UPDATE_INFO=$(ncu --jsonUpgraded -x typedoc*)
+          UPDATE_INFO=$(ncu --jsonUpgraded -x typedoc,typedoc-*,@typedoc/*)
           echo "update_info<<EOF" >> $GITHUB_OUTPUT
           echo "$UPDATE_INFO" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -163,7 +163,7 @@ jobs:
           cp package.json /tmp/package.json.before
 
           # Capture update info in structured format without modifying files
-          UPDATE_INFO=$(ncu --jsonUpgraded -x typedoc*)
+          UPDATE_INFO=$(ncu --jsonUpgraded -x typedoc,typedoc-*,@typedoc/*)
           echo "actual_changes<<EOF" >> $GITHUB_OUTPUT
 
           # Extract the changes in a format we can use later
@@ -247,7 +247,7 @@ jobs:
           if [ "${{ steps.check-updates.outputs.has_updates }}" = "true" ]; then
             # Update packages
             echo "[INFO] Updating packages to latest versions on branch $PR_BRANCH"
-            ncu -u -x typedoc*
+            ncu -u -x typedoc,typedoc-*,@typedoc/*
             
             # Install updated packages
             echo "[INFO] Installing updated packages"

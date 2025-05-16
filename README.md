@@ -110,17 +110,6 @@ VITE_ANILIST_CLIENT_SECRET=your-client-secret
 - **TailwindCSS** – Utility-first CSS
 - **Radix UI** – Accessible UI primitives
 - **Vite** – Fast build tool
-- **Vitest** – Unit testing
-- **Playwright** – End-to-end testing
-
----
-
-## 🧪 Testing
-
-- **Unit Tests**: `npm run test:unit` or `yarn test:unit`
-- **E2E Tests**: `npm run test:e2e` or `yarn test:e2e`
-- **All Tests**: `npm run test:all` or `yarn test:all`
-- **Coverage**: `npm run test:coverage`
 
 ---
 
