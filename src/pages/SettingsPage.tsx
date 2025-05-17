@@ -53,7 +53,10 @@ import {
   getAppVersion,
   getAppVersionStatus,
   AppVersionStatus,
+  compareVersions,
 } from "../utils/app-version";
+import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
+import { Loader2 } from "lucide-react";
 
 // Animation variants
 const containerVariants = {
@@ -138,6 +141,17 @@ export function SettingsPage() {
   const [versionStatus, setVersionStatus] = useState<AppVersionStatus | null>(
     null,
   );
+  // Update Check State
+  const [updateChannel, setUpdateChannel] = useState<"stable" | "beta">(
+    "stable",
+  );
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<null | {
+    version: string;
+    url: string;
+    isBeta: boolean;
+  }>(null);
+  const [updateError, setUpdateError] = useState<string | null>(null);
 
   // Handler for opening external links in the default browser
   const handleOpenExternal = (url: string) => (e: React.MouseEvent) => {
@@ -553,6 +567,46 @@ export function SettingsPage() {
     }
 
     return `${hoursRemaining}h`;
+  };
+
+  // Fetch update info from GitHub
+  const handleCheckForUpdates = async () => {
+    setIsCheckingUpdate(true);
+    setUpdateError(null);
+    setUpdateInfo(null);
+    try {
+      const response = await fetch(
+        "https://api.github.com/repos/RLAlpha49/KenmeiToAnilist/releases?per_page=10",
+      );
+      if (!response.ok) throw new Error("Failed to fetch releases");
+      type Release = {
+        draft: boolean;
+        prerelease: boolean;
+        tag_name: string;
+        html_url: string;
+        body: string;
+      };
+      const releases: Release[] = await response.json();
+      let release: Release | null = null;
+      if (updateChannel === "stable") {
+        release = releases.find((r) => !r.draft && !r.prerelease) || null;
+      } else {
+        release =
+          releases.find((r) => !r.draft && r.prerelease) ||
+          releases.find((r) => !r.draft && !r.prerelease) ||
+          null;
+      }
+      if (!release) throw new Error("No release found for selected channel");
+      setUpdateInfo({
+        version: release.tag_name,
+        url: release.html_url,
+        isBeta: !!release.prerelease,
+      });
+    } catch (e) {
+      setUpdateError(e instanceof Error ? e.message : "Unknown error");
+    } finally {
+      setIsCheckingUpdate(false);
+    }
   };
 
   return (
@@ -1488,6 +1542,131 @@ export function SettingsPage() {
           </TabsContent>
         </Tabs>
       </motion.div>
+
+      {/* Check for Updates Section */}
+      <Card className="bg-muted/10 mt-6 border-none shadow-sm">
+        <CardContent className="space-y-4 py-6">
+          <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="text-muted-foreground h-4 w-4" />
+              <h3 className="text-sm font-medium">Check for Updates</h3>
+            </div>
+          </div>
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:gap-8">
+            <RadioGroup
+              value={updateChannel}
+              onValueChange={(v) => setUpdateChannel(v as "stable" | "beta")}
+              className="flex flex-row gap-4"
+              aria-label="Update Channel"
+            >
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="stable" id="update-stable" />
+                <label htmlFor="update-stable" className="text-sm font-medium">
+                  Stable
+                </label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="beta" id="update-beta" />
+                <label htmlFor="update-beta" className="text-sm font-medium">
+                  Beta/Early Access
+                </label>
+              </div>
+            </RadioGroup>
+            <Button
+              onClick={handleCheckForUpdates}
+              disabled={isCheckingUpdate}
+              aria-label="Check for updates"
+              className="w-full md:w-auto"
+            >
+              {isCheckingUpdate ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Checking...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Check for Updates
+                </>
+              )}
+            </Button>
+          </div>
+          {updateError && (
+            <div className="text-sm text-red-600 dark:text-red-400">
+              {updateError}
+            </div>
+          )}
+          {updateInfo && (
+            <div className="bg-muted/40 rounded-lg border p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <Badge
+                  className={
+                    updateInfo.isBeta
+                      ? "bg-yellow-50 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
+                      : "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                  }
+                >
+                  {updateInfo.isBeta ? "Beta/Early Access" : "Stable"}
+                </Badge>
+                <span className="font-mono text-xs">
+                  Latest: {updateInfo.version}
+                </span>
+                <a
+                  role="button"
+                  tabIndex={0}
+                  aria-label="View release on GitHub"
+                  className="ml-2 cursor-pointer text-xs text-blue-600 underline hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                  onClick={handleOpenExternal(updateInfo.url)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      if (window.electronAPI?.shell?.openExternal) {
+                        window.electronAPI.shell.openExternal(updateInfo.url);
+                      } else {
+                        window.open(
+                          updateInfo.url,
+                          "_blank",
+                          "noopener,noreferrer",
+                        );
+                      }
+                    }
+                  }}
+                >
+                  View on GitHub
+                </a>
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="font-mono text-xs">
+                  Current: {getAppVersion()}
+                </span>
+                {(() => {
+                  const current = getAppVersion().replace(/^v/, "");
+                  const latest = updateInfo.version.replace(/^v/, "");
+                  if (current === latest) {
+                    return (
+                      <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                        Up to date
+                      </Badge>
+                    );
+                  }
+                  if (compareVersions(current, latest) < 0) {
+                    return (
+                      <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                        Update available
+                      </Badge>
+                    );
+                  }
+                  return (
+                    <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                      Development version
+                    </Badge>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Application Info Section */}
       <Card className="bg-muted/10 mt-6 border-none shadow-sm">

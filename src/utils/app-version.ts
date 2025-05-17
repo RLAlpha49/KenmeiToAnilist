@@ -201,7 +201,7 @@ export async function getAppVersionStatus(): Promise<AppVersionStatus> {
   try {
     // Fetch all releases (not just latest)
     const response = await fetch(
-      "https://api.github.com/repos/RLAlpha49/kenmei-to-anilist/releases?per_page=20",
+      "https://api.github.com/repos/RLAlpha49/KenmeiToAnilist/releases?per_page=20",
     );
     if (!response.ok) throw new Error("Failed to fetch releases");
     const releases: GitHubRelease[] = await response.json();
