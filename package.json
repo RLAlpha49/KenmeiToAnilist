@@ -34,7 +34,7 @@
     "@eslint/compat": "^1.2.9",
     "@eslint/js": "^9.26.0",
     "@tailwindcss/vite": "^4.1.7",
-    "@tanstack/router-devtools": "^1.120.3",
+    "@tanstack/router-devtools": "^1.120.6",
     "@types/electron-squirrel-startup": "^1.0.2",
     "@types/eslint-config-prettier": "^6.11.3",
     "@types/node": "^22.15.18",
