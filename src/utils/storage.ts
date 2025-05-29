@@ -106,20 +106,46 @@ export const storage = {
    * @returns The stored value or null if not found
    */
   getItem: (key: string): string | null => {
-    if (window.electronStore) {
-      // Synchronous fallback for compatibility, but always prefer electronStore
-      // This is async, so we log a warning if we ever fall back
-      let value = localStorage.getItem(key);
-      window.electronStore.getItem(key).then((electronValue) => {
-        if (electronValue !== null && electronValue !== value) {
-          localStorage.setItem(key, electronValue);
-          value = electronValue;
-        }
-      });
-      return value;
-    } else {
+    try {
+      // Check cache first to avoid redundant reads
+      if (key in storageCache) {
+        return storageCache[key];
+      }
+
+      // For compatibility with existing code, we need to return synchronously
+      // But electronStore API is asynchronous, so we fall back to localStorage
       const value = localStorage.getItem(key);
+      // Cache the value
+      if (value !== null) {
+        storageCache[key] = value;
+      }
+
+      // Asynchronously update from electron-store if available (won't affect current return)
+      if (window.electronStore) {
+        window.electronStore
+          .getItem(key)
+          .then((electronValue) => {
+            if (electronValue !== null && electronValue !== value) {
+              // Update localStorage and cache if electron-store has a different value
+              localStorage.setItem(key, electronValue);
+              storageCache[key] = electronValue;
+            }
+          })
+          .catch((error) => {
+            // Only log errors in development
+            if (process.env.NODE_ENV === "development") {
+              console.error(
+                `Error retrieving ${key} from electron-store:`,
+                error,
+              );
+            }
+          });
+      }
+
       return value;
+    } catch (error) {
+      console.error(`Error getting item from storage: ${key}`, error);
+      return null;
     }
   },
 
@@ -129,10 +155,30 @@ export const storage = {
    * @param value The value to store
    */
   setItem: (key: string, value: string): void => {
-    if (window.electronStore) {
-      window.electronStore.setItem(key, value);
+    try {
+      // Check if value changed to avoid redundant operations
+      if (storageCache[key] === value) {
+        return;
+      }
+
+      // Update cache
+      storageCache[key] = value;
+
+      // Store in localStorage for compatibility
+      localStorage.setItem(key, value);
+
+      // Also store in electronStore if available
+      if (window.electronStore) {
+        window.electronStore.setItem(key, value).catch((error) => {
+          // Only log errors in development
+          if (process.env.NODE_ENV === "development") {
+            console.error(`Error storing ${key} in electron-store:`, error);
+          }
+        });
+      }
+    } catch (error) {
+      console.error(`Error setting item in storage: ${key}`, error);
     }
-    localStorage.setItem(key, value);
   },
 
   /**
