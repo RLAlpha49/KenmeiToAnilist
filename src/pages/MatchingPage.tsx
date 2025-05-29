@@ -4,6 +4,15 @@
  * @description Matching page component for the Kenmei to AniList sync tool. Handles manga matching, review, rematch, and sync preparation.
  */
 
+// TODO: Add button to set all matched (including manually matched) entries to pending.
+// TODO: Have a setting for ignoring automatic matching with adult content (Kenmei rarely tracks adult content, so it may not be relevant to some users). Default is false. Should still be returned when searching manually either way.
+// TODO: Mark manga with adult content as such.
+// TODO: Blur image of manga marked as adult. Image can be pressed to unblur. (Should have a setting for this, default is true)
+// TODO: If a manga entry is on the user's list, it should show its current details on anilist.
+// TODO: Ignore any automatic match result with a title of "Watashi, Isekai de Dorei ni Sarechaimashita (Naki) Shikamo Goshujinsama wa Seikaku no Warui Elf no Joousama (demo Chou Bijin ← Koko Daiji) Munou Sugite Nonoshiraremakuru kedo Douryou no Orc ga Iyashi-kei da shi Sato no Elf wa Kawaii shi". This has such a long title alongside its synonyms that it appears to often for completly unrelated manga. This is just annoying to see over and over again. This should not happen when manually searching.
+
+// TODO: Somehow improve title similarity percentage calculation. (Sometimes it makes no sense at all)
+
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { KenmeiManga } from "../api/kenmei/types";
