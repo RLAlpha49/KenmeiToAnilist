@@ -26,7 +26,7 @@ import { useAuth } from "../hooks/useAuth";
 import { APICredentials } from "../types/auth";
 import { DEFAULT_ANILIST_CONFIG, DEFAULT_AUTH_PORT } from "../config/anilist";
 import {
-  storage,
+  STORAGE_KEYS,
   getSyncConfig,
   saveSyncConfig,
   SyncConfig,
@@ -269,13 +269,13 @@ export function SettingsPage() {
   useEffect(() => {
     try {
       // Load custom credentials toggle state
-      const savedUseCustom = storage.getItem("useCustomCredentials");
+      const savedUseCustom = localStorage.getItem("useCustomCredentials");
       if (savedUseCustom) {
         setUseCustomCredentials(JSON.parse(savedUseCustom));
       }
 
       // Load saved custom credentials if they exist
-      const savedCustomCreds = storage.getItem("customCredentials");
+      const savedCustomCreds = localStorage.getItem("customCredentials");
       if (savedCustomCreds) {
         const credentials = JSON.parse(savedCustomCreds);
         setClientId(credentials.clientId || "");
@@ -305,7 +305,7 @@ export function SettingsPage() {
 
   // Save custom credentials toggle state whenever it changes
   useEffect(() => {
-    storage.setItem(
+    localStorage.setItem(
       "useCustomCredentials",
       JSON.stringify(useCustomCredentials),
     );
@@ -314,7 +314,7 @@ export function SettingsPage() {
   // Save custom credentials whenever they change
   useEffect(() => {
     if (clientId || clientSecret || redirectUri) {
-      storage.setItem(
+      localStorage.setItem(
         "customCredentials",
         JSON.stringify({
           clientId,
@@ -398,7 +398,6 @@ export function SettingsPage() {
         "../api/matching/manga-search-service"
       );
       const { clearSearchCache } = await import("../api/anilist/client");
-      const { STORAGE_KEYS } = await import("../utils/storage");
 
       console.log("🧹 Starting selective cache clearing...");
 
@@ -482,6 +481,13 @@ export function SettingsPage() {
       uniqueKeysToRemove.forEach((cacheKey) => {
         try {
           localStorage.removeItem(cacheKey);
+          if (
+            window.electronStore &&
+            typeof window.electronStore.removeItem === "function"
+          ) {
+            window.electronStore.removeItem(cacheKey);
+            console.log(`🧹 Cleared Electron Store cache: ${cacheKey}`);
+          }
           console.log(`🧹 Cleared cache: ${cacheKey}`);
         } catch (e) {
           console.warn(`Failed to clear cache: ${cacheKey}`, e);
