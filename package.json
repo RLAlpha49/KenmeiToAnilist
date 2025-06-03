@@ -68,7 +68,7 @@
     "typedoc-plugin-zod": "^1.4.1",
     "typedoc-theme-hierarchy": "^5.0.5",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.33.0",
+    "typescript-eslint": "^8.33.1",
     "vite": "^6.3.5"
   },
   "dependencies": {
@@ -85,7 +85,7 @@
     "@radix-ui/react-tabs": "^1.1.12",
     "@radix-ui/react-tooltip": "^1.2.7",
     "@sentry/electron": "^6.6.0",
-    "@tanstack/react-query": "^5.79.0",
+    "@tanstack/react-query": "^5.79.2",
     "@tanstack/react-router": "^1.120.13",
     "@types/string-similarity": "^4.0.2",
     "class-variance-authority": "^0.7.1",
@@ -100,10 +100,10 @@
     "lucide-react": "^0.511.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "sonner": "^2.0.4",
+    "sonner": "^2.0.5",
     "string-similarity": "^4.0.4",
     "tailwind-merge": "^3.3.0",
     "tailwindcss-animate": "^1.0.7",
-    "zod": "^3.25.46"
+    "zod": "^3.25.49"
   }
 }
