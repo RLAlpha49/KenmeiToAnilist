@@ -21,6 +21,7 @@ import { STORAGE_KEYS, storage } from "../utils/storage";
  */
 export const usePendingManga = () => {
   const [pendingManga, setPendingManga] = useState<KenmeiManga[]>([]);
+  const [pendingMangaLoading, setPendingMangaLoading] = useState(true);
 
   // Debug effect for pendingManga
   useEffect(() => {
@@ -28,6 +29,36 @@ export const usePendingManga = () => {
       `pendingManga state updated: ${pendingManga.length} manga pending`,
     );
   }, [pendingManga]);
+
+  // On mount, always load pending manga from Electron storage if available
+  useEffect(() => {
+    let isMounted = true;
+    setPendingMangaLoading(true);
+    storage
+      .getItemAsync(STORAGE_KEYS.PENDING_MANGA)
+      .then((pendingMangaJson) => {
+        if (isMounted) {
+          if (pendingMangaJson) {
+            try {
+              const parsed = JSON.parse(pendingMangaJson) as KenmeiManga[];
+              setPendingManga(parsed);
+            } catch (e) {
+              console.error(
+                "Failed to parse pending manga from async storage:",
+                e,
+              );
+              setPendingManga([]);
+            }
+          } else {
+            setPendingManga([]);
+          }
+          setPendingMangaLoading(false);
+        }
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Persist pendingManga on unmount if process wasn't completed
   useEffect(() => {
@@ -76,7 +107,7 @@ export const usePendingManga = () => {
   };
 
   /**
-   * Calculates the list of pending manga that still need to be processed, using title-based and ID-based matching.
+   * Calculates the list of pending manga that still need to be processed, using BOTH id and title-based matching.
    *
    * @param processedResults - The list of already processed manga match results.
    * @param allManga - The complete list of Kenmei manga.
@@ -91,91 +122,34 @@ export const usePendingManga = () => {
       `Calculating pending manga: all manga count = ${allManga.length}, processed results = ${processedResults.length}`,
     );
 
-    // Since we've discovered IDs are undefined, prioritize title-based matching
-    console.log(
-      "Using title-based approach as primary method to find pending manga",
+    // Build sets for both IDs and titles
+    const processedIds = new Set(
+      processedResults.map((r) => r.kenmeiManga.id).filter(Boolean),
     );
-
-    // Create a set of processed manga titles (lowercase)
     const processedTitles = new Set(
       processedResults.map((r) => r.kenmeiManga.title.toLowerCase()),
     );
 
-    // Find manga that don't have matching titles
-    const titleBasedPending = allManga.filter(
-      (m) => !processedTitles.has(m.title.toLowerCase()),
-    );
+    console.log("Processed IDs:", Array.from(processedIds).slice(0, 5));
+    console.log("Processed Titles:", Array.from(processedTitles).slice(0, 5));
+
+    // Only manga that are not in either set are pending
+    const pending = allManga.filter((m) => {
+      const idMatch = m.id && processedIds.has(m.id);
+      const titleMatch = processedTitles.has(m.title.toLowerCase());
+      return !idMatch && !titleMatch;
+    });
 
     console.log(
-      `Title-based approach found ${titleBasedPending.length} pending manga`,
+      `Combined ID/title approach found ${pending.length} pending manga`,
     );
-
-    // Diagnostic log - output some sample manga for verification
-    if (titleBasedPending.length > 0) {
-      console.log("Sample pending manga titles:");
-      titleBasedPending.slice(0, 5).forEach((manga, index) => {
-        console.log(`${index + 1}. "${manga.title}"`);
-      });
-
-      if (titleBasedPending.length > 5) {
-        console.log(`... and ${titleBasedPending.length - 5} more`);
-      }
-    }
-
-    // Use title-based results if we found any
-    if (titleBasedPending.length > 0) {
+    if (pending.length > 0) {
       console.log(
-        `Using ${titleBasedPending.length} unmatched manga from title-based matching`,
+        "Sample pending manga:",
+        pending.slice(0, 5).map((m) => ({ id: m.id, title: m.title })),
       );
-      return titleBasedPending;
     }
-
-    // Only use ID-based matching as a backup since IDs might be undefined
-    // Create a set of all processed manga IDs for faster lookup
-    const processedIds = new Set(processedResults.map((r) => r.kenmeiManga.id));
-    console.log(`Created set with ${processedIds.size} processed manga IDs`);
-
-    // Log some sample IDs to help with debugging
-    const sampleProcessedIds = [...processedIds].slice(0, 3);
-    console.log("Sample processed IDs:", sampleProcessedIds);
-
-    const sampleAllMangaIds = allManga.slice(0, 3).map((m) => m.id);
-    console.log("Sample all manga IDs:", sampleAllMangaIds);
-
-    // Check for ID type mismatches that might cause comparison issues
-    const processedIdTypes = new Set([...processedIds].map((id) => typeof id));
-    const allMangaIdTypes = new Set(allManga.map((m) => typeof m.id));
-
-    console.log("Processed ID types:", [...processedIdTypes]);
-    console.log("All manga ID types:", [...allMangaIdTypes]);
-
-    // Find manga that haven't been processed yet
-    const idBasedPending = allManga.filter((m) => !processedIds.has(m.id));
-
-    console.log(
-      `ID-based filter found ${idBasedPending.length} manga that need processing`,
-    );
-
-    if (idBasedPending.length > 0) {
-      return idBasedPending;
-    }
-
-    // Final fallback - just use the numerical difference
-    if (allManga.length > processedResults.length) {
-      console.log("Using numerical difference fallback");
-      const difference = allManga.slice(
-        0,
-        allManga.length - processedResults.length,
-      );
-      console.log(
-        `Numerical difference provided ${difference.length} manga to process`,
-      );
-      return difference;
-    }
-
-    // No pending manga found
-    console.log("No pending manga found through any matching method");
-    return [];
+    return pending;
   };
 
   /**
@@ -255,5 +229,6 @@ export const usePendingManga = () => {
     savePendingManga,
     calculatePendingManga,
     loadPendingManga,
+    pendingMangaLoading,
   };
 };

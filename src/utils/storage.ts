@@ -233,6 +233,33 @@ export const storage = {
       console.error("Error clearing storage", error);
     }
   },
+
+  /**
+   * Async get an item from storage, always preferring Electron storage if available.
+   * Updates localStorage for compatibility.
+   * @param key The key of the item to get
+   * @returns Promise<string | null>
+   */
+  getItemAsync: async (key: string): Promise<string | null> => {
+    if (window.electronStore) {
+      try {
+        const value = await window.electronStore.getItem(key);
+        if (value !== null) {
+          localStorage.setItem(key, value); // keep localStorage in sync
+          storageCache[key] = value;
+        }
+        return value;
+      } catch (error) {
+        if (process.env.NODE_ENV === "development") {
+          console.error(`Error retrieving ${key} from electron-store:`, error);
+        }
+        // fallback to localStorage
+        return localStorage.getItem(key);
+      }
+    }
+    // fallback if no electronStore
+    return localStorage.getItem(key);
+  },
 };
 
 /**
