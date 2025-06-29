@@ -37,7 +37,7 @@
     "@tanstack/router-devtools": "^1.122.0",
     "@types/electron-squirrel-startup": "^1.0.2",
     "@types/eslint-config-prettier": "^6.11.3",
-    "@types/node": "^24.0.6",
+    "@types/node": "^24.0.7",
     "@types/node-fetch": "^2.6.12",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
