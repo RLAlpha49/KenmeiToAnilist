@@ -4,14 +4,21 @@
  * @description Matching page component for the Kenmei to AniList sync tool. Handles manga matching, review, rematch, and sync preparation.
  */
 
+// TODO: Add debug menu (Should be accessible from the settings page or a button next to the theme toggle). Should have the option to view and update the values of any of the electron store values as well as the browser local storage values directly.
+
 // TODO: Add button to set all matched (including manually matched) entries to pending.
 // TODO: Have a setting for ignoring automatic matching with adult content (Kenmei rarely tracks adult content, so it may not be relevant to some users). Default is false. Should still be returned when searching manually either way.
 // TODO: Mark manga with adult content as such.
-// TODO: Blur image of manga marked as adult. Image can be pressed to unblur. (Should have a setting for this, default is true)
-// TODO: If a manga entry is on the user's list, it should show its current details on anilist.
-// TODO: Ignore any automatic match result with a title of "Watashi, Isekai de Dorei ni Sarechaimashita (Naki) Shikamo Goshujinsama wa Seikaku no Warui Elf no Joousama (demo Chou Bijin ← Koko Daiji) Munou Sugite Nonoshiraremakuru kedo Douryou no Orc ga Iyashi-kei da shi Sato no Elf wa Kawaii shi". This has such a long title alongside its synonyms that it appears to often for completly unrelated manga. This is just annoying to see over and over again. This should not happen when manually searching.
+// TODO: Blur image of manga marked as adult. Image can be pressed to unblur. (Should have a setting for this in settings page, default is true)
+// TODO: If a manga entry is on the user's list, it should show its current details on anilist. (Need to update query and see if it is possible to get the users current details when searching)
+// TODO: Ignore any automatic match result with a title of "Watashi, Isekai de Dorei ni Sarechaimashita (Naki) Shikamo Goshujinsama wa Seikaku no Warui Elf no Joousama (demo Chou Bijin ← Koko Daiji) Munou Sugite Nonoshiraremakuru kedo Douryou no Orc ga Iyashi-kei da shi Sato no Elf wa Kawaii shi". This has such a long title alongside its synonyms that it appears to often for completly unrelated manga. This is just annoying to see over and over again. It should still be returned when manually searching.
+// TODO: Main matches "Kenmei" button uses title from kenmei and not anilist title. (Alternative matches work correctly)
+// TODO: Add a setting to ignore one shots from automatic matching. Should still be returned when manually searching. (Default is false)
+// TODO: Fix "load more results" showing duplicates when manually searching.
+// TODO: Add a way to go to first or last page of results.
 
 // TODO: Somehow improve title similarity percentage calculation. (Sometimes it makes no sense at all)
+// TODO: If matches have same confidence percentage, it should prioritize the main titles rather than the synonyms.
 
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";

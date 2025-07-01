@@ -4,6 +4,9 @@
  * @description Sync page component for the Kenmei to AniList sync tool. Handles synchronization preview, configuration, execution, and results display.
  */
 
+// TODO: Fix changes showing progress is changed to the same number when it is updating status or score.
+// TODO: Fix changes showing wrong progress count when updated (May only be a problem with Incremental Sync). It updates manga correctly however the display is incorrect. Status could also be displayed incorrectly. I assume the display of changes are off index and not displayed for their correct manga, or they could be wrong in the first place.
+
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuth } from "../hooks/useAuth";
