@@ -1,16 +1,19 @@
-name: Delete Old Artifacts
+name: Delete Old Artifacts Across All Branches
 
 on:
   push:
     branches:
-      - master
+      - '**'
   workflow_dispatch:
 
 jobs:
   cleanup:
     runs-on: ubuntu-latest
     steps:
-      - name: Delete artifacts from non-latest build workflow runs
+      - name: Checkout repository (optional, but good for context)
+        uses: actions/checkout@v4
+
+      - name: Delete artifacts from non-latest build workflow runs across all branches
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ARTIFACT_DELETE_TOKEN: ${{ secrets.ARTIFACT_DELETE_TOKEN }}
@@ -18,60 +21,74 @@ jobs:
           #!/bin/bash
           set -euo pipefail
 
-          echo "Cleaning up build artifacts not associated with the latest commit on branch '$GITHUB_REF_NAME'"
-
-          # The repository in form "owner/repo"
           owner_repo="${GITHUB_REPOSITORY}"
-          # Extract branch name from ref (refs/heads/branch)
-          branch="${GITHUB_REF##*/}"
-          # Current commit SHA triggering this workflow
-          current_sha="${GITHUB_SHA}"
-
           echo "Repository: $owner_repo"
-          echo "Branch: $branch"
-          echo "Current commit: $current_sha"
 
-          # List workflow runs for this branch
-          runs_json=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/repos/${owner_repo}/actions/runs?branch=${branch}&per_page=100")
+          # Get a list of all branches
+          echo "Fetching all branches..."
+          branches_json=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${owner_repo}/branches?per_page=100")
+          
+          # Extract branch names
+          all_branches=$(echo "$branches_json" | jq -r '.[].name')
 
-          # Filter for workflow runs that are completed and that do not match the current commit
-          delete_run_ids=$(echo "$runs_json" | jq --raw-output --arg current_sha "$current_sha" '.workflow_runs[] | select(.head_sha != $current_sha and .status=="completed") | .id')
-
-          if [ -z "$delete_run_ids" ]; then
-            echo "No older, completed workflow runs found to clean up."
+          if [ -z "$all_branches" ]; then
+            echo "No branches found to process."
             exit 0
           fi
 
-          for run_id in $delete_run_ids; do
-            echo "Processing workflow run ID: $run_id"
+          for branch_name in $all_branches; do
+            echo "--- Processing branch: $branch_name ---"
 
-            # Get the workflow name for this run
-            workflow_json=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-              "https://api.github.com/repos/${owner_repo}/actions/runs/${run_id}")
-            workflow_name=$(echo "$workflow_json" | jq --raw-output '.name')
-            
-            # Skip if not the build workflow
-            if [[ "$workflow_name" != "CI Suite" ]]; then
-              echo "Skipping workflow '$workflow_name' as it's not the CI workflow"
+            # List workflow runs for this specific branch
+            runs_json=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/${owner_repo}/actions/runs?branch=${branch_name}&per_page=100")
+
+            # Get the SHA of the *latest* successful workflow run for this branch,
+            # or the latest commit SHA for the branch itself if no runs.
+            latest_run_sha=""
+            latest_run_id=""
+
+            # Find the head_sha of the most recent completed CI Suite run on this branch
+            latest_ci_run=$(echo "$runs_json" | jq -r '.workflow_runs[] | select(.status=="completed" and .name=="CI Suite") | .id + " " + .head_sha' | head -n 1)
+            if [ -n "$latest_ci_run" ]; then
+              latest_run_id=$(echo "$latest_ci_run" | cut -d' ' -f1)
+              latest_run_sha=$(echo "$latest_ci_run" | cut -d' ' -f2)
+              echo "Latest CI Suite run on $branch_name: ID $latest_run_id, SHA $latest_run_sha"
+            else
+              echo "No completed 'CI Suite' workflow runs found on branch $branch_name. Skipping cleanup for this branch's runs."
+              continue # Skip to the next branch if no completed CI Suite runs
+            fi
+
+            # Filter for workflow runs that are completed and that do not match the identified latest run's commit SHA
+            delete_run_ids=$(echo "$runs_json" | jq --raw-output --arg latest_sha "$latest_run_sha" \
+              '.workflow_runs[] | select(.head_sha != $latest_sha and .status=="completed" and .name=="CI Suite") | .id')
+
+            if [ -z "$delete_run_ids" ]; then
+              echo "No older, completed 'CI Suite' workflow runs found to clean up on branch $branch_name."
               continue
             fi
 
-            echo "Found build workflow run: $run_id ($workflow_name)"
+            for run_id in $delete_run_ids; do
+              echo "Processing workflow run ID: $run_id on branch $branch_name"
 
-            # List artifacts in this workflow run
-            artifacts_json=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-              "https://api.github.com/repos/${owner_repo}/actions/runs/${run_id}/artifacts")
-            artifact_ids=$(echo "$artifacts_json" | jq --raw-output '.artifacts[] | .id')
+              # List artifacts in this workflow run
+              artifacts_json=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+                "https://api.github.com/repos/${owner_repo}/actions/runs/${run_id}/artifacts")
+              artifact_ids=$(echo "$artifacts_json" | jq --raw-output '.artifacts[] | .id')
 
-            if [ -z "$artifact_ids" ]; then
-              echo "No artifacts found for run $run_id"
-              continue
-            fi
+              if [ -z "$artifact_ids" ]; then
+                echo "No artifacts found for run $run_id on branch $branch_name"
+                continue
+              fi
 
-            for artifact_id in $artifact_ids; do
-              echo "Deleting artifact ID: $artifact_id from build run $run_id"
-              curl -s -X DELETE -H "Authorization: token ${ARTIFACT_DELETE_TOKEN}" \
-                "https://api.github.com/repos/${owner_repo}/actions/artifacts/${artifact_id}"
+              for artifact_id in $artifact_ids; do
+                echo "Deleting artifact ID: $artifact_id from build run $run_id on branch $branch_name"
+                curl -s -X DELETE -H "Authorization: token ${ARTIFACT_DELETE_TOKEN}" \
+                  "https://api.github.com/repos/${owner_repo}/actions/artifacts/${artifact_id}"
+                # Add a small delay to avoid hitting rate limits for very large numbers of artifacts/branches
+                sleep 0.5
+              done
             done
+            echo "--- Finished processing branch: $branch_name ---"
           done
