@@ -38,9 +38,6 @@ jobs:
           done
 
           # Store existing branch names in a hash for quick lookups
-          # Bash doesn't have native hash maps, so we'll just sort and use grep later, or array
-          # For a large number of branches, a real hash (e.g., in Python/Node.js step) would be better.
-          # For now, `grep -qw` is efficient enough for typical numbers of branches.
           all_existing_branches=$(cat "$temp_branches_file" | sort -u)
           echo "Found $(echo "$all_existing_branches" | wc -l) existing branches."
 
@@ -92,16 +89,30 @@ jobs:
               echo "  Latest CI Suite SHA for $branch_name: $latest_ci_run_for_branch"
             fi
           done
+          
+          # Convert Bash associative array to a JSON string
+          latest_shas_map_json="{"
+          first=true
+          for branch in "${!latest_ci_shas_per_branch[@]}"; do
+            if [ "$first" = false ]; then
+              latest_shas_map_json+=","
+            fi
+            # Escape keys and values for JSON
+            escaped_branch=$(printf %s "$branch" | jq -sRr @json)
+            escaped_sha=$(printf %s "${latest_ci_shas_per_branch[$branch]}" | jq -sRr @json)
+            latest_shas_map_json+="\"$escaped_branch\": $escaped_sha"
+            first=false
+          done
+          latest_shas_map_json+="}"
+
           echo "Identifying runs for deletion..."
           
-          # Use a single jq command to identify all IDs for deletion,
-          # and then loop over that *outside* a subshell.
-          runs_to_delete_output=$(echo "$all_runs_json" | jq -r --argjson latest_shas_map "($latest_ci_shas_per_branch | to_entries | map({key: .key, value: .value}))" \
+          runs_to_delete_output=$(echo "$all_runs_json" | jq -r --argjson latest_shas_map "$latest_shas_map_json" \
               '.[] | select(.name=="CI Suite" and .status=="completed") | 
               {id: .id, branch: .head_branch, sha: .head_sha} |
-              if ($latest_shas_map | map(.key) | contains([.branch])) then # Check if branch exists
+              if ($latest_shas_map | has(.branch)) then # Check if branch exists as a key in the map
                   # Branch exists, check if this is an old run
-                  .branch as $b | ($latest_shas_map[] | select(.key == $b).value) as $latest_sha_for_branch |
+                  .branch as $b | $latest_shas_map[$b] as $latest_sha_for_branch |
                   if .sha != $latest_sha_for_branch then
                       "\(.id) Older run on existing branch \(.branch) (\(.sha))"
                   else
