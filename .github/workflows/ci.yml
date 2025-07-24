@@ -49,6 +49,7 @@ jobs:
       - name: Build Application
         run: npm run make
       - name: Upload Windows Build Artifacts (.exe and .msi)
+        if: github.ref == 'refs/heads/master'
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
@@ -70,6 +71,7 @@ jobs:
       - name: Build Application
         run: npm run make
       - name: Upload macOS Build Artifacts
+        if: github.ref == 'refs/heads/master'
         uses: actions/upload-artifact@v4
         with:
           name: macos-build
@@ -91,6 +93,7 @@ jobs:
       - name: Build Application
         run: npm run make
       - name: Upload Linux Build Artifacts
+        if: github.ref == 'refs/heads/master'
         uses: actions/upload-artifact@v4
         with:
           name: linux-build
