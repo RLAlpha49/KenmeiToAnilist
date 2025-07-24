@@ -86,8 +86,6 @@ jobs:
                 echo "Deleting artifact ID: $artifact_id from build run $run_id on branch $branch_name"
                 curl -s -X DELETE -H "Authorization: token ${ARTIFACT_DELETE_TOKEN}" \
                   "https://api.github.com/repos/${owner_repo}/actions/artifacts/${artifact_id}"
-                # Add a small delay to avoid hitting rate limits for very large numbers of artifacts/branches
-                sleep 0.5
               done
             done
             echo "--- Finished processing branch: $branch_name ---"
