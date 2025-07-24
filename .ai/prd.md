@@ -77,7 +77,6 @@ Potential future improvements like additional tracking services, backup function
 - Story 1: Project Setup
   Status: Completed
   Requirements:
-
   - Set up Electron with TypeScript
   - Configure project structure
   - Set up build and packaging pipeline
@@ -85,7 +84,6 @@ Potential future improvements like additional tracking services, backup function
 - Story 2: Basic UI Implementation
   Status: Completed
   Requirements:
-
   - Create main application window
   - Implement file import functionality
   - Design settings page for AniList authentication
@@ -95,7 +93,6 @@ Potential future improvements like additional tracking services, backup function
 - Story 3: AniList API Authentication Implementation
   Status: Completed
   Requirements:
-
   - Configure AniList OAuth Application settings
   - Implement Electron OAuth workflow
   - Enhance Settings Page UI
@@ -107,7 +104,6 @@ Potential future improvements like additional tracking services, backup function
 - Story 4: Data Processing and Synchronization
   Status: Completed
   Requirements:
-
   - Implement Kenmei manga data processing pipeline
   - Add matching algorithm for AniList entries
   - Develop conflict resolution interface
@@ -117,7 +113,6 @@ Potential future improvements like additional tracking services, backup function
 - Story 5: Testing Framework
   Status: In Progress
   Requirements:
-
   - Set up Vitest for unit testing
   - Configure Playwright for end-to-end testing
   - Write tests for critical application paths
@@ -238,7 +233,7 @@ The application will implement caching for:
 
 ## Project Structure
 
-```
+```text
 src/
 ├── main/                 # Electron main process
 │   ├── index.ts          # Main entry point

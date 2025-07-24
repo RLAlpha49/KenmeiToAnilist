@@ -103,7 +103,7 @@ interface AuthState {
 
 ## UI Structure
 
-```
+```text
 src/
   components/
     layout/

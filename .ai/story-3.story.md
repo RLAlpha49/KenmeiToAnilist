@@ -19,7 +19,6 @@ Story Points: 2
 ## Tasks
 
 - [x] Configure AniList OAuth Application settings
-
   - [x] Register application on AniList
   - [x] Store client ID and secrets securely
   - [x] Define proper callback URL handling
@@ -27,7 +26,6 @@ Story Points: 2
   - [x] Add support for default or custom API credentials
 
 - [x] Implement Electron OAuth workflow
-
   - [x] Create a secure auth window
   - [x] Handle OAuth redirect and extract code
   - [x] Implement token exchange
@@ -36,7 +34,6 @@ Story Points: 2
   - [x] Handle window closing as authentication cancellation
 
 - [x] Enhance Settings Page UI
-
   - [x] Connect UI to real authentication flow
   - [x] Show accurate authentication state
   - [x] Display user profile after authentication
@@ -47,7 +44,6 @@ Story Points: 2
   - [x] Add custom redirect URI field for user-provided API applications
 
 - [x] Implement Token Management
-
   - [x] Add token expiration tracking
   - [x] Implement automatic token refresh
   - [x] Add secure token storage in Electron
@@ -55,7 +51,6 @@ Story Points: 2
   - [x] Associate tokens with credential source
 
 - [x] Create Auth Context Provider
-
   - [x] Set up React context for auth state
   - [x] Create hooks for accessing authentication state
   - [x] Implement API client with authentication integration

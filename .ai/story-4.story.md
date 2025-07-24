@@ -28,7 +28,6 @@ Story Points: 3
 ## Tasks
 
 - [x] Enhance Kenmei Data Processing
-
   - [x] Implement batch processing for large collections
   - [x] Add validation and error handling for import files
   - [x] Extract reading progress and status information
@@ -36,7 +35,6 @@ Story Points: 3
   - [x] Add support for handling multiple formats (chapters, volumes) correctly
 
 - [x] Implement AniList Search and Matching
-
   - [x] Set up AniList API client
   - [x] Create search functionality
   - [x] Develop title matching algorithms
@@ -44,7 +42,6 @@ Story Points: 3
   - [x] Handle batch processing with rate limiting
 
 - [x] Develop Match Review UI
-
   - [x] Create interface for reviewing matches
   - [x] Display confidence scores and match details
   - [x] Allow selection of alternate matches
@@ -52,7 +49,6 @@ Story Points: 3
   - [x] Add batch approval/rejection options
 
 - [x] Build Synchronization System
-
   - [x] Implement batch update functionality for AniList
   - [x] Add progress tracking for updating process
   - [x] Create retry mechanism for failed updates

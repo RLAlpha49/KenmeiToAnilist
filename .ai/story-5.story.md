@@ -1,6 +1,4 @@
-# Epic-3 - Story-5
-
-# Testing Framework Implementation
+# Story-5: Testing Framework Implementation
 
 **As a** developer
 **I want** a comprehensive testing framework
@@ -21,21 +19,18 @@ Story Points: 3
 ## Tasks
 
 1. - [x] Setup Testing Infrastructure
-
    1. - [x] Configure Vitest for unit testing
    2. - [x] Configure Playwright for end-to-end testing
    3. - [x] Create test directory structure
    4. - [x] Set up GitHub Actions for CI
 
 2. - [x] Implement Basic Tests
-
    1. - [x] Create utility tests (timeUtils)
    2. - [x] Create component tests (ToggleTheme)
    3. - [x] Create API tests (status-mapper)
    4. - [x] Create E2E test for application startup
 
 3. - [x] Extend Test Coverage for Components
-
    1. - [x] Test RateLimitCountdown component
    2. - [x] Test DragWindowRegion component
    3. - [x] Test layout components
@@ -44,7 +39,6 @@ Story Points: 3
    6. - [x] Test matching components
 
 4. - [x] Extend Test Coverage for Utilities and Helpers
-
    1. - [x] Test storage utility functions
    2. - [x] Test app-version utility
    3. - [x] Test export-utils functions
@@ -52,20 +46,17 @@ Story Points: 3
    5. - [x] Test tailwind utility
 
 5. - [x] Extend Test Coverage for API Functions
-
    1. - [x] Test AniList API integration
    2. - [x] Test Kenmei data parsers
    3. - [x] Test matching algorithms
    4. - [x] Test data processors
 
 6. - [x] Extend Test Coverage for Contexts
-
    1. - [x] Test ThemeContext
    2. - [x] Test AuthContext
    3. - [x] Test RateLimitContext
 
 7. - [x] Extend Test Coverage for Hooks
-
    1. - [x] Test useSynchronization hook
    2. - [x] Test useMatchHandlers hook
    3. - [x] Test useMatchingProcess hook
@@ -74,7 +65,6 @@ Story Points: 3
    6. - [x] Test useAuth hook
 
 8. - [x] Implement E2E Tests for Critical Workflows
-
    1. - [x] Test AniList authentication flow
    2. - [x] Test Kenmei import flow
    3. - [x] Test manga matching flow
@@ -82,7 +72,6 @@ Story Points: 3
    5. - [x] Test settings page functionality
 
 9. - [x] Implement Test Utilities and Mocks
-
    1. - [x] Create test data fixtures
    2. - [x] Create mock services
    3. - [x] Create test helpers
@@ -128,7 +117,7 @@ interface MockAniListManga {
 
 The testing structure mirrors the application structure:
 
-```
+```text
 src/
 └── tests/
     ├── unit/           # Vitest unit and component tests

@@ -21,28 +21,24 @@ Story Points: 2
 ## Tasks
 
 1. - [x] Initialize Project
-
    1. - [x] Create package.json with required dependencies
    2. - [x] Set up TypeScript configuration
    3. - [x] Configure Webpack for building the application
    4. - [x] Set up linting and formatting tools (ESLint, Prettier)
 
 2. - [x] Configure Electron
-
    1. - [x] Create main process entry point
    2. - [x] Set up basic window configuration
    3. - [x] Create preload script
    4. - [x] Implement IPC scaffolding
 
 3. - [x] Set up React
-
    1. - [x] Create renderer process entry point
    2. - [x] Set up React with TypeScript
    3. - [x] Configure TailwindCSS
    4. - [x] Create basic App component
 
 4. - [x] Create Project Structure
-
    1. - [x] Set up folder structure as defined in architecture
    2. - [x] Create placeholder files for key modules
    3. - [x] Set up type definitions
@@ -86,7 +82,7 @@ interface WindowState {
 
 The initial project structure will follow the architecture document:
 
-```
+```text
 ├── package.json
 ├── tsconfig.json
 ├── webpack.config.js
