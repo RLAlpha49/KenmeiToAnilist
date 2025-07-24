@@ -2,9 +2,7 @@ name: Delete All Old Artifacts Comprehensive
 
 on:
   workflow_dispatch:
-    # Manual trigger is best for this comprehensive cleanup
   schedule:
-    # Runs every Sunday at 00:00 UTC (adjust cron for your timezone/frequency)
     - cron: '0 0 * * 0'
 
 jobs:
@@ -94,34 +92,37 @@ jobs:
               echo "  Latest CI Suite SHA for $branch_name: $latest_ci_run_for_branch"
             fi
           done
-
           echo "Identifying runs for deletion..."
-          # Filter runs for deletion
-          # This will include:
-          # 1. Runs for branches that no longer exist
-          # 2. Older 'CI Suite' runs for existing branches (not matching the latest_ci_shas_per_branch)
-          delete_run_ids=""
-
-          echo "$all_runs_json" | jq -r '.[] | select(.name=="CI Suite" and .status=="completed") | "\(.id) \(.head_branch) \(.head_sha)"' | while read -r run_id head_branch head_sha; do
-              
-              branch_exists=false
-              if echo "$all_existing_branches" | grep -qw "$head_branch"; then
-                  branch_exists=true
-              fi
-
-              if [ "$branch_exists" == "true" ]; then
+          
+          # Use a single jq command to identify all IDs for deletion,
+          # and then loop over that *outside* a subshell.
+          runs_to_delete_output=$(echo "$all_runs_json" | jq -r --argjson latest_shas_map "($latest_ci_shas_per_branch | to_entries | map({key: .key, value: .value}))" \
+              '.[] | select(.name=="CI Suite" and .status=="completed") | 
+              {id: .id, branch: .head_branch, sha: .head_sha} |
+              if ($latest_shas_map | map(.key) | contains([.branch])) then # Check if branch exists
                   # Branch exists, check if this is an old run
-                  if [[ -n "${latest_ci_shas_per_branch[$head_branch]}" ]] && \
-                     [[ "$head_sha" != "${latest_ci_shas_per_branch[$head_branch]}" ]]; then
-                      echo "  Marking run ID $run_id (branch: $head_branch, SHA: $head_sha) for deletion (older run on existing branch)."
-                      delete_run_ids+=" $run_id"
-                  fi
+                  .branch as $b | ($latest_shas_map[] | select(.key == $b).value) as $latest_sha_for_branch |
+                  if .sha != $latest_sha_for_branch then
+                      "\(.id) Older run on existing branch \(.branch) (\(.sha))"
+                  else
+                      empty # Keep current/latest runs
+                  end
               else
                   # Branch does not exist, delete all CI Suite artifacts from this run
-                  echo "  Marking run ID $run_id (branch: $head_branch, SHA: $head_sha) for deletion (branch no longer exists)."
+                  "\(.id) Branch no longer exists \(.branch) (\(.sha))"
+              end'
+          )
+
+          # Now process the identified runs to build the delete_run_ids list
+          delete_run_ids=""
+          if [ -n "$runs_to_delete_output" ]; then
+              echo "$runs_to_delete_output" | while read -r line; do
+                  run_id=$(echo "$line" | cut -d' ' -f1)
+                  # Print the "Marking run ID..." message for logging
+                  echo "  Marking run ID $line for deletion." 
                   delete_run_ids+=" $run_id"
-              fi
-          done
+              done
+          fi
 
           if [ -z "$delete_run_ids" ]; then
             echo "No workflow runs identified for deletion."
