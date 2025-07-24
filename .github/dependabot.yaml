@@ -4,6 +4,10 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    ignore:
+      - dependency-name: "typedoc"
+      - dependency-name: "typedoc-*"
+      - dependency-name: "@typedoc/*"
 
   - package-ecosystem: "github-actions"
     directory: ".github/workflows"
