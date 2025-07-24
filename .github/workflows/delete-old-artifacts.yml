@@ -10,7 +10,7 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository (optional, but good for context)
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Delete artifacts from non-latest build workflow runs across all branches
@@ -44,13 +44,13 @@ jobs:
             runs_json=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
               "https://api.github.com/repos/${owner_repo}/actions/runs?branch=${branch_name}&per_page=100")
 
-            # Get the SHA of the *latest* successful workflow run for this branch,
-            # or the latest commit SHA for the branch itself if no runs.
             latest_run_sha=""
             latest_run_id=""
 
             # Find the head_sha of the most recent completed CI Suite run on this branch
-            latest_ci_run=$(echo "$runs_json" | jq -r '.workflow_runs[] | select(.status=="completed" and .name=="CI Suite") | .id + " " + .head_sha' | head -n 1)
+            # FIX: Explicitly convert .id to string before concatenation
+            latest_ci_run=$(echo "$runs_json" | jq -r '.workflow_runs[] | select(.status=="completed" and .name=="CI Suite") | (.id | tostring) + " " + .head_sha' | head -n 1)
+            
             if [ -n "$latest_ci_run" ]; then
               latest_run_id=$(echo "$latest_ci_run" | cut -d' ' -f1)
               latest_run_sha=$(echo "$latest_ci_run" | cut -d' ' -f2)
