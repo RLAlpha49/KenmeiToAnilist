@@ -196,12 +196,28 @@ jobs:
           # Now process the identified runs to build the delete_run_ids list
           delete_run_ids=""
           if [ -n "$runs_to_delete_output" ]; then
+              # Use a temporary file to collect run IDs to avoid subshell variable scope issues
+              temp_run_ids_file=$(mktemp)
               echo "$runs_to_delete_output" | while read -r line; do
+                  # Skip empty lines
+                  if [ -z "$line" ]; then
+                    continue
+                  fi
                   run_id=$(echo "$line" | cut -d' ' -f1)
+                  # Skip if run_id is empty
+                  if [ -z "$run_id" ]; then
+                    continue
+                  fi
                   # Print the "Marking run ID..." message for logging
                   echo "  Marking run ID $line for deletion." 
-                  delete_run_ids+=" $run_id"
+                  echo "$run_id" >> "$temp_run_ids_file"
               done
+              
+              # Read the collected run IDs from the file
+              if [ -s "$temp_run_ids_file" ]; then
+                delete_run_ids=$(cat "$temp_run_ids_file" | tr '\n' ' ')
+              fi
+              rm "$temp_run_ids_file"
           fi
 
           if [ -z "$delete_run_ids" ]; then
