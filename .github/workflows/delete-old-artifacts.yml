@@ -1,6 +1,10 @@
 name: Delete All Old Artifacts from All Workflows
 
 on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
   workflow_dispatch:
   schedule:
     - cron: "0 0 * * 0"
@@ -41,15 +45,16 @@ jobs:
           all_existing_branches=$(cat "$temp_branches_file" | sort -u)
           echo "Found $(echo "$all_existing_branches" | wc -l) existing branches."
 
-          echo "Fetching all workflow runs..."
-          # Fetch ALL workflow runs (potentially across multiple pages)
+          echo "Fetching workflow runs (limited to 5 pages)..."
+          # Fetch workflow runs (limited to 5 pages to control API usage)
           # We need to check runs regardless of their current branch status
           temp_runs_file=$(mktemp)
           page=1
           total_runs=0
+          max_pages=5
 
-          while true; do
-            echo "  Fetching page $page..."
+          while [ $page -le $max_pages ]; do
+            echo "  Fetching page $page of $max_pages..."
             runs_response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
               "https://api.github.com/repos/${owner_repo}/actions/runs?per_page=100&page=${page}")
             
@@ -63,6 +68,7 @@ jobs:
             page_length=$(echo "$current_page_runs" | jq 'length')
             
             if [ "$page_length" -eq 0 ]; then
+                echo "  No more runs available at page $page"
                 break # No more runs
             fi
             
@@ -97,11 +103,11 @@ jobs:
           # Use a more efficient approach to avoid broken pipes with large datasets
           echo "Finding latest completed run SHA for each branch..."
           declare -A latest_run_shas_per_branch
-          
+
           # Create a temporary file with sorted runs (newest first) to make processing more efficient
           temp_sorted_runs=$(mktemp)
           echo "$all_runs_json" | jq -r '.[] | select(.status=="completed" and .head_branch != null) | "\(.head_branch)|\(.head_sha)|\(.created_at)"' | sort -k3 -r > "$temp_sorted_runs"
-          
+
           for branch_name in $all_existing_branches; do
             # Find the first (newest) run for this branch using awk to avoid broken pipe
             latest_run_for_branch=$(awk -F'|' -v branch="$branch_name" '$1 == branch {print $2; exit}' "$temp_sorted_runs")
@@ -110,7 +116,7 @@ jobs:
               echo "  Latest completed run SHA for $branch_name: $latest_run_for_branch"
             fi
           done
-          
+
           rm "$temp_sorted_runs"
 
           # Convert Bash associative array to a JSON string
@@ -139,7 +145,7 @@ jobs:
           temp_artifacts_file=$(mktemp)
           page=1
           total_artifacts=0
-          
+
           while true; do
             echo "  Fetching artifacts page $page..."
             artifacts_response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
@@ -164,9 +170,9 @@ jobs:
             
             page=$((page + 1))
           done
-          
+
           echo "Found $total_artifacts total artifacts"
-          
+
           # Build a map of run_id -> artifact_count
           declare -A runs_with_artifacts_map
           if [ -s "$temp_artifacts_file" ]; then
@@ -177,16 +183,16 @@ jobs:
             done < "$temp_artifacts_file"
           fi
           rm "$temp_artifacts_file"
-          
+
           echo "Found $(echo ${#runs_with_artifacts_map[@]}) unique runs with artifacts"
 
           echo "Identifying runs for deletion..."
-          
+
           # First, let's debug what we're working with
           echo "Checking for completed runs with null branches..."
           null_branch_count=$(echo "$all_runs_json" | jq '[.[] | select(.status=="completed" and .head_branch == null)] | length')
           echo "Found $null_branch_count completed runs with null branches"
-          
+
           echo "Checking for completed runs with non-null branches..."
           non_null_branch_count=$(echo "$all_runs_json" | jq '[.[] | select(.status=="completed" and .head_branch != null)] | length')
           echo "Found $non_null_branch_count completed runs with non-null branches"
@@ -197,18 +203,18 @@ jobs:
               '.[] | select(.status=="completed" and .head_branch == null) | 
               "\(.id) Branch is null (\(.head_sha))"'
           )
-          
+
           echo "Processing non-null branch runs..."
           # Let's debug this step by step to find the null
           echo "First, let's check for any completed runs with null SHA..."
           null_sha_count=$(echo "$all_runs_json" | jq '[.[] | select(.status=="completed" and .head_branch != null and .head_sha == null)] | length')
           echo "Found $null_sha_count completed runs with null SHAs"
-          
+
           if [ "$null_sha_count" -gt 0 ]; then
             echo "Sample runs with null SHAs:"
             echo "$all_runs_json" | jq -r '.[] | select(.status=="completed" and .head_branch != null and .head_sha == null) | "ID: \(.id), Branch: \(.head_branch), SHA: \(.head_sha)"' | head -5
           fi
-          
+
           # Try a simpler approach - process each step separately
           echo "Creating basic run info..."
           basic_runs=$(echo "$all_runs_json" | jq -r \
@@ -216,12 +222,12 @@ jobs:
               {id: .id, branch: .head_branch, sha: (.head_sha // "null")} |
               "\(.id)|\(.branch)|\(.sha)"'
           )
-          
+
           echo "Processing runs with bash instead of complex jq..."
           non_null_branch_runs=""
           runs_checked=0
           runs_with_artifacts=0
-          
+
           while IFS='|' read -r run_id branch_name sha; do
             runs_checked=$((runs_checked + 1))
             if [ $((runs_checked % 500)) -eq 0 ]; then
@@ -252,9 +258,9 @@ jobs:
               non_null_branch_runs+="$run_id Branch no longer exists $branch_name ($sha) - has $artifact_count artifacts"$'\n'
             fi
           done <<< "$basic_runs"
-          
+
           echo "Checked $runs_checked total runs, found $runs_with_artifacts runs with artifacts"
-          
+
           # Combine the results
           runs_to_delete_output=""
           if [ -n "$null_branch_runs" ]; then
