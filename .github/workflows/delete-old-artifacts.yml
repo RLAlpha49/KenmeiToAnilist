@@ -122,7 +122,7 @@ jobs:
             latest_shas_map_json=$(cat "$temp_json_file")
             rm "$temp_json_file"
           fi
-          
+
           echo "Latest SHA map: $latest_shas_map_json"
 
           echo "Identifying runs for deletion..."
@@ -130,8 +130,11 @@ jobs:
           runs_to_delete_output=$(echo "$all_runs_json" | jq -r --argjson latest_shas_map "$latest_shas_map_json" \
               '.[] | select(.name=="CI Suite" and .status=="completed") | 
               {id: .id, branch: .head_branch, sha: .head_sha} |
-              if (.branch != null and ($latest_shas_map | has(.branch))) then # Check if branch is not null and exists as a key in the map
-                  # Branch exists, check if this is an old run
+              if .branch == null then
+                  # Branch is null, delete this run
+                  "\(.id) Branch is null (\(.sha))"
+              elif ($latest_shas_map | has(.branch)) then
+                  # Branch exists in map, check if this is an old run
                   .branch as $b | $latest_shas_map[$b] as $latest_sha_for_branch |
                   if .sha != $latest_sha_for_branch then
                       "\(.id) Older run on existing branch \(.branch) (\(.sha))"
@@ -139,12 +142,8 @@ jobs:
                       empty # Keep current/latest runs
                   end
               else
-                  # Branch does not exist or is null, delete all CI Suite artifacts from this run
-                  if .branch == null then
-                      "\(.id) Branch is null (\(.sha))"
-                  else
-                      "\(.id) Branch no longer exists \(.branch) (\(.sha))"
-                  end
+                  # Branch does not exist in map, delete this run
+                  "\(.id) Branch no longer exists \(.branch) (\(.sha))"
               end'
           )
 
