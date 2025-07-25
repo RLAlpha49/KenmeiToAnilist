@@ -103,8 +103,8 @@ jobs:
           echo "$all_runs_json" | jq -r '.[] | select(.status=="completed" and .head_branch != null) | "\(.head_branch)|\(.head_sha)|\(.created_at)"' | sort -k3 -r > "$temp_sorted_runs"
           
           for branch_name in $all_existing_branches; do
-            # Find the first (newest) run for this branch
-            latest_run_for_branch=$(grep "^$branch_name|" "$temp_sorted_runs" | head -n 1 | cut -d'|' -f2)
+            # Find the first (newest) run for this branch using awk to avoid broken pipe
+            latest_run_for_branch=$(awk -F'|' -v branch="$branch_name" '$1 == branch {print $2; exit}' "$temp_sorted_runs")
             if [ -n "$latest_run_for_branch" ]; then
               latest_run_shas_per_branch["$branch_name"]="$latest_run_for_branch"
               echo "  Latest completed run SHA for $branch_name: $latest_run_for_branch"
