@@ -1,4 +1,4 @@
-name: Delete All Old Artifacts Comprehensive
+name: Delete All Old Artifacts from All Workflows
 
 on:
   workflow_dispatch:
@@ -93,29 +93,29 @@ jobs:
 
           echo "Found $(echo "$all_runs_json" | jq 'length') total workflow runs to analyze."
 
-          # Get a list of the latest "CI Suite" run SHA for each existing branch
-          declare -A latest_ci_shas_per_branch
+          # Get a list of the latest completed run SHA for each existing branch (all workflows, not just CI Suite)
+          declare -A latest_run_shas_per_branch
           for branch_name in $all_existing_branches; do
-            latest_ci_run_for_branch=$(echo "$all_runs_json" | jq -r --arg bn "$branch_name" \
-              '.[] | select(.head_branch == $bn and .status=="completed" and .name=="CI Suite") | .head_sha' | head -n 1)
-            if [ -n "$latest_ci_run_for_branch" ]; then
-              latest_ci_shas_per_branch["$branch_name"]="$latest_ci_run_for_branch"
-              echo "  Latest CI Suite SHA for $branch_name: $latest_ci_run_for_branch"
+            latest_run_for_branch=$(echo "$all_runs_json" | jq -r --arg bn "$branch_name" \
+              '.[] | select(.head_branch == $bn and .status=="completed") | .head_sha' | head -n 1)
+            if [ -n "$latest_run_for_branch" ]; then
+              latest_run_shas_per_branch["$branch_name"]="$latest_run_for_branch"
+              echo "  Latest completed run SHA for $branch_name: $latest_run_for_branch"
             fi
           done
 
           # Convert Bash associative array to a JSON string
           echo "Building latest SHA map for branches..."
           latest_shas_map_json="{}"
-          if [ ${#latest_ci_shas_per_branch[@]} -gt 0 ]; then
+          if [ ${#latest_run_shas_per_branch[@]} -gt 0 ]; then
             # Use jq to build the JSON properly to avoid escaping issues
             temp_json_file=$(mktemp)
             echo "{}" > "$temp_json_file"
             
-            for branch in "${!latest_ci_shas_per_branch[@]}"; do
+            for branch in "${!latest_run_shas_per_branch[@]}"; do
               echo "  Processing branch: $branch"
               # Use jq to safely add each branch/SHA pair
-              jq --arg branch "$branch" --arg sha "${latest_ci_shas_per_branch[$branch]}" \
+              jq --arg branch "$branch" --arg sha "${latest_run_shas_per_branch[$branch]}" \
                 '. + {($branch): $sha}' "$temp_json_file" > "${temp_json_file}.tmp" && mv "${temp_json_file}.tmp" "$temp_json_file"
             done
             
@@ -128,57 +128,79 @@ jobs:
           echo "Identifying runs for deletion..."
           
           # First, let's debug what we're working with
-          echo "Checking for CI Suite runs with null branches..."
-          null_branch_count=$(echo "$all_runs_json" | jq '[.[] | select(.name=="CI Suite" and .status=="completed" and .head_branch == null)] | length')
-          echo "Found $null_branch_count CI Suite runs with null branches"
+          echo "Checking for completed runs with null branches..."
+          null_branch_count=$(echo "$all_runs_json" | jq '[.[] | select(.status=="completed" and .head_branch == null)] | length')
+          echo "Found $null_branch_count completed runs with null branches"
           
-          echo "Checking for CI Suite runs with non-null branches..."
-          non_null_branch_count=$(echo "$all_runs_json" | jq '[.[] | select(.name=="CI Suite" and .status=="completed" and .head_branch != null)] | length')
-          echo "Found $non_null_branch_count CI Suite runs with non-null branches"
+          echo "Checking for completed runs with non-null branches..."
+          non_null_branch_count=$(echo "$all_runs_json" | jq '[.[] | select(.status=="completed" and .head_branch != null)] | length')
+          echo "Found $non_null_branch_count completed runs with non-null branches"
 
           # Split the processing to avoid null key issues
           echo "Processing null branch runs..."
           null_branch_runs=$(echo "$all_runs_json" | jq -r \
-              '.[] | select(.name=="CI Suite" and .status=="completed" and .head_branch == null) | 
+              '.[] | select(.status=="completed" and .head_branch == null) | 
               "\(.id) Branch is null (\(.head_sha))"'
           )
           
           echo "Processing non-null branch runs..."
           # Let's debug this step by step to find the null
-          echo "First, let's check for any CI Suite runs with null SHA..."
-          null_sha_count=$(echo "$all_runs_json" | jq '[.[] | select(.name=="CI Suite" and .status=="completed" and .head_branch != null and .head_sha == null)] | length')
-          echo "Found $null_sha_count CI Suite runs with null SHAs"
+          echo "First, let's check for any completed runs with null SHA..."
+          null_sha_count=$(echo "$all_runs_json" | jq '[.[] | select(.status=="completed" and .head_branch != null and .head_sha == null)] | length')
+          echo "Found $null_sha_count completed runs with null SHAs"
           
           if [ "$null_sha_count" -gt 0 ]; then
             echo "Sample runs with null SHAs:"
-            echo "$all_runs_json" | jq -r '.[] | select(.name=="CI Suite" and .status=="completed" and .head_branch != null and .head_sha == null) | "ID: \(.id), Branch: \(.head_branch), SHA: \(.head_sha)"' | head -5
+            echo "$all_runs_json" | jq -r '.[] | select(.status=="completed" and .head_branch != null and .head_sha == null) | "ID: \(.id), Branch: \(.head_branch), SHA: \(.head_sha)"' | head -5
           fi
           
           # Try a simpler approach - process each step separately
           echo "Creating basic run info..."
           basic_runs=$(echo "$all_runs_json" | jq -r \
-              '.[] | select(.name=="CI Suite" and .status=="completed" and .head_branch != null) | 
+              '.[] | select(.status=="completed" and .head_branch != null) | 
               {id: .id, branch: .head_branch, sha: (.head_sha // "null")} |
               "\(.id)|\(.branch)|\(.sha)"'
           )
           
           echo "Processing runs with bash instead of complex jq..."
           non_null_branch_runs=""
+          runs_checked=0
+          runs_with_artifacts=0
+          
           while IFS='|' read -r run_id branch_name sha; do
+            runs_checked=$((runs_checked + 1))
+            if [ $((runs_checked % 100)) -eq 0 ]; then
+              echo "  Checked $runs_checked runs so far..."
+            fi
+            
+            # First check if this run has any artifacts (to avoid unnecessary processing)
+            artifacts_json=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/${owner_repo}/actions/runs/${run_id}/artifacts")
+            artifact_count=$(echo "$artifacts_json" | jq '.artifacts | length')
+            
+            # Skip runs without artifacts
+            if [ "$artifact_count" -eq 0 ]; then
+              continue
+            fi
+            
+            runs_with_artifacts=$((runs_with_artifacts + 1))
+            
             if [ "$sha" = "null" ]; then
               non_null_branch_runs+="$run_id Branch has null SHA ($branch_name)"$'\n'
             elif echo "$latest_shas_map_json" | jq -e --arg branch "$branch_name" 'has($branch)' > /dev/null; then
               # Branch exists in map, check if this is the latest SHA
               latest_sha=$(echo "$latest_shas_map_json" | jq -r --arg branch "$branch_name" '.[$branch]')
               if [ "$sha" != "$latest_sha" ]; then
-                non_null_branch_runs+="$run_id Older run on existing branch $branch_name ($sha)"$'\n'
+                non_null_branch_runs+="$run_id Older run on existing branch $branch_name ($sha) - has $artifact_count artifacts"$'\n'
               fi
               # If it's the latest, we don't add it (keep it)
             else
               # Branch doesn't exist in map
-              non_null_branch_runs+="$run_id Branch no longer exists $branch_name ($sha)"$'\n'
+              non_null_branch_runs+="$run_id Branch no longer exists $branch_name ($sha) - has $artifact_count artifacts"$'\n'
             fi
           done <<< "$basic_runs"
+          
+          echo "Checked $runs_checked total runs, found $runs_with_artifacts runs with artifacts"
           
           # Combine the results
           runs_to_delete_output=""
@@ -239,14 +261,23 @@ jobs:
             artifact_ids=$(echo "$artifacts_json" | jq --raw-output '.artifacts[] | .id')
 
             if [ -z "$artifact_ids" ]; then
-              echo "No artifacts found for run $run_id"
+              echo "  No artifacts found for run $run_id"
               continue
             fi
 
+            artifact_count=$(echo "$artifact_ids" | wc -w)
+            echo "  Found $artifact_count artifacts to delete for run $run_id"
+
             for artifact_id in $artifact_ids; do
-              echo "Deleting artifact ID: $artifact_id from run $run_id"
-              curl -s -X DELETE -H "Authorization: token ${ARTIFACT_DELETE_TOKEN}" \
-                "https://api.github.com/repos/${owner_repo}/actions/artifacts/${artifact_id}"
+              echo "  Deleting artifact ID: $artifact_id from run $run_id"
+              delete_response=$(curl -s -w "%{http_code}" -X DELETE -H "Authorization: token ${ARTIFACT_DELETE_TOKEN}" \
+                "https://api.github.com/repos/${owner_repo}/actions/artifacts/${artifact_id}")
+              
+              if [[ "$delete_response" == "204" ]]; then
+                echo "    ✓ Successfully deleted artifact $artifact_id"
+              else
+                echo "    ✗ Failed to delete artifact $artifact_id (HTTP $delete_response)"
+              fi
             done
           done
 
