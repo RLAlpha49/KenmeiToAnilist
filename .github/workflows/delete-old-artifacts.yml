@@ -3,7 +3,7 @@ name: Delete All Old Artifacts Comprehensive
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * 0'
+    - cron: "0 0 * * 0"
 
 jobs:
   cleanup:
@@ -24,7 +24,7 @@ jobs:
           # Get a list of all existing branches
           # Using a temporary file for branches for easier lookup
           temp_branches_file=$(mktemp)
-          
+
           page=1
           while true; do
             branches_json=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
@@ -89,7 +89,7 @@ jobs:
               echo "  Latest CI Suite SHA for $branch_name: $latest_ci_run_for_branch"
             fi
           done
-          
+
           # Convert Bash associative array to a JSON string
           latest_shas_map_json="{"
           first=true
@@ -100,13 +100,13 @@ jobs:
             # Escape keys and values for JSON
             escaped_branch=$(printf %s "$branch" | jq -sRr @json)
             escaped_sha=$(printf %s "${latest_ci_shas_per_branch[$branch]}" | jq -sRr @json)
-            latest_shas_map_json+="\"$escaped_branch\": $escaped_sha"
+            latest_shas_map_json+="$escaped_branch: $escaped_sha"
             first=false
           done
           latest_shas_map_json+="}"
 
           echo "Identifying runs for deletion..."
-          
+
           runs_to_delete_output=$(echo "$all_runs_json" | jq -r --argjson latest_shas_map "$latest_shas_map_json" \
               '.[] | select(.name=="CI Suite" and .status=="completed") | 
               {id: .id, branch: .head_branch, sha: .head_sha} |
