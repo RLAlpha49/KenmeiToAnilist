@@ -126,14 +126,28 @@ jobs:
           echo "Latest SHA map: $latest_shas_map_json"
 
           echo "Identifying runs for deletion..."
+          
+          # First, let's debug what we're working with
+          echo "Checking for CI Suite runs with null branches..."
+          null_branch_count=$(echo "$all_runs_json" | jq '[.[] | select(.name=="CI Suite" and .status=="completed" and .head_branch == null)] | length')
+          echo "Found $null_branch_count CI Suite runs with null branches"
+          
+          echo "Checking for CI Suite runs with non-null branches..."
+          non_null_branch_count=$(echo "$all_runs_json" | jq '[.[] | select(.name=="CI Suite" and .status=="completed" and .head_branch != null)] | length')
+          echo "Found $non_null_branch_count CI Suite runs with non-null branches"
 
-          runs_to_delete_output=$(echo "$all_runs_json" | jq -r --argjson latest_shas_map "$latest_shas_map_json" \
-              '.[] | select(.name=="CI Suite" and .status=="completed") | 
+          # Split the processing to avoid null key issues
+          echo "Processing null branch runs..."
+          null_branch_runs=$(echo "$all_runs_json" | jq -r \
+              '.[] | select(.name=="CI Suite" and .status=="completed" and .head_branch == null) | 
+              "\(.id) Branch is null (\(.head_sha))"'
+          )
+          
+          echo "Processing non-null branch runs..."
+          non_null_branch_runs=$(echo "$all_runs_json" | jq -r --argjson latest_shas_map "$latest_shas_map_json" \
+              '.[] | select(.name=="CI Suite" and .status=="completed" and .head_branch != null) | 
               {id: .id, branch: .head_branch, sha: .head_sha} |
-              if .branch == null then
-                  # Branch is null, delete this run
-                  "\(.id) Branch is null (\(.sha))"
-              elif ($latest_shas_map | has(.branch)) then
+              if ($latest_shas_map | has(.branch)) then
                   # Branch exists in map, check if this is an old run
                   .branch as $b | $latest_shas_map[$b] as $latest_sha_for_branch |
                   if .sha != $latest_sha_for_branch then
@@ -146,6 +160,19 @@ jobs:
                   "\(.id) Branch no longer exists \(.branch) (\(.sha))"
               end'
           )
+          
+          # Combine the results
+          runs_to_delete_output=""
+          if [ -n "$null_branch_runs" ]; then
+            runs_to_delete_output="$null_branch_runs"
+          fi
+          if [ -n "$non_null_branch_runs" ]; then
+            if [ -n "$runs_to_delete_output" ]; then
+              runs_to_delete_output="$runs_to_delete_output"$'\n'"$non_null_branch_runs"
+            else
+              runs_to_delete_output="$non_null_branch_runs"
+            fi
+          fi
 
           # Now process the identified runs to build the delete_run_ids list
           delete_run_ids=""
