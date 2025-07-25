@@ -94,15 +94,24 @@ jobs:
           echo "Found $(echo "$all_runs_json" | jq 'length') total workflow runs to analyze."
 
           # Get a list of the latest completed run SHA for each existing branch (all workflows, not just CI Suite)
+          # Use a more efficient approach to avoid broken pipes with large datasets
+          echo "Finding latest completed run SHA for each branch..."
           declare -A latest_run_shas_per_branch
+          
+          # Create a temporary file with sorted runs (newest first) to make processing more efficient
+          temp_sorted_runs=$(mktemp)
+          echo "$all_runs_json" | jq -r '.[] | select(.status=="completed" and .head_branch != null) | "\(.head_branch)|\(.head_sha)|\(.created_at)"' | sort -k3 -r > "$temp_sorted_runs"
+          
           for branch_name in $all_existing_branches; do
-            latest_run_for_branch=$(echo "$all_runs_json" | jq -r --arg bn "$branch_name" \
-              '.[] | select(.head_branch == $bn and .status=="completed") | .head_sha' | head -n 1)
+            # Find the first (newest) run for this branch
+            latest_run_for_branch=$(grep "^$branch_name|" "$temp_sorted_runs" | head -n 1 | cut -d'|' -f2)
             if [ -n "$latest_run_for_branch" ]; then
               latest_run_shas_per_branch["$branch_name"]="$latest_run_for_branch"
               echo "  Latest completed run SHA for $branch_name: $latest_run_for_branch"
             fi
           done
+          
+          rm "$temp_sorted_runs"
 
           # Convert Bash associative array to a JSON string
           echo "Building latest SHA map for branches..."
