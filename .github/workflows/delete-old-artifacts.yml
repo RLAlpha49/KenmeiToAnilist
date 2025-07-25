@@ -44,32 +44,46 @@ jobs:
           echo "Fetching all workflow runs..."
           # Fetch ALL workflow runs (potentially across multiple pages)
           # We need to check runs regardless of their current branch status
-          all_runs_json=""
+          temp_runs_file=$(mktemp)
           page=1
+          total_runs=0
+
           while true; do
+            echo "  Fetching page $page..."
             runs_response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
               "https://api.github.com/repos/${owner_repo}/actions/runs?per_page=100&page=${page}")
             
             # Check if runs_response is empty or malformed
-            if echo "$runs_response" | jq -e 'has("workflow_runs")' > /dev/null; then
-              current_page_runs=$(echo "$runs_response" | jq '.workflow_runs')
-              if [ "$(echo "$current_page_runs" | jq 'length')" -eq 0 ]; then
-                break # No more runs
-              fi
-              all_runs_json=$(echo "$all_runs_json" "$current_page_runs" | jq -s 'add | unique_by(.id)')
-              # If first page, initialize, else add to existing
-              if [ -z "$(echo "$all_runs_json" | jq '.[]?')" ]; then
-                  all_runs_json=$(echo "$runs_response" | jq '.workflow_runs')
-              else
-                  all_runs_json=$(echo "$all_runs_json" "$current_page_runs" | jq -s 'add | unique_by(.id)')
-              fi
-              
-            else
+            if ! echo "$runs_response" | jq -e 'has("workflow_runs")' > /dev/null; then
                 echo "Warning: API response for runs page $page was not as expected. Breaking loop."
                 break
             fi
+            
+            current_page_runs=$(echo "$runs_response" | jq '.workflow_runs')
+            page_length=$(echo "$current_page_runs" | jq 'length')
+            
+            if [ "$page_length" -eq 0 ]; then
+                break # No more runs
+            fi
+            
+            # Append runs to temp file (much faster than JSON manipulation)
+            echo "$current_page_runs" | jq -r '.[] | @json' >> "$temp_runs_file"
+            total_runs=$((total_runs + page_length))
+            echo "    Got $page_length runs (total: $total_runs)"
+            
             page=$((page + 1))
           done
+
+          # Combine all runs into single JSON array at the end
+          if [ ! -s "$temp_runs_file" ]; then
+            echo "No workflow runs found. Nothing to clean."
+            rm "$temp_branches_file" "$temp_runs_file"
+            exit 0
+          fi
+
+          echo "Combining $total_runs workflow runs..."
+          all_runs_json=$(cat "$temp_runs_file" | jq -s 'unique_by(.id)')
+          rm "$temp_runs_file"
 
           if [ -z "$all_runs_json" ] || [ "$(echo "$all_runs_json" | jq 'length')" -eq 0 ]; then
             echo "No workflow runs found. Nothing to clean."
@@ -110,7 +124,7 @@ jobs:
           runs_to_delete_output=$(echo "$all_runs_json" | jq -r --argjson latest_shas_map "$latest_shas_map_json" \
               '.[] | select(.name=="CI Suite" and .status=="completed") | 
               {id: .id, branch: .head_branch, sha: .head_sha} |
-              if ($latest_shas_map | has(.branch)) then # Check if branch exists as a key in the map
+              if (.branch != null and ($latest_shas_map | has(.branch))) then # Check if branch is not null and exists as a key in the map
                   # Branch exists, check if this is an old run
                   .branch as $b | $latest_shas_map[$b] as $latest_sha_for_branch |
                   if .sha != $latest_sha_for_branch then
@@ -119,8 +133,12 @@ jobs:
                       empty # Keep current/latest runs
                   end
               else
-                  # Branch does not exist, delete all CI Suite artifacts from this run
-                  "\(.id) Branch no longer exists \(.branch) (\(.sha))"
+                  # Branch does not exist or is null, delete all CI Suite artifacts from this run
+                  if .branch == null then
+                      "\(.id) Branch is null (\(.sha))"
+                  else
+                      "\(.id) Branch no longer exists \(.branch) (\(.sha))"
+                  end
               end'
           )
 
