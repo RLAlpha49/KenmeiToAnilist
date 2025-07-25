@@ -144,22 +144,41 @@ jobs:
           )
           
           echo "Processing non-null branch runs..."
-          non_null_branch_runs=$(echo "$all_runs_json" | jq -r --argjson latest_shas_map "$latest_shas_map_json" \
+          # Let's debug this step by step to find the null
+          echo "First, let's check for any CI Suite runs with null SHA..."
+          null_sha_count=$(echo "$all_runs_json" | jq '[.[] | select(.name=="CI Suite" and .status=="completed" and .head_branch != null and .head_sha == null)] | length')
+          echo "Found $null_sha_count CI Suite runs with null SHAs"
+          
+          if [ "$null_sha_count" -gt 0 ]; then
+            echo "Sample runs with null SHAs:"
+            echo "$all_runs_json" | jq -r '.[] | select(.name=="CI Suite" and .status=="completed" and .head_branch != null and .head_sha == null) | "ID: \(.id), Branch: \(.head_branch), SHA: \(.head_sha)"' | head -5
+          fi
+          
+          # Try a simpler approach - process each step separately
+          echo "Creating basic run info..."
+          basic_runs=$(echo "$all_runs_json" | jq -r \
               '.[] | select(.name=="CI Suite" and .status=="completed" and .head_branch != null) | 
-              {id: .id, branch: .head_branch, sha: .head_sha} |
-              if ($latest_shas_map | has(.branch)) then
-                  # Branch exists in map, check if this is an old run
-                  .branch as $b | $latest_shas_map[$b] as $latest_sha_for_branch |
-                  if .sha != $latest_sha_for_branch then
-                      "\(.id) Older run on existing branch \(.branch) (\(.sha))"
-                  else
-                      empty # Keep current/latest runs
-                  end
-              else
-                  # Branch does not exist in map, delete this run
-                  "\(.id) Branch no longer exists \(.branch) (\(.sha))"
-              end'
+              {id: .id, branch: .head_branch, sha: (.head_sha // "null")} |
+              "\(.id)|\(.branch)|\(.sha)"'
           )
+          
+          echo "Processing runs with bash instead of complex jq..."
+          non_null_branch_runs=""
+          while IFS='|' read -r run_id branch_name sha; do
+            if [ "$sha" = "null" ]; then
+              non_null_branch_runs+="$run_id Branch has null SHA ($branch_name)"$'\n'
+            elif echo "$latest_shas_map_json" | jq -e --arg branch "$branch_name" 'has($branch)' > /dev/null; then
+              # Branch exists in map, check if this is the latest SHA
+              latest_sha=$(echo "$latest_shas_map_json" | jq -r --arg branch "$branch_name" '.[$branch]')
+              if [ "$sha" != "$latest_sha" ]; then
+                non_null_branch_runs+="$run_id Older run on existing branch $branch_name ($sha)"$'\n'
+              fi
+              # If it's the latest, we don't add it (keep it)
+            else
+              # Branch doesn't exist in map
+              non_null_branch_runs+="$run_id Branch no longer exists $branch_name ($sha)"$'\n'
+            fi
+          done <<< "$basic_runs"
           
           # Combine the results
           runs_to_delete_output=""
