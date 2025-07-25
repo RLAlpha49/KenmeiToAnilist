@@ -105,19 +105,25 @@ jobs:
           done
 
           # Convert Bash associative array to a JSON string
-          latest_shas_map_json="{"
-          first=true
-          for branch in "${!latest_ci_shas_per_branch[@]}"; do
-            if [ "$first" = false ]; then
-              latest_shas_map_json+=","
-            fi
-            # Escape keys and values for JSON
-            escaped_branch=$(printf %s "$branch" | jq -sRr @json)
-            escaped_sha=$(printf %s "${latest_ci_shas_per_branch[$branch]}" | jq -sRr @json)
-            latest_shas_map_json+="$escaped_branch: $escaped_sha"
-            first=false
-          done
-          latest_shas_map_json+="}"
+          echo "Building latest SHA map for branches..."
+          latest_shas_map_json="{}"
+          if [ ${#latest_ci_shas_per_branch[@]} -gt 0 ]; then
+            # Use jq to build the JSON properly to avoid escaping issues
+            temp_json_file=$(mktemp)
+            echo "{}" > "$temp_json_file"
+            
+            for branch in "${!latest_ci_shas_per_branch[@]}"; do
+              echo "  Processing branch: $branch"
+              # Use jq to safely add each branch/SHA pair
+              jq --arg branch "$branch" --arg sha "${latest_ci_shas_per_branch[$branch]}" \
+                '. + {($branch): $sha}' "$temp_json_file" > "${temp_json_file}.tmp" && mv "${temp_json_file}.tmp" "$temp_json_file"
+            done
+            
+            latest_shas_map_json=$(cat "$temp_json_file")
+            rm "$temp_json_file"
+          fi
+          
+          echo "Latest SHA map: $latest_shas_map_json"
 
           echo "Identifying runs for deletion..."
 
