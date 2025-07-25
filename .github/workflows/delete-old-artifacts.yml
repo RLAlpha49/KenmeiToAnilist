@@ -134,6 +134,52 @@ jobs:
 
           echo "Latest SHA map: $latest_shas_map_json"
 
+          echo "Fetching all artifacts to identify runs with artifacts..."
+          # Get all artifacts first to avoid checking each run individually
+          temp_artifacts_file=$(mktemp)
+          page=1
+          total_artifacts=0
+          
+          while true; do
+            echo "  Fetching artifacts page $page..."
+            artifacts_response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/${owner_repo}/actions/artifacts?per_page=100&page=${page}")
+            
+            if ! echo "$artifacts_response" | jq -e 'has("artifacts")' > /dev/null; then
+                echo "Warning: API response for artifacts page $page was not as expected. Breaking loop."
+                break
+            fi
+            
+            current_page_artifacts=$(echo "$artifacts_response" | jq '.artifacts')
+            page_length=$(echo "$current_page_artifacts" | jq 'length')
+            
+            if [ "$page_length" -eq 0 ]; then
+                break # No more artifacts
+            fi
+            
+            # Extract run IDs and artifact counts for each run
+            echo "$current_page_artifacts" | jq -r '.[] | "\(.workflow_run.id)|\(.id)"' >> "$temp_artifacts_file"
+            total_artifacts=$((total_artifacts + page_length))
+            echo "    Got $page_length artifacts (total: $total_artifacts)"
+            
+            page=$((page + 1))
+          done
+          
+          echo "Found $total_artifacts total artifacts"
+          
+          # Build a map of run_id -> artifact_count
+          declare -A runs_with_artifacts_map
+          if [ -s "$temp_artifacts_file" ]; then
+            while IFS='|' read -r run_id artifact_id; do
+              if [ -n "$run_id" ] && [ "$run_id" != "null" ]; then
+                runs_with_artifacts_map["$run_id"]=$((${runs_with_artifacts_map["$run_id"]:-0} + 1))
+              fi
+            done < "$temp_artifacts_file"
+          fi
+          rm "$temp_artifacts_file"
+          
+          echo "Found $(echo ${#runs_with_artifacts_map[@]}) unique runs with artifacts"
+
           echo "Identifying runs for deletion..."
           
           # First, let's debug what we're working with
@@ -178,14 +224,12 @@ jobs:
           
           while IFS='|' read -r run_id branch_name sha; do
             runs_checked=$((runs_checked + 1))
-            if [ $((runs_checked % 100)) -eq 0 ]; then
+            if [ $((runs_checked % 500)) -eq 0 ]; then
               echo "  Checked $runs_checked runs so far..."
             fi
             
-            # First check if this run has any artifacts (to avoid unnecessary processing)
-            artifacts_json=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-              "https://api.github.com/repos/${owner_repo}/actions/runs/${run_id}/artifacts")
-            artifact_count=$(echo "$artifacts_json" | jq '.artifacts | length')
+            # Check if this run has artifacts using our pre-built map
+            artifact_count=${runs_with_artifacts_map["$run_id"]:-0}
             
             # Skip runs without artifacts
             if [ "$artifact_count" -eq 0 ]; then
