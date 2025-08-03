@@ -65,6 +65,14 @@ export interface AniListManga {
       };
     }[];
   };
+  // User's current entry for this manga (if on their list)
+  mediaListEntry?: {
+    id: number;
+    status: MediaListStatus;
+    progress: number;
+    score: number;
+    private: boolean;
+  } | null;
 }
 
 /**

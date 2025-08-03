@@ -101,6 +101,13 @@ query ($search: String, $page: Int, $perPage: Int) {
         month
         day
       }
+      mediaListEntry {
+        id
+        status
+        progress
+        score
+        private
+      }
     }
   }
 }
@@ -151,6 +158,13 @@ query ($search: String, $page: Int, $perPage: Int, $genre_in: [String], $tag_in:
         name
         category
       }
+      mediaListEntry {
+        id
+        status
+        progress
+        score
+        private
+      }
     }
   }
 }
@@ -184,6 +198,13 @@ query ($id: Int) {
     tags {
       id
       name
+    }
+    mediaListEntry {
+      id
+      status
+      progress
+      score
+      private
     }
   }
 }
@@ -233,6 +254,13 @@ query ($ids: [Int]) {
         year
         month
         day
+      }
+      mediaListEntry {
+        id
+        status
+        progress
+        score
+        private
       }
     }
   }

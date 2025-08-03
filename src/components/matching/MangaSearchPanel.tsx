@@ -16,6 +16,14 @@ import { KenmeiManga } from "../../api/kenmei/types";
 import { AniListManga } from "../../api/anilist/types";
 import { searchMangaByTitle } from "../../api/matching/manga-search-service";
 
+// Import utility functions for media list formatting
+import {
+  formatMediaListStatus,
+  getStatusBadgeColor,
+  formatScore,
+  isOnUserList,
+} from "../../utils/mediaListHelpers";
+
 // Track searches globally to prevent duplicates across component remounts
 const searchTracker = {
   lastMangaId: undefined as number | undefined,
@@ -504,6 +512,43 @@ export function MangaSearchPanel({
                         </span>
                       )}
                     </div>
+
+                    {/* User's current list status (if on their list) */}
+                    {(() => {
+                      const mediaListEntry = result.mediaListEntry;
+
+                      if (!mediaListEntry || !isOnUserList(mediaListEntry)) {
+                        return null;
+                      }
+
+                      return (
+                        <div className="rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                              On Your List:
+                            </span>
+                            <span
+                              className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${getStatusBadgeColor(mediaListEntry.status)}`}
+                            >
+                              {formatMediaListStatus(mediaListEntry.status)}
+                            </span>
+                          </div>
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
+                            <span className="text-blue-700 dark:text-blue-300">
+                              Progress: {mediaListEntry.progress || 0}
+                              {result.chapters &&
+                                result.chapters > 0 &&
+                                ` / ${result.chapters}`}
+                            </span>
+                          </div>
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
+                            <span className="text-blue-700 dark:text-blue-300">
+                              Score: {formatScore(mediaListEntry.score)}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     <div className="flex flex-wrap gap-2 pt-2">
                       {result.genres?.slice(0, 3).map((genre, i) => (

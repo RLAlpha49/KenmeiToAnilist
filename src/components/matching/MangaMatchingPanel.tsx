@@ -21,6 +21,14 @@ import {
   Loader2,
 } from "lucide-react";
 
+// Import utility functions for media list formatting
+import {
+  formatMediaListStatus,
+  getStatusBadgeColor,
+  formatScore,
+  isOnUserList,
+} from "../../utils/mediaListHelpers";
+
 // Import shadcn UI components
 import {
   Card,
@@ -1496,6 +1504,57 @@ export function MangaMatchingPanel({
                               )}
                             </div>
 
+                            {/* User's current list status (if on their list) */}
+                            {(() => {
+                              const mediaListEntry =
+                                match.selectedMatch?.mediaListEntry ||
+                                match.anilistMatches?.[0]?.manga
+                                  ?.mediaListEntry;
+
+                              if (
+                                !mediaListEntry ||
+                                !isOnUserList(mediaListEntry)
+                              ) {
+                                return null;
+                              }
+
+                              return (
+                                <div className="mt-2 rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                                      On Your List:
+                                    </span>
+                                    <Badge
+                                      className={getStatusBadgeColor(
+                                        mediaListEntry.status,
+                                      )}
+                                    >
+                                      {formatMediaListStatus(
+                                        mediaListEntry.status,
+                                      )}
+                                    </Badge>
+                                  </div>
+                                  <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
+                                    <span className="text-blue-700 dark:text-blue-300">
+                                      Progress: {mediaListEntry.progress || 0}
+                                      {((match.selectedMatch?.chapters &&
+                                        match.selectedMatch.chapters > 0) ||
+                                        (match.anilistMatches?.[0]?.manga
+                                          ?.chapters &&
+                                          match.anilistMatches[0].manga
+                                            .chapters > 0)) &&
+                                        ` / ${match.selectedMatch?.chapters || match.anilistMatches?.[0]?.manga?.chapters}`}
+                                    </span>
+                                  </div>
+                                  <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
+                                    <span className="text-blue-700 dark:text-blue-300">
+                                      Score: {formatScore(mediaListEntry.score)}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
                             {/* Kenmei status info */}
                             <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
                               <Badge className="bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300">
@@ -1928,6 +1987,57 @@ export function MangaMatchingPanel({
                                             </Badge>
                                           )}
                                       </div>
+
+                                      {/* User's current list status for alternative (if on their list) */}
+                                      {(() => {
+                                        const mediaListEntry =
+                                          altMatch.manga?.mediaListEntry;
+
+                                        if (
+                                          !mediaListEntry ||
+                                          !isOnUserList(mediaListEntry)
+                                        ) {
+                                          return null;
+                                        }
+
+                                        return (
+                                          <div className="mt-2 rounded-md bg-blue-50 p-2 dark:bg-blue-900/20">
+                                            <div className="flex items-center space-x-1">
+                                              <span className="text-xs font-medium text-blue-900 dark:text-blue-100">
+                                                On Your List:
+                                              </span>
+                                              <Badge
+                                                className={`${getStatusBadgeColor(mediaListEntry.status)} text-xs`}
+                                              >
+                                                {formatMediaListStatus(
+                                                  mediaListEntry.status,
+                                                )}
+                                              </Badge>
+                                            </div>
+                                            <div className="mt-1 text-xs text-blue-700 dark:text-blue-300">
+                                              Progress:{" "}
+                                              {mediaListEntry.progress || 0}
+                                              {altMatch.manga?.chapters &&
+                                                altMatch.manga.chapters > 0 &&
+                                                ` / ${altMatch.manga.chapters}`}
+                                              <span className="ml-2">
+                                                Score:{" "}
+                                                {formatScore(
+                                                  mediaListEntry.score,
+                                                )}
+                                              </span>
+                                            </div>
+                                            <div className="mt-1 text-xs text-blue-700 dark:text-blue-300">
+                                              <span className="ml-2">
+                                                Score:{" "}
+                                                {formatScore(
+                                                  mediaListEntry.score,
+                                                )}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        );
+                                      })()}
                                     </div>
                                     <div className="ml-2 flex flex-col items-end space-y-3">
                                       {altMatch.confidence !== undefined &&

@@ -10,8 +10,6 @@
 // TODO: Mark manga with adult content as such.
 // TODO: Blur image of manga marked as adult. Image can be pressed to unblur. (Should have a setting for this in settings page, default is true)
 
-// TODO: If a manga entry is on the user's list, it should show its current details on anilist. (Need to update query and see if it is possible to get the users current details)
-
 // TODO: Somehow improve title similarity percentage calculation. (Sometimes it makes no sense at all)
 // TODO: If matches have same confidence percentage, it should prioritize the main titles rather than the synonyms.
 
