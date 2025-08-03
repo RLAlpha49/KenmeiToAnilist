@@ -6,9 +6,10 @@
 
 import { KenmeiManga } from "./types";
 import { AniListManga } from "../anilist/types";
+import { calculateEnhancedSimilarity } from "../../utils/enhanced-similarity";
 
 /**
- * Calculate string similarity using Levenshtein distance
+ * Calculate string similarity using enhanced algorithms
  *
  * @param str1 - First string.
  * @param str2 - Second string.
@@ -17,40 +18,8 @@ import { AniListManga } from "../anilist/types";
 export function calculateSimilarity(str1: string, str2: string): number {
   if (!str1 || !str2) return 0;
 
-  const s1 = str1.toLowerCase();
-  const s2 = str2.toLowerCase();
-
-  // Levenshtein distance implementation
-  const len1 = s1.length;
-  const len2 = s2.length;
-
-  // Initialize matrix
-  const matrix: number[][] = Array(len1 + 1)
-    .fill(null)
-    .map(() => Array(len2 + 1).fill(null));
-
-  // Fill first row and column
-  for (let i = 0; i <= len1; i++) matrix[i][0] = i;
-  for (let j = 0; j <= len2; j++) matrix[0][j] = j;
-
-  // Fill the matrix
-  for (let i = 1; i <= len1; i++) {
-    for (let j = 1; j <= len2; j++) {
-      const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
-      matrix[i][j] = Math.min(
-        matrix[i - 1][j] + 1, // deletion
-        matrix[i][j - 1] + 1, // insertion
-        matrix[i - 1][j - 1] + cost, // substitution
-      );
-    }
-  }
-
-  // Calculate similarity based on distance
-  const maxLen = Math.max(len1, len2);
-  if (maxLen === 0) return 1.0; // Both strings are empty
-
-  const distance = matrix[len1][len2];
-  return 1 - distance / maxLen;
+  // Use the enhanced similarity calculation and convert to 0-1 scale
+  return calculateEnhancedSimilarity(str1, str2) / 100;
 }
 
 /**

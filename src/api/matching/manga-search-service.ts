@@ -18,6 +18,7 @@ import {
   getMangaByIds,
 } from "../anilist/client";
 import { normalizeString, findBestMatches } from "./match-engine";
+import { calculateEnhancedSimilarity } from "../../utils/enhanced-similarity";
 import { MatchEngineConfig, DEFAULT_MATCH_CONFIG } from "./match-engine";
 import { getMatchConfig } from "../../utils/storage";
 
@@ -626,22 +627,31 @@ function calculateMatchScore(manga: AniListManga, searchTitle: string): number {
 
   // Process all titles including synonyms for easier comparison
   if (manga.title.english) {
+    const processedTitle = normalizeForMatching(
+      processTitle(manga.title.english),
+    );
     allTitles.push({
-      text: normalizeForMatching(processTitle(manga.title.english)),
+      text: processedTitle,
       source: "english",
     });
   }
 
   if (manga.title.romaji) {
+    const processedTitle = normalizeForMatching(
+      processTitle(manga.title.romaji),
+    );
     allTitles.push({
-      text: normalizeForMatching(processTitle(manga.title.romaji)),
+      text: processedTitle,
       source: "romaji",
     });
   }
 
   if (manga.title.native) {
+    const processedTitle = normalizeForMatching(
+      processTitle(manga.title.native),
+    );
     allTitles.push({
-      text: normalizeForMatching(processTitle(manga.title.native)),
+      text: processedTitle,
       source: "native",
     });
   }
@@ -671,6 +681,19 @@ function calculateMatchScore(manga: AniListManga, searchTitle: string): number {
       text.includes(normalizedSearchTitle) &&
       normalizedSearchTitle.length > 6
     ) {
+      // Check if the difference is only articles
+      if (
+        isDifferenceOnlyArticles(
+          searchTitle,
+          manga.title.english || manga.title.romaji || "",
+        )
+      ) {
+        console.log(
+          `⭐ Article-only difference detected between "${normalizedSearchTitle}" and "${text}" (${source}) - very high score`,
+        );
+        return 0.97; // Nearly perfect match when only articles differ
+      }
+
       console.log(
         `✅ Search title "${searchTitle}" is a substantial part of "${text}" (${source})`,
       );
@@ -680,6 +703,19 @@ function calculateMatchScore(manga: AniListManga, searchTitle: string): number {
 
     // Check if this title is a substantial part of normalized search
     if (normalizedSearchTitle.includes(text) && text.length > 6) {
+      // Check if the difference is only articles (like "A" in "A False Confession" vs "False Confession")
+      if (
+        isDifferenceOnlyArticles(
+          searchTitle,
+          manga.title.english || manga.title.romaji || "",
+        )
+      ) {
+        console.log(
+          `⭐ Article-only difference detected between "${text}" and "${searchTitle}" (${source}) - very high score`,
+        );
+        return 0.97; // Nearly perfect match when only articles differ
+      }
+
       console.log(
         `✅ Title "${text}" is a substantial part of search "${searchTitle}" (${source})`,
       );
@@ -733,17 +769,18 @@ function calculateMatchScore(manga: AniListManga, searchTitle: string): number {
       bestScore = Math.max(bestScore, wordMatchScore);
     }
 
-    // Check similarity using Levenshtein distance
-    const similarity = calculateStringSimilarity(text, normalizedSearchTitle);
-    // Increase thresholds to be more strict
-    const similarityThreshold = normalizedSearchTitle.length < 10 ? 0.92 : 0.87;
+    // Check similarity using enhanced similarity calculation
+    const similarity =
+      calculateEnhancedSimilarity(text, normalizedSearchTitle) / 100;
+    // Lower thresholds to be more reasonable for enhanced similarity
+    const similarityThreshold = normalizedSearchTitle.length < 10 ? 0.6 : 0.5;
 
     if (similarity > similarityThreshold) {
       console.log(
-        `🔍 High text similarity (${similarity.toFixed(2)}) between "${text}" and "${searchTitle}"`,
+        `🔍 High text similarity (${similarity.toFixed(2)}) between "${text}" and "${searchTitle}" (${source})`,
       );
-      // Lower max score from 0.8 to 0.78 for similarity-based matches
-      const similarityScore = Math.max(0.78, similarity * 0.9);
+      // Scale the score based on similarity
+      const similarityScore = Math.max(0.6, similarity * 0.95);
       bestScore = Math.max(bestScore, similarityScore);
     }
   }
@@ -859,13 +896,11 @@ function calculateMatchScore(manga: AniListManga, searchTitle: string): number {
     }
 
     // APPROACH 5: Check for high similarity (handles minor differences in romanization)
-    const similarity = calculateStringSimilarity(
-      normalizedTitle,
-      normalizedSearchTitle,
-    );
+    const similarity =
+      calculateEnhancedSimilarity(normalizedTitle, normalizedSearchTitle) / 100;
 
-    // Higher threshold for shorter titles (to avoid false positives)
-    const similarityThreshold = normalizedSearchTitle.length < 10 ? 0.9 : 0.85;
+    // Reasonable threshold for enhanced similarity
+    const similarityThreshold = normalizedSearchTitle.length < 10 ? 0.6 : 0.45;
 
     if (similarity > similarityThreshold) {
       console.log(
@@ -998,7 +1033,8 @@ function checkSeasonPattern(
     cleanTitle2 = cleanTitle2.trim();
 
     // Calculate similarity between the core titles (without season markers)
-    const coreSimilarity = calculateStringSimilarity(cleanTitle1, cleanTitle2);
+    const coreSimilarity =
+      calculateEnhancedSimilarity(cleanTitle1, cleanTitle2) / 100;
 
     // If core titles are very similar, it's likely different seasons of the same series
     if (coreSimilarity > 0.85) {
@@ -1058,63 +1094,150 @@ function calculateWordOrderSimilarity(
 }
 
 /**
+ * Check if the difference between two titles is only articles
+ * Returns true if the longer title contains the shorter one plus only common articles
+ */
+function isDifferenceOnlyArticles(title1: string, title2: string): boolean {
+  const articles = new Set(["a", "an", "the"]);
+
+  // Normalize both titles
+  const norm1 = normalizeForMatching(title1)
+    .split(/\s+/)
+    .filter((word) => word.length > 0);
+  const norm2 = normalizeForMatching(title2)
+    .split(/\s+/)
+    .filter((word) => word.length > 0);
+
+  console.log(
+    `🔍 Checking article difference between "${title1}" and "${title2}"`,
+  );
+  console.log(
+    `  Normalized: ["${norm1.join('", "')}"] vs ["${norm2.join('", "')}"]`,
+  );
+
+  // Find the longer and shorter word arrays
+  const [longer, shorter] =
+    norm1.length >= norm2.length ? [norm1, norm2] : [norm2, norm1];
+
+  // If they have the same number of words, they're not article-different
+  if (longer.length === shorter.length) {
+    console.log(`  Same length, not article difference`);
+    return false;
+  }
+
+  // Remove all articles from both arrays and compare
+  const longerWithoutArticles = longer.filter((word) => !articles.has(word));
+  const shorterWithoutArticles = shorter.filter((word) => !articles.has(word));
+
+  console.log(
+    `  Without articles: ["${longerWithoutArticles.join('", "')}"] vs ["${shorterWithoutArticles.join('", "')}"]`,
+  );
+
+  // If after removing articles, they're identical, then the difference was only articles
+  const isArticleOnly =
+    longerWithoutArticles.length === shorterWithoutArticles.length &&
+    longerWithoutArticles.every(
+      (word, index) => word === shorterWithoutArticles[index],
+    );
+
+  console.log(`  Article-only difference: ${isArticleOnly}`);
+  return isArticleOnly;
+}
+
+/**
+ * Calculate title type priority for sorting when confidence scores are equal
+ * Returns a priority score where higher numbers indicate higher priority
+ * English/Romaji main titles get highest priority, synonyms get lowest priority
+ */
+function calculateTitleTypePriority(
+  manga: AniListManga,
+  searchTitle: string,
+): number {
+  const normalizedSearch = normalizeForMatching(searchTitle);
+
+  // Check which title type gives the best match
+  let bestMatchType = "synonym"; // Default to lowest priority
+  let bestSimilarity = 0;
+
+  // Check English title (highest priority after exact match)
+  if (manga.title?.english) {
+    const similarity = calculateEnhancedSimilarity(
+      normalizeForMatching(manga.title.english),
+      normalizedSearch,
+    );
+    if (similarity > bestSimilarity) {
+      bestSimilarity = similarity;
+      bestMatchType = "english";
+    }
+  }
+
+  // Check Romaji title (second highest priority)
+  if (manga.title?.romaji) {
+    const similarity = calculateEnhancedSimilarity(
+      normalizeForMatching(manga.title.romaji),
+      normalizedSearch,
+    );
+    if (similarity > bestSimilarity) {
+      bestSimilarity = similarity;
+      bestMatchType = "romaji";
+    }
+  }
+
+  // Check Native title (third priority)
+  if (manga.title?.native) {
+    const similarity = calculateEnhancedSimilarity(
+      normalizeForMatching(manga.title.native),
+      normalizedSearch,
+    );
+    if (similarity > bestSimilarity) {
+      bestSimilarity = similarity;
+      bestMatchType = "native";
+    }
+  }
+
+  // Check synonyms (lowest priority)
+  if (manga.synonyms && Array.isArray(manga.synonyms)) {
+    for (const synonym of manga.synonyms) {
+      if (synonym) {
+        const similarity = calculateEnhancedSimilarity(
+          normalizeForMatching(synonym),
+          normalizedSearch,
+        );
+        if (similarity > bestSimilarity) {
+          bestSimilarity = similarity;
+          bestMatchType = "synonym";
+        }
+      }
+    }
+  }
+
+  // Return priority score based on title type
+  switch (bestMatchType) {
+    case "english":
+      return 100;
+    case "romaji":
+      return 90;
+    case "native":
+      return 80;
+    case "synonym":
+      return 70;
+    default:
+      return 60;
+  }
+}
+
+/**
  * Normalize a string for matching by removing punctuation and standardizing case
  * Preserves word boundaries to maintain distinction between separate words
  */
 function normalizeForMatching(str: string): string {
   return str
     .toLowerCase()
-    .replace(/[^\w\s]/g, "") // Remove punctuation
+    .replace(/-/g, "") // Remove dashes consistently with processTitle logic
+    .replace(/[^\w\s]/g, "") // Remove remaining punctuation
     .replace(/\s+/g, " ") // Normalize spaces (replace multiple spaces with a single space)
     .replace(/_/g, " ") // Replace underscores with spaces
     .trim();
-}
-
-/**
- * Calculate string similarity using Levenshtein distance
- * Returns a value between 0 and 1, where 1 is a perfect match
- */
-function calculateStringSimilarity(str1: string, str2: string): number {
-  // If strings are exact match, return 1
-  if (str1 === str2) return 1;
-
-  // If either string is empty, no match
-  if (str1.length === 0 || str2.length === 0) return 0;
-
-  // If strings are very different in length, reduce similarity
-  const lengthDiff = Math.abs(str1.length - str2.length);
-  const maxLength = Math.max(str1.length, str2.length);
-  if (lengthDiff / maxLength > 0.5) return 0.2;
-
-  // Use Levenshtein distance for more accurate similarity calculation
-  const matrix: number[][] = [];
-
-  // Initialize the matrix
-  for (let i = 0; i <= str1.length; i++) {
-    matrix[i] = [i];
-  }
-
-  for (let j = 0; j <= str2.length; j++) {
-    matrix[0][j] = j;
-  }
-
-  // Fill the matrix
-  for (let i = 1; i <= str1.length; i++) {
-    for (let j = 1; j <= str2.length; j++) {
-      const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
-      matrix[i][j] = Math.min(
-        matrix[i - 1][j] + 1, // deletion
-        matrix[i][j - 1] + 1, // insertion
-        matrix[i - 1][j - 1] + cost, // substitution
-      );
-    }
-  }
-
-  // Calculate similarity as 1 - normalized distance
-  const distance = matrix[str1.length][str2.length];
-  const similarity = 1 - distance / Math.max(str1.length, str2.length);
-
-  return similarity;
 }
 
 /**
@@ -1199,7 +1322,7 @@ function rankMangaResults(
         // Increased threshold from 0.85 to 0.88 for stricter matching
         if (
           normalTitle === normalSearch ||
-          calculateStringSimilarity(normalTitle, normalSearch) > 0.88
+          calculateEnhancedSimilarity(normalTitle, normalSearch) > 88
         ) {
           console.log(
             `✅ Found good title match: "${title}" for "${searchTitle}"`,
@@ -1363,18 +1486,37 @@ export async function searchMangaByTitle(
         // Calculate a fresh confidence score using the original search title
         const confidence = calculateConfidence(title, manga);
 
+        // Calculate title type priority for tie-breaking when confidence scores are equal
+        const titleTypePriority = calculateTitleTypePriority(manga, title);
+
         console.log(
-          `⚖️ Cached match confidence for "${manga.title?.english || manga.title?.romaji}": ${confidence}%`,
+          `⚖️ Cached match confidence for "${manga.title?.english || manga.title?.romaji}": ${confidence}% (priority: ${titleTypePriority})`,
         );
 
         return {
           manga,
           confidence,
+          titleTypePriority,
         };
       });
 
+      // Sort by confidence first (descending), then by title type priority (descending) for ties
+      matches.sort((a, b) => {
+        if (a.confidence !== b.confidence) {
+          return b.confidence - a.confidence; // Higher confidence first
+        }
+        // When confidence is equal, prioritize main titles over synonyms
+        return b.titleTypePriority - a.titleTypePriority; // Higher priority first
+      });
+
+      // Remove the titleTypePriority from the final results to maintain the original interface
+      const finalMatches = matches.map(({ manga, confidence }) => ({
+        manga,
+        confidence,
+      }));
+
       return {
-        matches,
+        matches: finalMatches,
         pageInfo: undefined, // No pagination info available for cached results
       };
     }
@@ -1660,18 +1802,40 @@ export async function searchMangaByTitle(
       manga,
     );
 
+    // Calculate title type priority for tie-breaking when confidence scores are equal
+    const titleTypePriority = calculateTitleTypePriority(
+      manga,
+      typeof title === "string" ? title : "",
+    );
+
     console.log(
-      `⚖️ Confidence for "${manga.title?.english || manga.title?.romaji}": ${confidence}%`,
+      `⚖️ Confidence for "${manga.title?.english || manga.title?.romaji}": ${confidence}% (priority: ${titleTypePriority})`,
     );
 
     return {
       manga,
       confidence,
+      titleTypePriority,
     };
   });
 
+  // Sort by confidence first (descending), then by title type priority (descending) for ties
+  matches.sort((a, b) => {
+    if (a.confidence !== b.confidence) {
+      return b.confidence - a.confidence; // Higher confidence first
+    }
+    // When confidence is equal, prioritize main titles over synonyms
+    return b.titleTypePriority - a.titleTypePriority; // Higher priority first
+  });
+
+  // Remove the titleTypePriority from the final results to maintain the original interface
+  const finalMatches = matches.map(({ manga, confidence }) => ({
+    manga,
+    confidence,
+  }));
+
   return {
-    matches,
+    matches: finalMatches,
     pageInfo: lastPageInfo,
   };
 }

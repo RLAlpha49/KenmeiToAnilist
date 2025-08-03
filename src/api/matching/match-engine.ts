@@ -6,7 +6,7 @@
 
 import { KenmeiManga } from "../kenmei/types";
 import { AniListManga, MangaMatchResult } from "../anilist/types";
-import * as stringSimilarity from "string-similarity";
+import { calculateEnhancedSimilarity } from "../../utils/enhanced-similarity";
 
 /**
  * Interface for match engine configuration.
@@ -72,41 +72,22 @@ export function normalizeString(text: string, caseSensitive = false): string {
 }
 
 /**
- * Calculates string similarity using multiple algorithms for better accuracy.
+ * Calculates string similarity using enhanced algorithms for better accuracy.
  * Returns a score between 0-100.
  *
  * @param str1 - The first string to compare.
  * @param str2 - The second string to compare.
- * @param config - Optional partial match engine configuration.
  * @returns Similarity score between 0 and 100.
  * @source
  */
-export function calculateSimilarity(
-  str1: string,
-  str2: string,
-  config: Partial<MatchEngineConfig> = {},
-): number {
-  const { caseSensitive } = { ...DEFAULT_MATCH_CONFIG, ...config };
-
+export function calculateSimilarity(str1: string, str2: string): number {
   if (!str1 || !str2) return 0;
   if (str1 === str2) return 100;
 
-  const s1 = normalizeString(str1, caseSensitive);
-  const s2 = normalizeString(str2, caseSensitive);
-
-  if (s1 === s2) return 100;
-  if (s1.length < 2 || s2.length < 2) return 0;
-
-  // Exact substring check (one is contained within the other)
-  if (s1.includes(s2) || s2.includes(s1)) {
-    const longerLength = Math.max(s1.length, s2.length);
-    const shorterLength = Math.min(s1.length, s2.length);
-    return Math.round((shorterLength / longerLength) * 100);
-  }
-
-  // String similarity calculation using Dice coefficient
-  const similarity = stringSimilarity.compareTwoStrings(s1, s2);
-  return Math.round(similarity * 100);
+  // Use the enhanced similarity calculation
+  return calculateEnhancedSimilarity(str1, str2, {
+    debug: false, // Set to true for debugging
+  });
 }
 
 /**
@@ -150,7 +131,6 @@ export function scoreMatch(
     const englishScore = calculateSimilarity(
       kenmeiTitle,
       anilistManga.title.english,
-      matchConfig,
     );
     scores.push({ field: "english", score: englishScore });
 
@@ -164,7 +144,6 @@ export function scoreMatch(
     const romajiScore = calculateSimilarity(
       kenmeiTitle,
       anilistManga.title.romaji,
-      matchConfig,
     );
     scores.push({ field: "romaji", score: romajiScore });
 
@@ -178,7 +157,6 @@ export function scoreMatch(
     const nativeScore = calculateSimilarity(
       kenmeiTitle,
       anilistManga.title.native,
-      matchConfig,
     );
     scores.push({ field: "native", score: nativeScore });
 
@@ -197,11 +175,7 @@ export function scoreMatch(
     for (const synonym of anilistManga.synonyms) {
       if (!synonym) continue;
 
-      const synonymScore = calculateSimilarity(
-        kenmeiTitle,
-        synonym,
-        matchConfig,
-      );
+      const synonymScore = calculateSimilarity(kenmeiTitle, synonym);
       scores.push({ field: "synonym", score: synonymScore });
 
       // Exact match check
@@ -230,7 +204,6 @@ export function scoreMatch(
         const altEnglishScore = calculateSimilarity(
           normalizedAltTitle,
           anilistManga.title.english,
-          matchConfig,
         );
         scores.push({ field: "alt_to_english", score: altEnglishScore });
 
@@ -247,7 +220,6 @@ export function scoreMatch(
         const altRomajiScore = calculateSimilarity(
           normalizedAltTitle,
           anilistManga.title.romaji,
-          matchConfig,
         );
         scores.push({ field: "alt_to_romaji", score: altRomajiScore });
 
