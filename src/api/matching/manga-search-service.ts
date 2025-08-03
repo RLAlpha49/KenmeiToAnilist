@@ -19,6 +19,11 @@ import {
 import { normalizeString, findBestMatches } from "./match-engine";
 import { MatchEngineConfig, DEFAULT_MATCH_CONFIG } from "./match-engine";
 
+// Titles to ignore during automatic matching (but allow in manual searches)
+const IGNORED_AUTOMATIC_MATCH_TITLES = new Set([
+  "watashi, isekai de dorei ni sarechaimashita (naki) shikamo goshujinsama wa seikaku no warui elf no joousama (demo chou bijin ← koko daiji) munou sugite nonoshiraremakuru kedo douryou no orc ga iyashi-kei da shi sato no elf wa kawaii shi",
+]);
+
 // Cache for manga search results
 interface MangaCache {
   [key: string]: {
@@ -1097,17 +1102,36 @@ function calculateStringSimilarity(str1: string, str2: string): number {
 }
 
 /**
+ * Check if a manga should be ignored during automatic matching
+ */
+function shouldIgnoreForAutomaticMatching(manga: AniListManga): boolean {
+  // Get all titles to check (main titles + synonyms)
+  const titlesToCheck = [
+    manga.title?.romaji,
+    manga.title?.english,
+    manga.title?.native,
+    ...(manga.synonyms || []),
+  ].filter(Boolean) as string[];
+
+  // Check if any title matches ignored titles (case-insensitive)
+  return titlesToCheck.some((title) =>
+    IGNORED_AUTOMATIC_MATCH_TITLES.has(title.toLowerCase()),
+  );
+}
+
+/**
  * Filter and rank manga results by match quality
  */
 function rankMangaResults(
   results: AniListManga[],
   searchTitle: string,
   exactMatchingOnly: boolean,
+  isManualSearch: boolean = false,
 ): AniListManga[] {
   const scoredResults: Array<{ manga: AniListManga; score: number }> = [];
 
   console.log(
-    `🔍 Ranking ${results.length} manga results for "${searchTitle}" with exactMatchingOnly=${exactMatchingOnly}`,
+    `🔍 Ranking ${results.length} manga results for "${searchTitle}" with exactMatchingOnly=${exactMatchingOnly}, isManualSearch=${isManualSearch}`,
   );
 
   // Score each manga result
@@ -1116,6 +1140,14 @@ function rankMangaResults(
     if (manga.format === "NOVEL" || manga.format === "LIGHT_NOVEL") {
       console.log(
         `⏭️ Skipping light novel: ${manga.title?.romaji || manga.title?.english || "unknown"}`,
+      );
+      continue;
+    }
+
+    // Skip ignored titles for automatic matching (but allow for manual searches)
+    if (!isManualSearch && shouldIgnoreForAutomaticMatching(manga)) {
+      console.log(
+        `⏭️ Skipping ignored title for automatic matching: ${manga.title?.romaji || manga.title?.english || "unknown"}`,
       );
       continue;
     }
@@ -1451,7 +1483,12 @@ export async function searchMangaByTitle(
   }
 
   // Filter and rank results by match quality with modified exact matching behavior
-  const rankedResults = rankMangaResults(results, title, exactMatchMode);
+  const rankedResults = rankMangaResults(
+    results,
+    title,
+    exactMatchMode,
+    searchConfig.bypassCache,
+  );
 
   console.log(
     `🔍 Search complete for "${title}": Found ${results.length} results, ranked to ${rankedResults.length} relevant matches`,

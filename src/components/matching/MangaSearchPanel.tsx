@@ -195,10 +195,21 @@ export function MangaSearchPanel({
         console.log(
           `🔎 Appending ${results.length} results to existing ${searchResults.length} results`,
         );
-        setSearchResults((prev) => [
-          ...prev,
-          ...results.map((match) => match.manga),
-        ]);
+        setSearchResults((prev) => {
+          // Create a set of existing manga IDs to avoid duplicates
+          const existingIds = new Set(prev.map((manga) => manga.id));
+
+          // Filter out duplicates from new results
+          const newUniqueResults = results
+            .map((match) => match.manga)
+            .filter((manga) => !existingIds.has(manga.id));
+
+          console.log(
+            `🔎 Adding ${newUniqueResults.length} unique results (filtered ${results.length - newUniqueResults.length} duplicates)`,
+          );
+
+          return [...prev, ...newUniqueResults];
+        });
       }
 
       // Always set hasNextPage to true if we got results (could be more)

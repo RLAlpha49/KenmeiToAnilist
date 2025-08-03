@@ -335,11 +335,15 @@ export function MangaMatchingPanel({
         return;
       }
 
-      // Only handle left/right arrow keys
+      // Handle arrow keys and Home/End keys
       if (e.key === "ArrowLeft" && currentPage > 1) {
         goToPage(currentPage - 1);
       } else if (e.key === "ArrowRight" && currentPage < totalPages) {
         goToPage(currentPage + 1);
+      } else if (e.key === "Home" && currentPage > 1) {
+        goToPage(1);
+      } else if (e.key === "End" && currentPage < totalPages) {
+        goToPage(totalPages);
       }
     };
 
@@ -1537,14 +1541,15 @@ export function MangaMatchingPanel({
                               </a>
                             )}
                             {(() => {
-                              // Get the appropriate title for Kenmei link - for skipped items, always use Kenmei's title
+                              // Get the appropriate title for Kenmei link - prioritize AniList title for matched entries
                               const title =
-                                match.kenmeiManga.title ||
                                 match.selectedMatch?.title?.english ||
                                 match.selectedMatch?.title?.romaji ||
                                 match.anilistMatches?.[0]?.manga?.title
                                   ?.english ||
-                                match.anilistMatches?.[0]?.manga?.title?.romaji;
+                                match.anilistMatches?.[0]?.manga?.title
+                                  ?.romaji ||
+                                match.kenmeiManga.title;
 
                               const kenmeiUrl = createKenmeiUrl(title);
 
@@ -2052,10 +2057,21 @@ export function MangaMatchingPanel({
             of <span className="font-medium">{sortedMatches.length}</span>{" "}
             results
             <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
-              (Use ← → arrow keys to navigate pages)
+              (Use ← → arrow keys to navigate, Home/End for first/last page)
             </span>
           </div>
           <div className="inline-flex items-center space-x-1">
+            <button
+              className="inline-flex items-center rounded-md border border-gray-300 bg-white px-2 py-1 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              onClick={() => goToPage(1)}
+              disabled={currentPage === 1}
+              aria-label="First page"
+              title="Go to first page"
+            >
+              <span className="text-xs">«</span>
+              <span className="sr-only sm:not-sr-only sm:ml-1">First</span>
+            </button>
+
             <button
               className="inline-flex items-center rounded-md border border-gray-300 bg-white px-2 py-1 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
               onClick={() => goToPage(currentPage - 1)}
@@ -2080,6 +2096,17 @@ export function MangaMatchingPanel({
             >
               <span className="sr-only sm:not-sr-only sm:mr-1">Next</span>
               <ChevronRight className="h-4 w-4" aria-hidden="true" />
+            </button>
+
+            <button
+              className="inline-flex items-center rounded-md border border-gray-300 bg-white px-2 py-1 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              onClick={() => goToPage(totalPages)}
+              disabled={currentPage === totalPages}
+              aria-label="Last page"
+              title="Go to last page"
+            >
+              <span className="sr-only sm:not-sr-only sm:mr-1">Last</span>
+              <span className="text-xs">»</span>
             </button>
           </div>
         </div>
