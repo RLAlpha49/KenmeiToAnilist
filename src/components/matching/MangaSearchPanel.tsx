@@ -24,6 +24,9 @@ import {
   isOnUserList,
 } from "../../utils/mediaListHelpers";
 
+// Import storage utilities
+import { getMatchConfig } from "../../utils/storage";
+
 // Track searches globally to prevent duplicates across component remounts
 const searchTracker = {
   lastMangaId: undefined as number | undefined,
@@ -71,9 +74,43 @@ export function MangaSearchPanel({
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [page, setPage] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(false);
+  const [blurAdultContent, setBlurAdultContent] = useState(true);
+  const [unblurredImages, setUnblurredImages] = useState<Set<string>>(
+    new Set(),
+  );
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const resultsContainerRef = useRef<HTMLDivElement>(null);
+
+  // Load blur settings from match config
+  useEffect(() => {
+    const loadBlurSettings = async () => {
+      const matchConfig = getMatchConfig();
+      setBlurAdultContent(matchConfig.blurAdultContent);
+    };
+    loadBlurSettings();
+  }, []);
+
+  // Helper functions for adult content handling
+  const isAdultContent = (manga: AniListManga) => {
+    return manga?.isAdult === true;
+  };
+
+  const shouldBlurImage = (mangaId: string) => {
+    return blurAdultContent && !unblurredImages.has(mangaId);
+  };
+
+  const toggleImageBlur = (mangaId: string) => {
+    setUnblurredImages((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(mangaId)) {
+        newSet.delete(mangaId);
+      } else {
+        newSet.add(mangaId);
+      }
+      return newSet;
+    });
+  };
 
   // Style modifications to make everything larger
   const headerClasses = "text-xl font-medium"; // Increased from text-lg
@@ -470,13 +507,54 @@ export function MangaSearchPanel({
                 }}
               >
                 <div className="flex w-full items-start space-x-5">
-                  {result.coverImage?.medium && (
-                    <img
-                      src={result.coverImage.medium}
-                      alt={`Cover for ${result.title?.english || result.title?.romaji || "manga"}`}
-                      className="h-40 w-28 object-cover"
-                      loading="lazy"
-                    />
+                  {(result.coverImage?.large || result.coverImage?.medium) && (
+                    <div className="relative flex-shrink-0">
+                      <img
+                        src={
+                          result.coverImage.large || result.coverImage.medium
+                        }
+                        alt={`Cover for ${result.title?.english || result.title?.romaji || "manga"}`}
+                        className={`h-40 w-28 rounded border border-gray-200 object-cover shadow-sm transition-all hover:scale-[1.02] hover:shadow dark:border-gray-700 ${
+                          isAdultContent(result) &&
+                          shouldBlurImage(`search-${result.id}`)
+                            ? "cursor-pointer blur-md"
+                            : ""
+                        }`}
+                        loading="lazy"
+                        onClick={(e) => {
+                          if (isAdultContent(result)) {
+                            e.stopPropagation();
+                            toggleImageBlur(`search-${result.id}`);
+                          }
+                        }}
+                      />
+                      {/* Adult content warning badge */}
+                      {isAdultContent(result) && (
+                        <div className="absolute top-1 left-1">
+                          <span
+                            className="inline-flex items-center rounded-md bg-red-600 px-1 py-0 text-xs font-medium text-white"
+                            title="Adult Content"
+                          >
+                            18+
+                          </span>
+                        </div>
+                      )}
+                      {/* Click to reveal hint for blurred images */}
+                      {isAdultContent(result) &&
+                        shouldBlurImage(`search-${result.id}`) && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span
+                              className="bg-opacity-75 inline-flex cursor-pointer items-center rounded-md bg-gray-800 px-2 py-1 text-xs font-medium text-white"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleImageBlur(`search-${result.id}`);
+                              }}
+                            >
+                              Click to reveal
+                            </span>
+                          </div>
+                        )}
+                    </div>
                   )}
 
                   <div className="flex-1 space-y-2">

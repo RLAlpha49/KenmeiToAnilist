@@ -65,7 +65,6 @@ export interface AniListManga {
       };
     }[];
   };
-  // User's current entry for this manga (if on their list)
   mediaListEntry?: {
     id: number;
     status: MediaListStatus;
@@ -73,6 +72,7 @@ export interface AniListManga {
     score: number;
     private: boolean;
   } | null;
+  isAdult?: boolean;
 }
 
 /**

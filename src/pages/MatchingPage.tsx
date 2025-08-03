@@ -6,10 +6,6 @@
 
 // TODO: Add debug menu (Should be accessible from the settings page or a button next to the theme toggle). Should have the option to view and update the values of any of the electron store values as well as the browser local storage values directly.
 
-// TODO: Have a setting for ignoring automatic matching with adult content (Kenmei rarely tracks adult content, so it may not be relevant to some users). Default is false. Should still be returned when searching manually either way.
-// TODO: Mark manga with adult content as such.
-// TODO: Blur image of manga marked as adult. Image can be pressed to unblur. (Should have a setting for this in settings page, default is true)
-
 // TODO: Somehow improve title similarity percentage calculation. (Sometimes it makes no sense at all)
 // TODO: If matches have same confidence percentage, it should prioritize the main titles rather than the synonyms.
 

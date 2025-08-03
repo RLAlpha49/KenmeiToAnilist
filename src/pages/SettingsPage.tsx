@@ -1088,6 +1088,40 @@ export function SettingsPage() {
                     </div>
                   </motion.div>
 
+                  {/* Blur Adult Content Setting */}
+                  <motion.div
+                    className="bg-muted/40 rounded-lg border p-4"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.45, duration: 0.5 }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <h3 className="text-sm font-medium">
+                          Blur Adult Content Images
+                        </h3>
+                        <p className="text-muted-foreground text-xs">
+                          Blur cover images of adult content manga for privacy.
+                          Click to reveal the image temporarily.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          id="blur-adult-content"
+                          checked={matchConfig.blurAdultContent}
+                          onCheckedChange={(checked) => {
+                            const newConfig = {
+                              ...matchConfig,
+                              blurAdultContent: checked,
+                            };
+                            setMatchConfig(newConfig);
+                            saveMatchConfig(newConfig);
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+
                   {/* Info Alert */}
                   <motion.div
                     initial={{ opacity: 0 }}
@@ -1100,7 +1134,7 @@ export function SettingsPage() {
                         About Matching Settings
                       </AlertTitle>
                       <AlertDescription className="text-blue-700 dark:text-blue-300">
-                        These settings only affect automatic matching during the
+                        Some settings only affect automatic matching during the
                         initial import process. All manga types will still be
                         available when using manual search functionality.
                       </AlertDescription>

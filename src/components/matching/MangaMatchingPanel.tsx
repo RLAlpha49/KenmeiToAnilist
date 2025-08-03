@@ -5,7 +5,7 @@
  */
 import React, { useState, useEffect, useRef } from "react";
 import { KenmeiManga } from "../../api/kenmei/types";
-import { MangaMatchResult } from "../../api/anilist/types";
+import { MangaMatchResult, AniListManga } from "../../api/anilist/types";
 import {
   Search,
   Check,
@@ -28,6 +28,9 @@ import {
   formatScore,
   isOnUserList,
 } from "../../utils/mediaListHelpers";
+
+// Import storage utilities
+import { getMatchConfig } from "../../utils/storage";
 
 // Import shadcn UI components
 import {
@@ -115,6 +118,42 @@ export function MangaMatchingPanel({
   // Add state for processing status of the reset skipped button
   const [isResettingSkippedToPending, setIsResettingSkippedToPending] =
     useState(false);
+
+  // Add state for adult content settings and blur management
+  const [blurAdultContent, setBlurAdultContent] = useState(true);
+  const [unblurredImages, setUnblurredImages] = useState<Set<string>>(
+    new Set(),
+  );
+
+  // Load blur settings from match config
+  useEffect(() => {
+    const loadBlurSettings = async () => {
+      const matchConfig = getMatchConfig();
+      setBlurAdultContent(matchConfig.blurAdultContent);
+    };
+    loadBlurSettings();
+  }, []);
+
+  // Helper functions for adult content handling
+  const isAdultContent = (manga: AniListManga | undefined | null) => {
+    return manga?.isAdult === true;
+  };
+
+  const shouldBlurImage = (mangaId: string) => {
+    return blurAdultContent && !unblurredImages.has(mangaId);
+  };
+
+  const toggleImageBlur = (mangaId: string) => {
+    setUnblurredImages((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(mangaId)) {
+        newSet.delete(mangaId);
+      } else {
+        newSet.add(mangaId);
+      }
+      return newSet;
+    });
+  };
 
   // Handler for opening external links in the default browser
   const handleOpenExternal = (url: string) => (e: React.MouseEvent) => {
@@ -1313,33 +1352,94 @@ export function MangaMatchingPanel({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                           <div className="group relative flex-shrink-0">
-                            {/* Cover image with proper fallbacks */}
+                            {/* Cover image with proper fallbacks and adult content handling */}
                             {match.selectedMatch?.coverImage?.large ||
                             match.selectedMatch?.coverImage?.medium ||
                             match.anilistMatches?.[0]?.manga?.coverImage
                               ?.large ||
                             match.anilistMatches?.[0]?.manga?.coverImage
                               ?.medium ? (
-                              <img
-                                src={
-                                  match.selectedMatch?.coverImage?.large ||
-                                  match.selectedMatch?.coverImage?.medium ||
-                                  match.anilistMatches[0]?.manga?.coverImage
-                                    ?.large ||
-                                  match.anilistMatches[0]?.manga?.coverImage
-                                    ?.medium
-                                }
-                                alt={
-                                  match.selectedMatch?.title?.english ||
-                                  match.selectedMatch?.title?.romaji ||
-                                  match.anilistMatches?.[0]?.manga?.title
-                                    ?.english ||
-                                  match.anilistMatches?.[0]?.manga?.title
-                                    ?.romaji
-                                }
-                                className="h-44 w-32 rounded border border-gray-200 object-cover shadow-sm transition-all group-hover:scale-[1.02] group-hover:shadow dark:border-gray-700"
-                                loading="lazy"
-                              />
+                              <div className="relative">
+                                <img
+                                  src={
+                                    match.selectedMatch?.coverImage?.large ||
+                                    match.selectedMatch?.coverImage?.medium ||
+                                    match.anilistMatches[0]?.manga?.coverImage
+                                      ?.large ||
+                                    match.anilistMatches[0]?.manga?.coverImage
+                                      ?.medium
+                                  }
+                                  alt={
+                                    match.selectedMatch?.title?.english ||
+                                    match.selectedMatch?.title?.romaji ||
+                                    match.anilistMatches?.[0]?.manga?.title
+                                      ?.english ||
+                                    match.anilistMatches?.[0]?.manga?.title
+                                      ?.romaji
+                                  }
+                                  className={`h-44 w-32 rounded border border-gray-200 object-cover shadow-sm transition-all group-hover:scale-[1.02] group-hover:shadow dark:border-gray-700 ${
+                                    isAdultContent(
+                                      match.selectedMatch ||
+                                        match.anilistMatches?.[0]?.manga,
+                                    ) &&
+                                    shouldBlurImage(
+                                      `${match.selectedMatch?.id || match.anilistMatches?.[0]?.manga?.id}`,
+                                    )
+                                      ? "cursor-pointer blur-md"
+                                      : ""
+                                  }`}
+                                  loading="lazy"
+                                  onClick={() => {
+                                    if (
+                                      isAdultContent(
+                                        match.selectedMatch ||
+                                          match.anilistMatches?.[0]?.manga,
+                                      )
+                                    ) {
+                                      toggleImageBlur(
+                                        `${match.selectedMatch?.id || match.anilistMatches?.[0]?.manga?.id}`,
+                                      );
+                                    }
+                                  }}
+                                />
+                                {/* Adult content warning badge */}
+                                {isAdultContent(
+                                  match.selectedMatch ||
+                                    match.anilistMatches?.[0]?.manga,
+                                ) && (
+                                  <div className="absolute top-1 left-1">
+                                    <Badge
+                                      variant="destructive"
+                                      className="bg-red-600 px-1 py-0 text-xs hover:bg-red-700"
+                                      title="Adult Content"
+                                    >
+                                      18+
+                                    </Badge>
+                                  </div>
+                                )}
+                                {/* Click to reveal hint for blurred images */}
+                                {isAdultContent(
+                                  match.selectedMatch ||
+                                    match.anilistMatches?.[0]?.manga,
+                                ) &&
+                                  shouldBlurImage(
+                                    `${match.selectedMatch?.id || match.anilistMatches?.[0]?.manga?.id}`,
+                                  ) && (
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                      <Badge
+                                        variant="secondary"
+                                        className="cursor-pointer text-xs opacity-75"
+                                        onClick={() =>
+                                          toggleImageBlur(
+                                            `${match.selectedMatch?.id || match.anilistMatches?.[0]?.manga?.id}`,
+                                          )
+                                        }
+                                      >
+                                        Click to reveal
+                                      </Badge>
+                                    </div>
+                                  )}
+                              </div>
                             ) : (
                               <div className="flex h-44 w-32 items-center justify-center rounded border border-gray-200 bg-gray-100 shadow-sm dark:border-gray-700 dark:bg-gray-700">
                                 <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -1888,22 +1988,73 @@ export function MangaMatchingPanel({
                                 <div className="flex w-full flex-col space-y-2">
                                   <div className="flex items-center space-x-3">
                                     <div className="group relative flex-shrink-0">
-                                      {/* Cover image with better fallbacks */}
+                                      {/* Cover image with better fallbacks and adult content handling */}
                                       {altMatch.manga?.coverImage?.large ||
                                       altMatch.manga?.coverImage?.medium ? (
-                                        <img
-                                          src={
-                                            altMatch.manga.coverImage.large ||
-                                            altMatch.manga.coverImage.medium
-                                          }
-                                          alt={
-                                            altMatch.manga?.title?.english ||
-                                            altMatch.manga?.title?.romaji ||
-                                            "Alternative manga"
-                                          }
-                                          className="h-32 w-20 rounded border border-gray-200 object-cover shadow-sm transition-all group-hover:scale-[1.02] group-hover:shadow dark:border-gray-700"
-                                          loading="lazy"
-                                        />
+                                        <div className="relative">
+                                          <img
+                                            src={
+                                              altMatch.manga.coverImage.large ||
+                                              altMatch.manga.coverImage.medium
+                                            }
+                                            alt={
+                                              altMatch.manga?.title?.english ||
+                                              altMatch.manga?.title?.romaji ||
+                                              "Alternative manga"
+                                            }
+                                            className={`h-32 w-20 rounded border border-gray-200 object-cover shadow-sm transition-all group-hover:scale-[1.02] group-hover:shadow dark:border-gray-700 ${
+                                              isAdultContent(altMatch.manga) &&
+                                              shouldBlurImage(
+                                                `alt-${altMatch.manga?.id}`,
+                                              )
+                                                ? "cursor-pointer blur-md"
+                                                : ""
+                                            }`}
+                                            loading="lazy"
+                                            onClick={(e) => {
+                                              if (
+                                                isAdultContent(altMatch.manga)
+                                              ) {
+                                                e.stopPropagation();
+                                                toggleImageBlur(
+                                                  `alt-${altMatch.manga?.id}`,
+                                                );
+                                              }
+                                            }}
+                                          />
+                                          {/* Adult content warning badge */}
+                                          {isAdultContent(altMatch.manga) && (
+                                            <div className="absolute top-1 left-1">
+                                              <Badge
+                                                variant="destructive"
+                                                className="bg-red-600 px-1 py-0 text-[10px] hover:bg-red-700"
+                                                title="Adult Content"
+                                              >
+                                                18+
+                                              </Badge>
+                                            </div>
+                                          )}
+                                          {/* Click to reveal hint for blurred images */}
+                                          {isAdultContent(altMatch.manga) &&
+                                            shouldBlurImage(
+                                              `alt-${altMatch.manga?.id}`,
+                                            ) && (
+                                              <div className="absolute inset-0 flex items-center justify-center">
+                                                <Badge
+                                                  variant="secondary"
+                                                  className="cursor-pointer text-[10px] opacity-75"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    toggleImageBlur(
+                                                      `alt-${altMatch.manga?.id}`,
+                                                    );
+                                                  }}
+                                                >
+                                                  Click
+                                                </Badge>
+                                              </div>
+                                            )}
+                                        </div>
                                       ) : (
                                         <div className="flex h-32 w-20 items-center justify-center rounded border border-gray-200 bg-gray-100 shadow-sm dark:border-gray-700 dark:bg-gray-700">
                                           <span className="text-xs text-gray-500 dark:text-gray-400">

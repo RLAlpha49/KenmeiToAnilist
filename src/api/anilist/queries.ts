@@ -108,6 +108,7 @@ query ($search: String, $page: Int, $perPage: Int) {
         score
         private
       }
+      isAdult
     }
   }
 }
@@ -165,6 +166,7 @@ query ($search: String, $page: Int, $perPage: Int, $genre_in: [String], $tag_in:
         score
         private
       }
+      isAdult
     }
   }
 }
@@ -206,6 +208,7 @@ query ($id: Int) {
       score
       private
     }
+    isAdult
   }
 }
 `;
@@ -262,6 +265,7 @@ query ($ids: [Int]) {
         score
         private
       }
+      isAdult
     }
   }
 }

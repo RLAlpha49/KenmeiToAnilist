@@ -1341,6 +1341,19 @@ export async function searchMangaByTitle(
         }
       }
 
+      // For automatic matching, also filter out adult content if the setting is enabled
+      if (matchConfig.ignoreAdultContent) {
+        const beforeFilter = filteredManga.length;
+        filteredManga = filteredManga.filter((manga) => !manga.isAdult);
+        const afterFilter = filteredManga.length;
+
+        if (beforeFilter > afterFilter) {
+          console.log(
+            `🚫 Filtered out ${beforeFilter - afterFilter} adult content manga from cached results for "${title}"`,
+          );
+        }
+      }
+
       // Always calculate fresh confidence scores, even for cached results
       console.log(
         `⚖️ Calculating fresh confidence scores for ${filteredManga.length} cached matches`,
@@ -1576,6 +1589,19 @@ export async function searchMangaByTitle(
       if (beforeFilter > afterFilter) {
         console.log(
           `🚫 Filtered out ${beforeFilter - afterFilter} one-shot(s) during automatic matching for "${title}"`,
+        );
+      }
+    }
+
+    // For automatic matching, also filter out adult content if the setting is enabled
+    if (matchConfig.ignoreAdultContent) {
+      const beforeFilter = filteredResults.length;
+      filteredResults = filteredResults.filter((manga) => !manga.isAdult);
+      const afterFilter = filteredResults.length;
+
+      if (beforeFilter > afterFilter) {
+        console.log(
+          `🚫 Filtered out ${beforeFilter - afterFilter} adult content manga during automatic matching for "${title}"`,
         );
       }
     }
@@ -2084,6 +2110,19 @@ export async function batchMatchManga(
         if (beforeFilter > afterFilter) {
           console.log(
             `🚫 Filtered out ${beforeFilter - afterFilter} one-shot(s) for "${manga.title}" during batch matching`,
+          );
+        }
+      }
+
+      // Filter out adult content if the setting is enabled (for automatic matching)
+      if (matchConfig.ignoreAdultContent) {
+        const beforeFilter = potentialMatches.length;
+        potentialMatches = potentialMatches.filter((match) => !match.isAdult);
+        const afterFilter = potentialMatches.length;
+
+        if (beforeFilter > afterFilter) {
+          console.log(
+            `🚫 Filtered out ${beforeFilter - afterFilter} adult content manga for "${manga.title}" during batch matching`,
           );
         }
       }

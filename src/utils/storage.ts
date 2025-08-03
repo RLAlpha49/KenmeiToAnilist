@@ -333,6 +333,7 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
 export type MatchConfig = {
   ignoreOneShots: boolean;
   ignoreAdultContent: boolean;
+  blurAdultContent: boolean;
 };
 
 /**
@@ -343,6 +344,7 @@ export type MatchConfig = {
 export const DEFAULT_MATCH_CONFIG: MatchConfig = {
   ignoreOneShots: false,
   ignoreAdultContent: false,
+  blurAdultContent: true,
 };
 
 /**
