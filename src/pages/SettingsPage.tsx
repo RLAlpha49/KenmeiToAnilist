@@ -21,6 +21,7 @@ import {
   ExternalLink,
   XCircle,
   InfoIcon,
+  Search,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { APICredentials } from "../types/auth";
@@ -30,6 +31,9 @@ import {
   getSyncConfig,
   saveSyncConfig,
   SyncConfig,
+  getMatchConfig,
+  saveMatchConfig,
+  MatchConfig,
 } from "../utils/storage";
 import {
   Card,
@@ -131,6 +135,7 @@ export function SettingsPage() {
     `http://localhost:${DEFAULT_AUTH_PORT}/callback`,
   );
   const [syncConfig, setSyncConfig] = useState<SyncConfig>(getSyncConfig());
+  const [matchConfig, setMatchConfig] = useState<MatchConfig>(getMatchConfig());
   const [useCustomThreshold, setUseCustomThreshold] = useState<boolean>(
     typeof syncConfig.autoPauseThreshold === "string" ||
       ![1, 7, 14, 30, 60, 90, 180, 365].includes(
@@ -700,13 +705,20 @@ export function SettingsPage() {
         transition={{ duration: 0.5, delay: 0.2 }}
       >
         <Tabs defaultValue="account" className="space-y-6">
-          <TabsList className="bg-muted/50 grid w-full grid-cols-3 md:w-auto dark:bg-gray-800/50">
+          <TabsList className="bg-muted/50 grid w-full grid-cols-4 md:w-auto dark:bg-gray-800/50">
             <TabsTrigger
               value="account"
               className="data-[state=active]:bg-background flex items-center gap-1.5 dark:text-gray-300 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white dark:data-[state=active]:shadow-sm"
             >
               <UserCircle className="h-4 w-4" />
               Account
+            </TabsTrigger>
+            <TabsTrigger
+              value="matching"
+              className="data-[state=active]:bg-background flex items-center gap-1.5 dark:text-gray-300 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-white dark:data-[state=active]:shadow-sm"
+            >
+              <Search className="h-4 w-4" />
+              Matching
             </TabsTrigger>
             <TabsTrigger
               value="sync"
@@ -983,6 +995,117 @@ export function SettingsPage() {
                       </Button>
                     </motion.div>
                   )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          </TabsContent>
+
+          <TabsContent value="matching" className="space-y-6">
+            <motion.div variants={itemVariants} initial="hidden" animate="show">
+              <Card className="bg-muted/10 overflow-hidden border-none shadow-md">
+                <CardHeader className="mr-2 ml-2 rounded-t-lg rounded-b-lg bg-gradient-to-r from-green-500/10 to-teal-500/10">
+                  <CardTitle className="mt-2 flex items-center gap-2">
+                    <motion.div
+                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-green-500 to-teal-500 text-white"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Search className="h-4 w-4" />
+                    </motion.div>
+                    Matching Preferences
+                  </CardTitle>
+                  <CardDescription className="mb-2">
+                    Configure how your manga is automatically matched with
+                    AniList entries.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6 pt-6">
+                  {/* Ignore One Shots Setting */}
+                  <motion.div
+                    className="bg-muted/40 rounded-lg border p-4"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3, duration: 0.5 }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <h3 className="text-sm font-medium">
+                          Ignore One Shots in Automatic Matching
+                        </h3>
+                        <p className="text-muted-foreground text-xs">
+                          Skip one-shot manga during automatic matching. They
+                          will still appear in manual searches.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          id="ignore-one-shots"
+                          checked={matchConfig.ignoreOneShots}
+                          onCheckedChange={(checked) => {
+                            const newConfig = {
+                              ...matchConfig,
+                              ignoreOneShots: checked,
+                            };
+                            setMatchConfig(newConfig);
+                            saveMatchConfig(newConfig);
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  {/* Ignore Adult Content Setting */}
+                  <motion.div
+                    className="bg-muted/40 rounded-lg border p-4"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4, duration: 0.5 }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <h3 className="text-sm font-medium">
+                          Ignore Adult Content in Automatic Matching
+                        </h3>
+                        <p className="text-muted-foreground text-xs">
+                          Skip adult content manga during automatic matching.
+                          They will still appear in manual searches.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          id="ignore-adult-content"
+                          checked={matchConfig.ignoreAdultContent}
+                          onCheckedChange={(checked) => {
+                            const newConfig = {
+                              ...matchConfig,
+                              ignoreAdultContent: checked,
+                            };
+                            setMatchConfig(newConfig);
+                            saveMatchConfig(newConfig);
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  {/* Info Alert */}
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5, duration: 0.5 }}
+                  >
+                    <Alert className="border-blue-200 bg-blue-50/50 dark:border-blue-900/50 dark:bg-blue-950/50">
+                      <InfoIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <AlertTitle className="text-blue-800 dark:text-blue-200">
+                        About Matching Settings
+                      </AlertTitle>
+                      <AlertDescription className="text-blue-700 dark:text-blue-300">
+                        These settings only affect automatic matching during the
+                        initial import process. All manga types will still be
+                        available when using manual search functionality.
+                      </AlertDescription>
+                    </Alert>
+                  </motion.div>
                 </CardContent>
               </Card>
             </motion.div>

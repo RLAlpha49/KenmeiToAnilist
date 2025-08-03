@@ -275,6 +275,7 @@ export const STORAGE_KEYS = {
   CACHE_VERSION: "cache_version",
   SYNC_CONFIG: "sync_config",
   SYNC_STATS: "sync_stats",
+  MATCH_CONFIG: "match_config",
 };
 
 /**
@@ -322,6 +323,26 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
   updateStatus: true,
   updateProgress: true,
   overwriteExisting: false,
+};
+
+/**
+ * Matching configuration options for automatic manga matching.
+ *
+ * @source
+ */
+export type MatchConfig = {
+  ignoreOneShots: boolean;
+  ignoreAdultContent: boolean;
+};
+
+/**
+ * The default match configuration.
+ *
+ * @source
+ */
+export const DEFAULT_MATCH_CONFIG: MatchConfig = {
+  ignoreOneShots: false,
+  ignoreAdultContent: false,
 };
 
 /**
@@ -626,5 +647,43 @@ export function getSyncConfig(): SyncConfig {
   } catch (error) {
     console.error("Error retrieving sync config from storage", error);
     return DEFAULT_SYNC_CONFIG;
+  }
+}
+
+/**
+ * Saves match configuration to storage.
+ *
+ * @param config - The match configuration to save.
+ * @example
+ * ```ts
+ * saveMatchConfig(config);
+ * ```
+ * @source
+ */
+export function saveMatchConfig(config: MatchConfig): void {
+  try {
+    storage.setItem(STORAGE_KEYS.MATCH_CONFIG, JSON.stringify(config));
+  } catch (error) {
+    console.error("Error saving match config to storage", error);
+  }
+}
+
+/**
+ * Gets match configuration from storage.
+ *
+ * @returns The saved match configuration or default config if not found.
+ * @example
+ * ```ts
+ * const config = getMatchConfig();
+ * ```
+ * @source
+ */
+export function getMatchConfig(): MatchConfig {
+  try {
+    const config = storage.getItem(STORAGE_KEYS.MATCH_CONFIG);
+    return config ? JSON.parse(config) : DEFAULT_MATCH_CONFIG;
+  } catch (error) {
+    console.error("Error retrieving match config from storage", error);
+    return DEFAULT_MATCH_CONFIG;
   }
 }

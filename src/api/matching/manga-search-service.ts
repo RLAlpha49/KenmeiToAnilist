@@ -19,6 +19,7 @@ import {
 } from "../anilist/client";
 import { normalizeString, findBestMatches } from "./match-engine";
 import { MatchEngineConfig, DEFAULT_MATCH_CONFIG } from "./match-engine";
+import { getMatchConfig } from "../../utils/storage";
 
 // Titles to ignore during automatic matching (but allow in manual searches)
 const IGNORED_AUTOMATIC_MATCH_TITLES = new Set([
@@ -325,6 +326,18 @@ function isCacheValid(key: string): boolean {
  */
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Check if a manga is a one-shot
+ */
+function isOneShot(manga: AniListManga): boolean {
+  // Check format is ONE_SHOT
+  if (manga.format === "ONE_SHOT") {
+    return true;
+  }
+
+  return false;
 }
 
 /**
@@ -1310,9 +1323,23 @@ export async function searchMangaByTitle(
     if (isCacheValid(cacheKey)) {
       console.log(`Using cache for ${title}`);
       // Filter out Light Novels from cache results
-      const filteredManga = mangaCache[cacheKey].manga.filter(
+      let filteredManga = mangaCache[cacheKey].manga.filter(
         (manga) => manga.format !== "NOVEL" && manga.format !== "LIGHT_NOVEL",
       );
+
+      // For automatic matching, also filter out one-shots if the setting is enabled
+      const matchConfig = await getMatchConfig();
+      if (matchConfig.ignoreOneShots) {
+        const beforeFilter = filteredManga.length;
+        filteredManga = filteredManga.filter((manga) => !isOneShot(manga));
+        const afterFilter = filteredManga.length;
+
+        if (beforeFilter > afterFilter) {
+          console.log(
+            `🚫 Filtered out ${beforeFilter - afterFilter} one-shot(s) from cached results for "${title}"`,
+          );
+        }
+      }
 
       // Always calculate fresh confidence scores, even for cached results
       console.log(
@@ -1534,9 +1561,25 @@ export async function searchMangaByTitle(
   }
 
   // Filter out any Light Novels before returning results
-  const filteredResults = rankedResults.filter(
+  let filteredResults = rankedResults.filter(
     (manga) => manga.format !== "NOVEL" && manga.format !== "LIGHT_NOVEL",
   );
+
+  // For automatic matching (not manual searches), also filter out one-shots if the setting is enabled
+  if (!searchConfig.bypassCache) {
+    const matchConfig = await getMatchConfig();
+    if (matchConfig.ignoreOneShots) {
+      const beforeFilter = filteredResults.length;
+      filteredResults = filteredResults.filter((manga) => !isOneShot(manga));
+      const afterFilter = filteredResults.length;
+
+      if (beforeFilter > afterFilter) {
+        console.log(
+          `🚫 Filtered out ${beforeFilter - afterFilter} one-shot(s) during automatic matching for "${title}"`,
+        );
+      }
+    }
+  }
 
   // If after all filtering we have no results but the API returned some,
   // include at least the first API result regardless of score
@@ -2020,6 +2063,7 @@ export async function batchMatchManga(
     }
 
     // Fill in the results for manga we have matches for
+    const matchConfig = await getMatchConfig();
     for (let i = 0; i < mangaList.length; i++) {
       // Check for cancellation periodically
       if (i % 10 === 0) {
@@ -2027,7 +2071,22 @@ export async function batchMatchManga(
       }
 
       const manga = mangaList[i];
-      const potentialMatches = cachedResults[i] || [];
+      let potentialMatches = cachedResults[i] || [];
+
+      // Filter out one-shots if the setting is enabled (for automatic matching)
+      if (matchConfig.ignoreOneShots) {
+        const beforeFilter = potentialMatches.length;
+        potentialMatches = potentialMatches.filter(
+          (match) => !isOneShot(match),
+        );
+        const afterFilter = potentialMatches.length;
+
+        if (beforeFilter > afterFilter) {
+          console.log(
+            `🚫 Filtered out ${beforeFilter - afterFilter} one-shot(s) for "${manga.title}" during batch matching`,
+          );
+        }
+      }
 
       // Update progress for any remaining manga
       updateProgress(i, manga.title);
