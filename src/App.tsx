@@ -11,6 +11,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { SonnerProvider } from "./components/ui/sonner-provider";
 import { RateLimitProvider } from "./contexts/RateLimitContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { DebugProvider } from "./contexts/DebugContext";
 
 /**
  * The main application component for KenmeiToAnilist.
@@ -23,12 +24,14 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 export default function App() {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <RateLimitProvider>
-          <RouterProvider router={router} />
-          <SonnerProvider />
-        </RateLimitProvider>
-      </AuthProvider>
+      <DebugProvider>
+        <AuthProvider>
+          <RateLimitProvider>
+            <RouterProvider router={router} />
+            <SonnerProvider />
+          </RateLimitProvider>
+        </AuthProvider>
+      </DebugProvider>
     </ThemeProvider>
   );
 }

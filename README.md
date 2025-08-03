@@ -113,6 +113,22 @@ VITE_ANILIST_CLIENT_SECRET=your-client-secret
 
 ---
 
+## 📚 Documentation
+
+### Storage Implementation
+
+The app uses a three-layer storage architecture for data persistence and performance:
+
+- **[Storage Implementation Guide](./STORAGE_IMPLEMENTATION.md)** - Comprehensive documentation of the storage system, including:
+  - Three-layer architecture (in-memory cache, localStorage, Electron Store)
+  - Storage precedence and conflict resolution
+  - Debug menu integration and automatic synchronization
+  - Usage patterns and troubleshooting
+
+For developers working on the codebase or anyone interested in understanding how data is stored and synchronized across storage layers.
+
+---
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please:

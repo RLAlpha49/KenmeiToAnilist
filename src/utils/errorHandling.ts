@@ -210,11 +210,6 @@ export async function fetchWithTimeout(
 export function showErrorNotification(error: AppError): void {
   console.error("Error:", error.message, error);
 
-  // Here you would integrate with your UI notification system
-  // For example:
-  // toast.error(error.message);
-
-  // For now, let's use a simple alert for demo purposes
   if (typeof window !== "undefined") {
     alert(`Error: ${error.message}`);
   }

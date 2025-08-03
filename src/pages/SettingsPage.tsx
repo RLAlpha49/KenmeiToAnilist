@@ -22,8 +22,10 @@ import {
   XCircle,
   InfoIcon,
   Search,
+  Bug,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import { useDebug } from "../contexts/DebugContext";
 import { APICredentials } from "../types/auth";
 import { DEFAULT_ANILIST_CONFIG, DEFAULT_AUTH_PORT } from "../config/anilist";
 import {
@@ -106,6 +108,8 @@ export function SettingsPage() {
     updateCustomCredentials,
     customCredentials,
   } = useAuth();
+
+  const { isDebugEnabled, toggleDebug } = useDebug();
 
   // Add a ref to track the previous credential source to prevent loops
   const prevCredentialSourceRef = useRef<"default" | "custom">(
@@ -1698,6 +1702,71 @@ export function SettingsPage() {
                         </>
                       )}
                     </Button>
+                  </motion.div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Debug Settings Section */}
+            <motion.div variants={itemVariants} initial="hidden" animate="show">
+              <Card className="bg-muted/10 overflow-hidden border-none shadow-md">
+                <CardHeader className="mr-2 ml-2 rounded-t-lg rounded-b-lg bg-gradient-to-r from-orange-500/10 to-red-500/10">
+                  <CardTitle className="mt-2 flex items-center gap-2">
+                    <motion.div
+                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-orange-500 to-red-500 text-white"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Bug className="h-4 w-4" />
+                    </motion.div>
+                    Debug Tools
+                  </CardTitle>
+                  <CardDescription className="mb-2">
+                    Advanced debugging tools for developers and troubleshooting.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6 pt-6">
+                  <motion.div
+                    className="bg-muted/40 space-y-4 rounded-lg border p-4"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3, duration: 0.5 }}
+                  >
+                    <div className="mb-4 flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <h3 className="text-sm font-medium">Debug Menu</h3>
+                        <p className="text-muted-foreground text-xs">
+                          Enable debug menu to view and edit storage values
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm" htmlFor="debug-enabled">
+                          Enable debug menu
+                        </label>
+                        <Switch
+                          id="debug-enabled"
+                          checked={isDebugEnabled}
+                          onCheckedChange={toggleDebug}
+                        />
+                      </div>
+                    </div>
+                    {isDebugEnabled && (
+                      <div className="rounded-md bg-yellow-50 p-3 dark:bg-yellow-900/20">
+                        <div className="flex">
+                          <div className="flex-shrink-0">
+                            <AlertTriangle className="h-4 w-4 text-yellow-400" />
+                          </div>
+                          <div className="ml-3">
+                            <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                              <strong>Warning:</strong> Debug tools allow direct
+                              access to application storage. Use with caution as
+                              incorrect modifications may affect application
+                              functionality.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </motion.div>
                 </CardContent>
               </Card>

@@ -3,7 +3,7 @@
  * @module Header
  * @description Application header component with logo, navigation, theme toggle, and window controls.
  */
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import ToggleTheme from "../ToggleTheme";
 import { Button } from "../ui/button";
@@ -23,6 +23,7 @@ import {
   ClipboardCheck,
   Settings as SettingsIcon,
   ArrowUpDown as SyncIcon,
+  Bug,
 } from "lucide-react";
 import {
   minimizeWindow,
@@ -37,6 +38,8 @@ import {
 } from "../ui/tooltip";
 import { motion } from "framer-motion";
 import appIcon from "../../assets/k2a-icon-512x512.png";
+import { useDebug } from "../../contexts/DebugContext";
+import { DebugMenu } from "../debug/DebugMenu";
 
 /**
  * Header React component that displays the application header with logo, navigation links, theme toggle, and window controls.
@@ -45,6 +48,9 @@ import appIcon from "../../assets/k2a-icon-512x512.png";
  * @source
  */
 export function Header() {
+  const { isDebugEnabled } = useDebug();
+  const [isDebugMenuOpen, setIsDebugMenuOpen] = useState(false);
+
   return (
     <TooltipProvider>
       <header className="border-border bg-background/90 sticky top-0 z-40 border-b backdrop-blur-sm">
@@ -175,6 +181,23 @@ export function Header() {
               <div className="non-draggable">
                 <ToggleTheme />
               </div>
+              {isDebugEnabled && (
+                <div className="non-draggable">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setIsDebugMenuOpen(true)}
+                        className="h-8 w-8 rounded-full"
+                      >
+                        <Bug className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">Debug Menu</TooltipContent>
+                  </Tooltip>
+                </div>
+              )}
               <div className="non-draggable flex">
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -222,6 +245,12 @@ export function Header() {
           </div>
         </div>
       </header>
+
+      {/* Debug Menu */}
+      <DebugMenu
+        isOpen={isDebugMenuOpen}
+        onClose={() => setIsDebugMenuOpen(false)}
+      />
     </TooltipProvider>
   );
 }
