@@ -184,6 +184,16 @@ export interface MangaMatch {
 }
 
 /**
+ * Search response that includes both matches and pagination info.
+ *
+ * @source
+ */
+export interface MangaSearchResponse {
+  matches: MangaMatch[];
+  pageInfo?: PageInfo;
+}
+
+/**
  * Status of a manga match operation.
  *
  * @source

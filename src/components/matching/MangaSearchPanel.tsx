@@ -160,7 +160,16 @@ export function MangaSearchPanel({
 
       console.log(`🔎 Search config:`, searchConfig);
 
-      const results = await searchMangaByTitle(query, token, searchConfig);
+      const searchResponse = await searchMangaByTitle(
+        query,
+        token,
+        searchConfig,
+        undefined, // abortSignal
+        pageNum, // Pass the specific page number
+      );
+      const results = searchResponse.matches;
+      const pageInfo = searchResponse.pageInfo;
+
       const endTime = performance.now();
 
       console.log(
@@ -212,12 +221,20 @@ export function MangaSearchPanel({
         });
       }
 
-      // Always set hasNextPage to true if we got results (could be more)
-      setHasNextPage(results.length >= 10);
-      setPage(pageNum);
+      // Use actual pagination info from API response if available
+      if (pageInfo) {
+        console.log(`🔎 Using API pagination info:`, pageInfo);
+        setHasNextPage(pageInfo.hasNextPage);
+        setPage(pageInfo.currentPage);
+      } else {
+        // Fallback logic (for cached results that don't have pagination info)
+        console.log(`🔎 No pagination info available, using fallback logic`);
+        setHasNextPage(false); // Can't load more without pagination info
+        setPage(pageNum);
+      }
 
       console.log(
-        `🔎 UI state updated: searchResults.length=${results.length}, hasNextPage=${results.length >= 10}, page=${pageNum}`,
+        `🔎 UI state updated: searchResults.length=${results.length}, hasNextPage=${pageInfo?.hasNextPage || false}, page=${pageInfo?.currentPage || pageNum}`,
       );
     } catch (error) {
       console.error("Error searching manga:", error);

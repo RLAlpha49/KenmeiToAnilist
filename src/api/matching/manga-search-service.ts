@@ -7,9 +7,10 @@
 import { KenmeiManga } from "../kenmei/types";
 import {
   AniListManga,
-  MangaMatch,
   MangaMatchResult,
+  MangaSearchResponse,
   SearchResult,
+  PageInfo,
 } from "../anilist/types";
 import {
   searchManga,
@@ -281,8 +282,9 @@ export interface SearchServiceConfig {
   maxSearchResults: number;
   useAdvancedSearch: boolean;
   enablePreSearch: boolean;
-  exactMatchingOnly: boolean; // New option for exact matching
+  exactMatchingOnly: boolean;
   bypassCache?: boolean;
+  singlePageSearch?: boolean;
 }
 
 /**
@@ -299,6 +301,7 @@ export const DEFAULT_SEARCH_CONFIG: SearchServiceConfig = {
   enablePreSearch: true,
   exactMatchingOnly: false,
   bypassCache: false,
+  singlePageSearch: false,
 };
 
 /**
@@ -1281,7 +1284,8 @@ export async function searchMangaByTitle(
   token?: string,
   config: Partial<SearchServiceConfig> = {},
   abortSignal?: AbortSignal,
-): Promise<MangaMatch[]> {
+  specificPage?: number,
+): Promise<MangaSearchResponse> {
   const searchConfig = { ...DEFAULT_SEARCH_CONFIG, ...config };
 
   // Generate cache key for this title
@@ -1315,7 +1319,7 @@ export async function searchMangaByTitle(
         `⚖️ Calculating fresh confidence scores for ${filteredManga.length} cached matches`,
       );
 
-      return filteredManga.map((manga) => {
+      const matches = filteredManga.map((manga) => {
         // Calculate a fresh confidence score using the original search title
         const confidence = calculateConfidence(title, manga);
 
@@ -1328,6 +1332,11 @@ export async function searchMangaByTitle(
           confidence,
         };
       });
+
+      return {
+        matches,
+        pageInfo: undefined, // No pagination info available for cached results
+      };
     }
   } else {
     console.log(
@@ -1350,15 +1359,19 @@ export async function searchMangaByTitle(
 
   // Initialize search variables
   let results: AniListManga[] = [];
-  let currentPage = 1;
+  let currentPage = specificPage || 1; // Use specific page if provided
   let hasNextPage = true;
+  let lastPageInfo: PageInfo | undefined = undefined;
+
+  // If a specific page is requested, we only fetch that one page
+  const singlePageMode = specificPage !== undefined;
 
   // Add debug log to show we're making a network request
   console.log(
     `🌐 Making network request to AniList API for "${title}" - bypassCache=${searchConfig.bypassCache}`,
   );
 
-  // Search until we have enough results or there are no more pages
+  // Search until we have enough results or there are no more pages (or just one page if specific page requested)
   while (hasNextPage && results.length < searchConfig.maxSearchResults) {
     try {
       // Check if aborted before searching
@@ -1439,6 +1452,17 @@ export async function searchMangaByTitle(
           searchResult,
         );
         break; // Exit the loop but continue with whatever results we have
+      }
+
+      // Store the last pageInfo for the response
+      lastPageInfo = searchResult.Page.pageInfo;
+
+      // If we're fetching a specific page, stop after this iteration
+      if (singlePageMode) {
+        console.log(
+          `🔍 Single page mode: Fetched page ${currentPage}, stopping search`,
+        );
+        break;
       }
 
       // Check if there are more pages
@@ -1560,7 +1584,7 @@ export async function searchMangaByTitle(
     `⚖️ Calculating fresh confidence scores for ${finalResults.length} matches`,
   );
 
-  return finalResults.map((manga) => {
+  const matches = finalResults.map((manga) => {
     // Calculate a fresh confidence score using the original search title
     const confidence = calculateConfidence(
       typeof title === "string" ? title : "",
@@ -1576,6 +1600,11 @@ export async function searchMangaByTitle(
       confidence,
     };
   });
+
+  return {
+    matches,
+    pageInfo: lastPageInfo,
+  };
 }
 
 /**
@@ -1595,11 +1624,13 @@ export async function matchSingleManga(
   const searchConfig = { ...DEFAULT_SEARCH_CONFIG, ...config };
 
   // Search for potential matches
-  const potentialMatches = await searchMangaByTitle(
+  const searchResponse = await searchMangaByTitle(
     kenmeiManga.title,
     token,
     searchConfig,
   );
+
+  const potentialMatches = searchResponse.matches;
 
   // If using exact matching and we have matches, just use the top match
   if (searchConfig.exactMatchingOnly && potentialMatches.length > 0) {
@@ -1884,7 +1915,7 @@ export async function batchMatchManga(
               throw new Error("Operation cancelled by user");
             }
 
-            const potentialMatches = await searchMangaByTitle(
+            const searchResponse = await searchMangaByTitle(
               manga.title,
               token,
               searchConfig,
@@ -1892,7 +1923,9 @@ export async function batchMatchManga(
             );
 
             // Store the results
-            cachedResults[index] = potentialMatches.map((match) => match.manga);
+            cachedResults[index] = searchResponse.matches.map(
+              (match) => match.manga,
+            );
           }
         } catch (error) {
           // Check if this was a cancellation
