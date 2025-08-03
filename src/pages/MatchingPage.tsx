@@ -4,8 +4,6 @@
  * @description Matching page component for the Kenmei to AniList sync tool. Handles manga matching, review, rematch, and sync preparation.
  */
 
-// TODO: Add debug menu (Should be togglable from the settings page and accessible from a button next to the theme toggle on any page when it is on). Should have the option to view and update the values of any of the electron store values as well as the browser local storage values directly.
-
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { KenmeiManga } from "../api/kenmei/types";

@@ -115,17 +115,40 @@ VITE_ANILIST_CLIENT_SECRET=your-client-secret
 
 ## 📚 Documentation
 
-### Storage Implementation
+### For Users
 
-The app uses a three-layer storage architecture for data persistence and performance:
+- **[User Guide](./USER_GUIDE.md)** - Comprehensive guide for using the application
 
-- **[Storage Implementation Guide](./STORAGE_IMPLEMENTATION.md)** - Comprehensive documentation of the storage system, including:
+### For Developers
+
+- **[Architecture Documentation](./ARCHITECTURE.md)** - Comprehensive application architecture overview:
+  - Technology stack and framework decisions
+  - Process architecture (main vs renderer)
+  - Component hierarchy and data flow patterns
+  - Storage system and API integration details
+  - Build, deployment, and security considerations
+
+- **[Storage Implementation Guide](./STORAGE_IMPLEMENTATION.md)** - Technical documentation of the storage system:
   - Three-layer architecture (in-memory cache, localStorage, Electron Store)
   - Storage precedence and conflict resolution
   - Debug menu integration and automatic synchronization
   - Usage patterns and troubleshooting
 
-For developers working on the codebase or anyone interested in understanding how data is stored and synchronized across storage layers.
+- **[API Reference](./API_REFERENCE.md)** - Complete AniList API integration documentation:
+  - GraphQL queries and mutations
+  - Authentication and OAuth flow
+  - Rate limiting and error handling
+  - Data types and best practices
+
+- **[Contributing Guide](./CONTRIBUTING.md)** - Guidelines for contributing to the project:
+  - Development setup and workflow
+  - Code style and testing requirements
+  - Pull request process and review guidelines
+  - Issue reporting and feature requests
+
+### Additional Resources
+
+- **[Generated API Documentation](rlalpha49.github.io/KenmeiToAnilist/)** - TypeDoc generated documentation
 
 ---
 
