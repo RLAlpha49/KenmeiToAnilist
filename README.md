@@ -140,12 +140,6 @@ VITE_ANILIST_CLIENT_SECRET=your-client-secret
   - Rate limiting and error handling
   - Data types and best practices
 
-- **[Contributing Guide](./CONTRIBUTING.md)** - Guidelines for contributing to the project:
-  - Development setup and workflow
-  - Code style and testing requirements
-  - Pull request process and review guidelines
-  - Issue reporting and feature requests
-
 ### Additional Resources
 
 - **[Generated API Documentation](rlalpha49.github.io/KenmeiToAnilist/)** - TypeDoc generated documentation
