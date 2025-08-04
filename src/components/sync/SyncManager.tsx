@@ -128,14 +128,32 @@ const SyncManager: React.FC<SyncManagerProps> = ({
     if (syncActions?.startSync) {
       if (incrementalSync) {
         const processedEntries = entries.map((entry) => {
-          const previousProgress = entry.previousValues?.progress || 0;
+          // For new entries (no previousValues), use incremental sync if progress > 1
+          if (!entry.previousValues) {
+            const shouldUseIncremental = entry.progress > 1;
+            return {
+              ...entry,
+              syncMetadata: {
+                useIncrementalSync: shouldUseIncremental,
+                targetProgress: entry.progress,
+                progress: shouldUseIncremental ? 1 : entry.progress, // Start from 1 for incremental
+              },
+            };
+          }
+
+          // For existing entries, check if incremental sync is needed
+          const previousProgress = entry.previousValues.progress || 0;
           const targetProgress = entry.progress;
+          const shouldUseIncremental = targetProgress - previousProgress > 1;
+
           return {
             ...entry,
             syncMetadata: {
-              useIncrementalSync: targetProgress - previousProgress > 1,
+              useIncrementalSync: shouldUseIncremental,
               targetProgress,
-              progress: previousProgress + 1,
+              progress: shouldUseIncremental
+                ? previousProgress + 1
+                : entry.progress,
             },
           };
         });
@@ -313,24 +331,127 @@ const SyncManager: React.FC<SyncManagerProps> = ({
                     </div>
                   )}
 
-                {/* For entries that should be in the entries array, show changes */}
-                {completedEntries < totalEntries &&
-                  entries[completedEntries] && (
+                {/* Show changes for the current entry being processed */}
+                {status === "syncing" &&
+                  progress.currentEntry &&
+                  (() => {
+                    // Find the entry currently being processed by matching the mediaId
+                    const currentEntry = entries.find(
+                      (entry) =>
+                        entry.mediaId === progress.currentEntry?.mediaId,
+                    );
+                    return currentEntry;
+                  })() && (
                     <div className="mt-3 space-y-1.5 rounded-md bg-white/50 px-3 py-2 dark:bg-slate-800/20">
                       <h4 className="text-xs font-medium text-slate-600 dark:text-slate-300">
-                        Changes:
+                        Changes for current entry:
                       </h4>
-                      {entries[completedEntries].previousValues ? (
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-                          <div className="flex items-center justify-between">
-                            <span className="text-slate-500">Progress:</span>
-                            <div className="flex items-center">
-                              <span className="text-slate-500">
-                                {
-                                  entries[completedEntries].previousValues
-                                    ?.progress
-                                }
-                              </span>
+                      {(() => {
+                        const currentEntry = entries.find(
+                          (entry) =>
+                            entry.mediaId === progress.currentEntry?.mediaId,
+                        );
+                        return currentEntry?.previousValues ? (
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-500">Progress:</span>
+                              <div className="flex items-center">
+                                <span className="text-slate-500">
+                                  {currentEntry.previousValues?.progress}
+                                </span>
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="12"
+                                  height="12"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  className="mx-1 text-blue-400"
+                                >
+                                  <path d="M5 12h14"></path>
+                                  <path d="m12 5 7 7-7 7"></path>
+                                </svg>
+                                <span className="font-medium text-blue-600 dark:text-blue-400">
+                                  {currentEntry.progress}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-500">Status:</span>
+                              <div className="flex items-center">
+                                <span className="text-slate-500">
+                                  {currentEntry.previousValues?.status ||
+                                    "None"}
+                                </span>
+                                {currentEntry.status !==
+                                  currentEntry.previousValues?.status && (
+                                  <>
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      width="12"
+                                      height="12"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      className="mx-1 text-blue-400"
+                                    >
+                                      <path d="M5 12h14"></path>
+                                      <path d="m12 5 7 7-7 7"></path>
+                                    </svg>
+                                    <span className="font-medium text-blue-600 dark:text-blue-400">
+                                      {currentEntry.status}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-500">Score:</span>
+                              <div className="flex items-center">
+                                <span className="text-slate-500">
+                                  {currentEntry.previousValues?.score !==
+                                    null &&
+                                  currentEntry.previousValues?.score !==
+                                    undefined
+                                    ? currentEntry.previousValues.score
+                                    : "None"}
+                                </span>
+                                {currentEntry.score !==
+                                  currentEntry.previousValues?.score && (
+                                  <>
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      width="12"
+                                      height="12"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      className="mx-1 text-blue-400"
+                                    >
+                                      <path d="M5 12h14"></path>
+                                      <path d="m12 5 7 7-7 7"></path>
+                                    </svg>
+                                    <span className="font-medium text-blue-600 dark:text-blue-400">
+                                      {currentEntry.score}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="py-0.5">
+                            <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400">
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 width="12"
@@ -341,111 +462,16 @@ const SyncManager: React.FC<SyncManagerProps> = ({
                                 strokeWidth="2"
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
-                                className="mx-1 text-blue-400"
+                                className="mr-1"
                               >
+                                <path d="M12 5v14"></path>
                                 <path d="M5 12h14"></path>
-                                <path d="m12 5 7 7-7 7"></path>
                               </svg>
-                              <span className="font-medium text-blue-600 dark:text-blue-400">
-                                {entries[completedEntries].progress}
-                              </span>
-                            </div>
+                              New Entry
+                            </span>
                           </div>
-
-                          <div className="flex items-center justify-between">
-                            <span className="text-slate-500">Status:</span>
-                            <div className="flex items-center">
-                              <span className="text-slate-500">
-                                {entries[completedEntries].previousValues
-                                  ?.status || "None"}
-                              </span>
-                              {entries[completedEntries].status !==
-                                entries[completedEntries].previousValues
-                                  ?.status && (
-                                <>
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="12"
-                                    height="12"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="mx-1 text-blue-400"
-                                  >
-                                    <path d="M5 12h14"></path>
-                                    <path d="m12 5 7 7-7 7"></path>
-                                  </svg>
-                                  <span className="font-medium text-blue-600 dark:text-blue-400">
-                                    {entries[completedEntries].status}
-                                  </span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-slate-500">Score:</span>
-                            <div className="flex items-center">
-                              <span className="text-slate-500">
-                                {entries[completedEntries].previousValues
-                                  ?.score !== null &&
-                                entries[completedEntries].previousValues
-                                  ?.score !== undefined
-                                  ? entries[completedEntries].previousValues
-                                      .score
-                                  : "None"}
-                              </span>
-                              {entries[completedEntries].score !==
-                                entries[completedEntries].previousValues
-                                  ?.score && (
-                                <>
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="12"
-                                    height="12"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="mx-1 text-blue-400"
-                                  >
-                                    <path d="M5 12h14"></path>
-                                    <path d="m12 5 7 7-7 7"></path>
-                                  </svg>
-                                  <span className="font-medium text-blue-600 dark:text-blue-400">
-                                    {entries[completedEntries].score}
-                                  </span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="py-0.5">
-                          <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="12"
-                              height="12"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="mr-1"
-                            >
-                              <path d="M12 5v14"></path>
-                              <path d="M5 12h14"></path>
-                            </svg>
-                            New Entry
-                          </span>
-                        </div>
-                      )}
+                        );
+                      })()}
                     </div>
                   )}
               </div>
@@ -571,7 +597,7 @@ const SyncManager: React.FC<SyncManagerProps> = ({
                   <h3 className="text-sm font-semibold text-red-700 dark:text-red-400">
                     {(progress.retryAfter && progress.retryAfter > 10000) ||
                     rateLimitState.isRateLimited
-                      ? "Synchronization Paused"
+                      ? "Synchronization Paused. Rate Limit Exceeded"
                       : "Retrying After Server Error"}
                   </h3>
                 </div>

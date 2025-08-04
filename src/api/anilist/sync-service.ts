@@ -137,11 +137,11 @@ export async function updateMangaEntry(
       // For new entries, include all defined fields
       variables.status = entry.status;
 
-      if (typeof entry.progress === "number" && entry.progress > 0) {
+      if (typeof entry.progress === "number" && entry.progress >= 0) {
         variables.progress = entry.progress;
       }
 
-      if (typeof entry.score === "number" && entry.score > 0) {
+      if (typeof entry.score === "number" && entry.score >= 0) {
         variables.score = entry.score;
       }
 
@@ -567,13 +567,40 @@ export async function deleteMangaEntry(
 function getIncrementalSteps(entry: AniListMediaEntry): number[] {
   const steps: number[] = [];
   const prev = entry.previousValues;
-  const progressChanged = prev && entry.progress !== prev.progress;
-  const progressDelta = prev ? entry.progress - prev.progress : 0;
+
+  // For new entries (no previousValues)
+  if (!prev) {
+    const targetProgress = entry.progress;
+    const hasMetadata =
+      entry.status || entry.score || entry.private !== undefined;
+
+    // For new entries with progress > 1, use incremental steps
+    if (targetProgress > 1) {
+      steps.push(1, 2); // Step 1: progress = 1, Step 2: progress = target
+    } else if (targetProgress === 1) {
+      steps.push(1); // Step 1: progress = 1
+    }
+
+    // Always include step 3 for new entries to set status and other metadata
+    if (hasMetadata) {
+      steps.push(3);
+    }
+
+    // If no progress and no metadata, just add everything in one step
+    if (steps.length === 0) {
+      steps.push(1);
+    }
+
+    return steps;
+  }
+
+  // For existing entries (original logic)
+  const progressChanged = entry.progress !== prev.progress;
+  const progressDelta = entry.progress - prev.progress;
   const metadataChanged =
-    prev &&
-    (entry.status !== prev.status ||
-      entry.score !== prev.score ||
-      entry.private !== prev.private);
+    entry.status !== prev.status ||
+    entry.score !== prev.score ||
+    entry.private !== prev.private;
 
   // Step 1: Only if progress increased by exactly 1
   if (progressChanged && progressDelta === 1) {
@@ -852,9 +879,11 @@ export async function syncMangaBatch(
       storage.getItem(STORAGE_KEYS.SYNC_STATS) || "{}",
     );
     const totalSyncs = (prevStats.totalSyncs || 0) + 1;
+    const entriesSynced =
+      (prevStats.entriesSynced || 0) + report.successfulUpdates;
     const syncStats = {
       lastSyncTime: report.timestamp,
-      entriesSynced: report.successfulUpdates,
+      entriesSynced,
       failedSyncs: report.failedUpdates,
       totalSyncs,
     };
