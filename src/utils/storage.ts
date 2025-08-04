@@ -509,10 +509,10 @@ export function mergeMatchResults(newResults: MatchResult[]): MatchResult[] {
     const existingByTitle = new Map<string, MatchResult>();
 
     existingResults.forEach((match) => {
-      if (match.kenmeiManga?.id) {
+      if (match.kenmeiManga?.id != null) {
         existingById.set(match.kenmeiManga.id.toString(), match);
       }
-      if (match.kenmeiManga?.title) {
+      if (match.kenmeiManga?.title != null) {
         existingByTitle.set(match.kenmeiManga.title.toLowerCase(), match);
       }
     });
@@ -520,12 +520,13 @@ export function mergeMatchResults(newResults: MatchResult[]): MatchResult[] {
     // Process new results, preserving user progress from existing matches
     const processedResults = newResults.map((newMatch) => {
       // Try to find existing match by ID first
-      let existingMatch = newMatch.kenmeiManga?.id
-        ? existingById.get(newMatch.kenmeiManga.id.toString())
-        : undefined;
+      let existingMatch =
+        newMatch.kenmeiManga?.id != null
+          ? existingById.get(newMatch.kenmeiManga.id.toString())
+          : undefined;
 
       // If not found by ID, try title (case insensitive)
-      if (!existingMatch && newMatch.kenmeiManga?.title) {
+      if (!existingMatch && newMatch.kenmeiManga?.title != null) {
         existingMatch = existingByTitle.get(
           newMatch.kenmeiManga.title.toLowerCase(),
         );
@@ -554,12 +555,12 @@ export function mergeMatchResults(newResults: MatchResult[]): MatchResult[] {
     const processedIds = new Set<string>();
     const processedTitles = new Set<string>();
 
-    // Add all processed results to the tracking sets
+    // Add all processed results to the tracking sets with better null handling
     processedResults.forEach((result) => {
-      if (result.kenmeiManga?.id) {
+      if (result.kenmeiManga?.id != null) {
         processedIds.add(result.kenmeiManga.id.toString());
       }
-      if (result.kenmeiManga?.title) {
+      if (result.kenmeiManga?.title != null) {
         processedTitles.add(result.kenmeiManga.title.toLowerCase());
       }
     });
@@ -569,7 +570,7 @@ export function mergeMatchResults(newResults: MatchResult[]): MatchResult[] {
       (existingMatch) => {
         // Skip if we already processed this manga by ID
         if (
-          existingMatch.kenmeiManga?.id &&
+          existingMatch.kenmeiManga?.id != null &&
           processedIds.has(existingMatch.kenmeiManga.id.toString())
         ) {
           return false;
@@ -577,7 +578,7 @@ export function mergeMatchResults(newResults: MatchResult[]): MatchResult[] {
 
         // Skip if we already processed this manga by title
         if (
-          existingMatch.kenmeiManga?.title &&
+          existingMatch.kenmeiManga?.title != null &&
           processedTitles.has(existingMatch.kenmeiManga.title.toLowerCase())
         ) {
           return false;

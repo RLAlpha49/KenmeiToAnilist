@@ -523,27 +523,43 @@ export const useMatchingProcess = (authState: {
           console.log(`Found ${allManga.length} total manga in storage`);
 
           if (allManga.length > 0) {
-            // Find manga that haven't been processed yet based on titles
+            // Find manga that haven't been processed yet using comprehensive ID and title matching
+            const processedIds = new Set(
+              matchResults
+                .map((r) => r.kenmeiManga.id)
+                .filter((id) => id != null),
+            );
             const processedTitles = new Set(
               matchResults.map((r) => r.kenmeiManga.title.toLowerCase()),
             );
 
-            const titleBasedUnmatched = allManga.filter(
-              (manga: KenmeiManga) =>
-                !processedTitles.has(manga.title.toLowerCase()),
+            const comprehensiveUnmatched = allManga.filter(
+              (manga: KenmeiManga) => {
+                const idMatch = manga.id != null && processedIds.has(manga.id);
+                const titleMatch = processedTitles.has(
+                  manga.title.toLowerCase(),
+                );
+                return !idMatch && !titleMatch;
+              },
             );
 
-            if (titleBasedUnmatched.length > 0) {
+            if (comprehensiveUnmatched.length > 0) {
               console.log(
-                `Found ${titleBasedUnmatched.length} unmatched manga by title comparison`,
+                `Found ${comprehensiveUnmatched.length} unmatched manga using comprehensive ID and title comparison`,
+              );
+              console.log(
+                "Sample unmatched manga:",
+                comprehensiveUnmatched
+                  .slice(0, 5)
+                  .map((m: KenmeiManga) => ({ id: m.id, title: m.title })),
               );
               console.log("Starting matching process with all unmatched manga");
 
               // Set the pendingManga explicitly to the full list of unmatched manga
               // This ensures the correct count is shown in the UI
-              setPendingManga(titleBasedUnmatched);
+              setPendingManga(comprehensiveUnmatched);
 
-              startMatching(titleBasedUnmatched, false, setMatchResults);
+              startMatching(comprehensiveUnmatched, false, setMatchResults);
               return;
             }
           }
@@ -558,15 +574,20 @@ export const useMatchingProcess = (authState: {
           `Resuming matching process with ${pendingManga.length} remaining manga from pendingManga state`,
         );
 
-        // Add a check to ensure we're not duplicating already processed manga
+        // Add a check to ensure we're not duplicating already processed manga using comprehensive matching
+        const processedIds = new Set(
+          matchResults.map((r) => r.kenmeiManga.id).filter((id) => id != null),
+        );
         const processedTitles = new Set(
           matchResults.map((r) => r.kenmeiManga.title.toLowerCase()),
         );
 
-        // Filter out any manga that have already been processed
-        const uniquePendingManga = pendingManga.filter(
-          (manga) => !processedTitles.has(manga.title.toLowerCase()),
-        );
+        // Filter out any manga that have already been processed using comprehensive matching
+        const uniquePendingManga = pendingManga.filter((manga) => {
+          const idMatch = manga.id != null && processedIds.has(manga.id);
+          const titleMatch = processedTitles.has(manga.title.toLowerCase());
+          return !idMatch && !titleMatch;
+        });
 
         console.log(
           `Filtered out ${pendingManga.length - uniquePendingManga.length} already processed manga, remaining: ${uniquePendingManga.length}`,

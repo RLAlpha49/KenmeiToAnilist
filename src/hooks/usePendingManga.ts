@@ -122,26 +122,54 @@ export const usePendingManga = () => {
       `Calculating pending manga: all manga count = ${allManga.length}, processed results = ${processedResults.length}`,
     );
 
-    // Build sets for both IDs and titles
+    // Build sets for both IDs and titles with proper null/undefined handling - convert IDs to strings for consistent comparison
     const processedIds = new Set(
-      processedResults.map((r) => r.kenmeiManga.id).filter(Boolean),
+      processedResults
+        .map((r) => r.kenmeiManga.id?.toString())
+        .filter((id) => id != null),
     );
     const processedTitles = new Set(
-      processedResults.map((r) => r.kenmeiManga.title.toLowerCase()),
+      processedResults
+        .map((r) => r.kenmeiManga.title)
+        .filter((title) => title != null)
+        .map((title) => title.toLowerCase()),
     );
 
-    console.log("Processed IDs:", Array.from(processedIds).slice(0, 5));
-    console.log("Processed Titles:", Array.from(processedTitles).slice(0, 5));
+    console.log(
+      `Found ${processedIds.size} processed IDs and ${processedTitles.size} processed titles`,
+    );
+    console.log("Sample processed IDs:", Array.from(processedIds).slice(0, 5));
+    console.log(
+      "Sample processed Titles:",
+      Array.from(processedTitles).slice(0, 5),
+    );
 
-    // Only manga that are not in either set are pending
+    // Filter manga that are NOT in either set (comprehensive matching)
+    let debugCount = 0; // Counter for debug logging
     const pending = allManga.filter((m) => {
-      const idMatch = m.id && processedIds.has(m.id);
-      const titleMatch = processedTitles.has(m.title.toLowerCase());
-      return !idMatch && !titleMatch;
+      // Check if this manga is already processed by ID - convert to string for consistent comparison
+      const idMatch = m.id != null && processedIds.has(m.id.toString());
+
+      // Check if this manga is already processed by title
+      const titleMatch =
+        m.title != null && processedTitles.has(m.title.toLowerCase());
+
+      // Only include if it's NOT matched by either ID or title
+      const shouldInclude = !idMatch && !titleMatch;
+
+      // Debug logging for the first few manga
+      if (debugCount < 3 && shouldInclude) {
+        console.log(
+          `Manga "${m.title}" (ID: ${m.id}): idMatch=${idMatch}, titleMatch=${titleMatch}, shouldInclude=${shouldInclude}`,
+        );
+        debugCount++;
+      }
+
+      return shouldInclude;
     });
 
     console.log(
-      `Combined ID/title approach found ${pending.length} pending manga`,
+      `Comprehensive ID/title approach found ${pending.length} pending manga`,
     );
     if (pending.length > 0) {
       console.log(
