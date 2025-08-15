@@ -6,7 +6,7 @@ const { FuseVersion, FuseV1Options } = require("@electron/fuses");
 
 // Read package.json without using imports
 const getPackageVersion = () => {
-  const packageJsonPath = path.resolve("./package.json");
+  const packageJsonPath = path.resolve(__dirname, "../package.json");
   const packageJsonContent = fs.readFileSync(packageJsonPath, "utf8");
   const packageData = JSON.parse(packageJsonContent);
   return packageData.version;
@@ -14,13 +14,17 @@ const getPackageVersion = () => {
 
 const appVersion = getPackageVersion();
 
+const rootDir = path.resolve(__dirname, "..");
+const assetsDir = path.join(rootDir, "src", "assets");
+const iconBase = path.join(assetsDir, "k2a-icon-512x512");
+
 /** @type {import('@electron-forge/shared-types').ForgeConfig} */
 const config = {
   packagerConfig: {
     executableName: "kenmei-to-anilist",
     asar: true,
     appCopyright: `Copyright © ${new Date().getFullYear()}`,
-    icon: "./src/assets/k2a-icon-512x512",
+    icon: iconBase,
     appVersion: appVersion,
     buildVersion: appVersion,
     appBundleId: "com.rlapps.kenmeitoanilist",
@@ -31,7 +35,7 @@ const config = {
     {
       name: "@electron-forge/maker-squirrel",
       config: {
-        setupIcon: "./src/assets/k2a-icon-512x512.ico",
+        setupIcon: path.join(assetsDir, "k2a-icon-512x512.ico"),
         iconUrl:
           "https://raw.githubusercontent.com/RLAlpha49/KenmeiToAnilist/refs/heads/electron/src/assets/k2a-icon-512x512.ico",
         setupExe: "Kenmei-to-Anilist-Setup.exe",
@@ -48,16 +52,12 @@ const config = {
       name: "@electron-forge/maker-dmg",
       config: {
         name: "Kenmei-to-Anilist",
-        icon: "./src/assets/k2a-icon-512x512.icns",
+        icon: path.join(assetsDir, "k2a-icon-512x512.icns"),
         format: "ULFO",
       },
       platforms: ["darwin"],
     },
-    {
-      name: "@electron-forge/maker-zip",
-      config: {},
-      platforms: ["darwin"],
-    },
+    { name: "@electron-forge/maker-zip", config: {}, platforms: ["darwin"] },
     {
       name: "@electron-forge/maker-deb",
       config: {
@@ -66,7 +66,7 @@ const config = {
           productName: "Kenmei to Anilist",
           maintainer: "Alex Pettigrew",
           homepage: "https://github.com/RLAlpha49/KenmeiToAnilist",
-          icon: "./src/assets/k2a-icon-512x512.png",
+          icon: path.join(assetsDir, "k2a-icon-512x512.png"),
           version: appVersion,
         },
       },
@@ -79,20 +79,17 @@ const config = {
         build: [
           {
             entry: "src/main.ts",
-            config: "vite.main.config.ts",
+            config: "config/vite.main.config.ts",
             target: "main",
           },
           {
             entry: "src/preload.ts",
-            config: "vite.preload.config.ts",
+            config: "config/vite.preload.config.ts",
             target: "preload",
           },
         ],
         renderer: [
-          {
-            name: "main_window",
-            config: "vite.renderer.config.mts",
-          },
+          { name: "main_window", config: "config/vite.renderer.config.mts" },
         ],
       },
     },

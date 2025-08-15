@@ -4,17 +4,17 @@ This document provides a comprehensive overview of the Kenmei to AniList applica
 
 ## 📋 Table of Contents
 
-- [Overview](#overview)
-- [Technology Stack](#technology-stack)
-- [Application Architecture](#application-architecture)
-- [Process Architecture](#process-architecture)
-- [Component Architecture](#component-architecture)
-- [Data Flow & State Management](#data-flow--state-management)
-- [Storage Architecture](#storage-architecture)
-- [API Integration](#api-integration)
-- [Build & Deployment](#build--deployment)
-- [Security Considerations](#security-considerations)
-- [Performance Optimizations](#performance-optimizations)
+- [Overview](#-overview)
+- [Technology Stack](#️-technology-stack)
+- [Application Architecture](#️-application-architecture)
+- [Process Architecture](#️-process-architecture)
+- [Component Architecture](#-component-architecture)
+- [Data Flow & State Management](#-data-flow--state-management)
+- [Storage Architecture](#-storage-architecture)
+- [API Integration](#-api-integration)
+- [Build & Deployment](#-build--deployment)
+- [Security Considerations](#-security-considerations)
+- [Performance Optimizations](#-performance-optimizations)
 
 ## 🔎 Overview
 

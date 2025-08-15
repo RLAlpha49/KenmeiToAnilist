@@ -111,19 +111,19 @@ Configure what to sync:
 
 ### Common Import Issues
 
-**"Invalid CSV Format"**
+#### "Invalid CSV Format"
 
 - Ensure file has proper CSV structure
 - Check for missing headers
 - Verify file encoding (UTF-8 recommended)
 
-**"No Manga Found"**
+#### "No Manga Found"
 
 - Check if titles are in the correct column
 - Verify manga names match AniList database
 - Try manual matching for problem entries
 
-**"Authentication Failed"**
+#### "Authentication Failed"
 
 - Re-authenticate with AniList
 - Check internet connection

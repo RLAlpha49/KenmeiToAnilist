@@ -2,7 +2,7 @@
   "name": "Kenmei To Anilist",
   "entryPointStrategy": "expand",
   "entryPoints": ["./src"],
-  "out": "./docs",
+  "out": "./documentation",
   "plugin": [
     "typedoc-theme-hierarchy",
     "typedoc-plugin-missing-exports",

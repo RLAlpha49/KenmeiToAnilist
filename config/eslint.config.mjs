@@ -10,28 +10,20 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const prettierIgnorePath = path.resolve(__dirname, ".prettierignore");
+const prettierIgnorePath = path.resolve(__dirname, "../.prettierignore");
 
 /** @type {import('eslint').Linter.Config[]} */
 export default [
   includeIgnoreFile(prettierIgnorePath),
-  // Ignore patterns
   {
     ignores: [
-      // Build output
       "dist/**",
       ".vite/**",
       "out/**",
       "docs/**",
-
-      // Test output
       "playwright-report/**",
       "coverage/**",
-
-      // Node modules
       "node_modules/**",
-
-      // Configuration files that use CommonJS
       "**/*.config.js",
       "forge.config.js",
     ],
@@ -50,20 +42,13 @@ export default [
   pluginReact.configs.flat.recommended,
   {
     settings: {
-      react: {
-        version: "detect",
-      },
+      react: { version: "detect" },
     },
   },
   eslintPluginPrettierRecommended,
   ...tseslint.configs.recommended,
-
-  // Special rules for test files to disable specific linting errors
   {
     files: ["**/*.test.{ts,tsx}", "**/tests/**/*.{ts,tsx}"],
-    rules: {
-      // Allow any type in test files
-      "@typescript-eslint/no-explicit-any": "off",
-    },
+    rules: { "@typescript-eslint/no-explicit-any": "off" },
   },
 ];

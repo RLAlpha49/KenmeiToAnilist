@@ -11,15 +11,15 @@
 ## 📸 Screenshots
 
 - **Home Page**  
-  ![Home Page Screenshot](./demo/home-page.png)
+  ![Home Page Screenshot](./docs/assets/home-page.png)
 - **Import Kenmei CSV**  
-  ![Import Screenshot](./demo/import-page.png)
+  ![Import Screenshot](./docs/assets/import-page.png)
 - **Smart Matching**  
-  ![Matching Screenshot](./demo/review-page.png)
+  ![Matching Screenshot](./docs/assets/review-page.png)
 - **Sync to AniList**  
-  ![Sync Screenshot](./demo/sync-page.png)
+  ![Sync Screenshot](./docs/assets/sync-page.png)
 - **Settings**  
-  ![Settings Screenshot](./demo/settings-page.png)
+  ![Settings Screenshot](./docs/assets/settings-page.png)
 
 ---
 
@@ -117,32 +117,17 @@ VITE_ANILIST_CLIENT_SECRET=your-client-secret
 
 ### For Users
 
-- **[User Guide](./USER_GUIDE.md)** - Comprehensive guide for using the application
+- **[User Guide](./docs/guides/USER_GUIDE.md)** – How to use the application
 
 ### For Developers
 
-- **[Architecture Documentation](./ARCHITECTURE.md)** - Comprehensive application architecture overview:
-  - Technology stack and framework decisions
-  - Process architecture (main vs renderer)
-  - Component hierarchy and data flow patterns
-  - Storage system and API integration details
-  - Build, deployment, and security considerations
+- **[Architecture Documentation](./docs/guides/ARCHITECTURE.md)** – Technology choices, processes, structure, performance & security
+- **[Storage Implementation Guide](./docs/guides/STORAGE_IMPLEMENTATION.md)** – Three‑layer storage architecture details
+- **[AniList API Reference](./docs/guides/API_REFERENCE.md)** – GraphQL operations, auth, rate limiting, error handling
 
-- **[Storage Implementation Guide](./STORAGE_IMPLEMENTATION.md)** - Technical documentation of the storage system:
-  - Three-layer architecture (in-memory cache, localStorage, Electron Store)
-  - Storage precedence and conflict resolution
-  - Debug menu integration and automatic synchronization
-  - Usage patterns and troubleshooting
+### Generated API (TypeDoc)
 
-- **[API Reference](./API_REFERENCE.md)** - Complete AniList API integration documentation:
-  - GraphQL queries and mutations
-  - Authentication and OAuth flow
-  - Rate limiting and error handling
-  - Data types and best practices
-
-### Additional Resources
-
-- **[Generated API Documentation](rlalpha49.github.io/KenmeiToAnilist/)** - TypeDoc generated documentation
+- **[TypeDoc Site](https://rlalpha49.github.io/KenmeiToAnilist/)** – Auto‑generated source/API docs
 
 ---
 
