@@ -25,56 +25,56 @@ type TypeConfig = {
   label: string;
 };
 
-const TYPE_CONFIG: Record<ErrorType, TypeConfig> = {
-  [ErrorType.UNKNOWN]: {
+const TYPE_CONFIG: Record<string, TypeConfig> = {
+  unknown: {
     icon: <AlertCircle className="h-5 w-5" />,
     classes:
       "bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-300 border-red-200 dark:border-red-800",
     label: "Unknown",
   },
-  [ErrorType.VALIDATION]: {
+  validation: {
     icon: <Ban className="h-5 w-5" />,
     classes:
       "bg-orange-50 text-orange-800 dark:bg-orange-950 dark:text-orange-300 border-orange-200 dark:border-orange-800",
     label: "Validation",
   },
-  [ErrorType.NETWORK]: {
+  network: {
     icon: <WifiOff className="h-5 w-5" />,
     classes:
       "bg-yellow-50 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800",
     label: "Network",
   },
-  [ErrorType.AUTH]: {
+  auth: {
     icon: <Lock className="h-5 w-5" />,
     classes:
       "bg-blue-50 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border-blue-200 dark:border-blue-800",
     label: "Auth",
   },
-  [ErrorType.SERVER]: {
+  server: {
     icon: <Server className="h-5 w-5" />,
     classes:
       "bg-purple-50 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border-purple-200 dark:border-purple-800",
     label: "Server",
   },
-  [ErrorType.CLIENT]: {
+  client: {
     icon: <Monitor className="h-5 w-5" />,
     classes:
       "bg-gray-50 text-gray-800 dark:bg-gray-950 dark:text-gray-300 border-gray-200 dark:border-gray-800",
     label: "Client",
   },
-  [ErrorType.STORAGE]: {
+  storage: {
     icon: <HardDrive className="h-5 w-5" />,
     classes:
       "bg-cyan-50 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800",
     label: "Storage",
   },
-  [ErrorType.AUTHENTICATION]: {
+  AUTHENTICATION: {
     icon: <Lock className="h-5 w-5" />,
     classes:
       "bg-blue-50 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border-blue-200 dark:border-blue-800",
     label: "Authentication",
   },
-  [ErrorType.SYSTEM]: {
+  SYSTEM: {
     icon: <Cpu className="h-5 w-5" />,
     classes:
       "bg-fuchsia-50 text-fuchsia-800 dark:bg-fuchsia-950 dark:text-fuchsia-300 border-fuchsia-200 dark:border-fuchsia-800",
@@ -89,7 +89,7 @@ export function ErrorMessage({
   dismiss,
   showTypeLabel = true,
 }: ErrorMessageProps) {
-  const cfg = TYPE_CONFIG[type] ?? TYPE_CONFIG[ErrorType.UNKNOWN];
+  const cfg = TYPE_CONFIG[type] ?? TYPE_CONFIG[ErrorType.UNKNOWN] ?? TYPE_CONFIG["unknown"];
 
   return (
     <div

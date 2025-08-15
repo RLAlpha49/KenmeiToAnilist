@@ -11,7 +11,7 @@
     "typedoc-plugin-inline-sources"
   ],
   "theme": "hierarchy",
-  "tsconfig": "./tsconfig.json",
+  "tsconfig": "../tsconfig.json",
   "exclude": [
     "**/src/tests/**/*",
     "**/node_modules/**/*",
