@@ -89,7 +89,10 @@ export function ErrorMessage({
   dismiss,
   showTypeLabel = true,
 }: ErrorMessageProps) {
-  const cfg = TYPE_CONFIG[type] ?? TYPE_CONFIG[ErrorType.UNKNOWN] ?? TYPE_CONFIG["unknown"];
+  const cfg =
+    TYPE_CONFIG[type] ??
+    TYPE_CONFIG[ErrorType.UNKNOWN] ??
+    TYPE_CONFIG["unknown"];
 
   return (
     <div
