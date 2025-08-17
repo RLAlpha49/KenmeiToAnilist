@@ -2,1446 +2,1446 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/index.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/App.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/App.app.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/anilist-client.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/anilist-client.Cache.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/anilist-client.request.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/anilist-client.getOAuthUrl.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/anilist-client.getAccessToken.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/anilist-client.searchManga.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/anilist-client.advancedSearchManga.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/anilist-client.clearSearchCache.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/anilist-client.getMangaByIds.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/anilist-client.getUserMangaList.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/anilist-client.__test__.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/anilist-mutations.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/anilist-mutations.generateUpdateMangaEntryMutation.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/anilist-mutations.DELETE_MANGA_ENTRY.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/anilist-queries.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/anilist-queries.GET_VIEWER.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/anilist-queries.GET_USER_MANGA_LIST.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/anilist-queries.SEARCH_MANGA.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/anilist-queries.ADVANCED_SEARCH_MANGA.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/anilist-queries.GET_MANGA_BY_ID.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/anilist-queries.GET_MANGA_BY_IDS.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/anilist-sync-service.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/anilist-sync-service.SyncResult.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/anilist-sync-service.SyncProgress.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/anilist-sync-service.SyncReport.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/anilist-sync-service.updateMangaEntry.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/anilist-sync-service.deleteMangaEntry.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/anilist-sync-service.syncMangaBatch.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/anilist-sync-service.retryFailedUpdates.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/anilist-types.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/types/anilist-types.MediaListStatus.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/anilist-types.AniListManga.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/anilist-types.AniListMediaEntry.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/anilist-types.AniListUser.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/anilist-types.GraphQLError.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/anilist-types.AniListResponse.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/anilist-types.PageInfo.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/anilist-types.SearchResult.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/anilist-types.MangaMatch.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/anilist-types.MangaSearchResponse.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/types/anilist-types.MatchStatus.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/anilist-types.MangaMatchResult.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/anilist-types.UserMediaEntry.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/types/anilist-types.UserMediaList.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/kenmei-data-processor.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/kenmei-data-processor.ProcessOptions.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/kenmei-data-processor.DEFAULT_PROCESS_OPTIONS.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/kenmei-data-processor.processKenmeiExport.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/kenmei-data-processor.prepareEntryForSync.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/kenmei-data-processor.extractReadingStats.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/kenmei-data-processor.processMangaInBatches.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/kenmei-data-processor.filterMangaEntries.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/kenmei-matcher.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/kenmei-matcher.calculateSimilarity.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/kenmei-matcher.scoreMatch.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/kenmei-matcher.findBestMatch.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/kenmei-parser.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/kenmei-parser.parseKenmeiExport.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/kenmei-parser.processKenmeiMangaBatches.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/kenmei-parser.parseKenmeiCsvExport.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/kenmei-parser.extractMangaMetadata.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/status-mapper.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/status-mapper.mapKenmeiToAniListStatus.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/status-mapper.mapAniListToKenmeiStatus.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/status-mapper.createCustomStatusMapping.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/status-mapper.getAllPossibleStatusMappings.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/kenmei-types.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/types/kenmei-types.KenmeiStatus.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/kenmei-types.KenmeiManga.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/kenmei-types.KenmeiExport.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/kenmei-types.KenmeiParseOptions.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/kenmei-types.DEFAULT_PARSE_OPTIONS.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/kenmei-types.MangaMatch.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/kenmei-types.STATUS_MAPPING.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/kenmei-types.StatusMappingConfig.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/kenmei-types.ValidationError.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/kenmei-types.ProcessingResult.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/manga-search-service.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/manga-search-service.SearchServiceConfig.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/manga-search-service.DEFAULT_SEARCH_CONFIG.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/manga-search-service.searchMangaByTitle.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/manga-search-service.matchSingleManga.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/manga-search-service.batchMatchManga.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/manga-search-service.preloadCommonManga.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/manga-search-service.clearMangaCache.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/manga-search-service.getCacheStats.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/manga-search-service.cacheDebugger.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/manga-search-service.getBatchedMangaIds.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/manga-search-service.clearCacheForTitles.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/match-engine.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/match-engine.MatchEngineConfig.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/match-engine.DEFAULT_MATCH_CONFIG.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/match-engine.normalizeString.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/match-engine.calculateSimilarity.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/match-engine.scoreMatch.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/match-engine.findBestMatches.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/match-engine.processBatchMatches.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/DragWindowRegion.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/DragWindowRegion.DragWindowRegionProps.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/DragWindowRegion.dragWindowRegion.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/DragWindowRegion.WindowButtons.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/components_RateLimitCountdown.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/components_RateLimitCountdown.RateLimitCountdownProps.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/components_RateLimitCountdown.RateLimitCountdown.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/ToggleTheme.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/ToggleTheme.toggleTheme.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/DebugMenu.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/DebugMenu.DebugMenuProps.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/DebugMenu.DebugMenu.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/DataTable.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/DataTable.DataTableProps.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/DataTable.DataTable.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/FileDropZone.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/FileDropZone.FileDropZoneProps.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/FileDropZone.FileDropZone.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/ImportSummary.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/ImportSummary.ImportSummaryProps.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/ImportSummary.StatusCount.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/ImportSummary.ImportSummary.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/BaseLayout.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/BaseLayout.baseLayout.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/Footer.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/Footer.Footer.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/Header.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/Header.Header.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/CacheClearingNotification.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/CacheClearingNotification.CacheClearingNotificationProps.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/CacheClearingNotification.CacheClearingNotification.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/ErrorDisplay.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/ErrorDisplay.ErrorDisplayProps.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/ErrorDisplay.ErrorDisplay.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/MangaMatchingPanel.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/MangaMatchingPanel.MangaMatchingPanelProps.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/MangaMatchingPanel.MangaMatchingPanel.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/MangaSearchPanel.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/MangaSearchPanel.MangaSearchPanelProps.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/MangaSearchPanel.MangaSearchPanel.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/MatchingProgressPanel.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/MatchingProgressPanel.MatchingProgressProps.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/MatchingProgressPanel.MatchingProgressPanel.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/RematchOptions.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/RematchOptions.RematchOptionsProps.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/RematchOptions.RematchOptions.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/ResumeNotification.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/ResumeNotification.ResumeNotificationProps.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/ResumeNotification.ResumeNotification.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/SearchModal.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/SearchModal.SearchModalProps.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/SearchModal.SearchModal.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/SyncManager.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/SyncManager.SyncManagerProps.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/SyncManager.SyncManager.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/SyncResultsView.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/SyncResultsView.SyncResultsViewProps.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/SyncResultsView.SyncResultsView.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/anilist_config.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/anilist_config.DEFAULT_AUTH_PORT.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/anilist_config.DEFAULT_ANILIST_CONFIG.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/anilist_config.AUTH_STORAGE_CONFIG.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/anilist_config.ANILIST_API_ENDPOINTS.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/anilist_config.RATE_LIMIT_CONFIG.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/AuthContext.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/AuthContext.AuthProviderProps.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/AuthContext.AuthProvider.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/AuthContextDefinition.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/AuthContextDefinition.AuthContext.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/DebugContext.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/DebugContext.DebugContextType.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/DebugContext.DebugProvider.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/DebugContext.useDebug.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/RateLimitContext.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/RateLimitContext.RateLimitState.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/RateLimitContext.RateLimitContextType.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/RateLimitContext.RateLimitProvider.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/RateLimitContext.useRateLimit.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/ThemeContext.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/ThemeContext.ThemeContextType.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/ThemeContext.ThemeProvider.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/ThemeContext.useTheme.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/api_context.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/api_context.exposeApiContext.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/api_listeners.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/api_listeners.setupAniListAPI.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/auth_context.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/auth_context.exposeAuthContext.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/auth_listeners.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/auth_listeners.addAuthEventListeners.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/context_exposer.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/context_exposer.contextExposer.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/listeners_register.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/listeners_register.listenersRegister.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/store_context.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/store_context.exposeStoreContext.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/store_setup.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/store_setup.setupStoreIPC.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/theme_channels.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/theme_channels.THEME_MODE_CURRENT_CHANNEL.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/theme_channels.THEME_MODE_TOGGLE_CHANNEL.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/theme_channels.THEME_MODE_DARK_CHANNEL.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/theme_channels.THEME_MODE_LIGHT_CHANNEL.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/theme_channels.THEME_MODE_SYSTEM_CHANNEL.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/theme_context.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/theme_context.exposeThemeContext.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/theme_listeners.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/theme_listeners.addThemeEventListeners.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/window_channels.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/window_channels.WIN_MINIMIZE_CHANNEL.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/window_channels.WIN_MAXIMIZE_CHANNEL.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/window_channels.WIN_CLOSE_CHANNEL.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/window_context.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/window_context.exposeWindowContext.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/window_listeners.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/window_listeners.addWindowEventListeners.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/theme_helpers.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/theme_helpers.THEME_KEY.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/theme_helpers.ThemePreferences.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/theme_helpers.getCurrentTheme.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/theme_helpers.setTheme.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/theme_helpers.toggleTheme.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/theme_helpers.syncThemeWithLocal.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/theme_helpers.updateDocumentTheme.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/window_helpers.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/window_helpers.minimizeWindow.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/window_helpers.maximizeWindow.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/window_helpers.closeWindow.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/useAuth.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/useAuth.useAuth.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/useMatchHandlers.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/useMatchHandlers.useMatchHandlers.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/useMatchingProcess.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/useMatchingProcess.useMatchingProcess.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/usePendingManga.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/usePendingManga.usePendingManga.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/useSynchronization.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/useSynchronization.SynchronizationState.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/useSynchronization.SynchronizationActions.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/useSynchronization.useSynchronization.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/useTimeEstimate.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/useTimeEstimate.useTimeEstimate.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/main.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/main.createWindow.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/main.installExtensions.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/HomePage.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/HomePage.HomePage.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/ImportPage.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/ImportPage.ImportPage.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/MatchingPage.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/MatchingPage.MatchingPage.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/SettingsPage.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/SettingsPage.SettingsPage.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/SyncPage.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/SyncPage.SyncPage.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/preload.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/renderer.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/root-route.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/root-route.RootRoute.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/root-route.Root.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/router.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/router.history.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/router.router.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/routes.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/routes.HomeRoute.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/routes.ImportRoute.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/routes.ReviewRoute.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/routes.SyncRoute.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/routes.SettingsRoute.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/routes.rootTree.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/api-types.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/api-types.TokenExchangeParams.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/auth-types.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/auth-types.AuthState.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/auth-types.APICredentials.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/auth-types.TokenExchangeResponse.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/auth-types.ViewerResponse.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/auth-types.AuthContextType.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/types_images.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/types_images.value.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/kenmei-types-1.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/kenmei-types.KenmeiMangaItem.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/kenmei-types.KenmeiData.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/matching-types.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/matching-types.ApiError.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/matching-types.MatchingProgress.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/matching-types.TimeEstimate.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/matching-types.StatusFilterOptions.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/matching-types.MatchHandlersProps.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/theme-mode.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/types/theme-mode.ThemeMode.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/types.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/types.MAIN_WINDOW_VITE_DEV_SERVER_URL.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/types.MAIN_WINDOW_VITE_NAME.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/types.ThemeModeContext.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/types.ElectronWindow.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/app-version.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/app-version.getAppVersion.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/app-version.getAppVersionElectron.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/app-version.getFormattedAppVersion.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/app-version.UpdateInfo.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/app-version.checkForUpdates.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/app-version.compareVersions.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/types/app-version.AppVersionStatus.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/types/app-version.GitHubRelease.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/app-version.getAppVersionStatus.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/enhanced-similarity.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/enhanced-similarity.SimilarityConfig.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/enhanced-similarity.DEFAULT_SIMILARITY_CONFIG.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/enhanced-similarity.enhancedNormalize.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/enhanced-similarity.extractMeaningfulWords.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/enhanced-similarity.calculateEnhancedSimilarity.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/errorHandling.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/enums/errorHandling.ErrorType.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/errorHandling.AppError.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/errorHandling.createError.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/errorHandling.handleNetworkError.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/errorHandling.fetchWithTimeout.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/errorHandling.showErrorNotification.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/errorHandling.safeAsync.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/export-utils.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/export-utils.exportSyncErrorLog.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/export-utils.exportSyncReport.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/export-utils.saveSyncReportToHistory.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/export-utils.getSyncHistory.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/export-utils.downloadJson.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/export-utils.exportDataToFile.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/mediaListHelpers.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/mediaListHelpers.formatMediaListStatus.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/mediaListHelpers.getStatusColor.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/mediaListHelpers.getStatusBadgeColor.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/mediaListHelpers.formatScore.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/mediaListHelpers.isOnUserList.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/storage.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/storage.KenmeiManga.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/storage.KenmeiData.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/storage.ImportStats.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/storage.AnilistMatch.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/interfaces/storage.MatchResult.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/storage.storageCache.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/storage.storage.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/storage.STORAGE_KEYS.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/storage.CURRENT_CACHE_VERSION.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/types/storage.SyncConfig.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/storage.DEFAULT_SYNC_CONFIG.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/types/storage.MatchConfig.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/variables/storage.DEFAULT_MATCH_CONFIG.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/storage.saveKenmeiData.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/storage.getKenmeiData.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/storage.getImportStats.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/storage.getStatusCountsFromData.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/storage.getSavedMatchResults.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/storage.mergeMatchResults.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/storage.saveSyncConfig.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/storage.getSyncConfig.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/storage.saveMatchConfig.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/storage.getMatchConfig.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/tailwind.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/tailwind.cn.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/modules/timeUtils.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 	<url>
 		<loc>https://rlalpha49.github.io/KenmeiToAnilist/functions/timeUtils.formatTimeRemaining.html</loc>
-		<lastmod>2025-08-06T17:43:12.073Z</lastmod>
+		<lastmod>2025-08-17T16:06:34.903Z</lastmod>
 	</url>
 </urlset>
