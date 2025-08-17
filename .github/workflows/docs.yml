@@ -31,6 +31,6 @@ jobs:
       - name: Deploy to Documentation Branch
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: docs
+          folder: documentation
           branch: documentation
           clean: true
