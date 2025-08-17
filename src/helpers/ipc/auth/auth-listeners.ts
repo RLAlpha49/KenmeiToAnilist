@@ -237,6 +237,41 @@ export function addAuthEventListeners(mainWindow: BrowserWindow) {
   ipcMain.handle("auth:exchangeToken", async (_, params) => {
     try {
       const { clientId, clientSecret, redirectUri, code } = params;
+      // Validation guard: ensure required fields are present and non-empty
+      const missing: string[] = [];
+      if (!clientId) missing.push("clientId");
+      if (!clientSecret) missing.push("clientSecret");
+      if (!redirectUri) missing.push("redirectUri");
+      if (!code) missing.push("code");
+      if (missing.length) {
+        console.error("auth:exchangeToken missing required fields", missing);
+        return {
+          success: false,
+          error: `Missing required auth fields: ${missing.join(", ")}`,
+        };
+      }
+      // Basic sanity checks
+      if (clientId.length < 4 || clientSecret.length < 8) {
+        console.warn("auth:exchangeToken suspicious credential lengths", {
+          clientIdLen: clientId.length,
+          clientSecretLen: clientSecret.length,
+        });
+      }
+      // Redirect URI strictness: AniList requires exact match including protocol and path
+      try {
+        const parsed = new URL(redirectUri);
+        if (!/^https?:$/.test(parsed.protocol)) {
+          return {
+            success: false,
+            error: `Invalid redirect URI protocol: ${parsed.protocol}`,
+          };
+        }
+      } catch {
+        return {
+          success: false,
+          error: `Invalid redirect URI format: ${redirectUri}`,
+        };
+      }
       console.log("Exchanging token in main process:", {
         clientId: clientId.substring(0, 4) + "...",
         redirectUri,
@@ -282,6 +317,17 @@ export function addAuthEventListeners(mainWindow: BrowserWindow) {
           if (!response.ok) {
             const errorText = await response.text();
             console.error("Token exchange error:", errorText);
+            if (errorText.includes("invalid_client")) {
+              console.error(
+                "Detected invalid_client from AniList. Diagnostics:",
+                {
+                  clientIdLen: clientId.length,
+                  clientSecretLen: clientSecret.length,
+                  redirectUri,
+                  codeLen: code.length,
+                },
+              );
+            }
             throw new Error(`API error: ${response.status} ${errorText}`);
           }
 

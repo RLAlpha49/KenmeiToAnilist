@@ -81,14 +81,14 @@ yarn make
 
 ### Environment Variables
 
-Create a `.env` file in the root if you want to override AniList credentials:
+Create a `.env` file in the root if you want to set the default AniList credentials:
 
 ```env
 VITE_ANILIST_CLIENT_ID=your-client-id
 VITE_ANILIST_CLIENT_SECRET=your-client-secret
 ```
 
-> Default values are set in `src/config/anilist.ts`. You can also configure credentials in the app's Settings page.
+> You can also configure credentials in the app's Settings page.
 
 ---
 

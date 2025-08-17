@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect, ReactNode, useRef } from "react";
+import { toast } from "sonner";
 import { storage } from "../utils/storage";
 import {
   AuthState,
@@ -62,6 +63,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [customCredentials, setCustomCredentials] =
     useState<APICredentials | null>(null);
   const [isBrowserAuthFlow, setIsBrowserAuthFlow] = useState(false);
+  // Track a monotonic auth attempt id to prevent races (stale responses)
+  const authAttemptRef = useRef(0);
+  // Lock credential source during an active OAuth flow to avoid mismatches
+  const lockedCredentialSourceRef = useRef<null | ("default" | "custom")>(null);
 
   // Update storage only when state meaningfully changes
   useEffect(() => {
@@ -79,6 +84,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (!window.electronAuth?.onCodeReceived) return;
 
     const unsubscribe = window.electronAuth.onCodeReceived(async (data) => {
+      const currentAttempt = authAttemptRef.current;
       try {
         // We received the code, so the browser flow is now complete
         setIsBrowserAuthFlow(false);
@@ -88,10 +94,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
           "Authorization code received! Exchanging for token...",
         );
 
+        // Guard against stale events if user restarted login mid-flow
+        if (currentAttempt !== authAttemptRef.current) {
+          console.warn("Stale auth code event ignored (attempt id mismatch)");
+          toast.warning("Ignored outdated authentication response.");
+          return;
+        }
+
+        // Use locked credential source if set to avoid mid-flow toggles
+        const effectiveSource: "default" | "custom" =
+          lockedCredentialSourceRef.current || authState.credentialSource;
+
         // Get the current credentials being used
-        const credentialsResponse = await window.electronAuth.getCredentials(
-          authState.credentialSource,
-        );
+        const credentialsResponse =
+          await window.electronAuth.getCredentials(effectiveSource);
 
         if (!credentialsResponse.success || !credentialsResponse.credentials) {
           throw new Error(
@@ -101,6 +117,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         const { clientId, clientSecret, redirectUri } =
           credentialsResponse.credentials;
+
+        // Validate that essential fields are present before attempting exchange
+        if (!clientId || !clientSecret || !redirectUri) {
+          toast.error(
+            "Credentials incomplete. Please ensure Client ID, Secret & Redirect URI are set.",
+          );
+          throw new Error(
+            "Incomplete credentials: missing clientId, clientSecret or redirectUri",
+          );
+        }
 
         console.log("Exchanging auth code for token with credentials:", {
           clientId: clientId.substring(0, 4) + "...",
@@ -121,6 +147,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
             redirectUri,
             code: data.code,
           });
+
+          // Re-check attempt id after async boundary to prevent stale token applying
+          if (currentAttempt !== authAttemptRef.current) {
+            console.warn(
+              "Discarding token from stale auth attempt (attempt id changed)",
+            );
+            toast.warning(
+              "Discarded token from an outdated authentication attempt.",
+            );
+            return;
+          }
 
           if (!tokenExchangeResult.success || !tokenExchangeResult.token) {
             throw new Error(
@@ -199,12 +236,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
 
         setIsLoading(false);
+        // Clear credential lock after flow completes
+        lockedCredentialSourceRef.current = null;
       } catch (err: unknown) {
         console.error("Authentication error:", err);
+        toast.error(
+          err instanceof Error ? err.message : "Authentication failed",
+        );
         setError(err instanceof Error ? err.message : "Authentication failed");
         setStatusMessage(null);
         setIsLoading(false);
         setIsBrowserAuthFlow(false);
+        lockedCredentialSourceRef.current = null;
       }
     });
 
@@ -248,6 +291,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setError(null);
       setStatusMessage("Preparing authentication...");
       setIsBrowserAuthFlow(true);
+      // Increment attempt id and lock credential source for this flow
+      authAttemptRef.current += 1;
+      lockedCredentialSourceRef.current = authState.credentialSource;
 
       // Make sure the redirectUri is properly formatted with http://
       let redirectUri = credentials.redirectUri;
@@ -264,6 +310,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const storeResult =
         await window.electronAuth.storeCredentials(credentials);
       if (!storeResult.success) {
+        toast.error(storeResult.error || "Failed to store credentials");
         throw new Error(storeResult.error || "Failed to store credentials");
       }
 
@@ -282,6 +329,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         );
 
         if (!result.success) {
+          toast.error(result.error || "Failed to open authentication window");
           throw new Error(
             result.error || "Failed to open authentication window",
           );
@@ -289,11 +337,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       } catch (err) {
         if (!isBrowserAuthFlow) {
           console.error("Login window error:", err);
-          setError(
+          const msg =
             err instanceof Error
               ? err.message
-              : "Failed to open authentication window",
-          );
+              : "Failed to open authentication window";
+          toast.error(msg);
+          setError(msg);
           setStatusMessage(null);
           setIsLoading(false);
           setIsBrowserAuthFlow(false);
@@ -307,7 +356,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // The rest of the authentication process happens in the code received listener
     } catch (err: unknown) {
       console.error("Login error:", err);
-      setError(err instanceof Error ? err.message : "Login failed");
+      const msg = err instanceof Error ? err.message : "Login failed";
+      toast.error(msg);
+      setError(msg);
       setStatusMessage(null);
       setIsLoading(false);
       setIsBrowserAuthFlow(false);
@@ -324,12 +375,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
       credentialSource: authState.credentialSource,
     });
     setStatusMessage(null);
+    lockedCredentialSourceRef.current = null;
   };
 
   // Set credential source
   const setCredentialSource = (source: "default" | "custom") => {
     // Only update if the source actually changed
     if (source !== authState.credentialSource) {
+      // Prevent switching source during an active OAuth browser flow
+      if (isBrowserAuthFlow) {
+        console.warn(
+          "Credential source change ignored during active auth flow",
+        );
+        return;
+      }
       setAuthState((prevState) => ({
         ...prevState,
         credentialSource: source,
