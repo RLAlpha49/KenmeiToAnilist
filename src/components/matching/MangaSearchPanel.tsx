@@ -15,6 +15,7 @@ import {
 import { KenmeiManga } from "../../api/kenmei/types";
 import { AniListManga } from "../../api/anilist/types";
 import { searchMangaByTitle } from "../../api/matching/manga-search-service";
+import { getMangaByIds } from "../../api/anilist/client";
 
 // Import utility functions for media list formatting
 import {
@@ -26,13 +27,6 @@ import {
 
 // Import storage utilities
 import { getMatchConfig } from "../../utils/storage";
-
-// Track searches globally to prevent duplicates across component remounts
-const searchTracker = {
-  lastMangaId: undefined as number | undefined,
-  lastSearchTime: 0,
-  searchInProgress: false,
-};
 
 /**
  * Props for the MangaSearchPanel component.
@@ -116,42 +110,6 @@ export function MangaSearchPanel({
   const headerClasses = "text-xl font-medium"; // Increased from text-lg
   const titleClasses = "text-2xl font-semibold"; // Increased from text-lg
 
-  // Need to prevent duplicate searches within a short time window
-  const initiateSearch = (title: string) => {
-    const now = Date.now();
-    const currentMangaId = kenmeiManga?.id;
-
-    // Don't search if:
-    // 1. A search is already in progress
-    // 2. We've searched for this manga ID very recently (within 2 seconds)
-    // 3. This is the same manga ID as the last search
-    if (
-      searchTracker.searchInProgress ||
-      (currentMangaId === searchTracker.lastMangaId &&
-        now - searchTracker.lastSearchTime < 2000)
-    ) {
-      console.log(
-        `🔍 Skipping duplicate search for "${title}" - searched recently or in progress`,
-      );
-      return;
-    }
-
-    // Update tracker before starting search
-    searchTracker.lastMangaId = currentMangaId;
-    searchTracker.lastSearchTime = now;
-    searchTracker.searchInProgress = true;
-
-    console.log(`🔍 Initiating search for "${title}"`);
-    setSearchQuery(title);
-
-    // Small delay to ensure state is set
-    setTimeout(() => {
-      handleSearch(title).finally(() => {
-        searchTracker.searchInProgress = false;
-      });
-    }, 100);
-  };
-
   useEffect(() => {
     // Focus the search input
     if (searchInputRef.current) {
@@ -190,91 +148,139 @@ export function MangaSearchPanel({
 
       const startTime = performance.now();
 
-      // Ensure manual searches always show results by setting exactMatchingOnly to false
-      const searchConfig = {
-        bypassCache: !!bypassCache,
-        maxSearchResults: 30,
-        searchPerPage: 50,
-        exactMatchingOnly: false, // Always false for manual searches
-      };
+      // Check if the query is a valid AniList ID (numeric and reasonable range)
+      const isNumericId = /^\d+$/.test(query.trim());
+      const mangaId = isNumericId ? parseInt(query.trim(), 10) : null;
+      const isValidMangaId = mangaId && mangaId > 0 && mangaId < 10000000; // Reasonable ID range
 
-      console.log(`🔎 Search config:`, searchConfig);
+      if (isValidMangaId) {
+        console.log(`🔎 Detected AniList ID search: ${mangaId}`);
 
-      const searchResponse = await searchMangaByTitle(
-        query,
-        token,
-        searchConfig,
-        undefined, // abortSignal
-        pageNum, // Pass the specific page number
-      );
-      const results = searchResponse.matches;
-      const pageInfo = searchResponse.pageInfo;
+        // Search by ID using getMangaByIds
+        const idResults = await getMangaByIds([mangaId], token);
+
+        if (idResults.length > 0) {
+          console.log(`🔎 Found manga by ID ${mangaId}:`, idResults[0]);
+
+          // Set the results directly for ID searches
+          if (pageNum === 1) {
+            setSearchResults(idResults);
+          } else {
+            // For pagination (though unlikely with ID search), append results
+            setSearchResults((prev) => {
+              const existingIds = new Set(prev.map((manga) => manga.id));
+              const newResults = idResults.filter(
+                (manga) => !existingIds.has(manga.id),
+              );
+              return [...prev, ...newResults];
+            });
+          }
+
+          // Set pagination info for ID search (single result)
+          setHasNextPage(false);
+          setPage(1);
+        } else {
+          console.log(`⚠️ No manga found for ID ${mangaId}`);
+          if (pageNum === 1) {
+            setSearchResults([]);
+          }
+          setHasNextPage(false);
+        }
+      } else {
+        console.log(`🔎 Performing title search for: "${query}"`);
+
+        // Ensure manual searches always show results by setting exactMatchingOnly to false
+        const searchConfig = {
+          bypassCache: !!bypassCache,
+          maxSearchResults: 30,
+          searchPerPage: 50,
+          exactMatchingOnly: false, // Always false for manual searches
+        };
+
+        console.log(`🔎 Search config:`, searchConfig);
+
+        const searchResponse = await searchMangaByTitle(
+          query,
+          token,
+          searchConfig,
+          undefined, // abortSignal
+          pageNum, // Pass the specific page number
+        );
+        const results = searchResponse.matches;
+        const pageInfo = searchResponse.pageInfo;
+
+        const endTime = performance.now();
+
+        console.log(
+          `🔎 Search completed in ${(endTime - startTime).toFixed(2)}ms for "${query}"`,
+        );
+        console.log(
+          `🔎 Search returned ${results.length} results for "${query}"`,
+        );
+
+        // Log the actual titles received
+        if (results.length > 0) {
+          console.log(
+            `🔎 Titles received:`,
+            results.map((m) => ({
+              title:
+                m.manga.title?.romaji || m.manga.title?.english || "unknown",
+              confidence: m.confidence.toFixed(1),
+              id: m.manga.id,
+            })),
+          );
+        }
+
+        if (results.length === 0) {
+          console.log(
+            `⚠️ No results found for "${query}" - this could indicate a cache or display issue`,
+          );
+        }
+
+        if (pageNum === 1) {
+          console.log(`🔎 Resetting search results for "${query}"`);
+          setSearchResults(results.map((match) => match.manga));
+        } else {
+          console.log(
+            `🔎 Appending ${results.length} results to existing ${searchResults.length} results`,
+          );
+          setSearchResults((prev) => {
+            // Create a set of existing manga IDs to avoid duplicates
+            const existingIds = new Set(prev.map((manga) => manga.id));
+
+            // Filter out duplicates from new results
+            const newUniqueResults = results
+              .map((match) => match.manga)
+              .filter((manga) => !existingIds.has(manga.id));
+
+            console.log(
+              `🔎 Adding ${newUniqueResults.length} unique results (filtered ${results.length - newUniqueResults.length} duplicates)`,
+            );
+
+            return [...prev, ...newUniqueResults];
+          });
+        }
+
+        // Use actual pagination info from API response if available
+        if (pageInfo) {
+          console.log(`🔎 Using API pagination info:`, pageInfo);
+          setHasNextPage(pageInfo.hasNextPage);
+          setPage(pageInfo.currentPage);
+        } else {
+          // Fallback logic (for cached results that don't have pagination info)
+          console.log(`🔎 No pagination info available, using fallback logic`);
+          setHasNextPage(false); // Can't load more without pagination info
+          setPage(pageNum);
+        }
+
+        console.log(
+          `🔎 UI state updated: searchResults.length=${results.length}, hasNextPage=${pageInfo?.hasNextPage || false}, page=${pageInfo?.currentPage || pageNum}`,
+        );
+      }
 
       const endTime = performance.now();
-
       console.log(
         `🔎 Search completed in ${(endTime - startTime).toFixed(2)}ms for "${query}"`,
-      );
-      console.log(
-        `🔎 Search returned ${results.length} results for "${query}"`,
-      );
-
-      // Log the actual titles received
-      if (results.length > 0) {
-        console.log(
-          `🔎 Titles received:`,
-          results.map((m) => ({
-            title: m.manga.title?.romaji || m.manga.title?.english || "unknown",
-            confidence: m.confidence.toFixed(1),
-            id: m.manga.id,
-          })),
-        );
-      }
-
-      if (results.length === 0) {
-        console.log(
-          `⚠️ No results found for "${query}" - this could indicate a cache or display issue`,
-        );
-      }
-
-      if (pageNum === 1) {
-        console.log(`🔎 Resetting search results for "${query}"`);
-        setSearchResults(results.map((match) => match.manga));
-      } else {
-        console.log(
-          `🔎 Appending ${results.length} results to existing ${searchResults.length} results`,
-        );
-        setSearchResults((prev) => {
-          // Create a set of existing manga IDs to avoid duplicates
-          const existingIds = new Set(prev.map((manga) => manga.id));
-
-          // Filter out duplicates from new results
-          const newUniqueResults = results
-            .map((match) => match.manga)
-            .filter((manga) => !existingIds.has(manga.id));
-
-          console.log(
-            `🔎 Adding ${newUniqueResults.length} unique results (filtered ${results.length - newUniqueResults.length} duplicates)`,
-          );
-
-          return [...prev, ...newUniqueResults];
-        });
-      }
-
-      // Use actual pagination info from API response if available
-      if (pageInfo) {
-        console.log(`🔎 Using API pagination info:`, pageInfo);
-        setHasNextPage(pageInfo.hasNextPage);
-        setPage(pageInfo.currentPage);
-      } else {
-        // Fallback logic (for cached results that don't have pagination info)
-        console.log(`🔎 No pagination info available, using fallback logic`);
-        setHasNextPage(false); // Can't load more without pagination info
-        setPage(pageNum);
-      }
-
-      console.log(
-        `🔎 UI state updated: searchResults.length=${results.length}, hasNextPage=${pageInfo?.hasNextPage || false}, page=${pageInfo?.currentPage || pageNum}`,
       );
     } catch (error) {
       console.error("Error searching manga:", error);
@@ -421,11 +427,11 @@ export function MangaSearchPanel({
               ref={searchInputRef}
               type="text"
               className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-3 pl-12 text-base text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
-              placeholder="Search for a manga title..."
+              placeholder="Search by manga title or AniList ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               disabled={isSearching}
-              aria-label="Search manga title"
+              aria-label="Search manga title or AniList ID"
               autoComplete="off"
             />
           </div>
@@ -448,6 +454,14 @@ export function MangaSearchPanel({
             )}
           </button>
         </form>
+
+        {/* Search hint */}
+        <div className="mt-2 px-1">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            💡 Tip: You can search by title (e.g., "Attack on Titan") or AniList
+            ID (e.g., "53390")
+          </p>
+        </div>
       </div>
 
       <div

@@ -5,7 +5,6 @@
  */
 
 // TODO: Add alternative search method through comick API as they usually have almost all manga and AniList links are added if available.
-// TODO: Manual search could also be used by ID instead of title.
 
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
