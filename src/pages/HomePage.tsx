@@ -4,8 +4,6 @@
  * @description Home page component for the Kenmei to AniList sync tool. Displays dashboard, statistics, feature carousel, quick actions, and sync status.
  */
 
-// TODO: Fix display of sync statistics or how they are tracked.
-
 import React, { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import {

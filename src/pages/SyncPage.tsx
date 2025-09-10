@@ -4,6 +4,9 @@
  * @description Sync page component for the Kenmei to AniList sync tool. Handles synchronization preview, configuration, execution, and results display.
  */
 
+// TODO: Filter should default to "With Changes"
+// TODO: Fix status getting updated to paused incorrectly. It is calculating time since last read incorrectly.
+
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuth } from "../hooks/useAuth";

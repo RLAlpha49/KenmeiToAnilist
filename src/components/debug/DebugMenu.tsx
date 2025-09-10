@@ -4,8 +4,6 @@
  * @description Debug menu component for viewing and editing electron store and localStorage values.
  */
 
-// TODO: Fix textarea width
-
 import React, { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { storageCache } from "../../utils/storage";
@@ -621,7 +619,7 @@ export function DebugMenu({ isOpen, onClose }: DebugMenuProps) {
                 <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
                   📚 For detailed technical documentation, see{" "}
                   <a
-                    href="https://github.com/RLAlpha49/Anilist-Manga-Updater/blob/master/STORAGE_IMPLEMENTATION.md"
+                    href="https://github.com/RLAlpha49/Anilist-Manga-Updater/blob/master/docs/guides/STORAGE_IMPLEMENTATION.md"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="underline hover:text-amber-500 dark:hover:text-amber-300"
