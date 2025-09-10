@@ -4,8 +4,6 @@
  * @description Sync page component for the Kenmei to AniList sync tool. Handles synchronization preview, configuration, execution, and results display.
  */
 
-// TODO: Fix status getting updated to paused incorrectly. It is calculating time since last read incorrectly.
-
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuth } from "../hooks/useAuth";
@@ -579,15 +577,35 @@ export function SyncPage() {
         if (
           syncConfig.autoPauseInactive &&
           kenmei.status.toLowerCase() !== "completed" &&
-          kenmei.status.toLowerCase() !== "dropped" &&
-          kenmei.updated_at
+          kenmei.status.toLowerCase() !== "dropped"
         ) {
-          const lastUpdated = new Date(kenmei.updated_at);
-          const daysSinceUpdate = Math.floor(
-            (Date.now() - lastUpdated.getTime()) / (1000 * 60 * 60 * 24),
-          );
-          if (daysSinceUpdate >= syncConfig.autoPauseThreshold) {
-            calculatedStatus = "PAUSED";
+          // Use last_read_at if available, otherwise fall back to updated_at
+          const lastActivity = kenmei.last_read_at || kenmei.updated_at;
+          if (lastActivity) {
+            const lastUpdated = new Date(lastActivity);
+            const daysSinceUpdate = Math.floor(
+              (Date.now() - lastUpdated.getTime()) / (1000 * 60 * 60 * 24),
+            );
+
+            // If using a custom threshold
+            if (
+              (syncConfig.autoPauseThreshold as unknown as string) === "custom"
+            ) {
+              const customThreshold = syncConfig.customAutoPauseThreshold || 30;
+              if (daysSinceUpdate >= customThreshold) {
+                calculatedStatus = "PAUSED";
+              } else {
+                calculatedStatus = STATUS_MAPPING[kenmei.status];
+              }
+            }
+            // Using a predefined threshold (explicitly cast to number for type safety)
+            else if (
+              daysSinceUpdate >= (syncConfig.autoPauseThreshold as number)
+            ) {
+              calculatedStatus = "PAUSED";
+            } else {
+              calculatedStatus = STATUS_MAPPING[kenmei.status];
+            }
           } else {
             calculatedStatus = STATUS_MAPPING[kenmei.status];
           }
