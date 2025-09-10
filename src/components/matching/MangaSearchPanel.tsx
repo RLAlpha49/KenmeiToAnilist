@@ -458,8 +458,8 @@ export function MangaSearchPanel({
         {/* Search hint */}
         <div className="mt-2 px-1">
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            💡 Tip: You can search by title (e.g., "Attack on Titan") or AniList
-            ID (e.g., "53390")
+            💡 Tip: You can search by title (e.g., &ldquo;Attack on
+            Titan&rdquo;) or AniList ID (e.g., &ldquo;53390&rdquo;)
           </p>
         </div>
       </div>

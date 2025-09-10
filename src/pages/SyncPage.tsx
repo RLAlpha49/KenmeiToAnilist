@@ -4,7 +4,6 @@
  * @description Sync page component for the Kenmei to AniList sync tool. Handles synchronization preview, configuration, execution, and results display.
  */
 
-// TODO: Filter should default to "With Changes"
 // TODO: Fix status getting updated to paused incorrectly. It is calculating time since last read incorrectly.
 
 import React, { useState, useMemo, useEffect } from "react";
@@ -257,7 +256,7 @@ export function SyncPage() {
 
   const [filters, setFilters] = useState({
     status: "all", // 'all', 'reading', 'completed', 'planned', 'paused', 'dropped'
-    changes: "all", // 'all', 'with-changes', 'no-changes'
+    changes: "with-changes", // 'all', 'with-changes', 'no-changes'
     library: "all", // 'all', 'new', 'existing'
   });
 
@@ -1925,7 +1924,7 @@ export function SyncPage() {
                           setSortOption({ field: "title", direction: "asc" });
                           setFilters({
                             status: "all",
-                            changes: "all",
+                            changes: "with-changes",
                             library: "all",
                           });
                         }}
@@ -1966,7 +1965,7 @@ export function SyncPage() {
                           setSortOption({ field: "title", direction: "asc" });
                           setFilters({
                             status: "all",
-                            changes: "all",
+                            changes: "with-changes",
                             library: "all",
                           });
                         }}
