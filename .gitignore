@@ -102,6 +102,7 @@ out/
 
 .cursor/templates
 .vscode/
+copilot-instructions.md
 
 # Docs
 documentation/

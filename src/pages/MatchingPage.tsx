@@ -4,7 +4,6 @@
  * @description Matching page component for the Kenmei to AniList sync tool. Handles manga matching, review, rematch, and sync preparation.
  */
 
-// TODO: When searching manually, do not automatically search title.
 // TODO: Add alternative search method through comick API as they usually have almost all manga and AniList links are added if available.
 // TODO: Manual search could also be used by ID instead of title.
 

@@ -157,11 +157,6 @@ export function MangaSearchPanel({
     if (searchInputRef.current) {
       searchInputRef.current.focus();
     }
-
-    // If we have a manga title, search for it
-    if (kenmeiManga?.title) {
-      initiateSearch(kenmeiManga.title);
-    }
   }, [kenmeiManga?.id, kenmeiManga?.title]);
 
   useEffect(() => {
