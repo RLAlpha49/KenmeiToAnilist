@@ -4,6 +4,9 @@
  * @description Sync page component for the Kenmei to AniList sync tool. Handles synchronization preview, configuration, execution, and results display.
  */
 
+// TODO: Fix any custom days set for pause setting being defaulted to 30 days.
+// TODO: When synchronizing fix displaying progress as if being updated to its same chapter count when not needed. For example it currently shows 83 -> 83 even though nothing changes.
+
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuth } from "../hooks/useAuth";
