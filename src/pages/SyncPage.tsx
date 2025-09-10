@@ -181,6 +181,7 @@ export function SyncPage() {
     status: string;
     updated_at: string;
     last_read_at?: string;
+    title: string;
   }): MediaListStatus => {
     // Check if manga should be auto-paused due to inactivity
     const lastActivity = kenmei.last_read_at || kenmei.updated_at;
@@ -192,19 +193,45 @@ export function SyncPage() {
     ) {
       // Calculate how many days since the last activity
       const lastUpdated = new Date(lastActivity);
+
+      // Validate the parsed date
+      if (isNaN(lastUpdated.getTime())) {
+        console.warn(
+          `[Auto-Pause Warning] Title: "${kenmei.title}" | Invalid date format: ${lastActivity}`,
+        );
+        return STATUS_MAPPING[kenmei.status as KenmeiStatus];
+      }
+
       const daysSinceUpdate = Math.floor(
         (Date.now() - lastUpdated.getTime()) / (1000 * 60 * 60 * 24),
       );
 
-      // If using a custom threshold
-      if ((syncConfig.autoPauseThreshold as unknown as string) === "custom") {
-        const customThreshold = syncConfig.customAutoPauseThreshold || 30;
-        if (daysSinceUpdate >= customThreshold) {
-          return "PAUSED";
-        }
+      // Additional validation
+      if (daysSinceUpdate < 0) {
+        console.warn(
+          `[Auto-Pause Warning] Title: "${kenmei.title}" | Negative days calculated (future date): ${daysSinceUpdate}`,
+        );
+        return STATUS_MAPPING[kenmei.status as KenmeiStatus];
       }
-      // Using a predefined threshold (explicitly cast to number for type safety)
-      else if (daysSinceUpdate >= (syncConfig.autoPauseThreshold as number)) {
+
+      // Check if using a custom threshold (not in predefined list)
+      const isCustomThreshold = ![1, 7, 14, 30, 60, 90, 180, 365].includes(
+        syncConfig.autoPauseThreshold,
+      );
+      const threshold = isCustomThreshold
+        ? syncConfig.customAutoPauseThreshold || 30
+        : syncConfig.autoPauseThreshold;
+
+      // Validate threshold value
+      const validThreshold =
+        typeof threshold === "number" && threshold > 0 ? threshold : 30;
+      if (validThreshold !== threshold) {
+        console.warn(
+          `[Auto-Pause Warning] Title: "${kenmei.title}" | Invalid threshold value: ${threshold}, using fallback: ${validThreshold}`,
+        );
+      }
+
+      if (daysSinceUpdate >= validThreshold) {
         return "PAUSED";
       }
     }
@@ -583,28 +610,50 @@ export function SyncPage() {
           const lastActivity = kenmei.last_read_at || kenmei.updated_at;
           if (lastActivity) {
             const lastUpdated = new Date(lastActivity);
-            const daysSinceUpdate = Math.floor(
-              (Date.now() - lastUpdated.getTime()) / (1000 * 60 * 60 * 24),
-            );
 
-            // If using a custom threshold
-            if (
-              (syncConfig.autoPauseThreshold as unknown as string) === "custom"
-            ) {
-              const customThreshold = syncConfig.customAutoPauseThreshold || 30;
-              if (daysSinceUpdate >= customThreshold) {
-                calculatedStatus = "PAUSED";
-              } else {
-                calculatedStatus = STATUS_MAPPING[kenmei.status];
-              }
-            }
-            // Using a predefined threshold (explicitly cast to number for type safety)
-            else if (
-              daysSinceUpdate >= (syncConfig.autoPauseThreshold as number)
-            ) {
-              calculatedStatus = "PAUSED";
-            } else {
+            // Validate the parsed date
+            if (isNaN(lastUpdated.getTime())) {
+              console.warn(
+                `[Auto-Pause Warning 2] Title: "${kenmei.title}" | Invalid date format: ${lastActivity}`,
+              );
               calculatedStatus = STATUS_MAPPING[kenmei.status];
+            } else {
+              const daysSinceUpdate = Math.floor(
+                (Date.now() - lastUpdated.getTime()) / (1000 * 60 * 60 * 24),
+              );
+
+              // Additional validation
+              if (daysSinceUpdate < 0) {
+                console.warn(
+                  `[Auto-Pause Warning 2] Title: "${kenmei.title}" | Negative days calculated (future date): ${daysSinceUpdate}`,
+                );
+                calculatedStatus = STATUS_MAPPING[kenmei.status];
+              } else {
+                // Check if using a custom threshold (not in predefined list)
+                const isCustomThreshold = ![
+                  1, 7, 14, 30, 60, 90, 180, 365,
+                ].includes(syncConfig.autoPauseThreshold);
+                const threshold = isCustomThreshold
+                  ? syncConfig.customAutoPauseThreshold || 30
+                  : syncConfig.autoPauseThreshold;
+
+                // Validate threshold value
+                const validThreshold =
+                  typeof threshold === "number" && threshold > 0
+                    ? threshold
+                    : 30;
+                if (validThreshold !== threshold) {
+                  console.warn(
+                    `[Auto-Pause Warning 2] Title: "${kenmei.title}" | Invalid threshold value: ${threshold}, using fallback: ${validThreshold}`,
+                  );
+                }
+
+                if (daysSinceUpdate >= validThreshold) {
+                  calculatedStatus = "PAUSED";
+                } else {
+                  calculatedStatus = STATUS_MAPPING[kenmei.status];
+                }
+              }
             }
           } else {
             calculatedStatus = STATUS_MAPPING[kenmei.status];

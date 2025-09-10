@@ -160,6 +160,7 @@ export function FileDropZone({ onFileLoaded, onError }: FileDropZoneProps) {
             volumes_read: manga.volumes_read,
             created_at: manga.created_at,
             updated_at: manga.updated_at,
+            last_read_at: manga.last_read_at,
             notes: manga.notes,
             url: manga.url,
           })),

@@ -311,8 +311,13 @@ export const parseKenmeiCsvExport = (
       const urlValue = findValue(columnMappings.url);
       const notesValue = findValue(columnMappings.notes);
       const dateValue = findValue(columnMappings.date);
-      const lastReadAt =
-        entry.last_read_at || entry["last read at"] || undefined;
+      const lastReadAt = findValue([
+        "last_read_at",
+        "last read at",
+        "lastreadat",
+        "last_read",
+        "date_last_read",
+      ]);
       // Parse chapter and volume numbers
       const chaptersRead = parseIntSafe(chapterValue);
       const volumesRead = parseIntSafe(volumeValue);

@@ -135,8 +135,8 @@ export function ImportPage() {
         chapters_read: item.chapters_read ?? 0,
         volumes_read: item.volumes_read ?? 0,
         notes: item.notes ?? "",
-        created_at: item.created_at ?? new Date().toISOString(),
-        updated_at: item.updated_at ?? new Date().toISOString(),
+        created_at: item.created_at,
+        updated_at: item.updated_at,
         last_read_at: item.last_read_at,
       }));
 
@@ -178,8 +178,9 @@ export function ImportPage() {
           );
 
           if (existingIndex !== -1) {
+            const existing = mergedManga[existingIndex];
             mergedManga[existingIndex] = {
-              ...mergedManga[existingIndex],
+              ...existing,
               ...manga,
             };
             updatedMangaCount++;
