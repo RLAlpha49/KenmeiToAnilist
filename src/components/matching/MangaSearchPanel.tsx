@@ -528,9 +528,7 @@ export function MangaSearchPanel({
                   {(manga.coverImage?.large || manga.coverImage?.medium) && (
                     <div className="relative flex-shrink-0">
                       <img
-                        src={
-                          manga.coverImage.large || manga.coverImage.medium
-                        }
+                        src={manga.coverImage.large || manga.coverImage.medium}
                         alt={`Cover for ${manga.title?.english || manga.title?.romaji || "manga"}`}
                         className={`h-40 w-28 rounded border border-gray-200 object-cover shadow-sm transition-all hover:scale-[1.02] hover:shadow dark:border-gray-700 ${
                           isAdultContent(manga) &&
@@ -659,14 +657,16 @@ export function MangaSearchPanel({
                     })()}
 
                     <div className="flex flex-wrap gap-2 pt-2">
-                      {manga.genres?.slice(0, 3).map((genre: string, i: number) => (
-                        <span
-                          key={`${uniqueKey}-genre-${i}`}
-                          className="inline-flex items-center rounded-md bg-gray-100 px-3 py-1 text-sm font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-                        >
-                          {genre}
-                        </span>
-                      ))}
+                      {manga.genres
+                        ?.slice(0, 3)
+                        .map((genre: string, i: number) => (
+                          <span
+                            key={`${uniqueKey}-genre-${i}`}
+                            className="inline-flex items-center rounded-md bg-gray-100 px-3 py-1 text-sm font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                          >
+                            {genre}
+                          </span>
+                        ))}
                       {manga.genres && manga.genres.length > 3 && (
                         <span className="inline-flex items-center rounded-md bg-gray-100 px-3 py-1 text-sm font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-300">
                           +{manga.genres.length - 3} more

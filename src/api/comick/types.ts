@@ -94,12 +94,12 @@ export interface ComickMangaDetail {
       lang: string;
     }>;
     links?: {
-      al?: string;   // AniList ID
-      ap?: string;   // AnimePlanet
-      kt?: string;   // Kitsu
-      mb?: string;   // MangaBuddy
-      mu?: string;   // MangaUpdates
-      mal?: string;  // MyAnimeList
+      al?: string; // AniList ID
+      ap?: string; // AnimePlanet
+      kt?: string; // Kitsu
+      mb?: string; // MangaBuddy
+      mu?: string; // MangaUpdates
+      mal?: string; // MyAnimeList
       [key: string]: string | undefined; // Allow for other site keys
     };
   };
@@ -115,7 +115,7 @@ export interface ComickMatchResult {
   comickManga: ComickManga;
   anilistId?: number;
   anilistUrl?: string;
-  source: 'comick';
+  source: "comick";
 }
 
 /**

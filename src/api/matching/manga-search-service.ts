@@ -1779,31 +1779,43 @@ export async function searchMangaByTitle(
 
   // COMICK FALLBACK: If we have no results from AniList, try Comick
   const comickSourceMap = new Map<number, { title: string; url: string }>(); // Track which manga came from Comick
-  
+
   if (finalResults.length === 0 && token) {
-    console.log(`🎯 No AniList results found for "${title}", trying Comick fallback...`);
-    
+    console.log(
+      `🎯 No AniList results found for "${title}", trying Comick fallback...`,
+    );
+
     try {
       // Import Comick client dynamically to avoid circular dependencies
-      const { searchComickAndGetAniListManga } = await import('../comick/client');
-      
+      const { searchComickAndGetAniListManga } = await import(
+        "../comick/client"
+      );
+
       // Determine limit: 1 for automatic search, 5 for manual search
       const comickLimit = searchConfig.bypassCache ? 5 : 1;
-      
-      console.log(`🔍 Searching Comick with limit ${comickLimit} for "${title}"`);
-      
-      const comickResults = await searchComickAndGetAniListManga(title, comickLimit, token);
-      
+
+      console.log(
+        `🔍 Searching Comick with limit ${comickLimit} for "${title}"`,
+      );
+
+      const comickResults = await searchComickAndGetAniListManga(
+        title,
+        comickLimit,
+        token,
+      );
+
       if (comickResults.length > 0) {
-        console.log(`✅ Comick found ${comickResults.length} results for "${title}"`);
-        
+        console.log(
+          `✅ Comick found ${comickResults.length} results for "${title}"`,
+        );
+
         // Convert enhanced manga to regular AniList manga and store source info
         const processedComickResults = comickResults.map((enhancedManga) => {
           // Store Comick source info for later use
           if (enhancedManga.comickSource) {
             comickSourceMap.set(enhancedManga.id, enhancedManga.comickSource);
           }
-          
+
           // Convert back to regular AniList manga format for consistency
           const manga: AniListManga = {
             id: enhancedManga.id,
@@ -1824,21 +1836,21 @@ export async function searchMangaByTitle(
             mediaListEntry: enhancedManga.mediaListEntry,
             isAdult: enhancedManga.isAdult,
           };
-          
+
           const confidence = calculateConfidence(title, manga);
           const titleTypePriority = calculateTitleTypePriority(manga, title);
-          
+
           console.log(
-            `⚖️ Comick result confidence for "${manga.title?.english || manga.title?.romaji}": ${confidence}% (found via Comick: ${enhancedManga.comickSource?.title || 'unknown'})`
+            `⚖️ Comick result confidence for "${manga.title?.english || manga.title?.romaji}": ${confidence}% (found via Comick: ${enhancedManga.comickSource?.title || "unknown"})`,
           );
-          
+
           return {
             manga,
             confidence,
             titleTypePriority,
           };
         });
-        
+
         // Sort Comick results by confidence
         processedComickResults.sort((a, b) => {
           if (a.confidence !== b.confidence) {
@@ -1846,38 +1858,40 @@ export async function searchMangaByTitle(
           }
           return b.titleTypePriority - a.titleTypePriority;
         });
-        
+
         // Use Comick results as final results
-        finalResults = processedComickResults.map(match => match.manga);
-        
-        console.log(`🎯 Using ${finalResults.length} Comick results as fallback for "${title}"`);
-        
+        finalResults = processedComickResults.map((match) => match.manga);
+
+        console.log(
+          `🎯 Using ${finalResults.length} Comick results as fallback for "${title}"`,
+        );
+
         // Apply filtering to Comick results as well
         const matchConfig = await getMatchConfig();
-        
+
         if (!searchConfig.bypassCache) {
           // Filter one-shots if enabled
           if (matchConfig.ignoreOneShots) {
             const beforeFilter = finalResults.length;
             finalResults = finalResults.filter((manga) => !isOneShot(manga));
             const afterFilter = finalResults.length;
-            
+
             if (beforeFilter > afterFilter) {
               console.log(
-                `🚫 Filtered out ${beforeFilter - afterFilter} one-shot(s) from Comick results for "${title}"`
+                `🚫 Filtered out ${beforeFilter - afterFilter} one-shot(s) from Comick results for "${title}"`,
               );
             }
           }
-          
+
           // Filter adult content if enabled
           if (matchConfig.ignoreAdultContent) {
             const beforeFilter = finalResults.length;
             finalResults = finalResults.filter((manga) => !manga.isAdult);
             const afterFilter = finalResults.length;
-            
+
             if (beforeFilter > afterFilter) {
               console.log(
-                `🚫 Filtered out ${beforeFilter - afterFilter} adult content from Comick results for "${title}"`
+                `🚫 Filtered out ${beforeFilter - afterFilter} adult content from Comick results for "${title}"`,
               );
             }
           }
@@ -1930,7 +1944,9 @@ export async function searchMangaByTitle(
       manga,
       confidence,
       titleTypePriority,
-      comickSource: comickSourceMap.has(manga.id) ? comickSourceMap.get(manga.id) : undefined,
+      comickSource: comickSourceMap.has(manga.id)
+        ? comickSourceMap.get(manga.id)
+        : undefined,
     };
   });
 
