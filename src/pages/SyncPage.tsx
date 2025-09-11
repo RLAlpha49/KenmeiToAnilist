@@ -222,7 +222,7 @@ export function SyncPage() {
         syncConfig.autoPauseThreshold,
       );
       const threshold = isCustomThreshold
-        ? syncConfig.customAutoPauseThreshold || 30
+        ? (syncConfig.customAutoPauseThreshold ?? 30)
         : syncConfig.autoPauseThreshold;
 
       // Validate threshold value
@@ -637,7 +637,7 @@ export function SyncPage() {
                   1, 7, 14, 30, 60, 90, 180, 365,
                 ].includes(syncConfig.autoPauseThreshold);
                 const threshold = isCustomThreshold
-                  ? syncConfig.customAutoPauseThreshold || 30
+                  ? (syncConfig.customAutoPauseThreshold ?? 30)
                   : syncConfig.autoPauseThreshold;
 
                 // Validate threshold value
