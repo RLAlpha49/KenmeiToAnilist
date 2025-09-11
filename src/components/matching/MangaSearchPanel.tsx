@@ -13,7 +13,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { KenmeiManga } from "../../api/kenmei/types";
-import { AniListManga } from "../../api/anilist/types";
+import { AniListManga, MangaMatch } from "../../api/anilist/types";
 import { searchMangaByTitle } from "../../api/matching/manga-search-service";
 import { getMangaByIds } from "../../api/anilist/client";
 
@@ -63,7 +63,7 @@ export function MangaSearchPanel({
 }: MangaSearchPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<AniListManga[]>([]);
+  const [searchResults, setSearchResults] = useState<MangaMatch[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [page, setPage] = useState(1);
@@ -164,14 +164,22 @@ export function MangaSearchPanel({
 
           // Set the results directly for ID searches
           if (pageNum === 1) {
-            setSearchResults(idResults);
+            // Convert AniListManga to MangaMatch format for consistency
+            const idMatches: MangaMatch[] = idResults.map((manga) => ({
+              manga,
+              confidence: 100, // ID searches are 100% matches
+            }));
+            setSearchResults(idMatches);
           } else {
             // For pagination (though unlikely with ID search), append results
             setSearchResults((prev) => {
-              const existingIds = new Set(prev.map((manga) => manga.id));
-              const newResults = idResults.filter(
-                (manga) => !existingIds.has(manga.id),
-              );
+              const existingIds = new Set(prev.map((match) => match.manga.id));
+              const newResults = idResults
+                .filter((manga) => !existingIds.has(manga.id))
+                .map((manga) => ({
+                  manga,
+                  confidence: 100,
+                }));
               return [...prev, ...newResults];
             });
           }
@@ -239,19 +247,19 @@ export function MangaSearchPanel({
 
         if (pageNum === 1) {
           console.log(`🔎 Resetting search results for "${query}"`);
-          setSearchResults(results.map((match) => match.manga));
+          setSearchResults(results); // Use full match results instead of just manga
         } else {
           console.log(
             `🔎 Appending ${results.length} results to existing ${searchResults.length} results`,
           );
           setSearchResults((prev) => {
             // Create a set of existing manga IDs to avoid duplicates
-            const existingIds = new Set(prev.map((manga) => manga.id));
+            const existingIds = new Set(prev.map((match) => match.manga.id));
 
             // Filter out duplicates from new results
-            const newUniqueResults = results
-              .map((match) => match.manga)
-              .filter((manga) => !existingIds.has(manga.id));
+            const newUniqueResults = results.filter(
+              (match) => !existingIds.has(match.manga.id),
+            );
 
             console.log(
               `🔎 Adding ${newUniqueResults.length} unique results (filtered ${results.length - newUniqueResults.length} duplicates)`,
@@ -340,14 +348,14 @@ export function MangaSearchPanel({
         });
       } else if (e.key === "Enter" && selectedIndex >= 0) {
         e.preventDefault();
-        onSelectMatch(searchResults[selectedIndex]);
+        onSelectMatch(searchResults[selectedIndex].manga);
       }
     }
   };
 
-  const handleSelectResult = (manga: AniListManga, index: number) => {
+  const handleSelectResult = (match: MangaMatch, index: number) => {
     setSelectedIndex(index);
-    onSelectMatch(manga);
+    onSelectMatch(match.manga); // Pass the manga object to the parent
   };
 
   /**
@@ -490,10 +498,11 @@ export function MangaSearchPanel({
 
         <div className="space-y-5">
           {searchResults.map((result, index) => {
-            const mangaId = result.id;
+            const manga = result.manga; // Extract manga for easier access
+            const mangaId = manga.id;
             const uniqueKey = mangaId
               ? `manga-${mangaId}`
-              : `manga-${index}-${result.title?.romaji?.replace(/\s/g, "") || "unknown"}`;
+              : `manga-${index}-${manga.title?.romaji?.replace(/\s/g, "") || "unknown"}`;
 
             return (
               <div
@@ -516,29 +525,29 @@ export function MangaSearchPanel({
                 }}
               >
                 <div className="flex w-full items-start space-x-5">
-                  {(result.coverImage?.large || result.coverImage?.medium) && (
+                  {(manga.coverImage?.large || manga.coverImage?.medium) && (
                     <div className="relative flex-shrink-0">
                       <img
                         src={
-                          result.coverImage.large || result.coverImage.medium
+                          manga.coverImage.large || manga.coverImage.medium
                         }
-                        alt={`Cover for ${result.title?.english || result.title?.romaji || "manga"}`}
+                        alt={`Cover for ${manga.title?.english || manga.title?.romaji || "manga"}`}
                         className={`h-40 w-28 rounded border border-gray-200 object-cover shadow-sm transition-all hover:scale-[1.02] hover:shadow dark:border-gray-700 ${
-                          isAdultContent(result) &&
-                          shouldBlurImage(`search-${result.id}`)
+                          isAdultContent(manga) &&
+                          shouldBlurImage(`search-${manga.id}`)
                             ? "cursor-pointer blur-md"
                             : ""
                         }`}
                         loading="lazy"
                         onClick={(e) => {
-                          if (isAdultContent(result)) {
+                          if (isAdultContent(manga)) {
                             e.stopPropagation();
-                            toggleImageBlur(`search-${result.id}`);
+                            toggleImageBlur(`search-${manga.id}`);
                           }
                         }}
                       />
                       {/* Adult content warning badge */}
-                      {isAdultContent(result) && (
+                      {isAdultContent(manga) && (
                         <div className="absolute top-1 left-1">
                           <span
                             className="inline-flex items-center rounded-md bg-red-600 px-1 py-0 text-xs font-medium text-white"
@@ -549,14 +558,14 @@ export function MangaSearchPanel({
                         </div>
                       )}
                       {/* Click to reveal hint for blurred images */}
-                      {isAdultContent(result) &&
-                        shouldBlurImage(`search-${result.id}`) && (
+                      {isAdultContent(manga) &&
+                        shouldBlurImage(`search-${manga.id}`) && (
                           <div className="absolute inset-0 flex items-center justify-center">
                             <span
                               className="bg-opacity-75 inline-flex cursor-pointer items-center rounded-md bg-gray-800 px-2 py-1 text-xs font-medium text-white"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                toggleImageBlur(`search-${result.id}`);
+                                toggleImageBlur(`search-${manga.id}`);
                               }}
                             >
                               Click to reveal
@@ -568,41 +577,53 @@ export function MangaSearchPanel({
 
                   <div className="flex-1 space-y-2">
                     <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                      {result.title?.english ||
-                        result.title?.romaji ||
+                      {manga.title?.english ||
+                        manga.title?.romaji ||
                         "Unknown Title"}
                     </h3>
 
-                    {result.title?.romaji &&
-                      result.title.romaji !== result.title.english && (
+                    {manga.title?.romaji &&
+                      manga.title.romaji !== manga.title.english && (
                         <p className="text-base text-gray-600 dark:text-gray-400">
-                          {result.title.romaji}
+                          {manga.title.romaji}
                         </p>
                       )}
 
+                    {/* Comick source badge */}
+                    {result.comickSource && (
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center rounded-md bg-orange-100 px-2 py-1 text-xs font-medium text-orange-800 dark:bg-orange-900/30 dark:text-orange-300">
+                          📚 Found via Comick
+                        </span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          ({result.comickSource.title})
+                        </span>
+                      </div>
+                    )}
+
                     <div className="flex flex-wrap gap-2 pt-2">
-                      {result.format && (
+                      {manga.format && (
                         <span className="inline-flex items-center rounded-md bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                          {result.format.replace("_", " ")}
+                          {manga.format.replace("_", " ")}
                         </span>
                       )}
 
-                      {result.status && (
+                      {manga.status && (
                         <span className="inline-flex items-center rounded-md bg-green-100 px-3 py-1 text-sm font-medium text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                          {result.status.replace("_", " ")}
+                          {manga.status.replace("_", " ")}
                         </span>
                       )}
 
-                      {result.chapters && (
+                      {manga.chapters && (
                         <span className="inline-flex items-center rounded-md bg-purple-100 px-3 py-1 text-sm font-medium text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
-                          {result.chapters} chapters
+                          {manga.chapters} chapters
                         </span>
                       )}
                     </div>
 
                     {/* User's current list status (if on their list) */}
                     {(() => {
-                      const mediaListEntry = result.mediaListEntry;
+                      const mediaListEntry = manga.mediaListEntry;
 
                       if (!mediaListEntry || !isOnUserList(mediaListEntry)) {
                         return null;
@@ -638,7 +659,7 @@ export function MangaSearchPanel({
                     })()}
 
                     <div className="flex flex-wrap gap-2 pt-2">
-                      {result.genres?.slice(0, 3).map((genre, i) => (
+                      {manga.genres?.slice(0, 3).map((genre: string, i: number) => (
                         <span
                           key={`${uniqueKey}-genre-${i}`}
                           className="inline-flex items-center rounded-md bg-gray-100 px-3 py-1 text-sm font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-300"
@@ -646,9 +667,9 @@ export function MangaSearchPanel({
                           {genre}
                         </span>
                       ))}
-                      {result.genres && result.genres.length > 3 && (
+                      {manga.genres && manga.genres.length > 3 && (
                         <span className="inline-flex items-center rounded-md bg-gray-100 px-3 py-1 text-sm font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                          +{result.genres.length - 3} more
+                          +{manga.genres.length - 3} more
                         </span>
                       )}
                     </div>
@@ -656,7 +677,7 @@ export function MangaSearchPanel({
 
                   <div className="ml-auto flex flex-col items-end justify-between self-stretch">
                     <a
-                      href={`https://anilist.co/manga/${result.id}`}
+                      href={`https://anilist.co/manga/${manga.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="rounded p-2 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300"

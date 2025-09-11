@@ -4,8 +4,6 @@
  * @description Matching page component for the Kenmei to AniList sync tool. Handles manga matching, review, rematch, and sync preparation.
  */
 
-// TODO: Add alternative search method through comick API as they usually have almost all manga and AniList links are added if available.
-
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { KenmeiManga } from "../api/kenmei/types";

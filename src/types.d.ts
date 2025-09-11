@@ -90,6 +90,10 @@ declare interface Window {
         timeRemaining: number;
       }>;
     };
+    comick: {
+      search: (query: string, limit?: number) => Promise<unknown>;
+      getMangaDetail: (hid: string) => Promise<unknown>;
+    };
     shell: {
       openExternal: (url: string) => Promise<void>;
     };

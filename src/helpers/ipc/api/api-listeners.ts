@@ -6,6 +6,7 @@
 
 import { ipcMain, shell } from "electron";
 import fetch from "node-fetch";
+import type { ComickManga, ComickMangaDetail } from "../../../api/comick/types";
 
 const API_URL = "https://graphql.anilist.co";
 
@@ -394,5 +395,59 @@ export function setupAniListAPI() {
       retryAfter: isRateLimited ? rateLimitResetTime : null,
       timeRemaining: isRateLimited ? Math.max(0, rateLimitResetTime - now) : 0,
     };
+  });
+
+  // Comick API handlers
+  ipcMain.handle("comick:search", async (_, query: string, limit: number = 10) => {
+    try {
+      console.log(`🔍 Comick API: Searching for "${query}" with limit ${limit}`);
+      
+      const encodedQuery = encodeURIComponent(query);
+      const response = await fetch(`https://api.comick.fun/v1.0/search?q=${encodedQuery}&limit=${limit}&t=false`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'KenmeiToAniList/1.0',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json() as ComickManga[];
+      console.log(`📦 Comick API: Found ${Array.isArray(data) ? data.length : 0} results for "${query}"`);
+      
+      return data || [];
+    } catch (error) {
+      console.error(`❌ Comick search failed for "${query}":`, error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle("comick:getMangaDetail", async (_, slug: string) => {
+    try {
+      console.log(`📖 Comick API: Getting manga details for "${slug}"`);
+      
+      const response = await fetch(`https://api.comick.fun/comic/${slug}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'KenmeiToAniList/1.0',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json() as ComickMangaDetail;
+      console.log(`📖 Comick API: Retrieved details for "${slug}"`);
+      
+      return data || null;
+    } catch (error) {
+      console.error(`❌ Comick manga detail failed for "${slug}":`, error);
+      throw error;
+    }
   });
 }

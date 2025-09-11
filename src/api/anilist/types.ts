@@ -189,6 +189,13 @@ export interface MangaMatch {
   id?: number;
   manga: AniListManga;
   confidence: number;
+  // Optional source information for matches found via alternative methods
+  comickSource?: {
+    title: string;
+    slug: string;
+    comickId: string;
+    foundViaComick: boolean;
+  };
 }
 
 /**

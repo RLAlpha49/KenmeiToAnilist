@@ -1461,6 +1461,15 @@ export function MangaMatchingPanel({
                                   %
                                 </div>
                               )}
+                              
+                            {/* Comick source badge - show when result came from Comick */}
+                            {match.anilistMatches &&
+                              match.anilistMatches.length > 0 &&
+                              match.anilistMatches[0]?.comickSource && (
+                                <div className="absolute -top-2 -left-2 rounded-full bg-orange-100 px-2 py-1 text-xs font-bold text-orange-800 shadow-sm dark:bg-orange-900 dark:text-orange-200" title={`Found via Comick: ${match.anilistMatches[0].comickSource.title}`}>
+                                  Comick
+                                </div>
+                              )}
                           </div>
                           <div className="flex flex-col space-y-1">
                             {match.status === "skipped" &&
@@ -2195,6 +2204,12 @@ export function MangaMatchingPanel({
                                         renderConfidenceBadge(
                                           altMatch.confidence,
                                         )}
+                                      {/* Comick source badge for alternative matches */}
+                                      {altMatch.comickSource && (
+                                        <div className="rounded-full bg-orange-100 px-2 py-1 text-xs font-bold text-orange-800 shadow-sm dark:bg-orange-900 dark:text-orange-200" title={`Found via Comick: ${altMatch.comickSource.title}`}>
+                                          Comick
+                                        </div>
+                                      )}
                                       <div className="flex space-x-2">
                                         <a
                                           href={`https://anilist.co/manga/${altMatch.manga?.id || "unknown"}`}
