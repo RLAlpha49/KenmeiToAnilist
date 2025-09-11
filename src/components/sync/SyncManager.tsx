@@ -359,24 +359,29 @@ const SyncManager: React.FC<SyncManagerProps> = ({
                                 <span className="text-slate-500">
                                   {currentEntry.previousValues?.progress}
                                 </span>
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="12"
-                                  height="12"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  className="mx-1 text-blue-400"
-                                >
-                                  <path d="M5 12h14"></path>
-                                  <path d="m12 5 7 7-7 7"></path>
-                                </svg>
-                                <span className="font-medium text-blue-600 dark:text-blue-400">
-                                  {currentEntry.progress}
-                                </span>
+                                {currentEntry.progress !==
+                                  currentEntry.previousValues?.progress && (
+                                  <>
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      width="12"
+                                      height="12"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      className="mx-1 text-blue-400"
+                                    >
+                                      <path d="M5 12h14"></path>
+                                      <path d="m12 5 7 7-7 7"></path>
+                                    </svg>
+                                    <span className="font-medium text-blue-600 dark:text-blue-400">
+                                      {currentEntry.progress}
+                                    </span>
+                                  </>
+                                )}
                               </div>
                             </div>
 

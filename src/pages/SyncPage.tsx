@@ -4,9 +4,6 @@
  * @description Sync page component for the Kenmei to AniList sync tool. Handles synchronization preview, configuration, execution, and results display.
  */
 
-// TODO: Fix any custom days set for pause setting being defaulted to 30 days.
-// TODO: When synchronizing fix displaying progress as if being updated to its same chapter count when not needed. For example it currently shows 83 -> 83 even though nothing changes.
-
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuth } from "../hooks/useAuth";
@@ -2613,23 +2610,37 @@ export function SyncPage() {
                                       <div className="flex flex-shrink-0 items-center gap-1">
                                         {!isNewEntry && !isCompleted && (
                                           <>
-                                            {statusWillChange && (
-                                              <Badge
-                                                variant="outline"
-                                                className="border-blue-400 px-1 py-0 text-[10px]"
-                                              >
-                                                {userEntry?.status || "None"} →{" "}
-                                                {getEffectiveStatus(kenmei)}
-                                              </Badge>
-                                            )}
+                                            {(() => {
+                                              if (!statusWillChange)
+                                                return null;
 
-                                            {progressWillChange && (
-                                              <Badge
-                                                variant="outline"
-                                                className="border-green-400 px-1 py-0 text-[10px]"
-                                              >
-                                                {userEntry?.progress || 0} →{" "}
-                                                {syncConfig.prioritizeAniListProgress
+                                              const fromStatus =
+                                                userEntry?.status || "None";
+                                              const toStatus =
+                                                getEffectiveStatus(kenmei);
+
+                                              // Only show badge if values are actually different
+                                              if (fromStatus === toStatus)
+                                                return null;
+
+                                              return (
+                                                <Badge
+                                                  variant="outline"
+                                                  className="border-blue-400 px-1 py-0 text-[10px]"
+                                                >
+                                                  {fromStatus} → {toStatus}
+                                                </Badge>
+                                              );
+                                            })()}
+
+                                            {(() => {
+                                              if (!progressWillChange)
+                                                return null;
+
+                                              const fromProgress =
+                                                userEntry?.progress || 0;
+                                              const toProgress =
+                                                syncConfig.prioritizeAniListProgress
                                                   ? userEntry?.progress &&
                                                     userEntry.progress > 0
                                                     ? (kenmei.chapters_read ||
@@ -2638,21 +2649,43 @@ export function SyncPage() {
                                                         0
                                                       : userEntry.progress
                                                     : kenmei.chapters_read || 0
-                                                  : kenmei.chapters_read ||
-                                                    0}{" "}
-                                                ch
-                                              </Badge>
-                                            )}
+                                                  : kenmei.chapters_read || 0;
 
-                                            {scoreWillChange && (
-                                              <Badge
-                                                variant="outline"
-                                                className="border-amber-400 px-1 py-0 text-[10px]"
-                                              >
-                                                {userEntry?.score || 0} →{" "}
-                                                {kenmei.score || 0}/10
-                                              </Badge>
-                                            )}
+                                              // Only show badge if values are actually different
+                                              if (fromProgress === toProgress)
+                                                return null;
+
+                                              return (
+                                                <Badge
+                                                  variant="outline"
+                                                  className="border-green-400 px-1 py-0 text-[10px]"
+                                                >
+                                                  {fromProgress} → {toProgress}{" "}
+                                                  ch
+                                                </Badge>
+                                              );
+                                            })()}
+
+                                            {(() => {
+                                              if (!scoreWillChange) return null;
+
+                                              const fromScore =
+                                                userEntry?.score || 0;
+                                              const toScore = kenmei.score || 0;
+
+                                              // Only show badge if values are actually different
+                                              if (fromScore === toScore)
+                                                return null;
+
+                                              return (
+                                                <Badge
+                                                  variant="outline"
+                                                  className="border-amber-400 px-1 py-0 text-[10px]"
+                                                >
+                                                  {fromScore} → {toScore}/10
+                                                </Badge>
+                                              );
+                                            })()}
 
                                             {userEntry
                                               ? syncConfig.setPrivate &&
