@@ -82,7 +82,7 @@ const itemVariants = {
     y: 0,
     opacity: 1,
     transition: {
-      type: "spring",
+      type: "spring" as const,
       stiffness: 300,
       damping: 24,
     },
@@ -1117,6 +1117,41 @@ export function SettingsPage() {
                             const newConfig = {
                               ...matchConfig,
                               blurAdultContent: checked,
+                            };
+                            setMatchConfig(newConfig);
+                            saveMatchConfig(newConfig);
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  {/* Enable Comick Alternative Search Setting */}
+                  <motion.div
+                    className="bg-muted/40 rounded-lg border p-4"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5, duration: 0.5 }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <h3 className="text-sm font-medium">
+                          Enable Comick Alternative Search
+                        </h3>
+                        <p className="text-muted-foreground text-xs">
+                          Use Comick as a fallback to find manga when AniList
+                          search returns no results. Will be ignored when rate
+                          limited and continue searching normally.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          id="enable-comick-search"
+                          checked={matchConfig.enableComickSearch}
+                          onCheckedChange={(checked) => {
+                            const newConfig = {
+                              ...matchConfig,
+                              enableComickSearch: checked,
                             };
                             setMatchConfig(newConfig);
                             saveMatchConfig(newConfig);

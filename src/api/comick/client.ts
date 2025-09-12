@@ -167,7 +167,7 @@ export async function extractAniListIdFromComick(
  * Search for manga on Comick and get their AniList counterparts.
  *
  * @param query - The search query
- * @param limit - Maximum number of results to return (default: 1 for automatic, 5 for manual)
+ * @param limit - Maximum number of results to return (default: 1)
  * @param accessToken - AniList access token for fetching manga details
  * @returns Promise resolving to enhanced AniList manga with Comick source info
  * @source

@@ -23,8 +23,18 @@ interface StoreSchema {
   theme: string;
 }
 
+/**
+ * Interface for electron-store methods to avoid any types
+ */
+interface ElectronStoreInterface {
+  get(key: string): unknown;
+  set(key: string, value: unknown): void;
+  delete(key: string): void;
+  clear(): void;
+}
+
 // Create store instance
-const store = new Store<StoreSchema>();
+const store = new Store<StoreSchema>() as unknown as ElectronStoreInterface;
 
 /**
  * Registers IPC event listeners for interacting with the Electron store (get, set, remove, clear).
@@ -35,7 +45,7 @@ export function setupStoreIPC() {
   // Handle getting an item from the store
   ipcMain.handle("store:getItem", (_, key: string) => {
     try {
-      return store.get(key, null);
+      return store.get(key) || null;
     } catch (error) {
       console.error(`Error getting item from store: ${key}`, error);
       return null;

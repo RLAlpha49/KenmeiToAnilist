@@ -1778,13 +1778,16 @@ export async function searchMangaByTitle(
 
   console.log(`🔍 Final result count: ${finalResults.length} manga`);
 
-  // COMICK FALLBACK: If we have no results from AniList, try Comick
+  // COMICK FALLBACK: If we have no results from AniList, try Comick (if enabled)
   const comickSourceMap = new Map<
     number,
     { title: string; slug: string; comickId: string; foundViaComick: boolean }
   >();
 
-  if (finalResults.length === 0 && token) {
+  // Get match configuration to check if Comick search is enabled
+  const matchConfig = await getMatchConfig();
+
+  if (finalResults.length === 0 && token && matchConfig.enableComickSearch) {
     console.log(
       `🎯 No AniList results found for "${title}", trying Comick fallback...`,
     );
@@ -1795,8 +1798,8 @@ export async function searchMangaByTitle(
         "../comick/client"
       );
 
-      // Determine limit: 1 for automatic search, 5 for manual search
-      const comickLimit = searchConfig.bypassCache ? 5 : 1;
+      // Determine limit: Always use 1 to grab only the top search result from Comick
+      const comickLimit = 1;
 
       console.log(
         `🔍 Searching Comick with limit ${comickLimit} for "${title}"`,
@@ -1912,6 +1915,14 @@ export async function searchMangaByTitle(
     } catch (error) {
       console.error(`❌ Comick fallback failed for "${title}":`, error);
     }
+  } else if (
+    finalResults.length === 0 &&
+    token &&
+    !matchConfig.enableComickSearch
+  ) {
+    console.log(
+      `🚫 No AniList results found for "${title}", but Comick search is disabled in settings`,
+    );
   }
 
   // For manual searches with no results but API had results, always include the API results
@@ -2098,6 +2109,18 @@ export async function batchMatchManga(
   try {
     // First, check which manga are already in cache
     const cachedResults: Record<number, AniListManga[]> = {};
+    const cachedComickSources: Record<
+      number,
+      Map<
+        number,
+        {
+          title: string;
+          slug: string;
+          comickId: string;
+          foundViaComick: boolean;
+        }
+      >
+    > = {};
     const uncachedManga: { index: number; manga: KenmeiManga }[] = [];
 
     // Track manga IDs if we have them (for batch fetching)
@@ -2128,6 +2151,7 @@ export async function batchMatchManga(
         else if (isCacheValid(cacheKey)) {
           // This manga is in cache
           cachedResults[index] = mangaCache[cacheKey].manga;
+          cachedComickSources[index] = new Map(); // Cached results from direct AniList cache don't have Comick source info
           console.log(`Found cached results for: ${manga.title}`);
 
           // Immediately update progress for cached manga
@@ -2168,6 +2192,7 @@ export async function batchMatchManga(
         const manga = mangaMap.get(item.id);
         if (manga) {
           cachedResults[item.index] = [manga]; // Store as array of one manga for consistency
+          cachedComickSources[item.index] = new Map(); // Known IDs don't have Comick source info
 
           // Also store in the general cache to help future searches
           const title = mangaList[item.index].title;
@@ -2271,6 +2296,7 @@ export async function batchMatchManga(
           const cacheKey = generateCacheKey(manga.title);
           if (!searchConfig.bypassCache && isCacheValid(cacheKey)) {
             cachedResults[index] = mangaCache[cacheKey].manga;
+            cachedComickSources[index] = new Map(); // Cached results don't have Comick source info
             console.log(
               `Using cache for ${manga.title} (found during processing)`,
             );
@@ -2297,10 +2323,27 @@ export async function batchMatchManga(
               abortSignal, // Pass the abort signal to the search function
             );
 
-            // Store the results
+            // Store the results, preserving both manga and Comick source info
             cachedResults[index] = searchResponse.matches.map(
               (match) => match.manga,
             );
+
+            // Store Comick source information separately
+            const comickSourceMap = new Map<
+              number,
+              {
+                title: string;
+                slug: string;
+                comickId: string;
+                foundViaComick: boolean;
+              }
+            >();
+            searchResponse.matches.forEach((match) => {
+              if (match.comickSource) {
+                comickSourceMap.set(match.manga.id, match.comickSource);
+              }
+            });
+            cachedComickSources[index] = comickSourceMap;
           }
         } catch (error) {
           // Check if this was a cancellation
@@ -2318,6 +2361,7 @@ export async function batchMatchManga(
           console.error(`Error searching for manga: ${manga.title}`, error);
           // Store empty result on error
           cachedResults[index] = [];
+          cachedComickSources[index] = new Map();
         } finally {
           // Decrement the active count and process the next manga
           activeCount--;
@@ -2392,6 +2436,11 @@ export async function batchMatchManga(
         anilistMatches: [],
         status: "pending",
       } as MangaMatchResult; // Use empty arrays instead of null
+
+      // Initialize empty Comick source maps for missing entries
+      if (!cachedComickSources[i]) {
+        cachedComickSources[i] = new Map();
+      }
     }
 
     // Fill in the results for manga we have matches for
@@ -2436,10 +2485,12 @@ export async function batchMatchManga(
       // Update progress for any remaining manga
       updateProgress(i, manga.title);
 
-      // Fix mapping to create proper MangaMatch objects
+      // Fix mapping to create proper MangaMatch objects with Comick source info
+      const comickSourceMap = cachedComickSources[i] || new Map();
       const potentialMatchesFixed = potentialMatches.map((match) => ({
         manga: match,
         confidence: calculateConfidence(manga.title, match),
+        comickSource: comickSourceMap.get(match.id), // Include Comick source if available
       }));
 
       results[i] = {

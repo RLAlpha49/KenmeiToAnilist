@@ -30,7 +30,7 @@ import {
 } from "../../utils/mediaListHelpers";
 
 // Import storage utilities
-import { getMatchConfig } from "../../utils/storage";
+import { getMatchConfig, saveMatchConfig } from "../../utils/storage";
 
 // Import shadcn UI components
 import {
@@ -45,6 +45,8 @@ import { Input } from "../../components/ui/input";
 import { Checkbox } from "../../components/ui/checkbox";
 import { Separator } from "../../components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
+import { Switch } from "../../components/ui/switch";
+import { Label } from "../../components/ui/label";
 
 // Add AnimatePresence import alongside the existing imports
 import { motion, AnimatePresence } from "framer-motion";
@@ -125,11 +127,15 @@ export function MangaMatchingPanel({
     new Set(),
   );
 
+  // Add state for Comick search setting
+  const [enableComickSearch, setEnableComickSearch] = useState(true);
+
   // Load blur settings from match config
   useEffect(() => {
     const loadBlurSettings = async () => {
       const matchConfig = getMatchConfig();
       setBlurAdultContent(matchConfig.blurAdultContent);
+      setEnableComickSearch(matchConfig.enableComickSearch);
     };
     loadBlurSettings();
   }, []);
@@ -153,6 +159,23 @@ export function MangaMatchingPanel({
       }
       return newSet;
     });
+  };
+
+  // Handler for toggling Comick search setting
+  const handleComickSearchToggle = async (enabled: boolean) => {
+    setEnableComickSearch(enabled);
+    try {
+      const currentConfig = getMatchConfig();
+      const updatedConfig = {
+        ...currentConfig,
+        enableComickSearch: enabled,
+      };
+      saveMatchConfig(updatedConfig);
+    } catch (error) {
+      console.error("Failed to save Comick search setting:", error);
+      // Revert the state if saving failed
+      setEnableComickSearch(!enabled);
+    }
   };
 
   // Handler for opening external links in the default browser
@@ -1181,6 +1204,39 @@ export function MangaMatchingPanel({
                 >
                   Clear All
                 </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Comick Search Settings */}
+      <Card className="mb-4">
+        <CardContent className="p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="comick-search-toggle"
+                  checked={enableComickSearch}
+                  onCheckedChange={handleComickSearchToggle}
+                />
+                <Label
+                  htmlFor="comick-search-toggle"
+                  className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Enable Comick Alternative Search
+                </Label>
+              </div>
+              <div className="group relative flex">
+                <Info className="text-muted-foreground h-4 w-4" />
+                <div className="bg-card absolute bottom-full left-1/2 z-50 mb-2 hidden w-80 -translate-x-1/2 transform rounded-md border px-3 py-2 text-xs font-medium shadow-lg group-hover:block">
+                  When enabled, the system will attempt alternative searches
+                  through Comick if the initial AniList search doesn&apos;t find
+                  matches. This feature will be automatically ignored when rate
+                  limited and will continue searching normally. Only the top
+                  search result from Comick will be used.
+                </div>
               </div>
             </div>
           </div>

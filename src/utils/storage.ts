@@ -334,6 +334,7 @@ export type MatchConfig = {
   ignoreOneShots: boolean;
   ignoreAdultContent: boolean;
   blurAdultContent: boolean;
+  enableComickSearch: boolean;
 };
 
 /**
@@ -345,6 +346,7 @@ export const DEFAULT_MATCH_CONFIG: MatchConfig = {
   ignoreOneShots: false,
   ignoreAdultContent: false,
   blurAdultContent: true,
+  enableComickSearch: true,
 };
 
 /**

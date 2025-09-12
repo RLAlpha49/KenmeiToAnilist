@@ -110,8 +110,8 @@ export function SyncPage() {
 
   // Add a specific transition for view modes to prevent warping
   const viewModeTransition = {
-    type: "tween",
-    ease: "easeInOut",
+    type: "tween" as const,
+    ease: "easeInOut" as const,
     duration: 0.2,
   };
 
