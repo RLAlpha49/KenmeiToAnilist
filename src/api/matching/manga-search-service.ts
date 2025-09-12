@@ -9,6 +9,7 @@ import {
   AniListManga,
   MangaMatchResult,
   MangaSearchResponse,
+  MediaListStatus,
   SearchResult,
   PageInfo,
 } from "../anilist/types";
@@ -1778,7 +1779,10 @@ export async function searchMangaByTitle(
   console.log(`🔍 Final result count: ${finalResults.length} manga`);
 
   // COMICK FALLBACK: If we have no results from AniList, try Comick
-  const comickSourceMap = new Map<number, { title: string; url: string }>(); // Track which manga came from Comick
+  const comickSourceMap = new Map<
+    number,
+    { title: string; slug: string; comickId: string; foundViaComick: boolean }
+  >();
 
   if (finalResults.length === 0 && token) {
     console.log(
@@ -1833,7 +1837,13 @@ export async function searchMangaByTitle(
             tags: enhancedManga.tags,
             startDate: enhancedManga.startDate,
             staff: enhancedManga.staff,
-            mediaListEntry: enhancedManga.mediaListEntry,
+            mediaListEntry: enhancedManga.mediaListEntry
+              ? {
+                  ...enhancedManga.mediaListEntry,
+                  status: enhancedManga.mediaListEntry
+                    .status as MediaListStatus,
+                }
+              : enhancedManga.mediaListEntry,
             isAdult: enhancedManga.isAdult,
           };
 

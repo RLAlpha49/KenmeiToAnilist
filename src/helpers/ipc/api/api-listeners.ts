@@ -164,11 +164,13 @@ async function requestAniList(
     if (response.status >= 500 && response.status < 600) {
       if (retryCount >= MAX_RETRY_ATTEMPTS) {
         // If we've reached max retries, throw the error
-        const errorData = await response.json().catch(() => ({}));
+        const errorData = (await response.json().catch(() => ({}))) as {
+          errors?: unknown[];
+        };
         throw {
           status: response.status,
           statusText: response.statusText,
-          errors: errorData.errors,
+          errors: (errorData as { errors?: unknown[] }).errors,
           message: `Server error ${response.status} after ${MAX_RETRY_ATTEMPTS} retry attempts`,
         };
       }
@@ -186,16 +188,19 @@ async function requestAniList(
     }
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = (await response.json()) as { errors?: unknown[] };
+      const firstError = errorData.errors?.[0] as
+        | { message?: string }
+        | undefined;
       throw {
         status: response.status,
         statusText: response.statusText,
         errors: errorData.errors,
-        message: errorData.errors?.[0]?.message || response.statusText,
+        message: firstError?.message || response.statusText,
       };
     }
 
-    return await response.json();
+    return (await response.json()) as Record<string, unknown>;
   } catch (error) {
     // Handle network errors with retry
     if (
