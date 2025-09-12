@@ -58,15 +58,18 @@ export const storage = {
 
 ```typescript
 export const STORAGE_KEYS = {
-  KENMEI_DATA: "kenmei_data",
-  IMPORT_STATS: "import_stats",
-  MATCH_RESULTS: "match_results",
-  PENDING_MANGA: "pending_manga",
-  CACHE_VERSION: "cache_version",
-  SYNC_CONFIG: "sync_config",
-  SYNC_STATS: "sync_stats",
-  MATCH_CONFIG: "match_config",
+  KENMEI_DATA: "kenmei_data",           // Imported manga data from CSV
+  IMPORT_STATS: "import_stats",         // Import statistics and metadata
+  MATCH_RESULTS: "match_results",       // Manga matching results and user selections
+  PENDING_MANGA: "pending_manga",       // Manga pending matching processing
+  CACHE_VERSION: "cache_version",       // Cache version for compatibility checking
+  SYNC_CONFIG: "sync_config",           // Synchronization configuration settings
+  SYNC_STATS: "sync_stats",            // Synchronization statistics and history
+  MATCH_CONFIG: "match_config",         // Matching algorithm configuration
 };
+
+// Current cache version for compatibility
+export const CURRENT_CACHE_VERSION = 1;
 ```
 
 ### Read Operations

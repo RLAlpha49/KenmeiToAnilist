@@ -2,7 +2,19 @@
 
 This document provides detailed information about how Kenmei to AniList integrates with the AniList GraphQL API.
 
-## 📋 Overview
+## 📋 Table of Contents
+
+- [Overview](#-overview)
+- [Authentication](#-authentication)
+- [Search Operations](#-search-operations)
+- [User Library Operations](#-user-library-operations)
+- [Update Operations](#-update-operations)
+- [Data Types](#-data-types)
+- [Error Handling](#-error-handling)
+- [Request Implementation](#-request-implementation)
+- [External Resources](#-external-resources)
+
+## 🔎 Overview
 
 The app uses AniList's GraphQL API v2 for all data operations. This includes authentication, searching for manga, retrieving user lists, and updating manga entries.
 
@@ -29,39 +41,63 @@ const OAUTH_CONFIG = {
 #### Authorization URL
 
 ```typescript
-function getOAuthUrl(): string {
-  const params = new URLSearchParams({
-    client_id: OAUTH_CONFIG.clientId,
-    redirect_uri: OAUTH_CONFIG.redirectUri,
-    response_type: "code",
-    scope: OAUTH_CONFIG.scope,
-  });
-
-  return `https://anilist.co/api/v2/oauth/authorize?${params}`;
+// OAuth URL is constructed dynamically based on stored credentials
+function getOAuthUrl(clientId: string, redirectUri: string): string {
+  const encodedClientId = encodeURIComponent(clientId);
+  const encodedRedirectUri = encodeURIComponent(redirectUri);
+  
+  return `https://anilist.co/api/v2/oauth/authorize?client_id=${encodedClientId}&redirect_uri=${encodedRedirectUri}&response_type=code`;
 }
 ```
 
 #### Token Exchange
 
 ```typescript
-async function getAccessToken(authCode: string): Promise<string> {
-  const response = await fetch("https://anilist.co/api/v2/oauth/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({
-      grant_type: "authorization_code",
-      client_id: OAUTH_CONFIG.clientId,
-      client_secret: OAUTH_CONFIG.clientSecret,
-      redirect_uri: OAUTH_CONFIG.redirectUri,
-      code: authCode,
-    }),
-  });
+// Token exchange is handled in main process via IPC
+interface TokenExchangeParams {
+  clientId: string;
+  clientSecret: string;
+  redirectUri: string;
+  code: string;
+}
 
-  const data = await response.json();
-  return data.access_token;
+interface TokenResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  refresh_token?: string;
+}
+
+async function exchangeToken(params: TokenExchangeParams): Promise<{
+  success: boolean;
+  token?: TokenResponse;
+  error?: string;
+}> {
+  try {
+    const response = await fetch("https://anilist.co/api/v2/oauth/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        grant_type: "authorization_code",
+        ...params,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const tokenResponse: TokenResponse = await response.json();
+    return { success: true, token: tokenResponse };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Token exchange failed" 
+    };
+  }
 }
 ```
 
@@ -70,7 +106,7 @@ async function getAccessToken(authCode: string): Promise<string> {
 ### Basic Manga Search
 
 ```graphql
-query SearchManga($search: String!, $page: Int, $perPage: Int) {
+query SearchManga($search: String, $page: Int, $perPage: Int) {
   Page(page: $page, perPage: $perPage) {
     pageInfo {
       total
@@ -79,42 +115,47 @@ query SearchManga($search: String!, $page: Int, $perPage: Int) {
       hasNextPage
       perPage
     }
-    media(search: $search, type: MANGA, sort: SEARCH_MATCH) {
+    media(type: MANGA, search: $search) {
       id
       title {
         romaji
         english
         native
       }
+      synonyms
+      description
       format
       status
-      description
-      startDate {
-        year
-        month
-        day
-      }
-      endDate {
-        year
-        month
-        day
-      }
       chapters
       volumes
+      countryOfOrigin
+      source
       coverImage {
         large
         medium
       }
       genres
       tags {
+        id
         name
-        isAdult
+        category
       }
-      averageScore
-      meanScore
+      startDate {
+        year
+        month
+        day
+      }
+      mediaListEntry {
+        id
+        status
+        progress
+        score
+        private
+      }
       isAdult
     }
   }
+}
 }
 ```
 
@@ -123,12 +164,11 @@ query SearchManga($search: String!, $page: Int, $perPage: Int) {
 ```graphql
 query AdvancedSearchManga(
   $search: String
-  $year: Int
-  $status: MediaStatus
-  $format: MediaFormat
-  $genres: [String]
   $page: Int
   $perPage: Int
+  $genre_in: [String]
+  $tag_in: [String]
+  $format_in: [MediaFormat]
 ) {
   Page(page: $page, perPage: $perPage) {
     pageInfo {
@@ -139,13 +179,11 @@ query AdvancedSearchManga(
       perPage
     }
     media(
-      search: $search
-      type: MANGA
-      startDate_greater: $year
-      status: $status
-      format: $format
-      genre_in: $genres
-      sort: SEARCH_MATCH
+      type: MANGA, 
+      search: $search, 
+      genre_in: $genre_in, 
+      tag_in: $tag_in, 
+      format_in: $format_in
     ) {
       id
       title {
@@ -153,21 +191,39 @@ query AdvancedSearchManga(
         english
         native
       }
+      synonyms
+      description
       format
       status
-      startDate {
-        year
-      }
       chapters
       volumes
+      countryOfOrigin
       coverImage {
+        large
         medium
       }
       genres
-      averageScore
+      tags {
+        id
+        name
+        category
+      }
+      startDate {
+        year
+        month
+        day
+      }
+      mediaListEntry {
+        id
+        status
+        progress
+        score
+        private
+      }
       isAdult
     }
   }
+}
 }
 ```
 
@@ -176,54 +232,27 @@ query AdvancedSearchManga(
 ### Get User's Manga List
 
 ```graphql
-query GetUserMangaList($userId: Int!, $page: Int, $perPage: Int) {
-  Page(page: $page, perPage: $perPage) {
-    pageInfo {
-      total
-      currentPage
-      lastPage
-      hasNextPage
-      perPage
-    }
-    mediaList(userId: $userId, type: MANGA) {
-      id
-      mediaId
-      status
-      score
-      progress
-      progressVolumes
-      repeat
-      priority
-      private
-      notes
-      hiddenFromStatusLists
-      customLists
-      advancedScores
-      startedAt {
-        year
-        month
-        day
-      }
-      completedAt {
-        year
-        month
-        day
-      }
-      updatedAt
-      createdAt
-      media {
+query GetUserMangaList($userId: Int, $chunk: Int, $perChunk: Int) {
+  MediaListCollection(userId: $userId, type: MANGA, chunk: $chunk, perChunk: $perChunk) {
+    lists {
+      name
+      entries {
         id
-        title {
-          romaji
-          english
-          native
-        }
-        chapters
-        volumes
+        mediaId
         status
-        format
-        coverImage {
-          medium
+        progress
+        score
+        private
+        media {
+          id
+          title {
+            romaji
+            english
+            native
+          }
+          format
+          status
+          chapters
         }
       }
     }
@@ -464,11 +493,22 @@ interface GraphQLResponse<T> {
 ### Base Request Function
 
 ```typescript
+interface AniListResponse<T> {
+  data?: T;
+  errors?: Array<{
+    message: string;
+    locations?: Array<{ line: number; column: number }>;
+    path?: string[];
+  }>;
+}
+
 async function request<T>(
   query: string,
   variables?: Record<string, any>,
   accessToken?: string,
-): Promise<T> {
+  abortSignal?: AbortSignal,
+  bypassCache?: boolean,
+): Promise<AniListResponse<T>> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "application/json",
@@ -481,26 +521,52 @@ async function request<T>(
   const response = await fetch("https://graphql.anilist.co", {
     method: "POST",
     headers,
+    signal: abortSignal,
     body: JSON.stringify({
       query,
       variables,
     }),
   });
 
-  // Handle rate limiting
-  await handleRateLimit(response);
+  if (!response.ok) {
+    if (response.status === 429) {
+      // Handle rate limiting
+      const resetTime = response.headers.get("x-ratelimit-reset");
+      const retryAfter = resetTime ? parseInt(resetTime, 10) - Math.floor(Date.now() / 1000) : 60;
+      
+      throw {
+        message: "Rate limit exceeded",
+        status: 429,
+        isRateLimited: true,
+        retryAfter: retryAfter,
+      };
+    }
+    
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
 
-  const result: GraphQLResponse<T> = await response.json();
+  const result: AniListResponse<T> = await response.json();
 
-  if (result.errors) {
+  if (result.errors && result.errors.length > 0) {
+    // Check for rate limit errors in GraphQL errors
+    const rateLimitError = result.errors.find(error => 
+      error.message.toLowerCase().includes("rate limit") ||
+      error.message.toLowerCase().includes("too many requests")
+    );
+
+    if (rateLimitError) {
+      throw {
+        message: rateLimitError.message,
+        status: 429,
+        isRateLimited: true,
+        retryAfter: 60,
+      };
+    }
+
     throw new Error(`GraphQL Error: ${result.errors[0].message}`);
   }
 
-  if (!result.data) {
-    throw new Error("No data returned from GraphQL query");
-  }
-
-  return result.data;
+  return result;
 }
 ```
 

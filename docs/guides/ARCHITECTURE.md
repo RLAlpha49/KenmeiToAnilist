@@ -39,29 +39,33 @@ Kenmei to AniList is a cross-platform desktop application built with Electron th
 
 ### UI & Styling
 
-- **TailwindCSS 4.1.11** - Utility-first CSS framework
-- **Radix UI** - Accessible, unstyled UI primitives
-- **Lucide React** - Icon library
-- **Framer Motion** - Animation library for smooth transitions
-- **shadcn/ui** - Pre-built components using Radix UI
+- **TailwindCSS 4.1.13** - Utility-first CSS framework with @tailwindcss/vite plugin
+- **Radix UI** - Accessible, unstyled UI primitives  
+- **Lucide React** - Consistent icon library with 1000+ icons
+- **Framer Motion** - Declarative animation library for smooth page transitions
+- **shadcn/ui** - Pre-built, customizable components using Radix UI primitives
 
 ### State Management & Routing
 
-- **TanStack Router** - Type-safe client-side routing
-- **React Context** - Global state management for auth, themes, and debug
-- **Custom Caching** - Three-layer storage system with in-memory, localStorage, and Electron Store
+- **TanStack Router** - Type-safe, file-based client-side routing with nested layouts
+- **React Context** - Global state management for authentication, themes, rate limiting, and debug mode
+- **Custom Hooks** - Encapsulated logic for authentication, synchronization, and rate limiting
+- **Multi-layer Caching** - Three-tier storage system with automatic synchronization
 
 ### Storage & Data
 
-- **electron-store** - Persistent file-based storage
-- **localStorage** - Browser-based storage for fast access
-- **In-memory cache** - Runtime performance optimization
+- **electron-store** - Encrypted, persistent file-based storage for sensitive data
+- **localStorage** - Browser-based storage for fast access and compatibility
+- **In-memory cache** - Runtime performance optimization with automatic invalidation
+- **Automatic Synchronization** - Seamless data consistency across all storage layers
 
 ### Development & Build Tools
 
-- **Electron Forge** - Build, package, and distribute Electron apps
-- **ESLint & Prettier** - Code quality and formatting
-- **TypeDoc** - API documentation generation
+- **Electron Forge** - Complete toolchain for building, packaging, and distributing
+- **ESLint 9.35** - Modern linting with React Compiler plugin support
+- **Prettier** - Consistent code formatting with automatic integration
+- **TypeDoc** - Comprehensive API documentation generation from TypeScript comments
+- **React Compiler** - Experimental automatic optimization plugin (Babel)
 
 ### External APIs
 
@@ -103,8 +107,20 @@ src/
 │
 ├── api/                   # API integration modules
 │   ├── anilist/          # AniList API client and utilities
+│   │   ├── client.ts     # Main API client functions
+│   │   ├── queries.ts    # GraphQL queries
+│   │   ├── mutations.ts  # GraphQL mutations
+│   │   └── types.ts      # AniList type definitions
 │   ├── kenmei/           # Kenmei data processing
-│   └── matching/         # Manga matching algorithms
+│   │   ├── parser.ts     # CSV parsing logic
+│   │   └── types.ts      # Kenmei type definitions
+│   ├── matching/         # Manga matching algorithms
+│   │   ├── match-engine.ts         # Core matching logic
+│   │   ├── manga-search-service.ts # Search and caching
+│   │   └── enhanced-similarity.ts  # Similarity algorithms
+│   └── sync/             # Synchronization services
+│       ├── anilist-sync-service.ts  # Sync operations
+│       └── anilist-mutations.ts     # Update mutations
 │
 ├── components/           # React components
 │   ├── ui/              # Reusable UI components (shadcn/ui)
@@ -115,21 +131,32 @@ src/
 │   └── debug/           # Debug and development tools
 │
 ├── contexts/            # React Context providers
-│   ├── AuthContext.tsx  # Authentication state
-│   ├── ThemeContext.tsx # Theme management
-│   ├── RateLimitContext.tsx # API rate limiting
-│   └── DebugContext.tsx # Debug mode state
+│   ├── AuthContext.tsx       # Authentication state
+│   ├── ThemeContext.tsx      # Theme management  
+│   ├── RateLimitContext.tsx  # API rate limiting
+│   └── DebugContext.tsx      # Debug mode state
 │
 ├── helpers/             # Utility functions and IPC setup
 │   ├── ipc/            # Inter-process communication
+│   │   ├── api/        # API-related IPC handlers
+│   │   ├── auth/       # Authentication IPC handlers
+│   │   └── store/      # Storage IPC handlers
 │   └── *.ts            # General helper functions
 │
 ├── hooks/              # Custom React hooks
 ├── pages/              # Application pages/routes
-├── routes/             # Routing configuration
+│   ├── HomePage.tsx         # Dashboard and overview
+│   ├── ImportPage.tsx       # CSV import functionality
+│   ├── MatchingPage.tsx     # Manga matching interface
+│   ├── SyncPage.tsx         # Sync preview and execution
+│   └── SettingsPage.tsx     # App configuration
+├── routes/             # TanStack Router configuration
 ├── styles/             # Global styles and themes
 ├── types/              # TypeScript type definitions
 └── utils/              # Utility functions
+    ├── storage.ts           # Storage abstraction layer
+    ├── app-version.ts       # Version checking
+    └── enhanced-similarity.ts # String matching algorithms
 ```
 
 ## ⚙️ Process Architecture
@@ -261,24 +288,66 @@ App (Root)
 
 ### Routing Architecture
 
-The application uses TanStack Router for type-safe, file-based routing:
+The application uses TanStack Router for type-safe, declarative routing:
 
 ```typescript
-// Route structure
-export const rootTree = RootRoute.addChildren([
-  HomeRoute, // '/'
-  ImportRoute, // '/import'
-  ReviewRoute, // '/review'
-  SyncRoute, // '/sync'
-  SettingsRoute, // '/settings'
+// Current route structure
+export const routeTree = rootRoute.addChildren([
+  indexRoute,        // '/'      - HomePage dashboard
+  importRoute,       // '/import' - CSV import functionality  
+  reviewRoute,       // '/review' - Manga matching interface
+  syncRoute,         // '/sync'   - Sync preview and execution
+  settingsRoute,     // '/settings' - App configuration
 ]);
 
-// Memory-based routing for desktop app
-export const router = createRouter({
-  routeTree: rootTree,
-  history: createMemoryHistory({ initialEntries: ["/"] }),
+// Route definitions with lazy loading
+const importRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/import',
+  component: ImportPage,
 });
+
+// Type-safe navigation
+function navigateToSync() {
+  navigate({ to: '/sync' });
+}
 ```
+
+### Page Components
+
+#### HomePage (`src/pages/HomePage.tsx`)
+
+- **Purpose**: Dashboard with statistics, quick actions, and sync status
+- **Features**: Import stats, match results summary, version checking
+- **Key State**: Authentication status, import statistics, version info
+- **Navigation**: Links to all major app functions
+
+#### ImportPage (`src/pages/ImportPage.tsx`)
+
+- **Purpose**: CSV file import and validation
+- **Features**: Drag & drop upload, file validation, data preview
+- **Key State**: File upload progress, parsing results, error handling
+- **Data Flow**: Parses CSV → Validates format → Saves to storage
+
+#### MatchingPage (`src/pages/MatchingPage.tsx`)
+
+- **Purpose**: Manga matching interface with manual review capabilities
+- **Features**: Automatic matching, manual search, confidence scoring
+- **Key State**: Match results, search progress, user selections
+- **Integration**: Uses matching algorithms, AniList search, storage persistence
+
+#### SyncPage (`src/pages/SyncPage.tsx`)
+
+- **Purpose**: Synchronization preview, configuration, and execution
+- **Features**: Sync preview, configuration options, progress monitoring
+- **Key State**: Sync configuration, user library, sync progress
+- **Workflow**: Preview → Configure → Execute → Results
+
+#### SettingsPage (`src/pages/SettingsPage.tsx`)
+
+- **Purpose**: Application configuration and authentication
+- **Features**: AniList credentials, theme selection, matching configuration
+- **Key State**: Authentication state, app preferences, API credentials
 
 ## 📊 Data Flow & State Management
 
@@ -311,14 +380,14 @@ The application uses a hybrid approach combining multiple state management patte
 
 - **Authentication**: User login status, tokens, credentials
 - **Theme**: Current theme preference (dark/light/system)
-- **Debug**: Development mode, debug panel visibility
+- **Debug**: Development mode, debug panel visibility  
 - **Rate Limiting**: API quota status, retry timers
 
 #### Custom Caching System
 
-- **API Response Caching**: Manual cache management for AniList API responses
+- **API Response Caching**: Intelligent cache management for AniList API responses
 - **Storage Synchronization**: Three-layer cache system (in-memory → localStorage → Electron Store)
-- **Background Operations**: Asynchronous API calls with manual cache invalidation
+- **Background Operations**: Asynchronous API calls with automatic cache invalidation
 
 #### Persistent State (Storage)
 
@@ -428,58 +497,146 @@ The application integrates with AniList's GraphQL API v2 for all manga-related o
 The application uses OAuth 2.0 for secure AniList authentication:
 
 ```text
-1. User clicks "Login with AniList"
-2. App opens OAuth window (main process)
-3. User authorizes on AniList website
-4. Redirect with authorization code
-5. App exchanges code for access token
-6. Token stored securely (Electron Store)
-7. Token used for API requests
+1. User clicks "Connect AniList Account" 
+2. App opens OAuth window with AniList authorization URL
+3. User authorizes the application
+4. AniList redirects with authorization code
+5. Main process exchanges code for access token via IPC
+6. Token stored securely in Electron Store
+7. User profile fetched and stored in authentication context
+8. App navigates to authenticated state
 ```
 
-### Rate Limiting Strategy
+## 🔄 Application Workflow
+
+### Complete User Journey
+
+The application follows a structured workflow from import to synchronization:
+
+```mermaid
+graph TD
+    A[Home Page] --> B[Import CSV Data]
+    B --> C[Parse & Validate Data]
+    C --> D[Automatic Matching Process]
+    D --> E[Manual Review & Adjustment]
+    E --> F[Sync Configuration]
+    F --> G[Preview Changes]
+    G --> H[Execute Synchronization]
+    H --> I[View Results & Export Logs]
+    I --> A
+    
+    J[Settings] --> A
+    K[Authentication] --> A
+```
+
+#### Data Processing Pipeline
+
+1. **Import Phase**
+   - CSV file validation and parsing
+   - Kenmei data normalization
+   - Storage in three-layer system
+
+2. **Matching Phase**
+   - Automatic search using enhanced similarity algorithms
+   - Confidence scoring based on multiple factors
+   - Manual search and selection interface
+   - Results persistence with user modifications
+
+3. **Synchronization Phase**
+   - User library fetching with rate limit handling
+   - Change preview with configuration options
+   - Batch processing with incremental sync support
+   - Error handling and retry mechanisms
+
+4. **Results Phase**
+   - Comprehensive sync reporting
+   - Error log export functionality
+   - Statistics tracking and storage
+
+## 🚀 Performance Optimizations
+
+### Multi-layer Caching Strategy
 
 ```typescript
-// Rate limit management
-interface RateLimitStatus {
-  isRateLimited: boolean;
-  retryAfter: number | null;
-  timeRemaining: number;
-}
-
-// Exponential backoff for rate limits
-const delay = Math.min(1000 * Math.pow(2, attempt), 30000);
-await new Promise((resolve) => setTimeout(resolve, delay));
+// Three-tier caching implementation
+export const storage = {
+  // Level 1: In-memory cache (fastest)
+  getItem: (key: string) => {
+    if (key in storageCache) return storageCache[key];
+    
+    // Level 2: localStorage (fast)
+    const value = localStorage.getItem(key);
+    if (value !== null) storageCache[key] = value;
+    
+    // Level 3: Electron Store (authoritative, async check)
+    if (window.electronStore) {
+      window.electronStore.getItem(key).then(electronValue => {
+        if (electronValue !== null && electronValue !== value) {
+          localStorage.setItem(key, electronValue);
+          storageCache[key] = electronValue;
+        }
+      });
+    }
+    
+    return value;
+  }
+};
 ```
 
-### Caching Strategy
+### API Optimization Techniques
 
-The application implements a sophisticated multi-layer caching system:
+- **Request Batching**: Group multiple manga lookups into single API calls
+- **Intelligent Caching**: 30-minute cache expiration with manual invalidation
+- **Rate Limit Handling**: Automatic retry with exponential backoff
+- **Abort Signal Support**: Cancel in-flight requests during navigation
+- **Cache Bypass Options**: Force fresh data when needed
 
-#### API Response Caching
+### React Performance
 
-- **Search Results**: 30-minute expiration in localStorage and in-memory cache
-- **Manga Search**: 24-hour expiration for manga-specific queries
-- **Main Process Cache**: 30-minute expiration for IPC-cached responses
-- **Manual Cache Management**: Available via debug menu and API calls
+- **React Compiler**: Experimental automatic optimization (babel-plugin-react-compiler)
+- **Code Splitting**: Lazy loading for non-critical components
+- **Virtualization**: Large list rendering optimization (planned)
+- **Memoization**: Strategic use of useMemo and useCallback for expensive operations
 
-#### Cache Implementation Layers
+### Security Architecture
 
-```typescript
-// 1. In-memory cache (fastest access)
-const searchCache: Cache<SearchResult<AniListManga>> = {};
+#### Secure Authentication Storage
 
-// 2. localStorage persistence (survives page reloads)
-localStorage.setItem("anilist_search_cache", JSON.stringify(cache));
+- **Credential Encryption**: OAuth credentials stored in Electron Store with platform encryption
+- **Token Management**: Access tokens managed through secure IPC channels
+- **No Direct File Access**: Renderer process cannot access filesystem directly
 
-// 3. Main process cache (IPC-level caching)
-const searchCache: Cache<Record<string, unknown>> = {};
+## 🔧 Build & Deployment
+
+### Development Workflow
+
+```bash
+# Development server with hot reload
+npm start
+
+# Type checking
+npm run lint
+
+# Documentation generation  
+npm run docs
+
+# Package for distribution
+npm run make
 ```
 
-#### Cache Synchronization
+### Build Configuration
 
-- **Cross-layer sync**: In-memory ↔ localStorage ↔ Main process
-- **Event-driven updates**: Cache changes trigger synchronization events
+- **Electron Forge**: Complete build pipeline with platform-specific packaging
+- **Vite Configuration**: Separate configs for main, preload, and renderer processes
+- **TypeScript**: Strict type checking with path mapping for clean imports
+- **Asset Optimization**: Automatic code splitting and tree shaking
+
+### Distribution
+
+- **Windows**: Squirrel installer (.exe)
+- **macOS**: DMG installer with code signing
+- **Linux**: DEB and AppImage packages
+- **Auto-updater**: Built-in update mechanism (planned)
 - **Intelligent invalidation**: Manual clearing with title-specific targeting
 
 ## 🚀 Build & Deployment
@@ -501,8 +658,6 @@ Development environment features:
 ```bash
 npm run make  # Builds and packages for current platform
 ```
-
-### Build Configuration
 
 #### Electron Forge Configuration (`forge.config.js`)
 

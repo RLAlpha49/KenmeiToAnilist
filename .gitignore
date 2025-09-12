@@ -102,7 +102,7 @@ out/
 
 .cursor/templates
 .vscode/
-copilot-instructions.md
+AGENTS.md
 
 # Docs
 documentation/
