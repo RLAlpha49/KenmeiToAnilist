@@ -1,5 +1,16 @@
-# Add files here to ignore them from prettier formatting
 /dist
 /.vite
+/out
 /docs
+/documentation
+.vscode/settings.json
+package-lock.json
 README.md
+
+# Electron build outputs
+*.asar
+*.app
+*.exe
+*.dmg
+*.deb
+*.rpm
