@@ -13,8 +13,8 @@ import {
   AniListMediaEntry,
   UserMediaList,
   MediaListStatus,
+  MangaMatchResult
 } from "../api/anilist/types";
-import { MangaMatchResult } from "../api/anilist/types";
 import { STATUS_MAPPING, KenmeiStatus } from "../api/kenmei/types";
 import {
   getSavedMatchResults,
@@ -451,32 +451,48 @@ export function SyncPage() {
           if (isCompleted) {
             if (filters.changes === "with-changes") return false;
           } else {
-            const statusWillChange = userEntry
-              ? syncConfig.prioritizeAniListStatus
-                ? false
-                : getEffectiveStatus(kenmei) !== userEntry.status
-              : true;
+            // Determine if status will change
+            let statusWillChange: boolean;
+            if (!userEntry) {
+              statusWillChange = true;
+            } else if (syncConfig.prioritizeAniListStatus) {
+              statusWillChange = false;
+            } else {
+              statusWillChange = getEffectiveStatus(kenmei) !== userEntry.status;
+            }
 
-            const progressWillChange = userEntry
-              ? syncConfig.prioritizeAniListProgress
-                ? // Will only change if Kenmei has more chapters read than AniList
-                  (kenmei.chapters_read || 0) > (userEntry.progress || 0)
-                : (kenmei.chapters_read || 0) !== (userEntry.progress || 0)
-              : true;
+            // Determine if progress will change
+            let progressWillChange: boolean;
+            if (!userEntry) {
+              progressWillChange = true;
+            } else if (syncConfig.prioritizeAniListProgress) {
+              // Will only change if Kenmei has more chapters read than AniList
+              progressWillChange = (kenmei.chapters_read || 0) > (userEntry.progress || 0);
+            } else {
+              progressWillChange = (kenmei.chapters_read || 0) !== (userEntry.progress || 0);
+            }
 
             const anilistScore = userEntry ? Number(userEntry.score || 0) : 0;
             const kenmeiScore = Number(kenmei.score || 0);
 
-            const scoreWillChange = userEntry
-              ? userEntry.status === "COMPLETED" &&
-                syncConfig.preserveCompletedStatus
-                ? false
-                : syncConfig.prioritizeAniListScore && anilistScore > 0
-                  ? false
-                  : kenmeiScore > 0 &&
-                    (anilistScore === 0 ||
-                      Math.abs(kenmeiScore - anilistScore) >= 0.5)
-              : kenmeiScore > 0;
+            // Determine if score will change
+            let scoreWillChange: boolean;
+            if (!userEntry) {
+              scoreWillChange = kenmeiScore > 0;
+            } else {
+              // Check if entry is completed and we're preserving completed status
+              const isCompletedAndPreserved = userEntry.status === "COMPLETED" && 
+                syncConfig.preserveCompletedStatus;
+              
+              if (isCompletedAndPreserved) {
+                scoreWillChange = false;
+              } else if (syncConfig.prioritizeAniListScore && anilistScore > 0) {
+                scoreWillChange = false;
+              } else {
+                scoreWillChange = kenmeiScore > 0 && 
+                  (anilistScore === 0 || Math.abs(kenmeiScore - anilistScore) >= 0.5);
+              }
+            }
 
             const hasChanges =
               statusWillChange ||
@@ -572,8 +588,6 @@ export function SyncPage() {
         case "changes":
           comparison = getChangeCount(b) - getChangeCount(a);
           break;
-        default:
-          comparison = 0;
       }
 
       // Apply sort direction
@@ -661,34 +675,32 @@ export function SyncPage() {
         } else {
           calculatedStatus = STATUS_MAPPING[kenmei.status];
         }
-        const privateStatus = userEntry
-          ? syncConfig.setPrivate
-            ? true
-            : userEntry.private || false
-          : syncConfig.setPrivate;
+        let privateStatus: boolean;
+        if (userEntry) {
+          privateStatus = syncConfig.setPrivate ? true : (userEntry.private || false);
+        } else {
+          privateStatus = syncConfig.setPrivate;
+        }
         const entry: AniListMediaEntry = {
           mediaId: anilist.id,
           status:
             syncConfig.prioritizeAniListStatus && userEntry?.status
               ? (userEntry.status as MediaListStatus)
               : calculatedStatus,
-          progress:
-            syncConfig.prioritizeAniListProgress &&
-            userEntry?.progress &&
-            userEntry.progress > 0
-              ? userEntry.progress > (kenmei.chapters_read || 0)
-                ? userEntry.progress
-                : kenmei.chapters_read || 0
-              : kenmei.chapters_read || 0,
+          progress: (() => {
+            if (syncConfig.prioritizeAniListProgress && userEntry?.progress && userEntry.progress > 0) {
+              const kenmeiProgress = kenmei.chapters_read || 0;
+              return userEntry.progress > kenmeiProgress ? userEntry.progress : kenmeiProgress;
+            }
+            return kenmei.chapters_read || 0;
+          })(),
           private: privateStatus,
-          score:
-            userEntry &&
-            syncConfig.prioritizeAniListScore &&
-            userEntry.score > 0
-              ? userEntry.score
-              : typeof kenmei.score === "number"
-                ? kenmei.score
-                : 0,
+          score: (() => {
+            if (userEntry && syncConfig.prioritizeAniListScore && userEntry.score > 0) {
+              return userEntry.score;
+            }
+            return typeof kenmei.score === "number" ? kenmei.score : 0;
+          })(),
           previousValues: userEntry
             ? {
                 status: userEntry.status,
@@ -704,12 +716,10 @@ export function SyncPage() {
           title: anilist.title.romaji || kenmei.title,
           coverImage: anilist.coverImage?.large || anilist.coverImage?.medium,
         };
-        if (entry.private === undefined) {
-          entry.private = syncConfig.setPrivate || false;
-        }
+        entry.private ??= syncConfig.setPrivate || false;
         return entry;
       })
-      .filter((entry) => entry !== null) as AniListMediaEntry[];
+      .filter((entry) => entry !== null);
   }, [mangaMatches, userLibrary, syncConfig]);
 
   // Only sync entries with actual changes
@@ -742,10 +752,13 @@ export function SyncPage() {
       entry.previousValues.status === "COMPLETED" &&
       syncConfig.preserveCompletedStatus
         ? false
-        : syncConfig.prioritizeAniListScore && anilistScore > 0
-          ? false
-          : kenmeiScore > 0 &&
-            (anilistScore === 0 || Math.abs(kenmeiScore - anilistScore) >= 0.5);
+        : (() => {
+            if (syncConfig.prioritizeAniListScore && anilistScore > 0) {
+              return false;
+            }
+            return kenmeiScore > 0 &&
+              (anilistScore === 0 || Math.abs(kenmeiScore - anilistScore) >= 0.5);
+          })();
 
     // Privacy change
     const privacyWillChange =
@@ -926,13 +939,12 @@ export function SyncPage() {
         >
           <Card className="mx-auto w-full max-w-md text-center">
             <CardContent className="pt-6">
-              <div
+              <output
                 className="mb-4 inline-block h-8 w-8 animate-spin rounded-full border-4 border-current border-t-transparent text-blue-600"
-                role="status"
                 aria-label="loading"
               >
                 <span className="sr-only">Loading...</span>
-              </div>
+              </output>
               <h3 className="text-lg font-medium">
                 Loading Synchronization Data
               </h3>
@@ -957,13 +969,13 @@ export function SyncPage() {
         >
           <Card className="mx-auto w-full max-w-md text-center">
             <CardContent className="pt-6">
-              <div
+              <output
                 className="mb-4 inline-block h-8 w-8 animate-spin rounded-full border-4 border-current border-t-transparent text-blue-600"
-                role="status"
+                aria-live="polite"
                 aria-label="loading"
               >
                 <span className="sr-only">Loading...</span>
-              </div>
+              </output>
               <h3 className="text-lg font-medium">
                 {rateLimitState.isRateLimited
                   ? "Synchronization Paused"
@@ -1031,6 +1043,7 @@ export function SyncPage() {
                               className="flex-1 text-sm"
                             >
                               Prioritize AniList status
+                              {' '}
                               <span className="text-muted-foreground block text-xs">
                                 When enabled, keeps your existing AniList status
                               </span>
@@ -1052,6 +1065,7 @@ export function SyncPage() {
                               className="flex-1 text-sm"
                             >
                               Preserve Completed Status
+                              {' '}
                               <span className="text-muted-foreground block text-xs">
                                 Always preserve entries marked as COMPLETED in
                                 AniList
@@ -1074,6 +1088,7 @@ export function SyncPage() {
                               className="flex-1 text-sm"
                             >
                               Prioritize AniList progress
+                              {' '}
                               <span className="text-muted-foreground block text-xs">
                                 When enabled, keeps higher chapter counts from
                                 AniList (Does not apply when the prioritized
@@ -1097,6 +1112,7 @@ export function SyncPage() {
                               className="flex-1 text-sm"
                             >
                               Prioritize AniList scores
+                              {' '}
                               <span className="text-muted-foreground block text-xs">
                                 When enabled, keeps your existing AniList scores
                                 (Does not apply when the prioritized source is
@@ -1120,6 +1136,7 @@ export function SyncPage() {
                               className="flex-1 text-sm"
                             >
                               Set entries as private
+                              {' '}
                               <span className="text-muted-foreground block text-xs">
                                 When enabled, sets entries as private.
                                 Doesn&apos;t change existing private settings.
@@ -1142,6 +1159,7 @@ export function SyncPage() {
                               className="flex-1 text-sm"
                             >
                               Auto-pause inactive manga
+                              {' '}
                               <span className="text-muted-foreground block text-xs">
                                 When enabled, sets manga as PAUSED if not
                                 updated recently (Can specify the period)
@@ -2069,48 +2087,59 @@ export function SyncPage() {
                                 const userEntry = userLibrary[anilist.id];
 
                                 // Determine what will change based on sync configuration
-                                const statusWillChange = userEntry
-                                  ? syncConfig.prioritizeAniListStatus
-                                    ? false // If prioritizing AniList status, it won't change
-                                    : getEffectiveStatus(kenmei) !==
-                                        userEntry.status &&
+                                let statusWillChange = true;
+                                if (userEntry) {
+                                  if (syncConfig.prioritizeAniListStatus) {
+                                    statusWillChange = false; // If prioritizing AniList status, it won't change
+                                  } else {
+                                    statusWillChange =
+                                      getEffectiveStatus(kenmei) !== userEntry.status &&
                                       !(
                                         userEntry.status === "COMPLETED" &&
                                         syncConfig.preserveCompletedStatus
-                                      )
-                                  : true;
+                                      );
+                                  }
+                                }
 
-                                const progressWillChange = userEntry
-                                  ? syncConfig.prioritizeAniListProgress
-                                    ? // Will only change if Kenmei has more chapters read than AniList
-                                      (kenmei.chapters_read || 0) >
-                                      (userEntry.progress || 0)
-                                    : (kenmei.chapters_read || 0) !==
-                                      (userEntry.progress || 0)
-                                  : true;
+                                let progressWillChange = true;
+                                if (userEntry) {
+                                  if (syncConfig.prioritizeAniListProgress) {
+                                    // Will only change if Kenmei has more chapters read than AniList
+                                    progressWillChange = (kenmei.chapters_read || 0) > (userEntry.progress || 0);
+                                  } else {
+                                    progressWillChange = (kenmei.chapters_read || 0) !== (userEntry.progress || 0);
+                                  }
+                                }
 
-                                const scoreWillChange = userEntry
-                                  ? // Don't update completed entries if preserve setting is on
+                                let scoreWillChange: boolean;
+                                if (userEntry) {
+                                  // Don't update completed entries if preserve setting is on
+                                  if (
                                     userEntry.status === "COMPLETED" &&
                                     syncConfig.preserveCompletedStatus
-                                    ? false
-                                    : // Apply score prioritization rules
-                                      syncConfig.prioritizeAniListScore &&
-                                        userEntry.score &&
-                                        Number(userEntry.score) > 0
-                                      ? false // Only prioritize if AniList score > 0
-                                      : // Only consider a change if Kenmei has a score
-                                        kenmei.score > 0 &&
-                                        // Convert both scores to numbers and compare
-                                        // If AniList has no score but Kenmei does, that's a change
-                                        (Number(userEntry.score || 0) === 0 ||
-                                          // Use threshold comparison after explicit number conversion
-                                          Math.abs(
-                                            Number(kenmei.score) -
-                                              Number(userEntry.score || 0),
-                                          ) >= 0.5)
-                                  : // For new entries, only show score change if Kenmei has a score
-                                    kenmei.score > 0;
+                                  ) {
+                                    scoreWillChange = false;
+                                  } else if (
+                                    syncConfig.prioritizeAniListScore &&
+                                    userEntry.score &&
+                                    Number(userEntry.score) > 0
+                                  ) {
+                                    // Only prioritize if AniList score > 0
+                                    scoreWillChange = false;
+                                  } else {
+                                    // Only consider a change if Kenmei has a score
+                                    scoreWillChange =
+                                      kenmei.score > 0 &&
+                                      (Number(userEntry.score || 0) === 0 ||
+                                        Math.abs(
+                                          Number(kenmei.score) -
+                                            Number(userEntry.score || 0),
+                                        ) >= 0.5);
+                                  }
+                                } else {
+                                  // For new entries, only show score change if Kenmei has a score
+                                  scoreWillChange = kenmei.score > 0;
+                                }
 
                                 // Track if manga is new to the user's library or shouldn't be updated due to special cases
                                 const isNewEntry = !userEntry;
@@ -2269,7 +2298,7 @@ export function SyncPage() {
                                           {/* Comparison Table */}
                                           <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
                                             <div
-                                              className={`rounded-md p-2 ${isNewEntry ? "bg-slate-100 dark:bg-slate-800/60" : "bg-slate-100 dark:bg-slate-800/60"}`}
+                                              className="rounded-md p-2 bg-slate-100 dark:bg-slate-800/60"
                                             >
                                               <h4 className="text-muted-foreground mb-2 text-xs font-medium">
                                                 {isNewEntry
@@ -2324,13 +2353,21 @@ export function SyncPage() {
                                                     <span className="text-muted-foreground text-xs">
                                                       Private:
                                                     </span>
-                                                    <span
-                                                      className={`text-xs font-medium ${userEntry ? (syncConfig.setPrivate && !userEntry.private ? "text-muted-foreground line-through" : "") : syncConfig.setPrivate ? "text-muted-foreground line-through" : ""}`}
-                                                    >
-                                                      {userEntry?.private
-                                                        ? "Yes"
-                                                        : "No"}
-                                                    </span>
+                                                    {(() => {
+                                                      let privacyClass = "text-xs font-medium";
+                                                      if (userEntry) {
+                                                        if (syncConfig.setPrivate && !userEntry.private) {
+                                                          privacyClass += " text-muted-foreground line-through";
+                                                        }
+                                                      } else if (syncConfig.setPrivate) {
+                                                        privacyClass += " text-muted-foreground line-through";
+                                                      }
+                                                      return (
+                                                        <span className={privacyClass}>
+                                                          {userEntry?.private ? "Yes" : "No"}
+                                                        </span>
+                                                      );
+                                                    })()}
                                                   </div>
                                                 </div>
                                               )}
@@ -2356,61 +2393,89 @@ export function SyncPage() {
                                                   <span className="text-xs text-blue-500 dark:text-blue-400">
                                                     Progress:
                                                   </span>
-                                                  <span
-                                                    className={`text-xs font-medium ${progressWillChange ? "text-blue-700 dark:text-blue-300" : ""}`}
-                                                  >
-                                                    {syncConfig.prioritizeAniListProgress
-                                                      ? userEntry?.progress &&
-                                                        userEntry.progress > 0
-                                                        ? (kenmei.chapters_read ||
-                                                            0) >
-                                                          userEntry.progress
-                                                          ? kenmei.chapters_read ||
-                                                            0
-                                                          : userEntry.progress
-                                                        : kenmei.chapters_read ||
-                                                          0
-                                                      : kenmei.chapters_read ||
-                                                        0}{" "}
-                                                    ch
-                                                    {anilist.chapters
-                                                      ? ` / ${anilist.chapters}`
-                                                      : ""}
-                                                  </span>
+                                                  {(() => {
+                                                    let afterSyncProgress: number;
+                                                    if (syncConfig.prioritizeAniListProgress) {
+                                                      if (userEntry?.progress && userEntry.progress > 0) {
+                                                        afterSyncProgress =
+                                                          (kenmei.chapters_read || 0) > userEntry.progress
+                                                            ? kenmei.chapters_read || 0
+                                                            : userEntry.progress;
+                                                      } else {
+                                                        afterSyncProgress = kenmei.chapters_read || 0;
+                                                      }
+                                                    } else {
+                                                      afterSyncProgress = kenmei.chapters_read || 0;
+                                                    }
+                                                    return (
+                                                      <span
+                                                        className={`text-xs font-medium ${progressWillChange ? "text-blue-700 dark:text-blue-300" : ""}`}
+                                                      >
+                                                        {afterSyncProgress} ch
+                                                        {anilist.chapters
+                                                          ? ` / ${anilist.chapters}`
+                                                          : ""}
+                                                      </span>
+                                                    );
+                                                  })()}
                                                 </div>
                                                 <div className="flex items-center justify-between">
                                                   <span className="text-xs text-blue-500 dark:text-blue-400">
                                                     Score:
                                                   </span>
-                                                  <span
-                                                    className={`text-xs font-medium ${scoreWillChange ? "text-blue-700 dark:text-blue-300" : ""}`}
-                                                  >
-                                                    {scoreWillChange
-                                                      ? kenmei.score
-                                                        ? `${kenmei.score}/10`
-                                                        : "None"
-                                                      : userEntry?.score
-                                                        ? `${userEntry.score}/10`
-                                                        : "None"}
-                                                  </span>
+                                                  {(() => {
+                                                    let scoreDisplay: string;
+                                                    if (scoreWillChange) {
+                                                      scoreDisplay =
+                                                        kenmei.score
+                                                          ? `${kenmei.score}/10`
+                                                          : "None";
+                                                    } else {
+                                                      scoreDisplay =
+                                                        userEntry?.score
+                                                          ? `${userEntry.score}/10`
+                                                          : "None";
+                                                    }
+                                                    return (
+                                                      <span
+                                                        className={`text-xs font-medium ${scoreWillChange ? "text-blue-700 dark:text-blue-300" : ""}`}
+                                                      >
+                                                        {scoreDisplay}
+                                                      </span>
+                                                    );
+                                                  })()}
                                                 </div>
                                                 <div className="flex items-center justify-between">
                                                   <span className="text-xs text-blue-500 dark:text-blue-400">
                                                     Private:
                                                   </span>
-                                                  <span
-                                                    className={`text-xs font-medium ${userEntry ? (syncConfig.setPrivate && !userEntry.private ? "text-blue-700 dark:text-blue-300" : "") : syncConfig.setPrivate ? "text-blue-700 dark:text-blue-300" : ""}`}
-                                                  >
-                                                    {userEntry
-                                                      ? syncConfig.setPrivate
-                                                        ? "Yes"
-                                                        : userEntry.private
-                                                          ? "Yes"
-                                                          : "No"
-                                                      : syncConfig.setPrivate
-                                                        ? "Yes"
-                                                        : "No"}
-                                                  </span>
+                                                  {(() => {
+                                                    let privacyClass = "text-xs font-medium";
+                                                    if (userEntry) {
+                                                      if (syncConfig.setPrivate && !userEntry.private) {
+                                                        privacyClass += " text-blue-700 dark:text-blue-300";
+                                                      }
+                                                    } else if (syncConfig.setPrivate) {
+                                                      privacyClass += " text-blue-700 dark:text-blue-300";
+                                                    }
+                                                    let privacyDisplay: string;
+                                                    if (userEntry) {
+                                                      if (syncConfig.setPrivate) {
+                                                        privacyDisplay = "Yes";
+                                                      } else if (userEntry.private) {
+                                                        privacyDisplay = "Yes";
+                                                      } else {
+                                                        privacyDisplay = "No";
+                                                      }
+                                                    } else {
+                                                      privacyDisplay = syncConfig.setPrivate ? "Yes" : "No";
+                                                    }
+                                                    return (
+                                                      <span className={privacyClass}>
+                                                        {privacyDisplay}
+                                                      </span>
+                                                    );
+                                                  })()}
                                                 </div>
                                               </div>
                                             </div>
@@ -2455,13 +2520,14 @@ export function SyncPage() {
                                   : `Load More (${visibleItems} of ${sortedMangaMatches.length})`}
                               </Button>
                             </div>
-                          ) : sortedMangaMatches.length > 0 ? (
+                          ) : null}
+                          {sortedMangaMatches.length > 0 && sortedMangaMatches.length <= visibleItems && (
                             <div className="py-4 text-center">
                               <span className="text-muted-foreground text-xs">
                                 All items loaded
                               </span>
                             </div>
-                          ) : null}
+                          )}
                         </motion.div>
                       ) : (
                         <motion.div
@@ -2484,48 +2550,63 @@ export function SyncPage() {
                                 const userEntry = userLibrary[anilist.id];
 
                                 // Determine what will change based on sync configuration
-                                const statusWillChange = userEntry
-                                  ? syncConfig.prioritizeAniListStatus
-                                    ? false // If prioritizing AniList status, it won't change
-                                    : getEffectiveStatus(kenmei) !==
-                                        userEntry.status &&
+                                let statusWillChange: boolean;
+                                if (userEntry) {
+                                  if (syncConfig.prioritizeAniListStatus) {
+                                    statusWillChange = false; // If prioritizing AniList status, it won't change
+                                  } else {
+                                    statusWillChange =
+                                      getEffectiveStatus(kenmei) !== userEntry.status &&
                                       !(
                                         userEntry.status === "COMPLETED" &&
                                         syncConfig.preserveCompletedStatus
-                                      )
-                                  : true;
+                                      );
+                                  }
+                                } else {
+                                  statusWillChange = true;
+                                }
 
-                                const progressWillChange = userEntry
-                                  ? syncConfig.prioritizeAniListProgress
-                                    ? // Will only change if Kenmei has more chapters read than AniList
-                                      (kenmei.chapters_read || 0) >
-                                      (userEntry.progress || 0)
-                                    : (kenmei.chapters_read || 0) !==
-                                      (userEntry.progress || 0)
-                                  : true;
+                                let progressWillChange: boolean;
+                                if (userEntry) {
+                                  if (syncConfig.prioritizeAniListProgress) {
+                                    // Will only change if Kenmei has more chapters read than AniList
+                                    progressWillChange = (kenmei.chapters_read || 0) > (userEntry.progress || 0);
+                                  } else {
+                                    progressWillChange = (kenmei.chapters_read || 0) !== (userEntry.progress || 0);
+                                  }
+                                } else {
+                                  progressWillChange = true;
+                                }
 
-                                const scoreWillChange = userEntry
-                                  ? // Don't update completed entries if preserve setting is on
+                                let scoreWillChange: boolean;
+                                if (userEntry) {
+                                  // Don't update completed entries if preserve setting is on
+                                  if (
                                     userEntry.status === "COMPLETED" &&
                                     syncConfig.preserveCompletedStatus
-                                    ? false
-                                    : // Apply score prioritization rules
-                                      syncConfig.prioritizeAniListScore &&
-                                        userEntry.score &&
-                                        Number(userEntry.score) > 0
-                                      ? false // Only prioritize if AniList score > 0
-                                      : // Only consider a change if Kenmei has a score
-                                        kenmei.score > 0 &&
-                                        // Convert both scores to numbers and compare
-                                        // If AniList has no score but Kenmei does, that's a change
-                                        (Number(userEntry.score || 0) === 0 ||
-                                          // Use threshold comparison after explicit number conversion
-                                          Math.abs(
-                                            Number(kenmei.score) -
-                                              Number(userEntry.score || 0),
-                                          ) >= 0.5)
-                                  : // For new entries, only show score change if Kenmei has a score
-                                    kenmei.score > 0;
+                                  ) {
+                                    scoreWillChange = false;
+                                  } else if (
+                                    syncConfig.prioritizeAniListScore &&
+                                    userEntry.score &&
+                                    Number(userEntry.score) > 0
+                                  ) {
+                                    // Only prioritize if AniList score > 0
+                                    scoreWillChange = false;
+                                  } else {
+                                    // Only consider a change if Kenmei has a score
+                                    scoreWillChange =
+                                      kenmei.score > 0 &&
+                                      (Number(userEntry.score || 0) === 0 ||
+                                        Math.abs(
+                                          Number(kenmei.score) -
+                                            Number(userEntry.score || 0),
+                                        ) >= 0.5);
+                                  }
+                                } else {
+                                  // For new entries, only show score change if Kenmei has a score
+                                  scoreWillChange = kenmei.score > 0;
+                                }
 
                                 // Track if manga is new to the user's library or shouldn't be updated due to special cases
                                 const isNewEntry = !userEntry;
@@ -2639,17 +2720,19 @@ export function SyncPage() {
 
                                               const fromProgress =
                                                 userEntry?.progress || 0;
-                                              const toProgress =
-                                                syncConfig.prioritizeAniListProgress
-                                                  ? userEntry?.progress &&
-                                                    userEntry.progress > 0
-                                                    ? (kenmei.chapters_read ||
-                                                        0) > userEntry.progress
-                                                      ? kenmei.chapters_read ||
-                                                        0
-                                                      : userEntry.progress
-                                                    : kenmei.chapters_read || 0
-                                                  : kenmei.chapters_read || 0;
+                                              let toProgress: number;
+                                              if (syncConfig.prioritizeAniListProgress) {
+                                                if (userEntry?.progress && userEntry.progress > 0) {
+                                                  toProgress =
+                                                    (kenmei.chapters_read || 0) > userEntry.progress
+                                                      ? kenmei.chapters_read || 0
+                                                      : userEntry.progress;
+                                                } else {
+                                                  toProgress = kenmei.chapters_read || 0;
+                                                }
+                                              } else {
+                                                toProgress = kenmei.chapters_read || 0;
+                                              }
 
                                               // Only show badge if values are actually different
                                               if (fromProgress === toProgress)
