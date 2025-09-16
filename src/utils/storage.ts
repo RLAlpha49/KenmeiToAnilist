@@ -276,6 +276,7 @@ export const STORAGE_KEYS = {
   SYNC_CONFIG: "sync_config",
   SYNC_STATS: "sync_stats",
   MATCH_CONFIG: "match_config",
+  IGNORED_DUPLICATES: "ignored_duplicates",
 };
 
 /**
@@ -690,5 +691,108 @@ export function getMatchConfig(): MatchConfig {
   } catch (error) {
     console.error("Error retrieving match config from storage", error);
     return DEFAULT_MATCH_CONFIG;
+  }
+}
+
+/**
+ * Interface for tracking ignored duplicate AniList entries
+ */
+export interface IgnoredDuplicate {
+  anilistId: number;
+  anilistTitle: string;
+  ignoredAt: number; // timestamp
+}
+
+/**
+ * Save an ignored duplicate entry to storage
+ *
+ * @param anilistId - The AniList ID to ignore
+ * @param anilistTitle - The AniList title
+ * @source
+ */
+export function addIgnoredDuplicate(
+  anilistId: number,
+  anilistTitle: string,
+): void {
+  try {
+    const ignored = getIgnoredDuplicates();
+
+    // Check if already ignored
+    if (ignored.some((item) => item.anilistId === anilistId)) {
+      return;
+    }
+
+    // Add new ignored entry
+    ignored.push({
+      anilistId,
+      anilistTitle,
+      ignoredAt: Date.now(),
+    });
+
+    storage.setItem(STORAGE_KEYS.IGNORED_DUPLICATES, JSON.stringify(ignored));
+  } catch (error) {
+    console.error("Error saving ignored duplicate to storage", error);
+  }
+}
+
+/**
+ * Get all ignored duplicate entries from storage
+ *
+ * @returns Array of ignored duplicate entries
+ * @source
+ */
+export function getIgnoredDuplicates(): IgnoredDuplicate[] {
+  try {
+    const ignored = storage.getItem(STORAGE_KEYS.IGNORED_DUPLICATES);
+    return ignored ? JSON.parse(ignored) : [];
+  } catch (error) {
+    console.error("Error retrieving ignored duplicates from storage", error);
+    return [];
+  }
+}
+
+/**
+ * Remove an ignored duplicate entry from storage
+ *
+ * @param anilistId - The AniList ID to un-ignore
+ * @source
+ */
+export function removeIgnoredDuplicate(anilistId: number): void {
+  try {
+    const ignored = getIgnoredDuplicates();
+    const filtered = ignored.filter((item) => item.anilistId !== anilistId);
+    storage.setItem(STORAGE_KEYS.IGNORED_DUPLICATES, JSON.stringify(filtered));
+  } catch (error) {
+    console.error("Error removing ignored duplicate from storage", error);
+  }
+}
+
+/**
+ * Clear all ignored duplicate entries from storage
+ *
+ * @source
+ */
+export function clearIgnoredDuplicates(): void {
+  try {
+    storage.removeItem(STORAGE_KEYS.IGNORED_DUPLICATES);
+  } catch (error) {
+    console.error("Error clearing ignored duplicates from storage", error);
+  }
+}
+
+/**
+ * Check if a specific AniList ID is ignored
+ *
+ * @param anilistId - The AniList ID to check
+ * @returns True if the ID is ignored, false otherwise
+ * @source
+ */
+export function isAniListIdIgnored(anilistId: number): boolean {
+  try {
+    const ignored = getIgnoredDuplicates();
+    return ignored.some((item) => item.anilistId === anilistId);
+  } catch (error) {
+    console.error("Error checking if AniList ID is ignored", error);
+    return false;
   }
 }

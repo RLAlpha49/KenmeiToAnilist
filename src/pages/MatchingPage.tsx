@@ -10,7 +10,11 @@ import { KenmeiManga } from "../api/kenmei/types";
 import { MangaMatchResult } from "../api/anilist/types";
 import { MangaMatchingPanel } from "../components/matching/MangaMatchingPanel";
 import { useAuth } from "../hooks/useAuth";
-import { getKenmeiData } from "../utils/storage";
+import {
+  getKenmeiData,
+  addIgnoredDuplicate,
+  getIgnoredDuplicates,
+} from "../utils/storage";
 import { StatusFilterOptions } from "../types/matching";
 import { useMatchingProcess } from "../hooks/useMatchingProcess";
 import { usePendingManga } from "../hooks/usePendingManga";
@@ -28,9 +32,8 @@ import { CacheClearingNotification } from "../components/matching/CacheClearingN
 import { SearchModal } from "../components/matching/SearchModal";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle, X, Search } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle } from "lucide-react";
 
 // Animation variants
 const pageVariants = {
@@ -69,6 +72,189 @@ const contentVariants = {
 };
 
 /**
+ * Interface for duplicate AniList entries
+ */
+interface DuplicateEntry {
+  anilistId: number;
+  anilistTitle: string;
+  kenmeiTitles: string[];
+}
+
+/**
+ * Utility function to detect duplicate AniList IDs across matches
+ */
+function detectDuplicateAniListIds(
+  matches: MangaMatchResult[],
+): DuplicateEntry[] {
+  const anilistIdMap = new Map<
+    number,
+    { title: string; kenmeiTitles: string[] }
+  >();
+
+  // Collect all accepted matches with their AniList IDs
+  matches.forEach((match) => {
+    if (
+      (match.status === "matched" || match.status === "manual") &&
+      match.selectedMatch
+    ) {
+      const anilistId = match.selectedMatch.id;
+      const anilistTitle =
+        match.selectedMatch.title.romaji ||
+        match.selectedMatch.title.english ||
+        "Unknown Title";
+      const kenmeiTitle = match.kenmeiManga.title;
+
+      if (anilistIdMap.has(anilistId)) {
+        // This AniList ID is already mapped to another Kenmei manga
+        const existing = anilistIdMap.get(anilistId)!;
+        existing.kenmeiTitles.push(kenmeiTitle);
+      } else {
+        // First time seeing this AniList ID
+        anilistIdMap.set(anilistId, {
+          title: anilistTitle,
+          kenmeiTitles: [kenmeiTitle],
+        });
+      }
+    }
+  });
+
+  // Find duplicates (AniList IDs mapped to multiple Kenmei titles)
+  const duplicates: DuplicateEntry[] = [];
+  const ignoredDuplicates = getIgnoredDuplicates();
+  const ignoredIds = new Set(ignoredDuplicates.map((item) => item.anilistId));
+
+  anilistIdMap.forEach((value, anilistId) => {
+    if (value.kenmeiTitles.length > 1 && !ignoredIds.has(anilistId)) {
+      duplicates.push({
+        anilistId,
+        anilistTitle: value.title,
+        kenmeiTitles: value.kenmeiTitles,
+      });
+    }
+  });
+
+  return duplicates;
+}
+
+/**
+ * Component for displaying duplicate AniList ID warnings
+ */
+interface DuplicateWarningProps {
+  duplicates: DuplicateEntry[];
+  onDismiss: () => void;
+  onSearchAnilist: (anilistTitle: string) => void;
+  onIgnoreDuplicate: (anilistId: number, anilistTitle: string) => void;
+}
+
+function DuplicateWarning({
+  duplicates,
+  onDismiss,
+  onSearchAnilist,
+  onIgnoreDuplicate,
+}: Readonly<DuplicateWarningProps>) {
+  if (duplicates.length === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm dark:border-amber-800 dark:bg-amber-950">
+        <div className="flex items-start justify-between">
+          <div className="flex flex-1 items-start gap-3">
+            <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+            <div className="flex-1">
+              <h3 className="mb-2 text-base font-semibold text-amber-800 dark:text-amber-200">
+                Duplicate AniList Entries Detected
+              </h3>
+              <p className="mb-4 text-sm text-amber-700 dark:text-amber-300">
+                The same AniList manga is matched to multiple Kenmei entries.
+                This may be unintentional:
+              </p>
+              <div className="space-y-3">
+                {duplicates.map((duplicate) => (
+                  <div
+                    key={duplicate.anilistId}
+                    className="rounded-md border border-amber-200/50 bg-amber-100/60 p-3 dark:border-amber-800/50 dark:bg-amber-900/30"
+                  >
+                    <div className="mb-1 flex items-center justify-between">
+                      <div className="font-medium text-amber-900 dark:text-amber-100">
+                        AniList: {duplicate.anilistTitle}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            onSearchAnilist(duplicate.anilistTitle)
+                          }
+                          className="h-7 border-amber-300 px-2 text-xs text-amber-700 hover:border-amber-400 hover:bg-amber-200/50 dark:border-amber-700 dark:text-amber-300 dark:hover:border-amber-600 dark:hover:bg-amber-800/50"
+                          title={`Search for "${duplicate.anilistTitle}" in the match results below`}
+                        >
+                          <Search className="mr-1 h-3 w-3" />
+                          Search
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            onIgnoreDuplicate(
+                              duplicate.anilistId,
+                              duplicate.anilistTitle,
+                            )
+                          }
+                          className="h-7 px-2 text-xs text-amber-600 hover:bg-amber-200/50 hover:text-amber-700 dark:text-amber-400 dark:hover:bg-amber-800/50 dark:hover:text-amber-300"
+                          title={`Ignore this duplicate warning for "${duplicate.anilistTitle}"`}
+                        >
+                          <X className="mr-1 h-3 w-3" />
+                          Ignore
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="mb-2 text-xs tracking-wide text-amber-800 uppercase dark:text-amber-200">
+                      Matched to Kenmei entries:
+                    </div>
+                    <ul className="space-y-1">
+                      {duplicate.kenmeiTitles.map((title) => (
+                        <li
+                          key={`${duplicate.anilistId}-${title}`}
+                          className="flex items-start text-sm text-amber-700 dark:text-amber-300"
+                        >
+                          <span className="mt-0.5 mr-2 text-amber-500 dark:text-amber-400">
+                            •
+                          </span>
+                          <span>{title}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-4 rounded-md border-l-2 border-amber-400 bg-amber-100/40 p-3 text-xs text-amber-600 dark:border-amber-600 dark:bg-amber-900/20 dark:text-amber-400">
+                💡 <strong>Tip:</strong> Use the &ldquo;Search&rdquo; button to
+                find an AniList title in the match results below. If the
+                duplicate is intentional, click &ldquo;Ignore&rdquo; to
+                permanently dismiss this warning for that AniList entry.
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onDismiss}
+            className="ml-2 h-auto min-w-0 flex-shrink-0 p-1 text-amber-600 hover:bg-amber-100 hover:text-amber-800 dark:text-amber-400 dark:hover:bg-amber-900/50 dark:hover:text-amber-200"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+/**
  * Matching page component for the Kenmei to AniList sync tool.
  *
  * Handles manga matching, review, rematch, and sync preparation for the user.
@@ -102,6 +288,15 @@ export function MatchingPage() {
   );
   const [showRematchOptions, setShowRematchOptions] = useState(false);
   const [rematchWarning, setRematchWarning] = useState<string | null>(null);
+
+  // State for duplicate detection
+  const [duplicateEntries, setDuplicateEntries] = useState<DuplicateEntry[]>(
+    [],
+  );
+  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
+
+  // State for search query (to be passed to MangaMatchingPanel)
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   // New: Set all matched (including manual) entries to pending
   const handleSetAllMatchedToPending = () => {
@@ -148,6 +343,24 @@ export function MatchingPage() {
         skipped: matchResults.filter((m) => m.status === "skipped").length,
       };
       console.log("Status counts:", statusCounts);
+    }
+  }, [matchResults]);
+
+  // Effect to detect duplicate AniList IDs
+  useEffect(() => {
+    if (matchResults.length > 0) {
+      const duplicates = detectDuplicateAniListIds(matchResults);
+      setDuplicateEntries(duplicates);
+
+      // Show warning if duplicates are found and warning wasn't already dismissed
+      if (duplicates.length > 0) {
+        setShowDuplicateWarning(true);
+      } else {
+        setShowDuplicateWarning(false);
+      }
+    } else {
+      setDuplicateEntries([]);
+      setShowDuplicateWarning(false);
     }
   }, [matchResults]);
 
@@ -946,6 +1159,28 @@ export function MatchingPage() {
               )}
           </AnimatePresence>
 
+          {/* Duplicate AniList ID Warning */}
+          <AnimatePresence>
+            {showDuplicateWarning && duplicateEntries.length > 0 && (
+              <DuplicateWarning
+                duplicates={duplicateEntries}
+                onDismiss={() => setShowDuplicateWarning(false)}
+                onSearchAnilist={(title) => setSearchQuery(title)}
+                onIgnoreDuplicate={(anilistId, anilistTitle) => {
+                  addIgnoredDuplicate(anilistId, anilistTitle);
+                  // Refresh duplicates to remove the ignored one
+                  const updatedDuplicates =
+                    detectDuplicateAniListIds(matchResults);
+                  setDuplicateEntries(updatedDuplicates);
+                  // Hide warning if no duplicates remain
+                  if (updatedDuplicates.length === 0) {
+                    setShowDuplicateWarning(false);
+                  }
+                }}
+              />
+            )}
+          </AnimatePresence>
+
           {/* Initialization state - only show if not already loading and we have pending manga */}
           {matchingProcess.isInitializing &&
             !matchingProcess.isLoading &&
@@ -1202,6 +1437,7 @@ export function MatchingPage() {
                         matchHandlers.handleSelectAlternative
                       }
                       onResetToPending={matchHandlers.handleResetToPending}
+                      searchQuery={searchQuery}
                     />
 
                     {/* Action buttons */}

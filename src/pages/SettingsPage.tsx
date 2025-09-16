@@ -23,6 +23,7 @@ import {
   InfoIcon,
   Search,
   Bug,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useDebug } from "../contexts/DebugContext";
@@ -62,7 +63,6 @@ import {
   compareVersions,
 } from "../utils/app-version";
 import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
-import { Loader2 } from "lucide-react";
 
 // Animation variants
 const containerVariants = {
@@ -444,20 +444,15 @@ export function SettingsPage() {
         });
       }
 
-      // Keep track of which caches were cleared for user feedback
-      const clearedCacheTypes = [];
-
       // Clear Search Cache if selected
       if (cachesToClear.search) {
         clearSearchCache();
-        clearedCacheTypes.push("search");
         console.log("🧹 Search cache cleared");
       }
 
       // Clear Manga Cache if selected
       if (cachesToClear.manga) {
         clearMangaCache();
-        clearedCacheTypes.push("manga");
         console.log("🧹 Manga cache cleared");
       }
 
@@ -512,7 +507,6 @@ export function SettingsPage() {
             console.log("🧹 Successfully deleted IndexedDB database");
           DBDeleteRequest.onerror = () =>
             console.error("Error deleting IndexedDB database");
-          clearedCacheTypes.push("indexeddb");
         } catch (e) {
           console.warn("Failed to clear IndexedDB:", e);
         }
@@ -798,10 +792,14 @@ export function SettingsPage() {
                     {useCustomCredentials && (
                       <div className="space-y-3">
                         <div className="grid gap-1.5">
-                          <label className="text-xs font-medium">
+                          <label
+                            htmlFor="client-id"
+                            className="text-xs font-medium"
+                          >
                             Client ID
                           </label>
                           <input
+                            id="client-id"
                             type="text"
                             className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                             value={clientId}
@@ -811,10 +809,14 @@ export function SettingsPage() {
                           />
                         </div>
                         <div className="grid gap-1.5">
-                          <label className="text-xs font-medium">
+                          <label
+                            htmlFor="client-secret"
+                            className="text-xs font-medium"
+                          >
                             Client Secret
                           </label>
                           <input
+                            id="client-secret"
                             type="password"
                             className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                             value={clientSecret}
@@ -824,11 +826,15 @@ export function SettingsPage() {
                           />
                         </div>
                         <div className="grid gap-1.5">
-                          <label className="flex items-center gap-1.5 text-xs font-medium">
+                          <label
+                            htmlFor="redirect-uri"
+                            className="flex items-center gap-1.5 text-xs font-medium"
+                          >
                             <Link className="h-3.5 w-3.5" />
                             Redirect URI
                           </label>
                           <input
+                            id="redirect-uri"
                             type="text"
                             className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                             value={redirectUri}
@@ -1239,10 +1245,14 @@ export function SettingsPage() {
 
                     <div className="space-y-4">
                       <div className="grid gap-1.5">
-                        <label className="text-xs font-medium">
+                        <label
+                          htmlFor="auto-pause-threshold"
+                          className="text-xs font-medium"
+                        >
                           Auto-Pause Threshold
                         </label>
                         <select
+                          id="auto-pause-threshold"
                           className="border-input bg-background ring-offset-background focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                           value={
                             useCustomThreshold
@@ -1279,10 +1289,14 @@ export function SettingsPage() {
 
                       {useCustomThreshold && (
                         <div className="grid gap-1.5">
-                          <label className="text-xs font-medium">
+                          <label
+                            htmlFor="custom-auto-pause-threshold"
+                            className="text-xs font-medium"
+                          >
                             Custom threshold (days)
                           </label>
                           <input
+                            id="custom-auto-pause-threshold"
                             type="number"
                             min="1"
                             className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
@@ -1492,8 +1506,13 @@ export function SettingsPage() {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
-                        <label className="hover:bg-muted flex items-center gap-2 rounded-md p-2">
+                        <label
+                          className="hover:bg-muted flex items-center gap-2 rounded-md p-2"
+                          htmlFor="auth-cache"
+                          aria-label="Auth Cache - Authentication state"
+                        >
                           <input
+                            id="auth-cache"
                             type="checkbox"
                             className="border-primary text-primary h-4 w-4 rounded"
                             checked={cachesToClear.auth}
@@ -1513,8 +1532,13 @@ export function SettingsPage() {
                             </p>
                           </div>
                         </label>
-                        <label className="hover:bg-muted flex items-center gap-2 rounded-md p-2">
+                        <label
+                          className="hover:bg-muted flex items-center gap-2 rounded-md p-2"
+                          htmlFor="settings-cache"
+                          aria-label="Settings Cache - Sync preferences"
+                        >
                           <input
+                            id="settings-cache"
                             type="checkbox"
                             className="border-primary text-primary h-4 w-4 rounded"
                             checked={cachesToClear.settings}
@@ -1534,8 +1558,13 @@ export function SettingsPage() {
                             </p>
                           </div>
                         </label>
-                        <label className="hover:bg-muted flex items-center gap-2 rounded-md p-2">
+                        <label
+                          className="hover:bg-muted flex items-center gap-2 rounded-md p-2"
+                          htmlFor="sync-cache"
+                          aria-label="Sync Cache - Sync history"
+                        >
                           <input
+                            id="sync-cache"
                             type="checkbox"
                             className="border-primary text-primary h-4 w-4 rounded"
                             checked={cachesToClear.sync}
@@ -1555,8 +1584,13 @@ export function SettingsPage() {
                             </p>
                           </div>
                         </label>
-                        <label className="hover:bg-muted flex items-center gap-2 rounded-md p-2">
+                        <label
+                          className="hover:bg-muted flex items-center gap-2 rounded-md p-2"
+                          htmlFor="import-cache"
+                          aria-label="Import Cache - Import history"
+                        >
                           <input
+                            id="import-cache"
                             type="checkbox"
                             className="border-primary text-primary h-4 w-4 rounded"
                             checked={cachesToClear.import}
@@ -1579,8 +1613,13 @@ export function SettingsPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <label className="hover:bg-muted flex items-center gap-2 rounded-md p-2">
+                        <label
+                          className="hover:bg-muted flex items-center gap-2 rounded-md p-2"
+                          htmlFor="review-cache"
+                          aria-label="Review Cache - Match results"
+                        >
                           <input
+                            id="review-cache"
                             type="checkbox"
                             className="border-primary text-primary h-4 w-4 rounded"
                             checked={cachesToClear.review}
@@ -1600,8 +1639,13 @@ export function SettingsPage() {
                             </p>
                           </div>
                         </label>
-                        <label className="hover:bg-muted flex items-center gap-2 rounded-md p-2">
+                        <label
+                          className="hover:bg-muted flex items-center gap-2 rounded-md p-2"
+                          htmlFor="manga-cache"
+                          aria-label="Manga Cache - AniList manga data"
+                        >
                           <input
+                            id="manga-cache"
                             type="checkbox"
                             className="border-primary text-primary h-4 w-4 rounded"
                             checked={cachesToClear.manga}
@@ -1621,8 +1665,13 @@ export function SettingsPage() {
                             </p>
                           </div>
                         </label>
-                        <label className="hover:bg-muted flex items-center gap-2 rounded-md p-2">
+                        <label
+                          className="hover:bg-muted flex items-center gap-2 rounded-md p-2"
+                          htmlFor="search-cache"
+                          aria-label="Search Cache - Search results"
+                        >
                           <input
+                            id="search-cache"
                             type="checkbox"
                             className="border-primary text-primary h-4 w-4 rounded"
                             checked={cachesToClear.search}
@@ -1642,8 +1691,13 @@ export function SettingsPage() {
                             </p>
                           </div>
                         </label>
-                        <label className="hover:bg-muted flex items-center gap-2 rounded-md p-2">
+                        <label
+                          className="hover:bg-muted flex items-center gap-2 rounded-md p-2"
+                          htmlFor="other-caches"
+                          aria-label="Other Caches - Miscellaneous cache data"
+                        >
                           <input
+                            id="other-caches"
                             type="checkbox"
                             className="border-primary text-primary h-4 w-4 rounded"
                             checked={cachesToClear.other}
@@ -1707,36 +1761,48 @@ export function SettingsPage() {
                       </Button>
                     </div>
 
-                    <Button
-                      onClick={handleClearCache}
-                      variant={cacheCleared ? "outline" : "default"}
-                      disabled={
-                        isClearing ||
-                        !Object.values(cachesToClear).some(Boolean)
+                    {(() => {
+                      let buttonContent;
+                      if (isClearing) {
+                        buttonContent = (
+                          <>
+                            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                            Clearing Cache...
+                          </>
+                        );
+                      } else if (cacheCleared) {
+                        buttonContent = (
+                          <>
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            Cache Cleared Successfully
+                          </>
+                        );
+                      } else {
+                        buttonContent = (
+                          <>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Clear Selected Caches
+                          </>
+                        );
                       }
-                      className={`w-full ${
-                        cacheCleared
-                          ? "bg-green-50 text-green-600 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/40"
-                          : ""
-                      }`}
-                    >
-                      {isClearing ? (
-                        <>
-                          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                          Clearing Cache...
-                        </>
-                      ) : cacheCleared ? (
-                        <>
-                          <CheckCircle className="mr-2 h-4 w-4" />
-                          Cache Cleared Successfully
-                        </>
-                      ) : (
-                        <>
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Clear Selected Caches
-                        </>
-                      )}
-                    </Button>
+                      return (
+                        <Button
+                          onClick={handleClearCache}
+                          variant={cacheCleared ? "outline" : "default"}
+                          disabled={
+                            isClearing ||
+                            !Object.values(cachesToClear).some(Boolean)
+                          }
+                          className={`w-full ${
+                            cacheCleared
+                              ? "bg-green-50 text-green-600 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/40"
+                              : ""
+                          }`}
+                        >
+                          {buttonContent}
+                        </Button>
+                      );
+                    })()}
                   </motion.div>
                 </CardContent>
               </Card>
@@ -1878,11 +1944,10 @@ export function SettingsPage() {
                 <span className="font-mono text-xs">
                   Latest: {updateInfo.version}
                 </span>
-                <a
-                  role="button"
-                  tabIndex={0}
+                <button
+                  type="button"
                   aria-label="View release on GitHub"
-                  className="ml-2 cursor-pointer text-xs text-blue-600 underline hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                  className="ml-2 cursor-pointer border-0 bg-transparent p-0 text-xs text-blue-600 underline hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                   onClick={handleOpenExternal(updateInfo.url)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
@@ -1900,7 +1965,7 @@ export function SettingsPage() {
                   }}
                 >
                   View on GitHub
-                </a>
+                </button>
               </div>
               <div className="mt-2 flex items-center gap-2">
                 <span className="font-mono text-xs">
@@ -1950,35 +2015,47 @@ export function SettingsPage() {
               >
                 Version {getAppVersion()}
               </Badge>
-              {versionStatus === null ? (
-                <Badge
-                  variant="outline"
-                  className="bg-gray-100 text-gray-600 dark:bg-gray-800/30 dark:text-gray-300"
-                >
-                  Checking...
-                </Badge>
-              ) : versionStatus.status === "stable" ? (
-                <Badge
-                  variant="outline"
-                  className="bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300"
-                >
-                  Stable
-                </Badge>
-              ) : versionStatus.status === "beta" ? (
-                <Badge
-                  variant="outline"
-                  className="bg-yellow-50 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
-                >
-                  Beta
-                </Badge>
-              ) : (
-                <Badge
-                  variant="outline"
-                  className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                >
-                  Development
-                </Badge>
-              )}
+              {(() => {
+                let statusBadge;
+                if (versionStatus === null) {
+                  statusBadge = (
+                    <Badge
+                      variant="outline"
+                      className="bg-gray-100 text-gray-600 dark:bg-gray-800/30 dark:text-gray-300"
+                    >
+                      Checking...
+                    </Badge>
+                  );
+                } else if (versionStatus.status === "stable") {
+                  statusBadge = (
+                    <Badge
+                      variant="outline"
+                      className="bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                    >
+                      Stable
+                    </Badge>
+                  );
+                } else if (versionStatus.status === "beta") {
+                  statusBadge = (
+                    <Badge
+                      variant="outline"
+                      className="bg-yellow-50 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
+                    >
+                      Beta
+                    </Badge>
+                  );
+                } else {
+                  statusBadge = (
+                    <Badge
+                      variant="outline"
+                      className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                    >
+                      Development
+                    </Badge>
+                  );
+                }
+                return statusBadge;
+              })()}
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
@@ -2000,7 +2077,7 @@ export function SettingsPage() {
                     );
 
                   const syncHistory = JSON.parse(syncHistoryStr);
-                  if (!syncHistory || !syncHistory.length)
+                  if (!syncHistory?.length)
                     return (
                       <p className="text-muted-foreground ml-6 text-sm">
                         Never

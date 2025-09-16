@@ -13,7 +13,7 @@ import {
   AniListMediaEntry,
   UserMediaList,
   MediaListStatus,
-  MangaMatchResult
+  MangaMatchResult,
 } from "../api/anilist/types";
 import { STATUS_MAPPING, KenmeiStatus } from "../api/kenmei/types";
 import {
@@ -458,7 +458,8 @@ export function SyncPage() {
             } else if (syncConfig.prioritizeAniListStatus) {
               statusWillChange = false;
             } else {
-              statusWillChange = getEffectiveStatus(kenmei) !== userEntry.status;
+              statusWillChange =
+                getEffectiveStatus(kenmei) !== userEntry.status;
             }
 
             // Determine if progress will change
@@ -467,9 +468,11 @@ export function SyncPage() {
               progressWillChange = true;
             } else if (syncConfig.prioritizeAniListProgress) {
               // Will only change if Kenmei has more chapters read than AniList
-              progressWillChange = (kenmei.chapters_read || 0) > (userEntry.progress || 0);
+              progressWillChange =
+                (kenmei.chapters_read || 0) > (userEntry.progress || 0);
             } else {
-              progressWillChange = (kenmei.chapters_read || 0) !== (userEntry.progress || 0);
+              progressWillChange =
+                (kenmei.chapters_read || 0) !== (userEntry.progress || 0);
             }
 
             const anilistScore = userEntry ? Number(userEntry.score || 0) : 0;
@@ -481,16 +484,22 @@ export function SyncPage() {
               scoreWillChange = kenmeiScore > 0;
             } else {
               // Check if entry is completed and we're preserving completed status
-              const isCompletedAndPreserved = userEntry.status === "COMPLETED" && 
+              const isCompletedAndPreserved =
+                userEntry.status === "COMPLETED" &&
                 syncConfig.preserveCompletedStatus;
-              
+
               if (isCompletedAndPreserved) {
                 scoreWillChange = false;
-              } else if (syncConfig.prioritizeAniListScore && anilistScore > 0) {
+              } else if (
+                syncConfig.prioritizeAniListScore &&
+                anilistScore > 0
+              ) {
                 scoreWillChange = false;
               } else {
-                scoreWillChange = kenmeiScore > 0 && 
-                  (anilistScore === 0 || Math.abs(kenmeiScore - anilistScore) >= 0.5);
+                scoreWillChange =
+                  kenmeiScore > 0 &&
+                  (anilistScore === 0 ||
+                    Math.abs(kenmeiScore - anilistScore) >= 0.5);
               }
             }
 
@@ -677,7 +686,9 @@ export function SyncPage() {
         }
         let privateStatus: boolean;
         if (userEntry) {
-          privateStatus = syncConfig.setPrivate ? true : (userEntry.private || false);
+          privateStatus = syncConfig.setPrivate
+            ? true
+            : userEntry.private || false;
         } else {
           privateStatus = syncConfig.setPrivate;
         }
@@ -688,15 +699,25 @@ export function SyncPage() {
               ? (userEntry.status as MediaListStatus)
               : calculatedStatus,
           progress: (() => {
-            if (syncConfig.prioritizeAniListProgress && userEntry?.progress && userEntry.progress > 0) {
+            if (
+              syncConfig.prioritizeAniListProgress &&
+              userEntry?.progress &&
+              userEntry.progress > 0
+            ) {
               const kenmeiProgress = kenmei.chapters_read || 0;
-              return userEntry.progress > kenmeiProgress ? userEntry.progress : kenmeiProgress;
+              return userEntry.progress > kenmeiProgress
+                ? userEntry.progress
+                : kenmeiProgress;
             }
             return kenmei.chapters_read || 0;
           })(),
           private: privateStatus,
           score: (() => {
-            if (userEntry && syncConfig.prioritizeAniListScore && userEntry.score > 0) {
+            if (
+              userEntry &&
+              syncConfig.prioritizeAniListScore &&
+              userEntry.score > 0
+            ) {
               return userEntry.score;
             }
             return typeof kenmei.score === "number" ? kenmei.score : 0;
@@ -756,8 +777,11 @@ export function SyncPage() {
             if (syncConfig.prioritizeAniListScore && anilistScore > 0) {
               return false;
             }
-            return kenmeiScore > 0 &&
-              (anilistScore === 0 || Math.abs(kenmeiScore - anilistScore) >= 0.5);
+            return (
+              kenmeiScore > 0 &&
+              (anilistScore === 0 ||
+                Math.abs(kenmeiScore - anilistScore) >= 0.5)
+            );
           })();
 
     // Privacy change
@@ -1042,8 +1066,7 @@ export function SyncPage() {
                               htmlFor="prioritizeAniListStatus"
                               className="flex-1 text-sm"
                             >
-                              Prioritize AniList status
-                              {' '}
+                              Prioritize AniList status{" "}
                               <span className="text-muted-foreground block text-xs">
                                 When enabled, keeps your existing AniList status
                               </span>
@@ -1064,8 +1087,7 @@ export function SyncPage() {
                               htmlFor="preserveCompletedStatus"
                               className="flex-1 text-sm"
                             >
-                              Preserve Completed Status
-                              {' '}
+                              Preserve Completed Status{" "}
                               <span className="text-muted-foreground block text-xs">
                                 Always preserve entries marked as COMPLETED in
                                 AniList
@@ -1087,8 +1109,7 @@ export function SyncPage() {
                               htmlFor="prioritizeAniListProgress"
                               className="flex-1 text-sm"
                             >
-                              Prioritize AniList progress
-                              {' '}
+                              Prioritize AniList progress{" "}
                               <span className="text-muted-foreground block text-xs">
                                 When enabled, keeps higher chapter counts from
                                 AniList (Does not apply when the prioritized
@@ -1111,8 +1132,7 @@ export function SyncPage() {
                               htmlFor="prioritizeAniListScore"
                               className="flex-1 text-sm"
                             >
-                              Prioritize AniList scores
-                              {' '}
+                              Prioritize AniList scores{" "}
                               <span className="text-muted-foreground block text-xs">
                                 When enabled, keeps your existing AniList scores
                                 (Does not apply when the prioritized source is
@@ -1135,8 +1155,7 @@ export function SyncPage() {
                               htmlFor="setPrivate"
                               className="flex-1 text-sm"
                             >
-                              Set entries as private
-                              {' '}
+                              Set entries as private{" "}
                               <span className="text-muted-foreground block text-xs">
                                 When enabled, sets entries as private.
                                 Doesn&apos;t change existing private settings.
@@ -1158,8 +1177,7 @@ export function SyncPage() {
                               htmlFor="autoPauseInactive"
                               className="flex-1 text-sm"
                             >
-                              Auto-pause inactive manga
-                              {' '}
+                              Auto-pause inactive manga{" "}
                               <span className="text-muted-foreground block text-xs">
                                 When enabled, sets manga as PAUSED if not
                                 updated recently (Can specify the period)
@@ -2093,7 +2111,8 @@ export function SyncPage() {
                                     statusWillChange = false; // If prioritizing AniList status, it won't change
                                   } else {
                                     statusWillChange =
-                                      getEffectiveStatus(kenmei) !== userEntry.status &&
+                                      getEffectiveStatus(kenmei) !==
+                                        userEntry.status &&
                                       !(
                                         userEntry.status === "COMPLETED" &&
                                         syncConfig.preserveCompletedStatus
@@ -2105,9 +2124,13 @@ export function SyncPage() {
                                 if (userEntry) {
                                   if (syncConfig.prioritizeAniListProgress) {
                                     // Will only change if Kenmei has more chapters read than AniList
-                                    progressWillChange = (kenmei.chapters_read || 0) > (userEntry.progress || 0);
+                                    progressWillChange =
+                                      (kenmei.chapters_read || 0) >
+                                      (userEntry.progress || 0);
                                   } else {
-                                    progressWillChange = (kenmei.chapters_read || 0) !== (userEntry.progress || 0);
+                                    progressWillChange =
+                                      (kenmei.chapters_read || 0) !==
+                                      (userEntry.progress || 0);
                                   }
                                 }
 
@@ -2297,9 +2320,7 @@ export function SyncPage() {
 
                                           {/* Comparison Table */}
                                           <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-                                            <div
-                                              className="rounded-md p-2 bg-slate-100 dark:bg-slate-800/60"
-                                            >
+                                            <div className="rounded-md bg-slate-100 p-2 dark:bg-slate-800/60">
                                               <h4 className="text-muted-foreground mb-2 text-xs font-medium">
                                                 {isNewEntry
                                                   ? "Not in Library"
@@ -2354,17 +2375,31 @@ export function SyncPage() {
                                                       Private:
                                                     </span>
                                                     {(() => {
-                                                      let privacyClass = "text-xs font-medium";
+                                                      let privacyClass =
+                                                        "text-xs font-medium";
                                                       if (userEntry) {
-                                                        if (syncConfig.setPrivate && !userEntry.private) {
-                                                          privacyClass += " text-muted-foreground line-through";
+                                                        if (
+                                                          syncConfig.setPrivate &&
+                                                          !userEntry.private
+                                                        ) {
+                                                          privacyClass +=
+                                                            " text-muted-foreground line-through";
                                                         }
-                                                      } else if (syncConfig.setPrivate) {
-                                                        privacyClass += " text-muted-foreground line-through";
+                                                      } else if (
+                                                        syncConfig.setPrivate
+                                                      ) {
+                                                        privacyClass +=
+                                                          " text-muted-foreground line-through";
                                                       }
                                                       return (
-                                                        <span className={privacyClass}>
-                                                          {userEntry?.private ? "Yes" : "No"}
+                                                        <span
+                                                          className={
+                                                            privacyClass
+                                                          }
+                                                        >
+                                                          {userEntry?.private
+                                                            ? "Yes"
+                                                            : "No"}
                                                         </span>
                                                       );
                                                     })()}
@@ -2395,17 +2430,29 @@ export function SyncPage() {
                                                   </span>
                                                   {(() => {
                                                     let afterSyncProgress: number;
-                                                    if (syncConfig.prioritizeAniListProgress) {
-                                                      if (userEntry?.progress && userEntry.progress > 0) {
+                                                    if (
+                                                      syncConfig.prioritizeAniListProgress
+                                                    ) {
+                                                      if (
+                                                        userEntry?.progress &&
+                                                        userEntry.progress > 0
+                                                      ) {
                                                         afterSyncProgress =
-                                                          (kenmei.chapters_read || 0) > userEntry.progress
-                                                            ? kenmei.chapters_read || 0
+                                                          (kenmei.chapters_read ||
+                                                            0) >
+                                                          userEntry.progress
+                                                            ? kenmei.chapters_read ||
+                                                              0
                                                             : userEntry.progress;
                                                       } else {
-                                                        afterSyncProgress = kenmei.chapters_read || 0;
+                                                        afterSyncProgress =
+                                                          kenmei.chapters_read ||
+                                                          0;
                                                       }
                                                     } else {
-                                                      afterSyncProgress = kenmei.chapters_read || 0;
+                                                      afterSyncProgress =
+                                                        kenmei.chapters_read ||
+                                                        0;
                                                     }
                                                     return (
                                                       <span
@@ -2450,28 +2497,45 @@ export function SyncPage() {
                                                     Private:
                                                   </span>
                                                   {(() => {
-                                                    let privacyClass = "text-xs font-medium";
+                                                    let privacyClass =
+                                                      "text-xs font-medium";
                                                     if (userEntry) {
-                                                      if (syncConfig.setPrivate && !userEntry.private) {
-                                                        privacyClass += " text-blue-700 dark:text-blue-300";
+                                                      if (
+                                                        syncConfig.setPrivate &&
+                                                        !userEntry.private
+                                                      ) {
+                                                        privacyClass +=
+                                                          " text-blue-700 dark:text-blue-300";
                                                       }
-                                                    } else if (syncConfig.setPrivate) {
-                                                      privacyClass += " text-blue-700 dark:text-blue-300";
+                                                    } else if (
+                                                      syncConfig.setPrivate
+                                                    ) {
+                                                      privacyClass +=
+                                                        " text-blue-700 dark:text-blue-300";
                                                     }
                                                     let privacyDisplay: string;
                                                     if (userEntry) {
-                                                      if (syncConfig.setPrivate) {
+                                                      if (
+                                                        syncConfig.setPrivate
+                                                      ) {
                                                         privacyDisplay = "Yes";
-                                                      } else if (userEntry.private) {
+                                                      } else if (
+                                                        userEntry.private
+                                                      ) {
                                                         privacyDisplay = "Yes";
                                                       } else {
                                                         privacyDisplay = "No";
                                                       }
                                                     } else {
-                                                      privacyDisplay = syncConfig.setPrivate ? "Yes" : "No";
+                                                      privacyDisplay =
+                                                        syncConfig.setPrivate
+                                                          ? "Yes"
+                                                          : "No";
                                                     }
                                                     return (
-                                                      <span className={privacyClass}>
+                                                      <span
+                                                        className={privacyClass}
+                                                      >
                                                         {privacyDisplay}
                                                       </span>
                                                     );
@@ -2521,13 +2585,14 @@ export function SyncPage() {
                               </Button>
                             </div>
                           ) : null}
-                          {sortedMangaMatches.length > 0 && sortedMangaMatches.length <= visibleItems && (
-                            <div className="py-4 text-center">
-                              <span className="text-muted-foreground text-xs">
-                                All items loaded
-                              </span>
-                            </div>
-                          )}
+                          {sortedMangaMatches.length > 0 &&
+                            sortedMangaMatches.length <= visibleItems && (
+                              <div className="py-4 text-center">
+                                <span className="text-muted-foreground text-xs">
+                                  All items loaded
+                                </span>
+                              </div>
+                            )}
                         </motion.div>
                       ) : (
                         <motion.div
@@ -2556,7 +2621,8 @@ export function SyncPage() {
                                     statusWillChange = false; // If prioritizing AniList status, it won't change
                                   } else {
                                     statusWillChange =
-                                      getEffectiveStatus(kenmei) !== userEntry.status &&
+                                      getEffectiveStatus(kenmei) !==
+                                        userEntry.status &&
                                       !(
                                         userEntry.status === "COMPLETED" &&
                                         syncConfig.preserveCompletedStatus
@@ -2570,9 +2636,13 @@ export function SyncPage() {
                                 if (userEntry) {
                                   if (syncConfig.prioritizeAniListProgress) {
                                     // Will only change if Kenmei has more chapters read than AniList
-                                    progressWillChange = (kenmei.chapters_read || 0) > (userEntry.progress || 0);
+                                    progressWillChange =
+                                      (kenmei.chapters_read || 0) >
+                                      (userEntry.progress || 0);
                                   } else {
-                                    progressWillChange = (kenmei.chapters_read || 0) !== (userEntry.progress || 0);
+                                    progressWillChange =
+                                      (kenmei.chapters_read || 0) !==
+                                      (userEntry.progress || 0);
                                   }
                                 } else {
                                   progressWillChange = true;
@@ -2721,17 +2791,26 @@ export function SyncPage() {
                                               const fromProgress =
                                                 userEntry?.progress || 0;
                                               let toProgress: number;
-                                              if (syncConfig.prioritizeAniListProgress) {
-                                                if (userEntry?.progress && userEntry.progress > 0) {
+                                              if (
+                                                syncConfig.prioritizeAniListProgress
+                                              ) {
+                                                if (
+                                                  userEntry?.progress &&
+                                                  userEntry.progress > 0
+                                                ) {
                                                   toProgress =
-                                                    (kenmei.chapters_read || 0) > userEntry.progress
-                                                      ? kenmei.chapters_read || 0
+                                                    (kenmei.chapters_read ||
+                                                      0) > userEntry.progress
+                                                      ? kenmei.chapters_read ||
+                                                        0
                                                       : userEntry.progress;
                                                 } else {
-                                                  toProgress = kenmei.chapters_read || 0;
+                                                  toProgress =
+                                                    kenmei.chapters_read || 0;
                                                 }
                                               } else {
-                                                toProgress = kenmei.chapters_read || 0;
+                                                toProgress =
+                                                  kenmei.chapters_read || 0;
                                               }
 
                                               // Only show badge if values are actually different

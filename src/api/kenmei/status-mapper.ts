@@ -29,7 +29,7 @@ export function mapKenmeiToAniListStatus(
   customMapping?: Partial<StatusMappingConfig>,
 ): MediaListStatus {
   // Use custom mapping if provided, otherwise use default
-  if (customMapping && customMapping[status]) {
+  if (customMapping?.[status]) {
     return customMapping[status];
   }
 

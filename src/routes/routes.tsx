@@ -12,7 +12,7 @@ import { SettingsPage } from "../pages/SettingsPage";
 import { MatchingPage } from "../pages/MatchingPage";
 import { SyncPage } from "../pages/SyncPage";
 
-// TODO: Steps to add a new route:
+// Steps to add a new route:
 // 1. Create a new page component in the '../pages/' directory (e.g., NewPage.tsx)
 // 2. Import the new page component at the top of this file
 // 3. Define a new route for the page using createRoute()

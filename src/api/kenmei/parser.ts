@@ -66,6 +66,66 @@ export function parseKenmeiExport(
 }
 
 /**
+ * Create a default manga entry with fallback values
+ */
+function createDefaultMangaEntry(
+  manga: KenmeiManga,
+  index: number,
+  defaultStatus: KenmeiStatus,
+): KenmeiManga {
+  return {
+    ...manga,
+    status: manga.status || defaultStatus,
+    chapters_read:
+      typeof manga.chapters_read === "number" ? manga.chapters_read : 0,
+    score: typeof manga.score === "number" ? manga.score : 0,
+    id: manga.id || index,
+    url: manga.url || "",
+    created_at: manga.created_at || new Date().toISOString(),
+    updated_at: manga.updated_at || new Date().toISOString(),
+  };
+}
+
+/**
+ * Process a single manga entry with validation
+ */
+function processSingleManga(
+  manga: KenmeiManga,
+  index: number,
+  parseOptions: KenmeiParseOptions,
+  validationErrors: ValidationError[],
+  processedEntries: KenmeiManga[],
+): void {
+  try {
+    const validatedManga = validateAndNormalizeManga(
+      manga,
+      index,
+      parseOptions,
+    );
+    processedEntries.push(validatedManga);
+  } catch (error) {
+    if (error instanceof Error) {
+      validationErrors.push({
+        mangaTitle: manga.title || `Unknown manga at index ${index}`,
+        field: "general",
+        message: error.message,
+        index,
+      });
+    }
+
+    // If we allow partial data, continue processing despite errors
+    if (parseOptions.allowPartialData && manga.title) {
+      const defaultManga = createDefaultMangaEntry(
+        manga,
+        index,
+        parseOptions.defaultStatus,
+      );
+      processedEntries.push(defaultManga);
+    }
+  }
+}
+
+/**
  * Process Kenmei manga list in batches.
  *
  * @param mangaList - List of manga to process.
@@ -92,38 +152,13 @@ export function processKenmeiMangaBatches(
       const manga = batch[j];
       const index = i + j;
 
-      try {
-        const validatedManga = validateAndNormalizeManga(
-          manga,
-          index,
-          parseOptions,
-        );
-        processedEntries.push(validatedManga);
-      } catch (error) {
-        if (error instanceof Error) {
-          validationErrors.push({
-            mangaTitle: manga.title || `Unknown manga at index ${index}`,
-            field: "general",
-            message: error.message,
-            index,
-          });
-        }
-
-        // If we allow partial data, continue processing despite errors
-        if (parseOptions.allowPartialData && manga.title) {
-          processedEntries.push({
-            ...manga,
-            status: manga.status || parseOptions.defaultStatus,
-            chapters_read:
-              typeof manga.chapters_read === "number" ? manga.chapters_read : 0,
-            score: typeof manga.score === "number" ? manga.score : 0,
-            id: manga.id || index,
-            url: manga.url || "",
-            created_at: manga.created_at || new Date().toISOString(),
-            updated_at: manga.updated_at || new Date().toISOString(),
-          });
-        }
-      }
+      processSingleManga(
+        manga,
+        index,
+        parseOptions,
+        validationErrors,
+        processedEntries,
+      );
     }
   }
 
@@ -197,6 +232,212 @@ function isValidStatus(status: string): boolean {
 }
 
 /**
+ * Validate CSV data structure and headers
+ */
+function validateCsvStructure(rows: string[][]): string[] {
+  if (rows.length < 2) {
+    throw new Error("CSV file does not contain enough data");
+  }
+
+  // Get headers from the first line, normalize them to avoid issues with spaces or case
+  const headers = rows[0].map((header) => header.trim().toLowerCase());
+
+  // Validate required headers
+  const requiredHeaders = ["title"];
+  for (const required of requiredHeaders) {
+    if (!headers.includes(required)) {
+      throw new Error(`CSV is missing required header: ${required}`);
+    }
+  }
+
+  return headers;
+}
+
+/**
+ * Check if a row should be skipped due to invalid data
+ */
+function shouldSkipRow(
+  values: string[],
+  headers: string[],
+  rowIndex: number,
+): boolean {
+  // Skip rows that don't have enough fields (likely incomplete/malformed data)
+  if (values.length < 2) {
+    console.warn(
+      `Skipping row ${rowIndex + 1} with insufficient fields: ${values.join(",")}`,
+    );
+    return true;
+  }
+
+  // Skip rows where the title is just a number or looks like a chapter reference
+  const potentialTitle = values[headers.indexOf("title")];
+  if (
+    /^(Chapter|Ch\.|Vol\.|Volume) \d+$/i.test(potentialTitle) ||
+    /^\d+$/.test(potentialTitle)
+  ) {
+    console.warn(
+      `Skipping row ${rowIndex + 1} with invalid title: "${potentialTitle}"`,
+    );
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Create entry mapping from headers and values
+ */
+function createEntryMapping(
+  headers: string[],
+  values: string[],
+): Record<string, string> {
+  const entry: Record<string, string> = {};
+  headers.forEach((header, index) => {
+    if (index < values.length) {
+      entry[header] = values[index];
+    }
+  });
+  return entry;
+}
+
+/**
+ * Parse numeric values safely
+ */
+function parseIntSafe(value: string | undefined): number | undefined {
+  if (!value) return undefined;
+  // Remove any non-numeric characters except decimal point
+  const cleanValue = value.replace(/[^\d.]/g, "");
+  if (!cleanValue) return undefined;
+  const parsed = parseInt(cleanValue, 10);
+  return isNaN(parsed) ? undefined : parsed;
+}
+
+/**
+ * Find a value using flexible column mappings
+ */
+function findValue(
+  entry: Record<string, string>,
+  mappings: string[],
+): string | undefined {
+  for (const mapping of mappings) {
+    if (entry[mapping] !== undefined) {
+      return entry[mapping];
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Extract all field values from a CSV entry
+ */
+function extractFieldValues(entry: Record<string, string>) {
+  const columnMappings = {
+    chapter: [
+      "last_chapter_read",
+      "chapters_read",
+      "chapter",
+      "current_chapter",
+    ],
+    volume: ["last_volume_read", "volumes_read", "volume", "current_volume"],
+    status: ["status", "reading_status"],
+    score: ["score", "rating"],
+    url: ["series_url", "url", "link"],
+    notes: ["notes", "comments"],
+    date: ["last_read_at", "updated_at", "date"],
+  };
+
+  return {
+    chapterValue: findValue(entry, columnMappings.chapter),
+    volumeValue: findValue(entry, columnMappings.volume),
+    statusValue: findValue(entry, columnMappings.status),
+    scoreValue: findValue(entry, columnMappings.score),
+    urlValue: findValue(entry, columnMappings.url),
+    notesValue: findValue(entry, columnMappings.notes),
+    dateValue: findValue(entry, columnMappings.date),
+    lastReadAt: findValue(entry, [
+      "last_read_at",
+      "last read at",
+      "lastreadat",
+      "last_read",
+      "date_last_read",
+    ]),
+  };
+}
+
+/**
+ * Create a manga entry from parsed CSV values
+ */
+function createMangaEntry(
+  entry: Record<string, string>,
+  fieldValues: {
+    chapterValue: string | undefined;
+    volumeValue: string | undefined;
+    statusValue: string | undefined;
+    scoreValue: string | undefined;
+    urlValue: string | undefined;
+    notesValue: string | undefined;
+    dateValue: string | undefined;
+    lastReadAt: string | undefined;
+  },
+): KenmeiManga {
+  // Parse chapter and volume numbers
+  const chaptersRead = parseIntSafe(fieldValues.chapterValue);
+  const volumesRead = parseIntSafe(fieldValues.volumeValue);
+
+  // Convert to proper types
+  return {
+    id: parseInt(entry.id || "0"),
+    title: entry.title,
+    status: validateStatus(fieldValues.statusValue),
+    score: fieldValues.scoreValue ? parseFloat(fieldValues.scoreValue) : 0,
+    url: fieldValues.urlValue || "",
+    cover_url: entry.cover_url,
+    chapters_read: chaptersRead ?? 0,
+    total_chapters: entry.total_chapters
+      ? parseInt(entry.total_chapters)
+      : undefined,
+    volumes_read: volumesRead,
+    total_volumes: entry.total_volumes
+      ? parseInt(entry.total_volumes)
+      : undefined,
+    notes: fieldValues.notesValue || "",
+    last_read_at: fieldValues.lastReadAt,
+    created_at:
+      entry.created_at || fieldValues.dateValue || new Date().toISOString(),
+    updated_at:
+      entry.updated_at || fieldValues.dateValue || new Date().toISOString(),
+    author: entry.author,
+    alternative_titles: entry.alternative_titles
+      ? entry.alternative_titles.split(";")
+      : undefined,
+  };
+}
+
+/**
+ * Process validation results and update manga array
+ */
+function processValidationResults(
+  manga: KenmeiManga[],
+  parseOptions: KenmeiParseOptions,
+): void {
+  if (!parseOptions.validateStructure) return;
+
+  const result = processKenmeiMangaBatches(manga, 100, parseOptions);
+
+  if (result.validationErrors.length > 0 && !parseOptions.allowPartialData) {
+    throw new Error(
+      `${result.validationErrors.length} validation errors found in CSV import`,
+    );
+  }
+
+  // Use the processed entries if we have them
+  if (result.processedEntries.length > 0) {
+    manga.length = 0; // Clear the array
+    manga.push(...result.processedEntries);
+  }
+}
+
+/**
  * Parse a Kenmei CSV export file.
  *
  * @param csvString - The content of the CSV file.
@@ -217,36 +458,8 @@ export const parseKenmeiCsvExport = (
     // Parse CSV rows properly, respecting quoted fields
     const rows = parseCSVRows(normalizedCsv);
 
-    if (rows.length < 2) {
-      throw new Error("CSV file does not contain enough data");
-    }
-
-    // Get headers from the first line, normalize them to avoid issues with spaces or case
-    const headers = rows[0].map((header) => header.trim().toLowerCase());
-
-    // Validate required headers
-    const requiredHeaders = ["title"];
-    for (const required of requiredHeaders) {
-      if (!headers.includes(required)) {
-        throw new Error(`CSV is missing required header: ${required}`);
-      }
-    }
-
-    // Create mapping for various possible column names
-    const columnMappings = {
-      chapter: [
-        "last_chapter_read",
-        "chapters_read",
-        "chapter",
-        "current_chapter",
-      ],
-      volume: ["last_volume_read", "volumes_read", "volume", "current_volume"],
-      status: ["status", "reading_status"],
-      score: ["score", "rating"],
-      url: ["series_url", "url", "link"],
-      notes: ["notes", "comments"],
-      date: ["last_read_at", "updated_at", "date"],
-    };
+    // Validate CSV structure and get headers
+    const headers = validateCsvStructure(rows);
 
     // Parse manga entries
     const manga: KenmeiManga[] = [];
@@ -255,120 +468,24 @@ export const parseKenmeiCsvExport = (
     for (let i = 1; i < rows.length; i++) {
       const values = rows[i];
 
-      // Skip rows that don't have enough fields (likely incomplete/malformed data)
-      if (values.length < 2) {
-        console.warn(
-          `Skipping row ${i + 1} with insufficient fields: ${values.join(",")}`,
-        );
+      // Skip invalid rows
+      if (shouldSkipRow(values, headers, i)) {
         continue;
       }
 
-      // Skip rows where the title is just a number or looks like a chapter reference
-      const potentialTitle = values[headers.indexOf("title")];
-      if (
-        /^(Chapter|Ch\.|Vol\.|Volume) \d+$/i.test(potentialTitle) ||
-        /^\d+$/.test(potentialTitle)
-      ) {
-        console.warn(
-          `Skipping row ${i + 1} with invalid title: "${potentialTitle}"`,
-        );
-        continue;
-      }
+      // Create entry mapping from headers and values
+      const entry = createEntryMapping(headers, values);
 
-      // Create an object mapping headers to values
-      const entry: Record<string, string> = {};
-      headers.forEach((header, index) => {
-        if (index < values.length) {
-          entry[header] = values[index];
-        }
-      });
+      // Extract all field values
+      const fieldValues = extractFieldValues(entry);
 
-      // Find values using flexible column names
-      const findValue = (mappings: string[]): string | undefined => {
-        for (const mapping of mappings) {
-          if (entry[mapping] !== undefined) {
-            return entry[mapping];
-          }
-        }
-        return undefined;
-      };
-
-      // Parse numeric values safely
-      const parseIntSafe = (value: string | undefined): number | undefined => {
-        if (!value) return undefined;
-        // Remove any non-numeric characters except decimal point
-        const cleanValue = value.replace(/[^\d.]/g, "");
-        if (!cleanValue) return undefined;
-        const parsed = parseInt(cleanValue, 10);
-        return isNaN(parsed) ? undefined : parsed;
-      };
-
-      // Get values using flexible column mappings
-      const chapterValue = findValue(columnMappings.chapter);
-      const volumeValue = findValue(columnMappings.volume);
-      const statusValue = findValue(columnMappings.status);
-      const scoreValue = findValue(columnMappings.score);
-      const urlValue = findValue(columnMappings.url);
-      const notesValue = findValue(columnMappings.notes);
-      const dateValue = findValue(columnMappings.date);
-      const lastReadAt = findValue([
-        "last_read_at",
-        "last read at",
-        "lastreadat",
-        "last_read",
-        "date_last_read",
-      ]);
-      // Parse chapter and volume numbers
-      const chaptersRead = parseIntSafe(chapterValue);
-      const volumesRead = parseIntSafe(volumeValue);
-      // Convert to proper types
-      const mangaEntry: KenmeiManga = {
-        id: parseInt(entry.id || "0"),
-        title: entry.title,
-        status: validateStatus(statusValue),
-        score: scoreValue ? parseFloat(scoreValue) : 0,
-        url: urlValue || "",
-        cover_url: entry.cover_url,
-        chapters_read: chaptersRead !== undefined ? chaptersRead : 0,
-        total_chapters: entry.total_chapters
-          ? parseInt(entry.total_chapters)
-          : undefined,
-        volumes_read: volumesRead,
-        total_volumes: entry.total_volumes
-          ? parseInt(entry.total_volumes)
-          : undefined,
-        notes: notesValue || "",
-        last_read_at: lastReadAt,
-        created_at: entry.created_at || dateValue || new Date().toISOString(),
-        updated_at: entry.updated_at || dateValue || new Date().toISOString(),
-        author: entry.author,
-        alternative_titles: entry.alternative_titles
-          ? entry.alternative_titles.split(";")
-          : undefined,
-      };
-
+      // Create manga entry
+      const mangaEntry = createMangaEntry(entry, fieldValues);
       manga.push(mangaEntry);
     }
 
-    // Process in batches if needed and validation is enabled
-    if (parseOptions.validateStructure) {
-      const result = processKenmeiMangaBatches(manga, 100, parseOptions);
-
-      if (
-        result.validationErrors.length > 0 &&
-        !parseOptions.allowPartialData
-      ) {
-        throw new Error(
-          `${result.validationErrors.length} validation errors found in CSV import`,
-        );
-      }
-
-      // Use the processed entries if we have them
-      if (result.processedEntries.length > 0) {
-        manga.length = 0; // Clear the array
-        manga.push(...result.processedEntries);
-      }
-    }
+    // Process validation if enabled
+    processValidationResults(manga, parseOptions);
 
     // Create the export object
     const kenmeiExport: KenmeiExport = {
@@ -404,7 +521,8 @@ function parseCSVRows(csvContent: string): string[][] {
   let inQuotes: boolean = false;
 
   // Process each character in the CSV
-  for (let i = 0; i < csvContent.length; i++) {
+  let i = 0;
+  while (i < csvContent.length) {
     const char = csvContent[i];
     const nextChar = i < csvContent.length - 1 ? csvContent[i + 1] : "";
 
@@ -413,16 +531,18 @@ function parseCSVRows(csvContent: string): string[][] {
       // If this is an escaped quote (i.e., "")
       if (nextChar === '"') {
         currentValue += '"';
-        i++; // Skip the next quote
+        i += 2; // Skip both quotes
       } else {
         // Toggle in-quotes state
         inQuotes = !inQuotes;
+        i++;
       }
     }
     // Handle commas
     else if (char === "," && !inQuotes) {
       currentRow.push(currentValue);
       currentValue = "";
+      i++;
     }
     // Handle newlines
     else if (char === "\n" && !inQuotes) {
@@ -430,10 +550,12 @@ function parseCSVRows(csvContent: string): string[][] {
       rows.push(currentRow);
       currentRow = [];
       currentValue = "";
+      i++;
     }
     // Handle all other characters
     else {
       currentValue += char;
+      i++;
     }
   }
 

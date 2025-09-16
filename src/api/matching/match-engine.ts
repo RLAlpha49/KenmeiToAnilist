@@ -91,6 +91,194 @@ export function calculateSimilarity(str1: string, str2: string): number {
 }
 
 /**
+ * Scores primary titles (english, romaji, native) and returns any exact matches.
+ *
+ * @param kenmeiTitle - Normalized Kenmei title.
+ * @param anilistManga - AniList manga with title fields.
+ * @param scores - Array to push scores into.
+ * @returns Early return object if exact match found, null otherwise.
+ */
+function scorePrimaryTitles(
+  kenmeiTitle: string,
+  anilistManga: AniListManga,
+  scores: Array<{ field: string; score: number }>,
+): { confidence: number; isExactMatch: boolean; matchedField: string } | null {
+  const titleFields = [
+    { field: "english", title: anilistManga.title.english },
+    { field: "romaji", title: anilistManga.title.romaji },
+    { field: "native", title: anilistManga.title.native },
+  ];
+
+  for (const { field, title } of titleFields) {
+    if (!title) continue;
+
+    const score = calculateSimilarity(kenmeiTitle, title);
+    scores.push({ field, score });
+
+    if (score === 100) {
+      return { confidence: 100, isExactMatch: true, matchedField: field };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Scores AniList synonyms against Kenmei title and returns any exact matches.
+ *
+ * @param kenmeiTitle - Normalized Kenmei title.
+ * @param anilistManga - AniList manga with synonyms.
+ * @param scores - Array to push scores into.
+ * @returns Early return object if exact match found, null otherwise.
+ */
+function scoreSynonyms(
+  kenmeiTitle: string,
+  anilistManga: AniListManga,
+  scores: Array<{ field: string; score: number }>,
+): { confidence: number; isExactMatch: boolean; matchedField: string } | null {
+  if (!anilistManga.synonyms?.length) return null;
+
+  for (const synonym of anilistManga.synonyms) {
+    if (!synonym) continue;
+
+    const synonymScore = calculateSimilarity(kenmeiTitle, synonym);
+    scores.push({ field: "synonym", score: synonymScore });
+
+    if (synonymScore === 100) {
+      return { confidence: 100, isExactMatch: true, matchedField: "synonym" };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Checks a single alternative title against AniList titles.
+ *
+ * @param normalizedAltTitle - The normalized alternative title.
+ * @param anilistManga - AniList manga with title fields.
+ * @param scores - Array to push scores into.
+ * @returns Early return object if exact match found, null otherwise.
+ */
+function checkAlternativeTitleMatch(
+  normalizedAltTitle: string,
+  anilistManga: AniListManga,
+  scores: Array<{ field: string; score: number }>,
+): { confidence: number; isExactMatch: boolean; matchedField: string } | null {
+  // Check against english title
+  if (anilistManga.title.english) {
+    const altEnglishScore = calculateSimilarity(
+      normalizedAltTitle,
+      anilistManga.title.english,
+    );
+    scores.push({ field: "alt_to_english", score: altEnglishScore });
+
+    if (altEnglishScore === 100) {
+      return {
+        confidence: 95,
+        isExactMatch: true,
+        matchedField: "alt_to_english",
+      };
+    }
+  }
+
+  // Check against romaji title
+  if (anilistManga.title.romaji) {
+    const altRomajiScore = calculateSimilarity(
+      normalizedAltTitle,
+      anilistManga.title.romaji,
+    );
+    scores.push({ field: "alt_to_romaji", score: altRomajiScore });
+
+    if (altRomajiScore === 100) {
+      return {
+        confidence: 95,
+        isExactMatch: true,
+        matchedField: "alt_to_romaji",
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Scores Kenmei alternative titles against AniList titles and returns any exact matches.
+ *
+ * @param kenmeiManga - Kenmei manga with alternative titles.
+ * @param anilistManga - AniList manga with title fields.
+ * @param caseSensitive - Whether comparison is case sensitive.
+ * @param minTitleLength - Minimum length for alternative titles.
+ * @param scores - Array to push scores into.
+ * @returns Early return object if exact match found, null otherwise.
+ */
+function scoreAlternativeTitles(
+  kenmeiManga: KenmeiManga,
+  anilistManga: AniListManga,
+  caseSensitive: boolean,
+  minTitleLength: number,
+  scores: Array<{ field: string; score: number }>,
+): { confidence: number; isExactMatch: boolean; matchedField: string } | null {
+  if (!kenmeiManga.alternative_titles?.length) return null;
+
+  for (const altTitle of kenmeiManga.alternative_titles) {
+    if (!altTitle) continue;
+
+    const normalizedAltTitle = normalizeString(altTitle, caseSensitive);
+    if (normalizedAltTitle.length < minTitleLength) continue;
+
+    const matchResult = checkAlternativeTitleMatch(
+      normalizedAltTitle,
+      anilistManga,
+      scores,
+    );
+    if (matchResult) return matchResult;
+  }
+
+  return null;
+}
+
+/**
+ * Calculates final adjusted score with preference weighting.
+ *
+ * @param scores - Array of scores with field names.
+ * @param preferEnglishTitles - Whether to boost English title scores.
+ * @param preferRomajiTitles - Whether to boost Romaji title scores.
+ * @returns Object with final confidence, exact match status, and matched field.
+ */
+function calculateFinalScore(
+  scores: Array<{ field: string; score: number }>,
+  preferEnglishTitles: boolean,
+  preferRomajiTitles: boolean,
+): { confidence: number; isExactMatch: boolean; matchedField: string } {
+  if (scores.length === 0) {
+    return { confidence: 0, isExactMatch: false, matchedField: "none" };
+  }
+
+  // Get the highest score and its field
+  scores.sort((a, b) => b.score - a.score);
+  const topScore = scores[0];
+
+  // Apply title preference weighting
+  let adjustedScore = topScore.score;
+  if (
+    (topScore.field === "english" && preferEnglishTitles) ||
+    (topScore.field === "romaji" && preferRomajiTitles)
+  ) {
+    adjustedScore = Math.min(100, adjustedScore * 1.05);
+  }
+
+  // Consider an "exact match" if the confidence is very high
+  const isExactMatch = adjustedScore >= 95;
+
+  return {
+    confidence: Math.round(adjustedScore),
+    isExactMatch,
+    matchedField: topScore.field,
+  };
+}
+
+/**
  * Scores a match between a Kenmei manga and an AniList manga entry.
  * Returns a score between 0-100 and information about the match.
  *
@@ -124,141 +312,27 @@ export function scoreMatch(
   // Array to store all similarity scores with their sources
   const scores: Array<{ field: string; score: number }> = [];
 
-  // Check primary titles based on preferences
-  // We'll calculate similarity for all titles but weight them differently later
+  // Check primary titles - early return if exact match found
+  const primaryMatch = scorePrimaryTitles(kenmeiTitle, anilistManga, scores);
+  if (primaryMatch) return primaryMatch;
 
-  if (anilistManga.title.english) {
-    const englishScore = calculateSimilarity(
-      kenmeiTitle,
-      anilistManga.title.english,
+  // Check alternative titles if enabled - early return if exact match found
+  if (useAlternativeTitles) {
+    const synonymMatch = scoreSynonyms(kenmeiTitle, anilistManga, scores);
+    if (synonymMatch) return synonymMatch;
+
+    const altTitleMatch = scoreAlternativeTitles(
+      kenmeiManga,
+      anilistManga,
+      caseSensitive,
+      matchConfig.minTitleLength,
+      scores,
     );
-    scores.push({ field: "english", score: englishScore });
-
-    // Exact match check
-    if (englishScore === 100) {
-      return { confidence: 100, isExactMatch: true, matchedField: "english" };
-    }
+    if (altTitleMatch) return altTitleMatch;
   }
 
-  if (anilistManga.title.romaji) {
-    const romajiScore = calculateSimilarity(
-      kenmeiTitle,
-      anilistManga.title.romaji,
-    );
-    scores.push({ field: "romaji", score: romajiScore });
-
-    // Exact match check
-    if (romajiScore === 100) {
-      return { confidence: 100, isExactMatch: true, matchedField: "romaji" };
-    }
-  }
-
-  if (anilistManga.title.native) {
-    const nativeScore = calculateSimilarity(
-      kenmeiTitle,
-      anilistManga.title.native,
-    );
-    scores.push({ field: "native", score: nativeScore });
-
-    // Exact match check
-    if (nativeScore === 100) {
-      return { confidence: 100, isExactMatch: true, matchedField: "native" };
-    }
-  }
-
-  // Check alternative titles if enabled
-  if (
-    useAlternativeTitles &&
-    anilistManga.synonyms &&
-    anilistManga.synonyms.length > 0
-  ) {
-    for (const synonym of anilistManga.synonyms) {
-      if (!synonym) continue;
-
-      const synonymScore = calculateSimilarity(kenmeiTitle, synonym);
-      scores.push({ field: "synonym", score: synonymScore });
-
-      // Exact match check
-      if (synonymScore === 100) {
-        return { confidence: 100, isExactMatch: true, matchedField: "synonym" };
-      }
-    }
-  }
-
-  // Check Kenmei alternative titles against AniList titles
-  if (
-    useAlternativeTitles &&
-    kenmeiManga.alternative_titles &&
-    kenmeiManga.alternative_titles.length > 0
-  ) {
-    for (const altTitle of kenmeiManga.alternative_titles) {
-      if (!altTitle) continue;
-
-      const normalizedAltTitle = normalizeString(altTitle, caseSensitive);
-
-      // Skip very short alternative titles
-      if (normalizedAltTitle.length < matchConfig.minTitleLength) continue;
-
-      // Check against each AniList title field
-      if (anilistManga.title.english) {
-        const altEnglishScore = calculateSimilarity(
-          normalizedAltTitle,
-          anilistManga.title.english,
-        );
-        scores.push({ field: "alt_to_english", score: altEnglishScore });
-
-        if (altEnglishScore === 100) {
-          return {
-            confidence: 95,
-            isExactMatch: true,
-            matchedField: "alt_to_english",
-          };
-        }
-      }
-
-      if (anilistManga.title.romaji) {
-        const altRomajiScore = calculateSimilarity(
-          normalizedAltTitle,
-          anilistManga.title.romaji,
-        );
-        scores.push({ field: "alt_to_romaji", score: altRomajiScore });
-
-        if (altRomajiScore === 100) {
-          return {
-            confidence: 95,
-            isExactMatch: true,
-            matchedField: "alt_to_romaji",
-          };
-        }
-      }
-    }
-  }
-
-  // If we have no scores, return zero confidence
-  if (scores.length === 0) {
-    return { confidence: 0, isExactMatch: false, matchedField: "none" };
-  }
-
-  // Get the highest score and its field
-  scores.sort((a, b) => b.score - a.score);
-  const topScore = scores[0];
-
-  // Apply title preference weighting
-  let adjustedScore = topScore.score;
-  if (topScore.field === "english" && preferEnglishTitles) {
-    adjustedScore = Math.min(100, adjustedScore * 1.05);
-  } else if (topScore.field === "romaji" && preferRomajiTitles) {
-    adjustedScore = Math.min(100, adjustedScore * 1.05);
-  }
-
-  // Consider an "exact match" if the confidence is very high
-  const isExactMatch = adjustedScore >= 95;
-
-  return {
-    confidence: Math.round(adjustedScore),
-    isExactMatch,
-    matchedField: topScore.field,
-  };
+  // Calculate final score with preferences
+  return calculateFinalScore(scores, preferEnglishTitles, preferRomajiTitles);
 }
 
 /**
@@ -297,7 +371,7 @@ export function findBestMatches(
     .filter((match) => match.confidence > 0);
 
   // Determine the match status
-  let status: MangaMatchResult["status"] = "pending";
+  let status: MangaMatchResult["status"];
 
   if (topMatches.length === 0) {
     status = "pending"; // No matches found

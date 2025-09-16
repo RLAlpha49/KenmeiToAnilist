@@ -361,9 +361,9 @@ export function HomePage() {
           className="w-full"
         >
           <CarouselContent className="-ml-4">
-            {featureCards.map((feature, index) => (
+            {featureCards.map((feature) => (
               <CarouselItem
-                key={index}
+                key={feature.title}
                 className="pl-4 md:basis-1/2 lg:basis-1/3"
               >
                 <div className="p-1">
@@ -437,46 +437,65 @@ export function HomePage() {
             </CardHeader>
             <CardContent>
               <div className="relative">
-                <p className="mb-2 text-4xl font-bold text-green-600 dark:text-green-400">
-                  {matchStatus.status === "none"
-                    ? "-"
-                    : matchStatus.status === "pending"
-                      ? "Ready"
-                      : "Complete"}
-                </p>
+                {(() => {
+                  let matchStatusText: string;
+                  if (matchStatus.status === "none") {
+                    matchStatusText = "-";
+                  } else if (matchStatus.status === "pending") {
+                    matchStatusText = "Ready";
+                  } else {
+                    matchStatusText = "Complete";
+                  }
+                  return (
+                    <p className="mb-2 text-4xl font-bold text-green-600 dark:text-green-400">
+                      {matchStatusText}
+                    </p>
+                  );
+                })()}
                 <div className="text-muted-foreground flex flex-row flex-wrap gap-2 text-sm">
-                  {matchStatus.status === "pending" ? (
-                    <Badge
-                      variant="outline"
-                      className="bg-amber-100/50 text-amber-700 shadow-sm dark:bg-amber-900/20 dark:text-amber-400"
-                    >
-                      <span className="flex items-center gap-1">
-                        <div className="h-1.5 w-1.5 rounded-full bg-amber-500"></div>
-                        {matchStatus.pendingMatches} manga need review
-                      </span>
-                    </Badge>
-                  ) : matchStatus.status === "complete" ? (
-                    <Badge
-                      variant="outline"
-                      className="bg-green-100/50 text-green-700 shadow-sm dark:bg-green-900/20 dark:text-green-400"
-                    >
-                      <span className="flex items-center gap-1">
-                        <div className="h-1.5 w-1.5 rounded-full bg-green-500"></div>
-                        {matchStatus.totalMatches - matchStatus.skippedMatches}{" "}
-                        manga matched
-                      </span>
-                    </Badge>
-                  ) : (
-                    <Badge
-                      variant="outline"
-                      className="bg-gray-100/50 text-gray-700 shadow-sm dark:bg-gray-900/20 dark:text-gray-400"
-                    >
-                      <span className="flex items-center gap-1">
-                        <div className="h-1.5 w-1.5 rounded-full bg-gray-500"></div>
-                        Import data first
-                      </span>
-                    </Badge>
-                  )}
+                  {(() => {
+                    let badge;
+                    if (matchStatus.status === "pending") {
+                      badge = (
+                        <Badge
+                          variant="outline"
+                          className="bg-amber-100/50 text-amber-700 shadow-sm dark:bg-amber-900/20 dark:text-amber-400"
+                        >
+                          <span className="flex items-center gap-1">
+                            <div className="h-1.5 w-1.5 rounded-full bg-amber-500"></div>
+                            {matchStatus.pendingMatches} manga need review
+                          </span>
+                        </Badge>
+                      );
+                    } else if (matchStatus.status === "complete") {
+                      badge = (
+                        <Badge
+                          variant="outline"
+                          className="bg-green-100/50 text-green-700 shadow-sm dark:bg-green-900/20 dark:text-green-400"
+                        >
+                          <span className="flex items-center gap-1">
+                            <div className="h-1.5 w-1.5 rounded-full bg-green-500"></div>
+                            {matchStatus.totalMatches -
+                              matchStatus.skippedMatches}{" "}
+                            manga matched
+                          </span>
+                        </Badge>
+                      );
+                    } else {
+                      badge = (
+                        <Badge
+                          variant="outline"
+                          className="bg-gray-100/50 text-gray-700 shadow-sm dark:bg-gray-900/20 dark:text-gray-400"
+                        >
+                          <span className="flex items-center gap-1">
+                            <div className="h-1.5 w-1.5 rounded-full bg-gray-500"></div>
+                            Import data first
+                          </span>
+                        </Badge>
+                      );
+                    }
+                    return badge;
+                  })()}
 
                   {matchStatus.skippedMatches > 0 && (
                     <Badge
@@ -490,15 +509,23 @@ export function HomePage() {
                     </Badge>
                   )}
                 </div>
-                <RefreshCw
-                  className={`absolute right-0 bottom-0 h-16 w-16 opacity-20 ${
-                    matchStatus.status === "pending"
-                      ? "text-amber-500 dark:text-amber-900/50"
-                      : matchStatus.status === "complete"
-                        ? "text-green-500 dark:text-green-900/50"
-                        : "text-gray-500 dark:text-gray-900/50"
-                  }`}
-                />
+                {(() => {
+                  let refreshCwColorClass = "";
+                  if (matchStatus.status === "pending") {
+                    refreshCwColorClass =
+                      "text-amber-500 dark:text-amber-900/50";
+                  } else if (matchStatus.status === "complete") {
+                    refreshCwColorClass =
+                      "text-green-500 dark:text-green-900/50";
+                  } else {
+                    refreshCwColorClass = "text-gray-500 dark:text-gray-900/50";
+                  }
+                  return (
+                    <RefreshCw
+                      className={`absolute right-0 bottom-0 h-16 w-16 opacity-20 ${refreshCwColorClass}`}
+                    />
+                  );
+                })()}
               </div>
             </CardContent>
           </Card>
@@ -719,35 +746,47 @@ export function HomePage() {
               Kenmei to AniList Sync Tool • Version {getAppVersion()}
             </p>
             <div className="flex items-center gap-2">
-              {versionStatus === null ? (
-                <Badge
-                  variant="outline"
-                  className="bg-gray-100 text-xs font-normal text-gray-600 dark:bg-gray-800/30 dark:text-gray-300"
-                >
-                  Checking...
-                </Badge>
-              ) : versionStatus.status === "stable" ? (
-                <Badge
-                  variant="outline"
-                  className="bg-green-50 text-xs font-normal text-green-700 dark:bg-green-900/30 dark:text-green-300"
-                >
-                  Stable Release
-                </Badge>
-              ) : versionStatus.status === "beta" ? (
-                <Badge
-                  variant="outline"
-                  className="bg-yellow-50 text-xs font-normal text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
-                >
-                  Beta Release
-                </Badge>
-              ) : (
-                <Badge
-                  variant="outline"
-                  className="bg-blue-50 text-xs font-normal text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                >
-                  Development Build
-                </Badge>
-              )}
+              {(() => {
+                let badge;
+                if (versionStatus === null) {
+                  badge = (
+                    <Badge
+                      variant="outline"
+                      className="bg-gray-100 text-xs font-normal text-gray-600 dark:bg-gray-800/30 dark:text-gray-300"
+                    >
+                      Checking...
+                    </Badge>
+                  );
+                } else if (versionStatus.status === "stable") {
+                  badge = (
+                    <Badge
+                      variant="outline"
+                      className="bg-green-50 text-xs font-normal text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                    >
+                      Stable Release
+                    </Badge>
+                  );
+                } else if (versionStatus.status === "beta") {
+                  badge = (
+                    <Badge
+                      variant="outline"
+                      className="bg-yellow-50 text-xs font-normal text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
+                    >
+                      Beta Release
+                    </Badge>
+                  );
+                } else {
+                  badge = (
+                    <Badge
+                      variant="outline"
+                      className="bg-blue-50 text-xs font-normal text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                    >
+                      Development Build
+                    </Badge>
+                  );
+                }
+                return badge;
+              })()}
               <a
                 href="https://github.com/RLAlpha49/KenmeiToAnilist"
                 target="_blank"

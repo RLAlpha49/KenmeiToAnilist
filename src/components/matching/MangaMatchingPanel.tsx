@@ -75,6 +75,7 @@ export interface MangaMatchingPanelProps {
     directAccept?: boolean,
   ) => void;
   onResetToPending?: (match: MangaMatchResult) => void;
+  searchQuery?: string;
 }
 
 /**
@@ -91,6 +92,7 @@ export function MangaMatchingPanel({
   onRejectMatch,
   onSelectAlternative,
   onResetToPending,
+  searchQuery,
 }: MangaMatchingPanelProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilters, setStatusFilters] = useState({
@@ -102,6 +104,7 @@ export function MangaMatchingPanel({
   const [searchTerm, setSearchTerm] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastExternalSearchQuery = useRef<string | undefined>(undefined);
 
   // Add sort state
   const [sortOption, setSortOption] = useState<{
@@ -425,6 +428,18 @@ export function MangaMatchingPanel({
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [currentPage, totalPages]);
+
+  // Sync external searchQuery with local searchTerm
+  useEffect(() => {
+    if (
+      searchQuery !== undefined &&
+      searchQuery.trim() !== "" &&
+      searchQuery !== lastExternalSearchQuery.current
+    ) {
+      setSearchTerm(searchQuery);
+      lastExternalSearchQuery.current = searchQuery;
+    }
+  }, [searchQuery]);
 
   // Handle sort change
   const handleSortChange = (

@@ -174,8 +174,8 @@ export async function extractAniListIdFromComick(
  */
 export async function searchComickAndGetAniListManga(
   query: string,
-  limit: number = 1,
   accessToken: string,
+  limit: number = 1,
 ): Promise<EnhancedAniListManga[]> {
   try {
     console.log(`🔍 Starting Comick search for "${query}" with limit ${limit}`);
