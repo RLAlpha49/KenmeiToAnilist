@@ -1073,6 +1073,105 @@ export function SyncPage() {
     );
   }
 
+  // Helper function to calculate sync changes for a manga entry
+  const calculateSyncChanges = (
+    kenmei: {
+      chapters_read?: number;
+      score?: number;
+      status: string;
+      updated_at: string;
+      last_read_at?: string;
+      title: string;
+    },
+    userEntry:
+      | { status: string; progress: number; score: number; private: boolean }
+      | undefined,
+    syncConfig: SyncConfig,
+  ) => {
+    // Determine what will change based on sync configuration
+    let statusWillChange: boolean;
+    if (userEntry) {
+      if (syncConfig.prioritizeAniListStatus) {
+        statusWillChange = false; // If prioritizing AniList status, it won't change
+      } else {
+        statusWillChange =
+          getEffectiveStatus(kenmei) !== userEntry.status &&
+          !(
+            userEntry.status === "COMPLETED" &&
+            syncConfig.preserveCompletedStatus
+          );
+      }
+    } else {
+      statusWillChange = true;
+    }
+
+    let progressWillChange: boolean;
+    if (userEntry) {
+      if (syncConfig.prioritizeAniListProgress) {
+        // Will only change if Kenmei has more chapters read than AniList
+        progressWillChange =
+          (kenmei.chapters_read || 0) > (userEntry.progress || 0);
+      } else {
+        progressWillChange =
+          (kenmei.chapters_read || 0) !== (userEntry.progress || 0);
+      }
+    } else {
+      progressWillChange = true;
+    }
+
+    let scoreWillChange: boolean;
+    if (userEntry) {
+      // Don't update completed entries if preserve setting is on
+      if (
+        userEntry.status === "COMPLETED" &&
+        syncConfig.preserveCompletedStatus
+      ) {
+        scoreWillChange = false;
+      } else if (
+        syncConfig.prioritizeAniListScore &&
+        userEntry.score &&
+        Number(userEntry.score) > 0
+      ) {
+        // Only prioritize if AniList score > 0
+        scoreWillChange = false;
+      } else {
+        // Only consider a change if Kenmei has a score
+        scoreWillChange =
+          (kenmei.score || 0) > 0 &&
+          (Number(userEntry.score || 0) === 0 ||
+            Math.abs(
+              Number(kenmei.score || 0) - Number(userEntry.score || 0),
+            ) >= 0.5);
+      }
+    } else {
+      // For new entries, only show score change if Kenmei has a score
+      scoreWillChange = (kenmei.score || 0) > 0;
+    }
+
+    // Track if manga is new to the user's library or shouldn't be updated due to special cases
+    const isNewEntry = !userEntry;
+    const isCompleted = userEntry && userEntry.status === "COMPLETED";
+
+    // Count the number of changes
+    const changeCount = [
+      statusWillChange,
+      progressWillChange,
+      scoreWillChange,
+      userEntry
+        ? syncConfig.setPrivate && !userEntry.private
+        : syncConfig.setPrivate,
+    ].filter(Boolean).length;
+
+    return {
+      statusWillChange,
+      progressWillChange,
+      scoreWillChange,
+      isNewEntry,
+      isCompleted,
+      changeCount,
+    };
+  };
+
   // Render the appropriate view based on state
   const renderContent = () => {
     switch (viewMode) {
@@ -2038,81 +2137,19 @@ export function SyncPage() {
                                 // Get the user's existing data for this manga if it exists
                                 const userEntry = userLibrary[anilist.id];
 
-                                // Determine what will change based on sync configuration
-                                let statusWillChange = true;
-                                if (userEntry) {
-                                  if (syncConfig.prioritizeAniListStatus) {
-                                    statusWillChange = false; // If prioritizing AniList status, it won't change
-                                  } else {
-                                    statusWillChange =
-                                      getEffectiveStatus(kenmei) !==
-                                        userEntry.status &&
-                                      !(
-                                        userEntry.status === "COMPLETED" &&
-                                        syncConfig.preserveCompletedStatus
-                                      );
-                                  }
-                                }
-
-                                let progressWillChange = true;
-                                if (userEntry) {
-                                  if (syncConfig.prioritizeAniListProgress) {
-                                    // Will only change if Kenmei has more chapters read than AniList
-                                    progressWillChange =
-                                      (kenmei.chapters_read || 0) >
-                                      (userEntry.progress || 0);
-                                  } else {
-                                    progressWillChange =
-                                      (kenmei.chapters_read || 0) !==
-                                      (userEntry.progress || 0);
-                                  }
-                                }
-
-                                let scoreWillChange: boolean;
-                                if (userEntry) {
-                                  // Don't update completed entries if preserve setting is on
-                                  if (
-                                    userEntry.status === "COMPLETED" &&
-                                    syncConfig.preserveCompletedStatus
-                                  ) {
-                                    scoreWillChange = false;
-                                  } else if (
-                                    syncConfig.prioritizeAniListScore &&
-                                    userEntry.score &&
-                                    Number(userEntry.score) > 0
-                                  ) {
-                                    // Only prioritize if AniList score > 0
-                                    scoreWillChange = false;
-                                  } else {
-                                    // Only consider a change if Kenmei has a score
-                                    scoreWillChange =
-                                      kenmei.score > 0 &&
-                                      (Number(userEntry.score || 0) === 0 ||
-                                        Math.abs(
-                                          Number(kenmei.score) -
-                                            Number(userEntry.score || 0),
-                                        ) >= 0.5);
-                                  }
-                                } else {
-                                  // For new entries, only show score change if Kenmei has a score
-                                  scoreWillChange = kenmei.score > 0;
-                                }
-
-                                // Track if manga is new to the user's library or shouldn't be updated due to special cases
-                                const isNewEntry = !userEntry;
-                                const isCompleted =
-                                  userEntry && userEntry.status === "COMPLETED";
-
-                                // Count the number of changes
-                                const changeCount = [
+                                // Calculate sync changes using helper function
+                                const {
                                   statusWillChange,
                                   progressWillChange,
                                   scoreWillChange,
-                                  userEntry
-                                    ? syncConfig.setPrivate &&
-                                      !userEntry.private
-                                    : syncConfig.setPrivate,
-                                ].filter(Boolean).length;
+                                  isNewEntry,
+                                  isCompleted,
+                                  changeCount,
+                                } = calculateSyncChanges(
+                                  kenmei,
+                                  userEntry,
+                                  syncConfig,
+                                );
 
                                 return (
                                   <motion.div
@@ -2548,85 +2585,19 @@ export function SyncPage() {
                                 // Get the user's existing data for this manga if it exists
                                 const userEntry = userLibrary[anilist.id];
 
-                                // Determine what will change based on sync configuration
-                                let statusWillChange: boolean;
-                                if (userEntry) {
-                                  if (syncConfig.prioritizeAniListStatus) {
-                                    statusWillChange = false; // If prioritizing AniList status, it won't change
-                                  } else {
-                                    statusWillChange =
-                                      getEffectiveStatus(kenmei) !==
-                                        userEntry.status &&
-                                      !(
-                                        userEntry.status === "COMPLETED" &&
-                                        syncConfig.preserveCompletedStatus
-                                      );
-                                  }
-                                } else {
-                                  statusWillChange = true;
-                                }
-
-                                let progressWillChange: boolean;
-                                if (userEntry) {
-                                  if (syncConfig.prioritizeAniListProgress) {
-                                    // Will only change if Kenmei has more chapters read than AniList
-                                    progressWillChange =
-                                      (kenmei.chapters_read || 0) >
-                                      (userEntry.progress || 0);
-                                  } else {
-                                    progressWillChange =
-                                      (kenmei.chapters_read || 0) !==
-                                      (userEntry.progress || 0);
-                                  }
-                                } else {
-                                  progressWillChange = true;
-                                }
-
-                                let scoreWillChange: boolean;
-                                if (userEntry) {
-                                  // Don't update completed entries if preserve setting is on
-                                  if (
-                                    userEntry.status === "COMPLETED" &&
-                                    syncConfig.preserveCompletedStatus
-                                  ) {
-                                    scoreWillChange = false;
-                                  } else if (
-                                    syncConfig.prioritizeAniListScore &&
-                                    userEntry.score &&
-                                    Number(userEntry.score) > 0
-                                  ) {
-                                    // Only prioritize if AniList score > 0
-                                    scoreWillChange = false;
-                                  } else {
-                                    // Only consider a change if Kenmei has a score
-                                    scoreWillChange =
-                                      kenmei.score > 0 &&
-                                      (Number(userEntry.score || 0) === 0 ||
-                                        Math.abs(
-                                          Number(kenmei.score) -
-                                            Number(userEntry.score || 0),
-                                        ) >= 0.5);
-                                  }
-                                } else {
-                                  // For new entries, only show score change if Kenmei has a score
-                                  scoreWillChange = kenmei.score > 0;
-                                }
-
-                                // Track if manga is new to the user's library or shouldn't be updated due to special cases
-                                const isNewEntry = !userEntry;
-                                const isCompleted =
-                                  userEntry && userEntry.status === "COMPLETED";
-
-                                // Count the number of changes
-                                const changeCount = [
+                                // Calculate sync changes using helper function
+                                const {
                                   statusWillChange,
                                   progressWillChange,
                                   scoreWillChange,
-                                  userEntry
-                                    ? syncConfig.setPrivate &&
-                                      !userEntry.private
-                                    : syncConfig.setPrivate,
-                                ].filter(Boolean).length;
+                                  isNewEntry,
+                                  isCompleted,
+                                  changeCount,
+                                } = calculateSyncChanges(
+                                  kenmei,
+                                  userEntry,
+                                  syncConfig,
+                                );
 
                                 return (
                                   <motion.div
