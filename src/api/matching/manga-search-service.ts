@@ -9,7 +9,6 @@ import {
   AniListManga,
   MangaMatchResult,
   MangaSearchResponse,
-  MediaListStatus,
   SearchResult,
   PageInfo,
 } from "../anilist/types";
@@ -2330,7 +2329,7 @@ function convertEnhancedMangaToAniList(
     mediaListEntry: enhancedManga.mediaListEntry
       ? {
           ...enhancedManga.mediaListEntry,
-          status: enhancedManga.mediaListEntry.status as MediaListStatus,
+          status: enhancedManga.mediaListEntry.status,
         }
       : enhancedManga.mediaListEntry,
     isAdult: enhancedManga.isAdult,
