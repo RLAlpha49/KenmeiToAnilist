@@ -257,6 +257,60 @@ export function SyncPage() {
     });
   };
 
+  // Handler for refreshing user library (shared between Try Again and Refresh buttons)
+  const handleLibraryRefresh = () => {
+    setLibraryLoading(true);
+    setLibraryError(null);
+    setRetryCount(0);
+    setRateLimit(false, undefined, undefined);
+
+    const controller = new AbortController();
+
+    getUserMangaList(token, controller.signal)
+      .then((library) => {
+        console.log(
+          `Loaded ${Object.keys(library).length} entries from user's AniList library`,
+        );
+        setUserLibrary(library);
+        setLibraryLoading(false);
+      })
+      .catch((error) => {
+        if (error.name !== "AbortError") {
+          console.error("Failed to load user library again:", error);
+
+          // Check for rate limiting - with our new client updates, this should be more reliable
+          if (error.isRateLimited || error.status === 429) {
+            console.warn("📛 DETECTED RATE LIMIT in SyncPage:", {
+              isRateLimited: error.isRateLimited,
+              status: error.status,
+              retryAfter: error.retryAfter,
+            });
+
+            const retryDelay = error.retryAfter ? error.retryAfter : 60;
+            const retryTimestamp = Date.now() + retryDelay;
+
+            console.log(
+              `Setting rate limited state with retry after: ${retryTimestamp} (in ${retryDelay / 1000}s)`,
+            );
+
+            setRateLimit(
+              true,
+              retryDelay,
+              "AniList API rate limit reached. Waiting to retry...",
+            );
+          } else {
+            setLibraryError(
+              error.message ||
+                "Failed to load your AniList library. Synchronization can still proceed without comparison data.",
+            );
+          }
+
+          setUserLibrary({});
+          setLibraryLoading(false);
+        }
+      });
+  };
+
   // View mode for displaying manga entries
   const [displayMode, setDisplayMode] = useState<"cards" | "compact">("cards");
 
@@ -1307,70 +1361,7 @@ export function SyncPage() {
                           <Button
                             variant="link"
                             className="h-auto px-0 py-0 text-xs"
-                            onClick={() => {
-                              setLibraryLoading(true);
-                              setLibraryError(null);
-                              setRetryCount(0);
-                              setRateLimit(false, undefined, undefined);
-
-                              const controller = new AbortController();
-
-                              getUserMangaList(token, controller.signal)
-                                .then((library) => {
-                                  console.log(
-                                    `Loaded ${Object.keys(library).length} entries from user's AniList library`,
-                                  );
-                                  setUserLibrary(library);
-                                  setLibraryLoading(false);
-                                })
-                                .catch((error) => {
-                                  if (error.name !== "AbortError") {
-                                    console.error(
-                                      "Failed to load user library again:",
-                                      error,
-                                    );
-
-                                    // Check for rate limiting - with our new client updates, this should be more reliable
-                                    if (
-                                      error.isRateLimited ||
-                                      error.status === 429
-                                    ) {
-                                      console.warn(
-                                        "📛 DETECTED RATE LIMIT in SyncPage:",
-                                        {
-                                          isRateLimited: error.isRateLimited,
-                                          status: error.status,
-                                          retryAfter: error.retryAfter,
-                                        },
-                                      );
-
-                                      const retryDelay = error.retryAfter
-                                        ? error.retryAfter
-                                        : 60;
-                                      const retryTimestamp =
-                                        Date.now() + retryDelay;
-
-                                      console.log(
-                                        `Setting rate limited state with retry after: ${retryTimestamp} (in ${retryDelay / 1000}s)`,
-                                      );
-
-                                      setRateLimit(
-                                        true,
-                                        retryDelay,
-                                        "AniList API rate limit reached. Waiting to retry...",
-                                      );
-                                    } else {
-                                      setLibraryError(
-                                        error.message ||
-                                          "Failed to load your AniList library. Synchronization can still proceed without comparison data.",
-                                      );
-                                    }
-
-                                    setUserLibrary({});
-                                    setLibraryLoading(false);
-                                  }
-                                });
-                            }}
+                            onClick={handleLibraryRefresh}
                           >
                             Try Again
                           </Button>
@@ -1398,70 +1389,7 @@ export function SyncPage() {
                             variant="outline"
                             size="sm"
                             className="h-7 text-xs"
-                            onClick={() => {
-                              setLibraryLoading(true);
-                              setLibraryError(null);
-                              setRetryCount(0);
-                              setRateLimit(false, undefined, undefined);
-
-                              const controller = new AbortController();
-
-                              getUserMangaList(token, controller.signal)
-                                .then((library) => {
-                                  console.log(
-                                    `Loaded ${Object.keys(library).length} entries from user's AniList library`,
-                                  );
-                                  setUserLibrary(library);
-                                  setLibraryLoading(false);
-                                })
-                                .catch((error) => {
-                                  if (error.name !== "AbortError") {
-                                    console.error(
-                                      "Failed to load user library again:",
-                                      error,
-                                    );
-
-                                    // Check for rate limiting - with our new client updates, this should be more reliable
-                                    if (
-                                      error.isRateLimited ||
-                                      error.status === 429
-                                    ) {
-                                      console.warn(
-                                        "📛 DETECTED RATE LIMIT in SyncPage:",
-                                        {
-                                          isRateLimited: error.isRateLimited,
-                                          status: error.status,
-                                          retryAfter: error.retryAfter,
-                                        },
-                                      );
-
-                                      const retryDelay = error.retryAfter
-                                        ? error.retryAfter
-                                        : 60;
-                                      const retryTimestamp =
-                                        Date.now() + retryDelay;
-
-                                      console.log(
-                                        `Setting rate limited state with retry after: ${retryTimestamp} (in ${retryDelay / 1000}s)`,
-                                      );
-
-                                      setRateLimit(
-                                        true,
-                                        retryDelay,
-                                        "AniList API rate limit reached. Waiting to retry...",
-                                      );
-                                    } else {
-                                      setLibraryError(
-                                        error.message ||
-                                          "Failed to load your AniList library. Synchronization can still proceed without comparison data.",
-                                      );
-                                    }
-
-                                    setUserLibrary({});
-                                    setLibraryLoading(false);
-                                  }
-                                });
-                            }}
+                            onClick={handleLibraryRefresh}
                           >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
