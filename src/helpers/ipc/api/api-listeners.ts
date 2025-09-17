@@ -133,8 +133,12 @@ async function handleRateLimitResponse(
   }
 
   rateLimitResetTime = Date.now() + waitTime;
+  const searchTerm =
+    variables && typeof variables.search !== "undefined"
+      ? variables.search?.toString?.() ?? String(variables.search)
+      : "request";
   console.log(
-    `Rate limited for "${variables?.search || "request"}", waiting ${Math.round(waitTime / 1000)}s before retry #${retryCount + 1}`,
+    `Rate limited for "${searchTerm}", waiting ${Math.round(waitTime / 1000)}s before retry #${retryCount + 1}`,
   );
   await sleep(waitTime);
 
@@ -166,8 +170,12 @@ async function handleServerError(
   }
 
   const waitTime = 3000 * Math.pow(2, retryCount);
+  const searchTerm =
+    variables && typeof variables.search !== "undefined"
+      ? variables.search?.toString?.() ?? String(variables.search)
+      : "request";
   console.log(
-    `Server error ${response.status} for "${variables?.search || "request"}", waiting ${Math.round(waitTime / 1000)}s before retry #${retryCount + 1}`,
+    `Server error ${response.status} for "${searchTerm}", waiting ${Math.round(waitTime / 1000)}s before retry #${retryCount + 1}`,
   );
 
   await sleep(waitTime);
