@@ -416,6 +416,133 @@ function isCacheValid<T>(cache: Cache<T>, key: string): boolean {
 }
 
 /**
+ * Core search logic shared between basic and advanced search.
+ *
+ * @param query - The GraphQL query to execute.
+ * @param variables - Variables for the query.
+ * @param search - Search query string for logging/caching.
+ * @param cacheKey - Cache key for this search.
+ * @param searchType - Type of search for logging.
+ * @param token - Optional access token.
+ * @param bypassCache - Optional parameter to bypass cache.
+ * @param page - Page number for error handling.
+ * @param perPage - Results per page for error handling.
+ * @returns Promise resolving to search results.
+ */
+async function executeSearchQuery(
+  query: string,
+  variables: Record<string, unknown>,
+  search: string,
+  cacheKey: string,
+  searchType: string,
+  token?: string,
+  bypassCache?: boolean,
+  page: number = 1,
+  perPage: number = 50,
+): Promise<SearchResult<AniListManga>> {
+  // Check cache first
+  if (!bypassCache && isCacheValid(searchCache, cacheKey)) {
+    console.log(`📋 Using cached ${searchType} results for: "${search}"`);
+    return searchCache[cacheKey].data;
+  }
+
+  console.log(
+    `🔍 ${searchType} for manga: "${search}"${searchType === "Advanced search" ? " with filters" : ""} (page ${page})`,
+  );
+
+  try {
+    // Execute the API request
+    const response = await request<{
+      data?: { Page: SearchResult<AniListManga>["Page"] };
+      Page?: SearchResult<AniListManga>["Page"];
+    }>(query, variables, token, undefined, bypassCache);
+
+    console.log(`🔍 ${searchType} response:`, response);
+
+    // Validate response structure
+    if (!response?.data) {
+      console.error(
+        `Invalid API response for ${searchType.toLowerCase()} "${search}":`,
+        response,
+      );
+      throw new Error(`Invalid API response: missing data property`);
+    }
+
+    // Handle nested data structure
+    const responseData = response.data.data ?? response.data;
+
+    if (!responseData.Page) {
+      console.error(
+        `Invalid API response for ${searchType.toLowerCase()} "${search}": missing Page property`,
+        responseData,
+      );
+      throw new Error(`Invalid API response: missing Page property`);
+    }
+
+    const result = { Page: responseData.Page };
+
+    // Ensure media array exists
+    if (!result.Page.media) {
+      result.Page.media = [];
+    }
+
+    // Log results
+    console.log(
+      `🔍 Found ${result.Page.media.length} manga for ${searchType.toLowerCase()} "${search}" (page ${page}/${result.Page.pageInfo?.lastPage || 1})`,
+    );
+
+    // Cache results
+    if (!bypassCache) {
+      searchCache[cacheKey] = {
+        data: result,
+        timestamp: Date.now(),
+      };
+
+      persistSearchCache();
+      console.log(
+        `💾 Cached ${result.Page.media.length} ${searchType.toLowerCase()} results for "${search}"`,
+      );
+    }
+
+    // Dispatch search results event (only for basic search to avoid duplicate events)
+    if (searchType === "Searching") {
+      try {
+        const event = new CustomEvent("anilist:search-results-updated", {
+          detail: {
+            search,
+            results: result.Page.media || [],
+            timestamp: Date.now(),
+          },
+        });
+        window.dispatchEvent(event);
+      } catch (e) {
+        console.error("Failed to dispatch search results event:", e);
+      }
+    }
+
+    return result;
+  } catch (error) {
+    console.error(`Error in ${searchType.toLowerCase()} for: ${search}`, error);
+
+    // Return empty result to prevent crashing
+    const emptyResult: SearchResult<AniListManga> = {
+      Page: {
+        pageInfo: {
+          total: 0,
+          currentPage: page,
+          lastPage: 1,
+          hasNextPage: false,
+          perPage,
+        },
+        media: [],
+      },
+    };
+
+    return emptyResult;
+  }
+}
+
+/**
  * Search for manga on AniList.
  *
  * @param search - Search query.
@@ -433,106 +560,20 @@ export async function searchManga(
   token?: string,
   bypassCache?: boolean,
 ): Promise<SearchResult<AniListManga>> {
-  // We'll still use cache in the renderer process to minimize IPC calls
   const cacheKey = generateCacheKey(search, page, perPage);
+  const variables = { search, page, perPage };
 
-  // Check if we should bypass the cache
-  if (!bypassCache && isCacheValid(searchCache, cacheKey)) {
-    console.log(`📋 Using cached search results for: "${search}"`);
-    return searchCache[cacheKey].data;
-  }
-
-  console.log(`🔍 Searching for manga: "${search}" (page ${page})`);
-
-  try {
-    // Updated type parameter to correctly handle potential nested data structure
-    const response = await request<{
-      data?: { Page: SearchResult<AniListManga>["Page"] };
-      Page?: SearchResult<AniListManga>["Page"];
-    }>(SEARCH_MANGA, { search, page, perPage }, token, undefined, bypassCache);
-    console.log("🔍 searchManga response:", response);
-
-    // Validate the response structure before using it
-    if (!response?.data) {
-      console.error(
-        `Invalid API response when searching for "${search}":`,
-        response,
-      );
-      throw new Error(`Invalid API response: missing data property`);
-    }
-
-    // Check if the API response has a nested data object (response.data.data structure)
-    const responseData = response.data.data ?? response.data;
-
-    if (!responseData.Page) {
-      console.error(
-        `Invalid API response when searching for "${search}": missing Page property`,
-        responseData,
-      );
-      throw new Error(`Invalid API response: missing Page property`);
-    }
-
-    const result = { Page: responseData.Page };
-
-    // Ensure media array exists (even if empty)
-    if (!result.Page.media) {
-      result.Page.media = [];
-    }
-
-    // Log the number of results found
-    console.log(
-      `🔍 Found ${result.Page.media.length} manga for "${search}" (page ${page}/${result.Page.pageInfo?.lastPage || 1})`,
-    );
-
-    // Cache the results locally if not bypassing cache
-    if (!bypassCache) {
-      searchCache[cacheKey] = {
-        data: result,
-        timestamp: Date.now(),
-      };
-
-      // Persist the updated cache
-      persistSearchCache();
-      console.log(
-        `💾 Cached ${result.Page.media.length} results for "${search}"`,
-      );
-    }
-
-    // Signal to other components that a new search result is available
-    try {
-      // Notify any listeners that we have new search results
-      const event = new CustomEvent("anilist:search-results-updated", {
-        detail: {
-          search,
-          results: result.Page.media || [],
-          timestamp: Date.now(),
-        },
-      });
-      window.dispatchEvent(event);
-    } catch (e) {
-      console.error("Failed to dispatch search results event:", e);
-    }
-
-    return result;
-  } catch (error) {
-    console.error(`Error searching for manga: ${search}`, error);
-
-    // Return a valid but empty result to prevent crashing
-    const emptyResult: SearchResult<AniListManga> = {
-      Page: {
-        pageInfo: {
-          total: 0,
-          currentPage: page,
-          lastPage: 1,
-          hasNextPage: false,
-          perPage,
-        },
-        media: [],
-      },
-    };
-
-    return emptyResult;
-  }
+  return executeSearchQuery(
+    SEARCH_MANGA,
+    variables,
+    search,
+    cacheKey,
+    "Searching",
+    token,
+    bypassCache,
+    page,
+    perPage,
+  );
 }
 
 /**
@@ -559,108 +600,27 @@ export async function advancedSearchManga(
   token?: string,
   bypassCache?: boolean,
 ): Promise<SearchResult<AniListManga>> {
-  // Generate cache key with additional filters
   const cacheKey = generateCacheKey(search, page, perPage, filters);
+  const variables = {
+    search,
+    page,
+    perPage,
+    genre_in: filters.genres,
+    tag_in: filters.tags,
+    format_in: filters.formats,
+  };
 
-  // Check if we should bypass the cache
-  if (!bypassCache && isCacheValid(searchCache, cacheKey)) {
-    console.log(`📋 Using cached advanced search results for: "${search}"`);
-    return searchCache[cacheKey].data;
-  }
-
-  console.log(
-    `🔍 Advanced search for manga: "${search}" with filters:`,
-    filters,
+  return executeSearchQuery(
+    ADVANCED_SEARCH_MANGA,
+    variables,
+    search,
+    cacheKey,
+    "Advanced search",
+    token,
+    bypassCache,
+    page,
+    perPage,
   );
-
-  try {
-    // Map filters to variables
-    const variables = {
-      search,
-      page,
-      perPage,
-      genre_in: filters.genres,
-      tag_in: filters.tags,
-      format_in: filters.formats,
-    };
-
-    console.log("Query:", ADVANCED_SEARCH_MANGA);
-    console.log("Variables:", variables, { bypassCache });
-
-    // Updated type parameter to correctly handle potential nested data structure
-    const response = await request<{
-      data?: { Page: SearchResult<AniListManga>["Page"] };
-      Page?: SearchResult<AniListManga>["Page"];
-    }>(ADVANCED_SEARCH_MANGA, variables, token, undefined, bypassCache);
-
-    console.log("🔍 advancedSearchManga response:", response);
-
-    // Validate the response structure before using it
-    if (!response?.data) {
-      console.error(
-        `Invalid API response for advanced search "${search}":`,
-        response,
-      );
-      throw new Error(`Invalid API response: missing data property`);
-    }
-
-    // Check if the API response has a nested data object (response.data.data structure)
-    const responseData = response.data.data ?? response.data;
-
-    if (!responseData.Page) {
-      console.error(
-        `Invalid API response for advanced search "${search}": missing Page property`,
-        responseData,
-      );
-      throw new Error(`Invalid API response: missing Page property`);
-    }
-
-    const result = { Page: responseData.Page };
-
-    // Ensure media array exists (even if empty)
-    if (!result.Page.media) {
-      result.Page.media = [];
-    }
-
-    // Log the number of results found
-    console.log(
-      `🔍 Found ${result.Page.media.length} manga for advanced search "${search}" (page ${page}/${result.Page.pageInfo?.lastPage || 1})`,
-    );
-
-    // Cache the results if not bypassing cache
-    if (!bypassCache) {
-      searchCache[cacheKey] = {
-        data: result,
-        timestamp: Date.now(),
-      };
-
-      // Persist the updated cache
-      persistSearchCache();
-      console.log(
-        `💾 Cached ${result.Page.media.length} advanced search results for "${search}"`,
-      );
-    }
-
-    return result;
-  } catch (error) {
-    console.error(`Error in advanced search for: ${search}`, error);
-
-    // Return a valid but empty result to prevent crashing
-    const emptyResult: SearchResult<AniListManga> = {
-      Page: {
-        pageInfo: {
-          total: 0,
-          currentPage: page,
-          lastPage: 1,
-          hasNextPage: false,
-          perPage,
-        },
-        media: [],
-      },
-    };
-
-    return emptyResult;
-  }
 }
 
 /**
