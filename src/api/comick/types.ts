@@ -1,38 +1,4 @@
-/**
- * Shared subtypes for Comick API types
- */
-export interface MdTitle {
-  title: string;
-  lang: string;
-}
-
-export interface ComicRef {
-  id: string;
-  title: string;
-  slug: string;
-}
-
-export interface PersonRef {
-  id: string;
-  name: string;
-  slug: string;
-}
-
-export interface GenreRef {
-  id: string;
-  name: string;
-  slug: string;
-}
-
-export interface ComickLinks {
-  al?: string; // AniList ID
-  ap?: string; // AnimePlanet
-  kt?: string; // Kitsu
-  mb?: string; // MangaBuddy
-  mu?: string; // MangaUpdates
-  mal?: string; // MyAnimeList
-  [key: string]: string | undefined; // Allow for other site keys
-}
+import type { AniListManga } from "../anilist/types";
 /**
  * @packageDocumentation
  * @module comick-types
@@ -57,8 +23,15 @@ export interface ComickManga {
   user_follow_count?: number;
   content_rating?: string;
   demographic?: number;
-  md_titles?: MdTitle[];
-  md_comics?: ComicRef;
+  md_titles?: Array<{
+    title: string;
+    lang: string;
+  }>;
+  md_comics?: {
+    id: string;
+    title: string;
+    slug: string;
+  };
   highlight?: string;
 }
 
@@ -92,13 +65,44 @@ export interface ComickMangaDetail {
     demographic?: number;
     hentai?: boolean;
     content_rating?: string;
-    mu_comics?: ComicRef;
-    md_comics?: ComicRef;
-    authors?: PersonRef[];
-    artists?: PersonRef[];
-    genres?: GenreRef[];
-    md_titles?: MdTitle[];
-    links?: ComickLinks;
+    mu_comics?: {
+      id: string;
+      title: string;
+      slug: string;
+    };
+    md_comics?: {
+      id: string;
+      title: string;
+      slug: string;
+    };
+    authors?: Array<{
+      id: string;
+      name: string;
+      slug: string;
+    }>;
+    artists?: Array<{
+      id: string;
+      name: string;
+      slug: string;
+    }>;
+    genres?: Array<{
+      id: string;
+      name: string;
+      slug: string;
+    }>;
+    md_titles?: Array<{
+      title: string;
+      lang: string;
+    }>;
+    links?: {
+      al?: string; // AniList ID
+      ap?: string; // AnimePlanet
+      kt?: string; // Kitsu
+      mb?: string; // MangaBuddy
+      mu?: string; // MangaUpdates
+      mal?: string; // MyAnimeList
+      [key: string]: string | undefined; // Allow for other site keys
+    };
   };
   langList?: string[];
 }
@@ -120,55 +124,7 @@ export interface ComickMatchResult {
  *
  * @source
  */
-export interface EnhancedAniListManga {
-  id: number;
-  title: {
-    romaji: string;
-    english: string | null;
-    native: string | null;
-  };
-  synonyms?: string[];
-  description?: string;
-  format: string;
-  status: string;
-  chapters?: number;
-  volumes?: number;
-  countryOfOrigin?: string;
-  source?: string;
-  coverImage?: {
-    large?: string;
-    medium?: string;
-  };
-  genres?: string[];
-  tags?: {
-    id: number;
-    name: string;
-    category?: string;
-  }[];
-  startDate?: {
-    year?: number;
-    month?: number;
-    day?: number;
-  };
-  staff?: {
-    edges: {
-      node: {
-        id: number;
-        name: {
-          full: string;
-        };
-        role: string;
-      };
-    }[];
-  };
-  mediaListEntry?: {
-    id: number;
-    status: string;
-    progress: number;
-    score: number;
-    private: boolean;
-  } | null;
-  isAdult?: boolean;
+export interface EnhancedAniListManga extends AniListManga {
   comickSource?: {
     title: string;
     slug: string;
