@@ -33,43 +33,39 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
+          const vendorUIFrameworkPkgs = [
+            "@radix-ui",
+            "@icons-pack",
+            "class-variance-authority",
+            "tailwind",
+            "tailwindcss",
+            "framer-motion",
+            "sonner",
+          ];
           if (
-            id.includes("node_modules/@radix-ui") ||
-            id.includes("node_modules/@icons-pack") ||
-            id.includes("node_modules/class-variance-authority") ||
-            id.includes("node_modules/tailwind") ||
-            id.includes("node_modules/tailwindcss") ||
-            id.includes("node_modules/framer-motion") ||
-            id.includes("node_modules/sonner")
+            vendorUIFrameworkPkgs.some((pkg) =>
+              id.includes(`node_modules/${pkg}`),
+            )
           ) {
             return "vendor-ui-framework";
           }
           if (id.includes("node_modules")) {
             return "vendor";
           }
-          if (id.includes("/components/ui/")) {
-            return "app-ui-components";
-          }
-          if (id.includes("/components/import/")) {
-            return "app-import-components";
-          }
-          if (id.includes("/components/matching/")) {
-            return "app-matching-components";
-          }
-          if (id.includes("/components/sync/")) {
-            return "app-sync-components";
-          }
-          if (id.includes("/context/")) {
-            return "app-context";
-          }
-          if (id.includes("/helpers/")) {
-            return "app-helpers";
-          }
-          if (id.includes("/hooks/")) {
-            return "app-hooks";
-          }
-          if (id.includes("/pages/")) {
-            return "app-pages";
+          const appChunks = [
+            { match: "/components/ui/", name: "app-ui-components" },
+            { match: "/components/import/", name: "app-import-components" },
+            { match: "/components/matching/", name: "app-matching-components" },
+            { match: "/components/sync/", name: "app-sync-components" },
+            { match: "/context/", name: "app-context" },
+            { match: "/helpers/", name: "app-helpers" },
+            { match: "/hooks/", name: "app-hooks" },
+            { match: "/pages/", name: "app-pages" },
+          ];
+          for (const chunk of appChunks) {
+            if (id.includes(chunk.match)) {
+              return chunk.name;
+            }
           }
           return "app-core";
         },

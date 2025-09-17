@@ -195,10 +195,7 @@ export function ImportPage() {
       {(() => {
         if (importSuccess && importData) {
           return (
-            <ImportSuccessContent
-              importData={importData}
-              progress={progress}
-            />
+            <ImportSuccessContent importData={importData} progress={progress} />
           );
         }
 

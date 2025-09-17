@@ -180,8 +180,13 @@ function formatTokenExchangeError(lastError: unknown): string {
   let errorMessage: string;
   if (lastError instanceof Error) {
     errorMessage = lastError.message;
-  } else if (lastError && typeof lastError === "object" && "toString" in lastError && typeof (lastError as any).toString === "function") {
-    errorMessage = (lastError as any).toString();
+  } else if (
+    lastError &&
+    typeof lastError === "object" &&
+    "toString" in lastError &&
+    typeof (lastError as { toString: () => string }).toString === "function"
+  ) {
+    errorMessage = (lastError as { toString: () => string }).toString();
   } else if (lastError) {
     errorMessage = String(lastError);
   } else {
