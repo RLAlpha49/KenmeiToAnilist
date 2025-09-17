@@ -56,7 +56,9 @@ const RateLimitContext = createContext<RateLimitContextType | undefined>(
  * @returns The rate limit context provider with value for consumers.
  * @source
  */
-export function RateLimitProvider({ children }: { children: ReactNode }) {
+export function RateLimitProvider({
+  children,
+}: Readonly<{ children: ReactNode }>) {
   const [rateLimitState, setRateLimitState] = useState<RateLimitState>({
     isRateLimited: false,
     retryAfter: null,
@@ -177,10 +179,13 @@ export function RateLimitProvider({ children }: { children: ReactNode }) {
     }
   }, [rateLimitState.isRateLimited, rateLimitState.retryAfter]);
 
+  const contextValue = React.useMemo(
+    () => ({ rateLimitState, setRateLimit, clearRateLimit }),
+    [rateLimitState, setRateLimit, clearRateLimit],
+  );
+
   return (
-    <RateLimitContext.Provider
-      value={{ rateLimitState, setRateLimit, clearRateLimit }}
-    >
+    <RateLimitContext.Provider value={contextValue}>
       {children}
     </RateLimitContext.Provider>
   );
@@ -214,11 +219,11 @@ function RateLimitToast({
   message,
   retryAfter,
   onComplete,
-}: {
+}: Readonly<{
   message: string;
   retryAfter: number;
   onComplete: () => void;
-}) {
+}>) {
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [initialDuration, setInitialDuration] = useState<number>(0);
 

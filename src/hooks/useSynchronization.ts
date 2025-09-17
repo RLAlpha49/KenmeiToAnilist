@@ -301,7 +301,7 @@ export function useSynchronization(): [
 
               try {
                 const previousProgress = entry.previousValues?.progress || 0;
-                const targetProgress = entry.syncMetadata!.targetProgress;
+                const targetProgress = entry.syncMetadata.targetProgress;
                 const progressDiff = targetProgress - previousProgress;
 
                 console.log(

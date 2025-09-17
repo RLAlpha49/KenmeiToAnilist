@@ -130,8 +130,8 @@ const SyncResultsView: React.FC<SyncResultsViewProps> = ({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {report.errors.slice(0, 10).map((error, index) => (
-                    <TableRow key={index}>
+                  {report.errors.slice(0, 10).map((error) => (
+                    <TableRow key={error.mediaId}>
                       <TableCell className="font-medium">
                         {error.mediaId}
                       </TableCell>

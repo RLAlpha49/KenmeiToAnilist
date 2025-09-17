@@ -13,6 +13,7 @@ import {
   SearchResult,
   PageInfo,
 } from "../anilist/types";
+import { EnhancedAniListManga } from "../comick/types";
 import {
   searchManga,
   advancedSearchManga,
@@ -117,8 +118,6 @@ function initializeMangaService(): void {
         }
       },
     );
-
-    console.log("Manga search service event listeners registered");
   }
 
   // Make the cache debugger available globally for troubleshooting
@@ -1778,10 +1777,6 @@ function rankMangaResults(
   exactMatchingOnly: boolean,
   isManualSearch: boolean = false,
 ): AniListManga[] {
-  console.log(
-    `🔍 Ranking ${results.length} manga results for "${searchTitle}" with exactMatchingOnly=${exactMatchingOnly}, isManualSearch=${isManualSearch}`,
-  );
-
   const includeMangaFn = exactMatchingOnly
     ? (manga: AniListManga, score: number) =>
         shouldIncludeMangaExact(manga, score, searchTitle, results)
@@ -1984,10 +1979,6 @@ async function executeSingleSearch(
 ): Promise<SearchResult<AniListManga>> {
   let searchResult: SearchResult<AniListManga>;
 
-  console.log(
-    `🔍 Searching for "${searchQuery}" (page ${currentPage}, bypassCache=${searchConfig.bypassCache ? "true" : "false"})`,
-  );
-
   if (searchConfig.useAdvancedSearch) {
     searchResult = await advancedSearchWithRateLimit(
       searchQuery,
@@ -2115,9 +2106,6 @@ function processSearchResults(
   let exactMatchMode = searchConfig.exactMatchingOnly;
 
   if ((searchConfig.bypassCache && results.length > 0) || results.length <= 3) {
-    console.log(
-      `🔍 Using enhanced title matching to ensure results are displayed`,
-    );
     exactMatchMode = false;
   }
 
@@ -2197,7 +2185,6 @@ function handleNoResultsFallback(
   filteredResults: AniListManga[],
   originalResults: AniListManga[],
   searchConfig: SearchServiceConfig,
-  title: string,
 ): AniListManga[] {
   if (filteredResults.length === 0 && originalResults.length > 0) {
     console.log(
@@ -2242,7 +2229,7 @@ function handleNoResultsFallback(
  * Process Comick search results and return sorted manga with confidence scores
  */
 function processComickResults(
-  comickResults: any[],
+  comickResults: EnhancedAniListManga[],
   title: string,
   comickSourceMap: Map<
     number,
@@ -2321,7 +2308,9 @@ function applyComickFiltering(
 /**
  * Convert enhanced manga to AniListManga format
  */
-function convertEnhancedMangaToAniList(enhancedManga: any): AniListManga {
+function convertEnhancedMangaToAniList(
+  enhancedManga: EnhancedAniListManga,
+): AniListManga {
   return {
     id: enhancedManga.id,
     title: enhancedManga.title,
@@ -2379,9 +2368,6 @@ async function executeComickFallback(
   }
 
   if (!matchConfig.enableComickSearch) {
-    console.log(
-      `🚫 No AniList results found for "${title}", but Comick search is disabled in settings`,
-    );
     return { results: finalResults, comickSourceMap };
   }
 
@@ -2525,17 +2511,11 @@ export async function searchMangaByTitle(
     if (cachedResult) {
       return cachedResult;
     }
-  } else {
+  } else if (searchConfig.exactMatchingOnly) {
     console.log(
-      `🚨 FORCE SEARCH: Bypassing cache for "${title}" - will query AniList API directly`,
+      `🔍 MANUAL SEARCH: Ensuring exact matching is correctly configured`,
     );
-
-    if (searchConfig.exactMatchingOnly) {
-      console.log(
-        `🔍 MANUAL SEARCH: Ensuring exact matching is correctly configured`,
-      );
-      searchConfig.exactMatchingOnly = true;
-    }
+    searchConfig.exactMatchingOnly = true;
   }
 
   // Execute the search
@@ -2561,7 +2541,6 @@ export async function searchMangaByTitle(
     filteredResults,
     results,
     searchConfig,
-    title,
   );
 
   // Handle Comick fallback if needed

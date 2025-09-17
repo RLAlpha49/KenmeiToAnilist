@@ -50,7 +50,10 @@ export interface DataTableProps {
  * ```
  * @source
  */
-export function DataTable({ data, itemsPerPage = 50 }: DataTableProps) {
+export function DataTable({
+  data,
+  itemsPerPage = 50,
+}: Readonly<DataTableProps>) {
   const [visibleData, setVisibleData] = useState<KenmeiMangaItem[]>([]);
   const [displayCount, setDisplayCount] = useState(itemsPerPage);
   const [isLoading, setIsLoading] = useState(false);
@@ -187,8 +190,11 @@ export function DataTable({ data, itemsPerPage = 50 }: DataTableProps) {
           </TableHeader>
 
           <TableBody>
-            {visibleData.map((item, index) => (
-              <TableRow key={index} className="hover:bg-muted/40">
+            {visibleData.map((item) => (
+              <TableRow
+                key={`${item.title}-${item.status}-${item.updated_at ?? item.created_at}`}
+                className="hover:bg-muted/40"
+              >
                 <TableCell
                   className="max-w-[300px] truncate font-medium"
                   title={item.title}

@@ -5,8 +5,18 @@
  */
 
 import { ipcMain, shell } from "electron";
-import fetch from "node-fetch";
+import fetch, { Response } from "node-fetch";
 import type { ComickManga, ComickMangaDetail } from "../../../api/comick/types";
+
+/**
+ * Extended Error interface for GraphQL API errors.
+ * @internal
+ */
+interface GraphQLError extends Error {
+  status?: number;
+  statusText?: string;
+  errors?: unknown[];
+}
 
 const API_URL = "https://graphql.anilist.co";
 
@@ -52,6 +62,141 @@ const searchCache: Cache<Record<string, unknown>> = {};
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
+ * Handle rate limit checking and waiting.
+ * @internal
+ */
+async function handleRateLimit(): Promise<void> {
+  if (!isRateLimited) return;
+
+  const now = Date.now();
+  if (now < rateLimitResetTime) {
+    const waitTime = rateLimitResetTime - now;
+    console.log(
+      `Rate limited, waiting ${Math.round(waitTime / 1000)}s before retrying`,
+    );
+    await sleep(waitTime);
+  }
+  isRateLimited = false;
+}
+
+/**
+ * Handle request timing and rate limiting.
+ * @internal
+ */
+async function handleRequestTiming(): Promise<void> {
+  const now = Date.now();
+  const timeSinceLastRequest = now - lastRequestTime;
+
+  if (lastRequestTime > 0 && timeSinceLastRequest < REQUEST_INTERVAL) {
+    const waitTime = REQUEST_INTERVAL - timeSinceLastRequest;
+    await sleep(waitTime);
+  }
+
+  lastRequestTime = Date.now();
+}
+
+/**
+ * Handle 429 rate limit response with retry logic.
+ * @internal
+ */
+async function handleRateLimitResponse(
+  response: Response,
+  variables: Record<string, unknown> | undefined,
+  retryCount: number,
+  query: string,
+  token?: string,
+): Promise<Record<string, unknown>> {
+  if (retryCount >= MAX_RETRY_ATTEMPTS) {
+    const error = new Error(
+      `Rate limit exceeded after ${MAX_RETRY_ATTEMPTS} attempts`,
+    ) as GraphQLError;
+    error.status = 429;
+    error.statusText = "Rate Limit Exceeded";
+    error.errors = [
+      {
+        message: `Rate limit exceeded after ${MAX_RETRY_ATTEMPTS} attempts`,
+      },
+    ];
+    throw error;
+  }
+
+  isRateLimited = true;
+  const retryAfter = response.headers.get("Retry-After");
+  let waitTime: number;
+
+  if (retryAfter && !isNaN(Number(retryAfter))) {
+    waitTime = Number(retryAfter) * 1000;
+    console.log(`Rate limited with Retry-After header: ${retryAfter}s`);
+  } else {
+    waitTime = 5000 * Math.pow(2, retryCount);
+    console.log(`Rate limited, using exponential backoff: ${waitTime / 1000}s`);
+  }
+
+  rateLimitResetTime = Date.now() + waitTime;
+  console.log(
+    `Rate limited for "${variables?.search || "request"}", waiting ${Math.round(waitTime / 1000)}s before retry #${retryCount + 1}`,
+  );
+  await sleep(waitTime);
+
+  return requestAniList(query, variables, token, retryCount + 1);
+}
+
+/**
+ * Handle server error response with retry logic.
+ * @internal
+ */
+async function handleServerError(
+  response: Response,
+  variables: Record<string, unknown> | undefined,
+  retryCount: number,
+  query: string,
+  token?: string,
+): Promise<Record<string, unknown>> {
+  if (retryCount >= MAX_RETRY_ATTEMPTS) {
+    const errorData = (await response.json().catch(() => ({}))) as {
+      errors?: unknown[];
+    };
+    const error = new Error(
+      `Server error ${response.status} after ${MAX_RETRY_ATTEMPTS} retry attempts`,
+    ) as GraphQLError;
+    error.status = response.status;
+    error.statusText = response.statusText;
+    error.errors = (errorData as { errors?: unknown[] }).errors;
+    throw error;
+  }
+
+  const waitTime = 3000 * Math.pow(2, retryCount);
+  console.log(
+    `Server error ${response.status} for "${variables?.search || "request"}", waiting ${Math.round(waitTime / 1000)}s before retry #${retryCount + 1}`,
+  );
+
+  await sleep(waitTime);
+  return requestAniList(query, variables, token, retryCount + 1);
+}
+
+/**
+ * Handle network error with retry logic.
+ * @internal
+ */
+async function handleNetworkError(
+  error: Error,
+  retryCount: number,
+  query: string,
+  variables: Record<string, unknown> | undefined,
+  token?: string,
+): Promise<Record<string, unknown>> {
+  if (error.name === "FetchError" && retryCount < MAX_RETRY_ATTEMPTS) {
+    const waitTime = 1000 * Math.pow(2, retryCount);
+    console.log(
+      `Network error, retrying in ${waitTime / 1000}s (attempt ${retryCount + 1}/${MAX_RETRY_ATTEMPTS})`,
+    );
+    await sleep(waitTime);
+    return requestAniList(query, variables, token, retryCount + 1);
+  }
+  throw error;
+}
+
+/**
  * Make a GraphQL request to the AniList API.
  *
  * @param query - GraphQL query or mutation.
@@ -68,32 +213,8 @@ async function requestAniList(
   token?: string,
   retryCount: number = 0,
 ): Promise<Record<string, unknown>> {
-  // Check if we're currently rate limited
-  if (isRateLimited) {
-    const now = Date.now();
-    if (now < rateLimitResetTime) {
-      const waitTime = rateLimitResetTime - now;
-      console.log(
-        `Rate limited, waiting ${Math.round(waitTime / 1000)}s before retrying`,
-      );
-      await sleep(waitTime);
-      isRateLimited = false;
-    } else {
-      isRateLimited = false;
-    }
-  }
-
-  // Implement rate limiting based on time since last request
-  const now = Date.now();
-  const timeSinceLastRequest = now - lastRequestTime;
-
-  if (lastRequestTime > 0 && timeSinceLastRequest < REQUEST_INTERVAL) {
-    const waitTime = REQUEST_INTERVAL - timeSinceLastRequest;
-    await sleep(waitTime);
-  }
-
-  // Update last request time
-  lastRequestTime = Date.now();
+  await handleRateLimit();
+  await handleRequestTiming();
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -114,77 +235,18 @@ async function requestAniList(
       }),
     });
 
-    // Handle rate limiting (status code 429)
     if (response.status === 429) {
-      if (retryCount >= MAX_RETRY_ATTEMPTS) {
-        throw {
-          status: 429,
-          statusText: "Rate Limit Exceeded",
-          errors: [
-            {
-              message: `Rate limit exceeded after ${MAX_RETRY_ATTEMPTS} attempts`,
-            },
-          ],
-          message: `Rate limit exceeded after ${MAX_RETRY_ATTEMPTS} attempts`,
-        };
-      }
-
-      // Set rate limited flag
-      isRateLimited = true;
-
-      // Check for Retry-After header (in seconds)
-      const retryAfter = response.headers.get("Retry-After");
-      let waitTime: number;
-
-      if (retryAfter && !isNaN(Number(retryAfter))) {
-        // Use server-provided retry time
-        waitTime = Number(retryAfter) * 1000;
-        console.log(`Rate limited with Retry-After header: ${retryAfter}s`);
-      } else {
-        // Use exponential backoff if no header (starting with 5s, then 10s, 20s, etc.)
-        waitTime = 5000 * Math.pow(2, retryCount);
-        console.log(
-          `Rate limited, using exponential backoff: ${waitTime / 1000}s`,
-        );
-      }
-
-      // Set the reset time
-      rateLimitResetTime = Date.now() + waitTime;
-
-      console.log(
-        `Rate limited for "${variables?.search || "request"}", waiting ${Math.round(waitTime / 1000)}s before retry #${retryCount + 1}`,
+      return handleRateLimitResponse(
+        response,
+        variables,
+        retryCount,
+        query,
+        token,
       );
-      await sleep(waitTime);
-
-      // Try again recursively with incremented retry count
-      return requestAniList(query, variables, token, retryCount + 1);
     }
 
-    // Handle server errors (500, 502, 503, 504, etc.)
     if (response.status >= 500 && response.status < 600) {
-      if (retryCount >= MAX_RETRY_ATTEMPTS) {
-        // If we've reached max retries, throw the error
-        const errorData = (await response.json().catch(() => ({}))) as {
-          errors?: unknown[];
-        };
-        throw {
-          status: response.status,
-          statusText: response.statusText,
-          errors: (errorData as { errors?: unknown[] }).errors,
-          message: `Server error ${response.status} after ${MAX_RETRY_ATTEMPTS} retry attempts`,
-        };
-      }
-
-      // Use exponential backoff starting with 3 seconds
-      const waitTime = 3000 * Math.pow(2, retryCount);
-      console.log(
-        `Server error ${response.status} for "${variables?.search || "request"}", waiting ${Math.round(waitTime / 1000)}s before retry #${retryCount + 1}`,
-      );
-
-      await sleep(waitTime);
-
-      // Try again recursively with incremented retry count
-      return requestAniList(query, variables, token, retryCount + 1);
+      return handleServerError(response, variables, retryCount, query, token);
     }
 
     if (!response.ok) {
@@ -192,28 +254,19 @@ async function requestAniList(
       const firstError = errorData.errors?.[0] as
         | { message?: string }
         | undefined;
-      throw {
-        status: response.status,
-        statusText: response.statusText,
-        errors: errorData.errors,
-        message: firstError?.message || response.statusText,
-      };
+      const error = new Error(
+        firstError?.message || response.statusText,
+      ) as GraphQLError;
+      error.status = response.status;
+      error.statusText = response.statusText;
+      error.errors = errorData.errors;
+      throw error;
     }
 
     return (await response.json()) as Record<string, unknown>;
   } catch (error) {
-    // Handle network errors with retry
-    if (
-      error instanceof Error &&
-      error.name === "FetchError" &&
-      retryCount < MAX_RETRY_ATTEMPTS
-    ) {
-      const waitTime = 1000 * Math.pow(2, retryCount);
-      console.log(
-        `Network error, retrying in ${waitTime / 1000}s (attempt ${retryCount + 1}/${MAX_RETRY_ATTEMPTS})`,
-      );
-      await sleep(waitTime);
-      return requestAniList(query, variables, token, retryCount + 1);
+    if (error instanceof Error) {
+      return handleNetworkError(error, retryCount, query, variables, token);
     }
     throw error;
   }
@@ -232,7 +285,7 @@ function generateCacheKey(
   query: string,
   variables: Record<string, unknown> = {},
 ): string {
-  return `${query.substr(0, 50)}_${JSON.stringify(variables)}`;
+  return `${query.slice(0, 50)}_${JSON.stringify(variables)}`;
 }
 
 /**

@@ -44,7 +44,9 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
  * @returns The theme context provider with value for consumers.
  * @source
  */
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
+export function ThemeProvider({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   const [theme, setTheme] = useState<ThemePreferences>({
     system: "light",
     local: null,
@@ -99,10 +101,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return await setThemeMode(newTheme);
   };
 
+  const contextValue = React.useMemo(
+    () => ({ theme, isDarkMode, setThemeMode, toggleTheme }),
+    [theme, isDarkMode, setThemeMode, toggleTheme],
+  );
+
   return (
-    <ThemeContext.Provider
-      value={{ theme, isDarkMode, setThemeMode, toggleTheme }}
-    >
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );

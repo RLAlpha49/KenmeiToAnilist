@@ -49,6 +49,146 @@ const storedCredentials: Record<string, AuthCredentials | null> = {
 };
 
 /**
+ * Validate token exchange parameters.
+ * @internal
+ */
+function validateTokenExchangeParams(params: {
+  clientId: string;
+  clientSecret: string;
+  redirectUri: string;
+  code: string;
+}): { isValid: boolean; error?: string } {
+  const { clientId, clientSecret, redirectUri, code } = params;
+
+  // Validation guard: ensure required fields are present and non-empty
+  const missing: string[] = [];
+  if (!clientId) missing.push("clientId");
+  if (!clientSecret) missing.push("clientSecret");
+  if (!redirectUri) missing.push("redirectUri");
+  if (!code) missing.push("code");
+  if (missing.length) {
+    console.error("auth:exchangeToken missing required fields", missing);
+    return {
+      isValid: false,
+      error: `Missing required auth fields: ${missing.join(", ")}`,
+    };
+  }
+
+  // Basic sanity checks
+  if (clientId.length < 4 || clientSecret.length < 8) {
+    console.warn("auth:exchangeToken suspicious credential lengths", {
+      clientIdLen: clientId.length,
+      clientSecretLen: clientSecret.length,
+    });
+  }
+
+  // Redirect URI strictness: AniList requires exact match including protocol and path
+  try {
+    const parsed = new URL(redirectUri);
+    if (!/^https?:$/.test(parsed.protocol)) {
+      return {
+        isValid: false,
+        error: `Invalid redirect URI protocol: ${parsed.protocol}`,
+      };
+    }
+  } catch {
+    return {
+      isValid: false,
+      error: `Invalid redirect URI format: ${redirectUri}`,
+    };
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Perform a single token exchange HTTP request.
+ * @internal
+ */
+async function performTokenExchange(params: {
+  clientId: string;
+  clientSecret: string;
+  redirectUri: string;
+  code: string;
+}): Promise<{ success: boolean; token?: unknown; error?: string }> {
+  const { clientId, clientSecret, redirectUri, code } = params;
+
+  const response = await fetch("https://anilist.co/api/v2/oauth/token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      grant_type: "authorization_code",
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri,
+      code,
+    }),
+  });
+
+  console.log("Token exchange response status:", response.status);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Token exchange error:", errorText);
+    if (errorText.includes("invalid_client")) {
+      console.error("Detected invalid_client from AniList. Diagnostics:", {
+        clientIdLen: clientId.length,
+        clientSecretLen: clientSecret.length,
+        redirectUri,
+        codeLen: code.length,
+      });
+    }
+    return {
+      success: false,
+      error: `API error: ${response.status} ${errorText}`,
+    };
+  }
+
+  const data = await response.json();
+  console.log("Token exchange successful:", {
+    token_type: data.token_type,
+    expires_in: data.expires_in,
+    token_length: data.access_token?.length || 0,
+  });
+
+  return { success: true, token: data };
+}
+
+/**
+ * Check if an error is a network error that should be retried.
+ * @internal
+ */
+function isNetworkError(error: unknown): boolean {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  return (
+    errorMessage.includes("ENOTFOUND") ||
+    errorMessage.includes("ETIMEDOUT") ||
+    errorMessage.includes("ECONNRESET") ||
+    errorMessage.includes("socket hang up") ||
+    errorMessage.includes("network error")
+  );
+}
+
+/**
+ * Format the final error message for failed token exchange.
+ * @internal
+ */
+function formatTokenExchangeError(lastError: unknown): string {
+  let errorMessage: string;
+  if (lastError instanceof Error) {
+    errorMessage = lastError.message;
+  } else if (lastError) {
+    errorMessage = String(lastError);
+  } else {
+    errorMessage = "Unknown error";
+  }
+  return `Failed to exchange code for token: ${errorMessage}`;
+}
+
+/**
  * Add event listeners for authentication-related IPC events
  * @param mainWindow The main application window
  */
@@ -187,7 +327,7 @@ export function addAuthEventListeners(mainWindow: BrowserWindow) {
     try {
       console.log("Storing credentials:", credentials);
       // Store the credentials in memory
-      if (credentials && credentials.source) {
+      if (credentials?.source) {
         storedCredentials[credentials.source] = credentials;
       }
       return { success: true };
@@ -237,41 +377,18 @@ export function addAuthEventListeners(mainWindow: BrowserWindow) {
   ipcMain.handle("auth:exchangeToken", async (_, params) => {
     try {
       const { clientId, clientSecret, redirectUri, code } = params;
-      // Validation guard: ensure required fields are present and non-empty
-      const missing: string[] = [];
-      if (!clientId) missing.push("clientId");
-      if (!clientSecret) missing.push("clientSecret");
-      if (!redirectUri) missing.push("redirectUri");
-      if (!code) missing.push("code");
-      if (missing.length) {
-        console.error("auth:exchangeToken missing required fields", missing);
-        return {
-          success: false,
-          error: `Missing required auth fields: ${missing.join(", ")}`,
-        };
+
+      // Validate parameters
+      const validation = validateTokenExchangeParams({
+        clientId,
+        clientSecret,
+        redirectUri,
+        code,
+      });
+      if (!validation.isValid) {
+        return { success: false, error: validation.error };
       }
-      // Basic sanity checks
-      if (clientId.length < 4 || clientSecret.length < 8) {
-        console.warn("auth:exchangeToken suspicious credential lengths", {
-          clientIdLen: clientId.length,
-          clientSecretLen: clientSecret.length,
-        });
-      }
-      // Redirect URI strictness: AniList requires exact match including protocol and path
-      try {
-        const parsed = new URL(redirectUri);
-        if (!/^https?:$/.test(parsed.protocol)) {
-          return {
-            success: false,
-            error: `Invalid redirect URI protocol: ${parsed.protocol}`,
-          };
-        }
-      } catch {
-        return {
-          success: false,
-          error: `Invalid redirect URI format: ${redirectUri}`,
-        };
-      }
+
       console.log("Exchanging token in main process:", {
         clientId: clientId.substring(0, 4) + "...",
         redirectUri,
@@ -294,69 +411,22 @@ export function addAuthEventListeners(mainWindow: BrowserWindow) {
             await new Promise((resolve) => setTimeout(resolve, delay));
           }
 
-          const response = await fetch(
-            "https://anilist.co/api/v2/oauth/token",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Accept: "application/json",
-              },
-              body: JSON.stringify({
-                grant_type: "authorization_code",
-                client_id: clientId,
-                client_secret: clientSecret,
-                redirect_uri: redirectUri,
-                code,
-              }),
-            },
-          );
-
-          console.log("Token exchange response status:", response.status);
-
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error("Token exchange error:", errorText);
-            if (errorText.includes("invalid_client")) {
-              console.error(
-                "Detected invalid_client from AniList. Diagnostics:",
-                {
-                  clientIdLen: clientId.length,
-                  clientSecretLen: clientSecret.length,
-                  redirectUri,
-                  codeLen: code.length,
-                },
-              );
-            }
-            throw new Error(`API error: ${response.status} ${errorText}`);
+          const result = await performTokenExchange({
+            clientId,
+            clientSecret,
+            redirectUri,
+            code,
+          });
+          if (result.success) {
+            return { success: true, token: result.token };
           }
 
-          const data = await response.json();
-          console.log("Token exchange successful:", {
-            token_type: data.token_type,
-            expires_in: data.expires_in,
-            token_length: data.access_token?.length || 0,
-          });
-
-          return {
-            success: true,
-            token: data,
-          };
+          throw new Error(result.error);
         } catch (error) {
           lastError = error;
           console.error(`Token exchange attempt ${retries + 1} failed:`, error);
 
-          // Check if it's a network error that we should retry
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
-          const isNetworkError =
-            errorMessage.includes("ENOTFOUND") ||
-            errorMessage.includes("ETIMEDOUT") ||
-            errorMessage.includes("ECONNRESET") ||
-            errorMessage.includes("socket hang up") ||
-            errorMessage.includes("network error");
-
-          if (!isNetworkError) {
+          if (!isNetworkError(error)) {
             // Don't retry for non-network errors
             break;
           }
@@ -366,28 +436,146 @@ export function addAuthEventListeners(mainWindow: BrowserWindow) {
       }
 
       // If we reach here, all retries failed
-      const errorMessage =
-        lastError instanceof Error
-          ? lastError.message
-          : lastError
-            ? String(lastError)
-            : "Unknown error";
-
-      console.error("All token exchange attempts failed:", errorMessage);
+      console.error("All token exchange attempts failed:", lastError);
       return {
         success: false,
-        error: `Failed to exchange code for token: ${errorMessage}`,
+        error: formatTokenExchangeError(lastError),
       };
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       console.error("Token exchange handler error:", errorMessage);
-      return {
-        success: false,
-        error: errorMessage,
-      };
+      return { success: false, error: errorMessage };
     }
   });
+}
+
+/**
+ * Validate and parse an incoming HTTP request URL.
+ * @internal
+ */
+function validateAndParseUrl(
+  reqUrl: string | undefined,
+  port: string,
+): { isValid: boolean; parsedUrl?: URL; parsedPath?: string } {
+  if (!reqUrl) {
+    console.log("Empty request URL, ignoring");
+    return { isValid: false };
+  }
+
+  try {
+    const parsedUrl = new URL(reqUrl, `http://localhost:${port}`);
+    const parsedPath = parsedUrl.pathname;
+    return { isValid: true, parsedUrl, parsedPath };
+  } catch (error) {
+    console.error("Failed to parse URL:", error);
+    return { isValid: false };
+  }
+}
+
+/**
+ * Check if the parsed path matches our callback paths.
+ * @internal
+ */
+function isCallbackPath(
+  parsedPath: string,
+  normalizedCallbackPath: string,
+  callbackPath: string,
+): boolean {
+  return parsedPath === normalizedCallbackPath || parsedPath === callbackPath;
+}
+
+/**
+ * Process OAuth callback parameters and handle authentication flow.
+ * @internal
+ */
+function processAuthCallback(
+  params: URLSearchParams,
+  codeProcessed: boolean,
+  res: http.ServerResponse,
+  sendResponse: (
+    res: http.ServerResponse,
+    statusCode: number,
+    message: string,
+  ) => void,
+): { shouldContinue: boolean; code?: string; processed: boolean } {
+  const hasCode = params.has("code");
+  const hasError = params.has("error");
+
+  console.log(`Callback detected: code=${hasCode}, error=${hasError}`);
+
+  // If we already processed a code, don't do it again
+  if (codeProcessed) {
+    console.log("Code already processed, returning success response");
+    sendResponse(
+      res,
+      200,
+      "Authentication already processed. You can close this window.",
+    );
+    return { shouldContinue: false, processed: true };
+  }
+
+  if (hasError) {
+    const error = params.get("error");
+    const errorDescription = params.get("error_description");
+    const errorMessage = `Authentication Error: ${error} - ${errorDescription}`;
+    console.error(errorMessage);
+
+    authReject?.(new Error(errorMessage));
+    sendResponse(res, 400, `Authentication failed: ${errorDescription}`);
+    return { shouldContinue: false, processed: true };
+  }
+
+  if (hasCode) {
+    const code = params.get("code");
+    if (!code) {
+      sendResponse(res, 400, "Invalid code parameter");
+      return { shouldContinue: false, processed: true };
+    }
+    return { shouldContinue: true, code, processed: true };
+  }
+
+  // Neither code nor error
+  sendResponse(res, 400, "Invalid callback: missing code or error parameter");
+  return { shouldContinue: false, processed: true };
+}
+
+/**
+ * Handle successful authentication code receipt.
+ * @internal
+ */
+function handleSuccessfulAuth(
+  code: string,
+  res: http.ServerResponse,
+  sendResponse: (
+    res: http.ServerResponse,
+    statusCode: number,
+    message: string,
+  ) => void,
+): void {
+  console.log("Authentication successful, resolving with code");
+
+  // Resolve the promise with the code
+  if (authResolve) {
+    // Set a short timeout to allow the response to be sent first
+    setTimeout(() => {
+      authResolve!(code);
+
+      // Also set a timeout to clean up the server
+      setTimeout(() => {
+        cleanupAuthServer();
+      }, 3000);
+    }, 100);
+  } else {
+    console.warn("authResolve is null - code cannot be processed");
+  }
+
+  // Send successful response to browser
+  sendResponse(
+    res,
+    200,
+    "Authentication successful! You can close this window.",
+  );
 }
 
 /**
@@ -487,99 +675,47 @@ async function startAuthServer(
         try {
           console.log(`Received request: ${req.url}`);
 
-          if (!req.url) {
-            console.log("Empty request URL, ignoring");
+          const urlResult = validateAndParseUrl(req.url, port);
+          if (
+            !urlResult.isValid ||
+            !urlResult.parsedUrl ||
+            !urlResult.parsedPath
+          ) {
             return sendResponse(res, 400, "Bad Request: No URL provided");
           }
 
-          // Parse the URL and check if it matches our callback path
-          const parsedUrl = new URL(req.url, `http://localhost:${port}`);
-          const parsedPath = parsedUrl.pathname;
+          const { parsedUrl, parsedPath } = urlResult;
 
           console.log(
             `Parsed path: ${parsedPath}, comparing to: ${normalizedCallbackPath} or ${callbackPath}`,
           );
 
           if (
-            parsedPath === normalizedCallbackPath ||
-            parsedPath === callbackPath
+            isCallbackPath(parsedPath, normalizedCallbackPath, callbackPath)
           ) {
             // This is our callback
             const params = parsedUrl.searchParams;
 
-            // Check if we have a code or an error
-            const hasCode = params.has("code");
-            const hasError = params.has("error");
-
-            console.log(
-              `Callback detected: code=${hasCode}, error=${hasError}`,
-            );
-
-            // If we already processed a code, don't do it again
-            if (codeProcessed) {
-              console.log("Code already processed, returning success response");
-              return sendResponse(
-                res,
-                200,
-                "Authentication already processed. You can close this window.",
-              );
-            }
-
-            if (hasError) {
-              const error = params.get("error");
-              const errorDescription = params.get("error_description");
-              const errorMessage = `Authentication Error: ${error} - ${errorDescription}`;
-              console.error(errorMessage);
-
-              codeProcessed = true;
-              authReject?.(new Error(errorMessage));
-              return sendResponse(
-                res,
-                400,
-                `Authentication failed: ${errorDescription}`,
-              );
-            }
-
-            if (hasCode) {
-              const code = params.get("code");
-              if (!code) {
-                return sendResponse(res, 400, "Invalid code parameter");
-              }
-
-              // Mark as processed to prevent duplicate handling
-              codeProcessed = true;
-
-              console.log("Authentication successful, resolving with code");
-
-              // Resolve the promise with the code
-              if (authResolve) {
-                // Set a short timeout to allow the response to be sent first
-                setTimeout(() => {
-                  authResolve!(code);
-
-                  // Also set a timeout to clean up the server
-                  setTimeout(() => {
-                    cleanupAuthServer();
-                  }, 3000);
-                }, 100);
-              } else {
-                console.warn("authResolve is null - code cannot be processed");
-              }
-
-              // Send successful response to browser
-              return sendResponse(
-                res,
-                200,
-                "Authentication successful! You can close this window.",
-              );
-            }
-
-            // Neither code nor error
-            return sendResponse(
+            const authResult = processAuthCallback(
+              params,
+              codeProcessed,
               res,
-              400,
-              "Invalid callback: missing code or error parameter",
+              sendResponse,
             );
+            if (!authResult.shouldContinue) {
+              if (authResult.processed) {
+                codeProcessed = true;
+              }
+              return;
+            }
+
+            // Mark as processed to prevent duplicate handling
+            codeProcessed = true;
+
+            // Handle successful authentication
+            if (authResult.code) {
+              return handleSuccessfulAuth(authResult.code, res, sendResponse);
+            }
           } else {
             // Not our callback path
             return sendResponse(res, 404, "Not Found");
@@ -617,7 +753,7 @@ async function startAuthServer(
         "auth:status",
         `Failed to create auth server: ${err instanceof Error ? err.message : "Unknown error"}`,
       );
-      reject(err);
+      reject(err instanceof Error ? err : new Error(String(err)));
     }
   });
 }

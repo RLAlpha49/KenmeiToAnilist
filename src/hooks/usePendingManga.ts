@@ -138,11 +138,6 @@ export const usePendingManga = () => {
     console.log(
       `Found ${processedIds.size} processed IDs and ${processedTitles.size} processed titles`,
     );
-    console.log("Sample processed IDs:", Array.from(processedIds).slice(0, 5));
-    console.log(
-      "Sample processed Titles:",
-      Array.from(processedTitles).slice(0, 5),
-    );
 
     // Filter manga that are NOT in either set (comprehensive matching)
     let debugCount = 0; // Counter for debug logging

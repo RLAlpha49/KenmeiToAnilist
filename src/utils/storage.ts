@@ -537,10 +537,6 @@ export function mergeMatchResults(newResults: MatchResult[]): MatchResult[] {
 
       // If we found a match AND it has user progress (not pending), preserve it
       if (existingMatch && existingMatch.status !== "pending") {
-        console.log(
-          `Preserving existing ${existingMatch.status} match for "${newMatch.kenmeiManga?.title}"`,
-        );
-
         // Take new anilist matches but keep user's selected match and status
         return {
           ...newMatch,

@@ -88,7 +88,7 @@ export function ErrorMessage({
   retry,
   dismiss,
   showTypeLabel = true,
-}: ErrorMessageProps) {
+}: Readonly<ErrorMessageProps>) {
   const cfg =
     TYPE_CONFIG[type] ??
     TYPE_CONFIG[ErrorType.UNKNOWN] ??

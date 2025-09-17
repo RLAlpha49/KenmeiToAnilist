@@ -90,7 +90,7 @@ export function ImportSummary({
   data,
   onProceed,
   onCancel,
-}: ImportSummaryProps) {
+}: Readonly<ImportSummaryProps>) {
   const { manga } = data;
 
   const totalEntries = manga.length;

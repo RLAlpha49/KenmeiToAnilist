@@ -47,9 +47,9 @@ import { Separator } from "../../components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
 import { Switch } from "../../components/ui/switch";
 import { Label } from "../../components/ui/label";
-
-// Add AnimatePresence import alongside the existing imports
 import { motion, AnimatePresence } from "framer-motion";
+
+// TODO: Update the comick alternative search to use MangaDex instead, as comick was recently shut down. See: https://api.mangadex.org/docs/
 
 /**
  * Props for the MangaMatchingPanel component.
@@ -93,7 +93,7 @@ export function MangaMatchingPanel({
   onSelectAlternative,
   onResetToPending,
   searchQuery,
-}: MangaMatchingPanelProps) {
+}: Readonly<MangaMatchingPanelProps>) {
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilters, setStatusFilters] = useState({
     matched: true,
@@ -107,8 +107,9 @@ export function MangaMatchingPanel({
   const lastExternalSearchQuery = useRef<string | undefined>(undefined);
 
   // Add sort state
+  type SortField = "title" | "status" | "confidence" | "chapters_read";
   const [sortOption, setSortOption] = useState<{
-    field: "title" | "status" | "confidence" | "chapters_read";
+    field: SortField;
     direction: "asc" | "desc";
   }>({ field: "title", direction: "asc" });
 
@@ -208,7 +209,7 @@ export function MangaMatchingPanel({
       .replace(/\s+/g, " ") // Normalize spaces
       .trim() // Remove leading/trailing spaces
       .replace(/\s/g, "-") // Replace spaces with hyphens
-      .replace(/^-+|-+$/g, ""); // Remove hyphens at start/end
+      .replace(/(^-+)|(-+$)/g, ""); // Remove hyphens at start/end
 
     return `https://www.kenmei.co/series/${formattedTitle}`;
   };
@@ -276,15 +277,12 @@ export function MangaMatchingPanel({
       match.kenmeiManga.title
         .toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
-      (match.selectedMatch?.title?.english !== undefined &&
-        match.selectedMatch.title.english !== null &&
-        match.selectedMatch.title.english
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase())) ||
-      (match.selectedMatch?.title?.romaji !== undefined &&
-        match.selectedMatch.title.romaji
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()));
+      match.selectedMatch?.title?.english
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      match.selectedMatch?.title?.romaji
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase());
 
     return statusMatch && searchMatch;
   });
@@ -442,9 +440,7 @@ export function MangaMatchingPanel({
   }, [searchQuery]);
 
   // Handle sort change
-  const handleSortChange = (
-    field: "title" | "status" | "confidence" | "chapters_read",
-  ) => {
+  const handleSortChange = (field: SortField) => {
     setSortOption((prev) => {
       // If clicking the same field, toggle direction
       if (prev.field === field) {
@@ -462,9 +458,7 @@ export function MangaMatchingPanel({
   };
 
   // Function to render sort indicator
-  const renderSortIndicator = (
-    field: "title" | "status" | "confidence" | "chapters_read",
-  ) => {
+  const renderSortIndicator = (field: SortField) => {
     if (sortOption.field !== field) return null;
 
     return (
@@ -596,8 +590,8 @@ export function MangaMatchingPanel({
           <span className={statusColorClass}>
             {formatStatusText(match.kenmeiManga.status)}
           </span>
-          {headerIconData.map((data, i) => (
-            <React.Fragment key={`badge-${i}`}>
+          {headerIconData.map((data) => (
+            <React.Fragment key={`badge-${data.icon}-${data.text}`}>
               <span className="mx-1">•</span>
               <span className={`inline-flex items-center`}>
                 <span>{data.value}</span>
@@ -673,21 +667,19 @@ export function MangaMatchingPanel({
       });
 
       // Pass the full array with modifications to the parent
-      if (onRejectMatch) {
-        // Special flag to indicate this is a batch operation
-        const batchOperation = {
-          isBatchOperation: true,
-          matches: batchedReject,
-        };
+      // Special flag to indicate this is a batch operation
+      const batchOperation = {
+        isBatchOperation: true,
+        matches: batchedReject,
+      };
 
-        // @ts-expect-error - We're adding a special property for the batch handler to recognize
-        onRejectMatch(batchOperation);
+      // @ts-expect-error - We're adding a special property for the batch handler to recognize
+      onRejectMatch(batchOperation);
 
-        // Short delay to ensure state updates have time to process
-        setTimeout(() => {
-          setIsSkippingEmptyMatches(false);
-        }, 500);
-      }
+      // Short delay to ensure state updates have time to process
+      setTimeout(() => {
+        setIsSkippingEmptyMatches(false);
+      }, 500);
     } else {
       // Reset processing state if no matching items found
       setIsSkippingEmptyMatches(false);
@@ -741,21 +733,19 @@ export function MangaMatchingPanel({
       });
 
       // Pass the full array with modifications to the parent
-      if (onAcceptMatch) {
-        // Special flag to indicate this is a batch operation
-        const batchOperation = {
-          isBatchOperation: true,
-          matches: batchedAccept,
-        };
+      // Special flag to indicate this is a batch operation
+      const batchOperation = {
+        isBatchOperation: true,
+        matches: batchedAccept,
+      };
 
-        // @ts-expect-error - We're adding a special property for the batch handler to recognize
-        onAcceptMatch(batchOperation);
+      // @ts-expect-error - We're adding a special property for the batch handler to recognize
+      onAcceptMatch(batchOperation);
 
-        // Short delay to ensure state updates have time to process
-        setTimeout(() => {
-          setIsAcceptingAllMatches(false);
-        }, 500);
-      }
+      // Short delay to ensure state updates have time to process
+      setTimeout(() => {
+        setIsAcceptingAllMatches(false);
+      }, 500);
     } else {
       // Reset processing state if no matching items found
       setIsAcceptingAllMatches(false);
@@ -847,21 +837,19 @@ export function MangaMatchingPanel({
       });
 
       // Pass the full array with modifications to the parent
-      if (onResetToPending) {
-        // Special flag to indicate this is a batch operation
-        const batchOperation = {
-          isBatchOperation: true,
-          matches: batchedReset,
-        };
+      // Special flag to indicate this is a batch operation
+      const batchOperation = {
+        isBatchOperation: true,
+        matches: batchedReset,
+      };
 
-        // @ts-expect-error - We're adding a special property for the batch handler to recognize
-        onResetToPending(batchOperation);
+      // @ts-expect-error - We're adding a special property for the batch handler to recognize
+      onResetToPending(batchOperation);
 
-        // Short delay to ensure state updates have time to process
-        setTimeout(() => {
-          setIsResettingSkippedToPending(false);
-        }, 500);
-      }
+      // Short delay to ensure state updates have time to process
+      setTimeout(() => {
+        setIsResettingSkippedToPending(false);
+      }, 500);
     } else {
       // Reset processing state if no matching items found
       setIsResettingSkippedToPending(false);
@@ -1353,6 +1341,30 @@ export function MangaMatchingPanel({
                 ? `${match.kenmeiManga.id}-${match.status}`
                 : `index-${index}-${match.status}-${match.kenmeiManga.title?.replace(/\s+/g, "_") || "unknown"}`;
 
+              // Extract border color class for clarity
+              let borderColorClass = "";
+              if (match.status === "matched") {
+                borderColorClass = "border-green-400 dark:border-green-600";
+              } else if (match.status === "manual") {
+                borderColorClass = "border-blue-400 dark:border-blue-600";
+              } else if (match.status === "skipped") {
+                borderColorClass = "border-red-400 dark:border-red-600";
+              } else {
+                borderColorClass = "border-gray-200 dark:border-gray-700";
+              }
+
+              // Extract status color for the indicator
+              let statusBgColorClass = "";
+              if (match.status === "matched") {
+                statusBgColorClass = "bg-green-500 dark:bg-green-600";
+              } else if (match.status === "manual") {
+                statusBgColorClass = "bg-blue-500 dark:bg-blue-600";
+              } else if (match.status === "skipped") {
+                statusBgColorClass = "bg-red-500 dark:bg-red-600";
+              } else {
+                statusBgColorClass = "bg-gray-300 dark:bg-gray-600";
+              }
+
               return (
                 <motion.div
                   key={uniqueKey}
@@ -1360,17 +1372,8 @@ export function MangaMatchingPanel({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ duration: 0.2 }}
-                  className={`rounded-lg border ${
-                    match.status === "matched"
-                      ? "border-green-400 dark:border-green-600"
-                      : match.status === "manual"
-                        ? "border-blue-400 dark:border-blue-600"
-                        : match.status === "skipped"
-                          ? "border-red-400 dark:border-red-600"
-                          : "border-gray-200 dark:border-gray-700"
-                  } bg-white shadow-sm transition-all hover:shadow-md dark:bg-gray-800`}
+                  className={`rounded-lg border ${borderColorClass} bg-white shadow-sm transition-all hover:shadow-md dark:bg-gray-800`}
                   tabIndex={0}
-                  role="region"
                   aria-label={`Match result for ${match.kenmeiManga.title}`}
                 >
                   {/* Title and Status Bar with color indicator */}
@@ -1379,32 +1382,34 @@ export function MangaMatchingPanel({
                   >
                     {/* Status color indicator */}
                     <div
-                      className={`absolute top-0 bottom-0 left-0 w-1.5 ${
-                        match.status === "matched"
-                          ? "bg-green-500 dark:bg-green-600"
-                          : match.status === "manual"
-                            ? "bg-blue-500 dark:bg-blue-600"
-                            : match.status === "skipped"
-                              ? "bg-red-500 dark:bg-red-600"
-                              : "bg-gray-300 dark:bg-gray-600"
-                      }`}
+                      className={`absolute top-0 bottom-0 left-0 w-1.5 ${statusBgColorClass}`}
                     ></div>
                     <div className="flex items-center justify-between pl-2">
                       <div className="flex items-center">
-                        <Badge
-                          variant="outline"
-                          className={`mr-3 ${
-                            match.status === "matched"
-                              ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400"
-                              : match.status === "manual"
-                                ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
-                                : match.status === "skipped"
-                                  ? "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400"
-                                  : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
-                          }`}
-                        >
-                          {formatStatusText(match.status)}
-                        </Badge>
+                        {(() => {
+                          let badgeClass = "";
+                          if (match.status === "matched") {
+                            badgeClass =
+                              "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400";
+                          } else if (match.status === "manual") {
+                            badgeClass =
+                              "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400";
+                          } else if (match.status === "skipped") {
+                            badgeClass =
+                              "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400";
+                          } else {
+                            badgeClass =
+                              "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
+                          }
+                          return (
+                            <Badge
+                              variant="outline"
+                              className={`mr-3 ${badgeClass}`}
+                            >
+                              {formatStatusText(match.status)}
+                            </Badge>
+                          );
+                        })()}
                         <h3 className="line-clamp-1 text-lg font-medium text-gray-900 dark:text-white">
                           {match.kenmeiManga.title}
                         </h3>
@@ -1431,48 +1436,89 @@ export function MangaMatchingPanel({
                             match.anilistMatches?.[0]?.manga?.coverImage
                               ?.medium ? (
                               <div className="relative">
-                                <img
-                                  src={
-                                    match.selectedMatch?.coverImage?.large ||
-                                    match.selectedMatch?.coverImage?.medium ||
-                                    match.anilistMatches[0]?.manga?.coverImage
-                                      ?.large ||
-                                    match.anilistMatches[0]?.manga?.coverImage
-                                      ?.medium
-                                  }
-                                  alt={
-                                    match.selectedMatch?.title?.english ||
-                                    match.selectedMatch?.title?.romaji ||
-                                    match.anilistMatches?.[0]?.manga?.title
-                                      ?.english ||
-                                    match.anilistMatches?.[0]?.manga?.title
-                                      ?.romaji
-                                  }
-                                  className={`h-44 w-32 rounded border border-gray-200 object-cover shadow-sm transition-all group-hover:scale-[1.02] group-hover:shadow dark:border-gray-700 ${
-                                    isAdultContent(
-                                      match.selectedMatch ||
-                                        match.anilistMatches?.[0]?.manga,
-                                    ) &&
-                                    shouldBlurImage(
-                                      `${match.selectedMatch?.id || match.anilistMatches?.[0]?.manga?.id}`,
-                                    )
-                                      ? "cursor-pointer blur-md"
-                                      : ""
-                                  }`}
-                                  loading="lazy"
-                                  onClick={() => {
-                                    if (
-                                      isAdultContent(
-                                        match.selectedMatch ||
-                                          match.anilistMatches?.[0]?.manga,
+                                {isAdultContent(
+                                  match.selectedMatch ||
+                                    match.anilistMatches?.[0]?.manga,
+                                ) ? (
+                                  <button
+                                    type="button"
+                                    tabIndex={0}
+                                    aria-label={
+                                      shouldBlurImage(
+                                        `${match.selectedMatch?.id || match.anilistMatches?.[0]?.manga?.id}`,
                                       )
-                                    ) {
+                                        ? "Reveal adult content cover image"
+                                        : "Hide adult content cover image"
+                                    }
+                                    onClick={() => {
                                       toggleImageBlur(
                                         `${match.selectedMatch?.id || match.anilistMatches?.[0]?.manga?.id}`,
                                       );
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        toggleImageBlur(
+                                          `${match.selectedMatch?.id || match.anilistMatches?.[0]?.manga?.id}`,
+                                        );
+                                      }
+                                    }}
+                                    className={`h-44 w-32 rounded border border-gray-200 bg-transparent object-cover p-0 shadow-sm transition-all group-hover:scale-[1.02] group-hover:shadow dark:border-gray-700 ${
+                                      shouldBlurImage(
+                                        `${match.selectedMatch?.id || match.anilistMatches?.[0]?.manga?.id}`,
+                                      )
+                                        ? "cursor-pointer blur-md"
+                                        : ""
+                                    }`}
+                                    style={{ padding: 0, border: "none" }}
+                                  >
+                                    <img
+                                      src={
+                                        match.selectedMatch?.coverImage
+                                          ?.large ||
+                                        match.selectedMatch?.coverImage
+                                          ?.medium ||
+                                        match.anilistMatches[0]?.manga
+                                          ?.coverImage?.large ||
+                                        match.anilistMatches[0]?.manga
+                                          ?.coverImage?.medium
+                                      }
+                                      alt={
+                                        match.selectedMatch?.title?.english ||
+                                        match.selectedMatch?.title?.romaji ||
+                                        match.anilistMatches?.[0]?.manga?.title
+                                          ?.english ||
+                                        match.anilistMatches?.[0]?.manga?.title
+                                          ?.romaji
+                                      }
+                                      className="h-44 w-32 rounded object-cover"
+                                      loading="lazy"
+                                      draggable={false}
+                                    />
+                                  </button>
+                                ) : (
+                                  <img
+                                    src={
+                                      match.selectedMatch?.coverImage?.large ||
+                                      match.selectedMatch?.coverImage?.medium ||
+                                      match.anilistMatches[0]?.manga?.coverImage
+                                        ?.large ||
+                                      match.anilistMatches[0]?.manga?.coverImage
+                                        ?.medium
                                     }
-                                  }}
-                                />
+                                    alt={
+                                      match.selectedMatch?.title?.english ||
+                                      match.selectedMatch?.title?.romaji ||
+                                      match.anilistMatches?.[0]?.manga?.title
+                                        ?.english ||
+                                      match.anilistMatches?.[0]?.manga?.title
+                                        ?.romaji
+                                    }
+                                    className="h-44 w-32 rounded border border-gray-200 object-cover shadow-sm transition-all group-hover:scale-[1.02] group-hover:shadow dark:border-gray-700"
+                                    loading="lazy"
+                                    draggable={false}
+                                  />
+                                )}
                                 {/* Adult content warning badge */}
                                 {isAdultContent(
                                   match.selectedMatch ||
@@ -1843,10 +1889,7 @@ export function MangaMatchingPanel({
                                 if (onAcceptMatch) onAcceptMatch(match);
                               }}
                               onKeyDown={(e) =>
-                                handleKeyDown(
-                                  e,
-                                  () => onAcceptMatch && onAcceptMatch(match),
-                                )
+                                handleKeyDown(e, () => onAcceptMatch?.(match))
                               }
                               aria-label={`Accept match for ${match.kenmeiManga.title}`}
                             >
@@ -1867,11 +1910,8 @@ export function MangaMatchingPanel({
                               onManualSearch(match.kenmeiManga);
                           }}
                           onKeyDown={(e) =>
-                            handleKeyDown(
-                              e,
-                              () =>
-                                onManualSearch &&
-                                onManualSearch(match.kenmeiManga),
+                            handleKeyDown(e, () =>
+                              onManualSearch?.(match.kenmeiManga),
                             )
                           }
                           aria-label={`Search manually for ${match.kenmeiManga.title}`}
@@ -1885,10 +1925,7 @@ export function MangaMatchingPanel({
                             if (onRejectMatch) onRejectMatch(match);
                           }}
                           onKeyDown={(e) =>
-                            handleKeyDown(
-                              e,
-                              () => onRejectMatch && onRejectMatch(match),
-                            )
+                            handleKeyDown(e, () => onRejectMatch?.(match))
                           }
                           aria-label={`Skip matching for ${match.kenmeiManga.title}`}
                         >
@@ -1906,11 +1943,8 @@ export function MangaMatchingPanel({
                               onManualSearch(match.kenmeiManga);
                           }}
                           onKeyDown={(e) =>
-                            handleKeyDown(
-                              e,
-                              () =>
-                                onManualSearch &&
-                                onManualSearch(match.kenmeiManga),
+                            handleKeyDown(e, () =>
+                              onManualSearch?.(match.kenmeiManga),
                             )
                           }
                           aria-label={`Change match for ${match.kenmeiManga.title}`}
@@ -1924,10 +1958,7 @@ export function MangaMatchingPanel({
                             if (onResetToPending) onResetToPending(match);
                           }}
                           onKeyDown={(e) =>
-                            handleKeyDown(
-                              e,
-                              () => onResetToPending && onResetToPending(match),
-                            )
+                            handleKeyDown(e, () => onResetToPending?.(match))
                           }
                           aria-label={`Reset ${match.kenmeiManga.title} to pending status`}
                         >
@@ -1948,11 +1979,8 @@ export function MangaMatchingPanel({
                               onManualSearch(match.kenmeiManga);
                           }}
                           onKeyDown={(e) =>
-                            handleKeyDown(
-                              e,
-                              () =>
-                                onManualSearch &&
-                                onManualSearch(match.kenmeiManga),
+                            handleKeyDown(e, () =>
+                              onManualSearch?.(match.kenmeiManga),
                             )
                           }
                           aria-label={`Change match for ${match.kenmeiManga.title}`}
@@ -1966,10 +1994,7 @@ export function MangaMatchingPanel({
                             if (onResetToPending) onResetToPending(match);
                           }}
                           onKeyDown={(e) =>
-                            handleKeyDown(
-                              e,
-                              () => onResetToPending && onResetToPending(match),
-                            )
+                            handleKeyDown(e, () => onResetToPending?.(match))
                           }
                           aria-label={`Reset ${match.kenmeiManga.title} to pending status`}
                         >
@@ -1990,11 +2015,8 @@ export function MangaMatchingPanel({
                               onManualSearch(match.kenmeiManga);
                           }}
                           onKeyDown={(e) =>
-                            handleKeyDown(
-                              e,
-                              () =>
-                                onManualSearch &&
-                                onManualSearch(match.kenmeiManga),
+                            handleKeyDown(e, () =>
+                              onManualSearch?.(match.kenmeiManga),
                             )
                           }
                           aria-label={`Find match for ${match.kenmeiManga.title}`}
@@ -2008,10 +2030,7 @@ export function MangaMatchingPanel({
                             if (onResetToPending) onResetToPending(match);
                           }}
                           onKeyDown={(e) =>
-                            handleKeyDown(
-                              e,
-                              () => onResetToPending && onResetToPending(match),
-                            )
+                            handleKeyDown(e, () => onResetToPending?.(match))
                           }
                           aria-label={`Reset ${match.kenmeiManga.title} to pending status`}
                         >
@@ -2049,24 +2068,11 @@ export function MangaMatchingPanel({
                                   `alt-match-${index}`
                                 }
                                 className="flex items-center justify-between rounded-md border border-gray-200 bg-white p-2 transition-all hover:border-blue-300 hover:shadow dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600"
-                                tabIndex={0}
-                                role="button"
                                 aria-label={`Select ${
                                   altMatch.manga?.title?.english ||
                                   altMatch.manga?.title?.romaji ||
                                   "Alternative manga"
                                 } as match`}
-                                onKeyDown={(e) =>
-                                  handleKeyDown(e, () => {
-                                    if (onSelectAlternative)
-                                      onSelectAlternative(
-                                        match,
-                                        index + 1,
-                                        false,
-                                        true,
-                                      );
-                                  })
-                                }
                               >
                                 <div className="flex w-full flex-col space-y-2">
                                   <div className="flex items-center space-x-3">
@@ -2075,36 +2081,84 @@ export function MangaMatchingPanel({
                                       {altMatch.manga?.coverImage?.large ||
                                       altMatch.manga?.coverImage?.medium ? (
                                         <div className="relative">
-                                          <img
-                                            src={
-                                              altMatch.manga.coverImage.large ||
-                                              altMatch.manga.coverImage.medium
-                                            }
-                                            alt={
-                                              altMatch.manga?.title?.english ||
-                                              altMatch.manga?.title?.romaji ||
-                                              "Alternative manga"
-                                            }
-                                            className={`h-32 w-20 rounded border border-gray-200 object-cover shadow-sm transition-all group-hover:scale-[1.02] group-hover:shadow dark:border-gray-700 ${
-                                              isAdultContent(altMatch.manga) &&
-                                              shouldBlurImage(
-                                                `alt-${altMatch.manga?.id}`,
-                                              )
-                                                ? "cursor-pointer blur-md"
-                                                : ""
-                                            }`}
-                                            loading="lazy"
-                                            onClick={(e) => {
-                                              if (
-                                                isAdultContent(altMatch.manga)
-                                              ) {
+                                          {isAdultContent(altMatch.manga) ? (
+                                            <button
+                                              type="button"
+                                              tabIndex={0}
+                                              aria-label={
+                                                shouldBlurImage(
+                                                  `alt-${altMatch.manga?.id}`,
+                                                )
+                                                  ? "Reveal adult content cover image"
+                                                  : "Hide adult content cover image"
+                                              }
+                                              onClick={(e) => {
                                                 e.stopPropagation();
                                                 toggleImageBlur(
                                                   `alt-${altMatch.manga?.id}`,
                                                 );
+                                              }}
+                                              onKeyDown={(e) => {
+                                                if (
+                                                  e.key === "Enter" ||
+                                                  e.key === " "
+                                                ) {
+                                                  e.preventDefault();
+                                                  e.stopPropagation();
+                                                  toggleImageBlur(
+                                                    `alt-${altMatch.manga?.id}`,
+                                                  );
+                                                }
+                                              }}
+                                              className={`h-32 w-20 rounded border border-gray-200 bg-transparent object-cover p-0 shadow-sm transition-all group-hover:scale-[1.02] group-hover:shadow dark:border-gray-700 ${
+                                                shouldBlurImage(
+                                                  `alt-${altMatch.manga?.id}`,
+                                                )
+                                                  ? "cursor-pointer blur-md"
+                                                  : ""
+                                              }`}
+                                              style={{
+                                                padding: 0,
+                                                border: "none",
+                                              }}
+                                            >
+                                              <img
+                                                src={
+                                                  altMatch.manga.coverImage
+                                                    .large ||
+                                                  altMatch.manga.coverImage
+                                                    .medium
+                                                }
+                                                alt={
+                                                  altMatch.manga?.title
+                                                    ?.english ||
+                                                  altMatch.manga?.title
+                                                    ?.romaji ||
+                                                  "Alternative manga"
+                                                }
+                                                className="h-32 w-20 rounded object-cover"
+                                                loading="lazy"
+                                                draggable={false}
+                                              />
+                                            </button>
+                                          ) : (
+                                            <img
+                                              src={
+                                                altMatch.manga.coverImage
+                                                  .large ||
+                                                altMatch.manga.coverImage.medium
                                               }
-                                            }}
-                                          />
+                                              alt={
+                                                altMatch.manga?.title
+                                                  ?.english ||
+                                                altMatch.manga?.title?.romaji ||
+                                                "Alternative manga"
+                                              }
+                                              className="h-32 w-20 rounded border border-gray-200 object-cover shadow-sm transition-all group-hover:scale-[1.02] group-hover:shadow dark:border-gray-700"
+                                              loading="lazy"
+                                              draggable={false}
+                                            />
+                                          )}
                                           {/* Adult content warning badge */}
                                           {isAdultContent(altMatch.manga) && (
                                             <div className="absolute top-1 left-1">

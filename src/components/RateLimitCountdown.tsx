@@ -22,7 +22,7 @@ interface RateLimitCountdownProps {
 export function RateLimitCountdown({
   retryAfter,
   onComplete,
-}: RateLimitCountdownProps) {
+}: Readonly<RateLimitCountdownProps>) {
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [initialDuration, setInitialDuration] = useState<number>(0);
 

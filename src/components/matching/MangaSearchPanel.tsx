@@ -60,7 +60,7 @@ export function MangaSearchPanel({
   onSelectMatch,
   token,
   bypassCache,
-}: MangaSearchPanelProps) {
+}: Readonly<MangaSearchPanelProps>) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<MangaMatch[]>([]);
@@ -135,6 +135,147 @@ export function MangaSearchPanel({
     }
   }, [selectedIndex]);
 
+  // Check if query is a valid AniList ID
+  const isValidAniListId = (query: string) => {
+    const isNumericId = /^\d+$/.test(query.trim());
+    const mangaId = isNumericId ? parseInt(query.trim(), 10) : null;
+    return mangaId && mangaId > 0 && mangaId < 10000000 ? mangaId : null;
+  };
+
+  // Handle ID-based search
+  const handleIdSearch = async (
+    mangaId: number,
+    pageNum: number,
+    startTime: number,
+  ) => {
+    console.log(`🔎 Detected AniList ID search: ${mangaId}`);
+
+    const idResults = await getMangaByIds([mangaId], token);
+
+    if (idResults.length > 0) {
+      console.log(`🔎 Found manga by ID ${mangaId}:`, idResults[0]);
+
+      const idMatches: MangaMatch[] = idResults.map((manga) => ({
+        manga,
+        confidence: 100,
+      }));
+
+      updateSearchResults(idMatches, pageNum, {
+        hasNextPage: false,
+        currentPage: 1,
+      });
+    } else {
+      console.log(`⚠️ No manga found for ID ${mangaId}`);
+      if (pageNum === 1) {
+        setSearchResults([]);
+      }
+      setHasNextPage(false);
+    }
+
+    const endTime = performance.now();
+    console.log(
+      `🔎 Search completed in ${(endTime - startTime).toFixed(2)}ms for ID ${mangaId}`,
+    );
+  };
+
+  // Handle title-based search
+  const handleTitleSearch = async (
+    query: string,
+    pageNum: number,
+    startTime: number,
+  ) => {
+    console.log(`🔎 Performing title search for: "${query}"`);
+
+    const searchConfig = {
+      bypassCache: !!bypassCache,
+      maxSearchResults: 30,
+      searchPerPage: 50,
+      exactMatchingOnly: false,
+    };
+
+    console.log(`🔎 Search config:`, searchConfig);
+
+    const searchResponse = await searchMangaByTitle(
+      query,
+      token,
+      searchConfig,
+      undefined,
+      pageNum,
+    );
+
+    const results = searchResponse.matches;
+    const pageInfo = searchResponse.pageInfo;
+    const endTime = performance.now();
+
+    console.log(
+      `🔎 Search completed in ${(endTime - startTime).toFixed(2)}ms for "${query}"`,
+    );
+    console.log(`🔎 Search returned ${results.length} results for "${query}"`);
+
+    logSearchResults(results, query);
+    updateSearchResults(results, pageNum, pageInfo);
+  };
+
+  // Log search results for debugging
+  const logSearchResults = (results: MangaMatch[], query: string) => {
+    if (results.length > 0) {
+      console.log(
+        `🔎 Titles received:`,
+        results.map((m) => ({
+          title: m.manga.title?.romaji || m.manga.title?.english || "unknown",
+          confidence: m.confidence.toFixed(1),
+          id: m.manga.id,
+        })),
+      );
+    } else {
+      console.log(
+        `⚠️ No results found for "${query}" - this could indicate a cache or display issue`,
+      );
+    }
+  };
+
+  // Update search results with proper pagination handling
+  const updateSearchResults = (
+    results: MangaMatch[],
+    pageNum: number,
+    pageInfo?: { hasNextPage: boolean; currentPage: number },
+  ) => {
+    if (pageNum === 1) {
+      console.log(`🔎 Resetting search results`);
+      setSearchResults(results);
+    } else {
+      console.log(
+        `🔎 Appending ${results.length} results to existing ${searchResults.length} results`,
+      );
+      setSearchResults((prev) => {
+        const existingIds = new Set(prev.map((match) => match.manga.id));
+        const newUniqueResults = results.filter(
+          (match) => !existingIds.has(match.manga.id),
+        );
+
+        console.log(
+          `🔎 Adding ${newUniqueResults.length} unique results (filtered ${results.length - newUniqueResults.length} duplicates)`,
+        );
+
+        return [...prev, ...newUniqueResults];
+      });
+    }
+
+    if (pageInfo) {
+      console.log(`🔎 Using API pagination info:`, pageInfo);
+      setHasNextPage(pageInfo.hasNextPage);
+      setPage(pageInfo.currentPage);
+    } else {
+      console.log(`🔎 No pagination info available, using fallback logic`);
+      setHasNextPage(false);
+      setPage(pageNum);
+    }
+
+    console.log(
+      `🔎 UI state updated: searchResults.length=${results.length}, hasNextPage=${pageInfo?.hasNextPage || false}, page=${pageInfo?.currentPage || pageNum}`,
+    );
+  };
+
   const handleSearch = async (query: string, pageNum: number = 1) => {
     if (!query.trim()) return;
 
@@ -145,145 +286,15 @@ export function MangaSearchPanel({
       console.log(
         `🔎 Starting search for: "${query}" with bypassCache=${!!bypassCache}, page=${pageNum}`,
       );
-
       const startTime = performance.now();
 
-      // Check if the query is a valid AniList ID (numeric and reasonable range)
-      const isNumericId = /^\d+$/.test(query.trim());
-      const mangaId = isNumericId ? parseInt(query.trim(), 10) : null;
-      const isValidMangaId = mangaId && mangaId > 0 && mangaId < 10000000; // Reasonable ID range
+      // Check if query is a valid AniList ID
+      const mangaId = isValidAniListId(query);
 
-      if (isValidMangaId) {
-        console.log(`🔎 Detected AniList ID search: ${mangaId}`);
-
-        // Search by ID using getMangaByIds
-        const idResults = await getMangaByIds([mangaId], token);
-
-        if (idResults.length > 0) {
-          console.log(`🔎 Found manga by ID ${mangaId}:`, idResults[0]);
-
-          // Set the results directly for ID searches
-          if (pageNum === 1) {
-            // Convert AniListManga to MangaMatch format for consistency
-            const idMatches: MangaMatch[] = idResults.map((manga) => ({
-              manga,
-              confidence: 100, // ID searches are 100% matches
-            }));
-            setSearchResults(idMatches);
-          } else {
-            // For pagination (though unlikely with ID search), append results
-            setSearchResults((prev) => {
-              const existingIds = new Set(prev.map((match) => match.manga.id));
-              const newResults = idResults
-                .filter((manga) => !existingIds.has(manga.id))
-                .map((manga) => ({
-                  manga,
-                  confidence: 100,
-                }));
-              return [...prev, ...newResults];
-            });
-          }
-
-          // Set pagination info for ID search (single result)
-          setHasNextPage(false);
-          setPage(1);
-        } else {
-          console.log(`⚠️ No manga found for ID ${mangaId}`);
-          if (pageNum === 1) {
-            setSearchResults([]);
-          }
-          setHasNextPage(false);
-        }
+      if (mangaId) {
+        await handleIdSearch(mangaId, pageNum, startTime);
       } else {
-        console.log(`🔎 Performing title search for: "${query}"`);
-
-        // Ensure manual searches always show results by setting exactMatchingOnly to false
-        const searchConfig = {
-          bypassCache: !!bypassCache,
-          maxSearchResults: 30,
-          searchPerPage: 50,
-          exactMatchingOnly: false, // Always false for manual searches
-        };
-
-        console.log(`🔎 Search config:`, searchConfig);
-
-        const searchResponse = await searchMangaByTitle(
-          query,
-          token,
-          searchConfig,
-          undefined, // abortSignal
-          pageNum, // Pass the specific page number
-        );
-        const results = searchResponse.matches;
-        const pageInfo = searchResponse.pageInfo;
-
-        const endTime = performance.now();
-
-        console.log(
-          `🔎 Search completed in ${(endTime - startTime).toFixed(2)}ms for "${query}"`,
-        );
-        console.log(
-          `🔎 Search returned ${results.length} results for "${query}"`,
-        );
-
-        // Log the actual titles received
-        if (results.length > 0) {
-          console.log(
-            `🔎 Titles received:`,
-            results.map((m) => ({
-              title:
-                m.manga.title?.romaji || m.manga.title?.english || "unknown",
-              confidence: m.confidence.toFixed(1),
-              id: m.manga.id,
-            })),
-          );
-        }
-
-        if (results.length === 0) {
-          console.log(
-            `⚠️ No results found for "${query}" - this could indicate a cache or display issue`,
-          );
-        }
-
-        if (pageNum === 1) {
-          console.log(`🔎 Resetting search results for "${query}"`);
-          setSearchResults(results); // Use full match results instead of just manga
-        } else {
-          console.log(
-            `🔎 Appending ${results.length} results to existing ${searchResults.length} results`,
-          );
-          setSearchResults((prev) => {
-            // Create a set of existing manga IDs to avoid duplicates
-            const existingIds = new Set(prev.map((match) => match.manga.id));
-
-            // Filter out duplicates from new results
-            const newUniqueResults = results.filter(
-              (match) => !existingIds.has(match.manga.id),
-            );
-
-            console.log(
-              `🔎 Adding ${newUniqueResults.length} unique results (filtered ${results.length - newUniqueResults.length} duplicates)`,
-            );
-
-            return [...prev, ...newUniqueResults];
-          });
-        }
-
-        // Use actual pagination info from API response if available
-        if (pageInfo) {
-          console.log(`🔎 Using API pagination info:`, pageInfo);
-          setHasNextPage(pageInfo.hasNextPage);
-          setPage(pageInfo.currentPage);
-        } else {
-          // Fallback logic (for cached results that don't have pagination info)
-          console.log(`🔎 No pagination info available, using fallback logic`);
-          setHasNextPage(false); // Can't load more without pagination info
-          setPage(pageNum);
-        }
-
-        console.log(
-          `🔎 UI state updated: searchResults.length=${results.length}, hasNextPage=${pageInfo?.hasNextPage || false}, page=${pageInfo?.currentPage || pageNum}`,
-        );
+        await handleTitleSearch(query, pageNum, startTime);
       }
 
       const endTime = performance.now();
@@ -378,10 +389,9 @@ export function MangaSearchPanel({
   return (
     <div
       className="flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-md dark:border-gray-700 dark:bg-gray-800"
-      onKeyDown={handleKeyDown}
-      role="dialog"
-      aria-labelledby="search-title"
       aria-modal="true"
+      aria-labelledby="search-title"
+      tabIndex={-1}
     >
       <div className="border-b border-gray-200 bg-gray-50 p-5 dark:border-gray-700 dark:bg-gray-800">
         <div className="flex items-center justify-between">
@@ -441,6 +451,7 @@ export function MangaSearchPanel({
               disabled={isSearching}
               aria-label="Search manga title or AniList ID"
               autoComplete="off"
+              onKeyDown={handleKeyDown}
             />
           </div>
           <button
@@ -472,10 +483,9 @@ export function MangaSearchPanel({
         </div>
       </div>
 
-      <div
+      <section
         ref={resultsContainerRef}
         className="flex-1 overflow-y-auto p-5"
-        role="region"
         aria-label="Search results"
         aria-live="polite"
       >
@@ -508,42 +518,62 @@ export function MangaSearchPanel({
               <div
                 key={uniqueKey}
                 data-index={index}
-                className={`relative flex cursor-pointer flex-col space-y-3 rounded-lg border p-5 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800 ${
+                className={`relative flex flex-col space-y-3 rounded-lg border p-5 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800 ${
                   index === selectedIndex
                     ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
                     : "border-gray-200"
                 }`}
-                onClick={() => handleSelectResult(result, index)}
-                tabIndex={0}
-                role="button"
                 aria-pressed={index === selectedIndex}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    handleSelectResult(result, index);
-                  }
-                }}
               >
                 <div className="flex w-full items-start space-x-5">
                   {(manga.coverImage?.large || manga.coverImage?.medium) && (
                     <div className="relative flex-shrink-0">
-                      <img
-                        src={manga.coverImage.large || manga.coverImage.medium}
-                        alt={`Cover for ${manga.title?.english || manga.title?.romaji || "manga"}`}
-                        className={`h-40 w-28 rounded border border-gray-200 object-cover shadow-sm transition-all hover:scale-[1.02] hover:shadow dark:border-gray-700 ${
-                          isAdultContent(manga) &&
-                          shouldBlurImage(`search-${manga.id}`)
-                            ? "cursor-pointer blur-md"
-                            : ""
-                        }`}
-                        loading="lazy"
-                        onClick={(e) => {
-                          if (isAdultContent(manga)) {
+                      {isAdultContent(manga) ? (
+                        <button
+                          type="button"
+                          tabIndex={0}
+                          aria-label={
+                            shouldBlurImage(`search-${manga.id}`)
+                              ? "Reveal adult content cover"
+                              : "Hide adult content cover"
+                          }
+                          className="focus:outline-none"
+                          onClick={(e) => {
                             e.stopPropagation();
                             toggleImageBlur(`search-${manga.id}`);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              toggleImageBlur(`search-${manga.id}`);
+                            }
+                          }}
+                        >
+                          <img
+                            src={
+                              manga.coverImage.large || manga.coverImage.medium
+                            }
+                            alt={`Cover for ${manga.title?.english || manga.title?.romaji || "manga"}`}
+                            className={`h-40 w-28 rounded border border-gray-200 object-cover shadow-sm transition-all hover:scale-[1.02] hover:shadow dark:border-gray-700 ${
+                              shouldBlurImage(`search-${manga.id}`)
+                                ? "cursor-pointer blur-md"
+                                : ""
+                            }`}
+                            loading="lazy"
+                            draggable={false}
+                          />
+                        </button>
+                      ) : (
+                        <img
+                          src={
+                            manga.coverImage.large || manga.coverImage.medium
                           }
-                        }}
-                      />
+                          alt={`Cover for ${manga.title?.english || manga.title?.romaji || "manga"}`}
+                          className="h-40 w-28 rounded border border-gray-200 object-cover shadow-sm transition-all hover:scale-[1.02] hover:shadow dark:border-gray-700"
+                          loading="lazy"
+                          draggable={false}
+                        />
+                      )}
                       {/* Adult content warning badge */}
                       {isAdultContent(manga) && (
                         <div className="absolute top-1 left-1">
@@ -559,15 +589,28 @@ export function MangaSearchPanel({
                       {isAdultContent(manga) &&
                         shouldBlurImage(`search-${manga.id}`) && (
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <span
+                            <button
+                              type="button"
+                              tabIndex={0}
                               className="bg-opacity-75 inline-flex cursor-pointer items-center rounded-md bg-gray-800 px-2 py-1 text-xs font-medium text-white"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 toggleImageBlur(`search-${manga.id}`);
                               }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  toggleImageBlur(`search-${manga.id}`);
+                                }
+                              }}
+                              aria-label={
+                                shouldBlurImage(`search-${manga.id}`)
+                                  ? "Reveal adult content cover"
+                                  : "Hide adult content cover"
+                              }
                             >
                               Click to reveal
-                            </span>
+                            </button>
                           </div>
                         )}
                     </div>
@@ -724,7 +767,7 @@ export function MangaSearchPanel({
             </button>
           )}
         </div>
-      </div>
+      </section>
     </div>
   );
 }

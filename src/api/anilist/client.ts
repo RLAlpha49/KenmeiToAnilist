@@ -162,30 +162,6 @@ function buildRequestOptions(
 }
 
 /**
- * Logs request details for debugging purposes.
- *
- * @param requestId - Unique request identifier.
- * @param query - The GraphQL query string.
- * @param variables - Optional variables for the query.
- */
-function logRequestDetails(
-  requestId: string,
-  query: string,
-  variables?: Record<string, unknown>,
-): void {
-  const queryFirstLine = query.trim().split("\n")[0].substring(0, 50);
-  console.log(`📡 [${requestId}] GraphQL Request: ${queryFirstLine}...`);
-  console.log(
-    `📦 [${requestId}] Variables:`,
-    JSON.stringify(variables, null, 2),
-  );
-  console.log(
-    `📜 [${requestId}] Full Query:`,
-    query.replace(/\s+/g, " ").trim(),
-  );
-}
-
-/**
  * Handles Electron IPC requests to the main process.
  *
  * @param requestId - Unique request identifier.
@@ -217,12 +193,6 @@ async function handleElectronRequest<T>(
     if (abortSignal?.aborted) {
       throw new DOMException("The operation was aborted", "AbortError");
     }
-
-    // Log response for debugging
-    console.log(
-      `✅ [${requestId}] Response received:`,
-      JSON.stringify(response, null, 2),
-    );
 
     return response as AniListResponse<T>;
   } catch (error) {
@@ -315,12 +285,6 @@ async function handleBrowserRequest<T>(
 
     const jsonResponse = await response.json();
 
-    // Log response for debugging
-    console.log(
-      `✅ [${requestId}] Response received:`,
-      JSON.stringify(jsonResponse, null, 2),
-    );
-
     // Check for GraphQL errors
     if (jsonResponse.errors) {
       console.error(`⚠️ [${requestId}] GraphQL Errors:`, jsonResponse.errors);
@@ -358,9 +322,6 @@ export async function request<T>(
 
   // Check if we're running in a browser or Electron environment
   const isElectron = typeof window !== "undefined" && window.electronAPI;
-
-  // Log request details for debugging
-  logRequestDetails(requestId, query, variables);
 
   // Route request to appropriate handler
   if (isElectron) {
@@ -481,12 +442,6 @@ export async function searchManga(
     return searchCache[cacheKey].data;
   }
 
-  if (bypassCache) {
-    console.log(
-      `🚨 FORCE SEARCH: Bypassing cache for "${search}" in client.searchManga - will make API request`,
-    );
-  }
-
   console.log(`🔍 Searching for manga: "${search}" (page ${page})`);
 
   try {
@@ -495,8 +450,6 @@ export async function searchManga(
       data?: { Page: SearchResult<AniListManga>["Page"] };
       Page?: SearchResult<AniListManga>["Page"];
     }>(SEARCH_MANGA, { search, page, perPage }, token, undefined, bypassCache);
-    console.log("Query:", SEARCH_MANGA);
-    console.log("Variables:", { search, page, perPage, bypassCache });
     console.log("🔍 searchManga response:", response);
 
     // Validate the response structure before using it
@@ -542,10 +495,6 @@ export async function searchManga(
       persistSearchCache();
       console.log(
         `💾 Cached ${result.Page.media.length} results for "${search}"`,
-      );
-    } else {
-      console.log(
-        `🚨 FORCE SEARCH: Not caching results for "${search}" as bypassCache=true`,
       );
     }
 
@@ -619,12 +568,6 @@ export async function advancedSearchManga(
     return searchCache[cacheKey].data;
   }
 
-  if (bypassCache) {
-    console.log(
-      `🚨 FORCE SEARCH: Bypassing cache for "${search}" in client.advancedSearchManga - will make API request`,
-    );
-  }
-
   console.log(
     `🔍 Advanced search for manga: "${search}" with filters:`,
     filters,
@@ -695,10 +638,6 @@ export async function advancedSearchManga(
       persistSearchCache();
       console.log(
         `💾 Cached ${result.Page.media.length} advanced search results for "${search}"`,
-      );
-    } else {
-      console.log(
-        `🚨 FORCE SEARCH: Not caching advanced search results for "${search}" as bypassCache=true`,
       );
     }
 
@@ -969,8 +908,6 @@ async function getAuthenticatedUserID(
       abortSignal,
     );
 
-    console.log("Raw viewer response:", viewerResponse);
-
     // Handle multiple possible response formats
     let viewerId: number | undefined;
 
@@ -1210,12 +1147,8 @@ async function fetchCompleteUserMediaList(
   const mediaMap: UserMediaList = {};
   let hasNextChunk = true;
   let currentChunk = 1;
-  const perChunk = 500; // Maximum supported by AniList API
+  const perChunk = 500;
   let totalEntriesProcessed = 0;
-
-  console.log(
-    `Fetching complete user manga list for user ID ${userId} using chunked approach`,
-  );
 
   try {
     // Keep fetching chunks until we've got everything
@@ -1299,9 +1232,6 @@ function processMediaListCollectionChunk(
       return;
     }
 
-    console.log(
-      `Processing list "${list.name}" with ${list.entries.length} entries`,
-    );
     entriesProcessed += list.entries.length;
 
     list.entries.forEach((entry) => {

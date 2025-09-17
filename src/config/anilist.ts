@@ -11,7 +11,7 @@ let clientSecret = "";
 let encryptionKey = "";
 
 try {
-  if (typeof import.meta !== "undefined" && import.meta.env) {
+  if (import.meta?.env) {
     clientId = import.meta.env.VITE_ANILIST_CLIENT_ID || "";
     clientSecret = import.meta.env.VITE_ANILIST_CLIENT_SECRET || "";
     encryptionKey =

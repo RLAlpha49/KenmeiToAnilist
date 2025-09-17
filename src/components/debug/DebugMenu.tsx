@@ -69,7 +69,7 @@ const tryParseJSON = (
     const data = JSON.parse(value);
     return { ok: true, data };
   } catch (e) {
-    const err = e as unknown as { message?: string };
+    const err = e as { message?: string };
     return { ok: false, error: err?.message || "Invalid JSON" };
   }
 };
@@ -105,14 +105,12 @@ const getValueInfo = (
 };
 
 const TypeBadge: React.FC<{ type: StorageItem["type"] }> = ({ type }) => {
-  const variant =
-    type === "object"
-      ? "default"
-      : type === "number"
-        ? "secondary"
-        : type === "boolean"
-          ? "outline"
-          : "secondary";
+  let variant: "default" | "secondary" | "outline" = "secondary";
+  if (type === "object") {
+    variant = "default";
+  } else if (type === "boolean") {
+    variant = "outline";
+  }
   return <Badge variant={variant}>{type}</Badge>;
 };
 
@@ -143,7 +141,7 @@ const OverviewValue: React.FC<{ value: string; maxChars: number }> = ({
   return <span>{sliced}</span>;
 };
 
-export function DebugMenu({ isOpen, onClose }: DebugMenuProps) {
+export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
   const [electronStoreItems, setElectronStoreItems] = useState<StorageItem[]>(
     [],
   );
@@ -187,51 +185,66 @@ export function DebugMenu({ isOpen, onClose }: DebugMenuProps) {
     setLocalStorageItems(items);
   };
 
+  // Get all localStorage keys
+  const getLocalStorageKeys = (): string[] => {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) keys.push(key);
+    }
+    return keys;
+  };
+
+  // Get all keys to check for electron store
+  const getAllKeysToCheck = (): string[] => {
+    const localKeys = getLocalStorageKeys();
+    const electronSpecificKeys = [
+      "window-bounds",
+      "app-preferences",
+      "cache-settings",
+      "sync-config",
+      "match-config",
+      "kenmei-data",
+      "saved-match-results",
+      "pending-manga",
+      "auth-token",
+      "theme-preferences",
+      "anilist-credentials",
+      "app-version",
+      "last-sync-date",
+    ];
+    return [...new Set([...localKeys, ...electronSpecificKeys])];
+  };
+
+  // Process a single electron store item
+  const processElectronStoreItem = async (
+    key: string,
+  ): Promise<StorageItem | null> => {
+    try {
+      const value = await window.electronStore.getItem(key);
+      if (value === null || value === undefined) return null;
+
+      const str = typeof value === "string" ? value : JSON.stringify(value);
+      const { type, size } = getValueInfo(str);
+      return { key, value: str, type, size };
+    } catch (error) {
+      console.warn(`Failed to get electron store item "${key}":`, error);
+      return null;
+    }
+  };
+
   // Load electron store items (using localStorage keys as reference)
   const loadElectronStoreItems = async () => {
+    if (!window.electronStore) return;
+
     try {
       const items: StorageItem[] = [];
+      const keysToCheck = getAllKeysToCheck();
 
-      if (window.electronStore) {
-        // Get all localStorage keys as reference since everything should be in both stores
-        const allKeys: string[] = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key) allKeys.push(key);
-        }
-
-        // Also add some common electron-specific keys that might not be in localStorage
-        const electronSpecificKeys = [
-          "window-bounds",
-          "app-preferences",
-          "cache-settings",
-          "sync-config",
-          "match-config",
-          "kenmei-data",
-          "saved-match-results",
-          "pending-manga",
-          "auth-token",
-          "theme-preferences",
-          "anilist-credentials",
-          "app-version",
-          "last-sync-date",
-        ];
-
-        // Combine and deduplicate keys
-        const keysToCheck = [...new Set([...allKeys, ...electronSpecificKeys])];
-
-        for (const key of keysToCheck) {
-          try {
-            const value = await window.electronStore.getItem(key);
-            if (value !== null && value !== undefined) {
-              const str =
-                typeof value === "string" ? value : JSON.stringify(value);
-              const { type, size } = getValueInfo(str);
-              items.push({ key, value: str, type, size });
-            }
-          } catch (error) {
-            console.warn(`Failed to get electron store item "${key}":`, error);
-          }
+      for (const key of keysToCheck) {
+        const item = await processElectronStoreItem(key);
+        if (item) {
+          items.push(item);
         }
       }
 
@@ -292,7 +305,7 @@ export function DebugMenu({ isOpen, onClose }: DebugMenuProps) {
   };
 
   const addNewItem = async () => {
-    if (!newItem || !newItem.key.trim()) return;
+    if (!newItem?.key?.trim()) return;
 
     try {
       if (newItem.isElectron) {
@@ -398,9 +411,17 @@ export function DebugMenu({ isOpen, onClose }: DebugMenuProps) {
       );
       await refreshData();
     } catch (e) {
-      const err = e as unknown as { message?: string };
+      const err = e as { message?: string };
       toast.error(err?.message || "Import failed");
     }
+  };
+
+  // Copy to clipboard helper
+  const handleCopyValue = (value: string) => {
+    navigator.clipboard
+      .writeText(value)
+      .then(() => toast.success("Copied value"))
+      .catch(() => toast.error("Failed to copy value"));
   };
 
   // Filters
@@ -506,11 +527,7 @@ export function DebugMenu({ isOpen, onClose }: DebugMenuProps) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() =>
-                            navigator.clipboard
-                              .writeText(item.value)
-                              .then(() => toast.success("Copied value"))
-                          }
+                          onClick={() => handleCopyValue(item.value)}
                           aria-label="Copy value"
                           title="Copy value"
                         >

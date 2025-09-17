@@ -47,7 +47,10 @@ export interface FileDropZoneProps {
  * ```
  * @source
  */
-export function FileDropZone({ onFileLoaded, onError }: FileDropZoneProps) {
+export function FileDropZone({
+  onFileLoaded,
+  onError,
+}: Readonly<FileDropZoneProps>) {
   const [isDragging, setIsDragging] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileSize, setFileSize] = useState<number | null>(null);
@@ -55,17 +58,17 @@ export function FileDropZone({ onFileLoaded, onError }: FileDropZoneProps) {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
     setIsDragging(true);
   };
 
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDragLeave = (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
     setIsDragging(false);
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
     setIsDragging(false);
 
@@ -138,7 +141,7 @@ export function FileDropZone({ onFileLoaded, onError }: FileDropZoneProps) {
         // Use our parser function from api/kenmei/parser.ts
         const parsedData = parseKenmeiCsvExport(content);
 
-        if (!parsedData || !parsedData.manga || parsedData.manga.length === 0) {
+        if (!parsedData?.manga?.length) {
           onError(
             createError(
               ErrorType.VALIDATION,
@@ -191,12 +194,6 @@ export function FileDropZone({ onFileLoaded, onError }: FileDropZoneProps) {
     reader.readAsText(file);
   };
 
-  const handleButtonClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return bytes + " bytes";
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
@@ -204,7 +201,9 @@ export function FileDropZone({ onFileLoaded, onError }: FileDropZoneProps) {
   };
 
   return (
-    <div
+    <label
+      htmlFor="file-input"
+      aria-label="Upload Kenmei CSV Export - Click to select file or drag and drop"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -213,9 +212,9 @@ export function FileDropZone({ onFileLoaded, onError }: FileDropZoneProps) {
           ? "border-primary/50 bg-primary/5"
           : "border-border/50 hover:border-primary/30 hover:bg-muted/50"
       }`}
-      onClick={handleButtonClick}
     >
       <input
+        id="file-input"
         ref={fileInputRef}
         type="file"
         accept=".csv"
@@ -240,8 +239,8 @@ export function FileDropZone({ onFileLoaded, onError }: FileDropZoneProps) {
               variant="outline"
               className="mt-2"
               onClick={(e) => {
-                e.stopPropagation();
-                handleButtonClick();
+                e.preventDefault();
+                fileInputRef.current?.click();
               }}
             >
               <FileText className="mr-2 h-4 w-4" />
@@ -298,6 +297,6 @@ export function FileDropZone({ onFileLoaded, onError }: FileDropZoneProps) {
           )}
         </div>
       )}
-    </div>
+    </label>
   );
 }

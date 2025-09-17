@@ -28,6 +28,411 @@ import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
 import { useRateLimit } from "../../contexts/RateLimitContext";
 
+// Helper component for progress display
+const ProgressDisplay: React.FC<{
+  completedEntries: number;
+  totalEntries: number;
+  progressPercentage: number;
+  status: string;
+}> = ({ completedEntries, totalEntries, progressPercentage, status }) => (
+  <div className="mb-6">
+    <div className="mb-2 flex justify-between">
+      <span className="text-sm font-medium">
+        Progress: {completedEntries} of {totalEntries} entries
+      </span>
+      <span className="text-sm font-medium">{progressPercentage}%</span>
+    </div>
+    <Progress value={progressPercentage} className="h-3" />
+
+    <div className="mt-1.5 flex justify-between text-xs text-slate-500 dark:text-slate-400">
+      <span>
+        {status === "syncing" && completedEntries > 0
+          ? `${totalEntries - completedEntries} entries remaining`
+          : " "}
+      </span>
+      <span>
+        {status === "syncing" && progressPercentage > 0
+          ? progressPercentage + "% complete"
+          : ""}
+      </span>
+    </div>
+  </div>
+);
+
+// Helper component for sync status alerts
+const StatusAlerts: React.FC<{
+  status: string;
+  entries: AniListMediaEntry[];
+  incrementalSync: boolean;
+  onIncrementalSyncChange?: (value: boolean) => void;
+  autoStart: boolean;
+  syncState?: { error?: string | null };
+}> = ({
+  status,
+  entries,
+  incrementalSync,
+  onIncrementalSyncChange,
+  autoStart,
+  syncState,
+}) => {
+  if (status === "idle" && !autoStart) {
+    return (
+      <div className="mb-6 text-center">
+        <Alert className="mb-4 flex flex-row items-center border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20">
+          <div className="mr-3 flex items-center justify-center">
+            <AlertCircle className="h-4 w-4 text-blue-500" />
+          </div>
+          <div className="flex-1">
+            <AlertTitle className="w-full text-center">
+              Ready to Synchronize
+            </AlertTitle>
+            <AlertDescription className="flex w-full justify-center">
+              <span className="text-center">
+                {entries.length} manga{" "}
+                {entries.length === 1 ? "entry" : "entries"} with changes are
+                ready to be synchronized to your AniList account.
+              </span>
+            </AlertDescription>
+          </div>
+        </Alert>
+
+        <div className="mt-2 mb-4 flex items-center justify-center space-x-2">
+          <Switch
+            id="incrementalSync"
+            checked={incrementalSync}
+            onCheckedChange={onIncrementalSyncChange}
+            data-testid="switch"
+          />
+          <Label htmlFor="incrementalSync" className="text-sm">
+            Use incremental progress updates{" "}
+            <span className="text-muted-foreground block text-xs">
+              Updates progress gradually to trigger activity merge
+            </span>
+          </Label>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "syncing") {
+    return (
+      <Alert className="mb-4 border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20">
+        <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />
+        <AlertTitle>Synchronization in progress</AlertTitle>
+        <AlertDescription>
+          {incrementalSync
+            ? "Please wait while your manga entries are being updated on AniList using incremental progress updates. This may take longer but helps trigger activity merges."
+            : "Please wait while your manga entries are being updated on AniList."}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (status === "completed") {
+    return (
+      <Alert className="mb-4 border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20">
+        <CheckCircle className="h-4 w-4 text-green-500" />
+        <AlertTitle>Synchronization complete</AlertTitle>
+        <AlertDescription>
+          All manga entries have been successfully updated on AniList.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (status === "failed") {
+    return (
+      <Alert className="mb-4 border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
+        <AlertCircle className="h-4 w-4 text-red-500" />
+        <AlertTitle>Synchronization failed</AlertTitle>
+        <AlertDescription>
+          {syncState?.error?.includes("cancelled")
+            ? "Synchronization was cancelled by user. No further entries will be processed."
+            : syncState?.error ||
+              "Some entries failed to update. You can retry the failed entries."}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  return null;
+};
+
+// Helper component for current entry display
+const CurrentEntryDisplay: React.FC<{
+  progress: SyncProgress;
+  entries: AniListMediaEntry[];
+  status: string;
+  incrementalSync: boolean;
+}> = ({ progress, entries, status, incrementalSync }) => {
+  if (status !== "syncing" || !progress.currentEntry) return null;
+
+  return (
+    <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
+      <h3 className="mb-2 flex items-center text-sm font-semibold">
+        <RefreshCw className="mr-2 h-4 w-4 animate-spin text-blue-600" />
+        Currently Syncing:
+      </h3>
+      <div className="flex items-start">
+        {progress.currentEntry.coverImage && (
+          <img
+            src={progress.currentEntry.coverImage}
+            alt={progress.currentEntry.title}
+            className="mr-3 h-16 w-12 rounded-sm object-cover shadow-sm"
+          />
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-base font-medium text-blue-800 dark:text-blue-300">
+            {progress.currentEntry.title}
+          </p>
+
+          {/* Show incremental sync steps if applicable */}
+          {incrementalSync && progress.totalSteps && progress.currentStep && (
+            <div className="mt-2">
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-xs font-medium text-blue-700 dark:text-blue-400">
+                  Step {progress.currentStep} of {progress.totalSteps}
+                  {progress.currentStep === 1 && " (Initial Progress)"}
+                  {progress.currentStep === 2 && " (Final Progress)"}
+                  {progress.currentStep === 3 && " (Status & Score)"}
+                </span>
+                <span className="text-xs text-blue-600 dark:text-blue-400">
+                  {Math.round(
+                    (progress.currentStep / progress.totalSteps) * 100,
+                  )}
+                  %
+                </span>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-blue-200 dark:bg-blue-800">
+                <div
+                  className="h-full bg-blue-600 transition-all duration-300 dark:bg-blue-500"
+                  style={{
+                    width: `${(progress.currentStep / progress.totalSteps) * 100}%`,
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Show changes for the current entry being processed */}
+          {(() => {
+            const currentEntry = entries.find(
+              (entry) => entry.mediaId === progress.currentEntry?.mediaId,
+            );
+
+            if (!currentEntry) return null;
+
+            return (
+              <div className="mt-3 space-y-1.5 rounded-md bg-white/50 px-3 py-2 dark:bg-slate-800/20">
+                <h4 className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                  Changes for current entry:
+                </h4>
+                {currentEntry.previousValues ? (
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Progress:</span>
+                      <div className="flex items-center">
+                        <span className="text-slate-500">
+                          {currentEntry.previousValues?.progress}
+                        </span>
+                        {currentEntry.progress !==
+                          currentEntry.previousValues?.progress && (
+                          <>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="mx-1 text-blue-400"
+                            >
+                              <path d="M5 12h14"></path>
+                              <path d="m12 5 7 7-7 7"></path>
+                            </svg>
+                            <span className="font-medium text-blue-600 dark:text-blue-400">
+                              {currentEntry.progress}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Status:</span>
+                      <div className="flex items-center">
+                        <span className="text-slate-500">
+                          {currentEntry.previousValues?.status || "None"}
+                        </span>
+                        {currentEntry.status !==
+                          currentEntry.previousValues?.status && (
+                          <>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="mx-1 text-blue-400"
+                            >
+                              <path d="M5 12h14"></path>
+                              <path d="m12 5 7 7-7 7"></path>
+                            </svg>
+                            <span className="font-medium text-blue-600 dark:text-blue-400">
+                              {currentEntry.status}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Score:</span>
+                      <div className="flex items-center">
+                        <span className="text-slate-500">
+                          {currentEntry.previousValues?.score ?? "None"}
+                        </span>
+                        {currentEntry.score !==
+                          currentEntry.previousValues?.score && (
+                          <>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="mx-1 text-blue-400"
+                            >
+                              <path d="M5 12h14"></path>
+                              <path d="m12 5 7 7-7 7"></path>
+                            </svg>
+                            <span className="font-medium text-blue-600 dark:text-blue-400">
+                              {currentEntry.score}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-0.5">
+                    <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="mr-1"
+                      >
+                        <path d="M12 5v14"></path>
+                        <path d="M5 12h14"></path>
+                      </svg>
+                      New Entry
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Helper component for error details
+const ErrorDetails: React.FC<{ report: SyncReport }> = ({ report }) => {
+  if (report.errors.length === 0) return null;
+
+  return (
+    <div className="mt-4">
+      <h3 className="mb-2 flex items-center text-sm font-medium text-red-700 dark:text-red-400">
+        <AlertCircle className="mr-1.5 h-4 w-4 text-red-500" />
+        Error Details:
+      </h3>
+      <div className="max-h-60 overflow-y-auto rounded-md border border-red-200 bg-red-50/50 dark:border-red-800/50 dark:bg-red-900/10">
+        <ul className="divide-y divide-red-200 dark:divide-red-800/50">
+          {report.errors.map((error) => (
+            <li key={error.mediaId} className="p-3 text-sm">
+              <div className="flex flex-col">
+                <div className="mb-1 flex items-center">
+                  <XCircle className="mr-1.5 h-3.5 w-3.5 text-red-500" />
+                  <span className="font-medium text-red-700 dark:text-red-400">
+                    Media ID {error.mediaId}
+                  </span>
+                </div>
+                <div className="ml-5 rounded-sm bg-red-100 p-1.5 text-xs text-red-600 dark:bg-red-900/20 dark:text-red-500">
+                  {error.error}
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+};
+
+// Helper component for sync actions
+const SyncActions: React.FC<{
+  status: string;
+  onStartSync: () => void;
+  onCancel: () => void;
+  syncState?: { report?: SyncReport | null };
+}> = ({ status, onStartSync, onCancel, syncState }) => {
+  if (status === "idle") {
+    return (
+      <>
+        <Button variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button onClick={onStartSync}>Start Synchronization</Button>
+      </>
+    );
+  }
+
+  if (status === "syncing") {
+    return (
+      <Button variant="destructive" onClick={onCancel}>
+        Cancel Sync
+      </Button>
+    );
+  }
+
+  if (status === "completed" || status === "failed") {
+    return (
+      <>
+        <Button variant="outline" onClick={onCancel}>
+          Close
+        </Button>
+
+        {status === "failed" &&
+          syncState?.report &&
+          syncState.report.errors.length > 0 && (
+            <Button onClick={onStartSync}>Retry Failed Updates</Button>
+          )}
+      </>
+    );
+  }
+
+  return null;
+};
+
 /**
  * Props for the SyncManager component.
  *
@@ -99,13 +504,6 @@ const SyncManager: React.FC<SyncManagerProps> = ({
   };
 
   console.log("[SyncManager] Progress:", progress);
-
-  // DEBUG: Log progress object from sync-service
-  React.useEffect(() => {
-    if (syncState?.progress) {
-      console.log("[SyncManager] Progress update:", syncState.progress);
-    }
-  }, [syncState?.progress]);
 
   // Use progress.completed and progress.total directly
   const completedEntries = progress.completed;
@@ -212,277 +610,28 @@ const SyncManager: React.FC<SyncManagerProps> = ({
       </CardHeader>
 
       <CardContent>
-        {/* Progress bar */}
-        <div className="mb-6">
-          <div className="mb-2 flex justify-between">
-            <span className="text-sm font-medium">
-              Progress: {completedEntries} of {totalEntries} entries
-            </span>
-            <span className="text-sm font-medium">{progressPercentage}%</span>
-          </div>
-          <Progress value={progressPercentage} className="h-3" />
+        <ProgressDisplay
+          completedEntries={completedEntries}
+          totalEntries={totalEntries}
+          progressPercentage={progressPercentage}
+          status={status}
+        />
 
-          {/* Show estimated remaining entries */}
-          <div className="mt-1.5 flex justify-between text-xs text-slate-500 dark:text-slate-400">
-            <span>
-              {status === "syncing" && completedEntries > 0
-                ? `${totalEntries - completedEntries} entries remaining`
-                : " "}
-            </span>
-            <span>
-              {status === "syncing" && progressPercentage > 0
-                ? progressPercentage + "% complete"
-                : ""}
-            </span>
-          </div>
-        </div>
+        <StatusAlerts
+          status={status}
+          entries={entries}
+          incrementalSync={incrementalSync}
+          onIncrementalSyncChange={onIncrementalSyncChange}
+          autoStart={autoStart}
+          syncState={syncState}
+        />
 
-        {status === "idle" && !autoStart && (
-          <div className="mb-6 text-center">
-            <Alert className="mb-4 border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20">
-              <AlertCircle className="h-4 w-4 text-blue-500" />
-              <AlertTitle>Ready to Synchronize</AlertTitle>
-              <AlertDescription>
-                {entries.length} manga{" "}
-                {entries.length === 1 ? "entry" : "entries"} with changes are
-                ready to be synchronized to your AniList account. Entries
-                without changes have been automatically filtered out.
-              </AlertDescription>
-            </Alert>
-
-            {/* Add incremental sync option */}
-            <div className="mt-2 mb-4 flex items-center justify-center space-x-2">
-              <Switch
-                id="incrementalSync"
-                checked={incrementalSync}
-                onCheckedChange={onIncrementalSyncChange}
-                data-testid="switch"
-              />
-              <Label htmlFor="incrementalSync" className="text-sm">
-                Use incremental progress updates
-                <span className="text-muted-foreground block text-xs">
-                  Updates progress gradually to trigger activity merge
-                </span>
-              </Label>
-            </div>
-          </div>
-        )}
-
-        {/* Status message */}
-        {status === "syncing" && (
-          <Alert className="mb-4 border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20">
-            <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />
-            <AlertTitle>Synchronization in progress</AlertTitle>
-            <AlertDescription>
-              {incrementalSync
-                ? "Please wait while your manga entries are being updated on AniList using incremental progress updates. This may take longer but helps trigger activity merges."
-                : "Please wait while your manga entries are being updated on AniList."}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Show current entry being synced */}
-        {status === "syncing" && progress.currentEntry && (
-          <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
-            <h3 className="mb-2 flex items-center text-sm font-semibold">
-              <RefreshCw className="mr-2 h-4 w-4 animate-spin text-blue-600" />
-              Currently Syncing:
-            </h3>
-            <div className="flex items-start">
-              {progress.currentEntry.coverImage && (
-                <img
-                  src={progress.currentEntry.coverImage}
-                  alt={progress.currentEntry.title}
-                  className="mr-3 h-16 w-12 rounded-sm object-cover shadow-sm"
-                />
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="text-base font-medium text-blue-800 dark:text-blue-300">
-                  {progress.currentEntry.title}
-                </p>
-
-                {/* Show incremental sync steps if applicable */}
-                {incrementalSync &&
-                  progress.totalSteps &&
-                  progress.currentStep && (
-                    <div className="mt-2">
-                      <div className="mb-1 flex items-center justify-between">
-                        <span className="text-xs font-medium text-blue-700 dark:text-blue-400">
-                          Step {progress.currentStep} of {progress.totalSteps}
-                          {progress.currentStep === 1 && " (Initial Progress)"}
-                          {progress.currentStep === 2 && " (Final Progress)"}
-                          {progress.currentStep === 3 && " (Status & Score)"}
-                        </span>
-                        <span className="text-xs text-blue-600 dark:text-blue-400">
-                          {Math.round(
-                            (progress.currentStep / progress.totalSteps) * 100,
-                          )}
-                          %
-                        </span>
-                      </div>
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-blue-200 dark:bg-blue-800">
-                        <div
-                          className="h-full bg-blue-600 transition-all duration-300 dark:bg-blue-500"
-                          style={{
-                            width: `${(progress.currentStep / progress.totalSteps) * 100}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                {/* Show changes for the current entry being processed */}
-                {status === "syncing" &&
-                  progress.currentEntry &&
-                  (() => {
-                    // Find the entry currently being processed by matching the mediaId
-                    const currentEntry = entries.find(
-                      (entry) =>
-                        entry.mediaId === progress.currentEntry?.mediaId,
-                    );
-                    return currentEntry;
-                  })() && (
-                    <div className="mt-3 space-y-1.5 rounded-md bg-white/50 px-3 py-2 dark:bg-slate-800/20">
-                      <h4 className="text-xs font-medium text-slate-600 dark:text-slate-300">
-                        Changes for current entry:
-                      </h4>
-                      {(() => {
-                        const currentEntry = entries.find(
-                          (entry) =>
-                            entry.mediaId === progress.currentEntry?.mediaId,
-                        );
-                        return currentEntry?.previousValues ? (
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-                            <div className="flex items-center justify-between">
-                              <span className="text-slate-500">Progress:</span>
-                              <div className="flex items-center">
-                                <span className="text-slate-500">
-                                  {currentEntry.previousValues?.progress}
-                                </span>
-                                {currentEntry.progress !==
-                                  currentEntry.previousValues?.progress && (
-                                  <>
-                                    <svg
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      width="12"
-                                      height="12"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      className="mx-1 text-blue-400"
-                                    >
-                                      <path d="M5 12h14"></path>
-                                      <path d="m12 5 7 7-7 7"></path>
-                                    </svg>
-                                    <span className="font-medium text-blue-600 dark:text-blue-400">
-                                      {currentEntry.progress}
-                                    </span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                              <span className="text-slate-500">Status:</span>
-                              <div className="flex items-center">
-                                <span className="text-slate-500">
-                                  {currentEntry.previousValues?.status ||
-                                    "None"}
-                                </span>
-                                {currentEntry.status !==
-                                  currentEntry.previousValues?.status && (
-                                  <>
-                                    <svg
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      width="12"
-                                      height="12"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      className="mx-1 text-blue-400"
-                                    >
-                                      <path d="M5 12h14"></path>
-                                      <path d="m12 5 7 7-7 7"></path>
-                                    </svg>
-                                    <span className="font-medium text-blue-600 dark:text-blue-400">
-                                      {currentEntry.status}
-                                    </span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-slate-500">Score:</span>
-                              <div className="flex items-center">
-                                <span className="text-slate-500">
-                                  {currentEntry.previousValues?.score !==
-                                    null &&
-                                  currentEntry.previousValues?.score !==
-                                    undefined
-                                    ? currentEntry.previousValues.score
-                                    : "None"}
-                                </span>
-                                {currentEntry.score !==
-                                  currentEntry.previousValues?.score && (
-                                  <>
-                                    <svg
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      width="12"
-                                      height="12"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      className="mx-1 text-blue-400"
-                                    >
-                                      <path d="M5 12h14"></path>
-                                      <path d="m12 5 7 7-7 7"></path>
-                                    </svg>
-                                    <span className="font-medium text-blue-600 dark:text-blue-400">
-                                      {currentEntry.score}
-                                    </span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="py-0.5">
-                            <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="12"
-                                height="12"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="mr-1"
-                              >
-                                <path d="M12 5v14"></path>
-                                <path d="M5 12h14"></path>
-                              </svg>
-                              New Entry
-                            </span>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  )}
-              </div>
-            </div>
-          </div>
-        )}
+        <CurrentEntryDisplay
+          progress={progress}
+          entries={entries}
+          status={status}
+          incrementalSync={incrementalSync}
+        />
 
         {/* Success/Error counters */}
         <div className="mb-4 grid grid-cols-3 gap-4">
@@ -610,88 +759,16 @@ const SyncManager: React.FC<SyncManagerProps> = ({
             </div>
           )}
 
-        {status === "completed" && (
-          <Alert className="mb-4 border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20">
-            <CheckCircle className="h-4 w-4 text-green-500" />
-            <AlertTitle>Synchronization complete</AlertTitle>
-            <AlertDescription>
-              All manga entries have been successfully updated on AniList.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {status === "failed" && (
-          <Alert className="mb-4 border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
-            <AlertCircle className="h-4 w-4 text-red-500" />
-            <AlertTitle>Synchronization failed</AlertTitle>
-            <AlertDescription>
-              {syncState?.error && syncState.error.includes("cancelled")
-                ? "Synchronization was cancelled by user. No further entries will be processed."
-                : syncState?.error ||
-                  `${progress.failed} entries failed to update. You can retry the failed entries.`}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Error details */}
-        {syncState?.report && syncState.report.errors.length > 0 && (
-          <div className="mt-4">
-            <h3 className="mb-2 flex items-center text-sm font-medium text-red-700 dark:text-red-400">
-              <AlertCircle className="mr-1.5 h-4 w-4 text-red-500" />
-              Error Details:
-            </h3>
-            <div className="max-h-60 overflow-y-auto rounded-md border border-red-200 bg-red-50/50 dark:border-red-800/50 dark:bg-red-900/10">
-              <ul className="divide-y divide-red-200 dark:divide-red-800/50">
-                {syncState.report.errors.map((error, index) => (
-                  <li key={index} className="p-3 text-sm">
-                    <div className="flex flex-col">
-                      <div className="mb-1 flex items-center">
-                        <XCircle className="mr-1.5 h-3.5 w-3.5 text-red-500" />
-                        <span className="font-medium text-red-700 dark:text-red-400">
-                          Media ID {error.mediaId}
-                        </span>
-                      </div>
-                      <div className="ml-5 rounded-sm bg-red-100 p-1.5 text-xs text-red-600 dark:bg-red-900/20 dark:text-red-500">
-                        {error.error}
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        )}
+        {syncState?.report && <ErrorDetails report={syncState.report} />}
       </CardContent>
 
       <CardFooter className="flex justify-end space-x-2">
-        {status === "idle" && (
-          <>
-            <Button variant="outline" onClick={handleCancel}>
-              Cancel
-            </Button>
-            <Button onClick={handleStartSync}>Start Synchronization</Button>
-          </>
-        )}
-
-        {status === "syncing" && (
-          <Button variant="destructive" onClick={handleCancel}>
-            Cancel Sync
-          </Button>
-        )}
-
-        {(status === "completed" || status === "failed") && (
-          <>
-            <Button variant="outline" onClick={handleCancel}>
-              Close
-            </Button>
-
-            {status === "failed" &&
-              syncState?.report &&
-              syncState.report.errors.length > 0 && (
-                <Button onClick={handleStartSync}>Retry Failed Updates</Button>
-              )}
-          </>
-        )}
+        <SyncActions
+          status={status}
+          onStartSync={handleStartSync}
+          onCancel={handleCancel}
+          syncState={syncState}
+        />
       </CardFooter>
     </Card>
   );

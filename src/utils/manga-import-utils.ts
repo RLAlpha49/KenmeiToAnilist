@@ -178,9 +178,6 @@ export function updateMatchResults(validMergedManga: KenmeiManga[]): boolean {
 
     if (newMangaData) {
       updated = true;
-      console.log(
-        `Updating existing match for "${newMangaData.title}" with new import data`,
-      );
       return {
         ...result,
         kenmeiManga: { ...result.kenmeiManga, ...newMangaData },

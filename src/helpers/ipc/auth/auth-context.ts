@@ -48,8 +48,6 @@ export function exposeAuthContext() {
       return ipcRenderer.invoke("auth:exchangeToken", params);
     },
     onCodeReceived: (callback: (data: { code: string }) => void) => {
-      console.log("Renderer setting up code received listener");
-
       // Clear any existing listeners to prevent duplicates
       ipcRenderer.removeAllListeners("auth:codeReceived");
 
@@ -63,13 +61,10 @@ export function exposeAuthContext() {
 
       // Return a function to remove the event listener
       return () => {
-        console.log("Removing code received listener");
         ipcRenderer.removeAllListeners("auth:codeReceived");
       };
     },
     onCancelled: (callback: () => void) => {
-      console.log("Renderer setting up cancelled listener");
-
       // Clear any existing listeners to prevent duplicates
       ipcRenderer.removeAllListeners("auth:cancelled");
 
@@ -81,13 +76,10 @@ export function exposeAuthContext() {
 
       // Return a function to remove the event listener
       return () => {
-        console.log("Removing cancelled listener");
         ipcRenderer.removeAllListeners("auth:cancelled");
       };
     },
     onStatus: (callback: (message: string) => void) => {
-      console.log("Renderer setting up status listener");
-
       // Clear any existing listeners to prevent duplicates
       ipcRenderer.removeAllListeners("auth:status");
 
@@ -99,7 +91,6 @@ export function exposeAuthContext() {
 
       // Return a function to remove the event listener
       return () => {
-        console.log("Removing status listener");
         ipcRenderer.removeAllListeners("auth:status");
       };
     },

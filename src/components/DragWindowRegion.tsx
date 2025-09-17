@@ -33,7 +33,9 @@ export interface DragWindowRegionProps {
  * ```
  * @source
  */
-export default function DragWindowRegion({ title }: DragWindowRegionProps) {
+export default function DragWindowRegion({
+  title,
+}: Readonly<DragWindowRegionProps>) {
   return (
     <div className="flex w-screen items-stretch justify-between">
       <div className="draglayer w-full">
@@ -66,10 +68,10 @@ export function WindowButtons() {
       >
         <svg
           aria-hidden="true"
-          role="img"
           width="12"
           height="12"
           viewBox="0 0 12 12"
+          aria-label="Minimize window"
         >
           <rect fill="currentColor" width="10" height="1" x="1" y="6"></rect>
         </svg>
@@ -81,8 +83,7 @@ export function WindowButtons() {
         onClick={maximizeWindow}
       >
         <svg
-          aria-hidden="true"
-          role="img"
+          aria-label="Maximize window"
           width="12"
           height="12"
           viewBox="0 0 12 12"
@@ -104,8 +105,7 @@ export function WindowButtons() {
         onClick={closeWindow}
       >
         <svg
-          aria-hidden="true"
-          role="img"
+          aria-label="Close window"
           width="12"
           height="12"
           viewBox="0 0 12 12"

@@ -112,23 +112,23 @@ export function enhancedNormalize(text: string): string {
 
   // Normalize punctuation and special characters
   normalized = normalized
-    .replace(/['']/g, "'") // Normalize apostrophes
-    .replace(/[""]/g, '"') // Normalize quotes
+    .replace(/'/g, "'") // Normalize apostrophes
+    .replace(/" /g, '"') // Normalize quotes
     .replace(/[–—]/g, "-") // Normalize dashes
     .replace(/…/g, "...") // Normalize ellipsis
-    .replace(/[×]/g, "x") // Normalize multiplication sign
-    .replace(/[！]/g, "!") // Japanese exclamation
-    .replace(/[？]/g, "?") // Japanese question mark
-    .replace(/[：]/g, ":") // Japanese colon
-    .replace(/[；]/g, ";") // Japanese semicolon
-    .replace(/[，]/g, ",") // Japanese comma
-    .replace(/[。]/g, ".") // Japanese period
-    .replace(/[（]/g, "(") // Japanese left parenthesis
-    .replace(/[）]/g, ")") // Japanese right parenthesis
-    .replace(/[「]/g, '"') // Japanese left quote
-    .replace(/[」]/g, '"') // Japanese right quote
-    .replace(/[『]/g, '"') // Japanese left double quote
-    .replace(/[』]/g, '"'); // Japanese right double quote
+    .replace(/×/g, "x") // Normalize multiplication sign
+    .replace(/！/g, "!") // Japanese exclamation
+    .replace(/？/g, "?") // Japanese question mark
+    .replace(/：/g, ":") // Japanese colon
+    .replace(/；/g, ";") // Japanese semicolon
+    .replace(/，/g, ",") // Japanese comma
+    .replace(/。/g, ".") // Japanese period
+    .replace(/（/g, "(") // Japanese left parenthesis
+    .replace(/）/g, ")") // Japanese right parenthesis
+    .replace(/「/g, '"') // Japanese left quote
+    .replace(/」/g, '"') // Japanese right quote
+    .replace(/『/g, '"') // Japanese left double quote
+    .replace(/』/g, '"'); // Japanese right double quote
 
   // Handle common abbreviations
   for (const [abbrev, expansion] of ABBREVIATION_MAP) {
@@ -350,15 +350,12 @@ function calculateSemanticSimilarity(str1: string, str2: string): number {
   let score = 0;
   let maxPossibleScore = 0;
 
-  for (let i = 0; i < words1.length; i++) {
+  for (const word1 of words1) {
     maxPossibleScore += 1;
-    const word1 = words1[i];
 
     // Find best match in words2
     let bestMatch = 0;
-    for (let j = 0; j < words2.length; j++) {
-      const word2 = words2[j];
-
+    for (const word2 of words2) {
       // Exact match gets full score
       if (word1 === word2) {
         bestMatch = 1.0;

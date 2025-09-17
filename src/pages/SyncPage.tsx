@@ -1538,12 +1538,18 @@ export function SyncPage() {
                                 }
 
                                 // Check if any values will change based on sync configuration
-                                const statusWillChange = userEntry
-                                  ? syncConfig.prioritizeAniListStatus
-                                    ? false
-                                    : getEffectiveStatus(kenmei) !==
-                                      userEntry.status
-                                  : true;
+                                let statusWillChange: boolean;
+                                if (userEntry) {
+                                  if (syncConfig.prioritizeAniListStatus) {
+                                    statusWillChange = false;
+                                  } else {
+                                    statusWillChange =
+                                      getEffectiveStatus(kenmei) !==
+                                      userEntry.status;
+                                  }
+                                } else {
+                                  statusWillChange = true;
+                                }
 
                                 const progressWillChange =
                                   syncConfig.prioritizeAniListProgress

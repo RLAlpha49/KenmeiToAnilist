@@ -310,7 +310,7 @@ function handleResponseData(
 
   if (responseData?.SaveMediaListEntry?.id) {
     console.log(
-      `✅ [${operationId}] Successfully updated entry with ID ${responseData.SaveMediaListEntry.id}`,
+      `✅ [${operationId}] Successfully updated entry with ID ${mediaId}`,
     );
     return {
       success: true,
@@ -519,19 +519,6 @@ export async function updateMangaEntry(
   // Generate an operation ID for tracking in logs early
   const operationId = `${entry.mediaId}-${Date.now().toString(36).substring(4, 10)}`;
 
-  // Build log prefix with sync type information
-  const syncType = entry.syncMetadata?.useIncrementalSync
-    ? `INCREMENTAL[step=${entry.syncMetadata.step || 1}/${3}]`
-    : "STANDARD";
-
-  const retryInfo = entry.syncMetadata?.isRetry
-    ? `RETRY[#${entry.syncMetadata.retryCount || 1}]`
-    : "";
-
-  console.log(
-    `🔄 [${operationId}] ${syncType} ${retryInfo} Starting update for entry ${entry.mediaId} (${entry.title || "Untitled"})`,
-  );
-
   if (!token) {
     console.error(`❌ [${operationId}] No authentication token provided`);
     return {
@@ -551,12 +538,6 @@ export async function updateMangaEntry(
 
     // Apply incremental sync modifications if needed
     variables = applyIncrementalSyncStep(entry, variables, operationId);
-
-    // Log the variables being sent
-    console.log(
-      `📦 [${operationId}] Variables:`,
-      JSON.stringify(variables, null, 2),
-    );
 
     // Generate a dynamic mutation with only the needed variables
     const mutation = generateUpdateMangaEntryMutation(variables);
@@ -632,11 +613,6 @@ export async function deleteMangaEntry(
     const variables = {
       id: entryId,
     };
-
-    console.log(
-      `📦 [${operationId}] Variables:`,
-      JSON.stringify(variables, null, 2),
-    );
 
     // Define the expected response structure
     interface DeleteMediaListEntryData {

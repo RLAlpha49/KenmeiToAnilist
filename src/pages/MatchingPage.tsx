@@ -14,12 +14,12 @@ import {
   getKenmeiData,
   addIgnoredDuplicate,
   getIgnoredDuplicates,
+  getSavedMatchResults,
 } from "../utils/storage";
 import { StatusFilterOptions } from "../types/matching";
 import { useMatchingProcess } from "../hooks/useMatchingProcess";
 import { usePendingManga } from "../hooks/usePendingManga";
 import { useMatchHandlers } from "../hooks/useMatchHandlers";
-import { getSavedMatchResults } from "../utils/storage";
 import { clearCacheForTitles } from "../api/matching/manga-search-service";
 import { useRateLimit } from "../contexts/RateLimitContext";
 
@@ -364,18 +364,11 @@ export function MatchingPage() {
     }
   }, [matchResults]);
 
-  // Initial data loading
-  useEffect(() => {
-    // Strong initialization guard to prevent multiple runs
-    if (hasInitialized.current) {
-      console.log("Already initialized, skipping initialization");
-      return;
-    }
-
-    // Mark as initialized immediately to prevent any possibility of re-runs
-    hasInitialized.current = true;
-
-    // Check if user is authenticated but don't redirect
+  /**
+   * Check authentication status and set appropriate error messages.
+   * @internal
+   */
+  const checkAuthenticationStatus = (): boolean => {
     if (!authState.isAuthenticated || !authState.accessToken) {
       console.log("User not authenticated, showing auth error");
       matchingProcess.setError(
@@ -384,19 +377,16 @@ export function MatchingPage() {
       matchingProcess.setDetailMessage(
         "Please go to Settings to authenticate with AniList.",
       );
-      return;
+      return false;
     }
+    return true;
+  };
 
-    console.log("*** INITIALIZATION START ***");
-    console.log("Initial states:", {
-      isLoading: matchingProcess.isLoading,
-      hasError: !!matchingProcess.error,
-      matchResultsLength: matchResults.length,
-      pendingMangaLength: pendingMangaState.pendingManga.length,
-      isMatchingInitialized: matchingProcess.matchingInitialized.current,
-    });
-
-    // Check if there's an ongoing matching process
+  /**
+   * Restore running matching process state if it exists.
+   * @internal
+   */
+  const restoreRunningProcessState = (): boolean => {
     if (window.matchingProcessState?.isRunning) {
       console.log("Detected running matching process, restoring state");
 
@@ -417,35 +407,22 @@ export function MatchingPage() {
       // Mark as initialized to prevent auto-starting
       matchingProcess.matchingInitialized.current = true;
       matchingProcess.setIsInitializing(false);
-      return;
+      return true;
     }
+    return false;
+  };
 
-    // Skip if this effect has already been run
-    if (matchingProcess.matchingInitialized.current) {
-      console.log(
-        "Matching already initialized, skipping duplicate initialization",
-      );
-      matchingProcess.setIsInitializing(false);
-      return;
-    }
-
-    console.log("Initializing MatchingPage component...");
-
-    // Get imported data from storage to have it available for calculations
-    const importedData = getKenmeiData();
-    const importedManga = importedData?.manga || [];
-
-    if (importedManga.length > 0) {
-      console.log(`Found ${importedManga.length} imported manga from storage`);
-      // Store the imported manga data for later use
-      setManga(importedManga as KenmeiManga[]);
-    } else {
-      console.log("No imported manga found in storage");
-    }
-
-    // Load saved match results IMMEDIATELY to avoid showing false resume notifications
+  /**
+   * Process saved match results and update state.
+   * @internal
+   */
+  const processSavedMatchResults = (): {
+    hasResults: boolean;
+    savedResults?: MangaMatchResult[];
+  } => {
     console.log("Loading saved match results immediately...");
     const savedResults = getSavedMatchResults();
+
     if (
       savedResults &&
       Array.isArray(savedResults) &&
@@ -468,103 +445,146 @@ export function MatchingPage() {
         `${reviewedCount} manga have already been reviewed (${Math.round((reviewedCount / savedResults.length) * 100)}% complete)`,
       );
 
-      // Calculate what might still need processing if we have imported manga
-      if (importedManga.length > 0) {
-        console.log(
-          "Have both saved results and imported manga - calculating unmatched manga",
-        );
-        const calculatedPendingManga = pendingMangaState.calculatePendingManga(
-          savedResults as MangaMatchResult[],
-          importedManga as KenmeiManga[],
-        );
-        if (calculatedPendingManga.length > 0) {
-          console.log(
-            `Calculated ${calculatedPendingManga.length} manga that still need to be processed`,
-          );
-          pendingMangaState.savePendingManga(calculatedPendingManga);
-          console.log(
-            `Saved ${calculatedPendingManga.length} pending manga to storage for resume`,
-          );
-        } else {
-          console.log("No pending manga found in calculation");
-
-          // If there's a clear discrepancy between total manga and processed manga,
-          // force a calculation of pending manga by finding the actual missing manga
-          if (importedManga.length > savedResults.length) {
-            console.log(
-              `⚠️ Discrepancy detected! Total manga: ${importedManga.length}, Processed: ${savedResults.length}`,
-            );
-            console.log(
-              "Finding actual missing manga using comprehensive title and ID matching",
-            );
-
-            // Create sets of processed manga for quick lookup - convert IDs to strings for consistent comparison
-            const processedIds = new Set(
-              savedResults
-                .map((r) => r.kenmeiManga.id?.toString())
-                .filter(Boolean),
-            );
-            const processedTitles = new Set(
-              savedResults.map((r) => r.kenmeiManga.title.toLowerCase()),
-            );
-
-            console.log(
-              `Processed IDs (first 10):`,
-              Array.from(processedIds).slice(0, 10),
-            );
-            console.log(
-              `Processed titles (first 5):`,
-              Array.from(processedTitles).slice(0, 5),
-            );
-
-            // Find manga that aren't in savedResults using proper matching
-            const actualMissingManga = importedManga.filter((manga) => {
-              const idMatch =
-                manga.id != null && processedIds.has(manga.id.toString());
-              const titleMatch = processedTitles.has(manga.title.toLowerCase());
-
-              // Debug log for first few manga being checked
-              if (actualMissingManga.length < 5) {
-                console.log(
-                  `Checking manga "${manga.title}" (ID: ${manga.id}): idMatch=${idMatch}, titleMatch=${titleMatch}, shouldInclude=${!idMatch && !titleMatch}`,
-                );
-              }
-
-              return !idMatch && !titleMatch;
-            });
-
-            if (actualMissingManga.length > 0) {
-              console.log(
-                `Found ${actualMissingManga.length} actual missing manga that need processing`,
-              );
-              console.log(
-                "Sample missing manga:",
-                actualMissingManga
-                  .slice(0, 5)
-                  .map((m) => ({ id: m.id, title: m.title })),
-              );
-              pendingMangaState.savePendingManga(
-                actualMissingManga as KenmeiManga[],
-              );
-            } else {
-              console.log(
-                "No actual missing manga found despite count discrepancy - all manga may already be processed",
-              );
-            }
-          }
-        }
-      }
-
-      // Mark as initialized since we have results
-      matchingProcess.matchingInitialized.current = true;
-      matchingProcess.setIsInitializing(false);
-
-      console.log("*** INITIALIZATION COMPLETE - Using saved results ***");
-      return; // Skip further initialization
-    } else {
-      console.log("No saved match results found");
+      return {
+        hasResults: true,
+        savedResults: savedResults as MangaMatchResult[],
+      };
     }
 
+    console.log("No saved match results found");
+    return { hasResults: false };
+  };
+
+  /**
+   * Calculate missing manga and handle discrepancies between imported and saved results.
+   * @internal
+   */
+  const calculateMissingManga = (
+    savedResults: MangaMatchResult[],
+    importedManga: KenmeiManga[],
+  ): void => {
+    if (importedManga.length === 0) return;
+
+    console.log(
+      "Have both saved results and imported manga - calculating unmatched manga",
+    );
+
+    const calculatedPendingManga = pendingMangaState.calculatePendingManga(
+      savedResults,
+      importedManga,
+    );
+
+    if (calculatedPendingManga.length > 0) {
+      console.log(
+        `Calculated ${calculatedPendingManga.length} manga that still need to be processed`,
+      );
+      pendingMangaState.savePendingManga(calculatedPendingManga);
+      console.log(
+        `Saved ${calculatedPendingManga.length} pending manga to storage for resume`,
+      );
+    } else {
+      handleDiscrepancyDetection(savedResults, importedManga);
+    }
+  };
+
+  /**
+   * Handle discrepancy detection between total manga and processed manga.
+   * @internal
+   */
+  const handleDiscrepancyDetection = (
+    savedResults: MangaMatchResult[],
+    importedManga: KenmeiManga[],
+  ): void => {
+    console.log("No pending manga found in calculation");
+
+    // If there's a clear discrepancy between total manga and processed manga,
+    // force a calculation of pending manga by finding the actual missing manga
+    if (importedManga.length > savedResults.length) {
+      console.log(
+        `⚠️ Discrepancy detected! Total manga: ${importedManga.length}, Processed: ${savedResults.length}`,
+      );
+      console.log(
+        "Finding actual missing manga using comprehensive title and ID matching",
+      );
+
+      const actualMissingManga = findActualMissingManga(
+        savedResults,
+        importedManga,
+      );
+
+      if (actualMissingManga.length > 0) {
+        console.log(
+          `Found ${actualMissingManga.length} actual missing manga that need processing`,
+        );
+        console.log(
+          "Sample missing manga:",
+          actualMissingManga
+            .slice(0, 5)
+            .map((m) => ({ id: m.id, title: m.title })),
+        );
+        pendingMangaState.savePendingManga(actualMissingManga);
+      } else {
+        console.log(
+          "No actual missing manga found despite count discrepancy - all manga may already be processed",
+        );
+      }
+    }
+  };
+
+  /**
+   * Find actual missing manga using comprehensive matching.
+   * @internal
+   */
+  const findActualMissingManga = (
+    savedResults: MangaMatchResult[],
+    importedManga: KenmeiManga[],
+  ): KenmeiManga[] => {
+    // Create sets of processed manga for quick lookup - convert IDs to strings for consistent comparison
+    const processedIds = new Set(
+      savedResults.map((r) => r.kenmeiManga.id?.toString()).filter(Boolean),
+    );
+    const processedTitles = new Set(
+      savedResults.map((r) => r.kenmeiManga.title.toLowerCase()),
+    );
+
+    console.log(
+      `Processed IDs (first 10):`,
+      Array.from(processedIds).slice(0, 10),
+    );
+    console.log(
+      `Processed titles (first 5):`,
+      Array.from(processedTitles).slice(0, 5),
+    );
+
+    // Find manga that aren't in savedResults using proper matching
+    const actualMissingManga: KenmeiManga[] = [];
+
+    for (const manga of importedManga) {
+      const idMatch = manga.id != null && processedIds.has(manga.id.toString());
+      const titleMatch = processedTitles.has(manga.title.toLowerCase());
+
+      // Debug log for first few manga being checked
+      if (actualMissingManga.length < 5) {
+        console.log(
+          `Checking manga "${manga.title}" (ID: ${manga.id}): idMatch=${idMatch}, titleMatch=${titleMatch}, shouldInclude=${!idMatch && !titleMatch}`,
+        );
+      }
+
+      if (!idMatch && !titleMatch) {
+        actualMissingManga.push(manga);
+      }
+    }
+
+    return actualMissingManga;
+  };
+
+  /**
+   * Handle module preloading and final initialization steps.
+   * @internal
+   */
+  const handleModulePreloadingAndInitialization = (
+    importedManga: KenmeiManga[],
+  ): void => {
     // Check for pending manga from a previously interrupted operation (only if no saved results)
     const pendingMangaData = pendingMangaState.loadPendingManga();
 
@@ -592,11 +612,7 @@ export function MatchingPage() {
         matchingProcess.matchingInitialized.current = true;
 
         // Start matching process automatically
-        matchingProcess.startMatching(
-          importedManga as KenmeiManga[],
-          false,
-          setMatchResults,
-        );
+        matchingProcess.startMatching(importedManga, false, setMatchResults);
       } else if (!importedManga.length) {
         console.log("No imported manga found, redirecting to import page");
         matchingProcess.setError(
@@ -608,12 +624,83 @@ export function MatchingPage() {
       matchingProcess.setIsInitializing(false);
       console.log("*** INITIALIZATION COMPLETE ***");
     });
+  };
+
+  // Initial data loading
+  useEffect(() => {
+    // Strong initialization guard to prevent multiple runs
+    if (hasInitialized.current) {
+      return;
+    }
+
+    // Mark as initialized immediately to prevent any possibility of re-runs
+    hasInitialized.current = true;
+
+    // Check authentication status
+    if (!checkAuthenticationStatus()) {
+      return;
+    }
+
+    console.log("*** INITIALIZATION START ***");
+    console.log("Initial states:", {
+      isLoading: matchingProcess.isLoading,
+      hasError: !!matchingProcess.error,
+      matchResultsLength: matchResults.length,
+      pendingMangaLength: pendingMangaState.pendingManga.length,
+      isMatchingInitialized: matchingProcess.matchingInitialized.current,
+    });
+
+    // Check if there's an ongoing matching process and restore state if needed
+    if (restoreRunningProcessState()) {
+      return;
+    }
+
+    // Skip if this effect has already been run
+    if (matchingProcess.matchingInitialized.current) {
+      console.log(
+        "Matching already initialized, skipping duplicate initialization",
+      );
+      matchingProcess.setIsInitializing(false);
+      return;
+    }
+
+    console.log("Initializing MatchingPage component...");
+
+    // Get imported data from storage to have it available for calculations
+    const importedData = getKenmeiData();
+    const importedManga = importedData?.manga || [];
+
+    if (importedManga.length > 0) {
+      console.log(`Found ${importedManga.length} imported manga from storage`);
+      // Store the imported manga data for later use
+      setManga(importedManga as KenmeiManga[]);
+    } else {
+      console.log("No imported manga found in storage");
+    }
+
+    // Load saved match results and process them
+    const { hasResults, savedResults } = processSavedMatchResults();
+
+    if (hasResults && savedResults) {
+      // Calculate what might still need processing if we have imported manga
+      calculateMissingManga(savedResults, importedManga as KenmeiManga[]);
+
+      // Mark as initialized since we have results
+      matchingProcess.matchingInitialized.current = true;
+      matchingProcess.setIsInitializing(false);
+
+      console.log("*** INITIALIZATION COMPLETE - Using saved results ***");
+      return; // Skip further initialization
+    }
+
+    // Handle module preloading and final initialization steps
+    handleModulePreloadingAndInitialization(importedManga as KenmeiManga[]);
 
     // Cleanup function to ensure initialization state is reset
     return () => {
       matchingProcess.setIsInitializing(false);
     };
-  }, [navigate, matchingProcess, pendingMangaState]); // Remove matchResults from dependencies
+  }, [navigate, matchingProcess, pendingMangaState]);
 
   // Add an effect to sync with the global process state while the page is mounted
   useEffect(() => {
@@ -1076,8 +1163,7 @@ export function MatchingPage() {
       animate="visible"
     >
       {/* Authentication Error - Display regardless of loading state */}
-      {matchingProcess.error &&
-      matchingProcess.error.includes("Authentication Required") ? (
+      {matchingProcess.error?.includes("Authentication Required") ? (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}

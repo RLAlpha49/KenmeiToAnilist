@@ -19,7 +19,7 @@ import { SyncReport } from "../api/anilist/sync-service";
  * @source
  */
 export function exportSyncErrorLog(report: SyncReport): void {
-  if (!report || !report.errors.length) {
+  if (!report?.errors?.length) {
     console.warn("No errors to export");
     return;
   }
@@ -144,102 +144,4 @@ export function saveSyncReportToHistory(report: SyncReport): void {
   } catch (error) {
     console.error("Failed to save sync report to history:", error);
   }
-}
-
-/**
- * Gets sync history from localStorage.
- *
- * @returns An array of previously saved sync reports.
- * @example
- * ```ts
- * const history = getSyncHistory();
- * ```
- * @source
- */
-export function getSyncHistory(): SyncReport[] {
-  try {
-    const storageKey = "anilist_sync_history";
-    const historyJson = localStorage.getItem(storageKey);
-
-    if (!historyJson) {
-      return [];
-    }
-
-    return JSON.parse(historyJson) as SyncReport[];
-  } catch (error) {
-    console.error("Failed to get sync history:", error);
-    return [];
-  }
-}
-
-/**
- * Creates and downloads a JSON file with the provided data.
- *
- * @param data - The data to export as JSON.
- * @param filename - The name of the file to download (default: 'export.json').
- * @example
- * ```ts
- * downloadJson({ foo: 'bar' }, 'myfile.json');
- * ```
- * @source
- */
-export function downloadJson<T extends Record<string, unknown>>(
-  data: T,
-  filename = "export.json",
-): void {
-  // Convert to JSON string with pretty formatting
-  const jsonContent = JSON.stringify(data, null, 2);
-
-  // Create blob and URL
-  const blob = new Blob([jsonContent], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-
-  // Create element to trigger download
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-
-  // Trigger download
-  document.body.appendChild(link);
-  link.click();
-
-  // Clean up
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
-
-/**
- * Exports data to a JSON file with the given filename.
- *
- * @param data - The data to export as JSON.
- * @param filename - The name of the file to download (default: 'export.json').
- * @example
- * ```ts
- * exportDataToFile({ foo: 'bar' }, 'myfile.json');
- * ```
- * @source
- */
-export function exportDataToFile<T extends Record<string, unknown>>(
-  data: T,
-  filename = "export.json",
-): void {
-  // Convert to JSON string with pretty formatting
-  const jsonContent = JSON.stringify(data, null, 2);
-
-  // Create blob and URL
-  const blob = new Blob([jsonContent], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-
-  // Create element to trigger download
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-
-  // Trigger download
-  document.body.appendChild(link);
-  link.click();
-
-  // Clean up
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
 }

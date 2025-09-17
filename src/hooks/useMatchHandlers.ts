@@ -299,7 +299,7 @@ export const useMatchHandlers = (
       // Get the selected alternative
       const selectedAlternative = currentMatch.anilistMatches[alternativeIndex];
 
-      if (!selectedAlternative || !selectedAlternative.manga) {
+      if (!selectedAlternative?.manga) {
         console.error("Selected alternative is invalid");
         return;
       }

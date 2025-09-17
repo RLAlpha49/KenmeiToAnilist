@@ -4,8 +4,7 @@
  * @description Registers IPC event listeners for theme mode actions (current, toggle, dark, light, system) in the Electron main process.
  */
 
-import { nativeTheme } from "electron";
-import { ipcMain } from "electron";
+import { nativeTheme, ipcMain } from "electron";
 import {
   THEME_MODE_CURRENT_CHANNEL,
   THEME_MODE_DARK_CHANNEL,

@@ -37,7 +37,9 @@ const DEBUG_STORAGE_KEY = "debug-mode-enabled";
  * @returns The debug context provider with value for consumers.
  * @source
  */
-export function DebugProvider({ children }: { children: React.ReactNode }) {
+export function DebugProvider({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   const [isDebugEnabled, setIsDebugEnabled] = useState(false);
 
   // Load debug state from localStorage on initialization
@@ -66,11 +68,14 @@ export function DebugProvider({ children }: { children: React.ReactNode }) {
     setDebugEnabled(!isDebugEnabled);
   }, [isDebugEnabled, setDebugEnabled]);
 
-  const value: DebugContextType = {
-    isDebugEnabled,
-    toggleDebug,
-    setDebugEnabled,
-  };
+  const value = React.useMemo<DebugContextType>(
+    () => ({
+      isDebugEnabled,
+      toggleDebug,
+      setDebugEnabled,
+    }),
+    [isDebugEnabled, toggleDebug, setDebugEnabled],
+  );
 
   return (
     <DebugContext.Provider value={value}>{children}</DebugContext.Provider>

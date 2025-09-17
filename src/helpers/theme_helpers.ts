@@ -53,7 +53,7 @@ export async function getCurrentTheme(): Promise<ThemePreferences> {
  * @source
  */
 export async function setTheme(newTheme: ThemeMode) {
-  let isDarkMode = false;
+  let isDarkMode: boolean;
 
   switch (newTheme) {
     case "dark":

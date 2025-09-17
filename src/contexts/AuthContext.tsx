@@ -32,7 +32,7 @@ interface AuthProviderProps {
  * @returns The authentication context provider with value for consumers.
  * @source
  */
-export function AuthProvider({ children }: AuthProviderProps) {
+export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
   // Add a ref to track previous state for comparison
   const prevAuthStateRef = useRef<string>("");
 
@@ -78,6 +78,53 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [authState]);
 
+  // Helper function to validate credentials
+  const validateCredentials = (credentials: APICredentials) => {
+    const { clientId, clientSecret, redirectUri } = credentials;
+    if (!clientId || !clientSecret || !redirectUri) {
+      toast.error(
+        "Credentials incomplete. Please ensure Client ID, Secret & Redirect URI are set.",
+      );
+      throw new Error(
+        "Incomplete credentials: missing clientId, clientSecret or redirectUri",
+      );
+    }
+    return { clientId, clientSecret, redirectUri };
+  };
+
+  // Helper function to handle user profile fetching
+  const handleUserProfile = async (accessToken: string) => {
+    try {
+      const userProfile = await fetchUserProfile(accessToken);
+
+      if (userProfile?.data?.Viewer) {
+        const viewer = userProfile.data.Viewer;
+        setAuthState((prevState) => ({
+          ...prevState,
+          username: viewer.name,
+          userId: viewer.id,
+          avatarUrl:
+            viewer.avatar?.large ||
+            viewer.avatar?.medium ||
+            "https://s4.anilist.co/file/anilistcdn/user/avatar/large/default.png",
+        }));
+        setStatusMessage("Authentication complete!");
+      } else {
+        throw new Error("Failed to retrieve user profile");
+      }
+    } catch (profileError) {
+      console.error("Profile fetch error:", profileError);
+      // Still authenticated but with limited info - use defaults
+      setAuthState((prevState) => ({
+        ...prevState,
+        username: "AniList User",
+        avatarUrl:
+          "https://s4.anilist.co/file/anilistcdn/user/avatar/large/default.png",
+      }));
+      setStatusMessage("Authentication complete (limited profile info)");
+    }
+  };
+
   // Set up the code received listener
   useEffect(() => {
     // Only set up the listener if window.electronAuth is available
@@ -115,18 +162,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
           );
         }
 
-        const { clientId, clientSecret, redirectUri } =
-          credentialsResponse.credentials;
-
-        // Validate that essential fields are present before attempting exchange
-        if (!clientId || !clientSecret || !redirectUri) {
-          toast.error(
-            "Credentials incomplete. Please ensure Client ID, Secret & Redirect URI are set.",
-          );
-          throw new Error(
-            "Incomplete credentials: missing clientId, clientSecret or redirectUri",
-          );
-        }
+        const { clientId, clientSecret, redirectUri } = validateCredentials(
+          credentialsResponse.credentials,
+        );
 
         console.log("Exchanging auth code for token with credentials:", {
           clientId: clientId.substring(0, 4) + "...",
@@ -136,105 +174,54 @@ export function AuthProvider({ children }: AuthProviderProps) {
         });
 
         // Exchange the code for an access token
-        try {
-          setStatusMessage("Exchanging auth code for token...");
+        setStatusMessage("Exchanging auth code for token...");
+        const tokenExchangeResult = await window.electronAuth.exchangeToken({
+          clientId,
+          clientSecret,
+          redirectUri,
+          code: data.code,
+        });
 
-          // Use the main process token exchange instead of direct fetch
-          // This avoids network issues in the renderer process
-          const tokenExchangeResult = await window.electronAuth.exchangeToken({
-            clientId,
-            clientSecret,
-            redirectUri,
-            code: data.code,
-          });
+        // Re-check attempt id after async boundary to prevent stale token applying
+        if (currentAttempt !== authAttemptRef.current) {
+          console.warn(
+            "Discarding token from stale auth attempt (attempt id changed)",
+          );
+          toast.warning(
+            "Discarded token from an outdated authentication attempt.",
+          );
+          return;
+        }
 
-          // Re-check attempt id after async boundary to prevent stale token applying
-          if (currentAttempt !== authAttemptRef.current) {
-            console.warn(
-              "Discarding token from stale auth attempt (attempt id changed)",
-            );
-            toast.warning(
-              "Discarded token from an outdated authentication attempt.",
-            );
-            return;
-          }
-
-          if (!tokenExchangeResult.success || !tokenExchangeResult.token) {
-            throw new Error(
-              tokenExchangeResult.error || "Failed to exchange token",
-            );
-          }
-
-          const tokenResponse = tokenExchangeResult.token;
-
-          // Now TypeScript knows tokenResponse is defined
-          console.log("Token received:", {
-            expires_in: tokenResponse.expires_in,
-            token_type: tokenResponse.token_type,
-            token_length: tokenResponse.access_token.length,
-            token_start: tokenResponse.access_token.substring(0, 5) + "...",
-          });
-
-          setStatusMessage("Token received! Fetching user profile...");
-
-          // Temporarily update the auth state with token (without user info yet)
-          setAuthState((prevState) => ({
-            ...prevState,
-            isAuthenticated: true,
-            accessToken: tokenResponse.access_token,
-            expiresAt: Date.now() + tokenResponse.expires_in * 1000,
-          }));
-
-          // Fetch user profile data from AniList
-          try {
-            const userProfile = await fetchUserProfile(
-              tokenResponse.access_token,
-            );
-
-            if (userProfile && userProfile.data && userProfile.data.Viewer) {
-              const viewer = userProfile.data.Viewer;
-
-              // Update auth state with user profile data
-              setAuthState((prevState) => ({
-                ...prevState,
-                username: viewer.name,
-                userId: viewer.id,
-                avatarUrl:
-                  viewer.avatar?.large ||
-                  viewer.avatar?.medium ||
-                  "https://s4.anilist.co/file/anilistcdn/user/avatar/large/default.png",
-              }));
-
-              setStatusMessage("Authentication complete!");
-            } else {
-              console.warn("User profile data incomplete:", userProfile);
-              throw new Error("Failed to retrieve user profile");
-            }
-          } catch (profileError) {
-            console.error("Profile fetch error:", profileError);
-
-            // Still authenticated but with limited info - use defaults
-            setAuthState((prevState) => ({
-              ...prevState,
-              username: "AniList User",
-              avatarUrl:
-                "https://s4.anilist.co/file/anilistcdn/user/avatar/large/default.png",
-            }));
-
-            setStatusMessage("Authentication complete (limited profile info)");
-          }
-
-          // Clear any errors
-          setError(null);
-        } catch (tokenError) {
-          console.error("Token exchange error:", tokenError);
+        if (!tokenExchangeResult.success || !tokenExchangeResult.token) {
           throw new Error(
-            tokenError instanceof Error
-              ? `Failed to exchange code for token: ${tokenError.message}`
-              : "Failed to exchange code for token",
+            tokenExchangeResult.error || "Failed to exchange token",
           );
         }
 
+        const tokenResponse = tokenExchangeResult.token;
+        console.log("Token received:", {
+          expires_in: tokenResponse.expires_in,
+          token_type: tokenResponse.token_type,
+          token_length: tokenResponse.access_token.length,
+          token_start: tokenResponse.access_token.substring(0, 5) + "...",
+        });
+
+        setStatusMessage("Token received! Fetching user profile...");
+
+        // Temporarily update the auth state with token (without user info yet)
+        setAuthState((prevState) => ({
+          ...prevState,
+          isAuthenticated: true,
+          accessToken: tokenResponse.access_token,
+          expiresAt: Date.now() + tokenResponse.expires_in * 1000,
+        }));
+
+        // Fetch user profile data from AniList
+        await handleUserProfile(tokenResponse.access_token);
+
+        // Clear any errors
+        setError(null);
         setIsLoading(false);
         // Clear credential lock after flow completes
         lockedCredentialSourceRef.current = null;
@@ -454,18 +441,31 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return await response.json();
   };
 
-  // Create the context value
-  const contextValue: AuthContextType = {
-    authState,
-    login,
-    logout,
-    isLoading,
-    error,
-    statusMessage,
-    setCredentialSource,
-    updateCustomCredentials,
-    customCredentials,
-  };
+  // Create the context value, memoized to avoid unnecessary re-renders
+  const contextValue: AuthContextType = React.useMemo(
+    () => ({
+      authState,
+      login,
+      logout,
+      isLoading,
+      error,
+      statusMessage,
+      setCredentialSource,
+      updateCustomCredentials,
+      customCredentials,
+    }),
+    [
+      authState,
+      login,
+      logout,
+      isLoading,
+      error,
+      statusMessage,
+      setCredentialSource,
+      updateCustomCredentials,
+      customCredentials,
+    ],
+  );
 
   return (
     <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>

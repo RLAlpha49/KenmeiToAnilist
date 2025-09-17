@@ -16,9 +16,9 @@ import { Footer } from "./Footer";
  */
 export default function BaseLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <div className="bg-background text-foreground flex h-screen flex-col">
       <Header />
