@@ -914,53 +914,37 @@ async function getAuthenticatedUserID(
 }
 
 /**
- * Interface for MediaListCollection response structure
+ * Interface for a single media list entry
+ */
+interface MediaListEntry {
+  id: number;
+  mediaId: number;
+  status: string;
+  progress: number;
+  score: number;
+  private: boolean;
+  media: AniListManga;
+}
+
+/**
+ * Interface for media list collection structure
+ */
+interface MediaListCollection {
+  lists: Array<{
+    name: string;
+    entries: Array<MediaListEntry>;
+  }>;
+}
+
+/**
+ * Interface for MediaListCollection response structure with potential nesting
  */
 interface MediaListCollectionResponse {
-  MediaListCollection?: {
-    lists: Array<{
-      name: string;
-      entries: Array<{
-        id: number;
-        mediaId: number;
-        status: string;
-        progress: number;
-        score: number;
-        private: boolean;
-        media: AniListManga;
-      }>;
-    }>;
-  };
+  MediaListCollection?: MediaListCollection;
   data?: {
-    MediaListCollection?: {
-      lists: Array<{
-        name: string;
-        entries: Array<{
-          id: number;
-          mediaId: number;
-          status: string;
-          progress: number;
-          score: number;
-          private: boolean;
-          media: AniListManga;
-        }>;
-      }>;
-    };
+    MediaListCollection?: MediaListCollection;
     data?: {
-      MediaListCollection?: {
-        lists: Array<{
-          name: string;
-          entries: Array<{
-            id: number;
-            mediaId: number;
-            status: string;
-            progress: number;
-            score: number;
-            private: boolean;
-            media: AniListManga;
-          }>;
-        }>;
-      };
+      MediaListCollection?: MediaListCollection;
     };
   };
 }
@@ -973,7 +957,7 @@ interface MediaListCollectionResponse {
  */
 function extractMediaListCollection(
   response: MediaListCollectionResponse,
-): MediaListCollectionResponse["MediaListCollection"] | null {
+): MediaListCollection | null {
   if (response?.data?.MediaListCollection) {
     return response.data.MediaListCollection;
   } else if (response?.data?.data?.MediaListCollection) {
@@ -1164,20 +1148,7 @@ async function fetchCompleteUserMediaList(
  * Returns the number of entries processed
  */
 function processMediaListCollectionChunk(
-  mediaListCollection: {
-    lists: Array<{
-      name: string;
-      entries: Array<{
-        id: number;
-        mediaId: number;
-        status: string;
-        progress: number;
-        score: number;
-        private: boolean;
-        media: AniListManga;
-      }>;
-    }>;
-  },
+  mediaListCollection: MediaListCollection,
   mediaMap: UserMediaList,
 ): number {
   let entriesProcessed = 0;
