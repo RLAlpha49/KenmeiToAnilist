@@ -745,7 +745,7 @@ async function startAuthServer(
           "auth:status",
           `Auth server error: ${err instanceof Error ? err.message : "Unknown error"}`,
         );
-        reject(err);
+        reject(err instanceof Error ? err : new Error(String(err)));
       });
     } catch (err) {
       console.error("Failed to create auth server:", err);
