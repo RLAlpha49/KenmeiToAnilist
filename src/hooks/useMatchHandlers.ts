@@ -142,38 +142,45 @@ export const useMatchHandlers = (
   );
 
   /**
-   * Handles accepting a match or batch of matches, updating their status to "matched".
+   * Handles updating a match or batch of matches with a new status.
    *
-   * @param match - The match result or batch operation object to accept.
+   * @param match - The match result or batch operation object to update.
+   * @param newStatus - The new status to set.
+   * @param actionName - The name of the action for logging purposes.
+   * @param getSelectedMatch - Function to determine the selected match based on the operation.
    * @source
    */
-  const handleAcceptMatch = useCallback(
+  const handleMatchStatusUpdate = useCallback(
     (
       match:
         | MangaMatchResult
         | { isBatchOperation: boolean; matches: MangaMatchResult[] },
+      newStatus: "matched" | "skipped",
+      actionName: string,
+      getSelectedMatch: (match: MangaMatchResult) => AniListManga | undefined,
     ) => {
       // Check if this is a batch operation
       if ("isBatchOperation" in match && match.isBatchOperation) {
         console.log(
-          `Processing batch accept operation for ${match.matches.length} matches`,
+          `Processing batch ${actionName} operation for ${match.matches.length} matches`,
         );
 
         // For batch operations, we simply replace the entire match results array
-        // with the new one that already has the matched statuses applied
+        // with the new one that already has the statuses applied
         updateMatchResults(match.matches);
         return;
       }
 
-      // Regular single match processing (existing code)
-      console.log("handleAcceptMatch called with match:", match);
+      // Regular single match processing
+      console.log(`handle${actionName} called with match:`, match);
 
       // Find the match
       const index = findMatchIndex(match as MangaMatchResult);
       if (index === -1) return;
 
+      const singleMatch = match as MangaMatchResult;
       console.log(
-        `Accepting match for ${(match as MangaMatchResult).kenmeiManga.title}, current status: ${(match as MangaMatchResult).status}`,
+        `${actionName === "Accept" ? "Accepting" : "Skipping"} match for ${singleMatch.kenmeiManga.title}, current status: ${singleMatch.status}`,
       );
 
       // Create a copy of the results and update the status
@@ -181,9 +188,9 @@ export const useMatchHandlers = (
 
       // Create a new object reference to ensure React detects the change
       const updatedMatch = {
-        ...(match as MangaMatchResult),
-        status: "matched" as const,
-        selectedMatch: (match as MangaMatchResult).anilistMatches?.[0]?.manga,
+        ...singleMatch,
+        status: newStatus,
+        selectedMatch: getSelectedMatch(singleMatch),
         matchDate: new Date(),
       };
 
@@ -200,6 +207,28 @@ export const useMatchHandlers = (
   );
 
   /**
+   * Handles accepting a match or batch of matches, updating their status to "matched".
+   *
+   * @param match - The match result or batch operation object to accept.
+   * @source
+   */
+  const handleAcceptMatch = useCallback(
+    (
+      match:
+        | MangaMatchResult
+        | { isBatchOperation: boolean; matches: MangaMatchResult[] },
+    ) => {
+      handleMatchStatusUpdate(
+        match,
+        "matched",
+        "Accept",
+        (singleMatch) => singleMatch.anilistMatches?.[0]?.manga,
+      );
+    },
+    [handleMatchStatusUpdate],
+  );
+
+  /**
    * Handles rejecting/skipping a match or batch of matches, updating their status to "skipped".
    *
    * @param match - The match result or batch operation object to reject.
@@ -211,50 +240,9 @@ export const useMatchHandlers = (
         | MangaMatchResult
         | { isBatchOperation: boolean; matches: MangaMatchResult[] },
     ) => {
-      // Check if this is a batch operation
-      if ("isBatchOperation" in match && match.isBatchOperation) {
-        console.log(
-          `Processing batch reject operation for ${match.matches.length} matches`,
-        );
-
-        // For batch operations, we simply replace the entire match results array
-        // with the new one that already has the skipped statuses applied
-        updateMatchResults(match.matches);
-        return;
-      }
-
-      // Regular single match processing (existing code)
-      console.log("handleRejectMatch called with match:", match);
-
-      // Find the match
-      const index = findMatchIndex(match as MangaMatchResult);
-      if (index === -1) return;
-
-      console.log(
-        `Skipping match for ${(match as MangaMatchResult).kenmeiManga.title}, current status: ${(match as MangaMatchResult).status}`,
-      );
-
-      // Create a copy of the results and update the status
-      const updatedResults = [...matchResults];
-
-      // Create a new object reference to ensure React detects the change
-      const updatedMatch = {
-        ...(match as MangaMatchResult),
-        status: "skipped" as const,
-        selectedMatch: undefined,
-        matchDate: new Date(),
-      };
-
-      // Update the array with the new object
-      updatedResults[index] = updatedMatch;
-
-      console.log(
-        `Updated match status to: ${updatedMatch.status}, title: ${updatedMatch.kenmeiManga.title}`,
-      );
-
-      updateMatchResults(updatedResults);
+      handleMatchStatusUpdate(match, "skipped", "Reject", () => undefined);
     },
-    [findMatchIndex, matchResults, updateMatchResults],
+    [handleMatchStatusUpdate],
   );
 
   /**
