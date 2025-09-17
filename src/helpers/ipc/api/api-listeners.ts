@@ -96,6 +96,34 @@ async function handleRequestTiming(): Promise<void> {
 }
 
 /**
+ * Safely extract search term from variables for logging purposes.
+ * @internal
+ */
+function getSearchTermFromVariables(
+  variables: Record<string, unknown> | undefined,
+): string {
+  if (!variables || typeof variables.search === "undefined") {
+    return "request";
+  }
+
+  const search = variables.search;
+  if (typeof search === "string") {
+    return search;
+  }
+
+  if (
+    search !== null &&
+    typeof search === "object" &&
+    "toString" in search &&
+    typeof search.toString === "function"
+  ) {
+    return search.toString();
+  }
+
+  return String(search);
+}
+
+/**
  * Handle 429 rate limit response with retry logic.
  * @internal
  */
@@ -133,10 +161,7 @@ async function handleRateLimitResponse(
   }
 
   rateLimitResetTime = Date.now() + waitTime;
-  const searchTerm =
-    variables && typeof variables.search !== "undefined"
-      ? (variables.search?.toString?.() ?? String(variables.search))
-      : "request";
+  const searchTerm = getSearchTermFromVariables(variables);
   console.log(
     `Rate limited for "${searchTerm}", waiting ${Math.round(waitTime / 1000)}s before retry #${retryCount + 1}`,
   );
@@ -170,10 +195,7 @@ async function handleServerError(
   }
 
   const waitTime = 3000 * Math.pow(2, retryCount);
-  const searchTerm =
-    variables && typeof variables.search !== "undefined"
-      ? (variables.search?.toString?.() ?? String(variables.search))
-      : "request";
+  const searchTerm = getSearchTermFromVariables(variables);
   console.log(
     `Server error ${response.status} for "${searchTerm}", waiting ${Math.round(waitTime / 1000)}s before retry #${retryCount + 1}`,
   );
