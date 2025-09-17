@@ -7,6 +7,33 @@
 import { SyncReport } from "../api/anilist/sync-service";
 
 /**
+ * Helper to export a JSON object as a file with a generated filename.
+ *
+ * @param data - The data to export as JSON.
+ * @param filenamePrefix - The prefix for the filename.
+ * @param timestamp - The timestamp to use for the filename.
+ */
+function exportJsonFile(data: unknown, filenamePrefix: string, timestamp: Date | string): void {
+  try {
+    const jsonContent = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonContent], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const date = new Date(timestamp);
+    const dateStr = date.toISOString().split("T")[0];
+    link.download = `${filenamePrefix}-${dateStr}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error(`Failed to export ${filenamePrefix} file:`, error);
+  }
+}
+
+
+/**
  * Exports sync error logs to a JSON file.
  *
  * @param report - The sync report containing errors to export.
@@ -23,45 +50,15 @@ export function exportSyncErrorLog(report: SyncReport): void {
     console.warn("No errors to export");
     return;
   }
-
-  try {
-    // Create a formatted error log with timestamp
-    const errorLog = {
-      timestamp: report.timestamp,
-      totalEntries: report.totalEntries,
-      successfulUpdates: report.successfulUpdates,
-      failedUpdates: report.failedUpdates,
-      errors: report.errors,
-    };
-
-    // Convert to JSON string with pretty formatting
-    const jsonContent = JSON.stringify(errorLog, null, 2);
-
-    // Create blob and URL
-    const blob = new Blob([jsonContent], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-
-    // Create element to trigger download
-    const link = document.createElement("a");
-    link.href = url;
-
-    // Generate filename with date
-    const date = new Date(report.timestamp);
-    const dateStr = date.toISOString().split("T")[0]; // YYYY-MM-DD format
-    link.download = `anilist-sync-errors-${dateStr}.json`;
-
-    // Trigger download
-    document.body.appendChild(link);
-    link.click();
-
-    // Clean up
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    console.log("Error log exported successfully");
-  } catch (error) {
-    console.error("Failed to export error log:", error);
-  }
+  const errorLog = {
+    timestamp: report.timestamp,
+    totalEntries: report.totalEntries,
+    successfulUpdates: report.successfulUpdates,
+    failedUpdates: report.failedUpdates,
+    errors: report.errors,
+  };
+  exportJsonFile(errorLog, "anilist-sync-errors", report.timestamp);
+  console.log("Error log exported successfully");
 }
 
 /**
@@ -81,36 +78,8 @@ export function exportSyncReport(report: SyncReport): void {
     console.warn("No report to export");
     return;
   }
-
-  try {
-    // Convert to JSON string with pretty formatting
-    const jsonContent = JSON.stringify(report, null, 2);
-
-    // Create blob and URL
-    const blob = new Blob([jsonContent], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-
-    // Create element to trigger download
-    const link = document.createElement("a");
-    link.href = url;
-
-    // Generate filename with date
-    const date = new Date(report.timestamp);
-    const dateStr = date.toISOString().split("T")[0]; // YYYY-MM-DD format
-    link.download = `anilist-sync-report-${dateStr}.json`;
-
-    // Trigger download
-    document.body.appendChild(link);
-    link.click();
-
-    // Clean up
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    console.log("Sync report exported successfully");
-  } catch (error) {
-    console.error("Failed to export sync report:", error);
-  }
+  exportJsonFile(report, "anilist-sync-report", report.timestamp);
+  console.log("Sync report exported successfully");
 }
 
 /**
