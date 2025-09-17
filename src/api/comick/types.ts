@@ -1,4 +1,39 @@
 /**
+ * Shared subtypes for Comick API types
+ */
+export interface MdTitle {
+  title: string;
+  lang: string;
+}
+
+export interface ComicRef {
+  id: string;
+  title: string;
+  slug: string;
+}
+
+export interface PersonRef {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+export interface GenreRef {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+export interface ComickLinks {
+  al?: string; // AniList ID
+  ap?: string; // AnimePlanet
+  kt?: string; // Kitsu
+  mb?: string; // MangaBuddy
+  mu?: string; // MangaUpdates
+  mal?: string; // MyAnimeList
+  [key: string]: string | undefined; // Allow for other site keys
+}
+/**
  * @packageDocumentation
  * @module comick-types
  * @description Comick API type definitions for manga search and AniList link extraction.
@@ -22,15 +57,8 @@ export interface ComickManga {
   user_follow_count?: number;
   content_rating?: string;
   demographic?: number;
-  md_titles?: Array<{
-    title: string;
-    lang: string;
-  }>;
-  md_comics?: {
-    id: string;
-    title: string;
-    slug: string;
-  };
+  md_titles?: MdTitle[];
+  md_comics?: ComicRef;
   highlight?: string;
 }
 
@@ -64,44 +92,13 @@ export interface ComickMangaDetail {
     demographic?: number;
     hentai?: boolean;
     content_rating?: string;
-    mu_comics?: {
-      id: string;
-      title: string;
-      slug: string;
-    };
-    md_comics?: {
-      id: string;
-      title: string;
-      slug: string;
-    };
-    authors?: Array<{
-      id: string;
-      name: string;
-      slug: string;
-    }>;
-    artists?: Array<{
-      id: string;
-      name: string;
-      slug: string;
-    }>;
-    genres?: Array<{
-      id: string;
-      name: string;
-      slug: string;
-    }>;
-    md_titles?: Array<{
-      title: string;
-      lang: string;
-    }>;
-    links?: {
-      al?: string; // AniList ID
-      ap?: string; // AnimePlanet
-      kt?: string; // Kitsu
-      mb?: string; // MangaBuddy
-      mu?: string; // MangaUpdates
-      mal?: string; // MyAnimeList
-      [key: string]: string | undefined; // Allow for other site keys
-    };
+    mu_comics?: ComicRef;
+    md_comics?: ComicRef;
+    authors?: PersonRef[];
+    artists?: PersonRef[];
+    genres?: GenreRef[];
+    md_titles?: MdTitle[];
+    links?: ComickLinks;
   };
   langList?: string[];
 }
@@ -172,7 +169,6 @@ export interface EnhancedAniListManga {
     private: boolean;
   } | null;
   isAdult?: boolean;
-  // Enhanced fields for Comick integration
   comickSource?: {
     title: string;
     slug: string;

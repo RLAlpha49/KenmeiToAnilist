@@ -13,7 +13,11 @@ import { SyncReport } from "../api/anilist/sync-service";
  * @param filenamePrefix - The prefix for the filename.
  * @param timestamp - The timestamp to use for the filename.
  */
-function exportJsonFile(data: unknown, filenamePrefix: string, timestamp: Date | string): void {
+function exportJsonFile(
+  data: unknown,
+  filenamePrefix: string,
+  timestamp: Date | string,
+): void {
   try {
     const jsonContent = JSON.stringify(data, null, 2);
     const blob = new Blob([jsonContent], { type: "application/json" });
@@ -31,7 +35,6 @@ function exportJsonFile(data: unknown, filenamePrefix: string, timestamp: Date |
     console.error(`Failed to export ${filenamePrefix} file:`, error);
   }
 }
-
 
 /**
  * Exports sync error logs to a JSON file.
