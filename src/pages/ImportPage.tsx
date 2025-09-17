@@ -193,10 +193,10 @@ export function ImportPage() {
       )}
 
       {(() => {
-        if (importSuccess) {
+        if (importSuccess && importData) {
           return (
             <ImportSuccessContent
-              importData={importData!}
+              importData={importData}
               progress={progress}
             />
           );
