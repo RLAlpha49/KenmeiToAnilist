@@ -225,7 +225,7 @@ async function processHttpError(
   // Check for rate limiting
   if (response.status === 429) {
     const retryAfter = response.headers.get("Retry-After");
-    const retrySeconds = retryAfter ? parseInt(retryAfter, 10) : 60;
+    const retrySeconds = retryAfter ? Number.parseInt(retryAfter, 10) : 60;
 
     // Notify the application about rate limiting through a custom event
     try {
@@ -321,7 +321,7 @@ export async function request<T>(
   const requestId = Math.random().toString(36).substring(2, 8);
 
   // Check if we're running in a browser or Electron environment
-  const isElectron = typeof window !== "undefined" && globalThis.electronAPI;
+  const isElectron = typeof globalThis.window !== "undefined" && globalThis.electronAPI;
 
   // Route request to appropriate handler
   if (isElectron) {
@@ -771,7 +771,7 @@ function checkRateLimitInMessage(errorObj: { message?: string }): Error | null {
   let retrySeconds = 60;
   const retryMatch = RegExp(/retry after (\d+)/i).exec(errorObj.message);
   if (retryMatch?.[1]) {
-    retrySeconds = parseInt(retryMatch[1], 10);
+    retrySeconds = Number.parseInt(retryMatch[1], 10);
   }
 
   console.warn(

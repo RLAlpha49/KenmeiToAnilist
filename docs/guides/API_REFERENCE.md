@@ -448,7 +448,7 @@ interface RateLimitHeaders {
 async function handleRateLimit(response: Response): Promise<void> {
   if (response.status === 429) {
     const resetTime = response.headers.get("x-ratelimit-reset");
-    const delay = resetTime ? parseInt(resetTime) * 1000 - Date.now() : 60000;
+    const delay = resetTime ? Number.parseInt(resetTime) * 1000 - Date.now() : 60000;
 
     console.log(`Rate limited. Waiting ${delay}ms before retry...`);
     await new Promise((resolve) => setTimeout(resolve, delay));
@@ -532,7 +532,7 @@ async function request<T>(
     if (response.status === 429) {
       // Handle rate limiting
       const resetTime = response.headers.get("x-ratelimit-reset");
-      const retryAfter = resetTime ? parseInt(resetTime, 10) - Math.floor(Date.now() / 1000) : 60;
+      const retryAfter = resetTime ? Number.parseInt(resetTime, 10) - Math.floor(Date.now() / 1000) : 60;
       
       throw {
         message: "Rate limit exceeded",

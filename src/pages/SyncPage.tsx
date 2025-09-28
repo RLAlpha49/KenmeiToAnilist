@@ -1395,7 +1395,9 @@ export function SyncPage() {
                                     placeholder="Enter days"
                                     value={syncConfig.autoPauseThreshold.toString()}
                                     onChange={(e) => {
-                                      const value = parseInt(e.target.value);
+                                      const value = Number.parseInt(
+                                        e.target.value,
+                                      );
                                       if (!isNaN(value) && value > 0) {
                                         setSyncConfig((prev) => {
                                           const newConfig = {

@@ -462,7 +462,7 @@ export function getStatusCountsFromData(
 export function getSavedMatchResults(): MatchResult[] | null {
   try {
     // Check cache version compatibility
-    const savedVersion = parseInt(
+    const savedVersion = Number.parseInt(
       storage.getItem(STORAGE_KEYS.CACHE_VERSION) || "0",
       10,
     );

@@ -276,7 +276,7 @@ export class MangaDexClient extends BaseMangaSourceClient<
       }
 
       // Convert to number
-      const parsedAnilistId = parseInt(anilistId, 10);
+      const parsedAnilistId = Number.parseInt(anilistId, 10);
 
       if (isNaN(parsedAnilistId)) {
         console.log(

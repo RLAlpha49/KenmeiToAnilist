@@ -290,7 +290,7 @@ The storage system includes cache versioning for handling data structure changes
 export const CURRENT_CACHE_VERSION = 1;
 
 // Version checking ensures compatibility
-const version = parseInt(storage.getItem(STORAGE_KEYS.CACHE_VERSION) || "0");
+const version = Number.parseInt(storage.getItem(STORAGE_KEYS.CACHE_VERSION) || "0");
 if (version < CURRENT_CACHE_VERSION) {
   // Handle migration
 }

@@ -734,7 +734,7 @@ async function startAuthServer(
       });
 
       // Start the server
-      authServer.listen(parseInt(port), "localhost", () => {
+      authServer.listen(Number.parseInt(port), "localhost", () => {
         console.log(
           `Auth server started on port ${port}, waiting for callback at ${normalizedCallbackPath}`,
         );

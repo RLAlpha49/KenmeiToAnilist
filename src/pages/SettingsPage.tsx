@@ -1345,7 +1345,7 @@ export function SettingsPage() {
                               syncConfig.autoPauseThreshold
                             }
                             onChange={(e) => {
-                              const value = parseInt(e.target.value);
+                              const value = Number.parseInt(e.target.value);
                               if (!isNaN(value) && value > 0) {
                                 const newConfig = {
                                   ...syncConfig,

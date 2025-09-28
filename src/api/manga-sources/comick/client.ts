@@ -173,7 +173,7 @@ export class ComickClient extends BaseMangaSourceClient<
       return null;
     }
 
-    const parsedAnilistId = parseInt(anilistId, 10);
+    const parsedAnilistId = Number.parseInt(anilistId, 10);
     return isNaN(parsedAnilistId) ? null : parsedAnilistId;
   }
 }

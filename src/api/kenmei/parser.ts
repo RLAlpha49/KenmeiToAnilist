@@ -308,7 +308,7 @@ function parseIntSafe(value: string | undefined): number | undefined {
   // Remove any non-numeric characters except decimal point
   const cleanValue = value.replace(/[^\d.]/g, "");
   if (!cleanValue) return undefined;
-  const parsed = parseInt(cleanValue, 10);
+  const parsed = Number.parseInt(cleanValue, 10);
   return isNaN(parsed) ? undefined : parsed;
 }
 
@@ -386,7 +386,7 @@ function createMangaEntry(
 
   // Convert to proper types
   return {
-    id: parseInt(entry.id || "0"),
+    id: Number.parseInt(entry.id || "0"),
     title: entry.title,
     status: validateStatus(fieldValues.statusValue),
     score: fieldValues.scoreValue ? parseFloat(fieldValues.scoreValue) : 0,
@@ -394,11 +394,11 @@ function createMangaEntry(
     cover_url: entry.cover_url,
     chapters_read: chaptersRead ?? 0,
     total_chapters: entry.total_chapters
-      ? parseInt(entry.total_chapters)
+      ? Number.parseInt(entry.total_chapters)
       : undefined,
     volumes_read: volumesRead,
     total_volumes: entry.total_volumes
-      ? parseInt(entry.total_volumes)
+      ? Number.parseInt(entry.total_volumes)
       : undefined,
     notes: fieldValues.notesValue || "",
     last_read_at: fieldValues.lastReadAt,

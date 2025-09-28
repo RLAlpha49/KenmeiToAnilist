@@ -152,7 +152,7 @@ export function MangaSearchPanel({
   // Check if query is a valid AniList ID
   const isValidAniListId = (query: string) => {
     const isNumericId = /^\d+$/.test(query.trim());
-    const mangaId = isNumericId ? parseInt(query.trim(), 10) : null;
+    const mangaId = isNumericId ? Number.parseInt(query.trim(), 10) : null;
     return mangaId && mangaId > 0 && mangaId < 10000000 ? mangaId : null;
   };
 

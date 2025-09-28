@@ -1,6 +1,6 @@
 // @ts-check
-const fs = require("fs");
-const path = require("path");
+const fs = require("node:fs");
+const path = require("node:path");
 const { FuseVersion, FuseV1Options } = require("@electron/fuses");
 
 // Read package.json without using imports
