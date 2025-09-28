@@ -89,7 +89,7 @@ function initializeMangaService(): void {
 
           if (search && results && Array.isArray(results)) {
             // Add each individual manga to our manga cache
-            results.forEach((manga: AniListManga) => {
+            for (const manga of results) {
               if (manga.title) {
                 // Cache by romaji title
                 if (manga.title.romaji) {
@@ -109,7 +109,7 @@ function initializeMangaService(): void {
                   };
                 }
               }
-            });
+            }
 
             // Save the updated cache
             saveCache();
@@ -153,7 +153,7 @@ function processMangaCache(cachedMangaData: string): number {
     let loadedCount = 0;
 
     // Merge with our in-memory cache and filter out Light Novels
-    Object.keys(parsedCache).forEach((key) => {
+    for (const key of Object.keys(parsedCache)) {
       if (
         !mangaCache[key] ||
         parsedCache[key].timestamp > mangaCache[key].timestamp
@@ -170,7 +170,7 @@ function processMangaCache(cachedMangaData: string): number {
         };
         loadedCount++;
       }
-    });
+    }
 
     console.log(
       `Loaded ${Object.keys(parsedCache).length} cached manga from localStorage`,
@@ -205,8 +205,8 @@ function processSearchCacheEntry(searchEntry: {
   const media = searchEntry.data.Page.media;
 
   // Generate a proper cache key for each manga title
-  media.forEach((manga: AniListManga) => {
-    if (!manga.title?.romaji) return;
+  for (const manga of media) {
+    if (!manga.title?.romaji) continue;
 
     const mangaKey = generateCacheKey(manga.title.romaji);
 
@@ -236,7 +236,7 @@ function processSearchCacheEntry(searchEntry: {
         importedCount++;
       }
     }
-  });
+  }
 
   return importedCount;
 }
@@ -251,10 +251,10 @@ function processSearchCache(cachedSearchData: string): void {
     let totalImportedCount = 0;
 
     // Extract manga from search results and add to manga cache
-    Object.keys(parsedSearchCache).forEach((key) => {
+    for (const key of Object.keys(parsedSearchCache)) {
       const searchEntry = parsedSearchCache[key];
       totalImportedCount += processSearchCacheEntry(searchEntry);
-    });
+    }
 
     if (totalImportedCount > 0) {
       console.log(
@@ -681,11 +681,11 @@ function collectMangaTitles(manga: AniListManga): string[] {
     titles.push(manga.title.native);
   }
   if (manga.synonyms && Array.isArray(manga.synonyms)) {
-    manga.synonyms.forEach((synonym) => {
+    for (const synonym of manga.synonyms) {
       if (synonym) {
         titles.push(synonym);
       }
-    });
+    }
   }
 
   return titles;
@@ -721,14 +721,14 @@ function createNormalizedTitles(
   }
 
   if (manga.synonyms && Array.isArray(manga.synonyms)) {
-    manga.synonyms.forEach((synonym, index) => {
+    for (const [index, synonym] of manga.synonyms.entries()) {
       if (synonym) {
         allTitles.push({
           text: normalizeForMatching(processTitle(synonym)),
           source: `synonym_${index}`,
         });
       }
-    });
+    }
   }
 
   return allTitles;
@@ -2653,15 +2653,15 @@ function mergeSourceResults(
   const finalMangaDexSourceMap = new Map(mangaDexSourceMap);
 
   // Add original results first
-  originalResults.forEach((manga) => {
+  for (const manga of originalResults) {
     if (!seenIds.has(manga.id)) {
       seenIds.add(manga.id);
       mergedResults.push(manga);
     }
-  });
+  }
 
   // Add Comick results, checking for duplicates
-  comickResults.forEach((manga) => {
+  for (const manga of comickResults) {
     if (!seenIds.has(manga.id)) {
       seenIds.add(manga.id);
       mergedResults.push(manga);
@@ -2671,10 +2671,10 @@ function mergeSourceResults(
         `🔄 Found duplicate manga ID ${manga.id} from Comick, keeping source info`,
       );
     }
-  });
+  }
 
   // Add MangaDex results, checking for duplicates
-  mangaDexResults.forEach((manga) => {
+  for (const manga of mangaDexResults) {
     if (!seenIds.has(manga.id)) {
       seenIds.add(manga.id);
       mergedResults.push(manga);
@@ -2684,7 +2684,7 @@ function mergeSourceResults(
         `🔄 Found duplicate manga ID ${manga.id} from MangaDex, keeping source info`,
       );
     }
-  });
+  }
 
   console.log(
     `🔗 Merged results: ${originalResults.length} original + ${comickResults.length} Comick + ${mangaDexResults.length} MangaDex = ${mergedResults.length} unique results`,
@@ -3052,14 +3052,14 @@ function categorizeMangaForBatching(
     );
 
     // Put all manga in the uncached list
-    mangaList.forEach((manga, index) => {
+    for (const [index, manga] of mangaList.entries()) {
       uncachedManga.push({ index, manga });
-    });
+    }
   } else {
     console.log(`Checking cache for ${mangaList.length} manga titles...`);
 
     // Check cache for all manga first
-    mangaList.forEach((manga, index) => {
+    for (const [index, manga] of mangaList.entries()) {
       const cacheKey = generateCacheKey(manga.title);
 
       // If manga has a known AniList ID, we can batch fetch it
@@ -3079,7 +3079,7 @@ function categorizeMangaForBatching(
         // This manga needs to be fetched by search
         uncachedManga.push({ index, manga });
       }
-    });
+    }
 
     console.log(
       `Found ${Object.keys(cachedResults).length} cached manga, ${knownMangaIds.length} have known IDs, ${uncachedManga.length} require searching`,
@@ -3153,10 +3153,12 @@ async function processKnownMangaIds(
 
   // Create a map of ID to manga for easier lookup
   const mangaMap = new Map<number, AniListManga>();
-  batchedManga.forEach((manga) => mangaMap.set(manga.id, manga));
+  for (const manga of batchedManga) {
+    mangaMap.set(manga.id, manga);
+  }
 
   // Store the results in cachedResults by their original index
-  knownMangaIds.forEach((item) => {
+  for (const item of knownMangaIds) {
     const manga = mangaMap.get(item.id);
     if (manga) {
       cachedResults[item.index] = [manga]; // Store as array of one manga for consistency
@@ -3179,7 +3181,7 @@ async function processKnownMangaIds(
         manga: mangaList[item.index],
       });
     }
-  });
+  }
 }
 
 /**
@@ -3334,11 +3336,11 @@ async function processUncachedManga(
         foundViaComick: boolean;
       }
     >();
-    searchResponse.matches.forEach((match) => {
+    for (const match of searchResponse.matches) {
       if (match.comickSource) {
         comickSourceMap.set(match.manga.id, match.comickSource);
       }
-    });
+    }
     cachedComickSources[index] = comickSourceMap;
   };
 
@@ -3838,9 +3840,9 @@ export async function preloadCommonManga(
  * @source
  */
 export function clearMangaCache(): void {
-  Object.keys(mangaCache).forEach((key) => {
+  for (const key of Object.keys(mangaCache)) {
     delete mangaCache[key];
-  });
+  }
 }
 
 /**
@@ -3871,7 +3873,7 @@ export function getCacheStats(): {
   let oldestTimestamp = Date.now();
   let newestTimestamp = 0;
 
-  keys.forEach((key) => {
+  for (const key of keys) {
     const entry = mangaCache[key];
     totalEntries += entry.manga.length;
 
@@ -3882,7 +3884,7 @@ export function getCacheStats(): {
     if (entry.timestamp > newestTimestamp) {
       newestTimestamp = entry.timestamp;
     }
-  });
+  }
 
   return {
     size: keys.length,
@@ -4037,8 +4039,8 @@ export const cacheDebugger = {
     const keysToRemove: string[] = [];
 
     // Look for entries that may be this exact manga but stored under a different title variant
-    Object.keys(mangaCache).forEach((key) => {
-      if (key === mainKey) return; // Skip the main key we already handled
+    for (const key of Object.keys(mangaCache)) {
+      if (key === mainKey) continue; // Skip the main key we already handled
 
       // Check if this cache entry is for this specific manga (by exact title match)
       const entries = mangaCache[key].manga;
@@ -4063,13 +4065,13 @@ export const cacheDebugger = {
           break; // No need to check other manga in this entry
         }
       }
-    });
+    }
 
     // Remove the entries outside the loop to avoid concurrent modification
     if (keysToRemove.length > 0) {
-      keysToRemove.forEach((key) => {
+      for (const key of keysToRemove) {
         delete mangaCache[key];
-      });
+      }
       cleared = true;
     }
 
@@ -4094,13 +4096,13 @@ export const cacheDebugger = {
     let notFoundCount = 0;
 
     // Process all titles in a batch
-    titles.forEach((title) => {
+    for (const title of titles) {
       if (this.clearCacheEntryForTitle(title)) {
         entriesCleared++;
       } else {
         notFoundCount++;
       }
-    });
+    }
 
     console.log(
       `Cleared ${entriesCleared} cache entries (${notFoundCount} titles had no existing cache entries)`,
@@ -4110,9 +4112,9 @@ export const cacheDebugger = {
 
   clearAllCaches() {
     // Clear in-memory cache
-    Object.keys(mangaCache).forEach((key) => {
+    for (const key of Object.keys(mangaCache)) {
       delete mangaCache[key];
-    });
+    }
 
     // Clear localStorage caches
     try {

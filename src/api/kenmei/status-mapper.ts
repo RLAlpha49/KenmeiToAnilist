@@ -52,25 +52,25 @@ export function mapAniListToKenmeiStatus(
   const reverseMapping = new Map<MediaListStatus, KenmeiStatus>();
 
   // Populate with default mapping
-  Object.entries(DEFAULT_STATUS_MAPPING).forEach(
-    ([kenmeiStatus, anilistStatus]) => {
-      reverseMapping.set(anilistStatus, kenmeiStatus as KenmeiStatus);
-    },
-  );
+  for (const [kenmeiStatus, anilistStatus] of Object.entries(
+    DEFAULT_STATUS_MAPPING,
+  )) {
+    reverseMapping.set(anilistStatus, kenmeiStatus as KenmeiStatus);
+  }
 
   // Override with custom mapping if provided
   if (customMapping) {
-    Object.entries(customMapping).forEach(([kenmeiStatus, anilistStatus]) => {
+    for (const [kenmeiStatus, anilistStatus] of Object.entries(customMapping)) {
       // Find and remove the default entry for this AniList status
-      [...reverseMapping.entries()].forEach(([key]) => {
+      for (const [key] of reverseMapping.entries()) {
         if (key === anilistStatus) {
           reverseMapping.delete(key);
         }
-      });
+      }
 
       // Add the custom mapping
       reverseMapping.set(anilistStatus, kenmeiStatus as KenmeiStatus);
-    });
+    }
   }
 
   // Find the matching Kenmei status
@@ -93,18 +93,18 @@ export function createCustomStatusMapping(
   const customMapping: Partial<StatusMappingConfig> = {};
 
   // Validate and map preferences to status mapping
-  Object.entries(preferences).forEach(([key, value]) => {
+  for (const [key, value] of Object.entries(preferences)) {
     // Validate Kenmei status
     const kenmeiStatus = validateKenmeiStatus(key);
-    if (!kenmeiStatus) return;
+    if (!kenmeiStatus) continue;
 
     // Validate AniList status
     const anilistStatus = validateAniListStatus(value);
-    if (!anilistStatus) return;
+    if (!anilistStatus) continue;
 
     // Add to custom mapping
     customMapping[kenmeiStatus] = anilistStatus;
-  });
+  }
 
   return customMapping;
 }
@@ -115,23 +115,23 @@ export function createCustomStatusMapping(
  * @returns Valid KenmeiStatus or undefined
  */
 function validateKenmeiStatus(status: string): KenmeiStatus | undefined {
-  const validStatuses: KenmeiStatus[] = [
+  const validStatuses: Set<KenmeiStatus> = new Set([
     "reading",
     "completed",
     "on_hold",
     "dropped",
     "plan_to_read",
-  ];
+  ]);
 
   // Check exact match
-  if (validStatuses.includes(status as KenmeiStatus)) {
+  if (validStatuses.has(status as KenmeiStatus)) {
     return status as KenmeiStatus;
   }
 
   // Try to normalize the status
   const normalized = status.toLowerCase().replace(" ", "_");
 
-  if (validStatuses.includes(normalized as KenmeiStatus)) {
+  if (validStatuses.has(normalized as KenmeiStatus)) {
     return normalized as KenmeiStatus;
   }
 
@@ -152,24 +152,24 @@ function validateKenmeiStatus(status: string): KenmeiStatus | undefined {
  * @returns Valid MediaListStatus or undefined
  */
 function validateAniListStatus(status: string): MediaListStatus | undefined {
-  const validStatuses: MediaListStatus[] = [
+  const validStatuses: Set<MediaListStatus> = new Set([
     "CURRENT",
     "PLANNING",
     "COMPLETED",
     "DROPPED",
     "PAUSED",
     "REPEATING",
-  ];
+  ]);
 
   // Check exact match
-  if (validStatuses.includes(status as MediaListStatus)) {
+  if (validStatuses.has(status as MediaListStatus)) {
     return status as MediaListStatus;
   }
 
   // Try to normalize the status
   const normalized = status.toUpperCase().replace(" ", "_");
 
-  if (validStatuses.includes(normalized as MediaListStatus)) {
+  if (validStatuses.has(normalized as MediaListStatus)) {
     return normalized as MediaListStatus;
   }
 

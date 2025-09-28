@@ -41,7 +41,7 @@ export function parseKenmeiExport(
       }
 
       // Validate each manga entry
-      data.manga.forEach((manga: KenmeiManga, index: number) => {
+      for (const [index, manga] of data.manga.entries()) {
         if (!manga.title) {
           throw new Error(`Manga at index ${index} is missing a title`);
         }
@@ -53,7 +53,7 @@ export function parseKenmeiExport(
         if (typeof manga.chapters_read !== "number") {
           manga.chapters_read = 0;
         }
-      });
+      }
     }
 
     return data as KenmeiExport;
@@ -292,11 +292,12 @@ function createEntryMapping(
   values: string[],
 ): Record<string, string> {
   const entry: Record<string, string> = {};
-  headers.forEach((header, index) => {
+  for (let index = 0; index < headers.length; index++) {
+    const header = headers[index];
     if (index < values.length) {
       entry[header] = values[index];
     }
-  });
+  }
   return entry;
 }
 

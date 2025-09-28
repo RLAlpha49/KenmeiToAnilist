@@ -321,7 +321,7 @@ export async function request<T>(
   const requestId = Math.random().toString(36).substring(2, 8);
 
   // Check if we're running in a browser or Electron environment
-  const isElectron = typeof globalThis.window !== "undefined" && globalThis.electronAPI;
+  const isElectron = globalThis.window !== undefined && globalThis.electronAPI;
 
   // Route request to appropriate handler
   if (isElectron) {
@@ -632,17 +632,17 @@ export async function advancedSearchManga(
 export function clearSearchCache(searchQuery?: string): void {
   if (searchQuery) {
     // Clear specific cache entries
-    Object.keys(searchCache).forEach((key) => {
+    for (const key of Object.keys(searchCache)) {
       if (key.includes(searchQuery.toLowerCase())) {
         delete searchCache[key];
       }
-    });
+    }
     console.log(`Cleared search cache for: ${searchQuery}`);
   } else {
     // Clear all cache
-    Object.keys(searchCache).forEach((key) => {
+    for (const key of Object.keys(searchCache)) {
       delete searchCache[key];
-    });
+    }
     console.log("Cleared all search cache");
   }
 
@@ -769,7 +769,7 @@ function checkRateLimitInMessage(errorObj: { message?: string }): Error | null {
 
   // Try to extract retry time if present
   let retrySeconds = 60;
-  const retryMatch = RegExp(/retry after (\d+)/i).exec(errorObj.message);
+  const retryMatch = new RegExp(/retry after (\d+)/i).exec(errorObj.message);
   if (retryMatch?.[1]) {
     retrySeconds = Number.parseInt(retryMatch[1], 10);
   }
@@ -1159,18 +1159,18 @@ function processMediaListCollectionChunk(
     `Retrieved ${mediaListCollection.lists.length} lists in this chunk`,
   );
 
-  mediaListCollection.lists.forEach((list) => {
+  for (const list of mediaListCollection.lists) {
     if (!list.entries) {
       console.warn(`List "${list.name}" has no entries`);
-      return;
+      continue;
     }
 
     entriesProcessed += list.entries.length;
 
-    list.entries.forEach((entry) => {
+    for (const entry of list.entries) {
       if (!entry.media || !entry.mediaId) {
         console.warn("Found entry without media data:", entry);
-        return;
+        continue;
       }
 
       // Store the entry by its mediaId, potentially overwriting duplicates
@@ -1184,8 +1184,8 @@ function processMediaListCollectionChunk(
         private: entry.private,
         title: entry.media.title,
       };
-    });
-  });
+    }
+  }
 
   return entriesProcessed;
 }

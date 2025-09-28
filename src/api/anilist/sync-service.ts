@@ -180,9 +180,9 @@ function handleIncrementalStep3(
   operationId: string,
 ): GraphQLVariables {
   // Build variables based on entry type
-  const variables = !entry.previousValues
-    ? buildStep3VariablesForNewEntry(entry)
-    : buildStep3VariablesForExistingEntry(entry);
+  const variables = entry.previousValues
+    ? buildStep3VariablesForExistingEntry(entry)
+    : buildStep3VariablesForNewEntry(entry);
 
   // Build info string for logging
   const changes = [];
@@ -237,7 +237,7 @@ function extractRetryAfterTime(
       break;
     }
 
-    const timeMatch = RegExp(/(\d+)\s*(?:second|sec|s)/i).exec(err.message);
+    const timeMatch = new RegExp(/(\d+)\s*(?:second|sec|s)/i).exec(err.message);
     if (timeMatch?.[1]) {
       retryAfter = Number(timeMatch[1]) * 1000;
       break;
@@ -749,12 +749,12 @@ function calculateExistingEntrySteps(entry: AniListMediaEntry): number[] {
 
   // Add metadata step if needed
   if (metadataChanged) {
-    if (!progressChanged) {
-      // Only metadata changed
-      steps.push(3);
-    } else {
+    if (progressChanged) {
       // Both progress and metadata changed
       addMetadataStepForBothChanged(steps, progressDelta);
+    } else {
+      // Only metadata changed
+      steps.push(3);
     }
   }
 
@@ -868,7 +868,7 @@ function organizeEntriesByMediaId(
 ): Record<number, AniListMediaEntry[]> {
   const entriesByMediaId: Record<number, AniListMediaEntry[]> = {};
 
-  entries.forEach((entry) => {
+  for (const entry of entries) {
     if (entry.syncMetadata?.useIncrementalSync) {
       const steps = getIncrementalSteps(entry);
       for (const step of steps) {
@@ -888,7 +888,7 @@ function organizeEntriesByMediaId(
       }
       entriesByMediaId[entry.mediaId].push(entry);
     }
-  });
+  }
 
   return entriesByMediaId;
 }
@@ -1296,9 +1296,17 @@ export async function retryFailedUpdates(
   );
 
   // Add retry metadata to each entry
-  entriesToRetry.forEach((entry) => {
+  for (const entry of entriesToRetry) {
     // Initialize the syncMetadata if it doesn't exist
-    if (!entry.syncMetadata) {
+    if (entry.syncMetadata) {
+      // Update existing syncMetadata
+      entry.syncMetadata = {
+        ...entry.syncMetadata,
+        isRetry: true,
+        retryTimestamp: Date.now(),
+        retryCount: (entry.syncMetadata.retryCount || 0) + 1,
+      };
+    } else {
       entry.syncMetadata = {
         useIncrementalSync: false,
         targetProgress: entry.progress,
@@ -1307,16 +1315,8 @@ export async function retryFailedUpdates(
         retryTimestamp: Date.now(),
         retryCount: 1,
       };
-    } else {
-      // Update existing syncMetadata
-      entry.syncMetadata = {
-        ...entry.syncMetadata,
-        isRetry: true,
-        retryTimestamp: Date.now(),
-        retryCount: (entry.syncMetadata.retryCount || 0) + 1,
-      };
     }
-  });
+  }
 
   // Run the sync with only the failed entries
   return syncMangaBatch(entriesToRetry, token, onProgress, abortSignal);

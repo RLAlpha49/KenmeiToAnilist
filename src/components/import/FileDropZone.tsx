@@ -125,73 +125,65 @@ export function FileDropZone({
       return;
     }
 
-    const reader = new FileReader();
+    file
+      .text()
+      .then((content) => {
+        try {
+          clearInterval(progressInterval);
+          setLoadingProgress(100);
 
-    reader.onload = (event) => {
-      try {
-        clearInterval(progressInterval);
-        setLoadingProgress(100);
+          const parsedData = parseKenmeiCsvExport(content);
 
-        if (!event.target?.result) {
-          throw new Error("Failed to read file");
-        }
+          if (!parsedData?.manga?.length) {
+            onError(
+              createError(
+                ErrorType.VALIDATION,
+                "No manga entries found in the CSV file. Please check the file format.",
+              ),
+            );
+            return;
+          }
 
-        const content = event.target.result as string;
+          const kenmeiData: KenmeiData = {
+            version: "1.0.0",
+            exported_at: parsedData.export_date,
+            manga: parsedData.manga.map((manga) => ({
+              title: manga.title,
+              status: manga.status,
+              score: manga.score,
+              chapters_read: manga.chapters_read,
+              volumes_read: manga.volumes_read,
+              created_at: manga.created_at,
+              updated_at: manga.updated_at,
+              last_read_at: manga.last_read_at,
+              notes: manga.notes,
+              url: manga.url,
+            })),
+          };
 
-        // Use our parser function from api/kenmei/parser.ts
-        const parsedData = parseKenmeiCsvExport(content);
-
-        if (!parsedData?.manga?.length) {
+          setIsLoading(false);
+          onFileLoaded(kenmeiData);
+        } catch (err) {
+          console.error("CSV parsing error:", err);
+          setIsLoading(false);
           onError(
             createError(
               ErrorType.VALIDATION,
-              "No manga entries found in the CSV file. Please check the file format.",
+              "Failed to parse CSV file. Please ensure it's a valid Kenmei export file.",
             ),
           );
-          return;
         }
-
-        // Convert to our app's expected format
-        const kenmeiData: KenmeiData = {
-          version: "1.0.0",
-          exported_at: parsedData.export_date,
-          manga: parsedData.manga.map((manga) => ({
-            title: manga.title,
-            status: manga.status,
-            score: manga.score,
-            chapters_read: manga.chapters_read,
-            volumes_read: manga.volumes_read,
-            created_at: manga.created_at,
-            updated_at: manga.updated_at,
-            last_read_at: manga.last_read_at,
-            notes: manga.notes,
-            url: manga.url,
-          })),
-        };
-
-        setIsLoading(false);
-        onFileLoaded(kenmeiData);
-      } catch (err) {
-        console.error("CSV parsing error:", err);
+      })
+      .catch(() => {
+        clearInterval(progressInterval);
         setIsLoading(false);
         onError(
           createError(
-            ErrorType.VALIDATION,
-            "Failed to parse CSV file. Please ensure it's a valid Kenmei export file.",
+            ErrorType.UNKNOWN,
+            "Error reading file. Please try again.",
           ),
         );
-      }
-    };
-
-    reader.onerror = () => {
-      clearInterval(progressInterval);
-      setIsLoading(false);
-      onError(
-        createError(ErrorType.UNKNOWN, "Error reading file. Please try again."),
-      );
-    };
-
-    reader.readAsText(file);
+      });
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -222,33 +214,7 @@ export function FileDropZone({
         onChange={handleFileSelect}
       />
 
-      {!fileName ? (
-        // Empty state - show upload instructions
-        <div className="flex flex-col items-center justify-center space-y-3 p-6 text-center">
-          <div className="bg-primary/10 text-primary mb-2 rounded-full p-3">
-            <UploadCloud className="h-8 w-8" />
-          </div>
-          <h3 className="text-lg font-medium">Upload Kenmei CSV Export</h3>
-          <p className="text-muted-foreground max-w-md text-sm">
-            Drag and drop your Kenmei CSV export file here
-          </p>
-
-          <div className="mt-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="mt-2"
-              onClick={(e) => {
-                e.preventDefault();
-                fileInputRef.current?.click();
-              }}
-            >
-              <FileText className="mr-2 h-4 w-4" />
-              Browse Files
-            </Button>
-          </div>
-        </div>
-      ) : (
+      {fileName ? (
         // File selected state
         <div className="flex w-full flex-col items-center p-6 text-center">
           {isLoading ? (
@@ -295,6 +261,32 @@ export function FileDropZone({
               </Button>
             </div>
           )}
+        </div>
+      ) : (
+        // Empty state - show upload instructions
+        <div className="flex flex-col items-center justify-center space-y-3 p-6 text-center">
+          <div className="bg-primary/10 text-primary mb-2 rounded-full p-3">
+            <UploadCloud className="h-8 w-8" />
+          </div>
+          <h3 className="text-lg font-medium">Upload Kenmei CSV Export</h3>
+          <p className="text-muted-foreground max-w-md text-sm">
+            Drag and drop your Kenmei CSV export file here
+          </p>
+
+          <div className="mt-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-2"
+              onClick={(e) => {
+                e.preventDefault();
+                fileInputRef.current?.click();
+              }}
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              Browse Files
+            </Button>
+          </div>
         </div>
       )}
     </label>

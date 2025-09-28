@@ -30,7 +30,7 @@ export function RateLimitCountdown({
     // Calculate initial time remaining
     const calcTimeRemaining = () => {
       const diff = retryAfter - Date.now();
-      const result = diff > 0 ? diff : 0;
+      const result = Math.max(diff, 0);
       console.log(
         `Calculated remaining time: ${result}ms (${Math.ceil(result / 1000)}s)`,
       );

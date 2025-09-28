@@ -152,7 +152,7 @@ export function extractReadingStats(manga: KenmeiManga[]): {
   let inProgressManga = 0;
   const statusBreakdown: Record<string, number> = {};
 
-  manga.forEach((entry) => {
+  for (const entry of manga) {
     // Count chapters and volumes
     totalChapters += entry.chapters_read || 0;
     totalVolumes += entry.volumes_read || 0;
@@ -166,7 +166,7 @@ export function extractReadingStats(manga: KenmeiManga[]): {
 
     // Track status breakdown
     statusBreakdown[entry.status] = (statusBreakdown[entry.status] || 0) + 1;
-  });
+  }
 
   return {
     totalChapters,

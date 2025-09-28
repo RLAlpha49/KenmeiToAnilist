@@ -106,21 +106,20 @@ export class MangaDexClient extends BaseMangaSourceClient<
       const alternativeTitles: Array<{ title: string; lang: string }> = [];
 
       // Add all title variants
-      Object.entries(title).forEach(([lang, titleText]) => {
+      for (const [lang, titleText] of Object.entries(title)) {
         if (titleText && titleText !== primaryTitle) {
           alternativeTitles.push({ title: titleText as string, lang });
         }
-      });
+      }
 
       // Add alt titles
-      // eslint-disable-next-line
-      altTitles.forEach((altTitle: any) => {
-        Object.entries(altTitle).forEach(([lang, titleText]) => {
+      for (const altTitle of altTitles) {
+        for (const [lang, titleText] of Object.entries(altTitle)) {
           if (titleText) {
             alternativeTitles.push({ title: titleText as string, lang });
           }
-        });
-      });
+        }
+      }
 
       return {
         id: item.id,
@@ -170,21 +169,20 @@ export class MangaDexClient extends BaseMangaSourceClient<
     const alternativeTitles: Array<{ title: string; lang: string }> = [];
 
     // Add all title variants
-    Object.entries(title).forEach(([lang, titleText]) => {
+    for (const [lang, titleText] of Object.entries(title)) {
       if (titleText && titleText !== primaryTitle) {
         alternativeTitles.push({ title: titleText as string, lang });
       }
-    });
+    }
 
     // Add alt titles
-    // eslint-disable-next-line
-    altTitles.forEach((altTitle: any) => {
-      Object.entries(altTitle).forEach(([lang, titleText]) => {
+    for (const altTitle of altTitles) {
+      for (const [lang, titleText] of Object.entries(altTitle)) {
         if (titleText) {
           alternativeTitles.push({ title: titleText as string, lang });
         }
-      });
-    });
+      }
+    }
 
     // Parse authors and artists from relationships
     const authors: Array<{ id: string; name: string; slug?: string }> = [];
@@ -278,7 +276,7 @@ export class MangaDexClient extends BaseMangaSourceClient<
       // Convert to number
       const parsedAnilistId = Number.parseInt(anilistId, 10);
 
-      if (isNaN(parsedAnilistId)) {
+      if (Number.isNaN(parsedAnilistId)) {
         console.log(
           `🔗 Invalid AniList ID format for MangaDex manga: ${detail.title}`,
           { anilistId },

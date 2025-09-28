@@ -241,7 +241,7 @@ export function MangaMatchingPanel({
       // Create a simple hash from the title
       const generatedId = match.kenmeiManga.title
         .split("")
-        .reduce((hash, char) => (hash << 5) - hash + char.charCodeAt(0), 0);
+        .reduce((hash, char) => (hash << 5) - hash + (char.codePointAt(0) ?? 0), 0);
       match = {
         ...match,
         kenmeiManga: {
@@ -491,7 +491,7 @@ export function MangaMatchingPanel({
   // Render confidence badge
   const renderConfidenceBadge = (confidence: number | undefined) => {
     // If confidence is undefined, null, or NaN, return null (don't render anything)
-    if (confidence === undefined || confidence === null || isNaN(confidence)) {
+    if (confidence === undefined || confidence === null || Number.isNaN(confidence)) {
       return null;
     }
 
@@ -2465,7 +2465,7 @@ export function MangaMatchingPanel({
                                         altMatch.manga?.title?.english ||
                                         altMatch.manga?.title?.romaji ||
                                         "Unknown manga"
-                                      } as match (${altMatch.confidence !== undefined ? Math.round(altMatch.confidence) + "%" : "Unknown confidence"})`}
+                                      } as match (${typeof altMatch.confidence === "number" ? Math.round(altMatch.confidence) + "%" : "Unknown confidence"})`}
                                     >
                                       <Check
                                         className="mr-1 h-3 w-3"

@@ -104,9 +104,9 @@ export function ImportSummary({
     plan_to_read: 0,
   };
 
-  manga.forEach((item) => {
+  for (const item of manga) {
     statusCounts[item.status]++;
-  });
+  }
 
   const statusInfo: StatusCount[] = [
     {
