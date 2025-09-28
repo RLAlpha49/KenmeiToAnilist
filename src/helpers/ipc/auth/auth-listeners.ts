@@ -517,7 +517,7 @@ function processAuthCallback(
     sendResponse(
       res,
       200,
-      "Authentication already processed. You can close this window.",
+      "Authentication already processed. You can close this globalThis.",
     );
     return { shouldContinue: false, processed: true };
   }
@@ -581,7 +581,7 @@ function handleSuccessfulAuth(
   sendResponse(
     res,
     200,
-    "Authentication successful! You can close this window.",
+    "Authentication successful! You can close this globalThis.",
   );
 }
 
@@ -658,10 +658,10 @@ async function startAuthServer(
           <div class="container">
             <h1>${statusCode === 200 ? "Authentication Successful" : "Authentication Error"}</h1>
             <p>${message}</p>
-            <button class="close-button" onclick="window.close()">Close Window</button>
+            <button class="close-button" onclick="globalThis.close()">Close Window</button>
             <script>
               // Auto close after 5 seconds
-              setTimeout(() => window.close(), 5000);
+              setTimeout(() => globalThis.close(), 5000);
             </script>
           </div>
         </body>

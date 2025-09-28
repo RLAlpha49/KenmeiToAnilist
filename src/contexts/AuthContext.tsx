@@ -127,10 +127,10 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
 
   // Set up the code received listener
   useEffect(() => {
-    // Only set up the listener if window.electronAuth is available
-    if (!window.electronAuth?.onCodeReceived) return;
+    // Only set up the listener if globalThis.electronAuth is available
+    if (!globalThis.electronAuth?.onCodeReceived) return;
 
-    const unsubscribe = window.electronAuth.onCodeReceived(async (data) => {
+    const unsubscribe = globalThis.electronAuth.onCodeReceived(async (data) => {
       const currentAttempt = authAttemptRef.current;
       try {
         // We received the code, so the browser flow is now complete
@@ -154,7 +154,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
 
         // Get the current credentials being used
         const credentialsResponse =
-          await window.electronAuth.getCredentials(effectiveSource);
+          await globalThis.electronAuth.getCredentials(effectiveSource);
 
         if (!credentialsResponse.success || !credentialsResponse.credentials) {
           throw new Error(
@@ -175,12 +175,14 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
 
         // Exchange the code for an access token
         setStatusMessage("Exchanging auth code for token...");
-        const tokenExchangeResult = await window.electronAuth.exchangeToken({
-          clientId,
-          clientSecret,
-          redirectUri,
-          code: data.code,
-        });
+        const tokenExchangeResult = await globalThis.electronAuth.exchangeToken(
+          {
+            clientId,
+            clientSecret,
+            redirectUri,
+            code: data.code,
+          },
+        );
 
         // Re-check attempt id after async boundary to prevent stale token applying
         if (currentAttempt !== authAttemptRef.current) {
@@ -244,10 +246,10 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
 
   // Set up the status message listener
   useEffect(() => {
-    // Only set up the listener if window.electronAuth is available
-    if (!window.electronAuth?.onStatus) return;
+    // Only set up the listener if globalThis.electronAuth is available
+    if (!globalThis.electronAuth?.onStatus) return;
 
-    const unsubscribe = window.electronAuth.onStatus((message) => {
+    const unsubscribe = globalThis.electronAuth.onStatus((message) => {
       setStatusMessage(message);
     });
 
@@ -257,10 +259,10 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
 
   // Set up the cancellation listener
   useEffect(() => {
-    // Only set up the listener if window.electronAuth is available
-    if (!window.electronAuth?.onCancelled) return;
+    // Only set up the listener if globalThis.electronAuth is available
+    if (!globalThis.electronAuth?.onCancelled) return;
 
-    const unsubscribe = window.electronAuth.onCancelled(() => {
+    const unsubscribe = globalThis.electronAuth.onCancelled(() => {
       setIsLoading(false);
       setIsBrowserAuthFlow(false);
       setError("Authentication was cancelled");
@@ -295,7 +297,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
       // Store the credentials securely
       setStatusMessage("Storing credentials...");
       const storeResult =
-        await window.electronAuth.storeCredentials(credentials);
+        await globalThis.electronAuth.storeCredentials(credentials);
       if (!storeResult.success) {
         toast.error(storeResult.error || "Failed to store credentials");
         throw new Error(storeResult.error || "Failed to store credentials");
@@ -306,11 +308,11 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
       const encodedRedirectUri = encodeURIComponent(redirectUri);
       const oauthUrl = `https://anilist.co/api/v2/oauth/authorize?client_id=${clientId}&redirect_uri=${encodedRedirectUri}&response_type=code`;
 
-      setStatusMessage("Opening authentication window...");
+      setStatusMessage("Opening authentication globalThis...");
 
       // Open the OAuth window
       try {
-        const result = await window.electronAuth.openOAuthWindow(
+        const result = await globalThis.electronAuth.openOAuthWindow(
           oauthUrl,
           redirectUri,
         );
@@ -335,7 +337,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
           setIsBrowserAuthFlow(false);
         } else {
           console.log(
-            "Browser auth flow in progress - ignoring window.close error...",
+            "Browser auth flow in progress - ignoring globalThis.close error...",
           );
         }
       }

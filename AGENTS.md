@@ -21,7 +21,7 @@ This is an Electron desktop app (React + TypeScript) that migrates manga librari
 Example IPC usage:
 
 ```typescript
-// In renderer: window.electronStore.getItem(key)
+// In renderer: globalThis.electronStore.getItem(key)
 // Main handler: src/helpers/ipc/store/store-listeners.ts
 ```
 

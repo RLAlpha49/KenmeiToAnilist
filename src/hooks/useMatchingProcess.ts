@@ -97,7 +97,7 @@ export const useMatchingProcess = (authState: {
       if (!mangaList.length) return;
 
       // Check if matching is already in progress globally
-      if (window.matchingProcessState?.isRunning) {
+      if (globalThis.matchingProcessState?.isRunning) {
         console.log(
           "Matching process is already running, using existing process",
         );
@@ -105,12 +105,12 @@ export const useMatchingProcess = (authState: {
         // Just update our local state to match the global state
         setIsLoading(true);
         setProgress({
-          current: window.matchingProcessState.progress.current,
-          total: window.matchingProcessState.progress.total,
-          currentTitle: window.matchingProcessState.progress.currentTitle,
+          current: globalThis.matchingProcessState.progress.current,
+          total: globalThis.matchingProcessState.progress.total,
+          currentTitle: globalThis.matchingProcessState.progress.currentTitle,
         });
-        setStatusMessage(window.matchingProcessState.statusMessage);
-        setDetailMessage(window.matchingProcessState.detailMessage);
+        setStatusMessage(globalThis.matchingProcessState.statusMessage);
+        setDetailMessage(globalThis.matchingProcessState.detailMessage);
 
         return;
       }
@@ -151,7 +151,7 @@ export const useMatchingProcess = (authState: {
       setPendingManga(mangaList);
 
       // Initialize global tracking state
-      window.matchingProcessState = {
+      globalThis.matchingProcessState = {
         isRunning: true,
         progress: {
           current: 0,
@@ -166,7 +166,7 @@ export const useMatchingProcess = (authState: {
 
       // Create a new AbortController and store it globally
       const abortController = new AbortController();
-      window.activeAbortController = abortController;
+      globalThis.activeAbortController = abortController;
 
       try {
         // Import from the manga search service to check cache status
@@ -254,13 +254,13 @@ export const useMatchingProcess = (authState: {
             setProgress({ current, total, currentTitle });
 
             // Update global tracking state
-            if (window.matchingProcessState) {
-              window.matchingProcessState.progress = {
+            if (globalThis.matchingProcessState) {
+              globalThis.matchingProcessState.progress = {
                 current,
                 total,
                 currentTitle: currentTitle || "",
               };
-              window.matchingProcessState.lastUpdated = Date.now();
+              globalThis.matchingProcessState.lastUpdated = Date.now();
             }
 
             // Update status message to show we're doing fresh searches
@@ -275,9 +275,9 @@ export const useMatchingProcess = (authState: {
             );
 
             // Update global tracking state with fresh search message
-            if (window.matchingProcessState) {
-              window.matchingProcessState.statusMessage = statusMsg;
-              window.matchingProcessState.detailMessage = `Processing: ${Math.min(current, total)} of ${total}`;
+            if (globalThis.matchingProcessState) {
+              globalThis.matchingProcessState.statusMessage = statusMsg;
+              globalThis.matchingProcessState.detailMessage = `Processing: ${Math.min(current, total)} of ${total}`;
             }
 
             calculateTimeEstimate(current, total);
@@ -292,9 +292,9 @@ export const useMatchingProcess = (authState: {
               setDetailMessage(`${current} of ${withKnownIds}`);
 
               // Update global tracking state
-              if (window.matchingProcessState) {
-                window.matchingProcessState.statusMessage = `Batch fetching manga with known IDs`;
-                window.matchingProcessState.detailMessage = `${current} of ${withKnownIds}`;
+              if (globalThis.matchingProcessState) {
+                globalThis.matchingProcessState.statusMessage = `Batch fetching manga with known IDs`;
+                globalThis.matchingProcessState.detailMessage = `${current} of ${withKnownIds}`;
               }
             } else {
               const remainingItems = Math.max(0, total - current);
@@ -310,9 +310,9 @@ export const useMatchingProcess = (authState: {
               );
 
               // Update global tracking state
-              if (window.matchingProcessState) {
-                window.matchingProcessState.statusMessage = `Matching manga (${completionPercent}% complete)`;
-                window.matchingProcessState.detailMessage = `Processing: ${Math.min(current, total)} of ${total} (${remainingItems} remaining)`;
+              if (globalThis.matchingProcessState) {
+                globalThis.matchingProcessState.statusMessage = `Matching manga (${completionPercent}% complete)`;
+                globalThis.matchingProcessState.detailMessage = `Processing: ${Math.min(current, total)} of ${total} (${remainingItems} remaining)`;
               }
             }
           },
@@ -481,8 +481,8 @@ export const useMatchingProcess = (authState: {
         setFreshSearch(false);
 
         // Clear global tracking state when process finishes
-        if (window.matchingProcessState) {
-          window.matchingProcessState.isRunning = false;
+        if (globalThis.matchingProcessState) {
+          globalThis.matchingProcessState.isRunning = false;
         }
       }
     },
@@ -630,7 +630,7 @@ export const useMatchingProcess = (authState: {
    */
   const handleCancelResume = useCallback(() => {
     if (
-      window.confirm(
+      globalThis.confirm(
         "Are you sure you want to cancel the resume process? This will clear any pending manga and you'll have to start over.",
       )
     ) {
@@ -654,16 +654,16 @@ export const useMatchingProcess = (authState: {
       console.log("User requested cancellation - stopping all operations");
 
       // Update global tracking state
-      if (window.matchingProcessState) {
-        window.matchingProcessState.statusMessage = "Cancelling process...";
-        window.matchingProcessState.detailMessage =
+      if (globalThis.matchingProcessState) {
+        globalThis.matchingProcessState.statusMessage = "Cancelling process...";
+        globalThis.matchingProcessState.detailMessage =
           "Immediately stopping all operations";
       }
 
       // If we have an active abort controller, use it to abort immediately
-      if (window.activeAbortController) {
+      if (globalThis.activeAbortController) {
         console.log("Aborting all in-progress requests");
-        window.activeAbortController.abort();
+        globalThis.activeAbortController.abort();
       }
     }
   }, [isCancelling]);

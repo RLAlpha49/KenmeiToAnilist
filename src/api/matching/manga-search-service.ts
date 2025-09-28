@@ -73,7 +73,7 @@ function initializeMangaService(): void {
   if (typeof window !== "undefined" && !listenersRegistered) {
     listenersRegistered = true;
 
-    window.addEventListener("anilist:search-cache-initialized", () => {
+    globalThis.addEventListener("anilist:search-cache-initialized", () => {
       console.log(
         "Received search cache initialization event, syncing caches...",
       );
@@ -81,7 +81,7 @@ function initializeMangaService(): void {
     });
 
     // Listen for new search results to directly update our cache
-    window.addEventListener(
+    globalThis.addEventListener(
       "anilist:search-results-updated",
       (event: Event) => {
         if (event instanceof CustomEvent) {
@@ -130,7 +130,7 @@ function initializeMangaService(): void {
           enumerable: false,
         });
         console.log(
-          "AniList cache debugger available at window.__anilistCacheDebug",
+          "AniList cache debugger available at globalThis.__anilistCacheDebug",
         );
       }
     } catch (e) {

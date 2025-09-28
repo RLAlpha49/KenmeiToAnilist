@@ -221,7 +221,7 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
     key: string,
   ): Promise<StorageItem | null> => {
     try {
-      const value = await window.electronStore.getItem(key);
+      const value = await globalThis.electronStore.getItem(key);
       if (value === null || value === undefined) return null;
 
       const str = typeof value === "string" ? value : JSON.stringify(value);
@@ -235,7 +235,7 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
 
   // Load electron store items (using localStorage keys as reference)
   const loadElectronStoreItems = async () => {
-    if (!window.electronStore) return;
+    if (!globalThis.electronStore) return;
 
     try {
       const items: StorageItem[] = [];
@@ -275,8 +275,8 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
 
     try {
       if (editingItem.isElectron) {
-        if (window.electronStore) {
-          await window.electronStore.setItem(
+        if (globalThis.electronStore) {
+          await globalThis.electronStore.setItem(
             editingItem.key,
             editingItem.value,
           );
@@ -309,8 +309,8 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
 
     try {
       if (newItem.isElectron) {
-        if (window.electronStore) {
-          await window.electronStore.setItem(newItem.key, newItem.value);
+        if (globalThis.electronStore) {
+          await globalThis.electronStore.setItem(newItem.key, newItem.value);
 
           // Automatically sync to localStorage and cache (following storage precedence behavior)
           localStorage.setItem(newItem.key, newItem.value);
@@ -338,8 +338,8 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
   const deleteItem = async (key: string, isElectron: boolean) => {
     try {
       if (isElectron) {
-        if (window.electronStore) {
-          await window.electronStore.removeItem(key);
+        if (globalThis.electronStore) {
+          await globalThis.electronStore.removeItem(key);
 
           // Automatically sync deletion to localStorage and cache (following storage precedence behavior)
           localStorage.removeItem(key);
@@ -392,8 +392,8 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
             ? entry.value
             : JSON.stringify(entry.value);
         if (isElectron) {
-          if (window.electronStore) {
-            await window.electronStore.setItem(entry.key, value);
+          if (globalThis.electronStore) {
+            await globalThis.electronStore.setItem(entry.key, value);
 
             // Automatically sync to localStorage and cache (following storage precedence behavior)
             localStorage.setItem(entry.key, value);

@@ -1,8 +1,8 @@
-import path from "path";
+import path from "node:path";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
-import { readFileSync } from "fs";
+import { readFileSync } from "node:fs";
 
 // Get package version from root package.json (one level up from config directory)
 const packageJson = JSON.parse(

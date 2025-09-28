@@ -16,7 +16,7 @@ import {
  * @source
  */
 export function exposeWindowContext() {
-  const { contextBridge, ipcRenderer } = window.require("electron");
+  const { contextBridge, ipcRenderer } = globalThis.require("electron");
   contextBridge.exposeInMainWorld("electronWindow", {
     minimize: () => ipcRenderer.invoke(WIN_MINIMIZE_CHANNEL),
     maximize: () => ipcRenderer.invoke(WIN_MAXIMIZE_CHANNEL),

@@ -161,7 +161,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
                     "../../api/matching/manga-search-service"
                   );
                   if (
-                    window.confirm(
+                    globalThis.confirm(
                       "Are you sure you want to clear all caches? This will require re-fetching all manga data.",
                     )
                   ) {

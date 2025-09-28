@@ -90,8 +90,8 @@ getItem: (key: string): string | null => {
   }
 
   // 3. Asynchronously check Electron Store in background
-  if (window.electronStore) {
-    window.electronStore
+  if (globalThis.electronStore) {
+    globalThis.electronStore
       .getItem(key)
       .then((electronValue) => {
         if (electronValue !== null && electronValue !== value) {
@@ -111,9 +111,9 @@ getItem: (key: string): string | null => {
 
 ```typescript
 getItemAsync: async (key: string): Promise<string | null> => {
-  if (window.electronStore) {
+  if (globalThis.electronStore) {
     try {
-      const value = await window.electronStore.getItem(key);
+      const value = await globalThis.electronStore.getItem(key);
       if (value !== null) {
         // Keep localStorage in sync
         localStorage.setItem(key, value);
@@ -147,8 +147,8 @@ setItem: (key: string, value: string): void => {
   localStorage.setItem(key, value);
 
   // 3. Update Electron Store asynchronously
-  if (window.electronStore) {
-    window.electronStore
+  if (globalThis.electronStore) {
+    globalThis.electronStore
       .setItem(key, value)
       .catch((error) => console.error(`Error storing ${key}:`, error));
   }
@@ -166,8 +166,8 @@ removeItem: (key: string): void => {
   localStorage.removeItem(key);
 
   // 3. Remove from Electron Store
-  if (window.electronStore) {
-    window.electronStore
+  if (globalThis.electronStore) {
+    globalThis.electronStore
       .removeItem(key)
       .catch((error) => console.error(`Error removing ${key}:`, error));
   }
@@ -250,7 +250,7 @@ When editing Electron Store items through the Debug Menu:
 ```typescript
 // Electron Store operations automatically sync to other layers
 if (editingItem.isElectron) {
-  await window.electronStore.setItem(key, value);
+  await globalThis.electronStore.setItem(key, value);
 
   // Automatic synchronization
   localStorage.setItem(key, value);

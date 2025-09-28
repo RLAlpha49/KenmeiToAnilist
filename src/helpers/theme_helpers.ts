@@ -34,7 +34,7 @@ export interface ThemePreferences {
  * @source
  */
 export async function getCurrentTheme(): Promise<ThemePreferences> {
-  const currentTheme = await window.themeMode.current();
+  const currentTheme = await globalThis.themeMode.current();
   const localTheme = storage.getItem(THEME_KEY) as ThemeMode | null;
 
   return {
@@ -57,15 +57,15 @@ export async function setTheme(newTheme: ThemeMode) {
 
   switch (newTheme) {
     case "dark":
-      await window.themeMode.dark();
+      await globalThis.themeMode.dark();
       isDarkMode = true;
       break;
     case "light":
-      await window.themeMode.light();
+      await globalThis.themeMode.light();
       isDarkMode = false;
       break;
     case "system": {
-      isDarkMode = await window.themeMode.system();
+      isDarkMode = await globalThis.themeMode.system();
       break;
     }
   }

@@ -191,8 +191,8 @@ export function updateMatchResults(validMergedManga: KenmeiManga[]): boolean {
       `Updated ${updatedResults.filter((_, i) => updatedResults[i] !== matchResults[i]).length} existing matches with new import data`,
     );
     const updatedResultsJson = JSON.stringify(updatedResults);
-    if (window.electronStore) {
-      window.electronStore.setItem("match_results", updatedResultsJson);
+    if (globalThis.electronStore) {
+      globalThis.electronStore.setItem("match_results", updatedResultsJson);
     }
   }
 
@@ -206,8 +206,8 @@ export function clearPendingMangaStorage(): void {
   console.log(
     "Clearing pending manga storage after import to force recalculation",
   );
-  if (window.electronStore) {
-    window.electronStore.removeItem("pending_manga");
+  if (globalThis.electronStore) {
+    globalThis.electronStore.removeItem("pending_manga");
   }
   // Also clear from localStorage as fallback
   localStorage.removeItem("pending_manga");

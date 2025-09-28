@@ -18,7 +18,7 @@ import {
  * @source
  */
 export function exposeThemeContext() {
-  const { contextBridge, ipcRenderer } = window.require("electron");
+  const { contextBridge, ipcRenderer } = globalThis.require("electron");
   contextBridge.exposeInMainWorld("themeMode", {
     current: () => ipcRenderer.invoke(THEME_MODE_CURRENT_CHANNEL),
     toggle: () => ipcRenderer.invoke(THEME_MODE_TOGGLE_CHANNEL),

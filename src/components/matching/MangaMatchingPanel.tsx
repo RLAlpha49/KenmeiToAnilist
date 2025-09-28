@@ -205,11 +205,11 @@ export function MangaMatchingPanel({
   // Handler for opening external links in the default browser
   const handleOpenExternal = (url: string) => (e: React.MouseEvent) => {
     e.preventDefault();
-    if (window.electronAPI?.shell?.openExternal) {
-      window.electronAPI.shell.openExternal(url);
+    if (globalThis.electronAPI?.shell?.openExternal) {
+      globalThis.electronAPI.shell.openExternal(url);
     } else {
       // Fallback to regular link behavior if not in Electron
-      window.open(url, "_blank", "noopener,noreferrer");
+      globalThis.open(url, "_blank", "noopener,noreferrer");
     }
   };
 
@@ -395,8 +395,8 @@ export function MangaMatchingPanel({
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    globalThis.addEventListener("keydown", handleKeyDown);
+    return () => globalThis.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   // Count statistics
@@ -809,7 +809,7 @@ export function MangaMatchingPanel({
       });
 
       // Dispatch the event to be handled by the MatchingPage component
-      window.dispatchEvent(customEvent);
+      globalThis.dispatchEvent(customEvent);
 
       // Reset processing state after a short delay
       setTimeout(() => {

@@ -38,7 +38,7 @@ export const useTimeEstimate = () => {
    * @param total - The total number of items to process.
    * @remarks
    * Uses a moving average of the last 10 processing times to smooth out fluctuations.
-   * Updates the global window.matchingProcessState if available.
+   * Updates the global globalThis.matchingProcessState if available.
    *
    * @source
    */
@@ -91,10 +91,10 @@ export const useTimeEstimate = () => {
         setTimeEstimate(newEstimate);
 
         // Update global tracking state
-        if (window.matchingProcessState) {
+        if (globalThis.matchingProcessState) {
           // eslint-disable-next-line react-compiler/react-compiler
-          window.matchingProcessState.timeEstimate = newEstimate;
-          window.matchingProcessState.lastUpdated = now;
+          globalThis.matchingProcessState.timeEstimate = newEstimate;
+          globalThis.matchingProcessState.lastUpdated = now;
         }
 
         // Update refs for next calculation

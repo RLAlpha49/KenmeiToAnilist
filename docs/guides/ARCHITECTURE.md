@@ -569,8 +569,8 @@ export const storage = {
     if (value !== null) storageCache[key] = value;
     
     // Level 3: Electron Store (authoritative, async check)
-    if (window.electronStore) {
-      window.electronStore.getItem(key).then(electronValue => {
+    if (globalThis.electronStore) {
+      globalThis.electronStore.getItem(key).then(electronValue => {
         if (electronValue !== null && electronValue !== value) {
           localStorage.setItem(key, electronValue);
           storageCache[key] = electronValue;

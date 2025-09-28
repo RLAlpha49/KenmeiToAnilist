@@ -165,11 +165,11 @@ export function SettingsPage() {
   // Handler for opening external links in the default browser
   const handleOpenExternal = (url: string) => (e: React.MouseEvent) => {
     e.preventDefault();
-    if (window.electronAPI?.shell?.openExternal) {
-      window.electronAPI.shell.openExternal(url);
+    if (globalThis.electronAPI?.shell?.openExternal) {
+      globalThis.electronAPI.shell.openExternal(url);
     } else {
       // Fallback to regular link behavior if not in Electron
-      window.open(url, "_blank", "noopener,noreferrer");
+      globalThis.open(url, "_blank", "noopener,noreferrer");
     }
   };
 
@@ -392,7 +392,7 @@ export function SettingsPage() {
   };
 
   const handleCancelAuth = () => {
-    window.electronAuth.cancelAuth();
+    globalThis.electronAuth.cancelAuth();
   };
 
   const handleClearCache = async () => {
@@ -486,10 +486,10 @@ export function SettingsPage() {
         try {
           localStorage.removeItem(cacheKey);
           if (
-            window.electronStore &&
-            typeof window.electronStore.removeItem === "function"
+            globalThis.electronStore &&
+            typeof globalThis.electronStore.removeItem === "function"
           ) {
-            window.electronStore.removeItem(cacheKey);
+            globalThis.electronStore.removeItem(cacheKey);
             console.log(`🧹 Cleared Electron Store cache: ${cacheKey}`);
           }
           console.log(`🧹 Cleared cache: ${cacheKey}`);
@@ -502,7 +502,7 @@ export function SettingsPage() {
       if (Object.values(cachesToClear).some(Boolean)) {
         try {
           const DBDeleteRequest =
-            window.indexedDB.deleteDatabase("anilist-cache");
+            globalThis.indexedDB.deleteDatabase("anilist-cache");
           DBDeleteRequest.onsuccess = () =>
             console.log("🧹 Successfully deleted IndexedDB database");
           DBDeleteRequest.onerror = () =>
@@ -525,7 +525,7 @@ export function SettingsPage() {
 
       // Show a detailed summary to the user
       try {
-        window.alert(
+        globalThis.alert(
           "Cache Cleared Successfully!\n\n" +
             clearedSummary +
             "\n\nYou may need to restart the application for all changes to take effect.",
@@ -559,7 +559,7 @@ export function SettingsPage() {
   const handleRefreshPage = () => {
     // Clear error states and status messages
     setError(null);
-    window.location.reload();
+    globalThis.location.reload();
   };
 
   const calculateExpiryTime = () => {
@@ -1991,10 +1991,12 @@ export function SettingsPage() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
-                      if (window.electronAPI?.shell?.openExternal) {
-                        window.electronAPI.shell.openExternal(updateInfo.url);
+                      if (globalThis.electronAPI?.shell?.openExternal) {
+                        globalThis.electronAPI.shell.openExternal(
+                          updateInfo.url,
+                        );
                       } else {
-                        window.open(
+                        globalThis.open(
                           updateInfo.url,
                           "_blank",
                           "noopener,noreferrer",

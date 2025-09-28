@@ -42,11 +42,11 @@ import appIcon from "../../assets/k2a-icon-512x512.png";
 export function Footer() {
   const handleOpenExternal = (url: string) => (e: React.MouseEvent) => {
     e.preventDefault();
-    if (window.electronAPI?.shell?.openExternal) {
-      window.electronAPI.shell.openExternal(url);
+    if (globalThis.electronAPI?.shell?.openExternal) {
+      globalThis.electronAPI.shell.openExternal(url);
     } else {
       // Fallback to regular link behavior if not in Electron
-      window.open(url, "_blank", "noopener,noreferrer");
+      globalThis.open(url, "_blank", "noopener,noreferrer");
     }
   };
 

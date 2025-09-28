@@ -387,21 +387,21 @@ export function MatchingPage() {
    * @internal
    */
   const restoreRunningProcessState = (): boolean => {
-    if (window.matchingProcessState?.isRunning) {
+    if (globalThis.matchingProcessState?.isRunning) {
       console.log("Detected running matching process, restoring state");
 
       // Restore the matching process state
       matchingProcess.setIsLoading(true);
       matchingProcess.setProgress({
-        current: window.matchingProcessState.progress.current,
-        total: window.matchingProcessState.progress.total,
-        currentTitle: window.matchingProcessState.progress.currentTitle,
+        current: globalThis.matchingProcessState.progress.current,
+        total: globalThis.matchingProcessState.progress.total,
+        currentTitle: globalThis.matchingProcessState.progress.currentTitle,
       });
       matchingProcess.setStatusMessage(
-        window.matchingProcessState.statusMessage,
+        globalThis.matchingProcessState.statusMessage,
       );
       matchingProcess.setDetailMessage(
-        window.matchingProcessState.detailMessage,
+        globalThis.matchingProcessState.detailMessage,
       );
 
       // Mark as initialized to prevent auto-starting
@@ -705,12 +705,12 @@ export function MatchingPage() {
   // Add an effect to sync with the global process state while the page is mounted
   useEffect(() => {
     // Skip if we're not in the middle of a process
-    if (!window.matchingProcessState?.isRunning) return;
+    if (!globalThis.matchingProcessState?.isRunning) return;
 
     // Create a function to sync the UI with the global state
     const syncUIWithGlobalState = () => {
-      if (window.matchingProcessState?.isRunning) {
-        const currentState = window.matchingProcessState;
+      if (globalThis.matchingProcessState?.isRunning) {
+        const currentState = globalThis.matchingProcessState;
 
         console.log("Syncing UI with global process state:", {
           current: currentState.progress.current,
@@ -862,14 +862,14 @@ export function MatchingPage() {
     };
 
     // Add event listener for the custom event
-    window.addEventListener(
+    globalThis.addEventListener(
       "reSearchEmptyMatches",
       handleReSearchEmptyMatches as EventListener,
     );
 
     // Clean up the event listener when the component unmounts
     return () => {
-      window.removeEventListener(
+      globalThis.removeEventListener(
         "reSearchEmptyMatches",
         handleReSearchEmptyMatches as EventListener,
       );

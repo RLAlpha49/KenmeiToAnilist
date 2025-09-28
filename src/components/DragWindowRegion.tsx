@@ -51,7 +51,7 @@ export default function DragWindowRegion({
 }
 
 /**
- * Renders the window control buttons (minimize, maximize, close) for the Electron window.
+ * Renders the window control buttons (minimize, maximize, close) for the Electron globalThis.
  *
  * @returns A React element with window control buttons
  * @internal

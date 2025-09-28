@@ -5,31 +5,31 @@
  */
 
 /**
- * Minimizes the current Electron window.
+ * Minimizes the current Electron globalThis.
  *
  * @returns A promise that resolves when the window is minimized.
  * @source
  */
 export async function minimizeWindow() {
-  await window.electronWindow.minimize();
+  await globalThis.electronWindow.minimize();
 }
 
 /**
- * Maximizes the current Electron window.
+ * Maximizes the current Electron globalThis.
  *
  * @returns A promise that resolves when the window is maximized.
  * @source
  */
 export async function maximizeWindow() {
-  await window.electronWindow.maximize();
+  await globalThis.electronWindow.maximize();
 }
 
 /**
- * Closes the current Electron window.
+ * Closes the current Electron globalThis.
  *
  * @returns A promise that resolves when the window is closed.
  * @source
  */
 export async function closeWindow() {
-  await window.electronWindow.close();
+  await globalThis.electronWindow.close();
 }

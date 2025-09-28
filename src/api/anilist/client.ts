@@ -75,13 +75,13 @@ function initializeSearchCache(): void {
       const now = Date.now();
 
       // Merge with our in-memory cache
-      Object.keys(parsedCache).forEach((key) => {
+      for (const key of Object.keys(parsedCache)) {
         const entry = parsedCache[key];
         if (now - entry.timestamp < CACHE_EXPIRATION) {
           searchCache[key] = entry;
           loadedCount++;
         }
-      });
+      }
 
       console.log(
         `Loaded ${loadedCount} cached search results from localStorage`,
@@ -95,7 +95,7 @@ function initializeSearchCache(): void {
           const event = new CustomEvent("anilist:search-cache-initialized", {
             detail: { count: loadedCount },
           });
-          window.dispatchEvent(event);
+          globalThis.dispatchEvent(event);
           console.log("Dispatched cache initialization event");
         } catch (e) {
           console.error("Failed to dispatch cache event:", e);
@@ -182,7 +182,7 @@ async function handleElectronRequest<T>(
 ): Promise<AniListResponse<T>> {
   try {
     // Use the correct call format for the main process
-    const response = await window.electronAPI.anilist.request(
+    const response = await globalThis.electronAPI.anilist.request(
       query,
       { ...variables, bypassCache }, // Pass bypassCache flag to main process
       token,
@@ -229,7 +229,7 @@ async function processHttpError(
 
     // Notify the application about rate limiting through a custom event
     try {
-      window.dispatchEvent(
+      globalThis.dispatchEvent(
         new CustomEvent("anilist:rate-limited", {
           detail: {
             retryAfter: retrySeconds,
@@ -321,7 +321,7 @@ export async function request<T>(
   const requestId = Math.random().toString(36).substring(2, 8);
 
   // Check if we're running in a browser or Electron environment
-  const isElectron = typeof window !== "undefined" && window.electronAPI;
+  const isElectron = typeof window !== "undefined" && globalThis.electronAPI;
 
   // Route request to appropriate handler
   if (isElectron) {
@@ -376,7 +376,7 @@ export async function getAccessToken(
   });
 
   // Use the main process to exchange the token
-  const result = await window.electronAPI.anilist.exchangeToken({
+  const result = await globalThis.electronAPI.anilist.exchangeToken({
     clientId,
     clientSecret,
     redirectUri,
@@ -514,7 +514,7 @@ async function executeSearchQuery(
             timestamp: Date.now(),
           },
         });
-        window.dispatchEvent(event);
+        globalThis.dispatchEvent(event);
       } catch (e) {
         console.error("Failed to dispatch search results event:", e);
       }
@@ -650,9 +650,11 @@ export function clearSearchCache(searchQuery?: string): void {
   persistSearchCache();
 
   // Also clear the cache in the main process
-  window.electronAPI.anilist.clearCache(searchQuery).catch((error: Error) => {
-    console.error("Failed to clear main process cache:", error);
-  });
+  globalThis.electronAPI.anilist
+    .clearCache(searchQuery)
+    .catch((error: Error) => {
+      console.error("Failed to clear main process cache:", error);
+    });
 }
 
 /**

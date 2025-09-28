@@ -121,8 +121,8 @@ export const storage = {
       }
 
       // Asynchronously update from electron-store if available (won't affect current return)
-      if (window.electronStore) {
-        window.electronStore
+      if (globalThis.electronStore) {
+        globalThis.electronStore
           .getItem(key)
           .then((electronValue) => {
             if (electronValue !== null && electronValue !== value) {
@@ -168,8 +168,8 @@ export const storage = {
       localStorage.setItem(key, value);
 
       // Also store in electronStore if available
-      if (window.electronStore) {
-        window.electronStore.setItem(key, value).catch((error) => {
+      if (globalThis.electronStore) {
+        globalThis.electronStore.setItem(key, value).catch((error) => {
           // Only log errors in development
           if (process.env.NODE_ENV === "development") {
             console.error(`Error storing ${key} in electron-store:`, error);
@@ -194,8 +194,8 @@ export const storage = {
       localStorage.removeItem(key);
 
       // Also remove from electronStore if available
-      if (window.electronStore) {
-        window.electronStore.removeItem(key).catch((error) => {
+      if (globalThis.electronStore) {
+        globalThis.electronStore.removeItem(key).catch((error) => {
           // Only log errors in development
           if (process.env.NODE_ENV === "development") {
             console.error(`Error removing ${key} from electron-store:`, error);
@@ -221,8 +221,8 @@ export const storage = {
       localStorage.clear();
 
       // Also clear electronStore if available
-      if (window.electronStore) {
-        window.electronStore.clear().catch((error) => {
+      if (globalThis.electronStore) {
+        globalThis.electronStore.clear().catch((error) => {
           // Only log errors in development
           if (process.env.NODE_ENV === "development") {
             console.error("Error clearing electron-store:", error);
@@ -241,9 +241,9 @@ export const storage = {
    * @returns Promise<string | null>
    */
   getItemAsync: async (key: string): Promise<string | null> => {
-    if (window.electronStore) {
+    if (globalThis.electronStore) {
       try {
-        const value = await window.electronStore.getItem(key);
+        const value = await globalThis.electronStore.getItem(key);
         if (value !== null) {
           localStorage.setItem(key, value); // keep localStorage in sync
           storageCache[key] = value;

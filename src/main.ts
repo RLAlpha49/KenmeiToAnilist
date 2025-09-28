@@ -4,6 +4,8 @@
  * @description Electron main process entry point. Handles window creation, Sentry initialization, Windows installer events, and environment setup for the renderer process.
  */
 
+/// <reference types="@electron-forge/plugin-vite/forge-vite-env" />
+
 import { app, BrowserWindow } from "electron";
 import registerListeners from "./helpers/ipc/listeners-register";
 import squirrelStartup from "electron-squirrel-startup";

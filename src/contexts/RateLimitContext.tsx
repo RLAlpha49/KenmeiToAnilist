@@ -103,11 +103,12 @@ export function RateLimitProvider({
   // Periodically check rate limit status from main process
   useEffect(() => {
     // Skip if we're in a browser environment without Electron
-    if (!window.electronAPI?.anilist?.getRateLimitStatus) return;
+    if (!globalThis.electronAPI?.anilist?.getRateLimitStatus) return;
 
     const checkRateLimitStatus = async () => {
       try {
-        const status = await window.electronAPI.anilist.getRateLimitStatus();
+        const status =
+          await globalThis.electronAPI.anilist.getRateLimitStatus();
 
         if (status.isRateLimited) {
           setRateLimitState({
@@ -146,11 +147,11 @@ export function RateLimitProvider({
     };
 
     // Add event listener for the custom rate limiting event
-    window.addEventListener("anilist:rate-limited", handleRateLimit);
+    globalThis.addEventListener("anilist:rate-limited", handleRateLimit);
 
     // Clean up the listener on unmount
     return () => {
-      window.removeEventListener("anilist:rate-limited", handleRateLimit);
+      globalThis.removeEventListener("anilist:rate-limited", handleRateLimit);
     };
   }, []);
 

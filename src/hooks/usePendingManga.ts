@@ -64,7 +64,10 @@ export const usePendingManga = () => {
   useEffect(() => {
     return () => {
       // Only save if we have pending manga and we're not in an active process
-      if (pendingManga.length > 0 && !window.matchingProcessState?.isRunning) {
+      if (
+        pendingManga.length > 0 &&
+        !globalThis.matchingProcessState?.isRunning
+      ) {
         console.log(
           `Component unmounting - ensuring ${pendingManga.length} pending manga are saved to storage`,
         );

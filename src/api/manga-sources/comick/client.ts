@@ -40,7 +40,7 @@ export class ComickClient extends BaseMangaSourceClient<
       console.log(`🔍 Searching Comick for: "${query}" (limit: ${limit})`);
 
       // Use generic manga source API to call the main process instead of direct fetch to avoid CORS issues
-      const data = (await window.electronAPI.mangaSource.search(
+      const data = (await globalThis.electronAPI.mangaSource.search(
         "comick",
         query,
         limit,
@@ -69,7 +69,7 @@ export class ComickClient extends BaseMangaSourceClient<
       console.log(`📖 Getting Comick manga details for: ${slug}`);
 
       // Use generic manga source API to call the main process instead of direct fetch to avoid CORS issues
-      const rawData = await window.electronAPI.mangaSource.getMangaDetail(
+      const rawData = await globalThis.electronAPI.mangaSource.getMangaDetail(
         "comick",
         slug,
       );
