@@ -27,11 +27,12 @@ export function exposeApiContext() {
       getRateLimitStatus: () =>
         ipcRenderer.invoke("anilist:getRateLimitStatus"),
     },
-    comick: {
-      search: (query: string, limit?: number) =>
-        ipcRenderer.invoke("comick:search", query, limit),
-      getMangaDetail: (hid: string) =>
-        ipcRenderer.invoke("comick:getMangaDetail", hid),
+    // Generic manga source API
+    mangaSource: {
+      search: (source: string, query: string, limit?: number) =>
+        ipcRenderer.invoke("mangaSource:search", source, query, limit),
+      getMangaDetail: (source: string, slug: string) =>
+        ipcRenderer.invoke("mangaSource:getMangaDetail", source, slug),
     },
     shell: {
       openExternal: (url: string) =>

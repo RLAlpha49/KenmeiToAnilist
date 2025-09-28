@@ -1141,23 +1141,62 @@ export function SettingsPage() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-medium">
+                            Enable Comick Alternative Search
+                          </h3>
+                          <Badge
+                            variant="secondary"
+                            className="bg-yellow-100 text-xs text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
+                          >
+                            Disabled
+                          </Badge>
+                        </div>
+                        <p className="text-muted-foreground text-xs">
+                          Comick fallback search is temporarily disabled as the
+                          service has been taken down. The API may return once
+                          Comick fully transitions as a tracking site.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          id="enable-comick-search"
+                          checked={false}
+                          disabled={true}
+                          onCheckedChange={() => {
+                            // No-op: Comick fallback is disabled
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  {/* MangaDex Alternative Search */}
+                  <motion.div
+                    className="bg-muted/40 rounded-lg border p-4"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5, duration: 0.5 }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
                         <h3 className="text-sm font-medium">
-                          Enable Comick Alternative Search
+                          Enable MangaDex Alternative Search
                         </h3>
                         <p className="text-muted-foreground text-xs">
-                          Use Comick as a fallback to find manga when AniList
+                          Use MangaDex as a fallback to find manga when AniList
                           search returns no results. Will be ignored when rate
                           limited and continue searching normally.
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <Switch
-                          id="enable-comick-search"
-                          checked={matchConfig.enableComickSearch}
+                          id="enable-mangadex-search"
+                          checked={matchConfig.enableMangaDexSearch}
                           onCheckedChange={(checked) => {
                             const newConfig = {
                               ...matchConfig,
-                              enableComickSearch: checked,
+                              enableMangaDexSearch: checked,
                             };
                             setMatchConfig(newConfig);
                             saveMatchConfig(newConfig);
@@ -1179,9 +1218,9 @@ export function SettingsPage() {
                         About Matching Settings
                       </AlertTitle>
                       <AlertDescription className="text-blue-700 dark:text-blue-300">
-                        Some settings only affect automatic matching during the
-                        initial import process. All manga types will still be
-                        available when using manual search functionality.
+                        Some settings only affect automatic matching. All manga
+                        types will still be available when using manual search
+                        functionality.
                       </AlertDescription>
                     </Alert>
                   </motion.div>

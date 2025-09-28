@@ -190,11 +190,25 @@ export interface MangaMatch {
   manga: AniListManga;
   confidence: number;
   // Optional source information for matches found via alternative methods
+  sourceInfo?: {
+    title: string;
+    slug: string;
+    sourceId: string;
+    source: string;
+    foundViaAlternativeSearch: boolean;
+  };
+  // @deprecated Use sourceInfo instead
   comickSource?: {
     title: string;
     slug: string;
     comickId: string;
     foundViaComick: boolean;
+  };
+  mangaDexSource?: {
+    title: string;
+    slug: string;
+    mangaDexId: string;
+    foundViaMangaDex: boolean;
   };
 }
 

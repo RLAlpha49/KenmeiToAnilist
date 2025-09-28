@@ -336,6 +336,7 @@ export type MatchConfig = {
   ignoreAdultContent: boolean;
   blurAdultContent: boolean;
   enableComickSearch: boolean;
+  enableMangaDexSearch: boolean;
 };
 
 /**
@@ -347,7 +348,8 @@ export const DEFAULT_MATCH_CONFIG: MatchConfig = {
   ignoreOneShots: false,
   ignoreAdultContent: false,
   blurAdultContent: true,
-  enableComickSearch: true,
+  enableComickSearch: false, // Temporarily disabled - Comick unavailable
+  enableMangaDexSearch: true,
 };
 
 /**

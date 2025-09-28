@@ -29,6 +29,20 @@ import {
 import { getMatchConfig } from "../../utils/storage";
 
 /**
+ * Get CSS classes for source badge based on source type
+ */
+function getSourceBadgeClasses(source: string): string {
+  switch (source) {
+    case "comick":
+      return "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300";
+    case "mangadex":
+      return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300";
+    default:
+      return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300";
+  }
+}
+
+/**
  * Props for the MangaSearchPanel component.
  *
  * @property kenmeiManga - The Kenmei manga to search for a match (optional).
@@ -630,17 +644,51 @@ export function MangaSearchPanel({
                         </p>
                       )}
 
-                    {/* Comick source badge */}
-                    {result.comickSource && (
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center rounded-md bg-orange-100 px-2 py-1 text-xs font-medium text-orange-800 dark:bg-orange-900/30 dark:text-orange-300">
-                          📚 Found via Comick
-                        </span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          ({result.comickSource.title})
-                        </span>
-                      </div>
-                    )}
+                    {/* Alternative source badges */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* Show unified sourceInfo badge */}
+                      {result.sourceInfo && (
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${getSourceBadgeClasses(result.sourceInfo.source)}`}
+                          >
+                            📚 Found via{" "}
+                            {result.sourceInfo.source === "mangadex"
+                              ? "MangaDex"
+                              : result.sourceInfo.source}
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            ({result.sourceInfo.title})
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Show individual source badges when both exist */}
+                      {!result.sourceInfo && (
+                        <>
+                          {result.comickSource && (
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex items-center rounded-md bg-orange-100 px-2 py-1 text-xs font-medium text-orange-800 dark:bg-orange-900/30 dark:text-orange-300">
+                                📚 Found via Comick
+                              </span>
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                ({result.comickSource.title})
+                              </span>
+                            </div>
+                          )}
+                          {result.mangaDexSource && (
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex items-center rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                                📚 Found via MangaDex
+                              </span>
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                ({result.mangaDexSource.title})
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
 
                     <div className="flex flex-wrap gap-2 pt-2">
                       {manga.format && (

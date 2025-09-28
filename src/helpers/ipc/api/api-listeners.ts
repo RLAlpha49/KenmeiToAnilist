@@ -6,7 +6,7 @@
 
 import { ipcMain, shell } from "electron";
 import fetch, { Response } from "node-fetch";
-import type { ComickManga, ComickMangaDetail } from "../../../api/comick/types";
+import { getAppVersionElectron } from "../../../utils/app-version";
 
 /**
  * Extended Error interface for GraphQL API errors.
@@ -246,9 +246,11 @@ async function requestAniList(
   await handleRateLimit();
   await handleRequestTiming();
 
+  const appVersion = await getAppVersionElectron();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "application/json",
+    "User-Agent": `KenmeiToAniList/${appVersion}`,
   };
 
   if (token) {
@@ -412,11 +414,13 @@ export function setupAniListAPI() {
         code: code,
       };
 
+      const appVersion = await getAppVersionElectron();
       const response = await fetch("https://anilist.co/api/v2/oauth/token", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
+          "User-Agent": `KenmeiToAniList/${appVersion}`,
         },
         body: JSON.stringify(tokenRequestBody),
       });
@@ -485,67 +489,78 @@ export function setupAniListAPI() {
     };
   });
 
-  // Comick API handlers
+  // Manga source API handlers (generic)
   ipcMain.handle(
-    "comick:search",
-    async (_, query: string, limit: number = 10) => {
+    "mangaSource:search",
+    async (_, source: string, query: string, limit: number = 10) => {
       try {
+        const { mangaSourceRegistry } = await import(
+          "../../../api/manga-sources/registry"
+        );
+        const { MangaSource } = await import(
+          "../../../api/manga-sources/types"
+        );
+
         console.log(
-          `🔍 Comick API: Searching for "${query}" with limit ${limit}`,
+          `🔍 ${source} API: Searching for "${query}" with limit ${limit}`,
         );
 
-        const encodedQuery = encodeURIComponent(query);
-        const response = await fetch(
-          `https://api.comick.fun/v1.0/search?q=${encodedQuery}&limit=${limit}&t=false`,
-          {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-              "User-Agent": "KenmeiToAniList/1.0",
-            },
-          },
+        const sourceEnum = Object.values(MangaSource).find(
+          (val) => val === source,
         );
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        if (!sourceEnum) {
+          throw new Error(`Unsupported manga source: ${source}`);
         }
 
-        const data = (await response.json()) as ComickManga[];
+        const data = await mangaSourceRegistry.searchManga(
+          sourceEnum,
+          query,
+          limit,
+        );
+
         console.log(
-          `📦 Comick API: Found ${Array.isArray(data) ? data.length : 0} results for "${query}"`,
+          `📦 ${source} API: Found ${Array.isArray(data) ? data.length : 0} results for "${query}"`,
         );
 
         return data || [];
       } catch (error) {
-        console.error(`❌ Comick search failed for "${query}":`, error);
+        console.error(`❌ ${source} search failed for "${query}":`, error);
         throw error;
       }
     },
   );
 
-  ipcMain.handle("comick:getMangaDetail", async (_, slug: string) => {
-    try {
-      console.log(`📖 Comick API: Getting manga details for "${slug}"`);
+  ipcMain.handle(
+    "mangaSource:getMangaDetail",
+    async (_, source: string, slug: string) => {
+      try {
+        const { mangaSourceRegistry } = await import(
+          "../../../api/manga-sources/registry"
+        );
+        const { MangaSource } = await import(
+          "../../../api/manga-sources/types"
+        );
 
-      const response = await fetch(`https://api.comick.fun/comic/${slug}`, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "User-Agent": "KenmeiToAniList/1.0",
-        },
-      });
+        console.log(`📖 ${source} API: Getting manga details for "${slug}"`);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Convert string value to enum (e.g., "mangadex" -> MangaSource.MANGADX)
+        // Find the enum value that matches the string value
+        const sourceEnum = Object.values(MangaSource).find(
+          (val) => val === source,
+        );
+        if (!sourceEnum) {
+          throw new Error(`Unsupported manga source: ${source}`);
+        }
+
+        const data = await mangaSourceRegistry.getMangaDetail(sourceEnum, slug);
+
+        console.log(`📖 ${source} API: Retrieved details for "${slug}"`);
+
+        return data || null;
+      } catch (error) {
+        console.error(`❌ ${source} manga detail failed for "${slug}":`, error);
+        throw error;
       }
-
-      const data = (await response.json()) as ComickMangaDetail;
-      console.log(`📖 Comick API: Retrieved details for "${slug}"`);
-
-      return data || null;
-    } catch (error) {
-      console.error(`❌ Comick manga detail failed for "${slug}":`, error);
-      throw error;
-    }
-  });
+    },
+  );
 }

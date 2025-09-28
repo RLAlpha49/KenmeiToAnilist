@@ -12,7 +12,7 @@ import {
   SearchResult,
   PageInfo,
 } from "../anilist/types";
-import { EnhancedAniListManga } from "../comick/types";
+import type { EnhancedAniListManga } from "../manga-sources/types";
 import {
   searchManga,
   advancedSearchManga,
@@ -2236,8 +2236,13 @@ function processComickResults(
   >,
 ): AniListManga[] {
   const processedResults = comickResults.map((enhancedManga) => {
-    if (enhancedManga.comickSource) {
-      comickSourceMap.set(enhancedManga.id, enhancedManga.comickSource);
+    if (enhancedManga.sourceInfo) {
+      comickSourceMap.set(enhancedManga.id, {
+        title: enhancedManga.sourceInfo.title,
+        slug: enhancedManga.sourceInfo.slug,
+        comickId: enhancedManga.sourceInfo.sourceId,
+        foundViaComick: enhancedManga.sourceInfo.foundViaAlternativeSearch,
+      });
     }
 
     const manga = convertEnhancedMangaToAniList(enhancedManga);
@@ -2245,7 +2250,7 @@ function processComickResults(
     const titleTypePriority = calculateTitleTypePriority(manga, title);
 
     console.log(
-      `⚖️ Comick result confidence for "${manga.title?.english || manga.title?.romaji}": ${confidence}% (found via Comick: ${enhancedManga.comickSource?.title || "unknown"})`,
+      `⚖️ Comick result confidence for "${manga.title?.english || manga.title?.romaji}": ${confidence}% (found via Comick: ${enhancedManga.sourceInfo?.title || "unknown"})`,
     );
 
     return { manga, confidence, titleTypePriority };
@@ -2305,6 +2310,96 @@ function applyComickFiltering(
 }
 
 /**
+ * Process MangaDex results for display
+ */
+function processMangaDexResults(
+  mangaDexResults: EnhancedAniListManga[],
+  title: string,
+  mangaDexSourceMap: Map<
+    number,
+    {
+      title: string;
+      slug: string;
+      mangaDexId: string;
+      foundViaMangaDex: boolean;
+    }
+  >,
+): AniListManga[] {
+  const processedResults = mangaDexResults.map((enhancedManga) => {
+    if (enhancedManga.sourceInfo) {
+      mangaDexSourceMap.set(enhancedManga.id, {
+        title: enhancedManga.sourceInfo.title,
+        slug: enhancedManga.sourceInfo.slug,
+        mangaDexId: enhancedManga.sourceInfo.sourceId,
+        foundViaMangaDex: enhancedManga.sourceInfo.foundViaAlternativeSearch,
+      });
+    }
+
+    const manga = convertEnhancedMangaToAniList(enhancedManga);
+    const confidence = calculateConfidence(title, manga);
+    const titleTypePriority = calculateTitleTypePriority(manga, title);
+
+    console.log(
+      `⚖️ MangaDex result confidence for "${manga.title?.english || manga.title?.romaji}": ${confidence}% (found via MangaDex: ${enhancedManga.sourceInfo?.title || "unknown"})`,
+    );
+
+    return { manga, confidence, titleTypePriority };
+  });
+
+  // Sort by confidence and priority
+  processedResults.sort((a, b) => {
+    if (a.confidence !== b.confidence) {
+      return b.confidence - a.confidence;
+    }
+    return b.titleTypePriority - a.titleTypePriority;
+  });
+
+  return processedResults.map((match) => match.manga);
+}
+
+/**
+ * Apply content filtering to MangaDex results based on match configuration
+ */
+function applyMangaDexFiltering(
+  mangaDexResults: AniListManga[],
+  title: string,
+  searchConfig: SearchServiceConfig,
+): AniListManga[] {
+  if (searchConfig.bypassCache) {
+    return mangaDexResults;
+  }
+
+  const matchConfig = getMatchConfig();
+  let filteredResults = mangaDexResults;
+
+  if (matchConfig.ignoreOneShots) {
+    const beforeFilter = filteredResults.length;
+    filteredResults = filteredResults.filter((manga) => !isOneShot(manga));
+    const afterFilter = filteredResults.length;
+
+    if (beforeFilter > afterFilter) {
+      console.log(
+        `🚫 Filtered out ${beforeFilter - afterFilter} one-shot(s) from MangaDex results for "${title}"`,
+      );
+    }
+  }
+
+  if (matchConfig.ignoreAdultContent) {
+    const beforeFilter = filteredResults.length;
+    filteredResults = filteredResults.filter((manga) => !manga.isAdult);
+    const afterFilter = filteredResults.length;
+
+    if (beforeFilter > afterFilter) {
+      console.log(
+        `🚫 Filtered out ${beforeFilter - afterFilter} adult content from MangaDex results for "${title}"`,
+      );
+    }
+  }
+
+  return filteredResults;
+}
+
+/**
  * Convert enhanced manga to AniListManga format
  */
 function convertEnhancedMangaToAniList(
@@ -2339,9 +2434,6 @@ function convertEnhancedMangaToAniList(
 /**
  * Execute Comick fallback search when no AniList results found
  */
-/**
- * Execute Comick fallback search when no AniList results found
- */
 async function executeComickFallback(
   title: string,
   token: string | undefined,
@@ -2362,7 +2454,7 @@ async function executeComickFallback(
   const matchConfig = getMatchConfig();
 
   // Early return if conditions not met for Comick search
-  if (finalResults.length > 0 || !token) {
+  if (!token) {
     return { results: finalResults, comickSourceMap };
   }
 
@@ -2375,12 +2467,15 @@ async function executeComickFallback(
   );
 
   try {
-    const { searchComickAndGetAniListManga } = await import("../comick/client");
+    const { mangaSourceRegistry, MangaSource } = await import(
+      "../manga-sources"
+    );
     const comickLimit = 1;
 
     console.log(`🔍 Searching Comick with limit ${comickLimit} for "${title}"`);
 
-    const comickResults = await searchComickAndGetAniListManga(
+    const comickResults = await mangaSourceRegistry.searchAndGetAniListManga(
+      MangaSource.COMICK,
       title,
       token,
       comickLimit,
@@ -2421,6 +2516,232 @@ async function executeComickFallback(
 }
 
 /**
+ * Execute MangaDex fallback search when no AniList results found
+ */
+async function executeMangaDexFallback(
+  title: string,
+  token: string | undefined,
+  finalResults: AniListManga[],
+  searchConfig: SearchServiceConfig,
+): Promise<{
+  results: AniListManga[];
+  mangaDexSourceMap: Map<
+    number,
+    {
+      title: string;
+      slug: string;
+      mangaDexId: string;
+      foundViaMangaDex: boolean;
+    }
+  >;
+}> {
+  const mangaDexSourceMap = new Map<
+    number,
+    {
+      title: string;
+      slug: string;
+      mangaDexId: string;
+      foundViaMangaDex: boolean;
+    }
+  >();
+
+  const matchConfig = getMatchConfig();
+
+  // Early return if conditions not met for MangaDex search
+  if (!token) {
+    return { results: finalResults, mangaDexSourceMap };
+  }
+
+  if (!matchConfig.enableMangaDexSearch) {
+    return { results: finalResults, mangaDexSourceMap };
+  }
+
+  console.log(
+    `🎯 No AniList results found for "${title}", trying MangaDex fallback...`,
+  );
+
+  try {
+    const { mangaSourceRegistry, MangaSource } = await import(
+      "../manga-sources"
+    );
+    const mangaDexLimit = 1;
+
+    console.log(
+      `🔍 Searching MangaDex with limit ${mangaDexLimit} for "${title}"`,
+    );
+
+    const mangaDexResults = await mangaSourceRegistry.searchAndGetAniListManga(
+      MangaSource.MANGADEX,
+      title,
+      token,
+      mangaDexLimit,
+    );
+
+    if (mangaDexResults.length === 0) {
+      console.log(`📦 No MangaDex results found for "${title}"`);
+      return { results: finalResults, mangaDexSourceMap };
+    }
+
+    console.log(
+      `✅ MangaDex found ${mangaDexResults.length} results for "${title}"`,
+    );
+
+    // Process the MangaDex results
+    let processedResults = processMangaDexResults(
+      mangaDexResults,
+      title,
+      mangaDexSourceMap,
+    );
+
+    console.log(
+      `🎯 Using ${processedResults.length} MangaDex results as fallback for "${title}"`,
+    );
+
+    // Apply filtering to MangaDex results
+    processedResults = applyMangaDexFiltering(
+      processedResults,
+      title,
+      searchConfig,
+    );
+
+    return { results: processedResults, mangaDexSourceMap };
+  } catch (error) {
+    console.error(`❌ MangaDex fallback failed for "${title}":`, error);
+    return { results: finalResults, mangaDexSourceMap };
+  }
+}
+
+/**
+ * Merge results from original search, Comick, and MangaDex while handling duplicates
+ */
+function mergeSourceResults(
+  originalResults: AniListManga[],
+  comickResults: AniListManga[],
+  mangaDexResults: AniListManga[],
+  comickSourceMap: Map<
+    number,
+    { title: string; slug: string; comickId: string; foundViaComick: boolean }
+  >,
+  mangaDexSourceMap: Map<
+    number,
+    {
+      title: string;
+      slug: string;
+      mangaDexId: string;
+      foundViaMangaDex: boolean;
+    }
+  >,
+): {
+  mergedResults: AniListManga[];
+  comickSourceMap: Map<
+    number,
+    { title: string; slug: string; comickId: string; foundViaComick: boolean }
+  >;
+  mangaDexSourceMap: Map<
+    number,
+    {
+      title: string;
+      slug: string;
+      mangaDexId: string;
+      foundViaMangaDex: boolean;
+    }
+  >;
+} {
+  const seenIds = new Set<number>();
+  const mergedResults: AniListManga[] = [];
+  const finalComickSourceMap = new Map(comickSourceMap);
+  const finalMangaDexSourceMap = new Map(mangaDexSourceMap);
+
+  // Add original results first
+  originalResults.forEach((manga) => {
+    if (!seenIds.has(manga.id)) {
+      seenIds.add(manga.id);
+      mergedResults.push(manga);
+    }
+  });
+
+  // Add Comick results, checking for duplicates
+  comickResults.forEach((manga) => {
+    if (!seenIds.has(manga.id)) {
+      seenIds.add(manga.id);
+      mergedResults.push(manga);
+    } else {
+      // If duplicate, keep the Comick source info
+      console.log(
+        `🔄 Found duplicate manga ID ${manga.id} from Comick, keeping source info`,
+      );
+    }
+  });
+
+  // Add MangaDex results, checking for duplicates
+  mangaDexResults.forEach((manga) => {
+    if (!seenIds.has(manga.id)) {
+      seenIds.add(manga.id);
+      mergedResults.push(manga);
+    } else {
+      // If duplicate, keep the MangaDex source info
+      console.log(
+        `🔄 Found duplicate manga ID ${manga.id} from MangaDex, keeping source info`,
+      );
+    }
+  });
+
+  console.log(
+    `🔗 Merged results: ${originalResults.length} original + ${comickResults.length} Comick + ${mangaDexResults.length} MangaDex = ${mergedResults.length} unique results`,
+  );
+
+  return {
+    mergedResults,
+    comickSourceMap: finalComickSourceMap,
+    mangaDexSourceMap: finalMangaDexSourceMap,
+  };
+}
+
+/**
+ * Get source info for a manga from either Comick or MangaDex source maps
+ */
+function getSourceInfo(
+  mangaId: number,
+  comickSourceMap: Map<
+    number,
+    { title: string; slug: string; comickId: string; foundViaComick: boolean }
+  >,
+  mangaDexSourceMap: Map<
+    number,
+    {
+      title: string;
+      slug: string;
+      mangaDexId: string;
+      foundViaMangaDex: boolean;
+    }
+  >,
+) {
+  if (comickSourceMap.has(mangaId)) {
+    const comickInfo = comickSourceMap.get(mangaId)!;
+    return {
+      title: comickInfo.title,
+      slug: comickInfo.slug,
+      sourceId: comickInfo.comickId,
+      source: "comick",
+      foundViaAlternativeSearch: comickInfo.foundViaComick,
+    };
+  }
+
+  if (mangaDexSourceMap.has(mangaId)) {
+    const mangaDexInfo = mangaDexSourceMap.get(mangaId)!;
+    return {
+      title: mangaDexInfo.title,
+      slug: mangaDexInfo.slug,
+      sourceId: mangaDexInfo.mangaDexId,
+      source: "mangadex",
+      foundViaAlternativeSearch: mangaDexInfo.foundViaMangaDex,
+    };
+  }
+
+  return undefined;
+}
+
+/**
  * Build final response with confidence scoring
  */
 function buildFinalResponse(
@@ -2429,6 +2750,15 @@ function buildFinalResponse(
   comickSourceMap: Map<
     number,
     { title: string; slug: string; comickId: string; foundViaComick: boolean }
+  >,
+  mangaDexSourceMap: Map<
+    number,
+    {
+      title: string;
+      slug: string;
+      mangaDexId: string;
+      foundViaMangaDex: boolean;
+    }
   >,
   lastPageInfo?: PageInfo,
 ): MangaSearchResponse {
@@ -2460,6 +2790,10 @@ function buildFinalResponse(
       comickSource: comickSourceMap.has(manga.id)
         ? comickSourceMap.get(manga.id)
         : undefined,
+      mangaDexSource: mangaDexSourceMap.has(manga.id)
+        ? mangaDexSourceMap.get(manga.id)
+        : undefined,
+      sourceInfo: getSourceInfo(manga.id, comickSourceMap, mangaDexSourceMap),
     };
   });
 
@@ -2470,11 +2804,15 @@ function buildFinalResponse(
     return b.titleTypePriority - a.titleTypePriority;
   });
 
-  const finalMatches = matches.map(({ manga, confidence, comickSource }) => ({
-    manga,
-    confidence,
-    comickSource,
-  }));
+  const finalMatches = matches.map(
+    ({ manga, confidence, comickSource, mangaDexSource, sourceInfo }) => ({
+      manga,
+      confidence,
+      comickSource,
+      mangaDexSource,
+      sourceInfo,
+    }),
+  );
 
   return {
     matches: finalMatches,
@@ -2542,12 +2880,68 @@ export async function searchMangaByTitle(
     searchConfig,
   );
 
-  // Handle Comick fallback if needed
-  const { results: finalResults, comickSourceMap } =
-    await executeComickFallback(title, token, filteredResults, searchConfig);
+  // Handle fallback sources only if no original AniList results were found
+  let finalResults = filteredResults;
+  let comickSourceMap = new Map<
+    number,
+    { title: string; slug: string; comickId: string; foundViaComick: boolean }
+  >();
+  let mangaDexSourceMap = new Map<
+    number,
+    {
+      title: string;
+      slug: string;
+      mangaDexId: string;
+      foundViaMangaDex: boolean;
+    }
+  >();
+
+  // Only use fallback sources if no AniList results were found
+  if (filteredResults.length === 0) {
+    console.log(
+      `🎯 No AniList results found for "${title}", trying fallback sources...`,
+    );
+
+    // Try both fallback sources when enabled
+    const comickFallback = await executeComickFallback(
+      title,
+      token,
+      finalResults,
+      searchConfig,
+    );
+    const mangaDexFallback = await executeMangaDexFallback(
+      title,
+      token,
+      finalResults,
+      searchConfig,
+    );
+
+    // Merge results and handle duplicates
+    const mergedResults = mergeSourceResults(
+      finalResults,
+      comickFallback.results,
+      mangaDexFallback.results,
+      comickFallback.comickSourceMap,
+      mangaDexFallback.mangaDexSourceMap,
+    );
+
+    finalResults = mergedResults.mergedResults;
+    comickSourceMap = mergedResults.comickSourceMap;
+    mangaDexSourceMap = mergedResults.mangaDexSourceMap;
+  } else {
+    console.log(
+      `✅ Found ${filteredResults.length} AniList results for "${title}", skipping fallback sources`,
+    );
+  }
 
   // Build and return final response
-  return buildFinalResponse(finalResults, title, comickSourceMap, lastPageInfo);
+  return buildFinalResponse(
+    finalResults,
+    title,
+    comickSourceMap,
+    mangaDexSourceMap,
+    lastPageInfo,
+  );
 }
 
 /**
@@ -3148,6 +3542,16 @@ function createMangaMatchResult(
     manga: match,
     confidence: calculateConfidence(manga.title, match),
     comickSource: comickSourceMap.get(match.id), // Include Comick source if available
+    sourceInfo: comickSourceMap.get(match.id)
+      ? {
+          title: comickSourceMap.get(match.id)!.title,
+          slug: comickSourceMap.get(match.id)!.slug,
+          sourceId: comickSourceMap.get(match.id)!.comickId,
+          source: "comick",
+          foundViaAlternativeSearch: comickSourceMap.get(match.id)!
+            .foundViaComick,
+        }
+      : undefined,
   }));
 
   return {

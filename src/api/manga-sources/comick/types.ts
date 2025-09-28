@@ -1,4 +1,7 @@
-import type { AniListManga } from "../anilist/types";
+import type { AniListManga } from "../../anilist/types";
+import type { BaseMangaEntry, BaseMangaDetail } from "../types";
+import { MangaSource } from "../types";
+
 /**
  * @packageDocumentation
  * @module comick-types
@@ -7,16 +10,12 @@ import type { AniListManga } from "../anilist/types";
 
 /**
  * Represents a Comick manga entry from the search API.
+ * Extends the base manga entry with Comick-specific properties.
  *
  * @source
  */
-export interface ComickManga {
-  id: string;
-  title: string;
-  slug: string;
-  year?: number;
-  status?: number;
-  country?: string;
+export interface ComickManga extends BaseMangaEntry {
+  source: MangaSource.COMICK;
   rating?: string;
   rating_count?: number;
   follow_count?: number;
@@ -32,7 +31,7 @@ export interface ComickManga {
     title: string;
     slug: string;
   };
-  highlight?: string;
+  highlight?: string; // Search highlight from API
 }
 
 /**
@@ -48,10 +47,12 @@ export interface ComickSearchResponse {
 
 /**
  * Represents a Comick manga detail with referrers (external links).
+ * Extends the base manga detail with Comick-specific properties.
  *
  * @source
  */
-export interface ComickMangaDetail {
+export interface ComickMangaDetail extends BaseMangaDetail {
+  source: MangaSource.COMICK;
   comic: {
     id: string;
     title: string;
@@ -109,6 +110,7 @@ export interface ComickMangaDetail {
 
 /**
  * Represents a matched manga from Comick with AniList info.
+ * @deprecated Use MangaMatchResult from manga-sources/types instead.
  *
  * @source
  */
@@ -121,6 +123,7 @@ export interface ComickMatchResult {
 
 /**
  * Represents an enhanced AniList manga entry that includes Comick source info.
+ * @deprecated Use EnhancedAniListManga from manga-sources/types instead.
  *
  * @source
  */

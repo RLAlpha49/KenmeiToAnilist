@@ -90,6 +90,14 @@ declare interface Window {
         timeRemaining: number;
       }>;
     };
+    mangaSource: {
+      search: (
+        source: string,
+        query: string,
+        limit?: number,
+      ) => Promise<unknown>;
+      getMangaDetail: (source: string, slug: string) => Promise<unknown>;
+    };
     comick: {
       search: (query: string, limit?: number) => Promise<unknown>;
       getMangaDetail: (hid: string) => Promise<unknown>;

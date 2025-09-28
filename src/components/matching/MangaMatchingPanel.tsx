@@ -49,8 +49,6 @@ import { Switch } from "../../components/ui/switch";
 import { Label } from "../../components/ui/label";
 import { motion, AnimatePresence } from "framer-motion";
 
-// TODO: Update the comick alternative search to use MangaDex instead, as comick was recently shut down. See: https://api.mangadex.org/docs/
-
 /**
  * Props for the MangaMatchingPanel component.
  *
@@ -131,15 +129,20 @@ export function MangaMatchingPanel({
     new Set(),
   );
 
-  // Add state for Comick search setting
-  const [enableComickSearch, setEnableComickSearch] = useState(true);
+  // Add state for Comick search setting (disabled - Comick temporarily unavailable)
+  // eslint-disable-next-line
+  const [enableComickSearch, setEnableComickSearch] = useState(false);
+  // Add state for MangaDex search setting
+  const [enableMangaDexSearch, setEnableMangaDexSearch] = useState(true);
 
   // Load blur settings from match config
   useEffect(() => {
     const loadBlurSettings = async () => {
       const matchConfig = getMatchConfig();
       setBlurAdultContent(matchConfig.blurAdultContent);
-      setEnableComickSearch(matchConfig.enableComickSearch);
+      // Comick is temporarily disabled, keep it false
+      setEnableComickSearch(false);
+      setEnableMangaDexSearch(matchConfig.enableMangaDexSearch);
     };
     loadBlurSettings();
   }, []);
@@ -179,6 +182,23 @@ export function MangaMatchingPanel({
       console.error("Failed to save Comick search setting:", error);
       // Revert the state if saving failed
       setEnableComickSearch(!enabled);
+    }
+  };
+
+  // Handler for toggling MangaDex search setting
+  const handleMangaDexSearchToggle = async (enabled: boolean) => {
+    setEnableMangaDexSearch(enabled);
+    try {
+      const currentConfig = getMatchConfig();
+      const updatedConfig = {
+        ...currentConfig,
+        enableMangaDexSearch: enabled,
+      };
+      saveMatchConfig(updatedConfig);
+    } catch (error) {
+      console.error("Failed to save MangaDex search setting:", error);
+      // Revert the state if saving failed
+      setEnableMangaDexSearch(!enabled);
     }
   };
 
@@ -1213,32 +1233,71 @@ export function MangaMatchingPanel({
         </CardContent>
       </Card>
 
-      {/* Comick Search Settings */}
+      {/* Alternative Search Settings */}
       <Card className="mb-4">
         <CardContent className="p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="comick-search-toggle"
-                  checked={enableComickSearch}
-                  onCheckedChange={handleComickSearchToggle}
-                />
-                <Label
-                  htmlFor="comick-search-toggle"
-                  className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Enable Comick Alternative Search
-                </Label>
+          <div className="space-y-4">
+            {/* Comick Search Toggle - Temporarily Disabled */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="comick-search-toggle"
+                      checked={false}
+                      disabled={true}
+                      onCheckedChange={handleComickSearchToggle}
+                    />
+                    <Label
+                      htmlFor="comick-search-toggle"
+                      className="text-muted-foreground cursor-not-allowed text-sm leading-none font-medium opacity-70"
+                    >
+                      Enable Comick Alternative Search (Temporarily Disabled)
+                    </Label>
+                  </div>
+                  <div className="group relative flex">
+                    <Info className="text-muted-foreground h-4 w-4" />
+                    <div className="bg-card absolute bottom-full left-1/2 z-50 mb-2 hidden w-80 -translate-x-1/2 transform rounded-md border px-3 py-2 text-xs font-medium shadow-lg group-hover:block">
+                      Comick has been temporarily taken down. This feature is
+                      disabled until Comick fully transitions as a tracking site
+                      and their API is restored.
+                    </div>
+                  </div>
+                </div>
+                <div className="ml-6 rounded-md bg-yellow-50 px-3 py-2 text-xs text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300">
+                  <strong>Notice:</strong> Comick alternative search is
+                  temporarily disabled as Comick has been taken down. The API
+                  should hopefully be restored after Comick completes its
+                  transition as a tracking site.
+                </div>
               </div>
-              <div className="group relative flex">
-                <Info className="text-muted-foreground h-4 w-4" />
-                <div className="bg-card absolute bottom-full left-1/2 z-50 mb-2 hidden w-80 -translate-x-1/2 transform rounded-md border px-3 py-2 text-xs font-medium shadow-lg group-hover:block">
-                  When enabled, the system will attempt alternative searches
-                  through Comick if the initial AniList search doesn&apos;t find
-                  matches. This feature will be automatically ignored when rate
-                  limited and will continue searching normally. Only the top
-                  search result from Comick will be used.
+            </div>
+
+            {/* MangaDex Search Toggle */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="mangadex-search-toggle"
+                    checked={enableMangaDexSearch}
+                    onCheckedChange={handleMangaDexSearchToggle}
+                  />
+                  <Label
+                    htmlFor="mangadex-search-toggle"
+                    className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Enable MangaDex Alternative Search
+                  </Label>
+                </div>
+                <div className="group relative flex">
+                  <Info className="text-muted-foreground h-4 w-4" />
+                  <div className="bg-card absolute bottom-full left-1/2 z-50 mb-2 hidden w-80 -translate-x-1/2 transform rounded-md border px-3 py-2 text-xs font-medium shadow-lg group-hover:block">
+                    When enabled, the system will attempt alternative searches
+                    through MangaDex if the initial AniList search doesn&apos;t
+                    find matches. This feature will be automatically ignored
+                    when rate limited and will continue searching normally. Only
+                    the top search result from MangaDex will be used.
+                  </div>
                 </div>
               </div>
             </div>
@@ -1579,15 +1638,33 @@ export function MangaMatchingPanel({
                                 </div>
                               )}
 
-                            {/* Comick source badge - show when result came from Comick */}
+                            {/* Source badges - show when result came from alternative sources */}
                             {match.anilistMatches &&
-                              match.anilistMatches.length > 0 &&
-                              match.anilistMatches[0]?.comickSource && (
-                                <div
-                                  className="absolute -top-2 -left-2 rounded-full bg-orange-100 px-2 py-1 text-xs font-bold text-orange-800 shadow-sm dark:bg-orange-900 dark:text-orange-200"
-                                  title={`Found via Comick: ${match.anilistMatches[0].comickSource.title}`}
-                                >
-                                  Comick
+                              match.anilistMatches.length > 0 && (
+                                <div className="absolute -top-2 -left-2 flex gap-1">
+                                  {/* Comick source badge */}
+                                  {(match.anilistMatches[0]?.sourceInfo
+                                    ?.source === "comick" ||
+                                    match.anilistMatches[0]?.comickSource) && (
+                                    <div
+                                      className="rounded-full bg-orange-100 px-2 py-1 text-xs font-bold text-orange-800 shadow-sm dark:bg-orange-900 dark:text-orange-200"
+                                      title={`Found via Comick: ${match.anilistMatches[0]?.sourceInfo?.title || match.anilistMatches[0]?.comickSource?.title}`}
+                                    >
+                                      Comick
+                                    </div>
+                                  )}
+                                  {/* MangaDex source badge */}
+                                  {(match.anilistMatches[0]?.sourceInfo
+                                    ?.source === "mangadex" ||
+                                    match.anilistMatches[0]
+                                      ?.mangaDexSource) && (
+                                    <div
+                                      className="rounded-full bg-blue-100 px-2 py-1 text-xs font-bold text-blue-800 shadow-sm dark:bg-blue-900 dark:text-blue-200"
+                                      title={`Found via MangaDex: ${match.anilistMatches[0]?.sourceInfo?.title || match.anilistMatches[0]?.mangaDexSource?.title}`}
+                                    >
+                                      MangaDex
+                                    </div>
+                                  )}
                                 </div>
                               )}
                           </div>
@@ -2288,15 +2365,31 @@ export function MangaMatchingPanel({
                                         renderConfidenceBadge(
                                           altMatch.confidence,
                                         )}
-                                      {/* Comick source badge for alternative matches */}
-                                      {altMatch.comickSource && (
-                                        <div
-                                          className="rounded-full bg-orange-100 px-2 py-1 text-xs font-bold text-orange-800 shadow-sm dark:bg-orange-900 dark:text-orange-200"
-                                          title={`Found via Comick: ${altMatch.comickSource.title}`}
-                                        >
-                                          Comick
-                                        </div>
-                                      )}
+                                      {/* Alternative source badges for alternative matches */}
+                                      <div className="flex flex-col gap-1">
+                                        {/* Comick source badge */}
+                                        {(altMatch.sourceInfo?.source ===
+                                          "comick" ||
+                                          altMatch.comickSource) && (
+                                          <div
+                                            className="rounded-full bg-orange-100 px-2 py-1 text-xs font-bold text-orange-800 shadow-sm dark:bg-orange-900 dark:text-orange-200"
+                                            title={`Found via Comick: ${altMatch.sourceInfo?.title || altMatch.comickSource?.title}`}
+                                          >
+                                            Comick
+                                          </div>
+                                        )}
+                                        {/* MangaDex source badge */}
+                                        {(altMatch.sourceInfo?.source ===
+                                          "mangadex" ||
+                                          altMatch.mangaDexSource) && (
+                                          <div
+                                            className="rounded-full bg-blue-100 px-2 py-1 text-xs font-bold text-blue-800 shadow-sm dark:bg-blue-900 dark:text-blue-200"
+                                            title={`Found via MangaDex: ${altMatch.sourceInfo?.title || altMatch.mangaDexSource?.title}`}
+                                          >
+                                            MangaDex
+                                          </div>
+                                        )}
+                                      </div>
                                       <div className="flex space-x-2">
                                         <a
                                           href={`https://anilist.co/manga/${altMatch.manga?.id || "unknown"}`}
