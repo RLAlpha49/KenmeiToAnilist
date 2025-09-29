@@ -66,24 +66,24 @@ const ABBREVIATION_MAP = new Map([
  * Common title prefixes/suffixes that can be ignored or normalized
  */
 const IGNORABLE_PATTERNS = [
-  /^\[.*?\]\s*/i, // [Tag] at start
-  /\s*\[.*?\]$/i, // [Tag] at end
-  /^\(.*?\)\s*/i, // (Text) at start
-  /\s*\(.*?\)$/i, // (Text) at end
-  /\s*-\s*raw$/i, // "- Raw" suffix
-  /\s*raw$/i, // "Raw" suffix
-  /\s*scan$/i, // "Scan" suffix
-  /\s*manga$/i, // "Manga" suffix (when redundant)
-  /\s*comic$/i, // "Comic" suffix
-  /\s*doujin(shi)?$/i, // "Doujin/Doujinshi" suffix
-  /\s*anthology$/i, // "Anthology" suffix
-  /\s*collection$/i, // "Collection" suffix
-  /\s*vol\.\s*\d+/i, // Volume numbers
-  /\s*volume\s*\d+/i, // Volume numbers
-  /\s*ch\.\s*\d+/i, // Chapter numbers
-  /\s*chapter\s*\d+/i, // Chapter numbers
-  /\s*oneshot$/i, // "Oneshot" suffix
-  /\s*one[-\s]shot$/i, // "One-shot" variations
+  /^\[.*?\]\s*/gi, // [Tag] at start
+  /\s*\[.*?\]$/gi, // [Tag] at end
+  /^\(.*?\)\s*/gi, // (Text) at start
+  /\s*\(.*?\)$/gi, // (Text) at end
+  /\s*-\s*raw$/gi, // "- Raw" suffix
+  /\s*raw$/gi, // "Raw" suffix
+  /\s*scan$/gi, // "Scan" suffix
+  /\s*manga$/gi, // "Manga" suffix (when redundant)
+  /\s*comic$/gi, // "Comic" suffix
+  /\s*doujin(shi)?$/gi, // "Doujin/Doujinshi" suffix
+  /\s*anthology$/gi, // "Anthology" suffix
+  /\s*collection$/gi, // "Collection" suffix
+  /\s*vol\.\s*\d+/gi, // Volume numbers
+  /\s*volume\s*\d+/gi, // Volume numbers
+  /\s*ch\.\s*\d+/gi, // Chapter numbers
+  /\s*chapter\s*\d+/gi, // Chapter numbers
+  /\s*oneshot$/gi, // "Oneshot" suffix
+  /\s*one[-\s]shot$/gi, // "One-shot" variations
 ];
 
 /**
