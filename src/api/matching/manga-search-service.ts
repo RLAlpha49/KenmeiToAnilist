@@ -274,7 +274,7 @@ function processSearchCache(cachedSearchData: string): void {
  */
 function syncWithClientCache(): void {
   // Check localStorage cache first
-  if (typeof globalThis.window === "undefined") {
+  if (globalThis.window === undefined) {
     return;
   }
 

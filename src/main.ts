@@ -136,9 +136,7 @@ async function installExtensions() {
   }
 }
 
-await app.whenReady();
-createWindow();
-await installExtensions();
+app.whenReady().then(createWindow).then(installExtensions);
 
 //osX only
 app.on("window-all-closed", () => {

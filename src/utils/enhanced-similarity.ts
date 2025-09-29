@@ -139,7 +139,7 @@ export function enhancedNormalize(text: string): string {
   // Normalize whitespace and special characters
   normalized = normalized
     .replaceAll(/[^\w\s\-']/g, " ") // Replace most special chars with space
-    .replaceAll(/-/g, "") // Remove dashes to match manga-search-service normalization
+    .replaceAll("-", "") // Remove dashes to match manga-search-service normalization
     .replaceAll(/\s+/g, "") // Remove all spaces for more consistent matching
     .toLowerCase()
     .trim();
