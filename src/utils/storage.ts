@@ -213,9 +213,9 @@ export const storage = {
   clear: (): void => {
     try {
       // Clear cache
-      Object.keys(storageCache).forEach((key) => {
+      for (const key of Object.keys(storageCache)) {
         delete storageCache[key];
-      });
+      }
 
       // Clear localStorage for compatibility
       localStorage.clear();
@@ -513,22 +513,22 @@ export function mergeMatchResults(newResults: MatchResult[]): MatchResult[] {
     const existingById = new Map<string, MatchResult>();
     const existingByTitle = new Map<string, MatchResult>();
 
-    existingResults.forEach((match) => {
+    for (const match of existingResults) {
       if (match.kenmeiManga?.id != null) {
         existingById.set(match.kenmeiManga.id.toString(), match);
       }
       if (match.kenmeiManga?.title != null) {
         existingByTitle.set(match.kenmeiManga.title.toLowerCase(), match);
       }
-    });
+    }
 
     // Process new results, preserving user progress from existing matches
     const processedResults = newResults.map((newMatch) => {
       // Try to find existing match by ID first
       let existingMatch =
-        newMatch.kenmeiManga?.id != null
-          ? existingById.get(newMatch.kenmeiManga.id.toString())
-          : undefined;
+        newMatch.kenmeiManga?.id === null
+          ? undefined
+          : existingById.get(newMatch.kenmeiManga.id.toString());
 
       // If not found by ID, try title (case insensitive)
       if (!existingMatch && newMatch.kenmeiManga?.title != null) {
@@ -557,14 +557,14 @@ export function mergeMatchResults(newResults: MatchResult[]): MatchResult[] {
     const processedTitles = new Set<string>();
 
     // Add all processed results to the tracking sets with better null handling
-    processedResults.forEach((result) => {
+    for (const result of processedResults) {
       if (result.kenmeiManga?.id != null) {
         processedIds.add(result.kenmeiManga.id.toString());
       }
       if (result.kenmeiManga?.title != null) {
         processedTitles.add(result.kenmeiManga.title.toLowerCase());
       }
-    });
+    }
 
     // Find existing results that weren't in the new results and add them
     const unprocessedExistingResults = existingResults.filter(

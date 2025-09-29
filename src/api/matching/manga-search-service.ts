@@ -70,7 +70,7 @@ function initializeMangaService(): void {
   syncWithClientCache();
 
   // Set up event listeners
-  if (typeof window !== "undefined" && !listenersRegistered) {
+  if (typeof globalThis.window !== "undefined" && !listenersRegistered) {
     listenersRegistered = true;
 
     globalThis.addEventListener("anilist:search-cache-initialized", () => {
@@ -120,11 +120,11 @@ function initializeMangaService(): void {
   }
 
   // Make the cache debugger available globally for troubleshooting
-  if (typeof window !== "undefined") {
+  if (typeof globalThis.window !== "undefined") {
     try {
       // Only define the property if it doesn't already exist
-      if (!Object.hasOwn(window, "__anilistCacheDebug")) {
-        Object.defineProperty(window, "__anilistCacheDebug", {
+      if (!Object.hasOwn(globalThis, "__anilistCacheDebug")) {
+        Object.defineProperty(globalThis, "__anilistCacheDebug", {
           value: cacheDebugger,
           writable: false,
           enumerable: false,
@@ -274,7 +274,7 @@ function processSearchCache(cachedSearchData: string): void {
  */
 function syncWithClientCache(): void {
   // Check localStorage cache first
-  if (typeof window === "undefined") {
+  if (typeof globalThis.window === "undefined") {
     return;
   }
 
@@ -299,7 +299,7 @@ function syncWithClientCache(): void {
 
 // Save the cache to localStorage when it's updated
 function saveCache(): void {
-  if (typeof window !== "undefined") {
+  if (typeof globalThis.window !== "undefined") {
     try {
       localStorage.setItem("anilist_manga_cache", JSON.stringify(mangaCache));
     } catch (e) {
@@ -641,10 +641,12 @@ function checkTitleMatch(title: string, searchName: string): boolean {
  */
 function processTitle(title: string): string {
   return title
-    .replace(/-/g, " ")
-    .replace(/[\u2018\u2019]/g, "'")
-    .replace(/[\u201C\u201D]/g, '"')
-    .replace(/_/g, " ")
+    .replaceAll("-", " ")
+    .replaceAll("\u2018", "'")
+    .replaceAll("\u2019", "'")
+    .replaceAll("\u201C", '"')
+    .replaceAll("\u201D", '"')
+    .replaceAll("_", " ")
     .trim();
 }
 
@@ -656,11 +658,16 @@ function processTitle(title: string): string {
 function replaceSpecialChars(str: string): string {
   // Replace common problematic characters
   return str
-    .replace(/[оО]/g, "o") // Cyrillic to Latin
-    .replace(/[аА]/g, "a") // Cyrillic to Latin
-    .replace(/[еЕ]/g, "e") // Cyrillic to Latin
-    .replace(/[рР]/g, "p") // Cyrillic to Latin
-    .replace(/[сС]/g, "c"); // Cyrillic to Latin
+    .replaceAll("о", "o")
+    .replaceAll("О", "o")
+    .replaceAll("а", "a")
+    .replaceAll("А", "a")
+    .replaceAll("е", "e")
+    .replaceAll("Е", "e")
+    .replaceAll("р", "p")
+    .replaceAll("Р", "p")
+    .replaceAll("с", "c")
+    .replaceAll("С", "c");
 }
 
 /**
@@ -1405,7 +1412,7 @@ function calculateWordOrderSimilarity(
   // Return a score based on common words and if order is preserved
   return (
     (commonWordCount / Math.max(words1.length, words2.length)) *
-    (orderPreserved ? 1.0 : 0.7)
+    (orderPreserved ? 1 : 0.7)
   ); // Penalty if order differs
 }
 
@@ -1552,10 +1559,10 @@ function calculateTitleTypePriority(
 function normalizeForMatching(str: string): string {
   return str
     .toLowerCase()
-    .replace(/-/g, "") // Remove dashes consistently with processTitle logic
-    .replace(/[^\w\s]/g, "") // Remove remaining punctuation
-    .replace(/\s+/g, " ") // Normalize spaces (replace multiple spaces with a single space)
-    .replace(/_/g, " ") // Replace underscores with spaces
+    .replaceAll("-", "") // Remove dashes consistently with processTitle logic
+    .replaceAll(/[^\w\s]/g, "") // Remove remaining punctuation
+    .replaceAll(/\s+/g, " ") // Normalize spaces (replace multiple spaces with a single space)
+    .replaceAll("_", " ") // Replace underscores with spaces
     .trim();
 }
 
@@ -2120,15 +2127,15 @@ function processSearchResults(
   );
 
   // Cache results if not bypassing cache
-  if (!searchConfig.bypassCache) {
+  if (searchConfig.bypassCache) {
+    console.log(`🔍 MANUAL SEARCH: Skipping cache save for "${title}"`);
+  } else {
     const cacheKey = generateCacheKey(title);
     mangaCache[cacheKey] = {
       manga: rankedResults,
       timestamp: Date.now(),
     };
     saveCache();
-  } else {
-    console.log(`🔍 MANUAL SEARCH: Skipping cache save for "${title}"`);
   }
 
   return rankedResults;
@@ -2662,27 +2669,27 @@ function mergeSourceResults(
 
   // Add Comick results, checking for duplicates
   for (const manga of comickResults) {
-    if (!seenIds.has(manga.id)) {
-      seenIds.add(manga.id);
-      mergedResults.push(manga);
-    } else {
+    if (seenIds.has(manga.id)) {
       // If duplicate, keep the Comick source info
       console.log(
         `🔄 Found duplicate manga ID ${manga.id} from Comick, keeping source info`,
       );
+    } else {
+      seenIds.add(manga.id);
+      mergedResults.push(manga);
     }
   }
 
   // Add MangaDex results, checking for duplicates
   for (const manga of mangaDexResults) {
-    if (!seenIds.has(manga.id)) {
-      seenIds.add(manga.id);
-      mergedResults.push(manga);
-    } else {
+    if (seenIds.has(manga.id)) {
       // If duplicate, keep the MangaDex source info
       console.log(
         `🔄 Found duplicate manga ID ${manga.id} from MangaDex, keeping source info`,
       );
+    } else {
+      seenIds.add(manga.id);
+      mergedResults.push(manga);
     }
   }
 
@@ -3917,7 +3924,7 @@ export const cacheDebugger = {
     let storedMangaCount = 0;
     let storedSearchCount = 0;
 
-    if (typeof window !== "undefined") {
+    if (typeof globalThis.window !== "undefined") {
       try {
         const mangaCacheData = localStorage.getItem("anilist_manga_cache");
         if (mangaCacheData) {
@@ -4004,7 +4011,7 @@ export const cacheDebugger = {
     clearMangaCache();
 
     // Clear localStorage caches
-    if (typeof window !== "undefined") {
+    if (typeof globalThis.window !== "undefined") {
       try {
         localStorage.removeItem("anilist_manga_cache");
         localStorage.removeItem("anilist_search_cache");

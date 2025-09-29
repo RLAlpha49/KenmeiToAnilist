@@ -307,10 +307,10 @@ function createEntryMapping(
 function parseIntSafe(value: string | undefined): number | undefined {
   if (!value) return undefined;
   // Remove any non-numeric characters except decimal point
-  const cleanValue = value.replace(/[^\d.]/g, "");
+  const cleanValue = value.replaceAll(/[^\d.]/g, "");
   if (!cleanValue) return undefined;
   const parsed = Number.parseInt(cleanValue, 10);
-  return isNaN(parsed) ? undefined : parsed;
+  return Number.isNaN(parsed) ? undefined : parsed;
 }
 
 /**
@@ -390,7 +390,9 @@ function createMangaEntry(
     id: Number.parseInt(entry.id || "0"),
     title: entry.title,
     status: validateStatus(fieldValues.statusValue),
-    score: fieldValues.scoreValue ? parseFloat(fieldValues.scoreValue) : 0,
+    score: fieldValues.scoreValue
+      ? Number.parseFloat(fieldValues.scoreValue)
+      : 0,
     url: fieldValues.urlValue || "",
     cover_url: entry.cover_url,
     chapters_read: chaptersRead ?? 0,
@@ -454,7 +456,7 @@ export const parseKenmeiCsvExport = (
 
   try {
     // Replace Windows line breaks with Unix style
-    const normalizedCsv = csvString.replace(/\r\n/g, "\n");
+    const normalizedCsv = csvString.replaceAll("\r\n", "\n");
 
     // Parse CSV rows properly, respecting quoted fields
     const rows = parseCSVRows(normalizedCsv);
@@ -632,7 +634,7 @@ export function extractMangaMetadata(manga: KenmeiManga[]): {
   let totalChaptersRead = 0;
   let hasVolumesData = false;
 
-  manga.forEach((entry) => {
+  for (const entry of manga) {
     // Count statuses
     statusCounts[entry.status]++;
 
@@ -649,7 +651,7 @@ export function extractMangaMetadata(manga: KenmeiManga[]): {
     if (entry.volumes_read !== undefined || entry.total_volumes !== undefined) {
       hasVolumesData = true;
     }
-  });
+  }
 
   return {
     totalManga: manga.length,

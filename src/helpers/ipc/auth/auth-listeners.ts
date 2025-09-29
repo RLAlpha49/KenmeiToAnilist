@@ -5,8 +5,8 @@
  */
 
 import { BrowserWindow, ipcMain, shell } from "electron";
-import { URL } from "url";
-import * as http from "http";
+import { URL } from "node:url";
+import * as http from "node:http";
 
 let authCancelled = false;
 let loadTimeout: NodeJS.Timeout | null = null;

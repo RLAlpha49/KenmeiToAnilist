@@ -230,10 +230,7 @@ function RateLimitToast({
 
   useEffect(() => {
     // Calculate initial time remaining
-    const calcTimeRemaining = () => {
-      const diff = retryAfter - Date.now();
-      return diff > 0 ? diff : 0;
-    };
+    const calcTimeRemaining = () => Math.max(retryAfter - Date.now(), 0);
 
     const initialRemaining = calcTimeRemaining();
     setTimeRemaining(initialRemaining);

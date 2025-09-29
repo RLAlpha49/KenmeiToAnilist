@@ -102,7 +102,7 @@ async function handleRequestTiming(): Promise<void> {
 function getSearchTermFromVariables(
   variables: Record<string, unknown> | undefined,
 ): string {
-  if (!variables || typeof variables.search === "undefined") {
+  if (!variables || variables.search === "undefined") {
     return "request";
   }
 
@@ -152,7 +152,7 @@ async function handleRateLimitResponse(
   const retryAfter = response.headers.get("Retry-After");
   let waitTime: number;
 
-  if (retryAfter && !isNaN(Number(retryAfter))) {
+  if (retryAfter && !Number.isNaN(Number(retryAfter))) {
     waitTime = Number(retryAfter) * 1000;
     console.log(`Rate limited with Retry-After header: ${retryAfter}s`);
   } else {
@@ -464,16 +464,16 @@ export function setupAniListAPI() {
   ipcMain.handle("anilist:clearCache", (_, searchQuery) => {
     if (searchQuery) {
       // Clear specific cache entries
-      Object.keys(searchCache).forEach((key) => {
+      for (const key of Object.keys(searchCache)) {
         if (key.includes(searchQuery)) {
           delete searchCache[key];
         }
-      });
+      }
     } else {
       // Clear all cache
-      Object.keys(searchCache).forEach((key) => {
+      for (const key of Object.keys(searchCache)) {
         delete searchCache[key];
-      });
+      }
     }
 
     return { success: true };

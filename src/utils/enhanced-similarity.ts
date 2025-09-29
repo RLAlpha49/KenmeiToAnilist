@@ -96,51 +96,51 @@ export function enhancedNormalize(text: string): string {
 
   // Remove common ignorable patterns
   for (const pattern of IGNORABLE_PATTERNS) {
-    normalized = normalized.replace(pattern, "");
+    normalized = normalized.replaceAll(pattern, "");
   }
 
   // Normalize Unicode characters
   normalized = normalized.normalize("NFD");
 
   // Convert full-width characters to half-width
-  normalized = normalized.replace(/[\uff01-\uff5e]/g, (char) =>
-    String.fromCharCode(char.charCodeAt(0) - 0xfee0),
+  normalized = normalized.replaceAll(/[\uff01-\uff5e]/g, (char) =>
+    String.fromCodePoint((char.codePointAt(0) ?? 0) - 0xfee0),
   );
 
   // Remove diacritics/accents
-  normalized = normalized.replace(/[\u0300-\u036f]/g, "");
+  normalized = normalized.replaceAll(/[\u0300-\u036f]/g, "");
 
   // Normalize punctuation and special characters
   normalized = normalized
-    .replace(/'/g, "'") // Normalize apostrophes
-    .replace(/" /g, '"') // Normalize quotes
-    .replace(/[–—]/g, "-") // Normalize dashes
-    .replace(/…/g, "...") // Normalize ellipsis
-    .replace(/×/g, "x") // Normalize multiplication sign
-    .replace(/！/g, "!") // Japanese exclamation
-    .replace(/？/g, "?") // Japanese question mark
-    .replace(/：/g, ":") // Japanese colon
-    .replace(/；/g, ";") // Japanese semicolon
-    .replace(/，/g, ",") // Japanese comma
-    .replace(/。/g, ".") // Japanese period
-    .replace(/（/g, "(") // Japanese left parenthesis
-    .replace(/）/g, ")") // Japanese right parenthesis
-    .replace(/「/g, '"') // Japanese left quote
-    .replace(/」/g, '"') // Japanese right quote
-    .replace(/『/g, '"') // Japanese left double quote
-    .replace(/』/g, '"'); // Japanese right double quote
+    .replaceAll("'", "'") // Normalize apostrophes
+    .replaceAll('" ', '"') // Normalize quotes
+    .replaceAll(/[–—]/g, "-") // Normalize dashes
+    .replaceAll("…", "...") // Normalize ellipsis
+    .replaceAll("×", "x") // Normalize multiplication sign
+    .replaceAll("！", "!") // Japanese exclamation
+    .replaceAll("？", "?") // Japanese question mark
+    .replaceAll("：", ":") // Japanese colon
+    .replaceAll("；", ";") // Japanese semicolon
+    .replaceAll("，", ",") // Japanese comma
+    .replaceAll("。", ".") // Japanese period
+    .replaceAll("（", "(") // Japanese left parenthesis
+    .replaceAll("）", ")") // Japanese right parenthesis
+    .replaceAll("「", '"') // Japanese left quote
+    .replaceAll("」", '"') // Japanese right quote
+    .replaceAll("『", '"') // Japanese left double quote
+    .replaceAll("』", '"'); // Japanese right double quote
 
   // Handle common abbreviations
   for (const [abbrev, expansion] of ABBREVIATION_MAP) {
     const regex = new RegExp(`\\b${abbrev}\\b`, "gi");
-    normalized = normalized.replace(regex, expansion);
+    normalized = normalized.replaceAll(regex, expansion);
   }
 
   // Normalize whitespace and special characters
   normalized = normalized
-    .replace(/[^\w\s\-']/g, " ") // Replace most special chars with space
-    .replace(/-/g, "") // Remove dashes to match manga-search-service normalization
-    .replace(/\s+/g, "") // Remove all spaces for more consistent matching
+    .replaceAll(/[^\w\s\-']/g, " ") // Replace most special chars with space
+    .replaceAll(/-/g, "") // Remove dashes to match manga-search-service normalization
+    .replaceAll(/\s+/g, "") // Remove all spaces for more consistent matching
     .toLowerCase()
     .trim();
 
@@ -191,13 +191,13 @@ export function extractMeaningfulWords(text: string): string[] {
 
   // Remove common ignorable patterns
   for (const pattern of IGNORABLE_PATTERNS) {
-    normalized = normalized.replace(pattern, "");
+    normalized = normalized.replaceAll(pattern, "");
   }
 
   // Normalize punctuation but keep spaces
   normalized = normalized
-    .replace(/[^\w\s]/g, " ") // Replace punctuation with spaces
-    .replace(/\s+/g, " ") // Normalize multiple spaces to single space
+    .replaceAll(/[^\w\s]/g, " ") // Replace punctuation with spaces
+    .replaceAll(/\s+/g, " ") // Normalize multiple spaces to single space
     .trim();
 
   return normalized
@@ -212,7 +212,7 @@ function calculateExactMatch(str1: string, str2: string): number {
   const norm1 = enhancedNormalize(str1);
   const norm2 = enhancedNormalize(str2);
 
-  if (norm1 === norm2) return 1.0;
+  if (norm1 === norm2) return 1;
 
   // Check if one is exactly contained in the other
   if (norm1.includes(norm2) || norm2.includes(norm1)) {
@@ -261,7 +261,7 @@ function calculateWordOrderSimilarity(str1: string, str2: string): number {
   const words1 = extractMeaningfulWords(str1);
   const words2 = extractMeaningfulWords(str2);
 
-  if (words1.length === 0 && words2.length === 0) return 1.0;
+  if (words1.length === 0 && words2.length === 0) return 1;
   if (words1.length === 0 || words2.length === 0) return 0;
 
   // Count word matches
@@ -284,7 +284,7 @@ function calculateCharacterSimilarity(str1: string, str2: string): number {
   const norm1 = enhancedNormalize(str1);
   const norm2 = enhancedNormalize(str2);
 
-  if (norm1.length === 0 && norm2.length === 0) return 1.0;
+  if (norm1.length === 0 && norm2.length === 0) return 1;
   if (norm1.length === 0 || norm2.length === 0) return 0;
 
   // Use Dice coefficient from string-similarity library
@@ -301,18 +301,18 @@ function calculateCharacterSimilarity(str1: string, str2: string): number {
  * Calculate Levenshtein distance-based similarity
  */
 function calculateLevenshteinSimilarity(str1: string, str2: string): number {
-  if (str1 === str2) return 1.0;
+  if (str1 === str2) return 1;
 
   const len1 = str1.length;
   const len2 = str2.length;
 
-  if (len1 === 0) return len2 === 0 ? 1.0 : 0;
+  if (len1 === 0) return len2 === 0 ? 1 : 0;
   if (len2 === 0) return 0;
 
   // Create matrix for dynamic programming
   const matrix: number[][] = Array(len1 + 1)
     .fill(null)
-    .map(() => Array(len2 + 1).fill(0));
+    .map(() => new Array(len2 + 1).fill(0));
 
   // Initialize first row and column
   for (let i = 0; i <= len1; i++) matrix[i][0] = i;
@@ -343,7 +343,7 @@ function calculateSemanticSimilarity(str1: string, str2: string): number {
   const words1 = extractMeaningfulWords(str1);
   const words2 = extractMeaningfulWords(str2);
 
-  if (words1.length === 0 && words2.length === 0) return 1.0;
+  if (words1.length === 0 && words2.length === 0) return 1;
   if (words1.length === 0 || words2.length === 0) return 0;
 
   // Simple semantic similarity based on word overlap and positioning
@@ -358,7 +358,7 @@ function calculateSemanticSimilarity(str1: string, str2: string): number {
     for (const word2 of words2) {
       // Exact match gets full score
       if (word1 === word2) {
-        bestMatch = 1.0;
+        bestMatch = 1;
         break;
       }
 

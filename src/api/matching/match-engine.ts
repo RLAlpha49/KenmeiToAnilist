@@ -60,8 +60,8 @@ export function normalizeString(text: string, caseSensitive = false): string {
 
   // Replace special characters and normalize spacing
   let normalized = text
-    .replace(/[^\w\s]/gi, " ") // Replace special chars with space
-    .replace(/\s+/g, " ") // Collapse multiple spaces
+    .replaceAll(/[^\w\s]/gi, " ") // Replace special chars with space
+    .replaceAll(/\s+/g, " ") // Collapse multiple spaces
     .trim();
 
   if (!caseSensitive) {

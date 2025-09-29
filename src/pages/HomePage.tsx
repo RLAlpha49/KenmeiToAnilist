@@ -238,7 +238,7 @@ export function HomePage() {
           let pendingCount = 0;
           let skippedCount = 0;
 
-          Object.values(matchResults).forEach((result) => {
+          for (const result of Object.values(matchResults)) {
             // Type cast the unknown result to our MatchResult interface
             const matchResult = result as MatchResult;
 
@@ -255,7 +255,7 @@ export function HomePage() {
             ) {
               pendingCount++;
             }
-          });
+          }
 
           setMatchStatus({
             pendingMatches: pendingCount,

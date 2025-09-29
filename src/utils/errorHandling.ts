@@ -210,7 +210,7 @@ export async function fetchWithTimeout(
 export function showErrorNotification(error: AppError): void {
   console.error("Error:", error.message, error);
 
-  if (typeof window !== "undefined") {
+  if (typeof globalThis.window !== "undefined") {
     alert(`Error: ${error.message}`);
   }
 }

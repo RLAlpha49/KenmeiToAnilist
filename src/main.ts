@@ -9,8 +9,8 @@
 import { app, BrowserWindow } from "electron";
 import registerListeners from "./helpers/ipc/listeners-register";
 import squirrelStartup from "electron-squirrel-startup";
-import path from "path";
-import { spawnSync } from "child_process";
+import path from "node:path";
+import { spawnSync } from "node:child_process";
 import {
   installExtension,
   REACT_DEVELOPER_TOOLS,
@@ -136,7 +136,9 @@ async function installExtensions() {
   }
 }
 
-app.whenReady().then(createWindow).then(installExtensions);
+await app.whenReady();
+createWindow();
+await installExtensions();
 
 //osX only
 app.on("window-all-closed", () => {

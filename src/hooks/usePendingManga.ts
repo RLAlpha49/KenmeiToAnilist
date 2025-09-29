@@ -206,9 +206,9 @@ export const usePendingManga = () => {
           if (validManga.length > 0) {
             console.log(
               `Found ${validManga.length} valid pending manga from interrupted operation` +
-                (validManga.length !== pendingMangaData.length
-                  ? ` (filtered out ${pendingMangaData.length - validManga.length} invalid entries)`
-                  : ""),
+                (validManga.length === pendingMangaData.length
+                  ? ""
+                  : ` (filtered out ${pendingMangaData.length - validManga.length} invalid entries)`),
             );
 
             // Only set valid manga

@@ -92,7 +92,7 @@ function detectDuplicateAniListIds(
   >();
 
   // Collect all accepted matches with their AniList IDs
-  matches.forEach((match) => {
+  for (const match of matches) {
     if (
       (match.status === "matched" || match.status === "manual") &&
       match.selectedMatch
@@ -116,14 +116,14 @@ function detectDuplicateAniListIds(
         });
       }
     }
-  });
+  }
 
   // Find duplicates (AniList IDs mapped to multiple Kenmei titles)
   const duplicates: DuplicateEntry[] = [];
   const ignoredDuplicates = getIgnoredDuplicates();
   const ignoredIds = new Set(ignoredDuplicates.map((item) => item.anilistId));
 
-  anilistIdMap.forEach((value, anilistId) => {
+  for (const [anilistId, value] of anilistIdMap) {
     if (value.kenmeiTitles.length > 1 && !ignoredIds.has(anilistId)) {
       duplicates.push({
         anilistId,
@@ -131,7 +131,7 @@ function detectDuplicateAniListIds(
         kenmeiTitles: value.kenmeiTitles,
       });
     }
-  });
+  }
 
   return duplicates;
 }

@@ -526,7 +526,7 @@ export function MangaSearchPanel({
             const mangaId = manga.id;
             const uniqueKey = mangaId
               ? `manga-${mangaId}`
-              : `manga-${index}-${manga.title?.romaji?.replace(/\s/g, "") || "unknown"}`;
+              : `manga-${index}-${manga.title?.romaji?.replaceAll(" ", "") || "unknown"}`;
 
             return (
               <div

@@ -195,7 +195,7 @@ export function SyncPage() {
       const lastUpdated = new Date(lastActivity);
 
       // Validate the parsed date
-      if (isNaN(lastUpdated.getTime())) {
+      if (Number.isNaN(lastUpdated.getTime())) {
         console.warn(
           `[Auto-Pause Warning] Title: "${kenmei.title}" | Invalid date format: ${lastActivity}`,
         );
@@ -534,9 +534,7 @@ export function SyncPage() {
 
             // Determine if score will change
             let scoreWillChange: boolean;
-            if (!userEntry) {
-              scoreWillChange = kenmeiScore > 0;
-            } else {
+            if (userEntry) {
               // Check if entry is completed and we're preserving completed status
               const isCompletedAndPreserved =
                 userEntry.status === "COMPLETED" &&
@@ -555,6 +553,8 @@ export function SyncPage() {
                   (anilistScore === 0 ||
                     Math.abs(kenmeiScore - anilistScore) >= 0.5);
               }
+            } else {
+              scoreWillChange = kenmeiScore > 0;
             }
 
             const hasChanges =
@@ -689,7 +689,7 @@ export function SyncPage() {
             const lastUpdated = new Date(lastActivity);
 
             // Validate the parsed date
-            if (isNaN(lastUpdated.getTime())) {
+            if (Number.isNaN(lastUpdated.getTime())) {
               console.warn(
                 `[Auto-Pause Warning 2] Title: "${kenmei.title}" | Invalid date format: ${lastActivity}`,
               );
@@ -759,9 +759,7 @@ export function SyncPage() {
               userEntry.progress > 0
             ) {
               const kenmeiProgress = kenmei.chapters_read || 0;
-              return userEntry.progress > kenmeiProgress
-                ? userEntry.progress
-                : kenmeiProgress;
+              return Math.max(userEntry.progress, kenmeiProgress);
             }
             return kenmei.chapters_read || 0;
           })(),
@@ -1355,7 +1353,40 @@ export function SyncPage() {
                               >
                                 Pause after
                               </Label>
-                              {!useCustomThreshold ? (
+                              {useCustomThreshold ? (
+                                <div className="flex w-full items-center gap-2">
+                                  <input
+                                    id="customAutoPauseThreshold"
+                                    type="number"
+                                    min="1"
+                                    placeholder="Enter days"
+                                    value={syncConfig.autoPauseThreshold.toString()}
+                                    onChange={(e) => {
+                                      const value = Number.parseInt(
+                                        e.target.value,
+                                      );
+                                      if (!Number.isNaN(value) && value > 0) {
+                                        setSyncConfig((prev) => {
+                                          const newConfig = {
+                                            ...prev,
+                                            autoPauseThreshold: value,
+                                          };
+                                          saveSyncConfig(newConfig);
+                                          return newConfig;
+                                        });
+                                      }
+                                    }}
+                                    className="border-input bg-background focus-visible:ring-ring h-8 w-full rounded-md border px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none"
+                                  />
+                                  <Button
+                                    variant="outline"
+                                    className="h-8 px-2"
+                                    onClick={() => setUseCustomThreshold(false)}
+                                  >
+                                    Use Presets
+                                  </Button>
+                                </div>
+                              ) : (
                                 <select
                                   id="autoPauseThreshold"
                                   value={syncConfig.autoPauseThreshold}
@@ -1386,39 +1417,6 @@ export function SyncPage() {
                                   <option value="365">1 year</option>
                                   <option value="custom">Custom...</option>
                                 </select>
-                              ) : (
-                                <div className="flex w-full items-center gap-2">
-                                  <input
-                                    id="customAutoPauseThreshold"
-                                    type="number"
-                                    min="1"
-                                    placeholder="Enter days"
-                                    value={syncConfig.autoPauseThreshold.toString()}
-                                    onChange={(e) => {
-                                      const value = Number.parseInt(
-                                        e.target.value,
-                                      );
-                                      if (!isNaN(value) && value > 0) {
-                                        setSyncConfig((prev) => {
-                                          const newConfig = {
-                                            ...prev,
-                                            autoPauseThreshold: value,
-                                          };
-                                          saveSyncConfig(newConfig);
-                                          return newConfig;
-                                        });
-                                      }
-                                    }}
-                                    className="border-input bg-background focus-visible:ring-ring h-8 w-full rounded-md border px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none"
-                                  />
-                                  <Button
-                                    variant="outline"
-                                    className="h-8 px-2"
-                                    onClick={() => setUseCustomThreshold(false)}
-                                  >
-                                    Use Presets
-                                  </Button>
-                                </div>
                               )}
                             </div>
 
@@ -2286,7 +2284,7 @@ export function SyncPage() {
                                               !isCompleted && (
                                                 <div className="rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
                                                   {changeCount} change
-                                                  {changeCount !== 1 ? "s" : ""}
+                                                  {changeCount === 1 ? "" : "s"}
                                                 </div>
                                               )}
                                           </div>

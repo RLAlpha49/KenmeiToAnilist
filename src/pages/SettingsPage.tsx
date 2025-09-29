@@ -424,7 +424,7 @@ export function SettingsPage() {
 
       // Additional keys from STORAGE_KEYS constant
       if (STORAGE_KEYS) {
-        Object.entries(STORAGE_KEYS).forEach(([key, value]) => {
+        for (const [key, value] of Object.entries(STORAGE_KEYS)) {
           if (typeof value === "string") {
             // Add to appropriate category based on key name
             if (key.includes("MATCH") || key.includes("REVIEW")) {
@@ -441,7 +441,7 @@ export function SettingsPage() {
               }
             }
           }
-        });
+        }
       }
 
       // Clear Search Cache if selected
@@ -465,13 +465,13 @@ export function SettingsPage() {
       // Get all localStorage keys to clear based on selections
       const keysToRemove: string[] = [];
 
-      Object.entries(cachesToClear).forEach(([type, selected]) => {
+      for (const [type, selected] of Object.entries(cachesToClear)) {
         if (selected && cacheKeysByType[type as keyof typeof cacheKeysByType]) {
           keysToRemove.push(
             ...cacheKeysByType[type as keyof typeof cacheKeysByType],
           );
         }
-      });
+      }
 
       // Remove duplicates
       const uniqueKeysToRemove = [...new Set(keysToRemove)];
@@ -482,7 +482,7 @@ export function SettingsPage() {
       );
 
       // Clear selected localStorage keys
-      uniqueKeysToRemove.forEach((cacheKey) => {
+      for (const cacheKey of uniqueKeysToRemove) {
         try {
           localStorage.removeItem(cacheKey);
           if (
@@ -496,7 +496,7 @@ export function SettingsPage() {
         } catch (e) {
           console.warn(`Failed to clear cache: ${cacheKey}`, e);
         }
-      });
+      }
 
       // Clear IndexedDB if any cache is selected
       if (Object.values(cachesToClear).some(Boolean)) {
@@ -1346,7 +1346,7 @@ export function SettingsPage() {
                             }
                             onChange={(e) => {
                               const value = Number.parseInt(e.target.value);
-                              if (!isNaN(value) && value > 0) {
+                              if (!Number.isNaN(value) && value > 0) {
                                 const newConfig = {
                                   ...syncConfig,
                                   autoPauseThreshold: value,

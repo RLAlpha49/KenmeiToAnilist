@@ -324,7 +324,11 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
           );
         }
       } catch (err) {
-        if (!isBrowserAuthFlow) {
+        if (isBrowserAuthFlow) {
+          console.log(
+            "Browser auth flow in progress - ignoring globalThis.close error...",
+          );
+        } else {
           console.error("Login window error:", err);
           const msg =
             err instanceof Error
@@ -335,10 +339,6 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
           setStatusMessage(null);
           setIsLoading(false);
           setIsBrowserAuthFlow(false);
-        } else {
-          console.log(
-            "Browser auth flow in progress - ignoring globalThis.close error...",
-          );
         }
       }
 

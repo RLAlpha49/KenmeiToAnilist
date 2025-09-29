@@ -29,7 +29,7 @@ function exportJsonFile(
     link.download = `${filenamePrefix}-${dateStr}.json`;
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    link.remove();
     URL.revokeObjectURL(url);
   } catch (error) {
     console.error(`Failed to export ${filenamePrefix} file:`, error);

@@ -224,12 +224,12 @@ export function MangaMatchingPanel({
     // 6. Trim hyphens from the beginning and end
     const formattedTitle = title
       .toLowerCase()
-      .replace(/'/g, " ")
-      .replace(/[^\w\s-]/g, " ") // Replace special chars with spaces instead of removing
-      .replace(/\s+/g, " ") // Normalize spaces
+      .replaceAll("'", " ")
+      .replaceAll(/[^\w\s-]/g, " ") // Replace special chars with spaces instead of removing
+      .replaceAll(/\s+/g, " ") // Normalize spaces
       .trim() // Remove leading/trailing spaces
-      .replace(/\s/g, "-") // Replace spaces with hyphens
-      .replace(/(^-+)|(-+$)/g, ""); // Remove hyphens at start/end
+      .replaceAll(" ", "-") // Replace spaces with hyphens
+      .replaceAll(/(^-+)|(-+$)/g, ""); // Remove hyphens at start/end
 
     return `https://www.kenmei.co/series/${formattedTitle}`;
   };
@@ -241,7 +241,10 @@ export function MangaMatchingPanel({
       // Create a simple hash from the title
       const generatedId = match.kenmeiManga.title
         .split("")
-        .reduce((hash, char) => (hash << 5) - hash + (char.codePointAt(0) ?? 0), 0);
+        .reduce(
+          (hash, char) => (hash << 5) - hash + (char.codePointAt(0) ?? 0),
+          0,
+        );
       match = {
         ...match,
         kenmeiManga: {
@@ -491,7 +494,11 @@ export function MangaMatchingPanel({
   // Render confidence badge
   const renderConfidenceBadge = (confidence: number | undefined) => {
     // If confidence is undefined, null, or NaN, return null (don't render anything)
-    if (confidence === undefined || confidence === null || Number.isNaN(confidence)) {
+    if (
+      confidence === undefined ||
+      confidence === null ||
+      Number.isNaN(confidence)
+    ) {
       return null;
     }
 
@@ -1398,7 +1405,7 @@ export function MangaMatchingPanel({
               // Generate a unique key using index as fallback when ID is undefined
               const uniqueKey = match.kenmeiManga.id
                 ? `${match.kenmeiManga.id}-${match.status}`
-                : `index-${index}-${match.status}-${match.kenmeiManga.title?.replace(/\s+/g, "_") || "unknown"}`;
+                : `index-${index}-${match.status}-${match.kenmeiManga.title?.replaceAll(" ", "_") || "unknown"}`;
 
               // Extract border color class for clarity
               let borderColorClass = "";
