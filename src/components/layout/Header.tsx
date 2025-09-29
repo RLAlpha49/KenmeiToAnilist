@@ -12,7 +12,6 @@ import {
   NavigationMenuList,
   NavigationMenuItem,
   NavigationMenuLink,
-  navigationMenuTriggerStyle,
 } from "../ui/navigation-menu";
 import {
   Minimize2,
@@ -40,6 +39,22 @@ import { motion } from "framer-motion";
 import appIcon from "../../assets/k2a-icon-512x512.png";
 import { useDebug } from "../../contexts/DebugContext";
 import { DebugMenu } from "../debug/DebugMenu";
+import type { LucideIcon } from "lucide-react";
+import { cn } from "@/utils/tailwind";
+
+type NavItem = {
+  label: string;
+  to: string;
+  icon: LucideIcon;
+};
+
+const NAV_ITEMS: NavItem[] = [
+  { label: "Home", to: "/", icon: Home },
+  { label: "Import", to: "/import", icon: Download },
+  { label: "Review", to: "/review", icon: ClipboardCheck },
+  { label: "Sync", to: "/sync", icon: SyncIcon },
+  { label: "Settings", to: "/settings", icon: SettingsIcon },
+];
 
 /**
  * Header React component that displays the application header with logo, navigation links, theme toggle, and window controls.
@@ -53,9 +68,10 @@ export function Header() {
 
   return (
     <TooltipProvider>
-      <header className="border-border bg-background/90 sticky top-0 z-40 border-b backdrop-blur-sm">
+      <header className="border-border bg-background/80 sticky top-0 z-40 border-b backdrop-blur-xl">
         <div className="draglayer w-full">
-          <div className="flex h-14 items-center justify-between px-4">
+          <div className="relative flex h-16 items-center justify-between px-4">
+            <div className="pointer-events-none absolute inset-x-6 top-1/2 z-0 h-24 -translate-y-1/2 rounded-full bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-transparent blur-2xl" />
             <div className="flex items-center gap-4">
               {/* Logo and title */}
               <Link to="/" className="non-draggable flex items-center">
@@ -66,112 +82,49 @@ export function Header() {
                 >
                   <img src={appIcon} alt="K2A Logo" className="h-8 w-8" />
                 </motion.div>
-                <h1 className="overflow-hidden font-mono text-lg font-bold whitespace-nowrap">
-                  <span className="hidden bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent min-[44rem]:inline">
-                    Kenmei to AniList
-                  </span>
-                  <span className="inline bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent max-[44rem]:inline min-[44rem]:hidden">
-                    K2A
-                  </span>
-                </h1>
+                <div className="overflow-hidden whitespace-nowrap">
+                  <p className="text-muted-foreground text-xs tracking-[0.4em] uppercase">
+                    Sync Tool
+                  </p>
+                  <h1 className="font-mono text-lg leading-tight font-semibold">
+                    <span className="hidden bg-gradient-to-r from-blue-500 via-purple-500 to-fuchsia-500 bg-clip-text text-transparent min-[44rem]:inline">
+                      Kenmei → AniList
+                    </span>
+                    <span className="inline bg-gradient-to-r from-blue-500 via-purple-500 to-fuchsia-500 bg-clip-text text-transparent max-[44rem]:inline min-[44rem]:hidden">
+                      K2A
+                    </span>
+                  </h1>
+                </div>
               </Link>
 
               {/* Always visible navigation - icon-only on small screens, icon+text on larger screens */}
               <div className="non-draggable">
                 <NavigationMenu>
-                  <NavigationMenuList className="flex">
-                    <NavigationMenuItem>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <NavigationMenuLink
-                            className={navigationMenuTriggerStyle()}
-                            asChild
-                          >
-                            <Link to="/">
-                              <Home className="h-4 w-4 flex-shrink-0" />
-                              <span className="ml-2 max-lg:hidden">Home</span>
-                            </Link>
-                          </NavigationMenuLink>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="lg:hidden">
-                          Home
-                        </TooltipContent>
-                      </Tooltip>
-                    </NavigationMenuItem>
-                    <NavigationMenuItem>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <NavigationMenuLink
-                            className={navigationMenuTriggerStyle()}
-                            asChild
-                          >
-                            <Link to="/import">
-                              <Download className="h-4 w-4 flex-shrink-0" />
-                              <span className="ml-2 max-lg:hidden">Import</span>
-                            </Link>
-                          </NavigationMenuLink>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="lg:hidden">
-                          Import
-                        </TooltipContent>
-                      </Tooltip>
-                    </NavigationMenuItem>
-                    <NavigationMenuItem>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <NavigationMenuLink
-                            className={navigationMenuTriggerStyle()}
-                            asChild
-                          >
-                            <Link to="/review">
-                              <ClipboardCheck className="h-4 w-4 flex-shrink-0" />
-                              <span className="ml-2 max-lg:hidden">Review</span>
-                            </Link>
-                          </NavigationMenuLink>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="lg:hidden">
-                          Review
-                        </TooltipContent>
-                      </Tooltip>
-                    </NavigationMenuItem>
-                    <NavigationMenuItem>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <NavigationMenuLink
-                            className={navigationMenuTriggerStyle()}
-                            asChild
-                          >
-                            <Link to="/sync">
-                              <SyncIcon className="h-4 w-4 flex-shrink-0" />
-                              <span className="ml-2 max-lg:hidden">Sync</span>
-                            </Link>
-                          </NavigationMenuLink>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="lg:hidden">
-                          Sync
-                        </TooltipContent>
-                      </Tooltip>
-                    </NavigationMenuItem>
-                    <NavigationMenuItem>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <NavigationMenuLink
-                            className={navigationMenuTriggerStyle()}
-                            asChild
-                          >
-                            <Link to="/settings">
-                              <SettingsIcon className="h-4 w-4 flex-shrink-0" />
-                              <span className="ml-2 max-lg:hidden">
-                                Settings
-                              </span>
-                            </Link>
-                          </NavigationMenuLink>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="lg:hidden">
-                          Settings
-                        </TooltipContent>
-                      </Tooltip>
-                    </NavigationMenuItem>
+                  <NavigationMenuList className="bg-background/60 flex rounded-full p-1 text-xs font-medium shadow-inner ring-1 shadow-black/5 ring-white/40 backdrop-blur-sm dark:bg-slate-950/60 dark:ring-white/10">
+                    {NAV_ITEMS.map(({ label, to, icon: Icon }) => (
+                      <NavigationMenuItem key={label}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <NavigationMenuLink
+                              asChild
+                              className={cn(
+                                "group text-muted-foreground inline-flex h-9 items-center justify-center rounded-full px-3 text-xs font-medium tracking-wide transition-all",
+                                "hover:text-foreground focus-visible:ring-primary/40 hover:bg-white/70 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent focus-visible:outline-hidden",
+                                "data-[state=open]:text-primary data-[state=open]:bg-white/80 dark:hover:bg-slate-900/70 dark:data-[state=open]:bg-slate-900/80",
+                              )}
+                            >
+                              <Link to={to} className="flex items-center gap-2">
+                                <Icon className="h-4 w-4" />
+                                <span className="max-lg:hidden">{label}</span>
+                              </Link>
+                            </NavigationMenuLink>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className="lg:hidden">
+                            {label}
+                          </TooltipContent>
+                        </Tooltip>
+                      </NavigationMenuItem>
+                    ))}
                   </NavigationMenuList>
                 </NavigationMenu>
               </div>

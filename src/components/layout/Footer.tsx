@@ -4,7 +4,7 @@
  * @description Application footer component with branding, version, social links, and credits.
  */
 import React from "react";
-import { Heart, Mail } from "lucide-react";
+import { Heart, Mail, GitBranch } from "lucide-react";
 
 /**
  * GitHub SVG icon (from simpleicons.org)
@@ -67,24 +67,35 @@ export function Footer() {
 
   return (
     <TooltipProvider>
-      <footer className="border-border bg-background/90 border-t p-3 text-xs backdrop-blur-sm">
-        <div className="container mx-auto flex flex-col items-center justify-between gap-4 sm:flex-row">
-          <div className="flex items-center gap-2">
+      <footer className="border-border bg-background/80 relative border-t px-4 py-6 text-xs backdrop-blur-xl">
+        <div className="pointer-events-none absolute inset-x-0 top-[-120px] h-60 w-full bg-gradient-to-b from-blue-500/10 via-purple-500/10 to-transparent blur-3xl" />
+        <div className="relative z-[1] container mx-auto flex flex-col items-center justify-between gap-6 md:flex-row">
+          <div className="flex items-center gap-3">
             <motion.div
-              className="h-6 w-6"
-              whileHover={{ rotate: 10, scale: 1.05 }}
+              className="h-8 w-8"
+              whileHover={{ rotate: 6, scale: 1.05 }}
             >
-              <img src={appIcon} alt="K2A Logo" className="h-6 w-6" />
+              <img src={appIcon} alt="K2A Logo" className="h-8 w-8" />
             </motion.div>
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">Kenmei to AniList</span>
-              <Badge variant="outline" className="h-5 px-2 font-mono">
-                v{getAppVersion()}
-              </Badge>
+            <div className="flex flex-col gap-1">
+              <span className="text-muted-foreground text-xs tracking-[0.4em] uppercase">
+                Sync tool
+              </span>
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <span className="bg-gradient-to-r from-blue-500 via-purple-500 to-fuchsia-500 bg-clip-text text-transparent">
+                  Kenmei → AniList
+                </span>
+                <Badge
+                  variant="outline"
+                  className="rounded-full border-white/40 bg-white/70 px-2 py-0.5 font-mono text-[0.65rem] tracking-widest uppercase shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/80"
+                >
+                  v{getAppVersion()}
+                </Badge>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col items-center gap-4 md:flex-row md:items-end">
             <div className="flex gap-2">
               {socialLinks.map((link) => (
                 <Tooltip key={link.name}>
@@ -92,7 +103,7 @@ export function Footer() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="text-muted-foreground hover:text-foreground h-7 w-7 rounded-full"
+                      className="text-muted-foreground hover:text-foreground h-9 w-9 rounded-full border border-white/20 bg-white/60 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/60"
                       onClick={handleOpenExternal(link.url)}
                     >
                       {link.icon}
@@ -104,20 +115,25 @@ export function Footer() {
               ))}
             </div>
 
-            <Separator orientation="vertical" className="h-4" />
+            <Separator orientation="horizontal" className="md:hidden" />
 
-            <motion.div
-              className="text-muted-foreground flex items-center"
-              whileHover={{ scale: 1.05 }}
-            >
-              <span>Made with</span>
-              <Heart className="mx-1 h-3 w-3 fill-red-500 text-red-500" />
-              <span>for manga readers</span>
-            </motion.div>
-
-            <span className="text-muted-foreground">
-              © {new Date().getFullYear()}
-            </span>
+            <div className="text-muted-foreground flex items-center gap-4">
+              <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/50 px-3 py-1 text-[0.65rem] tracking-[0.3em] uppercase shadow-sm backdrop-blur md:flex dark:bg-slate-900/60">
+                <GitBranch className="h-3 w-3" />
+                open-source
+              </div>
+              <motion.div
+                className="flex items-center gap-2"
+                whileHover={{ scale: 1.05 }}
+              >
+                <span>Crafted with</span>
+                <Heart className="h-3 w-3 fill-red-500 text-red-500" />
+                <span>for manga readers</span>
+              </motion.div>
+              <span className="text-muted-foreground">
+                © {new Date().getFullYear()}
+              </span>
+            </div>
           </div>
         </div>
       </footer>

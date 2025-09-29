@@ -1207,34 +1207,6 @@ export function HomePage() {
                   );
                 })}
               </div>
-              <div className="border-primary/30 bg-primary/5 text-muted-foreground rounded-2xl border border-dashed p-5 text-sm">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="space-y-1">
-                    <p className="text-foreground text-sm font-semibold">
-                      Need a deeper dive?
-                    </p>
-                    <p className="text-muted-foreground text-sm">
-                      Follow the step-by-step migration walkthrough with visuals
-                      and tips.
-                    </p>
-                  </div>
-                  <Button
-                    asChild
-                    size="sm"
-                    className="from-primary/80 via-primary to-primary/80 h-auto rounded-full bg-gradient-to-r px-4 py-2 text-xs font-semibold tracking-wide text-white uppercase shadow-sm transition hover:shadow-lg"
-                  >
-                    <a
-                      href="https://github.com/RLAlpha49/KenmeiToAnilist/blob/master/docs/guides/API_REFERENCE.md"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-2"
-                    >
-                      Open docs
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
-                  </Button>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </motion.section>
