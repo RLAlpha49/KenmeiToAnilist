@@ -4,6 +4,9 @@
  * @description Home page component for the Kenmei to AniList sync tool. Displays dashboard, statistics, feature carousel, quick actions, and sync status.
  */
 
+// TODO: Fix bottom right corner of quick action buttons being cut off.
+// TODO: Remove sync journey and have status distribution extend to full width like quick actions section.
+
 import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import {
