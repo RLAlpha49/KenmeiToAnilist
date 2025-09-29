@@ -59,13 +59,6 @@ npm run docs           # Generate TypeDoc documentation
 npm run format:write   # Prettier formatting
 ```
 
-### Configuration Files
-
-- **Build**: `config/forge.config.js` (Electron Forge with Vite plugin)
-- **Vite**: Separate configs for main/preload/renderer processes
-- **ESLint**: `config/eslint.config.mjs` with React Compiler support
-- **TypeDoc**: Auto-generated docs at <https://rlalpha49.github.io/KenmeiToAnilist/>
-
 ### Project Structure Conventions
 
 ```text
@@ -86,32 +79,6 @@ src/
 - **Animations**: Framer Motion for page transitions, tailwindcss-animate for micro-interactions
 - **Type Safety**: Comprehensive TypeScript with strict mode
 
-### Debugging & Error Handling
-
-- **Debug Context**: `src/contexts/DebugContext.tsx` toggles debug mode app-wide
-- **Sentry Integration**: Error tracking in main process
-- **Export Utilities**: `src/utils/export-utils.ts` for debugging data export
-
-## Critical Implementation Details
-
-### AniList API
-
-- **Rate Limiting**: Built into client with exponential backoff
-- **Authentication**: OAuth2 flow handled in main process for security
-- **Caching Strategy**: Multi-level search result caching with timestamp invalidation
-
-### Matching Engine
-
-- **String Similarity**: Enhanced algorithms in `src/utils/enhanced-similarity.ts`
-- **Smart Matching**: `src/api/matching/match-engine.ts` with configurable thresholds
-- **User Review**: Manual override system for mismatches
-
-### Build & Distribution
-
-- **Cross-Platform**: Windows (Squirrel), macOS (DMG), Linux (Deb)
-- **Security**: Electron Fuses, context isolation, CSP headers
-- **Auto-Update**: GitHub releases integration with version comparison
-
 ## Common Patterns to Follow
 
 1. **IPC Operations**: Always use context bridge, never direct ipcRenderer
@@ -119,9 +86,3 @@ src/
 3. **Error Boundaries**: Comprehensive error handling with user-friendly messages
 4. **Type Safety**: Leverage TypeScript strictly, especially for API responses
 5. **Performance**: Three-layer caching, React Compiler optimization, lazy loading
-
-## Environment & Dependencies
-
-- **Node.js 18+** required
-- **Force install** needed: `npm install --force` (dependency conflicts)
-- **Environment Variables**: Optional `.env` for default AniList credentials, configure via Settings UI alternatively
