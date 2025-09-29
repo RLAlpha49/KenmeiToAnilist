@@ -30,7 +30,6 @@
 - **One-Click Sync**: Synchronize your collection to AniList with a single click after reviewing matches.
 - **Auto-Pause Manga**: Automatically pause manga that haven't been updated within a customizable time period.
 - **Flexible Configuration**: Customize how synchronization works with priority settings for status, progress, and scores.
-- **Modern UI/UX**: Built with React, TailwindCSS, and Radix UI for a beautiful, accessible experience.
 
 ---
 
@@ -89,27 +88,6 @@ VITE_ANILIST_CLIENT_SECRET=your-client-secret
 ```
 
 > You can also configure credentials in the app's Settings page.
-
----
-
-## 📦 Usage
-
-1. **Export from Kenmei**: In Kenmei, export your manga library as a CSV file.
-2. **Import in App**: Drag and drop or select your CSV file in the Import page.
-3. **Review & Match**: The app will auto-match your manga. Review and adjust any mismatches.
-4. **Sync to AniList**: Click sync to update your AniList library.
-5. **Configure Settings**: Adjust sync options, privacy, and credentials in the Settings page.
-
----
-
-## 🏗️ Tech Stack
-
-- **Electron** – Desktop app framework
-- **React** – UI library
-- **TypeScript** – Type safety
-- **TailwindCSS** – Utility-first CSS
-- **Radix UI** – Accessible UI primitives
-- **Vite** – Fast build tool
 
 ---
 
