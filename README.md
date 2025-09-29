@@ -131,6 +131,16 @@ VITE_ANILIST_CLIENT_SECRET=your-client-secret
 
 ---
 
+## 🙏 Credits
+
+This project makes use of several external APIs and services:
+
+- **[AniList](https://anilist.co/)** – The primary manga database and sync target.
+- **[MangaDex](https://mangadex.org/)** – Used as a fallback source.
+- **[Comick](https://comick.io/)** – Used as a fallback source.
+
+---
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please:
