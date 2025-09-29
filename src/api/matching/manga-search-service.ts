@@ -641,13 +641,16 @@ function checkTitleMatch(title: string, searchName: string): boolean {
  * @returns Processed title with normalized characters
  */
 function processTitle(title: string): string {
-  return title
+  const withoutParentheses = title.replaceAll(/\s*\([^()]*\)\s*/g, " ");
+
+  return withoutParentheses
     .replaceAll("-", " ")
     .replaceAll("\u2018", "'")
     .replaceAll("\u2019", "'")
     .replaceAll("\u201C", '"')
     .replaceAll("\u201D", '"')
     .replaceAll("_", " ")
+    .replaceAll(/\s{2,}/g, " ")
     .trim();
 }
 
