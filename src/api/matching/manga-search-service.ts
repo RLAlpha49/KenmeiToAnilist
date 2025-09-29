@@ -3034,6 +3034,18 @@ function categorizeMangaForBatching(
       }
     >
   >;
+  cachedMangaDexSources: Record<
+    number,
+    Map<
+      number,
+      {
+        title: string;
+        slug: string;
+        mangaDexId: string;
+        foundViaMangaDex: boolean;
+      }
+    >
+  >;
   uncachedManga: { index: number; manga: KenmeiManga }[];
   knownMangaIds: { index: number; id: number }[];
 } {
@@ -3047,6 +3059,18 @@ function categorizeMangaForBatching(
         slug: string;
         comickId: string;
         foundViaComick: boolean;
+      }
+    >
+  > = {};
+  const cachedMangaDexSources: Record<
+    number,
+    Map<
+      number,
+      {
+        title: string;
+        slug: string;
+        mangaDexId: string;
+        foundViaMangaDex: boolean;
       }
     >
   > = {};
@@ -3079,6 +3103,7 @@ function categorizeMangaForBatching(
         // This manga is in cache
         cachedResults[index] = mangaCache[cacheKey].manga;
         cachedComickSources[index] = new Map(); // Cached results from direct AniList cache don't have Comick source info
+        cachedMangaDexSources[index] = new Map();
         console.log(`Found cached results for: ${manga.title}`);
 
         // Immediately update progress for cached manga
@@ -3097,6 +3122,7 @@ function categorizeMangaForBatching(
   return {
     cachedResults,
     cachedComickSources,
+    cachedMangaDexSources,
     uncachedManga,
     knownMangaIds,
   };
@@ -3136,13 +3162,25 @@ async function processKnownMangaIds(
         }
       >
     >;
+    cachedMangaDexSources: Record<
+      number,
+      Map<
+        number,
+        {
+          title: string;
+          slug: string;
+          mangaDexId: string;
+          foundViaMangaDex: boolean;
+        }
+      >
+    >;
   },
 ): Promise<void> {
   const { knownMangaIds, mangaList, uncachedManga } = data;
   const { searchConfig, token } = config;
   const { shouldCancel, abortSignal } = control;
   const { updateProgress } = callbacks;
-  const { cachedResults, cachedComickSources } = storage;
+  const { cachedResults, cachedComickSources, cachedMangaDexSources } = storage;
 
   if (knownMangaIds.length === 0 || searchConfig.bypassCache) {
     return;
@@ -3171,6 +3209,7 @@ async function processKnownMangaIds(
     if (manga) {
       cachedResults[item.index] = [manga]; // Store as array of one manga for consistency
       cachedComickSources[item.index] = new Map(); // Known IDs don't have Comick source info
+      cachedMangaDexSources[item.index] = new Map();
 
       // Also store in the general cache to help future searches
       const title = mangaList[item.index].title;
@@ -3226,13 +3265,25 @@ async function processUncachedManga(
         }
       >
     >;
+    cachedMangaDexSources: Record<
+      number,
+      Map<
+        number,
+        {
+          title: string;
+          slug: string;
+          mangaDexId: string;
+          foundViaMangaDex: boolean;
+        }
+      >
+    >;
   },
 ): Promise<void> {
   const { uncachedManga, mangaList, reportedIndices } = data;
   const { token, searchConfig } = config;
   const { abortSignal, checkCancellation } = control;
   const { updateProgress } = callbacks;
-  const { cachedResults, cachedComickSources } = storage;
+  const { cachedResults, cachedComickSources, cachedMangaDexSources } = storage;
 
   if (uncachedManga.length === 0) {
     return;
@@ -3267,7 +3318,7 @@ async function processUncachedManga(
   };
 
   /**
-   * Search for manga and store results with Comick source information
+   * Search for manga and store results with alternative source information
    */
   const searchAndStoreManga = async (
     index: number,
@@ -3290,6 +3341,17 @@ async function processUncachedManga(
           }
         >;
       };
+      cachedMangaDexSources: {
+        [key: number]: Map<
+          number,
+          {
+            title: string;
+            slug: string;
+            mangaDexId: string;
+            foundViaMangaDex: boolean;
+          }
+        >;
+      };
     },
   ): Promise<void> => {
     const {
@@ -3300,6 +3362,7 @@ async function processUncachedManga(
       updateProgress,
       cachedResults,
       cachedComickSources,
+      cachedMangaDexSources,
     } = options;
 
     // Double-check cache one more time before searching
@@ -3307,6 +3370,7 @@ async function processUncachedManga(
     if (!searchConfig.bypassCache && isCacheValid(cacheKey)) {
       cachedResults[index] = mangaCache[cacheKey].manga;
       cachedComickSources[index] = new Map(); // Cached results don't have Comick source info
+      cachedMangaDexSources[index] = new Map();
       console.log(`Using cache for ${manga.title} (found during processing)`);
       // Update progress for this manga
       updateProgress(index, manga.title);
@@ -3334,7 +3398,7 @@ async function processUncachedManga(
     // Store the results, preserving both manga and Comick source info
     cachedResults[index] = searchResponse.matches.map((match) => match.manga);
 
-    // Store Comick source information separately
+    // Store alternative source information separately
     const comickSourceMap = new Map<
       number,
       {
@@ -3344,12 +3408,49 @@ async function processUncachedManga(
         foundViaComick: boolean;
       }
     >();
+    const mangaDexSourceMap = new Map<
+      number,
+      {
+        title: string;
+        slug: string;
+        mangaDexId: string;
+        foundViaMangaDex: boolean;
+      }
+    >();
     for (const match of searchResponse.matches) {
       if (match.comickSource) {
         comickSourceMap.set(match.manga.id, match.comickSource);
       }
+      if (match.mangaDexSource) {
+        mangaDexSourceMap.set(match.manga.id, match.mangaDexSource);
+      }
+
+      if (
+        !comickSourceMap.has(match.manga.id) &&
+        match.sourceInfo?.source === "comick"
+      ) {
+        comickSourceMap.set(match.manga.id, {
+          title: match.sourceInfo.title,
+          slug: match.sourceInfo.slug,
+          comickId: match.sourceInfo.sourceId,
+          foundViaComick: match.sourceInfo.foundViaAlternativeSearch,
+        });
+      }
+
+      if (
+        !mangaDexSourceMap.has(match.manga.id) &&
+        match.sourceInfo?.source === "mangadex"
+      ) {
+        mangaDexSourceMap.set(match.manga.id, {
+          title: match.sourceInfo.title,
+          slug: match.sourceInfo.slug,
+          mangaDexId: match.sourceInfo.sourceId,
+          foundViaMangaDex: match.sourceInfo.foundViaAlternativeSearch,
+        });
+      }
     }
     cachedComickSources[index] = comickSourceMap;
+    cachedMangaDexSources[index] = mangaDexSourceMap;
   };
 
   /**
@@ -3371,6 +3472,17 @@ async function processUncachedManga(
         }
       >;
     },
+    cachedMangaDexSources: {
+      [key: number]: Map<
+        number,
+        {
+          title: string;
+          slug: string;
+          mangaDexId: string;
+          foundViaMangaDex: boolean;
+        }
+      >;
+    },
     onCancellation: () => void,
   ): boolean => {
     // Check if this was a cancellation
@@ -3387,6 +3499,7 @@ async function processUncachedManga(
     // Store empty result on error
     cachedResults[index] = [];
     cachedComickSources[index] = new Map();
+    cachedMangaDexSources[index] = new Map();
     return false; // Indicates regular error, not cancellation
   };
 
@@ -3437,6 +3550,7 @@ async function processUncachedManga(
         updateProgress,
         cachedResults,
         cachedComickSources,
+        cachedMangaDexSources,
       });
     } catch (error) {
       const wasCancelled = handleMangaProcessingError(
@@ -3445,6 +3559,7 @@ async function processUncachedManga(
         index,
         cachedResults,
         cachedComickSources,
+        cachedMangaDexSources,
         () => {
           isCancelled = true;
           reject(error);
@@ -3546,23 +3661,32 @@ function createMangaMatchResult(
       foundViaComick: boolean;
     }
   >,
+  mangaDexSourceMap: Map<
+    number,
+    {
+      title: string;
+      slug: string;
+      mangaDexId: string;
+      foundViaMangaDex: boolean;
+    }
+  >,
 ): MangaMatchResult {
   // Fix mapping to create proper MangaMatch objects with Comick source info
-  const potentialMatchesFixed = potentialMatches.map((match) => ({
-    manga: match,
-    confidence: calculateConfidence(manga.title, match),
-    comickSource: comickSourceMap.get(match.id), // Include Comick source if available
-    sourceInfo: comickSourceMap.get(match.id)
-      ? {
-          title: comickSourceMap.get(match.id)!.title,
-          slug: comickSourceMap.get(match.id)!.slug,
-          sourceId: comickSourceMap.get(match.id)!.comickId,
-          source: "comick",
-          foundViaAlternativeSearch: comickSourceMap.get(match.id)!
-            .foundViaComick,
-        }
-      : undefined,
-  }));
+  const potentialMatchesFixed = potentialMatches.map((match) => {
+    const sourceInfo = getSourceInfo(
+      match.id,
+      comickSourceMap,
+      mangaDexSourceMap,
+    );
+
+    return {
+      manga: match,
+      confidence: calculateConfidence(manga.title, match),
+      comickSource: comickSourceMap.get(match.id), // Include Comick source if available
+      mangaDexSource: mangaDexSourceMap.get(match.id),
+      sourceInfo,
+    };
+  });
 
   return {
     kenmeiManga: manga,
@@ -3593,6 +3717,18 @@ function compileMatchResults(
       }
     >
   >,
+  cachedMangaDexSources: Record<
+    number,
+    Map<
+      number,
+      {
+        title: string;
+        slug: string;
+        mangaDexId: string;
+        foundViaMangaDex: boolean;
+      }
+    >
+  >,
   checkCancellation: () => void,
   updateProgress: (index: number, title?: string) => void,
 ): MangaMatchResult[] {
@@ -3609,6 +3745,9 @@ function compileMatchResults(
     // Initialize empty Comick source maps for missing entries
     if (!cachedComickSources[i]) {
       cachedComickSources[i] = new Map();
+    }
+    if (!cachedMangaDexSources[i]) {
+      cachedMangaDexSources[i] = new Map();
     }
   }
 
@@ -3635,10 +3774,12 @@ function compileMatchResults(
 
     // Create match result for this manga
     const comickSourceMap = cachedComickSources[i] || new Map();
+    const mangaDexSourceMap = cachedMangaDexSources[i] || new Map();
     results[i] = createMangaMatchResult(
       manga,
       potentialMatches,
       comickSourceMap,
+      mangaDexSourceMap,
     );
   }
 
@@ -3736,8 +3877,13 @@ export async function batchMatchManga(
 
   try {
     // Categorize manga based on cache status
-    const { cachedResults, cachedComickSources, uncachedManga, knownMangaIds } =
-      categorizeMangaForBatching(mangaList, searchConfig, updateProgress);
+    const {
+      cachedResults,
+      cachedComickSources,
+      cachedMangaDexSources,
+      uncachedManga,
+      knownMangaIds,
+    } = categorizeMangaForBatching(mangaList, searchConfig, updateProgress);
 
     // Check for cancellation
     checkCancellation();
@@ -3748,7 +3894,7 @@ export async function batchMatchManga(
       { searchConfig, token },
       { shouldCancel, abortSignal },
       { updateProgress },
-      { cachedResults, cachedComickSources },
+      { cachedResults, cachedComickSources, cachedMangaDexSources },
     );
 
     // Check for cancellation
@@ -3761,7 +3907,7 @@ export async function batchMatchManga(
         { token, searchConfig },
         { abortSignal, checkCancellation },
         { updateProgress },
-        { cachedResults, cachedComickSources },
+        { cachedResults, cachedComickSources, cachedMangaDexSources },
       );
     } catch (error) {
       console.log("Processing cancelled:", error);
@@ -3789,6 +3935,7 @@ export async function batchMatchManga(
       mangaList,
       cachedResults,
       cachedComickSources,
+      cachedMangaDexSources,
       checkCancellation,
       updateProgress,
     );
