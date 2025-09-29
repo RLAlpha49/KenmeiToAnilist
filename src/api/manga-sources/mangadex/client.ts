@@ -79,6 +79,49 @@ export class MangaDexClient extends BaseMangaSourceClient<
   }
 
   /**
+   * Extract primary title from MangaDex title object.
+   * Prefers English, then romanized Japanese, then Japanese, then any available.
+   */
+  private extractPrimaryTitle(title: Record<string, string>): string {
+    return (
+      title.en ||
+      title["ja-ro"] ||
+      title.ja ||
+      Object.values(title)[0] ||
+      "Unknown Title"
+    );
+  }
+
+  /**
+   * Parse alternative titles from MangaDex title and altTitles objects.
+   */
+  private parseAlternativeTitles(
+    title: Record<string, string>,
+    altTitles: Record<string, string>[],
+    primaryTitle: string,
+  ): Array<{ title: string; lang: string }> {
+    const alternativeTitles: Array<{ title: string; lang: string }> = [];
+
+    // Add all title variants (excluding the primary title)
+    for (const [lang, titleText] of Object.entries(title)) {
+      if (titleText && titleText !== primaryTitle) {
+        alternativeTitles.push({ title: titleText, lang });
+      }
+    }
+
+    // Add alt titles
+    for (const altTitle of altTitles) {
+      for (const [lang, titleText] of Object.entries(altTitle)) {
+        if (titleText) {
+          alternativeTitles.push({ title: titleText, lang });
+        }
+      }
+    }
+
+    return alternativeTitles;
+  }
+
+  /**
    * Parse raw search response into MangaDex manga entries.
    */
   // eslint-disable-next-line
@@ -94,32 +137,13 @@ export class MangaDexClient extends BaseMangaSourceClient<
       const title = attributes.title || {};
       const altTitles = attributes.altTitles || [];
 
-      // Get the primary title (prefer English, then romanized Japanese, then any available)
-      const primaryTitle =
-        title.en ||
-        title["ja-ro"] ||
-        title.ja ||
-        Object.values(title)[0] ||
-        "Unknown Title";
-
-      // Parse alternative titles
-      const alternativeTitles: Array<{ title: string; lang: string }> = [];
-
-      // Add all title variants
-      for (const [lang, titleText] of Object.entries(title)) {
-        if (titleText && titleText !== primaryTitle) {
-          alternativeTitles.push({ title: titleText as string, lang });
-        }
-      }
-
-      // Add alt titles
-      for (const altTitle of altTitles) {
-        for (const [lang, titleText] of Object.entries(altTitle)) {
-          if (titleText) {
-            alternativeTitles.push({ title: titleText as string, lang });
-          }
-        }
-      }
+      // Extract titles using helper methods
+      const primaryTitle = this.extractPrimaryTitle(title);
+      const alternativeTitles = this.parseAlternativeTitles(
+        title,
+        altTitles,
+        primaryTitle,
+      );
 
       return {
         id: item.id,
@@ -157,32 +181,13 @@ export class MangaDexClient extends BaseMangaSourceClient<
     const title = attributes.title || {};
     const altTitles = attributes.altTitles || [];
 
-    // Get the primary title (prefer English, then romanized Japanese, then any available)
-    const primaryTitle =
-      title.en ||
-      title["ja-ro"] ||
-      title.ja ||
-      Object.values(title)[0] ||
-      "Unknown Title";
-
-    // Parse alternative titles
-    const alternativeTitles: Array<{ title: string; lang: string }> = [];
-
-    // Add all title variants
-    for (const [lang, titleText] of Object.entries(title)) {
-      if (titleText && titleText !== primaryTitle) {
-        alternativeTitles.push({ title: titleText as string, lang });
-      }
-    }
-
-    // Add alt titles
-    for (const altTitle of altTitles) {
-      for (const [lang, titleText] of Object.entries(altTitle)) {
-        if (titleText) {
-          alternativeTitles.push({ title: titleText as string, lang });
-        }
-      }
-    }
+    // Extract titles using helper methods
+    const primaryTitle = this.extractPrimaryTitle(title);
+    const alternativeTitles = this.parseAlternativeTitles(
+      title,
+      altTitles,
+      primaryTitle,
+    );
 
     // Parse authors and artists from relationships
     const authors: Array<{ id: string; name: string; slug?: string }> = [];

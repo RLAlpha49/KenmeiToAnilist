@@ -40,7 +40,7 @@ export const getAppVersion = (): string => {
 export const getAppVersionElectron = async (): Promise<string> => {
   try {
     // Only import app in Electron main process
-    if (typeof globalThis.window === "undefined") {
+    if (globalThis.window === undefined) {
       const electron = await import("electron");
       return electron.app.getVersion();
     }

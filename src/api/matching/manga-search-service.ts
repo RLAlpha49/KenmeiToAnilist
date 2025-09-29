@@ -70,7 +70,7 @@ function initializeMangaService(): void {
   syncWithClientCache();
 
   // Set up event listeners
-  if (typeof globalThis.window !== "undefined" && !listenersRegistered) {
+  if (globalThis.window !== undefined && !listenersRegistered) {
     listenersRegistered = true;
 
     globalThis.addEventListener("anilist:search-cache-initialized", () => {
@@ -120,7 +120,7 @@ function initializeMangaService(): void {
   }
 
   // Make the cache debugger available globally for troubleshooting
-  if (typeof globalThis.window !== "undefined") {
+  if (globalThis.window !== undefined) {
     try {
       // Only define the property if it doesn't already exist
       if (!Object.hasOwn(globalThis, "__anilistCacheDebug")) {
@@ -299,7 +299,7 @@ function syncWithClientCache(): void {
 
 // Save the cache to localStorage when it's updated
 function saveCache(): void {
-  if (typeof globalThis.window !== "undefined") {
+  if (globalThis.window !== undefined) {
     try {
       localStorage.setItem("anilist_manga_cache", JSON.stringify(mangaCache));
     } catch (e) {
@@ -573,7 +573,8 @@ async function advancedSearchWithRateLimit(
  * @returns String with punctuation removed
  */
 function removePunctuation(str: string): string {
-  return str.replace(/[^\w\s]/g, "");
+  // Replace all non-word and non-space characters with empty string
+  return str.replaceAll(/[^\w\s]/g, "");
 }
 
 /**
@@ -3924,7 +3925,7 @@ export const cacheDebugger = {
     let storedMangaCount = 0;
     let storedSearchCount = 0;
 
-    if (typeof globalThis.window !== "undefined") {
+    if (globalThis.window !== undefined) {
       try {
         const mangaCacheData = localStorage.getItem("anilist_manga_cache");
         if (mangaCacheData) {
@@ -4011,7 +4012,7 @@ export const cacheDebugger = {
     clearMangaCache();
 
     // Clear localStorage caches
-    if (typeof globalThis.window !== "undefined") {
+    if (globalThis.window !== undefined) {
       try {
         localStorage.removeItem("anilist_manga_cache");
         localStorage.removeItem("anilist_search_cache");

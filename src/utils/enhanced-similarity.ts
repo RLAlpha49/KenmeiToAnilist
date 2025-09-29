@@ -310,7 +310,7 @@ function calculateLevenshteinSimilarity(str1: string, str2: string): number {
   if (len2 === 0) return 0;
 
   // Create matrix for dynamic programming
-  const matrix: number[][] = Array(len1 + 1)
+  const matrix: number[][] = new Array(len1 + 1)
     .fill(null)
     .map(() => new Array(len2 + 1).fill(0));
 
