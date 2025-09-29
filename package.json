@@ -23,7 +23,7 @@
   "author": "Alex Pettigrew <alexpettigrew29@gmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "@electron-forge/cli": "^7.8.3",
+    "@electron-forge/cli": "^7.9.0",
     "@electron-forge/maker-deb": "^7.9.0",
     "@electron-forge/maker-dmg": "^7.9.0",
     "@electron-forge/maker-squirrel": "^7.9.0",
@@ -37,7 +37,7 @@
     "@tailwindcss/vite": "^4.1.13",
     "@types/electron-squirrel-startup": "^1.0.2",
     "@types/node": "^24.5.2",
-    "@types/node-fetch": "^2.6.13",
+    "@types/node-fetch": "^3.0.2",
     "@types/react": "^19.1.15",
     "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react": "^5.0.4",
