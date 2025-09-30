@@ -10,15 +10,16 @@
     "forge": "config/forge.config.js"
   },
   "scripts": {
-    "start": "electron-forge start",
-    "package": "electron-forge package",
-    "make": "electron-forge make",
-    "publish": "electron-forge publish",
-    "lint": "eslint -c config/eslint.config.mjs .",
-    "format": "prettier --check .",
+    "build": "electron-forge make",
+    "docs": "typedoc --options config/typedoc.json",
     "format:write": "prettier --write .",
+    "lint": "eslint -c config/eslint.config.mjs .",
+    "make": "electron-forge make",
+    "precommit": "npm run lint && npm run format:write",
+    "publish": "electron-forge publish",
+    "start": "electron-forge start",
     "update": "ncu -u -x typedoc,typedoc-*,@typedoc/*",
-    "docs": "typedoc --options config/typedoc.json"
+    "prepare": "husky"
   },
   "author": "Alex Pettigrew <alexpettigrew29@gmail.com>",
   "license": "MIT",
@@ -49,6 +50,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-compiler": "^19.1.0-rc.2",
     "globals": "^16.4.0",
+    "husky": "^9.1.7",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.6.14",
     "tailwindcss": "^4.1.13",
