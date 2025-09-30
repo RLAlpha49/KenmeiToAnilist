@@ -567,7 +567,7 @@ export function SettingsPage() {
   };
 
   const readLastSyncMetadata = () => {
-    if (typeof globalThis.window === "undefined" || !globalThis.localStorage) {
+    if (typeof globalThis.window === undefined || !globalThis.localStorage) {
       return {
         label: "Unavailable",
         hint: "Sync history will appear after your first run.",
