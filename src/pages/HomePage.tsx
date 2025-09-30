@@ -637,16 +637,6 @@ export function HomePage() {
           initial="hidden"
           animate="show"
         >
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h2 className="text-foreground text-2xl font-semibold tracking-tight">
-                Feature spotlight
-              </h2>
-              <p className="text-muted-foreground text-sm">
-                Explore everything the migration assistant can do for you.
-              </p>
-            </div>
-          </div>
           <Carousel
             opts={{
               align: "start",
@@ -654,7 +644,7 @@ export function HomePage() {
             }}
             plugins={[
               Autoplay({
-                delay: 5000,
+                delay: 4000,
                 stopOnInteraction: false,
                 stopOnMouseEnter: true,
               }),

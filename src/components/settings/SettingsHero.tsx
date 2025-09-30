@@ -20,6 +20,7 @@ interface SettingsHeroProps {
   avatarUrl?: string | null;
   statusMessage?: string | null;
   isLoading: boolean;
+  disableLogin?: boolean;
   onLogin: () => void;
   onLogout: () => void;
   onOpenDocs?: () => void;
@@ -37,6 +38,7 @@ export function SettingsHero({
   avatarUrl,
   statusMessage,
   isLoading,
+  disableLogin = false,
   onLogin,
   onLogout,
   onOpenDocs,
@@ -97,23 +99,24 @@ export function SettingsHero({
                 onClick={onLogin}
                 size="lg"
                 className="bg-indigo-600 text-white hover:bg-indigo-500 dark:bg-white dark:text-slate-900 dark:hover:bg-white/90"
-                disabled={isLoading}
+                disabled={isLoading || disableLogin}
               >
                 <LogIn className="mr-2 h-4 w-4" />
                 Authenticate with AniList
               </Button>
             )}
-
-            <Button
-              onClick={onLogin}
-              size="lg"
-              variant="outline"
-              className="border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-100 dark:border-white/30 dark:bg-white/5 dark:text-white dark:hover:border-white/60 dark:hover:bg-white/10"
-              disabled={isLoading}
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Refresh token
-            </Button>
+            {isAuthenticated && (
+              <Button
+                onClick={onLogin}
+                size="lg"
+                variant="outline"
+                className="border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-100 dark:border-white/30 dark:bg-white/5 dark:text-white dark:hover:border-white/60 dark:hover:bg-white/10"
+                disabled={isLoading}
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh token
+              </Button>
+            )}
 
             {onOpenDocs && (
               <Button

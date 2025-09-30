@@ -4,11 +4,7 @@
  * @description Settings page component for the Kenmei to AniList sync tool. Handles authentication, sync preferences, data management, and cache clearing.
  */
 
-// TODO: Fix auth canceling taking too long. Most likely something wrong in auth context.
-// TODO: Fix canceling auth automatically navigates to home page. Should stay on settings page.
-// TODO: Refresh token button should not be visible if not authenticated already.
-// TODO: Should add a warning when switching credential source that you must re-authenticate.
-// TODO: Should show warning/error if custom credentials are incomplete or if the default credentials are missing. Default credentials should never be missing unless .env is empty.
+// TODO: Refreshing the token should show the auth status messages like how it does when first authenticating.
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { ErrorMessage } from "../components/ui/error-message";
@@ -89,6 +85,7 @@ export function SettingsPage() {
     authState,
     login,
     logout,
+    cancelAuth,
     isLoading,
     error: authError,
     statusMessage,
@@ -99,7 +96,6 @@ export function SettingsPage() {
 
   const { isDebugEnabled, toggleDebug } = useDebug();
 
-  // Add a ref to track the previous credential source to prevent loops
   const prevCredentialSourceRef = useRef<"default" | "custom">(
     authState.credentialSource,
   );
@@ -379,8 +375,19 @@ export function SettingsPage() {
     }
   };
 
-  const handleCancelAuth = () => {
-    globalThis.electronAuth.cancelAuth();
+  const handleCancelAuth = async () => {
+    try {
+      await cancelAuth();
+    } catch (err) {
+      setError(
+        createError(
+          ErrorType.AUTHENTICATION,
+          err instanceof Error
+            ? err.message
+            : "Failed to cancel authentication. Please try again.",
+        ),
+      );
+    }
   };
 
   const handleClearCache = async () => {
@@ -567,7 +574,7 @@ export function SettingsPage() {
   };
 
   const readLastSyncMetadata = () => {
-    if (typeof globalThis.window === undefined || !globalThis.localStorage) {
+    if (globalThis.window === undefined || !globalThis.localStorage) {
       return {
         label: "Unavailable",
         hint: "Sync history will appear after your first run.",
@@ -676,6 +683,38 @@ export function SettingsPage() {
     }
   };
 
+  const defaultCredentialStatus = useMemo(() => {
+    const missing: string[] = [];
+    const defaultClientId = DEFAULT_ANILIST_CONFIG.clientId?.trim() ?? "";
+    const defaultClientSecret =
+      DEFAULT_ANILIST_CONFIG.clientSecret?.trim() ?? "";
+    if (!defaultClientId) missing.push("Client ID");
+    if (!defaultClientSecret) missing.push("Client Secret");
+    return {
+      hasCredentials: missing.length === 0,
+      missing,
+    };
+  }, []);
+
+  const customCredentialStatus = useMemo(() => {
+    const trimmedClientId = clientId.trim();
+    const trimmedClientSecret = clientSecret.trim();
+    const trimmedRedirectUri = redirectUri.trim();
+    const missing: string[] = [];
+    if (!trimmedClientId) missing.push("Client ID");
+    if (!trimmedClientSecret) missing.push("Client Secret");
+    if (!trimmedRedirectUri) missing.push("Redirect URI");
+    return {
+      complete: missing.length === 0,
+      missing,
+    };
+  }, [clientId, clientSecret, redirectUri]);
+
+  const credentialsBlocked = useCustomCredentials
+    ? !customCredentialStatus.complete
+    : !defaultCredentialStatus.hasCredentials;
+  const disableAuthActions = isLoading || credentialsBlocked;
+
   const expiresLabel = useMemo(
     () => (authState.isAuthenticated ? calculateExpiryTime() : undefined),
     [authState.expiresAt, authState.isAuthenticated],
@@ -761,6 +800,24 @@ export function SettingsPage() {
         </Alert>
       )}
 
+      {!useCustomCredentials && !defaultCredentialStatus.hasCredentials && (
+        <Alert className="mt-4 border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-400/40 dark:bg-amber-500/10 dark:text-amber-100">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle className="text-amber-700 dark:text-amber-100">
+            Default credentials missing
+          </AlertTitle>
+          <AlertDescription className="text-xs text-amber-600 dark:text-amber-100/80">
+            {`Default credentials missing (${defaultCredentialStatus.missing.join(", ")}). Provide `}
+            <code className="font-mono">VITE_ANILIST_CLIENT_ID</code>
+            {" and "}
+            <code className="font-mono">VITE_ANILIST_CLIENT_SECRET</code>
+            {
+              " in your environment or switch to custom credentials before signing in."
+            }
+          </AlertDescription>
+        </Alert>
+      )}
+
       {useCustomCredentials && (
         <div className="mt-6 grid gap-4 md:grid-cols-2">
           <div className="grid gap-1.5">
@@ -833,6 +890,14 @@ export function SettingsPage() {
               AniList Developer Settings
             </a>
           </p>
+          {!customCredentialStatus.complete && (
+            <Alert className="border-rose-200 bg-rose-50 text-rose-700 md:col-span-2 dark:border-rose-400/40 dark:bg-rose-500/10 dark:text-rose-100">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="text-xs text-rose-600 dark:text-rose-100">
+                {`Custom credentials incomplete. Missing: ${customCredentialStatus.missing.join(", ")}. All fields are required before authenticating.`}
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
       )}
 
@@ -870,6 +935,7 @@ export function SettingsPage() {
           statusMessage && showStatusMessage && !error ? statusMessage : null
         }
         isLoading={isLoading}
+        disableLogin={disableAuthActions}
         onLogin={handleLogin}
         onLogout={logout}
         onClearStatus={() => setShowStatusMessage(false)}
@@ -920,24 +986,24 @@ export function SettingsPage() {
         className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/80 p-6 shadow-[0_40px_90px_-60px_rgba(15,23,42,0.15)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/40 dark:shadow-[0_40px_90px_-60px_rgba(15,23,42,0.9)]"
       >
         <Tabs defaultValue="matching" className="space-y-6">
-          <TabsList className="flex w-full flex-col gap-2 rounded-2xl border border-slate-200 bg-white/80 p-3 text-sm text-slate-600 backdrop-blur md:flex-row md:items-center md:justify-start md:gap-3 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+          <TabsList className="flex w-full flex-col gap-2 rounded-2xl border border-slate-200 bg-white/80 p-5 text-sm text-slate-600 backdrop-blur md:flex-row md:items-center md:justify-start md:gap-3 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
             <TabsTrigger
               value="matching"
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent px-5 py-3 font-medium text-slate-600 transition hover:border-slate-200 hover:text-slate-900 data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg dark:hover:border-white/20 dark:hover:text-white dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-white/20 dark:data-[state=active]:text-white"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent px-5 py-3.5 font-medium text-slate-600 transition hover:border-slate-200 hover:text-slate-900 data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg dark:hover:border-white/20 dark:hover:text-white dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-white/20 dark:data-[state=active]:text-white"
             >
               <Search className="h-4 w-4" />
               Matching
             </TabsTrigger>
             <TabsTrigger
               value="sync"
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent px-5 py-3 font-medium text-slate-600 transition hover:border-slate-200 hover:text-slate-900 data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg dark:hover:border-white/20 dark:hover:text-white dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-white/20 dark:data-[state=active]:text-white"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent px-5 py-3.5 font-medium text-slate-600 transition hover:border-slate-200 hover:text-slate-900 data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg dark:hover:border-white/20 dark:hover:text-white dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-white/20 dark:data-[state=active]:text-white"
             >
               <RefreshCw className="h-4 w-4" />
               Sync
             </TabsTrigger>
             <TabsTrigger
               value="data"
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent px-5 py-3 font-medium text-slate-600 transition hover:border-slate-200 hover:text-slate-900 data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg dark:hover:border-white/20 dark:hover:text-white dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-white/20 dark:data-[state=active]:text-white"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent px-5 py-3.5 font-medium text-slate-600 transition hover:border-slate-200 hover:text-slate-900 data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg dark:hover:border-white/20 dark:hover:text-white dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-white/20 dark:data-[state=active]:text-white"
             >
               <Database className="h-4 w-4" />
               Data
@@ -1940,7 +2006,7 @@ export function SettingsPage() {
         })()}
 
         <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="bg-muted/40 rounded-2xl border p-4">
             <div className="flex items-center gap-2 text-xs font-medium tracking-wide text-slate-900 uppercase dark:text-slate-300">
               <Clock className="h-4 w-4" /> Last synced
             </div>
@@ -1949,7 +2015,7 @@ export function SettingsPage() {
               {lastSyncMetadata.hint}
             </p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="bg-muted/40 rounded-2xl border p-4">
             <div className="flex items-center gap-2 text-xs font-medium tracking-wide text-slate-900 uppercase dark:text-slate-300">
               <Key className="h-4 w-4" /> Credentials
             </div>
@@ -1960,7 +2026,7 @@ export function SettingsPage() {
                 : "Using built-in credentials"}
             </p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="bg-muted/40 rounded-2xl border p-4">
             <div className="flex items-center gap-2 text-xs font-medium tracking-wide text-slate-900 uppercase dark:text-slate-300">
               <UserCircle className="h-4 w-4" /> Authentication
             </div>

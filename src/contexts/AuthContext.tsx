@@ -367,6 +367,31 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     lockedCredentialSourceRef.current = null;
   };
 
+  const cancelAuth = async () => {
+    // Increment attempt id to invalidate any in-flight responses
+    authAttemptRef.current += 1;
+    lockedCredentialSourceRef.current = null;
+
+    setIsLoading(false);
+    setIsBrowserAuthFlow(false);
+    setStatusMessage(null);
+    setError("Authentication was cancelled");
+
+    try {
+      if (globalThis.electronAuth?.cancelAuth) {
+        const result = await globalThis.electronAuth.cancelAuth();
+        if (!result?.success && result?.error) {
+          toast.error(result.error);
+        }
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to cancel authentication";
+      console.error("Cancel auth error:", err);
+      toast.error(message);
+    }
+  };
+
   // Set credential source
   const setCredentialSource = (source: "default" | "custom") => {
     // Only update if the source actually changed
@@ -449,6 +474,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
       authState,
       login,
       logout,
+      cancelAuth,
       isLoading,
       error,
       statusMessage,
@@ -460,6 +486,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
       authState,
       login,
       logout,
+      cancelAuth,
       isLoading,
       error,
       statusMessage,
