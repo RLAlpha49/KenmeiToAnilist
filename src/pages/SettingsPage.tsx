@@ -4,10 +4,6 @@
  * @description Settings page component for the Kenmei to AniList sync tool. Handles authentication, sync preferences, data management, and cache clearing.
  */
 
-// TODO: Fix padding of tabs
-// TODO: Fix white theme styling for some elements in hero, authentication, and application sections.
-// TODO: Clear caches button should show disabled cursor if button is disabled.
-
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { ErrorMessage } from "../components/ui/error-message";
 import { ErrorType, createError, AppError } from "../utils/errorHandling";
@@ -22,7 +18,6 @@ import {
   Clock,
   AlertTriangle,
   Link,
-  ExternalLink,
   InfoIcon,
   Search,
   Bug,
@@ -566,7 +561,7 @@ export function SettingsPage() {
   };
 
   const readLastSyncMetadata = () => {
-    if (typeof window === "undefined" || !window.localStorage) {
+    if (typeof globalThis.window === "undefined" || !globalThis.localStorage) {
       return {
         label: "Unavailable",
         hint: "Sync history will appear after your first run.",
@@ -574,7 +569,9 @@ export function SettingsPage() {
     }
 
     try {
-      const historyRaw = window.localStorage.getItem("anilist_sync_history");
+      const historyRaw = globalThis.localStorage.getItem(
+        "anilist_sync_history",
+      );
       if (!historyRaw) {
         return {
           label: "Never",
@@ -833,18 +830,18 @@ export function SettingsPage() {
         </div>
       )}
 
-      <div className="mt-6 flex flex-wrap items-center gap-3 text-xs text-slate-200/80">
-        <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/10 px-3 py-1">
+      <div className="mt-6 flex flex-wrap items-center gap-3 text-xs text-slate-600 dark:text-slate-200/80">
+        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-700 dark:border-white/15 dark:bg-white/10 dark:text-slate-200/80">
           <Clock className="h-3 w-3" />
           {authState.isAuthenticated
             ? `Token expires in ${expiresLabel ?? "unknown"}`
             : "No active session"}
         </span>
-        <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/10 px-3 py-1">
+        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-700 dark:border-white/15 dark:bg-white/10 dark:text-slate-200/80">
           <Key className="h-3 w-3" />
           {credentialSourceLabel}
         </span>
-        <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/10 px-3 py-1">
+        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-700 dark:border-white/15 dark:bg-white/10 dark:text-slate-200/80">
           <ShieldCheck className="h-3 w-3" />
           Stored locally only
         </span>
@@ -917,24 +914,24 @@ export function SettingsPage() {
         className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/80 p-6 shadow-[0_40px_90px_-60px_rgba(15,23,42,0.15)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/40 dark:shadow-[0_40px_90px_-60px_rgba(15,23,42,0.9)]"
       >
         <Tabs defaultValue="matching" className="space-y-6">
-          <TabsList className="flex w-full flex-col gap-2 rounded-2xl border border-slate-200 bg-white/80 p-2 text-sm text-slate-600 backdrop-blur md:flex-row md:items-center md:justify-start md:gap-3 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+          <TabsList className="flex w-full flex-col gap-2 rounded-2xl border border-slate-200 bg-white/80 p-3 text-sm text-slate-600 backdrop-blur md:flex-row md:items-center md:justify-start md:gap-3 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
             <TabsTrigger
               value="matching"
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent px-4 py-2 font-medium text-slate-600 transition hover:border-slate-200 hover:text-slate-900 data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg dark:hover:border-white/20 dark:hover:text-white dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-white/20 dark:data-[state=active]:text-white"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent px-5 py-3 font-medium text-slate-600 transition hover:border-slate-200 hover:text-slate-900 data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg dark:hover:border-white/20 dark:hover:text-white dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-white/20 dark:data-[state=active]:text-white"
             >
               <Search className="h-4 w-4" />
               Matching
             </TabsTrigger>
             <TabsTrigger
               value="sync"
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent px-4 py-2 font-medium text-slate-600 transition hover:border-slate-200 hover:text-slate-900 data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg dark:hover:border-white/20 dark:hover:text-white dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-white/20 dark:data-[state=active]:text-white"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent px-5 py-3 font-medium text-slate-600 transition hover:border-slate-200 hover:text-slate-900 data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg dark:hover:border-white/20 dark:hover:text-white dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-white/20 dark:data-[state=active]:text-white"
             >
               <RefreshCw className="h-4 w-4" />
               Sync
             </TabsTrigger>
             <TabsTrigger
               value="data"
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent px-4 py-2 font-medium text-slate-600 transition hover:border-slate-200 hover:text-slate-900 data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg dark:hover:border-white/20 dark:hover:text-white dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-white/20 dark:data-[state=active]:text-white"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent px-5 py-3 font-medium text-slate-600 transition hover:border-slate-200 hover:text-slate-900 data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg dark:hover:border-white/20 dark:hover:text-white dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-white/20 dark:data-[state=active]:text-white"
             >
               <Database className="h-4 w-4" />
               Data
@@ -1704,7 +1701,7 @@ export function SettingsPage() {
                           isClearing ||
                           !Object.values(cachesToClear).some(Boolean)
                         }
-                        className={`w-full ${
+                        className={`w-full disabled:cursor-not-allowed disabled:opacity-60 ${
                           cacheCleared
                             ? "bg-green-50 text-green-600 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/40"
                             : ""
@@ -1899,7 +1896,7 @@ export function SettingsPage() {
       <SettingsSectionShell
         icon={InfoIcon}
         title="Application insights"
-        description="Quick glance at your environment, sync activity, and helpful links."
+        description="Quick glance."
         accent="from-indigo-500/15 via-purple-500/10 to-transparent"
         className="mt-6"
         contentClassName="space-y-6"
@@ -1921,12 +1918,12 @@ export function SettingsPage() {
             channelLabel = "Development channel";
           }
           return (
-            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-200">
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-slate-200">
+              <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-700 dark:border-white/15 dark:bg-white/10 dark:text-slate-200">
                 <Clock className="h-3.5 w-3.5" />
                 {channelLabel}
               </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1">
+              <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-700 dark:border-white/15 dark:bg-white/10 dark:text-slate-200">
                 <UserCircle className="h-3.5 w-3.5" />
                 {authState.isAuthenticated
                   ? "Session active"
@@ -1938,60 +1935,38 @@ export function SettingsPage() {
 
         <div className="grid gap-3 md:grid-cols-3">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <div className="flex items-center gap-2 text-xs font-medium tracking-wide text-slate-300 uppercase">
+            <div className="flex items-center gap-2 text-xs font-medium tracking-wide text-slate-900 uppercase dark:text-slate-300">
               <Clock className="h-4 w-4" /> Last synced
             </div>
             <p className="mt-2 text-sm text-white">{lastSyncMetadata.label}</p>
-            <p className="text-xs text-slate-300/80">{lastSyncMetadata.hint}</p>
+            <p className="text-xs text-slate-900/80 dark:text-slate-300/80">
+              {lastSyncMetadata.hint}
+            </p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <div className="flex items-center gap-2 text-xs font-medium tracking-wide text-slate-300 uppercase">
+            <div className="flex items-center gap-2 text-xs font-medium tracking-wide text-slate-900 uppercase dark:text-slate-300">
               <Key className="h-4 w-4" /> Credentials
             </div>
             <p className="mt-2 text-sm text-white">{credentialSourceLabel}</p>
-            <p className="text-xs text-slate-300/80">
+            <p className="text-xs text-slate-900/80 dark:text-slate-300/80">
               {useCustomCredentials
                 ? "Using custom AniList API keys"
                 : "Using built-in credentials"}
             </p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <div className="flex items-center gap-2 text-xs font-medium tracking-wide text-slate-300 uppercase">
+            <div className="flex items-center gap-2 text-xs font-medium tracking-wide text-slate-900 uppercase dark:text-slate-300">
               <UserCircle className="h-4 w-4" /> Authentication
             </div>
             <p className="mt-2 text-sm text-white">
               {authState.isAuthenticated ? "Connected" : "Not connected"}
             </p>
-            <p className="text-xs text-slate-300/80">
+            <p className="text-xs text-slate-900/80 dark:text-slate-300/80">
               {authState.isAuthenticated
                 ? `Expires in ${expiresLabel ?? "unknown"}`
                 : "Sign in to unlock sync features"}
             </p>
           </div>
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-300">
-          <div className="inline-flex items-center gap-2">
-            <span className="tracking-wide text-slate-400 uppercase">
-              Resources
-            </span>
-            <Separator orientation="vertical" className="h-4 bg-white/20" />
-            <a
-              href="https://github.com/RLAlpha49/KenmeiToAnilist"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-blue-200 underline-offset-4 transition hover:text-blue-100 hover:underline"
-              onClick={handleOpenExternal(
-                "https://github.com/RLAlpha49/KenmeiToAnilist",
-              )}
-            >
-              <ExternalLink className="h-3 w-3" />
-              GitHub repo
-            </a>
-          </div>
-          <span className="text-slate-400/70">
-            Made with ❤️ for manga readers.
-          </span>
         </div>
       </SettingsSectionShell>
     </motion.div>

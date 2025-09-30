@@ -46,7 +46,7 @@ export function SettingsHero({
   expiresLabel,
   versionLabel,
   children,
-}: SettingsHeroProps) {
+}: Readonly<SettingsHeroProps>) {
   const connectionTone = isAuthenticated
     ? "border-emerald-200 bg-emerald-100 text-emerald-700 dark:border-emerald-400/40 dark:bg-emerald-400/10 dark:text-emerald-200"
     : "border-amber-200 bg-amber-100 text-amber-700 dark:border-amber-400/40 dark:bg-amber-400/10 dark:text-amber-100";
@@ -108,7 +108,7 @@ export function SettingsHero({
               onClick={onLogin}
               size="lg"
               variant="outline"
-              className="border-white/30 bg-white/5 text-white hover:border-white/60 hover:bg-white/10"
+              className="border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-100 dark:border-white/30 dark:bg-white/5 dark:text-white dark:hover:border-white/60 dark:hover:bg-white/10"
               disabled={isLoading}
             >
               <RefreshCw className="mr-2 h-4 w-4" />

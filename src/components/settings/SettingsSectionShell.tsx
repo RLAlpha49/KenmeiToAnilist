@@ -32,7 +32,7 @@ export function SettingsSectionShell({
   className,
   contentClassName,
   delay = 0,
-}: SettingsSectionShellProps) {
+}: Readonly<SettingsSectionShellProps>) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 18 }}
