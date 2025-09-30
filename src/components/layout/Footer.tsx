@@ -4,7 +4,7 @@
  * @description Application footer component with branding, version, social links, and credits.
  */
 import React from "react";
-import { Heart, Mail, GitBranch } from "lucide-react";
+import { Heart, GitBranch } from "lucide-react";
 
 /**
  * GitHub SVG icon (from simpleicons.org)
@@ -50,21 +50,6 @@ export function Footer() {
     }
   };
 
-  const socialLinks = [
-    {
-      name: "GitHub",
-      icon: <GithubIcon className="h-4 w-4" />,
-      url: "https://github.com/RLAlpha49/KenmeiToAnilist",
-      tooltip: "View source code on GitHub",
-    },
-    {
-      name: "Contact",
-      icon: <Mail className="h-4 w-4" />,
-      url: "mailto:contact@alpha49.com",
-      tooltip: "Email with questions",
-    },
-  ];
-
   return (
     <TooltipProvider>
       <footer className="border-border bg-background/80 relative border-t px-4 py-6 text-xs backdrop-blur-xl">
@@ -96,32 +81,31 @@ export function Footer() {
           </div>
 
           <div className="flex flex-col items-center gap-4 md:flex-row md:items-end">
-            <div className="flex gap-2">
-              {socialLinks.map((link) => (
-                <Tooltip key={link.name}>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-muted-foreground hover:text-foreground h-9 w-9 rounded-full border border-white/20 bg-white/60 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/60"
-                      onClick={handleOpenExternal(link.url)}
-                    >
-                      {link.icon}
-                      <span className="sr-only">{link.name}</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">{link.tooltip}</TooltipContent>
-                </Tooltip>
-              ))}
-            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="text-muted-foreground hover:text-foreground inline-flex items-center gap-3 rounded-full border border-white/20 bg-white/60 px-4 py-2 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/60"
+                  onClick={handleOpenExternal(
+                    "https://github.com/RLAlpha49/KenmeiToAnilist",
+                  )}
+                >
+                  <span className="flex items-center gap-2 text-[0.65rem] font-semibold tracking-[0.3em] uppercase">
+                    <GithubIcon className="h-4 w-4" />
+                    <GitBranch className="h-3 w-3" />
+                    Open source
+                  </span>
+                  <span className="sr-only">GitHub repository</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                View source code on GitHub
+              </TooltipContent>
+            </Tooltip>
 
             <Separator orientation="horizontal" className="md:hidden" />
 
             <div className="text-muted-foreground flex items-center gap-4">
-              <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/50 px-3 py-1 text-[0.65rem] tracking-[0.3em] uppercase shadow-sm backdrop-blur md:flex dark:bg-slate-900/60">
-                <GitBranch className="h-3 w-3" />
-                open-source
-              </div>
               <motion.div
                 className="flex items-center gap-2"
                 whileHover={{ scale: 1.05 }}
