@@ -88,6 +88,7 @@ export interface ViewerResponse {
  *
  * @property authState - The current authentication state.
  * @property login - Function to log in with credentials.
+ * @property refreshToken - Function to refresh the authentication token.
  * @property logout - Function to log out the user.
  * @property cancelAuth - Function to cancel an in-progress authentication flow.
  * @property isLoading - Whether an authentication operation is in progress.
@@ -101,6 +102,7 @@ export interface ViewerResponse {
 export interface AuthContextType {
   authState: AuthState;
   login: (credentials: APICredentials) => Promise<void>;
+  refreshToken: () => Promise<void>;
   logout: () => void;
   cancelAuth: () => Promise<void>;
   isLoading: boolean;

@@ -14,6 +14,7 @@ import {
   AuthContextType,
 } from "../types/auth";
 import { AuthContext } from "./AuthContextDefinition";
+import { DEFAULT_ANILIST_CONFIG } from "../config/anilist";
 
 /**
  * Props for the AuthProvider component.
@@ -273,6 +274,98 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     return unsubscribe;
   }, []);
 
+  // Refresh token function - shows status messages like initial auth
+  const refreshToken = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      setStatusMessage("Refreshing authentication...");
+      setIsBrowserAuthFlow(true);
+      // Increment attempt id and lock credential source for this flow
+      authAttemptRef.current += 1;
+      lockedCredentialSourceRef.current = authState.credentialSource;
+
+      // Get current credentials based on credential source
+      const credentials: APICredentials =
+        authState.credentialSource === "custom" && customCredentials
+          ? customCredentials
+          : {
+              source: "default" as const,
+              clientId: DEFAULT_ANILIST_CONFIG.clientId,
+              clientSecret: DEFAULT_ANILIST_CONFIG.clientSecret,
+              redirectUri: DEFAULT_ANILIST_CONFIG.redirectUri,
+            };
+
+      // Make sure the redirectUri is properly formatted with http://
+      let redirectUri = credentials.redirectUri;
+      if (
+        !redirectUri.startsWith("http://") &&
+        !redirectUri.startsWith("https://")
+      ) {
+        redirectUri = `http://${redirectUri}`;
+        credentials.redirectUri = redirectUri;
+      }
+
+      // Store the credentials securely
+      setStatusMessage("Storing credentials...");
+      const storeResult =
+        await globalThis.electronAuth.storeCredentials(credentials);
+      if (!storeResult.success) {
+        toast.error(storeResult.error || "Failed to store credentials");
+        throw new Error(storeResult.error || "Failed to store credentials");
+      }
+
+      // Generate the OAuth URL
+      const clientId = encodeURIComponent(credentials.clientId);
+      const encodedRedirectUri = encodeURIComponent(redirectUri);
+      const oauthUrl = `https://anilist.co/api/v2/oauth/authorize?client_id=${clientId}&redirect_uri=${encodedRedirectUri}&response_type=code`;
+
+      setStatusMessage("Opening authentication window...");
+
+      // Open the OAuth window
+      try {
+        const result = await globalThis.electronAuth.openOAuthWindow(
+          oauthUrl,
+          redirectUri,
+        );
+
+        if (!result.success) {
+          toast.error(result.error || "Failed to open authentication window");
+          throw new Error(
+            result.error || "Failed to open authentication window",
+          );
+        }
+      } catch (err) {
+        if (isBrowserAuthFlow) {
+          console.log(
+            "Browser auth flow in progress - ignoring window.close error...",
+          );
+        } else {
+          console.error("Login window error:", err);
+          const msg =
+            err instanceof Error
+              ? err.message
+              : "Failed to open authentication window";
+          toast.error(msg);
+          setError(msg);
+          setStatusMessage(null);
+          setIsLoading(false);
+          setIsBrowserAuthFlow(false);
+        }
+      }
+
+      // The rest of the authentication process happens in the code received listener
+    } catch (err: unknown) {
+      console.error("Token refresh error:", err);
+      const msg = err instanceof Error ? err.message : "Token refresh failed";
+      toast.error(msg);
+      setError(msg);
+      setStatusMessage(null);
+      setIsLoading(false);
+      setIsBrowserAuthFlow(false);
+    }
+  };
+
   // Login function
   const login = async (credentials: APICredentials) => {
     try {
@@ -473,6 +566,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     () => ({
       authState,
       login,
+      refreshToken,
       logout,
       cancelAuth,
       isLoading,
@@ -485,6 +579,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     [
       authState,
       login,
+      refreshToken,
       logout,
       cancelAuth,
       isLoading,

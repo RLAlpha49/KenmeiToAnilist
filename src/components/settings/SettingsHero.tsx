@@ -22,6 +22,7 @@ interface SettingsHeroProps {
   isLoading: boolean;
   disableLogin?: boolean;
   onLogin: () => void;
+  onRefreshToken?: () => void;
   onLogout: () => void;
   onOpenDocs?: () => void;
   onClearStatus?: () => void;
@@ -40,6 +41,7 @@ export function SettingsHero({
   isLoading,
   disableLogin = false,
   onLogin,
+  onRefreshToken,
   onLogout,
   onOpenDocs,
   onClearStatus,
@@ -105,9 +107,9 @@ export function SettingsHero({
                 Authenticate with AniList
               </Button>
             )}
-            {isAuthenticated && (
+            {isAuthenticated && onRefreshToken && (
               <Button
-                onClick={onLogin}
+                onClick={onRefreshToken}
                 size="lg"
                 variant="outline"
                 className="border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-100 dark:border-white/30 dark:bg-white/5 dark:text-white dark:hover:border-white/60 dark:hover:bg-white/10"

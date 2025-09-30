@@ -15,11 +15,10 @@
     "format:write": "prettier --write .",
     "lint": "eslint -c config/eslint.config.mjs .",
     "make": "electron-forge make",
-    "precommit": "npm run lint && npm run format:write",
+    "precommit": "npm run format:write && npm run lint",
     "publish": "electron-forge publish",
     "start": "electron-forge start",
-    "update": "ncu -u -x typedoc,typedoc-*,@typedoc/*",
-    "prepare": "husky"
+    "update": "ncu -u -x typedoc,typedoc-*,@typedoc/*"
   },
   "author": "Alex Pettigrew <alexpettigrew29@gmail.com>",
   "license": "MIT",

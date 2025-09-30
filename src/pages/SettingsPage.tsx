@@ -4,8 +4,6 @@
  * @description Settings page component for the Kenmei to AniList sync tool. Handles authentication, sync preferences, data management, and cache clearing.
  */
 
-// TODO: Refreshing the token should show the auth status messages like how it does when first authenticating.
-
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { ErrorMessage } from "../components/ui/error-message";
 import { ErrorType, createError, AppError } from "../utils/errorHandling";
@@ -84,6 +82,7 @@ export function SettingsPage() {
   const {
     authState,
     login,
+    refreshToken,
     logout,
     cancelAuth,
     isLoading,
@@ -937,6 +936,7 @@ export function SettingsPage() {
         isLoading={isLoading}
         disableLogin={disableAuthActions}
         onLogin={handleLogin}
+        onRefreshToken={refreshToken}
         onLogout={logout}
         onClearStatus={() => setShowStatusMessage(false)}
         onCancelAuth={handleCancelAuth}
