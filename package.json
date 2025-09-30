@@ -18,7 +18,8 @@
     "precommit": "npm run format:write && npm run lint",
     "publish": "electron-forge publish",
     "start": "electron-forge start",
-    "update": "ncu -u -x typedoc,typedoc-*,@typedoc/*"
+    "update": "ncu -u -x typedoc,typedoc-*,@typedoc/*",
+    "prepare": "husky"
   },
   "author": "Alex Pettigrew <alexpettigrew29@gmail.com>",
   "license": "MIT",
