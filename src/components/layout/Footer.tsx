@@ -72,7 +72,7 @@ export function Footer() {
                 </span>
                 <Badge
                   variant="outline"
-                  className="rounded-full border-white/40 bg-white/70 px-2 py-0.5 font-mono text-[0.65rem] tracking-widest uppercase shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/80"
+                  className="rounded-full border-white/40 bg-white/70 px-2 py-0.5 font-mono text-[0.65rem] tracking-widest shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/80"
                 >
                   v{getAppVersion()}
                 </Badge>

@@ -4,6 +4,12 @@
  * @description Settings page component for the Kenmei to AniList sync tool. Handles authentication, sync preferences, data management, and cache clearing.
  */
 
+// TODO: Fix auth canceling taking too long. Most likely something wrong in auth context.
+// TODO: Fix canceling auth automatically navigates to home page. Should stay on settings page.
+// TODO: Refresh token button should not be visible if not authenticated already.
+// TODO: Should add a warning when switching credential source that you must re-authenticate.
+// TODO: Should show warning/error if custom credentials are incomplete or if the default credentials are missing. Default credentials should never be missing unless .env is empty.
+
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { ErrorMessage } from "../components/ui/error-message";
 import { ErrorType, createError, AppError } from "../utils/errorHandling";

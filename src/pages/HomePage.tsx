@@ -4,9 +4,6 @@
  * @description Home page component for the Kenmei to AniList sync tool. Displays dashboard, statistics, feature carousel, quick actions, and sync status.
  */
 
-// TODO: Fix bottom right corner of quick action buttons being cut off.
-// TODO: Remove sync journey and have status distribution extend to full width like quick actions section.
-
 import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -25,11 +22,7 @@ import {
   Settings,
   CheckCheck,
   ArrowUpRight,
-  CheckCircle2,
-  Circle,
-  Loader2,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { getImportStats, storage, STORAGE_KEYS } from "../utils/storage";
 import { motion } from "framer-motion";
@@ -73,14 +66,6 @@ interface SyncStats {
   entriesSynced: number;
   failedSyncs: number;
   totalSyncs: number;
-}
-
-interface JourneyStep {
-  label: string;
-  description: string;
-  status: "done" | "active" | "pending";
-  icon: LucideIcon;
-  href: string;
 }
 
 // Animation variants for staggered children
@@ -332,7 +317,7 @@ export function HomePage() {
     if (!authState.isAuthenticated) {
       return {
         label: "Connect AniList",
-        description: "Authenticate to unlock syncing and review tools",
+        description: "Authenticate to see syncing and review tools",
         href: "/settings",
         tone: "from-blue-500 via-indigo-500 to-purple-500",
       };
@@ -438,95 +423,6 @@ export function HomePage() {
       stats.dropped,
     ],
   );
-
-  const journeySteps = useMemo<JourneyStep[]>(() => {
-    const hasImports = stats.total > 0;
-    const hasMatches = matchStatus.totalMatches > 0;
-    const needsReview = matchStatus.pendingMatches > 0;
-    const hasSynced = syncStats.totalSyncs > 0;
-    const hasSuccessfulSync = syncStats.entriesSynced > 0;
-
-    let matchTitlesDescription: string;
-    if (hasMatches) {
-      if (needsReview) {
-        matchTitlesDescription = `${formatNumber(matchStatus.pendingMatches)} entries left to review`;
-      } else {
-        matchTitlesDescription = "All titles reviewed and matched";
-      }
-    } else {
-      matchTitlesDescription = "Smart matching pairs Kenmei titles to AniList";
-    }
-
-    let matchTitlesStatus: "done" | "active" | "pending";
-    if (!hasImports) {
-      matchTitlesStatus = "pending";
-    } else if (needsReview) {
-      matchTitlesStatus = "active";
-    } else if (hasMatches) {
-      matchTitlesStatus = "done";
-    } else {
-      matchTitlesStatus = "pending";
-    }
-
-    return [
-      {
-        label: "Import Library",
-        description: hasImports
-          ? `Imported ${formatNumber(stats.total)} manga from Kenmei`
-          : "Upload your Kenmei CSV export",
-        status: hasImports ? "done" : "active",
-        icon: Download,
-        href: "/import",
-      },
-      {
-        label: "Match Titles",
-        description: matchTitlesDescription,
-        status: matchTitlesStatus,
-        icon: ClipboardCheck,
-        href: "/review",
-      },
-      {
-        label: "Fine-tune Settings",
-        description:
-          "Adjust sync preferences, status priorities, and automation rules",
-        status: (() => {
-          if (hasMatches && !needsReview) {
-            return hasSynced ? "done" : "active";
-          } else {
-            return "pending";
-          }
-        })(),
-        icon: Settings,
-        href: "/settings",
-      },
-      {
-        label: "Sync to AniList",
-        description: hasSuccessfulSync
-          ? `Synced ${formatNumber(syncStats.entriesSynced)} entries successfully`
-          : "Push your curated list with a single click",
-        status: (() => {
-          if (hasSuccessfulSync) {
-            return "done";
-          }
-          if (hasMatches && !needsReview) {
-            return "active";
-          }
-          if (hasSynced) {
-            return "active";
-          }
-          return "pending";
-        })(),
-        icon: RefreshCw,
-        href: "/sync",
-      },
-    ];
-  }, [
-    stats.total,
-    matchStatus.totalMatches,
-    matchStatus.pendingMatches,
-    syncStats.totalSyncs,
-    syncStats.entriesSynced,
-  ]);
 
   let matchStatusText: string;
   if (matchStatus.status === "none") {
@@ -750,21 +646,6 @@ export function HomePage() {
                 Explore everything the migration assistant can do for you.
               </p>
             </div>
-            <Button
-              asChild
-              variant="ghost"
-              className="text-muted-foreground hover:border-border hover:text-foreground h-auto self-start rounded-full border border-transparent px-4 py-2 text-sm font-semibold transition"
-            >
-              <a
-                href="https://github.com/RLAlpha49/KenmeiToAnilist/blob/master/docs/guides/ARCHITECTURE.md"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2"
-              >
-                Architecture overview
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            </Button>
           </div>
           <Carousel
             opts={{
@@ -973,181 +854,53 @@ export function HomePage() {
         </motion.section>
 
         <motion.section
-          className="mb-12 grid grid-cols-1 gap-6 lg:grid-cols-2"
-          variants={containerVariants}
+          className="mb-12"
+          variants={itemVariants}
           initial="hidden"
           animate="show"
         >
-          <motion.div variants={itemVariants}>
-            <Card className="relative h-full overflow-hidden border border-white/30 bg-white/80 p-6 shadow-xl backdrop-blur dark:border-white/10 dark:bg-slate-950/70">
-              <CardHeader className="space-y-2 p-0 pb-4">
-                <CardTitle className="text-xl font-semibold">
-                  Status distribution
-                </CardTitle>
-                <CardDescription>
-                  See how your library breaks down by reading state.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4 p-0">
-                {statusBreakdown.map((status) => {
-                  const percent =
-                    stats.total > 0
-                      ? Math.round((status.value / stats.total) * 100)
-                      : 0;
-                  return (
-                    <div key={status.label} className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-foreground font-medium">
-                          {status.label}
-                        </span>
-                        <span className="text-muted-foreground">
-                          {formatNumber(status.value)}{" "}
-                          {status.value === 1 ? "entry" : "entries"} • {percent}
-                          %
-                        </span>
-                      </div>
-                      <div className="bg-muted relative h-2.5 overflow-hidden rounded-full">
-                        <div
-                          className={`absolute inset-y-0 left-0 rounded-full bg-gradient-to-r ${status.gradient}`}
-                          style={{ width: `${percent}%` }}
-                        />
-                      </div>
+          <Card className="relative overflow-hidden border border-white/30 bg-white/80 p-6 shadow-xl backdrop-blur dark:border-white/10 dark:bg-slate-950/70">
+            <CardHeader className="space-y-2 p-0 pb-4">
+              <CardTitle className="text-xl font-semibold">
+                Status distribution
+              </CardTitle>
+              <CardDescription>
+                See how your library breaks down by reading state.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 p-0">
+              {statusBreakdown.map((status) => {
+                const percent =
+                  stats.total > 0
+                    ? Math.round((status.value / stats.total) * 100)
+                    : 0;
+                return (
+                  <div key={status.label} className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-foreground font-medium">
+                        {status.label}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {formatNumber(status.value)}{" "}
+                        {status.value === 1 ? "entry" : "entries"} • {percent}%
+                      </span>
                     </div>
-                  );
-                })}
-                {stats.total === 0 && (
-                  <p className="text-muted-foreground text-sm">
-                    Import your Kenmei CSV to unlock detailed visualizations.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          <motion.div variants={itemVariants}>
-            <Card className="relative h-full overflow-hidden border border-white/30 bg-white/80 p-6 shadow-xl backdrop-blur dark:border-white/10 dark:bg-slate-950/70">
-              <CardHeader className="space-y-2 p-0 pb-4">
-                <CardTitle className="flex items-center gap-2 text-xl font-semibold">
-                  <Sparkles className="h-5 w-5 text-blue-500" />
-                  Your sync journey
-                </CardTitle>
-                <CardDescription>
-                  Follow the recommended path to keep your lists perfectly
-                  mirrored.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6 p-0">
-                <ul className="space-y-6">
-                  {journeySteps.map((step, index) => {
-                    const StepIcon = step.icon;
-                    let statusStyles;
-                    if (step.status === "done") {
-                      statusStyles = {
-                        circle:
-                          "border-green-500/40 bg-green-500/10 text-green-600 dark:text-green-300",
-                        badge:
-                          "bg-green-500/20 text-green-700 dark:text-green-200",
-                        connector: "from-green-500/30 to-transparent",
-                      };
-                    } else if (step.status === "active") {
-                      statusStyles = {
-                        circle:
-                          "border-blue-500/50 bg-blue-500/10 text-blue-600 dark:text-blue-300",
-                        badge:
-                          "bg-blue-500/20 text-blue-700 dark:text-blue-200",
-                        connector: "from-blue-500/30 to-transparent",
-                      };
-                    } else {
-                      statusStyles = {
-                        circle:
-                          "border-muted bg-muted/60 text-muted-foreground",
-                        badge: "bg-muted text-muted-foreground",
-                        connector: "from-border to-transparent",
-                      };
-                    }
-
-                    // Extract icon element for status
-                    let statusIcon;
-                    if (step.status === "active") {
-                      statusIcon = <Loader2 className="h-4 w-4 animate-spin" />;
-                    } else if (step.status === "done") {
-                      statusIcon = <CheckCircle2 className="h-4 w-4" />;
-                    } else {
-                      statusIcon = <Circle className="h-4 w-4" />;
-                    }
-
-                    return (
-                      <li key={step.label} className="relative pl-14">
-                        <div className="absolute top-0 left-0 flex flex-col items-center">
-                          <div
-                            className={`flex h-10 w-10 items-center justify-center rounded-full border ${statusStyles.circle}`}
-                          >
-                            {statusIcon}
-                          </div>
-                          {index < journeySteps.length - 1 && (
-                            <span
-                              className={`mt-2 block h-12 w-px bg-gradient-to-b ${statusStyles.connector}`}
-                            />
-                          )}
-                        </div>
-                        <div className="rounded-2xl border border-white/40 bg-white/80 p-4 shadow-sm transition hover:border-transparent hover:shadow-lg dark:border-white/10 dark:bg-slate-950/70">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-slate-100/70 to-white/50 shadow-sm dark:from-slate-900/70 dark:to-slate-900/50">
-                                <StepIcon className="text-foreground h-4 w-4" />
-                              </div>
-                              <div>
-                                <p className="text-foreground font-semibold">
-                                  {step.label}
-                                </p>
-                                <p className="text-muted-foreground text-sm">
-                                  {step.description}
-                                </p>
-                              </div>
-                            </div>
-                            {(() => {
-                              let badgeLabel: string;
-                              if (step.status === "done") {
-                                badgeLabel = "Done";
-                              } else if (step.status === "active") {
-                                badgeLabel = "In progress";
-                              } else {
-                                badgeLabel = "Next up";
-                              }
-                              return (
-                                <Badge
-                                  variant="outline"
-                                  className={`rounded-full border-transparent px-3 py-1 text-xs font-semibold ${statusStyles.badge}`}
-                                >
-                                  {badgeLabel}
-                                </Badge>
-                              );
-                            })()}
-                          </div>
-                          <div className="mt-4 flex items-center justify-between">
-                            <Button
-                              asChild
-                              variant="ghost"
-                              size="sm"
-                              className="text-primary h-auto px-0 text-sm font-semibold"
-                            >
-                              <Link
-                                to={step.href}
-                                className="inline-flex items-center gap-1"
-                              >
-                                Open step
-                                <ArrowUpRight className="h-3.5 w-3.5" />
-                              </Link>
-                            </Button>
-                          </div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </CardContent>
-            </Card>
-          </motion.div>
+                    <div className="bg-muted relative h-2.5 overflow-hidden rounded-full">
+                      <div
+                        className={`absolute inset-y-0 left-0 rounded-full bg-gradient-to-r ${status.gradient}`}
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+              {stats.total === 0 && (
+                <p className="text-muted-foreground text-sm">
+                  Import your Kenmei CSV to unlock detailed visualizations.
+                </p>
+              )}
+            </CardContent>
+          </Card>
         </motion.section>
 
         <motion.section
@@ -1156,7 +909,7 @@ export function HomePage() {
           initial="hidden"
           animate="show"
         >
-          <Card className="overflow-hidden border border-white/30 bg-white/80 shadow-xl backdrop-blur dark:border-white/10 dark:bg-slate-950/70">
+          <Card className="border border-white/30 bg-white/80 shadow-xl backdrop-blur dark:border-white/10 dark:bg-slate-950/70">
             <CardHeader className="space-y-2">
               <CardTitle className="flex items-center gap-2 text-xl">
                 <Sparkles className="h-5 w-5 text-blue-500" />
