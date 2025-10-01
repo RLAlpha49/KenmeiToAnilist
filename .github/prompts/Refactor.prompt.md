@@ -71,3 +71,4 @@ You must operate in a strict, sequential loop. Do not proceed to the next extrac
 - **Do not** rename any exported members from the original file.
 - **Do not** proceed to the next step if a verification command fails.
 - **Do not** complete the refactoring if any parts remain that could be extracted or todo items.
+- **Do not** edit or add comments unless absolutely necessary for clarity.
