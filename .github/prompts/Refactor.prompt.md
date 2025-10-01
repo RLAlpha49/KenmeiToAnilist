@@ -46,28 +46,28 @@ When the file in `${selection}` is a UI component with a large `return` statemen
 You must operate in a strict, sequential loop. Do not proceed to the next extraction until the current one is fully completed and verified.
 
 1.  **Organize & Extract**:
-    * **Create Subdirectory**: Determine the base name of the file in `${selection}` (e.g., `HomePage` from `src/pages/HomePage.tsx`). In the same directory, create a new subdirectory with that base name if it does not already exist (e.g., `src/pages/HomePage/`).
-    * **Identify Unit**: Identify a single, logical unit to extract. Prioritize the largest, most obvious UI chunks first, following the **UI Extraction Strategy**. After UI is broken down, extract hooks, types, or utility functions.
-    * **Create New File**: Create a new, appropriately named file for this unit **inside the subdirectory** (e.g., `src/pages/HomePage/HomePageHeader.tsx` for a component, or `src/pages/HomePage/useHomePageData.ts` for a hook).
-    * **Move Code**: Move the code for the extracted unit into this new file. If it's a new UI component, ensure you also move or create its `Props` type definition. Export the new unit.
+    - **Create Subdirectory**: Determine the base name of the file in `${selection}` (e.g., `HomePage` from `src/pages/HomePage.tsx`). In the same directory, create a new subdirectory with that base name if it does not already exist (e.g., `src/pages/HomePage/`).
+    - **Identify Unit**: Identify a single, logical unit to extract. Prioritize the largest, most obvious UI chunks first, following the **UI Extraction Strategy**. After UI is broken down, extract hooks, types, or utility functions.
+    - **Create New File**: Create a new, appropriately named file for this unit **inside the subdirectory** (e.g., `src/pages/HomePage/HomePageHeader.tsx` for a component, or `src/pages/HomePage/useHomePageData.ts` for a hook).
+    - **Move Code**: Move the code for the extracted unit into this new file. If it's a new UI component, ensure you also move or create its `Props` type definition. Export the new unit.
 
 2.  **Immediately Update & Verify**:
-    * Modify the original file (`${selection}`) to import the extracted unit from its new location.
-    * Save both the new file and the modified `${selection}`.
-    * Run the following verification commands. This **must pass** with no errors before you can continue.
-        * `npx eslint -c config/eslint.config.mjs <path_to_new_file> ${selection} --fix && npx tsc --noEmit`
+    - Modify the original file (`${selection}`) to import the extracted unit from its new location.
+    - Save both the new file and the modified `${selection}`.
+    - Run the following verification commands. This **must pass** with no errors before you can continue.
+      - `npx eslint -c config/eslint.config.mjs <path_to_new_file> ${selection} --fix && npx tsc --noEmit`
 
 3.  **Continue or Conclude**:
-    * If more logical units can be extracted from `${selection}` or todo items, **return to Step 1** and begin the next cycle.
-    * If no more parts can be reasonably extracted, announce that the refactoring is complete.
+    - If more logical units can be extracted from `${selection}` or todo items, **return to Step 1** and begin the next cycle.
+    - If no more parts can be reasonably extracted, announce that the refactoring is complete.
 
 ---
 
 ## Critical Constraints (Do Not)
 
--   **Do not** alter any logic, props, or the rendered UI.
--   **Do not** batch operations. You are forbidden from extracting multiple parts before updating and verifying.
--   **Do not** place new files anywhere except the specified component subdirectory.
--   **Do not** rename any exported members from the original file.
--   **Do not** proceed to the next step if a verification command fails.
--   **Do not** complete the refactoring if any parts remain that could be extracted or todo items.
+- **Do not** alter any logic, props, or the rendered UI.
+- **Do not** batch operations. You are forbidden from extracting multiple parts before updating and verifying.
+- **Do not** place new files anywhere except the specified component subdirectory.
+- **Do not** rename any exported members from the original file.
+- **Do not** proceed to the next step if a verification command fails.
+- **Do not** complete the refactoring if any parts remain that could be extracted or todo items.
