@@ -7,18 +7,12 @@ import React, { useState, useEffect, useRef } from "react";
 import { KenmeiManga } from "../../api/kenmei/types";
 import { MangaMatchResult, AniListManga } from "../../api/anilist/types";
 import {
-  Search,
   Check,
-  X,
   ExternalLink,
-  Filter,
   ChevronRight,
   ChevronLeft,
   Info,
-  RefreshCw,
   AlertTriangle,
-  ArrowLeft,
-  Loader2,
 } from "lucide-react";
 
 // Import utility functions for media list formatting
@@ -33,21 +27,24 @@ import {
 import { getMatchConfig, saveMatchConfig } from "../../utils/storage";
 
 // Import shadcn UI components
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
+import { Card, CardContent } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import { Checkbox } from "../../components/ui/checkbox";
 import { Separator } from "../../components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
-import { Switch } from "../../components/ui/switch";
-import { Label } from "../../components/ui/label";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
+import { ConfidenceBadge } from "./MangaMatchingPanel/ConfidenceBadge";
+import { createKenmeiUrl } from "./MangaMatchingPanel/createKenmeiUrl";
+import MatchActions from "./MangaMatchingPanel/MatchActions";
+import MatchStatusIndicator from "./MangaMatchingPanel/MatchStatusIndicator";
+import MatchCard from "./MangaMatchingPanel/MatchCard";
+import { MatchStatisticsCard } from "./MangaMatchingPanel/MatchStatisticsCard";
+import { MatchBulkActions } from "./MangaMatchingPanel/MatchBulkActions";
+import {
+  MatchFilterControls,
+  type StatusFiltersState,
+} from "./MangaMatchingPanel/MatchFilterControls";
+import { AlternativeSearchSettingsCard } from "./MangaMatchingPanel/AlternativeSearchSettingsCard";
 
 /**
  * Props for the MangaMatchingPanel component.
@@ -93,7 +90,7 @@ export function MangaMatchingPanel({
   searchQuery,
 }: Readonly<MangaMatchingPanelProps>) {
   const [currentPage, setCurrentPage] = useState(1);
-  const [statusFilters, setStatusFilters] = useState({
+  const [statusFilters, setStatusFilters] = useState<StatusFiltersState>({
     matched: true,
     pending: true,
     manual: true,
@@ -113,7 +110,6 @@ export function MangaMatchingPanel({
 
   // Items per page
   const itemsPerPage = 10;
-
   // Add state for processing status of the skip button
   const [isSkippingEmptyMatches, setIsSkippingEmptyMatches] = useState(false);
   // Add state for processing status of the accept all button
@@ -213,27 +209,6 @@ export function MangaMatchingPanel({
     }
   };
 
-  // Helper function to create Kenmei URL from manga title
-  const createKenmeiUrl = (title: string) => {
-    if (!title) return null;
-    // 1. Convert to lowercase
-    // 2. Replace apostrophes with spaces
-    // 3. Replace special characters with spaces (except hyphens)
-    // 4. Replace multiple spaces with a single space
-    // 5. Replace spaces with hyphens
-    // 6. Trim hyphens from the beginning and end
-    const formattedTitle = title
-      .toLowerCase()
-      .replaceAll("'", " ")
-      .replaceAll(/[^\w\s-]/g, " ") // Replace special chars with spaces instead of removing
-      .replaceAll(/\s+/g, " ") // Normalize spaces
-      .trim() // Remove leading/trailing spaces
-      .replaceAll(" ", "-") // Replace spaces with hyphens
-      .replaceAll(/(^-+)|(-+$)/g, ""); // Remove hyphens at start/end
-
-    return `https://www.kenmei.co/series/${formattedTitle}`;
-  };
-
   // Process matches to filter out Light Novels from alternatives
   const processedMatches = matches.map((match) => {
     // Ensure manga has an ID - if missing, generate one based on title
@@ -249,13 +224,13 @@ export function MangaMatchingPanel({
         ...match,
         kenmeiManga: {
           ...match.kenmeiManga,
-          id: Math.abs(generatedId), // Use positive number
+          id: Math.abs(generatedId),
         },
       };
     }
 
     // Filter out Light Novels from anilistMatches
-    const filteredMatches = match.anilistMatches
+    const filteredAltMatches = match.anilistMatches
       ? match.anilistMatches.filter(
           (m) =>
             m.manga &&
@@ -275,7 +250,7 @@ export function MangaMatchingPanel({
     // Return a new object with filtered matches
     return {
       ...match,
-      anilistMatches: filteredMatches,
+      anilistMatches: filteredAltMatches,
       selectedMatch: newSelectedMatch,
     };
   });
@@ -283,9 +258,7 @@ export function MangaMatchingPanel({
   // Filter and search matches
   const filteredMatches = processedMatches.filter((match) => {
     // Sanity check - skip entries with no ID
-    if (match.kenmeiManga.id === undefined) {
-      return false;
-    }
+    if (match.kenmeiManga.id === undefined) return false;
 
     // Apply status filters
     const statusMatch =
@@ -491,70 +464,7 @@ export function MangaMatchingPanel({
     );
   };
 
-  // Render confidence badge
-  const renderConfidenceBadge = (confidence: number | undefined) => {
-    // If confidence is undefined, null, or NaN, return null (don't render anything)
-    if (
-      confidence === undefined ||
-      confidence === null ||
-      Number.isNaN(confidence)
-    ) {
-      return null;
-    }
-
-    // Round the confidence value for display and comparison
-    const roundedConfidence = Math.min(99, Math.round(confidence)); // Cap at 99%
-
-    // Determine color scheme and label based on confidence level
-    let colorClass = "";
-    let barColorClass = "";
-    let label = "";
-
-    // Even if confidence is 0, we'll still show it with styling
-    if (roundedConfidence >= 90) {
-      colorClass =
-        "bg-green-50 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800";
-      barColorClass = "bg-green-500 dark:bg-green-400";
-      label = "High";
-    } else if (roundedConfidence >= 75) {
-      colorClass =
-        "bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800";
-      barColorClass = "bg-blue-500 dark:bg-blue-400";
-      label = "Good";
-    } else if (roundedConfidence >= 50) {
-      colorClass =
-        "bg-yellow-50 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800";
-      barColorClass = "bg-yellow-500 dark:bg-yellow-400";
-      label = "Medium";
-    } else {
-      colorClass =
-        "bg-red-50 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800";
-      barColorClass = "bg-red-500 dark:bg-red-400";
-      label = "Low";
-    }
-
-    return (
-      <div
-        className={`relative flex flex-col rounded-md border px-2.5 py-1 text-xs font-medium ${colorClass}`}
-        title={`${roundedConfidence}% confidence match`}
-        aria-label={`${label} confidence match: ${roundedConfidence}%`}
-      >
-        <div className="mb-1 flex items-center justify-between">
-          <span className="mr-1 font-semibold">{label}</span>
-          <span className="font-mono">{roundedConfidence}%</span>
-        </div>
-
-        {/* Progress bar background */}
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-          {/* Progress bar indicator */}
-          <div
-            className={`h-full rounded-full ${barColorClass}`}
-            style={{ width: `${roundedConfidence}%` }}
-          ></div>
-        </div>
-      </div>
-    );
-  };
+  // Confidence badge extracted to separate component
 
   // Helper function to format status text nicely - moved outside for reuse
   const formatStatusText = (status: string | undefined): string => {
@@ -565,87 +475,6 @@ export function MangaMatchingPanel({
       .split(/[_\s]+/) // Split by underscores or spaces
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(" ");
-  };
-
-  // Render match status indicator
-  const renderStatusIndicator = (match: MangaMatchResult) => {
-    // Extract the data for the header badges
-    const headerIconData = [
-      {
-        value: match.kenmeiManga.chapters_read || 0,
-        icon: "chapters",
-        text: "chapters read",
-      },
-      {
-        value: match.kenmeiManga.score,
-        icon: "star",
-        text: "score",
-        hideIfZero: true,
-      },
-    ].filter((data) => !data.hideIfZero || data.value > 0);
-
-    // Determine status color based on Kenmei status
-    let statusColorClass = "";
-    switch (match.kenmeiManga.status?.toLowerCase()) {
-      case "reading":
-        statusColorClass = "text-green-600 dark:text-green-400";
-        break;
-      case "completed":
-        statusColorClass = "text-blue-600 dark:text-blue-400";
-        break;
-      case "on_hold":
-        statusColorClass = "text-amber-600 dark:text-amber-400";
-        break;
-      case "dropped":
-        statusColorClass = "text-red-600 dark:text-red-400";
-        break;
-      case "plan_to_read":
-        statusColorClass = "text-purple-600 dark:text-purple-400";
-        break;
-      default:
-        statusColorClass = "text-gray-600 dark:text-gray-400";
-        break;
-    }
-
-    // Create Kenmei URL for the status indicator
-    const kenmeiUrl = createKenmeiUrl(match.kenmeiManga.title);
-
-    // Return the status indicator with correct color
-    return (
-      <div className="flex flex-col items-end">
-        <div className="text-muted-foreground line-clamp-1 text-xs">
-          <span className={statusColorClass}>
-            {formatStatusText(match.kenmeiManga.status)}
-          </span>
-          {headerIconData.map((data) => (
-            <React.Fragment key={`badge-${data.icon}-${data.text}`}>
-              <span className="mx-1">•</span>
-              <span className={`inline-flex items-center`}>
-                <span>{data.value}</span>
-                <span className="ml-1">{data.text}</span>
-              </span>
-            </React.Fragment>
-          ))}
-        </div>
-
-        {/* Kenmei link below status */}
-        {kenmeiUrl && (
-          <div className="mt-1 flex items-center">
-            <a
-              href={kenmeiUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center text-xs text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
-              aria-label="View on Kenmei (opens in external browser)"
-              onClick={handleOpenExternal(kenmeiUrl)}
-            >
-              <ExternalLink className="mr-1 h-3 w-3" aria-hidden="true" />
-              View on Kenmei
-            </a>
-          </div>
-        )}
-      </div>
-    );
   };
 
   // Handle keyboard navigation for item selection
@@ -894,423 +723,40 @@ export function MangaMatchingPanel({
       ref={containerRef}
       tabIndex={-1} // Make div focusable but not in tab order
     >
-      {/* Stats and filter controls */}
-      <Card className="mb-4">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-semibold">
-            Match Statistics
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4 flex flex-wrap gap-3">
-            <div className="flex items-center gap-1.5">
-              <Badge variant="outline" className="bg-muted/50 text-foreground">
-                Total: {matchStats.total}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Badge variant="outline" className="bg-muted/80 text-foreground">
-                Pending: {matchStats.pending}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Badge
-                variant="outline"
-                className="bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
-              >
-                Matched: {matchStats.matched}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Badge
-                variant="outline"
-                className="bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
-              >
-                Manual: {matchStats.manual}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Badge
-                variant="outline"
-                className="bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
-              >
-                Skipped: {matchStats.skipped}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Badge
-                variant="outline"
-                className="bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400"
-              >
-                No Matches: {noMatchesCount}
-              </Badge>
-            </div>
-          </div>
+      <MatchStatisticsCard
+        matchStats={matchStats}
+        noMatchesCount={noMatchesCount}
+        searchTerm={searchTerm}
+        onSearchTermChange={(value) => setSearchTerm(value)}
+        searchInputRef={searchInputRef}
+      />
 
-          <div className="relative mb-6">
-            <div className="relative">
-              <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
-              <Input
-                ref={searchInputRef}
-                type="text"
-                className="pl-9"
-                placeholder="Search titles... (Ctrl+F)"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                aria-label="Search manga titles"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <MatchBulkActions
+        emptyMatchesCount={emptyMatchesCount}
+        onSkipEmptyMatches={handleSkipEmptyMatches}
+        isSkippingEmptyMatches={isSkippingEmptyMatches}
+        noMatchesCount={noMatchesCount}
+        onReSearchNoMatches={handleReSearchNoMatches}
+        isReSearchingNoMatches={isReSearchingNoMatches}
+        skippedMangaCount={skippedMangaCount}
+        onResetSkippedToPending={handleResetSkippedToPending}
+        isResettingSkippedToPending={isResettingSkippedToPending}
+        pendingMatchesCount={pendingMatchesCount}
+        onAcceptAllPendingMatches={handleAcceptAllPendingMatches}
+        isAcceptingAllMatches={isAcceptingAllMatches}
+      />
 
-      {/* Action buttons */}
-      <div className="mb-4 flex flex-col space-y-4">
-        {/* Skip Empty Matches button */}
-        {emptyMatchesCount > 0 && (
-          <Card className="p-4">
-            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-              <Button
-                variant="outline"
-                onClick={handleSkipEmptyMatches}
-                disabled={isSkippingEmptyMatches}
-                className="bg-background w-full sm:w-auto"
-              >
-                {isSkippingEmptyMatches ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <X className="mr-2 h-4 w-4" />
-                    Skip Empty Matches ({emptyMatchesCount})
-                  </>
-                )}
-              </Button>
-              <span className="text-muted-foreground text-sm">
-                Mark all pending manga with no matches as skipped
-              </span>
-            </div>
-          </Card>
-        )}
+      <MatchFilterControls
+        statusFilters={statusFilters}
+        setStatusFilters={setStatusFilters}
+        matchStats={matchStats}
+      />
 
-        {/* Re-Search Empty Matches button */}
-        {noMatchesCount > 0 && (
-          <Card className="p-4">
-            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-              <Button
-                variant="outline"
-                onClick={handleReSearchNoMatches}
-                disabled={isReSearchingNoMatches}
-                className="w-full border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:text-purple-800 sm:w-auto dark:border-purple-800 dark:bg-purple-900/20 dark:text-purple-300 dark:hover:bg-purple-900/30"
-              >
-                {isReSearchingNoMatches ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Re-search Empty Matches ({noMatchesCount})
-                  </>
-                )}
-              </Button>
-              <span className="text-muted-foreground text-sm">
-                Attempt to find matches for all manga without results
-              </span>
-            </div>
-          </Card>
-        )}
-
-        {/* Reset Skipped to Pending button */}
-        {skippedMangaCount > 0 && (
-          <Card className="p-4">
-            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-              <Button
-                variant="outline"
-                onClick={handleResetSkippedToPending}
-                disabled={isResettingSkippedToPending}
-                className="w-full border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 hover:text-orange-800 sm:w-auto dark:border-orange-800 dark:bg-orange-900/20 dark:text-orange-300 dark:hover:bg-orange-900/30"
-              >
-                {isResettingSkippedToPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Reset Skipped to Pending ({skippedMangaCount})
-                  </>
-                )}
-              </Button>
-              <span className="text-muted-foreground text-sm">
-                Reset all skipped manga back to pending status
-              </span>
-            </div>
-          </Card>
-        )}
-
-        {/* Accept All Matches button */}
-        {pendingMatchesCount > 0 && (
-          <Card className="p-4">
-            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-              <Button
-                variant="outline"
-                onClick={handleAcceptAllPendingMatches}
-                disabled={isAcceptingAllMatches}
-                className="w-full border-green-200 bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 sm:w-auto dark:border-green-800 dark:bg-green-900/20 dark:text-green-300 dark:hover:bg-green-900/30"
-              >
-                {isAcceptingAllMatches ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <Check className="mr-2 h-4 w-4" />
-                    Accept All Matches ({pendingMatchesCount})
-                  </>
-                )}
-              </Button>
-              <div className="flex items-center gap-2">
-                <div className="group relative flex">
-                  <Info className="text-muted-foreground h-4 w-4" />
-                  <div className="bg-card absolute bottom-full left-1/2 mb-2 hidden w-64 -translate-x-1/2 transform rounded-md border px-3 py-2 text-xs font-medium shadow-lg group-hover:block">
-                    It&apos;s still a good idea to skim over the matches to
-                    ensure everything is correct before proceeding.
-                  </div>
-                </div>
-                <span className="text-muted-foreground text-sm">
-                  Accept all pending manga with available matches
-                </span>
-              </div>
-            </div>
-          </Card>
-        )}
-      </div>
-
-      {/* Filter selection */}
-      <Card className="mb-4">
-        <CardContent className="p-4">
-          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-            <div className="flex items-center gap-2">
-              <Filter className="text-muted-foreground h-4 w-4" />
-              <span className="text-sm font-medium">Show status:</span>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="matched-filter"
-                  checked={statusFilters.matched}
-                  onCheckedChange={() =>
-                    setStatusFilters({
-                      ...statusFilters,
-                      matched: !statusFilters.matched,
-                    })
-                  }
-                />
-                <label
-                  htmlFor="matched-filter"
-                  className="flex items-center text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Matched
-                  <Badge
-                    variant="outline"
-                    className="ml-2 bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
-                  >
-                    {matchStats.matched}
-                  </Badge>
-                </label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="pending-filter"
-                  checked={statusFilters.pending}
-                  onCheckedChange={() =>
-                    setStatusFilters({
-                      ...statusFilters,
-                      pending: !statusFilters.pending,
-                    })
-                  }
-                />
-                <label
-                  htmlFor="pending-filter"
-                  className="flex items-center text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Pending
-                  <Badge
-                    variant="outline"
-                    className="bg-muted/80 text-foreground ml-2"
-                  >
-                    {matchStats.pending}
-                  </Badge>
-                </label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="manual-filter"
-                  checked={statusFilters.manual}
-                  onCheckedChange={() =>
-                    setStatusFilters({
-                      ...statusFilters,
-                      manual: !statusFilters.manual,
-                    })
-                  }
-                />
-                <label
-                  htmlFor="manual-filter"
-                  className="flex items-center text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Manual
-                  <Badge
-                    variant="outline"
-                    className="ml-2 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
-                  >
-                    {matchStats.manual}
-                  </Badge>
-                </label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="skipped-filter"
-                  checked={statusFilters.skipped}
-                  onCheckedChange={() =>
-                    setStatusFilters({
-                      ...statusFilters,
-                      skipped: !statusFilters.skipped,
-                    })
-                  }
-                />
-                <label
-                  htmlFor="skipped-filter"
-                  className="flex items-center text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Skipped
-                  <Badge
-                    variant="outline"
-                    className="ml-2 bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
-                  >
-                    {matchStats.skipped}
-                  </Badge>
-                </label>
-              </div>
-
-              <div className="ml-2 flex items-center space-x-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    setStatusFilters({
-                      matched: true,
-                      pending: true,
-                      manual: true,
-                      skipped: true,
-                    })
-                  }
-                  className="h-7 px-2 text-xs"
-                >
-                  Select All
-                </Button>
-                <Separator orientation="vertical" className="h-4" />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    setStatusFilters({
-                      matched: false,
-                      pending: false,
-                      manual: false,
-                      skipped: false,
-                    })
-                  }
-                  className="h-7 px-2 text-xs"
-                >
-                  Clear All
-                </Button>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Alternative Search Settings */}
-      <Card className="mb-4">
-        <CardContent className="p-4">
-          <div className="space-y-4">
-            {/* Comick Search Toggle - Temporarily Disabled */}
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="comick-search-toggle"
-                      checked={false}
-                      disabled={true}
-                      onCheckedChange={handleComickSearchToggle}
-                    />
-                    <Label
-                      htmlFor="comick-search-toggle"
-                      className="text-muted-foreground cursor-not-allowed text-sm leading-none font-medium opacity-70"
-                    >
-                      Enable Comick Alternative Search (Temporarily Disabled)
-                    </Label>
-                  </div>
-                  <div className="group relative flex">
-                    <Info className="text-muted-foreground h-4 w-4" />
-                    <div className="bg-card absolute bottom-full left-1/2 z-50 mb-2 hidden w-80 -translate-x-1/2 transform rounded-md border px-3 py-2 text-xs font-medium shadow-lg group-hover:block">
-                      Comick has been temporarily taken down. This feature is
-                      disabled until Comick fully transitions as a tracking site
-                      and their API is restored.
-                    </div>
-                  </div>
-                </div>
-                <div className="ml-6 rounded-md bg-yellow-50 px-3 py-2 text-xs text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300">
-                  <strong>Notice:</strong> Comick alternative search is
-                  temporarily disabled as Comick has been taken down. The API
-                  should hopefully be restored after Comick completes its
-                  transition as a tracking site.
-                </div>
-              </div>
-            </div>
-
-            {/* MangaDex Search Toggle */}
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="mangadex-search-toggle"
-                    checked={enableMangaDexSearch}
-                    onCheckedChange={handleMangaDexSearchToggle}
-                  />
-                  <Label
-                    htmlFor="mangadex-search-toggle"
-                    className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Enable MangaDex Alternative Search
-                  </Label>
-                </div>
-                <div className="group relative flex">
-                  <Info className="text-muted-foreground h-4 w-4" />
-                  <div className="bg-card absolute bottom-full left-1/2 z-50 mb-2 hidden w-80 -translate-x-1/2 transform rounded-md border px-3 py-2 text-xs font-medium shadow-lg group-hover:block">
-                    When enabled, the system will attempt alternative searches
-                    through MangaDex if the initial AniList search doesn&apos;t
-                    find matches. This feature will be automatically ignored
-                    when rate limited and will continue searching normally. Only
-                    the top search result from MangaDex will be used.
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <AlternativeSearchSettingsCard
+        enableMangaDexSearch={enableMangaDexSearch}
+        onComickSearchToggle={handleComickSearchToggle}
+        onMangaDexSearchToggle={handleMangaDexSearchToggle}
+      />
 
       {/* Sort options */}
       <Card className="mb-4">
@@ -1432,15 +878,10 @@ export function MangaMatchingPanel({
               }
 
               return (
-                <motion.div
+                <MatchCard
                   key={uniqueKey}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.2 }}
+                  match={match}
                   className={`rounded-lg border ${borderColorClass} bg-white shadow-sm transition-all hover:shadow-md dark:bg-gray-800`}
-                  tabIndex={0}
-                  aria-label={`Match result for ${match.kenmeiManga.title}`}
                 >
                   {/* Title and Status Bar with color indicator */}
                   <div
@@ -1481,7 +922,12 @@ export function MangaMatchingPanel({
                         </h3>
                       </div>
                       <div className="ml-2 flex min-w-[250px] items-center justify-end">
-                        {renderStatusIndicator(match)}
+                        <MatchStatusIndicator
+                          match={match}
+                          formatStatusText={formatStatusText}
+                          createKenmeiUrl={createKenmeiUrl}
+                          handleOpenExternal={handleOpenExternal}
+                        />
                       </div>
                     </div>
                   </div>
@@ -1660,6 +1106,7 @@ export function MangaMatchingPanel({
                                       Comick
                                     </div>
                                   )}
+
                                   {/* MangaDex source badge */}
                                   {(match.anilistMatches[0]?.sourceInfo
                                     ?.source === "mangadex" ||
@@ -1887,9 +1334,11 @@ export function MangaMatchingPanel({
                         <div className="flex flex-col items-end space-y-3">
                           {match.anilistMatches &&
                             match.anilistMatches.length > 0 &&
-                            match.anilistMatches[0]?.confidence !== undefined &&
-                            renderConfidenceBadge(
-                              match.anilistMatches[0].confidence,
+                            match.anilistMatches[0]?.confidence !==
+                              undefined && (
+                              <ConfidenceBadge
+                                confidence={match.anilistMatches[0].confidence}
+                              />
                             )}
                           <div className="flex space-x-2">
                             {(match.selectedMatch ||
@@ -1960,128 +1409,23 @@ export function MangaMatchingPanel({
 
                   {/* Action buttons */}
                   <div className="flex space-x-2 p-4">
-                    {(() => {
-                      const commonSearchButton = (
-                        text: string,
-                        ariaLabel: string,
-                      ) => (
-                        <button
-                          className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
-                          onClick={() => {
-                            if (match.status === "pending") {
-                              console.log(
-                                `Clicked Search Manually for manga ID: ${match.kenmeiManga.id}, title: ${match.kenmeiManga.title}`,
-                              );
-                            }
-                            if (onManualSearch)
-                              onManualSearch(match.kenmeiManga);
-                          }}
-                          onKeyDown={(e) =>
-                            handleKeyDown(e, () =>
-                              onManualSearch?.(match.kenmeiManga),
-                            )
-                          }
-                          aria-label={ariaLabel}
-                        >
-                          <Search className="mr-2 h-4 w-4" aria-hidden="true" />
-                          {text}
-                        </button>
-                      );
-
-                      const resetButton = (
-                        <button
-                          className="inline-flex items-center rounded-md bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-300 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:outline-none dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-                          onClick={() => {
-                            if (onResetToPending) onResetToPending(match);
-                          }}
-                          onKeyDown={(e) =>
-                            handleKeyDown(e, () => onResetToPending?.(match))
-                          }
-                          aria-label={`Reset ${match.kenmeiManga.title} to pending status`}
-                        >
-                          <ArrowLeft
-                            className="mr-2 h-4 w-4"
-                            aria-hidden="true"
-                          />
-                          Reset to Pending
-                        </button>
-                      );
-
-                      switch (match.status) {
-                        case "pending":
-                          return (
-                            <>
-                              {match.anilistMatches &&
-                                match.anilistMatches.length > 0 && (
-                                  <button
-                                    className="inline-flex items-center rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none"
-                                    onClick={() => {
-                                      console.log(
-                                        `Clicked Accept Match for manga ID: ${match.kenmeiManga.id}, title: ${match.kenmeiManga.title}`,
-                                      );
-                                      if (onAcceptMatch) onAcceptMatch(match);
-                                    }}
-                                    onKeyDown={(e) =>
-                                      handleKeyDown(e, () =>
-                                        onAcceptMatch?.(match),
-                                      )
-                                    }
-                                    aria-label={`Accept match for ${match.kenmeiManga.title}`}
-                                  >
-                                    <Check
-                                      className="mr-2 h-4 w-4"
-                                      aria-hidden="true"
-                                    />
-                                    Accept Match
-                                  </button>
-                                )}
-                              {commonSearchButton(
-                                "Search Manually",
-                                `Search manually for ${match.kenmeiManga.title}`,
-                              )}
-                              <button
-                                className="inline-flex items-center rounded-md bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-300 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:outline-none dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-                                onClick={() => {
-                                  if (onRejectMatch) onRejectMatch(match);
-                                }}
-                                onKeyDown={(e) =>
-                                  handleKeyDown(e, () => onRejectMatch?.(match))
-                                }
-                                aria-label={`Skip matching for ${match.kenmeiManga.title}`}
-                              >
-                                <X
-                                  className="mr-2 h-4 w-4"
-                                  aria-hidden="true"
-                                />
-                                Skip
-                              </button>
-                            </>
-                          );
-                        case "matched":
-                        case "manual":
-                          return (
-                            <>
-                              {commonSearchButton(
-                                "Change Match",
-                                `Change match for ${match.kenmeiManga.title}`,
-                              )}
-                              {resetButton}
-                            </>
-                          );
-                        case "skipped":
-                          return (
-                            <>
-                              {commonSearchButton(
-                                "Search Manually",
-                                `Find match for ${match.kenmeiManga.title}`,
-                              )}
-                              {resetButton}
-                            </>
-                          );
-                        default:
-                          return null;
+                    <MatchActions
+                      match={match}
+                      onManualSearch={onManualSearch}
+                      onAcceptMatch={onAcceptMatch}
+                      onRejectMatch={onRejectMatch}
+                      onResetToPending={onResetToPending}
+                      onSelectAlternative={onSelectAlternative}
+                      handleKeyDown={(e, cb) =>
+                        // local handler from parent
+                        (
+                          handleKeyDown as unknown as (
+                            e: React.KeyboardEvent,
+                            cb: () => void,
+                          ) => void
+                        )(e as unknown as React.KeyboardEvent, cb)
                       }
-                    })()}
+                    />
                   </div>
 
                   {/* Alternative matches - only show for non-matched entries */}
@@ -2368,10 +1712,11 @@ export function MangaMatchingPanel({
                                       })()}
                                     </div>
                                     <div className="ml-2 flex flex-col items-end space-y-3">
-                                      {altMatch.confidence !== undefined &&
-                                        renderConfidenceBadge(
-                                          altMatch.confidence,
-                                        )}
+                                      {altMatch.confidence !== undefined && (
+                                        <ConfidenceBadge
+                                          confidence={altMatch.confidence}
+                                        />
+                                      )}
                                       {/* Alternative source badges for alternative matches */}
                                       <div className="flex flex-col gap-1">
                                         {/* Comick source badge */}
@@ -2487,7 +1832,7 @@ export function MangaMatchingPanel({
                         </div>
                       </div>
                     )}
-                </motion.div>
+                </MatchCard>
               );
             })}
           </AnimatePresence>
