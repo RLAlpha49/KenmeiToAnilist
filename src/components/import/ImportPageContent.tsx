@@ -13,6 +13,7 @@ import { DataTable } from "./DataTable";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
+import { Progress } from "../ui/progress";
 import { Alert, AlertDescription } from "../ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import {
@@ -22,6 +23,7 @@ import {
   CheckCircle2,
   Upload,
   Info,
+  Clock,
 } from "lucide-react";
 import {
   getStatusColor,
@@ -74,7 +76,7 @@ export function ImportSuccessContent({
         <div className="pointer-events-none absolute top-[-60px] right-[-60px] h-48 w-48 rounded-full bg-gradient-to-br from-emerald-500/25 via-green-500/20 to-transparent blur-3xl" />
         <div className="pointer-events-none absolute bottom-[-80px] left-[-80px] h-64 w-64 rounded-full bg-gradient-to-br from-blue-400/20 via-indigo-400/15 to-transparent blur-3xl" />
 
-        <div className="relative z-[1] mx-auto max-w-md text-center">
+        <div className="relative z-[1] mx-auto max-w-md space-y-6 text-center">
           <motion.div
             className="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-green-500 text-white shadow-2xl"
             initial={{ scale: 0, rotate: -180 }}
@@ -99,23 +101,16 @@ export function ImportSuccessContent({
           </motion.div>
 
           <motion.div
-            className="mb-6"
+            className="mb-6 space-y-3"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5, duration: 0.5 }}
           >
-            <div className="text-muted-foreground mb-4 flex items-center justify-between text-sm">
+            <div className="flex items-center justify-between text-sm font-medium text-emerald-600 dark:text-emerald-300">
               <span>Processing complete</span>
               <span>{progress}%</span>
             </div>
-            <div className="relative h-3 overflow-hidden rounded-full bg-white/20 backdrop-blur-sm">
-              <motion.div
-                className="h-full bg-gradient-to-r from-emerald-500 to-green-500"
-                initial={{ width: 0 }}
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-              />
-            </div>
+            <Progress value={progress} className="h-2 bg-emerald-500/20" />
           </motion.div>
 
           <motion.div
@@ -284,7 +279,7 @@ export function FileReadyContent({
           </div>
 
           <motion.div
-            className="grid grid-cols-2 gap-4 md:grid-cols-4"
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
             variants={containerVariants}
             initial="hidden"
             animate="show"
@@ -307,6 +302,27 @@ export function FileReadyContent({
                 </div>
               </div>
             </motion.div>
+
+            {previousMatchCount > 0 && (
+              <motion.div variants={itemVariants}>
+                <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-green-500/10 to-emerald-500/5 p-4 shadow-xl backdrop-blur-sm dark:border-emerald-500/25 dark:from-emerald-500/20 dark:via-green-500/15 dark:to-emerald-500/10">
+                  <div className="absolute top-[-20px] right-[-20px] h-20 w-20 rounded-full bg-emerald-500/20 blur-2xl" />
+                  <div className="relative z-[1] flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-emerald-600 shadow-sm dark:bg-slate-900/60">
+                      <Clock className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                        Previously Matched
+                      </p>
+                      <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">
+                        {previousMatchCount}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
 
             {Object.entries(statusCounts).map(([status, count], index) => (
               <motion.div key={status} variants={itemVariants} custom={index}>
@@ -381,7 +397,7 @@ export function FileReadyContent({
                   Processing...
                 </div>
               ) : (
-                "Continue to Review"
+                "Launch match review"
               )}
             </Button>
             <Button
@@ -391,7 +407,7 @@ export function FileReadyContent({
               size="lg"
               className="h-auto rounded-full border-white/60 bg-white/75 px-6 py-3 text-base font-semibold shadow-sm transition focus-visible:ring-2 focus-visible:ring-offset-2 dark:border-white/20 dark:bg-slate-950/60 dark:focus-visible:ring-offset-slate-950"
             >
-              Cancel
+              Reset import
             </Button>
           </motion.div>
 

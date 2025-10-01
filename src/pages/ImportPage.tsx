@@ -4,7 +4,7 @@
  * @description Import page component for the Kenmei to AniList sync tool. Handles file upload, import, error handling, and displays import summary and data table.
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { ErrorMessage } from "../components/ui/error-message";
 import { ErrorType, AppError, createError } from "../utils/errorHandling";
@@ -43,18 +43,45 @@ export function ImportPage() {
   const [previousMatchCount, setPreviousMatchCount] = useState(0);
   const [progress, setProgress] = useState(0);
 
+  const statusCountsSnapshot = useMemo(
+    () => (importData ? getStatusCounts(importData.manga) : null),
+    [importData],
+  );
+
   const handleFileLoaded = (data: KenmeiData) => {
     setImportData(data);
     setError(null);
     setImportSuccess(false);
-    toast.success("File loaded successfully");
+    toast.success("File loaded", {
+      description:
+        `${data.manga.length} entries queued for review.` +
+        (previousMatchCount > 0
+          ? " Prior matches will be reapplied automatically."
+          : " We'll keep your Kenmei metadata intact."),
+    });
   };
 
-  const handleError = (error: AppError) => {
+  const handleError = (error: AppError, toastId?: string) => {
     setError(error);
     setImportData(null);
     setImportSuccess(false);
-    toast.error(error.message);
+    const descriptions: Partial<Record<ErrorType, string>> = {
+      [ErrorType.VALIDATION]:
+        "The file format looks off. Please double-check the export steps and try again.",
+      [ErrorType.STORAGE]:
+        "We couldn't persist the import locally. Make sure storage permissions are available and retry.",
+      [ErrorType.NETWORK]:
+        "A network hiccup interrupted the import. Check your connection and try again.",
+    };
+
+    const description =
+      descriptions[error.type] ||
+      "Please try again in a moment. If the issue persists, export a fresh file from Kenmei.";
+
+    toast.error(error.message, {
+      id: toastId,
+      description,
+    });
   };
 
   const handleImport = async () => {
@@ -63,6 +90,10 @@ export function ImportPage() {
     }
 
     setIsLoading(true);
+
+    const loadingToastId = toast.loading("Processing your library", {
+      description: "Merging entries and preserving previous matches...",
+    }) as string;
 
     // Start progress animation
     setProgress(10);
@@ -110,6 +141,12 @@ export function ImportPage() {
       setImportSuccess(true);
       setProgress(100);
 
+      toast.success("Import ready for review", {
+        id: loadingToastId,
+        duration: 2800,
+        description: "We'll take you to the match review in just a sec.",
+      });
+
       // Redirect to the review page after a short delay
       setTimeout(() => {
         navigate({ to: "/review" });
@@ -122,6 +159,7 @@ export function ImportPage() {
           ErrorType.STORAGE,
           "Failed to save import data. Please try again.",
         ),
+        loadingToastId,
       );
     } finally {
       clearInterval(progressInterval);
@@ -137,6 +175,10 @@ export function ImportPage() {
     setImportData(null);
     setError(null);
     setImportSuccess(false);
+    toast("Import reset", {
+      description:
+        "Upload a fresh Kenmei export whenever you're ready to try again.",
+    });
   };
 
   useEffect(() => {
@@ -156,25 +198,26 @@ export function ImportPage() {
 
   return (
     <motion.div
-      className="container mx-auto px-4 py-8 md:px-6"
+      className="container mx-auto space-y-10 px-4 py-8 md:px-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4 }}
     >
-      <motion.div
-        className="mb-8 space-y-2"
-        initial={{ opacity: 0, y: -20 }}
+      <motion.header
+        className="max-w-3xl space-y-3"
+        initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1, duration: 0.5 }}
+        transition={{ duration: 0.4 }}
       >
-        <h1 className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-4xl font-bold text-transparent">
-          Import Your Manga
+        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+          Import your Kenmei library
         </h1>
-        <p className="text-muted-foreground max-w-2xl">
-          Transfer your manga collection from Kenmei to AniList with a single
-          file import.
+        <p className="text-muted-foreground text-base">
+          Upload your Kenmei export, review each match, and sync the results to
+          AniList. We preserve previous match decisions so you can pick up right
+          where you left off.
         </p>
-      </motion.div>
+      </motion.header>
 
       {error && (
         <motion.div
@@ -208,7 +251,8 @@ export function ImportPage() {
           );
         }
 
-        const statusCounts = getStatusCounts(importData.manga);
+        const statusCounts =
+          statusCountsSnapshot ?? getStatusCounts(importData.manga);
         return (
           <FileReadyContent
             importData={importData}
