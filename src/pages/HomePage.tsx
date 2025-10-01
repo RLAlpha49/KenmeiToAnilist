@@ -317,7 +317,6 @@ export function HomePage() {
     if (!authState.isAuthenticated) {
       return {
         label: "Connect AniList",
-        description: "Authenticate to see syncing and review tools",
         href: "/settings",
         tone: "from-blue-500 via-indigo-500 to-purple-500",
       };
@@ -326,7 +325,6 @@ export function HomePage() {
     if (stats.total === 0) {
       return {
         label: "Start Import",
-        description: "Upload your Kenmei CSV to kick off your migration",
         href: "/import",
         tone: "from-green-500 via-emerald-500 to-teal-500",
       };
@@ -335,7 +333,6 @@ export function HomePage() {
     if (matchStatus.pendingMatches > 0) {
       return {
         label: "Review Matches",
-        description: "Resolve pending titles before you sync",
         href: "/review",
         tone: "from-amber-500 via-orange-500 to-rose-500",
       };
@@ -344,7 +341,6 @@ export function HomePage() {
     if (syncStats.totalSyncs === 0) {
       return {
         label: "Configure Sync",
-        description: "Fine-tune sync behavior and status priorities",
         href: "/settings",
         tone: "from-purple-500 via-blue-500 to-indigo-500",
       };
@@ -352,7 +348,6 @@ export function HomePage() {
 
     return {
       label: "Run Sync",
-      description: "Push updates to AniList with confidence",
       href: "/sync",
       tone: "from-fuchsia-500 via-purple-500 to-blue-500",
     };
@@ -563,12 +558,12 @@ export function HomePage() {
                 </Badge>
                 <div className="space-y-4">
                   <h1 className="text-foreground text-4xl font-semibold tracking-tight md:text-5xl lg:text-6xl">
-                    Your manga migration control center
+                    Move your Kenmei library to AniList with confidence
                   </h1>
                   <p className="text-muted-foreground text-lg md:max-w-2xl">
-                    Keep tabs on every step of your import, review, and sync
-                    flow with a dashboard built for manga fans who want their
-                    AniList library perfectly aligned.
+                    A simple, safe tool to import, match, and synchronize your
+                    manga collection from Kenmei to AniList — with smart
+                    matching and flexible sync options.
                   </p>
                 </div>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -602,9 +597,6 @@ export function HomePage() {
                     </a>
                   </Button>
                 </div>
-                <p className="text-muted-foreground/80 text-sm">
-                  {heroAction.description}
-                </p>
               </div>
               <div className="grid gap-4 sm:grid-cols-3 lg:w-80 lg:grid-cols-1">
                 {heroHighlights.map((metric) => {

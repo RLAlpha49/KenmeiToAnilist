@@ -15,6 +15,7 @@ import { Label } from "../ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Badge } from "../ui/badge";
 import { ScrollArea } from "../ui/scroll-area";
+import { Switch } from "../ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -439,10 +440,10 @@ export function StorageDebugger() {
     const filtered = filterItems(items);
 
     return (
-      <Card className="flex h-full flex-col">
-        <CardHeader className="flex-shrink-0 pb-3">
+      <Card className="border-border/60 bg-background/90 flex h-full max-h-[40vh] flex-col border pt-0 pb-6 shadow-md backdrop-blur-sm">
+        <CardHeader className="border-border/60 bg-muted/10 flex-shrink-0 border-b px-5 py-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
               {icon}
               {title}
               <Badge variant="outline">
@@ -492,8 +493,8 @@ export function StorageDebugger() {
           </div>
         </CardHeader>
         <CardContent className="min-h-0 flex-1 overflow-hidden p-0">
-          <ScrollArea className="h-full max-h-[400px]">
-            <div className="space-y-2 p-4">
+          <ScrollArea type="always" className="h-full max-h-[420px]">
+            <div className="space-y-3 p-4">
               {filtered.length === 0 ? (
                 <div className="text-muted-foreground py-8 text-center">
                   {searchQuery
@@ -502,11 +503,14 @@ export function StorageDebugger() {
                 </div>
               ) : (
                 filtered.map((item) => (
-                  <div key={item.key} className="rounded-lg border">
-                    <div className="flex items-center justify-between p-3">
+                  <div
+                    key={item.key}
+                    className="group border-border/50 bg-muted/10 hover:border-primary/40 hover:bg-primary/5 rounded-xl border transition-all"
+                  >
+                    <div className="flex items-center justify-between gap-3 p-4">
                       <div className="min-w-0 flex-1">
-                        <div className="mb-1 flex items-center gap-2">
-                          <code className="bg-muted rounded px-1 font-mono text-sm">
+                        <div className="mb-1 flex flex-wrap items-center gap-2">
+                          <code className="bg-background/80 rounded px-1.5 font-mono text-sm shadow-sm">
                             {highlight(item.key, searchQuery)}
                           </code>
                           <TypeBadge type={item.type} />
@@ -514,7 +518,7 @@ export function StorageDebugger() {
                             {formatSize(item.size)}
                           </span>
                         </div>
-                        <div className="text-muted-foreground font-mono text-sm break-all">
+                        <div className="text-muted-foreground font-mono text-sm leading-relaxed break-all">
                           <OverviewValue value={item.value} maxChars={160} />
                         </div>
                       </div>
@@ -538,12 +542,19 @@ export function StorageDebugger() {
                               isElectron,
                             })
                           }
+                          aria-label="Edit item"
+                          title="Edit item"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              aria-label="Delete item"
+                              title="Delete item"
+                            >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </AlertDialogTrigger>
@@ -590,93 +601,190 @@ export function StorageDebugger() {
     return getValueInfo(editingItem.value).type;
   }, [editingItem]);
 
+  const storageStats = useMemo(() => {
+    const localCount = localStorageItems.length;
+    const electronCount = electronStoreItems.length;
+    const localSize = localStorageItems.reduce(
+      (acc, item) => acc + item.size,
+      0,
+    );
+    const electronSize = electronStoreItems.reduce(
+      (acc, item) => acc + item.size,
+      0,
+    );
+    const uniqueKeys = new Set([
+      ...localStorageItems.map((item) => item.key),
+      ...electronStoreItems.map((item) => item.key),
+    ]);
+
+    return {
+      local: { count: localCount, size: localSize },
+      electron: { count: electronCount, size: electronSize },
+      total: {
+        count: uniqueKeys.size,
+        size: localSize + electronSize,
+      },
+    };
+  }, [localStorageItems, electronStoreItems]);
+
+  const statCards = useMemo(
+    () => [
+      {
+        id: "local",
+        label: "localStorage",
+        count: storageStats.local.count,
+        size: storageStats.local.size,
+        accent: "from-sky-500/25 via-blue-500/10 to-transparent",
+      },
+      {
+        id: "electron",
+        label: "Electron Store",
+        count: storageStats.electron.count,
+        size: storageStats.electron.size,
+        accent: "from-purple-500/25 via-fuchsia-500/10 to-transparent",
+      },
+      {
+        id: "total",
+        label: "Merged footprint",
+        count: storageStats.total.count,
+        size: storageStats.total.size,
+        accent: "from-emerald-500/20 via-teal-500/10 to-transparent",
+      },
+    ],
+    [storageStats],
+  );
+
   return (
     <>
-      {/* Storage Behavior Notice (storage-specific guidance) */}
-      <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/20">
-        <div className="flex items-start gap-2">
-          <div className="mt-0.5 flex-shrink-0">
-            <svg
-              className="h-4 w-4 text-amber-600 dark:text-amber-400"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fillRule="evenodd"
-                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                clipRule="evenodd"
+      <div className="border-border/60 bg-background/95 relative mt-2 overflow-hidden rounded-3xl border shadow-xl backdrop-blur">
+        <div className="from-primary/10 pointer-events-none absolute inset-0 bg-gradient-to-br via-blue-500/10 to-transparent" />
+        <div className="bg-primary/20 pointer-events-none absolute top-1/2 -right-24 h-96 w-96 -translate-y-1/2 rounded-full blur-[120px]" />
+        <div className="relative z-10 flex flex-col gap-6 p-6 md:p-8">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="relative w-full sm:min-w-[240px]">
+              <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+              <Input
+                placeholder="Search by key or value…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="border-border/60 bg-background/80 w-full rounded-full pr-4 pl-9 text-sm shadow-inner"
               />
-            </svg>
-          </div>
-          <div className="text-sm">
-            <p className="mb-1 font-medium text-amber-800 dark:text-amber-200">
-              Storage Behavior
-            </p>
-            <p className="text-amber-700 dark:text-amber-300">
-              <strong>Electron Store takes precedence.</strong> Changes to
-              electron store automatically sync to localStorage and cache.
-              Direct localStorage edits may be overwritten. Both stores should
-              contain the same data in normal operation.
-            </p>
-            <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
-              📚 For detailed technical documentation, see{" "}
-              <a
-                href="https://github.com/RLAlpha49/Anilist-Manga-Updater/blob/master/docs/guides/STORAGE_IMPLEMENTATION.md"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline hover:text-amber-500 dark:hover:text-amber-300"
+            </div>
+            <div className="flex items-center justify-end gap-3">
+              <div className="text-muted-foreground flex items-center gap-2 text-xs">
+                <Switch
+                  id="search-values-toggle"
+                  checked={searchInValues}
+                  onCheckedChange={(checked) =>
+                    setSearchInValues(Boolean(checked))
+                  }
+                  aria-labelledby="search-values-label"
+                />
+                <span id="search-values-label" className="font-medium">
+                  Search values
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={refreshData}
+                disabled={isLoading}
+                className="border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 shadow-sm transition-colors"
               >
-                STORAGE_IMPLEMENTATION.md
-              </a>
-            </p>
+                <RefreshCw
+                  className={`mr-1 h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+                />
+                Refresh
+              </Button>
+            </div>
           </div>
-        </div>
-      </div>
-      <div className="mb-3 flex items-center justify-between pt-4">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={refreshData}
-            disabled={isLoading}
-          >
-            <RefreshCw
-              className={`mr-1 h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
-            />{" "}
-            Refresh
-          </Button>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="text-muted-foreground absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
-            <Input
-              placeholder="Search keys and values..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-64 pl-8"
-            />
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            {statCards.map((stat) => (
+              <div
+                key={stat.id}
+                className="border-border/60 bg-background/90 relative overflow-hidden rounded-2xl border p-4 shadow-inner"
+              >
+                <div
+                  className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${stat.accent}`}
+                />
+                <div className="relative z-10 space-y-2">
+                  <p className="text-muted-foreground text-xs tracking-wide uppercase">
+                    {stat.label}
+                  </p>
+                  <div className="font-mono text-2xl font-semibold">
+                    {stat.count.toLocaleString()}
+                    <span className="text-muted-foreground ml-2 text-sm font-medium">
+                      keys
+                    </span>
+                  </div>
+                  <p className="text-muted-foreground text-xs">
+                    {formatSize(stat.size)} total footprint
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
-          <Button
-            variant={searchInValues ? "default" : "outline"}
-            size="sm"
-            onClick={() => setSearchInValues(!searchInValues)}
-            className="text-xs"
-          >
-            Values
-          </Button>
+
+          <div className="flex items-start gap-3 rounded-2xl border border-amber-200/80 bg-amber-50/70 p-4 text-sm shadow-sm dark:border-amber-800/70 dark:bg-amber-950/40">
+            <div className="mt-1 flex items-center justify-center rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-300">
+              <svg
+                className="m-1 h-4 w-4"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <div className="text-muted-foreground space-y-2">
+              <p className="font-medium text-amber-800 dark:text-amber-200">
+                Storage precedence
+              </p>
+              <p>
+                <strong>Electron Store overrides localStorage.</strong> Edits
+                sync downstream automatically, so prefer modifying the Electron
+                layer when possible.
+              </p>
+              <p className="text-xs">
+                📚 Learn more in{" "}
+                <a
+                  href="https://github.com/RLAlpha49/Anilist-Manga-Updater/blob/master/docs/guides/STORAGE_IMPLEMENTATION.md"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline decoration-dotted underline-offset-4 hover:text-amber-600 dark:hover:text-amber-300"
+                >
+                  STORAGE_IMPLEMENTATION.md
+                </a>
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col">
-        <Tabs defaultValue="localStorage" className="min-h-0 flex-1">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="localStorage">localStorage</TabsTrigger>
-            <TabsTrigger value="electronStore">Electron Store</TabsTrigger>
+      <div className="mt-6 flex min-h-0 flex-1 flex-col">
+        <Tabs defaultValue="localStorage" className="min-h-0 flex-1 gap-4">
+          <TabsList className="bg-muted/40 grid w-full grid-cols-2 gap-2 rounded-full p-1 text-sm font-medium">
+            <TabsTrigger
+              value="localStorage"
+              className="data-[state=active]:bg-background rounded-full data-[state=active]:shadow-md"
+            >
+              localStorage
+            </TabsTrigger>
+            <TabsTrigger
+              value="electronStore"
+              className="data-[state=active]:bg-background rounded-full data-[state=active]:shadow-md"
+            >
+              Electron Store
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent
             value="localStorage"
-            className="mt-3 min-h-[300px] flex-1"
+            className="min-h-[480px] flex-1 pb-4"
           >
             {renderStorageTable(
               localStorageItems,
@@ -688,7 +796,7 @@ export function StorageDebugger() {
 
           <TabsContent
             value="electronStore"
-            className="mt-3 min-h-[300px] flex-1"
+            className="min-h-[480px] flex-1 pb-4"
           >
             {renderStorageTable(
               electronStoreItems,

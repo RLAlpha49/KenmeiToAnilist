@@ -41,11 +41,23 @@ interface DebugContextType {
   isDebugEnabled: boolean;
   toggleDebug: () => void;
   setDebugEnabled: (enabled: boolean) => void;
+  storageDebuggerEnabled: boolean;
+  setStorageDebuggerEnabled: (enabled: boolean) => void;
+  toggleStorageDebugger: () => void;
 }
 
 const DebugContext = createContext<DebugContextType | undefined>(undefined);
 
 const DEBUG_STORAGE_KEY = "debug-mode-enabled";
+const DEBUG_FEATURE_TOGGLES_KEY = "debug-feature-toggles";
+
+type DebugFeatureToggles = {
+  storageDebugger: boolean;
+};
+
+const DEFAULT_FEATURE_TOGGLES: DebugFeatureToggles = {
+  storageDebugger: true,
+};
 
 /**
  * Provides debug context to its children, managing debug state and persistence.
@@ -58,6 +70,9 @@ export function DebugProvider({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const [isDebugEnabled, setIsDebugEnabled] = useState(false);
+  const [featureToggles, setFeatureToggles] = useState<DebugFeatureToggles>(
+    DEFAULT_FEATURE_TOGGLES,
+  );
 
   // Load debug state from localStorage on initialization
   useEffect(() => {
@@ -68,6 +83,27 @@ export function DebugProvider({
       }
     } catch (error) {
       console.error("Failed to load debug state from localStorage:", error);
+    }
+  }, []);
+
+  // Load feature toggles on initialization
+  useEffect(() => {
+    try {
+      const storedToggles = localStorage.getItem(DEBUG_FEATURE_TOGGLES_KEY);
+      if (storedToggles) {
+        const parsed = JSON.parse(
+          storedToggles,
+        ) as Partial<DebugFeatureToggles>;
+        setFeatureToggles((prev) => ({
+          ...prev,
+          ...parsed,
+        }));
+      }
+    } catch (error) {
+      console.error(
+        "Failed to load debug feature toggles from localStorage:",
+        error,
+      );
     }
   }, []);
 
@@ -85,13 +121,60 @@ export function DebugProvider({
     setDebugEnabled(!isDebugEnabled);
   }, [isDebugEnabled, setDebugEnabled]);
 
+  const persistFeatureToggles = useCallback(
+    (updater: (prev: DebugFeatureToggles) => DebugFeatureToggles) => {
+      setFeatureToggles((prev) => {
+        const next = updater(prev);
+        try {
+          localStorage.setItem(DEBUG_FEATURE_TOGGLES_KEY, JSON.stringify(next));
+        } catch (error) {
+          console.error(
+            "Failed to save debug feature toggles to localStorage:",
+            error,
+          );
+        }
+        return next;
+      });
+    },
+    [],
+  );
+
+  const setStorageDebuggerEnabled = useCallback(
+    (enabled: boolean) => {
+      persistFeatureToggles((prev) => ({
+        ...prev,
+        storageDebugger: enabled,
+      }));
+    },
+    [persistFeatureToggles],
+  );
+
+  const toggleStorageDebugger = useCallback(() => {
+    persistFeatureToggles((prev) => ({
+      ...prev,
+      storageDebugger: !prev.storageDebugger,
+    }));
+  }, [persistFeatureToggles]);
+
+  const storageDebuggerEnabled = featureToggles.storageDebugger;
+
   const value = React.useMemo<DebugContextType>(
     () => ({
       isDebugEnabled,
       toggleDebug,
       setDebugEnabled,
+      storageDebuggerEnabled,
+      setStorageDebuggerEnabled,
+      toggleStorageDebugger,
     }),
-    [isDebugEnabled, toggleDebug, setDebugEnabled],
+    [
+      isDebugEnabled,
+      toggleDebug,
+      setDebugEnabled,
+      storageDebuggerEnabled,
+      setStorageDebuggerEnabled,
+      toggleStorageDebugger,
+    ],
   );
 
   return (

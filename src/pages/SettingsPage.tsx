@@ -93,7 +93,12 @@ export function SettingsPage() {
     customCredentials,
   } = useAuth();
 
-  const { isDebugEnabled, toggleDebug } = useDebug();
+  const {
+    isDebugEnabled,
+    toggleDebug,
+    storageDebuggerEnabled,
+    setStorageDebuggerEnabled,
+  } = useDebug();
 
   const prevCredentialSourceRef = useRef<"default" | "custom">(
     authState.credentialSource,
@@ -1805,7 +1810,8 @@ export function SettingsPage() {
                     <div className="space-y-0.5">
                       <h3 className="text-sm font-medium">Debug menu</h3>
                       <p className="text-muted-foreground text-xs">
-                        Enable debug menu to view and edit storage values.
+                        Enable the in-app debug hub to access advanced
+                        diagnostics.
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -1819,22 +1825,56 @@ export function SettingsPage() {
                       />
                     </div>
                   </div>
-                  {isDebugEnabled && (
-                    <div className="rounded-md bg-yellow-50 p-3 dark:bg-yellow-900/20">
-                      <div className="flex">
-                        <div className="flex-shrink-0">
-                          <AlertTriangle className="h-4 w-4 text-yellow-400" />
-                        </div>
-                        <div className="ml-3">
+                  {isDebugEnabled ? (
+                    <div className="space-y-4">
+                      <div className="rounded-md bg-yellow-50 p-3 dark:bg-yellow-900/20">
+                        <div className="flex gap-3">
+                          <AlertTriangle className="mt-0.5 h-4 w-4 text-yellow-400" />
                           <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                            <strong>Warning:</strong> Debug tools allow direct
-                            access to application storage. Use with caution as
-                            incorrect modifications may affect application
-                            functionality.
+                            <strong>Heads up:</strong> Debug tools provide
+                            direct access to persistent storage. Misuse can
+                            impact application stability.
                           </p>
                         </div>
                       </div>
+                      <div className="border-border/60 bg-background/40 rounded-2xl border border-dashed p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-sm font-semibold">
+                                Storage debugger
+                              </h4>
+                              <Badge
+                                variant="outline"
+                                className="border-primary/40 text-primary text-[10px] tracking-wide uppercase"
+                              >
+                                Beta
+                              </Badge>
+                            </div>
+                            <p className="text-muted-foreground text-xs">
+                              Inspect and edit Electron Store alongside
+                              localStorage from the debug command center.
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground text-xs">
+                              Enable panel
+                            </span>
+                            <Switch
+                              id="storage-debugger-enabled"
+                              checked={storageDebuggerEnabled}
+                              onCheckedChange={(checked) =>
+                                setStorageDebuggerEnabled(Boolean(checked))
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
+                  ) : (
+                    <p className="text-muted-foreground text-xs">
+                      Turn on the debug menu to manage individual tools.
+                    </p>
                   )}
                 </motion.div>
               </SettingsSectionShell>
