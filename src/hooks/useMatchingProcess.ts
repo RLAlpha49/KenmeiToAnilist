@@ -3,10 +3,15 @@
  * @module useMatchingProcess
  * @description Custom React hook for managing the manga matching process, including batch matching, progress tracking, error handling, and resume/cancel operations in the Kenmei to AniList sync tool.
  */
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { KenmeiManga } from "../api/kenmei/types";
 import { MangaMatchResult } from "../api/anilist/types";
-import { batchMatchManga } from "../api/matching/manga-search-service";
+import {
+  batchMatchManga,
+  setManualMatchingPause,
+  isManualMatchingPaused,
+} from "../api/matching/manga-search-service";
+import { RateLimitState } from "../contexts/RateLimitContext";
 import {
   STORAGE_KEYS,
   storage,
@@ -20,7 +25,7 @@ import { usePendingManga } from "./usePendingManga";
 /**
  * Custom hook to manage the manga matching process, including batch matching, progress tracking, error handling, and resume/cancel operations.
  *
- * @param authState - The authentication state containing the AniList access token.
+ * @param options - Options containing the AniList access token and optional rate limit state.
  * @returns An object containing state, progress, error, and handler functions for the matching process.
  * @example
  * ```ts
@@ -31,8 +36,12 @@ import { usePendingManga } from "./usePendingManga";
  * ```
  * @source
  */
-export const useMatchingProcess = (authState: {
+export const useMatchingProcess = ({
+  accessToken,
+  rateLimitState,
+}: {
   accessToken: string | null;
+  rateLimitState?: RateLimitState;
 }) => {
   // State for matching process
   const [isLoading, setIsLoading] = useState(false);
@@ -50,6 +59,7 @@ export const useMatchingProcess = (authState: {
   const [bypassCache, setBypassCache] = useState(false);
   const [freshSearch, setFreshSearch] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isRateLimitPaused, setIsRateLimitPaused] = useState(false);
 
   // Cancel ref
   const cancelMatchingRef = useRef(false);
@@ -61,8 +71,14 @@ export const useMatchingProcess = (authState: {
   const [isInitializing, setIsInitializing] = useState(true);
 
   // Time estimate
-  const { timeEstimate, calculateTimeEstimate, initializeTimeTracking } =
-    useTimeEstimate();
+  const {
+    timeEstimate,
+    calculateTimeEstimate,
+    initializeTimeTracking,
+    pauseTimeTracking,
+    resumeTimeTracking,
+    isPaused: isTimeEstimatePaused,
+  } = useTimeEstimate();
 
   // Pending manga
   const {
@@ -75,6 +91,7 @@ export const useMatchingProcess = (authState: {
   // Cache clearing state
   const [isCacheClearing, setIsCacheClearing] = useState(false);
   const [cacheClearingCount, setCacheClearingCount] = useState(0);
+  const [isManuallyPaused, setIsManuallyPaused] = useState(false);
 
   /**
    * Starts the batch matching process for the provided manga list.
@@ -100,6 +117,8 @@ export const useMatchingProcess = (authState: {
       if (globalThis.matchingProcessState?.isRunning) {
         console.log(
           "Matching process is already running, using existing process",
+          handlePauseMatching,
+          handleResumeMatchingRequests,
         );
 
         // Just update our local state to match the global state
@@ -120,7 +139,7 @@ export const useMatchingProcess = (authState: {
       setIsCancelling(false);
 
       // Check if we have an access token
-      if (!authState.accessToken) {
+      if (!accessToken) {
         setError(
           "You need to be authenticated with AniList to match manga. Please go to Settings and connect your AniList account.",
         );
@@ -234,7 +253,7 @@ export const useMatchingProcess = (authState: {
         // Process manga in batches
         const results = await batchMatchManga(
           mangaList,
-          authState.accessToken || "",
+          accessToken || "",
           {
             batchSize: 5,
             searchPerPage: 50,
@@ -249,6 +268,12 @@ export const useMatchingProcess = (authState: {
           (current, total, currentTitle) => {
             // Check for cancellation - immediately abort if cancelled
             handleCancellation();
+
+            if (isManualMatchingPaused()) {
+              pauseTimeTracking();
+            } else {
+              resumeTimeTracking();
+            }
 
             // Update progress
             setProgress({ current, total, currentTitle });
@@ -306,7 +331,7 @@ export const useMatchingProcess = (authState: {
                 `Matching manga (${completionPercent}% complete)`,
               );
               setDetailMessage(
-                `Processing: ${Math.min(current, total)} of ${total} (${remainingItems} remaining)`,
+                `Processing: ${Math.min(current, total)} of ${total}`,
               );
 
               // Update global tracking state
@@ -487,7 +512,7 @@ export const useMatchingProcess = (authState: {
       }
     },
     [
-      authState.accessToken,
+      accessToken,
       calculateTimeEstimate,
       calculatePendingManga,
       initializeTimeTracking,
@@ -647,6 +672,10 @@ export const useMatchingProcess = (authState: {
    */
   const handleCancelProcess = useCallback(() => {
     if (!isCancelling) {
+      setManualMatchingPause(false);
+      setIsManuallyPaused(false);
+      setIsRateLimitPaused(false);
+      resumeTimeTracking();
       setIsCancelling(true);
       cancelMatchingRef.current = true;
       setStatusMessage("Cancelling process...");
@@ -666,7 +695,12 @@ export const useMatchingProcess = (authState: {
         globalThis.activeAbortController.abort();
       }
     }
-  }, [isCancelling]);
+  }, [
+    isCancelling,
+    resumeTimeTracking,
+    setIsRateLimitPaused,
+    setIsManuallyPaused,
+  ]);
 
   /**
    * Marks the completion of the initialization phase for the matching process.
@@ -677,6 +711,126 @@ export const useMatchingProcess = (authState: {
     setIsInitializing(false);
     matchingInitialized.current = true;
   }, []);
+
+  const handlePauseMatching = useCallback(() => {
+    setManualMatchingPause(true);
+    pauseTimeTracking();
+    setIsManuallyPaused(true);
+    setStatusMessage("Matching paused");
+    setDetailMessage("Resume when you're ready to continue");
+  }, [pauseTimeTracking]);
+
+  const handleResumeMatchingRequests = useCallback(() => {
+    if (rateLimitState?.isRateLimited) {
+      const detail =
+        "AniList rate limit is active. We'll resume automatically once it's cleared.";
+      setStatusMessage("AniList rate limit reached");
+      setDetailMessage(detail);
+      return;
+    }
+
+    setManualMatchingPause(false);
+    resumeTimeTracking();
+    setIsManuallyPaused(false);
+    setStatusMessage("Resuming matching...");
+  }, [rateLimitState?.isRateLimited, resumeTimeTracking]);
+
+  // Helper to build rate limit detail message
+  const buildRateLimitDetail = useCallback(() => {
+    if (!rateLimitState?.retryAfter) {
+      return "Waiting for AniList to lift the rate limit...";
+    }
+    const remainingSeconds = Math.max(
+      0,
+      Math.ceil((rateLimitState.retryAfter - Date.now()) / 1000),
+    );
+    const minutes = Math.floor(remainingSeconds / 60);
+    const seconds = remainingSeconds % 60;
+    const formatted = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+    return `Waiting for AniList to lift the rate limit (retry in ~${formatted}).`;
+  }, [rateLimitState?.retryAfter]);
+
+  // Handles entering rate limit state
+  const handleEnterRateLimit = useCallback(
+    (detail: string) => {
+      setIsRateLimitPaused(true);
+      setStatusMessage("AniList rate limit reached");
+      setDetailMessage(detail);
+      setManualMatchingPause(true);
+      pauseTimeTracking();
+      if (globalThis.matchingProcessState) {
+        globalThis.matchingProcessState.statusMessage =
+          "AniList rate limit reached";
+        globalThis.matchingProcessState.detailMessage = detail;
+        globalThis.matchingProcessState.lastUpdated = Date.now();
+      }
+    },
+    [pauseTimeTracking],
+  );
+
+  // Handles updating rate limit detail
+  const handleUpdateRateLimitDetail = useCallback((detail: string) => {
+    setDetailMessage(detail);
+    if (globalThis.matchingProcessState) {
+      globalThis.matchingProcessState.detailMessage = detail;
+      globalThis.matchingProcessState.lastUpdated = Date.now();
+    }
+  }, []);
+
+  // Handles exiting rate limit state
+  const handleExitRateLimit = useCallback(() => {
+    setIsRateLimitPaused(false);
+    resumeTimeTracking();
+    if (!isManuallyPaused) {
+      setManualMatchingPause(false);
+    }
+    const detail = isManuallyPaused
+      ? "Matching remains paused. Resume when you're ready to continue."
+      : "Back to matching remaining manga. We'll continue processing the queue.";
+    const status = isManuallyPaused
+      ? "Matching paused"
+      : "Resuming matching...";
+    setStatusMessage(status);
+    setDetailMessage(detail);
+    if (globalThis.matchingProcessState) {
+      globalThis.matchingProcessState.statusMessage = status;
+      globalThis.matchingProcessState.detailMessage = detail;
+      globalThis.matchingProcessState.lastUpdated = Date.now();
+    }
+  }, [resumeTimeTracking, isManuallyPaused]);
+
+  useEffect(() => {
+    if (
+      !rateLimitState ||
+      isCancelling ||
+      !(isLoading || globalThis.matchingProcessState?.isRunning)
+    ) {
+      return;
+    }
+
+    if (rateLimitState.isRateLimited) {
+      const detail = buildRateLimitDetail();
+      if (!isRateLimitPaused) {
+        handleEnterRateLimit(detail);
+      } else {
+        handleUpdateRateLimitDetail(detail);
+      }
+    } else if (isRateLimitPaused) {
+      handleExitRateLimit();
+    }
+  }, [
+    rateLimitState,
+    isLoading,
+    isRateLimitPaused,
+    isManuallyPaused,
+    isCancelling,
+    pauseTimeTracking,
+    resumeTimeTracking,
+    buildRateLimitDetail,
+    handleEnterRateLimit,
+    handleUpdateRateLimitDetail,
+    handleExitRateLimit,
+  ]);
 
   return {
     isLoading,
@@ -710,6 +864,15 @@ export const useMatchingProcess = (authState: {
     handleResumeMatching,
     handleCancelResume,
     handleCancelProcess,
+    handlePauseMatching,
+    handleResumeMatchingRequests,
     completeInitialization,
+    setManualMatchingPause,
+    isManuallyPaused,
+    setIsManuallyPaused,
+    isTimeEstimatePaused,
+    pauseTimeTracking,
+    resumeTimeTracking,
+    isRateLimitPaused,
   };
 };

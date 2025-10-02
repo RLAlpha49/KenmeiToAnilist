@@ -6,7 +6,7 @@ interface Props {
   onGoToImport: () => void;
 }
 
-export default function NoResultsView({ onGoToImport }: Props) {
+export default function NoResultsView({ onGoToImport }: Readonly<Props>) {
   return (
     <motion.div
       className="bg-background/50 flex h-full min-h-[60vh] flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 p-12 text-center backdrop-blur-sm dark:border-gray-700"

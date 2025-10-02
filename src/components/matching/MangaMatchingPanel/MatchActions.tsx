@@ -2,6 +2,7 @@ import React from "react";
 import { Search, Check, X, ArrowLeft } from "lucide-react";
 import { MangaMatchResult } from "../../../api/anilist/types";
 import { KenmeiManga } from "../../../api/kenmei/types";
+import { Button } from "../../ui/button";
 
 export interface MatchActionsProps {
   match: MangaMatchResult;
@@ -26,14 +27,17 @@ export function MatchActions({
   onResetToPending,
   onSelectAlternative,
   handleKeyDown,
-}: MatchActionsProps) {
+}: Readonly<MatchActionsProps>) {
   // keep onSelectAlternative referenced to preserve API and avoid unused prop linting
   if (onSelectAlternative) {
     /* no-op to satisfy linter */
   }
+  const buttonBaseClass =
+    "relative overflow-hidden rounded-xl px-4 py-2 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
+
   const commonSearchButton = (text: string, ariaLabel: string) => (
-    <button
-      className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
+    <Button
+      className={`${buttonBaseClass} bg-gradient-to-r from-indigo-500 via-indigo-400 to-sky-400 text-white shadow-[0_10px_30px_-12px_rgba(79,70,229,0.65)] hover:shadow-[0_18px_40px_-15px_rgba(14,165,233,0.55)] focus-visible:ring-indigo-400/70 dark:from-indigo-500 dark:via-indigo-400 dark:to-sky-500`}
       onClick={() => {
         if (match.status === "pending") {
           console.log(
@@ -49,12 +53,13 @@ export function MatchActions({
     >
       <Search className="mr-2 h-4 w-4" aria-hidden="true" />
       {text}
-    </button>
+    </Button>
   );
 
   const resetButton = (
-    <button
-      className="inline-flex items-center rounded-md bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-300 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:outline-none dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+    <Button
+      variant="secondary"
+      className={`${buttonBaseClass} bg-slate-200/80 text-slate-800 shadow-[0_8px_28px_-15px_rgba(15,23,42,0.45)] hover:bg-slate-200 focus-visible:ring-slate-400 dark:bg-slate-800/70 dark:text-slate-200 dark:hover:bg-slate-800`}
       onClick={() => {
         if (onResetToPending) onResetToPending(match);
       }}
@@ -63,7 +68,7 @@ export function MatchActions({
     >
       <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
       Reset to Pending
-    </button>
+    </Button>
   );
 
   switch (match.status) {
@@ -71,8 +76,8 @@ export function MatchActions({
       return (
         <>
           {match.anilistMatches && match.anilistMatches.length > 0 && (
-            <button
-              className="inline-flex items-center rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none"
+            <Button
+              className={`${buttonBaseClass} bg-gradient-to-r from-emerald-500 via-emerald-400 to-lime-400 text-white shadow-[0_12px_32px_-15px_rgba(16,185,129,0.6)] hover:shadow-[0_20px_45px_-18px_rgba(101,163,13,0.55)] focus-visible:ring-emerald-400/80 dark:from-emerald-500 dark:via-emerald-400 dark:to-lime-500`}
               onClick={() => {
                 console.log(
                   `Clicked Accept Match for manga ID: ${match.kenmeiManga.id}, title: ${match.kenmeiManga.title}`,
@@ -84,7 +89,7 @@ export function MatchActions({
             >
               <Check className="mr-2 h-4 w-4" aria-hidden="true" />
               Accept Match
-            </button>
+            </Button>
           )}
 
           {commonSearchButton(
@@ -92,8 +97,8 @@ export function MatchActions({
             `Search manually for ${match.kenmeiManga.title}`,
           )}
 
-          <button
-            className="inline-flex items-center rounded-md bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-300 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:outline-none dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+          <Button
+            className={`${buttonBaseClass} bg-slate-100/80 text-slate-700 shadow-[0_8px_28px_-15px_rgba(30,41,59,0.45)] hover:bg-slate-100 focus-visible:ring-slate-300 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800`}
             onClick={() => {
               if (onRejectMatch) onRejectMatch(match);
             }}
@@ -102,7 +107,7 @@ export function MatchActions({
           >
             <X className="mr-2 h-4 w-4" aria-hidden="true" />
             Skip
-          </button>
+          </Button>
         </>
       );
 

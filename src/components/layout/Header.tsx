@@ -3,6 +3,9 @@
  * @module Header
  * @description Application header component with logo, navigation, theme toggle, and window controls.
  */
+
+// TODO: Nav items should be highlighted when active
+
 import React, { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import ToggleTheme from "../ToggleTheme";

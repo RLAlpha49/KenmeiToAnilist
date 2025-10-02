@@ -21,7 +21,7 @@ import { toast } from "sonner";
  * @property message - The message to display to the user, or null.
  * @source
  */
-interface RateLimitState {
+export interface RateLimitState {
   isRateLimited: boolean;
   retryAfter: number | null;
   message: string | null;

@@ -7,7 +7,7 @@ interface Props {
   message?: string;
 }
 
-export default function InitializationCard({ message }: Props) {
+export default function InitializationCard({ message }: Readonly<Props>) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}

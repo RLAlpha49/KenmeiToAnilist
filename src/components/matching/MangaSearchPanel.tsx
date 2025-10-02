@@ -11,6 +11,8 @@ import {
   ArrowLeft,
   Loader2,
   ExternalLink,
+  Sparkles,
+  Gauge,
 } from "lucide-react";
 import { KenmeiManga } from "../../api/kenmei/types";
 import { AniListManga, MangaMatch } from "../../api/anilist/types";
@@ -121,8 +123,8 @@ export function MangaSearchPanel({
   };
 
   // Style modifications to make everything larger
-  const headerClasses = "text-xl font-medium"; // Increased from text-lg
-  const titleClasses = "text-2xl font-semibold"; // Increased from text-lg
+  const headerClasses = "text-2xl font-semibold tracking-tight"; // Elevated typography for hero header
+  const titleClasses = "text-3xl font-semibold"; // Increased from text-lg for stronger emphasis
 
   useEffect(() => {
     // Focus the search input
@@ -402,63 +404,87 @@ export function MangaSearchPanel({
    */
   return (
     <div
-      className="flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-md dark:border-gray-700 dark:bg-gray-800"
+      className="relative flex h-full flex-col overflow-hidden rounded-3xl border border-white/30 bg-gradient-to-br from-white/95 via-white/90 to-white/80 shadow-[0_30px_70px_-40px_rgba(15,23,42,0.55)] backdrop-blur-xl dark:border-slate-700/70 dark:from-slate-900/95 dark:via-slate-950/90 dark:to-slate-950/80"
       aria-modal="true"
       aria-labelledby="search-title"
       tabIndex={-1}
     >
-      <div className="border-b border-gray-200 bg-gray-50 p-5 dark:border-gray-700 dark:bg-gray-800">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <button
-              onClick={onClose}
-              className="mr-4 rounded-md p-2 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300"
-              aria-label="Go back"
-            >
-              <ArrowLeft size={24} aria-hidden="true" />
-            </button>
-            <h2
-              id="search-title"
-              className={`${headerClasses} text-gray-900 dark:text-white`}
-            >
-              Search for manga
-            </h2>
-          </div>
+      <div className="flex items-center justify-between border-b border-slate-200/70 bg-white/80 px-6 py-4 backdrop-blur dark:border-slate-800 dark:bg-slate-900/70">
+        <div className="flex items-center gap-3">
           <button
             onClick={onClose}
-            className="rounded-md p-2 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300"
-            aria-label="Close search panel"
+            className="rounded-full border border-slate-200/70 bg-white/90 p-2 text-slate-500 transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:outline-none dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:text-white dark:focus-visible:ring-blue-500"
+            aria-label="Go back"
           >
-            <X size={24} aria-hidden="true" />
+            <ArrowLeft size={22} aria-hidden="true" />
           </button>
+          <h2
+            id="search-title"
+            className={`${headerClasses} text-slate-900 dark:text-white`}
+          >
+            AniList search
+          </h2>
         </div>
+        <button
+          onClick={onClose}
+          className="rounded-full border border-slate-200/70 bg-white/90 p-2 text-slate-500 transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:outline-none dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:text-white dark:focus-visible:ring-blue-500"
+          aria-label="Close search panel"
+        >
+          <X size={22} aria-hidden="true" />
+        </button>
       </div>
 
       {kenmeiManga && (
-        <div className="border-b border-gray-200 bg-blue-50 p-5 dark:border-gray-700 dark:bg-blue-900/20">
-          <h3 className="mb-2 text-lg font-medium text-gray-900 dark:text-white">
-            Looking for a match for:
+        <div className="mx-6 mt-6 rounded-2xl border border-white/30 bg-gradient-to-br from-blue-50/80 via-white/75 to-purple-50/70 p-6 shadow-[inset_0_0_1px_rgba(59,130,246,0.25)] dark:border-slate-700/60 dark:from-blue-900/40 dark:via-slate-900/60 dark:to-indigo-950/60">
+          <h3 className="text-xs font-semibold tracking-[0.2em] text-blue-800/80 uppercase dark:text-blue-200/80">
+            Matching for
           </h3>
-          <p className={`${titleClasses} text-blue-700 dark:text-blue-300`}>
+          <p
+            className={`${titleClasses} mt-2 text-blue-900 dark:text-blue-200`}
+          >
             {kenmeiManga.title}
           </p>
-          <p className="mt-2 text-base text-gray-600 dark:text-gray-400">
-            {kenmeiManga.status} • {kenmeiManga.chapters_read} chapters read
-            {kenmeiManga.score > 0 && ` • Score: ${kenmeiManga.score}/10`}
-          </p>
+          <div className="mt-4 flex flex-wrap gap-2 text-sm">
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-3 py-1 font-medium text-blue-800 shadow-sm ring-1 ring-blue-500/20 dark:bg-slate-900/60 dark:text-blue-200 dark:ring-blue-500/30">
+              <span
+                className="h-2 w-2 rounded-full bg-blue-500"
+                aria-hidden="true"
+              />
+              {kenmeiManga.status}
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-3 py-1 font-medium text-blue-800 shadow-sm ring-1 ring-blue-500/20 dark:bg-slate-900/60 dark:text-blue-200 dark:ring-blue-500/30">
+              <span
+                className="h-2 w-2 rounded-full bg-indigo-500"
+                aria-hidden="true"
+              />
+              {kenmeiManga.chapters_read} chapters read
+            </span>
+            {kenmeiManga.score > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-3 py-1 font-medium text-blue-800 shadow-sm ring-1 ring-blue-500/20 dark:bg-slate-900/60 dark:text-blue-200 dark:ring-blue-500/30">
+                <span
+                  className="h-2 w-2 rounded-full bg-purple-500"
+                  aria-hidden="true"
+                />
+                Score: {kenmeiManga.score}/10
+              </span>
+            )}
+          </div>
         </div>
       )}
 
-      <div className="border-b border-gray-200 p-5 dark:border-gray-700">
-        <form onSubmit={handleSubmit} className="flex items-center gap-3">
-          <div className="relative flex-1">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-              <Search className="h-6 w-6 text-gray-400" aria-hidden="true" />
+      <div className="border-b border-white/20 bg-white/60 p-6 shadow-inner dark:border-slate-700/70 dark:bg-slate-900/50">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-4 lg:flex-row lg:items-center"
+        >
+          <div className="relative flex-1 rounded-2xl bg-white/80 shadow-sm ring-1 ring-slate-200/70 transition focus-within:ring-2 focus-within:ring-blue-500 dark:bg-slate-900/80 dark:ring-slate-700/70">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-5">
+              <Search className="h-6 w-6 text-slate-400" aria-hidden="true" />
             </div>
             <input
               ref={searchInputRef}
               type="text"
-              className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-3 pl-12 text-base text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
+              className="block w-full rounded-2xl border-0 bg-transparent p-4 pl-14 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus-visible:ring-0 dark:text-slate-100"
               placeholder="Search by manga title or AniList ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -467,10 +493,15 @@ export function MangaSearchPanel({
               autoComplete="off"
               onKeyDown={handleKeyDown}
             />
+            <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+              <span className="hidden text-xs font-semibold tracking-[0.3em] text-slate-400/70 uppercase sm:block">
+                Enter ↵
+              </span>
+            </div>
           </div>
           <button
             type="submit"
-            className="inline-flex items-center rounded-lg bg-blue-700 px-5 py-3 text-base font-medium text-white hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 focus:outline-none disabled:bg-blue-400 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+            className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-blue-600/30 transition duration-200 hover:brightness-110 focus-visible:ring-2 focus-visible:ring-purple-300 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:shadow-indigo-500/30"
             disabled={isSearching || !searchQuery.trim()}
             aria-label={isSearching ? "Searching..." : "Search for manga"}
           >
@@ -489,59 +520,83 @@ export function MangaSearchPanel({
         </form>
 
         {/* Search hint */}
-        <div className="mt-2 px-1">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            💡 Tip: You can search by title (e.g., &ldquo;Attack on
-            Titan&rdquo;) or AniList ID (e.g., &ldquo;53390&rdquo;)
-          </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl bg-white/80 px-4 py-3 text-xs font-medium text-slate-600 shadow-sm ring-1 ring-slate-200/60 dark:bg-slate-900/70 dark:text-slate-300 dark:ring-slate-700/60">
+          <span className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-300">
+            <Sparkles className="h-4 w-4" aria-hidden="true" />
+            Pro tip
+          </span>
+          <span className="text-slate-500 dark:text-slate-300">
+            Search by title (e.g., “Attack on Titan”) or jump straight to an
+            AniList ID (e.g., “53390”).
+          </span>
         </div>
       </div>
 
       <section
         ref={resultsContainerRef}
-        className="flex-1 overflow-y-auto p-5"
+        className="flex-1 overflow-y-auto p-6"
         aria-label="Search results"
         aria-live="polite"
       >
         {error && (
           <div
-            className="mb-5 rounded-md bg-red-50 p-4 text-base text-red-700 dark:bg-red-900/20 dark:text-red-400"
+            className="mb-6 rounded-2xl border border-red-200/60 bg-red-50/80 p-4 text-base text-red-700 shadow-sm backdrop-blur dark:border-red-500/20 dark:bg-red-900/30 dark:text-red-200"
             role="alert"
           >
             <p>{error}</p>
           </div>
         )}
 
-        {searchResults.length === 0 && !isSearching && !error && (
-          <div className="text-center text-lg text-gray-500 dark:text-gray-400">
-            {searchQuery.trim()
-              ? "No results found"
-              : "Enter a search term to find manga"}
+        {isSearching && (
+          <div className="mb-6 flex items-center justify-center gap-3 rounded-3xl border border-blue-200/60 bg-blue-50/70 px-4 py-5 text-base font-medium text-blue-700 shadow-sm dark:border-blue-500/30 dark:bg-blue-900/20 dark:text-blue-200">
+            <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+            Searching...
           </div>
         )}
 
-        <div className="space-y-5">
+        {searchResults.length === 0 && !isSearching && !error && (
+          <div className="mx-auto flex max-w-lg flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300/70 bg-white/60 p-8 text-center text-lg text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300">
+            <Sparkles
+              className="mb-3 h-9 w-9 text-blue-500"
+              aria-hidden="true"
+            />
+            {searchQuery.trim()
+              ? "No results just yet—try refining your keywords or searching by AniList ID."
+              : "Start by typing a title or AniList ID to discover the best match."}
+          </div>
+        )}
+
+        <div className="space-y-6">
           {searchResults.map((result, index) => {
             const manga = result.manga; // Extract manga for easier access
             const mangaId = manga.id;
             const uniqueKey = mangaId
               ? `manga-${mangaId}`
               : `manga-${index}-${manga.title?.romaji?.replaceAll(" ", "") || "unknown"}`;
+            const isSelected = index === selectedIndex;
 
             return (
               <div
                 key={uniqueKey}
                 data-index={index}
-                className={`relative flex flex-col space-y-3 rounded-lg border p-5 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800 ${
-                  index === selectedIndex
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                    : "border-gray-200"
+                className={`group relative overflow-hidden rounded-2xl border border-white/25 bg-white/85 p-6 shadow-[0_24px_45px_-35px_rgba(59,130,246,0.45)] backdrop-blur transition-all duration-300 dark:border-slate-700/60 dark:bg-slate-900/75 ${
+                  isSelected
+                    ? "ring-2 ring-blue-400/80 ring-offset-2 ring-offset-white dark:ring-blue-400/60 dark:ring-offset-slate-950"
+                    : "ring-1 ring-slate-200/70 hover:-translate-y-1 hover:border-blue-300/50 hover:ring-blue-300/60 dark:ring-slate-800/70"
                 }`}
-                aria-pressed={index === selectedIndex}
+                aria-pressed={isSelected}
               >
-                <div className="flex w-full items-start space-x-5">
+                <div
+                  className="pointer-events-none absolute inset-0 opacity-0 transition duration-300 group-hover:opacity-100"
+                  aria-hidden="true"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, rgba(59,130,246,0.14), transparent 60%)",
+                  }}
+                />
+                <div className="relative flex w-full flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
                   {(manga.coverImage?.large || manga.coverImage?.medium) && (
-                    <div className="relative flex-shrink-0">
+                    <div className="relative z-[1] flex-shrink-0">
                       {isAdultContent(manga) ? (
                         <button
                           type="button"
@@ -568,9 +623,9 @@ export function MangaSearchPanel({
                               manga.coverImage.large || manga.coverImage.medium
                             }
                             alt={`Cover for ${manga.title?.english || manga.title?.romaji || "manga"}`}
-                            className={`h-40 w-28 rounded border border-gray-200 object-cover shadow-sm transition-all hover:scale-[1.02] hover:shadow dark:border-gray-700 ${
+                            className={`h-44 w-32 rounded-2xl border border-white/40 object-cover shadow-xl transition duration-300 hover:scale-[1.03] hover:shadow-2xl dark:border-slate-700 ${
                               shouldBlurImage(`search-${manga.id}`)
-                                ? "cursor-pointer blur-md"
+                                ? "cursor-pointer blur-lg"
                                 : ""
                             }`}
                             loading="lazy"
@@ -583,7 +638,7 @@ export function MangaSearchPanel({
                             manga.coverImage.large || manga.coverImage.medium
                           }
                           alt={`Cover for ${manga.title?.english || manga.title?.romaji || "manga"}`}
-                          className="h-40 w-28 rounded border border-gray-200 object-cover shadow-sm transition-all hover:scale-[1.02] hover:shadow dark:border-gray-700"
+                          className="h-44 w-32 rounded-2xl border border-white/40 object-cover shadow-xl transition duration-300 hover:scale-[1.03] hover:shadow-2xl dark:border-slate-700"
                           loading="lazy"
                           draggable={false}
                         />
@@ -606,7 +661,7 @@ export function MangaSearchPanel({
                             <button
                               type="button"
                               tabIndex={0}
-                              className="bg-opacity-75 inline-flex cursor-pointer items-center rounded-md bg-gray-800 px-2 py-1 text-xs font-medium text-white"
+                              className="inline-flex cursor-pointer items-center rounded-full bg-slate-900/80 px-3 py-1 text-xs font-semibold text-white shadow-lg shadow-slate-900/40"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 toggleImageBlur(`search-${manga.id}`);
@@ -630,81 +685,105 @@ export function MangaSearchPanel({
                     </div>
                   )}
 
-                  <div className="flex-1 space-y-2">
-                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                      {manga.title?.english ||
-                        manga.title?.romaji ||
-                        "Unknown Title"}
-                    </h3>
+                  <div className="relative z-[1] flex-1 space-y-5">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="space-y-3">
+                        <h3 className="text-2xl font-semibold text-slate-900 transition duration-200 group-hover:text-blue-700 dark:text-white dark:group-hover:text-blue-200">
+                          {manga.title?.english ||
+                            manga.title?.romaji ||
+                            "Unknown Title"}
+                        </h3>
 
-                    {manga.title?.romaji &&
-                      manga.title.romaji !== manga.title.english && (
-                        <p className="text-base text-gray-600 dark:text-gray-400">
-                          {manga.title.romaji}
-                        </p>
-                      )}
+                        {manga.title?.romaji &&
+                          manga.title.romaji !== manga.title.english && (
+                            <p className="text-base text-slate-500 dark:text-slate-400">
+                              {manga.title.romaji}
+                            </p>
+                          )}
 
-                    {/* Alternative source badges */}
-                    <div className="flex flex-wrap items-center gap-2">
-                      {/* Show unified sourceInfo badge */}
-                      {result.sourceInfo && (
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${getSourceBadgeClasses(result.sourceInfo.source)}`}
-                          >
-                            📚 Found via{" "}
-                            {result.sourceInfo.source === "mangadex"
-                              ? "MangaDex"
-                              : result.sourceInfo.source}
-                          </span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            ({result.sourceInfo.title})
-                          </span>
+                        {/* Alternative source badges */}
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                          {/* Show unified sourceInfo badge */}
+                          {result.sourceInfo && (
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold shadow-sm ring-1 ring-black/5 dark:ring-white/10 ${getSourceBadgeClasses(result.sourceInfo.source)}`}
+                              >
+                                📚 Found via{" "}
+                                {result.sourceInfo.source === "mangadex"
+                                  ? "MangaDex"
+                                  : result.sourceInfo.source}
+                              </span>
+                              <span className="text-xs text-slate-400 dark:text-slate-400">
+                                ({result.sourceInfo.title})
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Show individual source badges when both exist */}
+                          {!result.sourceInfo && (
+                            <>
+                              {result.comickSource && (
+                                <div className="flex items-center gap-2">
+                                  <span className="inline-flex items-center gap-2 rounded-full bg-orange-100/90 px-3 py-1 text-xs font-semibold text-orange-800 shadow-sm ring-1 ring-orange-200/60 dark:bg-orange-900/30 dark:text-orange-300 dark:ring-orange-400/30">
+                                    📚 Found via Comick
+                                  </span>
+                                  <span className="text-xs text-slate-400 dark:text-slate-400">
+                                    ({result.comickSource.title})
+                                  </span>
+                                </div>
+                              )}
+                              {result.mangaDexSource && (
+                                <div className="flex items-center gap-2">
+                                  <span className="inline-flex items-center gap-2 rounded-full bg-blue-100/90 px-3 py-1 text-xs font-semibold text-blue-800 shadow-sm ring-1 ring-blue-200/60 dark:bg-blue-900/30 dark:text-blue-300 dark:ring-blue-400/30">
+                                    📚 Found via MangaDex
+                                  </span>
+                                  <span className="text-xs text-slate-400 dark:text-slate-400">
+                                    ({result.mangaDexSource.title})
+                                  </span>
+                                </div>
+                              )}
+                            </>
+                          )}
                         </div>
-                      )}
+                      </div>
 
-                      {/* Show individual source badges when both exist */}
-                      {!result.sourceInfo && (
-                        <>
-                          {result.comickSource && (
-                            <div className="flex items-center gap-2">
-                              <span className="inline-flex items-center rounded-md bg-orange-100 px-2 py-1 text-xs font-medium text-orange-800 dark:bg-orange-900/30 dark:text-orange-300">
-                                📚 Found via Comick
-                              </span>
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
-                                ({result.comickSource.title})
-                              </span>
-                            </div>
-                          )}
-                          {result.mangaDexSource && (
-                            <div className="flex items-center gap-2">
-                              <span className="inline-flex items-center rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                                📚 Found via MangaDex
-                              </span>
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
-                                ({result.mangaDexSource.title})
-                              </span>
-                            </div>
-                          )}
-                        </>
-                      )}
+                      <div className="flex shrink-0 flex-col items-end gap-3">
+                        {typeof result.confidence === "number" && (
+                          <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600/90 to-purple-600/90 px-3 py-1 text-xs font-semibold text-white shadow-lg shadow-blue-600/30">
+                            <Gauge className="h-4 w-4" aria-hidden="true" />
+                            {Math.round(result.confidence)}% match
+                          </span>
+                        )}
+                        <a
+                          href={`https://anilist.co/manga/${manga.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 rounded-full border border-blue-100/80 bg-white/80 px-3 py-2 text-xs font-semibold text-blue-700 transition hover:border-blue-400 hover:text-blue-900 focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:outline-none dark:border-blue-500/30 dark:bg-slate-900/70 dark:text-blue-200 dark:hover:border-blue-400/60"
+                          aria-label="View on AniList"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ExternalLink size={16} aria-hidden="true" /> View on
+                          AniList
+                        </a>
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap gap-2 pt-2">
                       {manga.format && (
-                        <span className="inline-flex items-center rounded-md bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                        <span className="inline-flex items-center gap-2 rounded-full bg-blue-100/90 px-3 py-1 text-sm font-medium text-blue-800 shadow-sm dark:bg-blue-900/20 dark:text-blue-200">
                           {manga.format.replace("_", " ")}
                         </span>
                       )}
 
                       {manga.status && (
-                        <span className="inline-flex items-center rounded-md bg-green-100 px-3 py-1 text-sm font-medium text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                        <span className="inline-flex items-center gap-2 rounded-full bg-green-100/90 px-3 py-1 text-sm font-medium text-green-800 shadow-sm dark:bg-green-900/20 dark:text-green-200">
                           {manga.status.replace("_", " ")}
                         </span>
                       )}
 
                       {manga.chapters && (
-                        <span className="inline-flex items-center rounded-md bg-purple-100 px-3 py-1 text-sm font-medium text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+                        <span className="inline-flex items-center gap-2 rounded-full bg-purple-100/90 px-3 py-1 text-sm font-medium text-purple-800 shadow-sm dark:bg-purple-900/20 dark:text-purple-200">
                           {manga.chapters} chapters
                         </span>
                       )}
@@ -719,27 +798,25 @@ export function MangaSearchPanel({
                       }
 
                       return (
-                        <div className="rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                              On Your List:
+                        <div className="rounded-2xl border border-blue-400/30 bg-blue-500/10 p-4 text-sm shadow-inner dark:border-blue-400/20 dark:bg-blue-900/30">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                              On your list
                             </span>
                             <span
-                              className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${getStatusBadgeColor(mediaListEntry.status)}`}
+                              className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusBadgeColor(mediaListEntry.status)}`}
                             >
                               {formatMediaListStatus(mediaListEntry.status)}
                             </span>
                           </div>
-                          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
-                            <span className="text-blue-700 dark:text-blue-300">
+                          <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-blue-800 dark:text-blue-200">
+                            <span>
                               Progress: {mediaListEntry.progress || 0}
                               {result.chapters &&
                                 result.chapters > 0 &&
                                 ` / ${result.chapters}`}
                             </span>
-                          </div>
-                          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
-                            <span className="text-blue-700 dark:text-blue-300">
+                            <span>
                               Score: {formatScore(mediaListEntry.score)}
                             </span>
                           </div>
@@ -753,41 +830,33 @@ export function MangaSearchPanel({
                         .map((genre: string, i: number) => (
                           <span
                             key={`${uniqueKey}-genre-${i}`}
-                            className="inline-flex items-center rounded-md bg-gray-100 px-3 py-1 text-sm font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                            className="inline-flex items-center gap-2 rounded-full bg-slate-100/90 px-3 py-1 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-800/70 dark:text-slate-200"
                           >
                             {genre}
                           </span>
                         ))}
                       {manga.genres && manga.genres.length > 3 && (
-                        <span className="inline-flex items-center rounded-md bg-gray-100 px-3 py-1 text-sm font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                        <span className="inline-flex items-center gap-2 rounded-full bg-slate-100/90 px-3 py-1 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-800/70 dark:text-slate-200">
                           +{manga.genres.length - 3} more
                         </span>
                       )}
                     </div>
                   </div>
 
-                  <div className="ml-auto flex flex-col items-end justify-between self-stretch">
-                    <a
-                      href={`https://anilist.co/manga/${manga.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded p-2 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300"
-                      aria-label="View on AniList"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <ExternalLink size={20} aria-hidden="true" />
-                    </a>
-
+                  <div className="relative z-[1] flex flex-col items-end justify-between gap-4 self-stretch lg:gap-5">
                     <button
-                      className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-base font-medium text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:bg-blue-600 dark:hover:bg-blue-700"
+                      className={`inline-flex items-center gap-2 rounded-full border border-blue-400/40 px-4 py-2 text-sm font-semibold text-blue-700 transition focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:outline-none dark:border-blue-500/30 dark:text-blue-200 ${
+                        isSelected
+                          ? "bg-blue-500/20"
+                          : "bg-white/70 hover:bg-blue-50 dark:bg-slate-900/60 dark:hover:bg-slate-800/70"
+                      }`}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleSelectResult(result, index);
                       }}
                       aria-label="Select this manga match"
                     >
-                      <Check size={18} className="mr-2" aria-hidden="true" />{" "}
-                      Select
+                      <Check size={18} aria-hidden="true" /> Select match
                     </button>
                   </div>
                 </div>
@@ -797,7 +866,7 @@ export function MangaSearchPanel({
 
           {hasNextPage && (
             <button
-              className="w-full rounded-md border border-gray-200 bg-white py-3 text-center text-base font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              className="group relative w-full overflow-hidden rounded-2xl border border-white/40 bg-white/70 px-4 py-3 text-center text-base font-semibold text-blue-700 shadow-md shadow-blue-200/40 transition hover:-translate-y-0.5 hover:border-blue-300/60 hover:text-blue-900 dark:border-slate-700/70 dark:bg-slate-900/70 dark:text-blue-200 dark:hover:border-blue-400/60"
               onClick={loadMoreResults}
               disabled={isSearching}
             >
@@ -810,7 +879,10 @@ export function MangaSearchPanel({
                   Loading more...
                 </>
               ) : (
-                "Load more results"
+                <span className="inline-flex items-center justify-center gap-2">
+                  <Sparkles className="h-4 w-4" aria-hidden="true" />
+                  Load more results
+                </span>
               )}
             </button>
           )}

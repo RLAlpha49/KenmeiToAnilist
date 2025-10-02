@@ -27,13 +27,13 @@ class MangaSourceRegistry {
     const loaders = [
       {
         source: MangaSource.COMICK,
-        path: "./comick/client",
         exportName: "comickClient",
+        importFn: () => import("./comick/client"),
       },
       {
         source: MangaSource.MANGADEX,
-        path: "./mangadex/client",
         exportName: "mangaDexClient",
+        importFn: () => import("./mangadex/client"),
       },
     ] as const;
 
@@ -54,7 +54,9 @@ class MangaSourceRegistry {
 
     const promises = loaders.map(async (l): Promise<LoadResult> => {
       try {
-        const mod = await import(l.path);
+        // use the per-loader import function (literal import) so Vite can
+        // statically analyze the dependency graph and avoid dynamic-import warnings
+        const mod = await l.importFn();
         const candidate = (mod as Record<string, unknown>)[l.exportName];
         if (isClient(candidate)) {
           return { loader: l, client: candidate };
@@ -75,7 +77,12 @@ class MangaSourceRegistry {
         this.registerClient(res.loader.source, res.client);
         continue;
       }
-      console.error(`Failed to initialize ${res.loader.path}:`, res.error);
+      console.error(
+        `Failed to initialize loader ${res.loader.exportName} for source ${String(
+          res.loader.source,
+        )}:`,
+        res.error,
+      );
     }
 
     this.initialized = true;

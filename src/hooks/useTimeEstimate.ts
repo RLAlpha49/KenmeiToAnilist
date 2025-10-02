@@ -25,11 +25,15 @@ export const useTimeEstimate = () => {
     estimatedRemainingSeconds: 0,
   });
 
+  const [isPaused, setIsPaused] = useState(false);
+
   // Refs for stable time tracking
   const processingStartTimeRef = useRef<number>(0);
   const lastProcessedCountRef = useRef<number>(0);
   const processingTimesRef = useRef<number[]>([]);
   const lastTimeUpdateRef = useRef<number>(0);
+  const pauseCountRef = useRef<number>(0);
+  const pauseStartRef = useRef<number | null>(null);
 
   /**
    * Calculate a more stable time estimate using recent processing times.
@@ -48,6 +52,11 @@ export const useTimeEstimate = () => {
 
       // Only update time estimate if we've made progress
       if (current <= lastProcessedCountRef.current) {
+        return;
+      }
+
+      // Skip updates while paused to prevent skewed averages
+      if (pauseCountRef.current > 0) {
         return;
       }
 
@@ -116,6 +125,9 @@ export const useTimeEstimate = () => {
     lastProcessedCountRef.current = 0;
     lastTimeUpdateRef.current = processingStartTimeRef.current;
     processingTimesRef.current = [];
+    pauseCountRef.current = 0;
+    pauseStartRef.current = null;
+    setIsPaused(false);
 
     // Reset time estimate state
     const initialEstimate = {
@@ -129,9 +141,43 @@ export const useTimeEstimate = () => {
     return initialEstimate;
   }, []);
 
+  const pauseTimeTracking = useCallback(() => {
+    if (pauseCountRef.current === 0) {
+      pauseStartRef.current = Date.now();
+      setIsPaused(true);
+    }
+    pauseCountRef.current += 1;
+  }, []);
+
+  const resumeTimeTracking = useCallback(() => {
+    if (pauseCountRef.current === 0) {
+      return;
+    }
+
+    pauseCountRef.current -= 1;
+
+    if (pauseCountRef.current === 0 && pauseStartRef.current) {
+      const now = Date.now();
+      const pausedDuration = now - pauseStartRef.current;
+      pauseStartRef.current = null;
+      processingStartTimeRef.current += pausedDuration;
+      lastTimeUpdateRef.current += pausedDuration;
+
+      setTimeEstimate((prev) => ({
+        ...prev,
+        startTime: processingStartTimeRef.current,
+      }));
+
+      setIsPaused(false);
+    }
+  }, []);
+
   return {
     timeEstimate,
     calculateTimeEstimate,
     initializeTimeTracking,
+    pauseTimeTracking,
+    resumeTimeTracking,
+    isPaused,
   };
 };

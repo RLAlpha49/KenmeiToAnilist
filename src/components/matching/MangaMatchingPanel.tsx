@@ -7,36 +7,30 @@ import React, { useState, useEffect, useRef } from "react";
 import { KenmeiManga } from "../../api/kenmei/types";
 import { MangaMatchResult, AniListManga } from "../../api/anilist/types";
 import {
-  Check,
-  ExternalLink,
   ChevronRight,
   ChevronLeft,
-  Info,
   AlertTriangle,
+  Type,
+  ListFilter,
+  Sparkles,
+  BookOpen,
+  ArrowUpDown,
+  ShieldAlert,
 } from "lucide-react";
-
-// Import utility functions for media list formatting
-import {
-  formatMediaListStatus,
-  getStatusBadgeColor,
-  formatScore,
-  isOnUserList,
-} from "../../utils/mediaListHelpers";
+import { cn } from "@/utils/tailwind";
 
 // Import storage utilities
 import { getMatchConfig, saveMatchConfig } from "../../utils/storage";
 
 // Import shadcn UI components
-import { Card, CardContent } from "../../components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
-import { Button } from "../../components/ui/button";
-import { Separator } from "../../components/ui/separator";
-import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
 import { AnimatePresence } from "framer-motion";
-import { ConfidenceBadge } from "./MangaMatchingPanel/ConfidenceBadge";
-import { createKenmeiUrl } from "./MangaMatchingPanel/createKenmeiUrl";
-import MatchActions from "./MangaMatchingPanel/MatchActions";
-import MatchStatusIndicator from "./MangaMatchingPanel/MatchStatusIndicator";
 import MatchCard from "./MangaMatchingPanel/MatchCard";
 import { MatchStatisticsCard } from "./MangaMatchingPanel/MatchStatisticsCard";
 import { MatchBulkActions } from "./MangaMatchingPanel/MatchBulkActions";
@@ -71,6 +65,8 @@ export interface MangaMatchingPanelProps {
   ) => void;
   onResetToPending?: (match: MangaMatchResult) => void;
   searchQuery?: string;
+  onSetMatchedToPending?: () => void;
+  disableSetMatchedToPending?: boolean;
 }
 
 /**
@@ -88,6 +84,7 @@ export function MangaMatchingPanel({
   onSelectAlternative,
   onResetToPending,
   searchQuery,
+  onSetMatchedToPending,
 }: Readonly<MangaMatchingPanelProps>) {
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilters, setStatusFilters] = useState<StatusFiltersState>({
@@ -101,23 +98,19 @@ export function MangaMatchingPanel({
   const containerRef = useRef<HTMLDivElement>(null);
   const lastExternalSearchQuery = useRef<string | undefined>(undefined);
 
-  // Add sort state
   type SortField = "title" | "status" | "confidence" | "chapters_read";
   const [sortOption, setSortOption] = useState<{
     field: SortField;
     direction: "asc" | "desc";
   }>({ field: "title", direction: "asc" });
 
-  // Items per page
   const itemsPerPage = 10;
-  // Add state for processing status of the skip button
   const [isSkippingEmptyMatches, setIsSkippingEmptyMatches] = useState(false);
-  // Add state for processing status of the accept all button
   const [isAcceptingAllMatches, setIsAcceptingAllMatches] = useState(false);
   const [isReSearchingNoMatches, setIsReSearchingNoMatches] = useState(false);
-  // Add state for processing status of the reset skipped button
   const [isResettingSkippedToPending, setIsResettingSkippedToPending] =
     useState(false);
+  const [isResettingMatchedToPending] = useState(false);
 
   // Add state for adult content settings and blur management
   const [blurAdultContent, setBlurAdultContent] = useState(true);
@@ -717,6 +710,9 @@ export function MangaMatchingPanel({
     (match) => match.status === "skipped",
   ).length;
 
+  // Count matched manga for bulk reset label
+  const matchedCount = matches.filter((m) => m.status === "matched").length;
+
   return (
     <div
       className="flex flex-col space-y-4"
@@ -744,6 +740,9 @@ export function MangaMatchingPanel({
         pendingMatchesCount={pendingMatchesCount}
         onAcceptAllPendingMatches={handleAcceptAllPendingMatches}
         isAcceptingAllMatches={isAcceptingAllMatches}
+        onSetMatchedToPending={onSetMatchedToPending}
+        isResettingMatchedToPending={isResettingMatchedToPending}
+        matchedCount={matchedCount}
       />
 
       <MatchFilterControls
@@ -759,89 +758,164 @@ export function MangaMatchingPanel({
       />
 
       {/* Sort options */}
-      <Card className="mb-4">
-        <CardContent className="p-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="mr-2 text-sm font-medium">Sort by:</span>
-
-            <Button
-              variant={sortOption.field === "title" ? "secondary" : "outline"}
-              size="sm"
-              onClick={() => handleSortChange("title")}
-              className="h-8"
-            >
-              Title{renderSortIndicator("title")}
-            </Button>
-
-            <Button
-              variant={sortOption.field === "status" ? "secondary" : "outline"}
-              size="sm"
-              onClick={() => handleSortChange("status")}
-              className="h-8"
-            >
-              Status{renderSortIndicator("status")}
-            </Button>
-
-            <Button
-              variant={
-                sortOption.field === "confidence" ? "secondary" : "outline"
+      <Card className="relative mb-4 overflow-hidden rounded-3xl border border-white/40 bg-white/75 shadow-xl shadow-slate-900/5 backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/70">
+        <div className="pointer-events-none absolute top-0 -left-16 h-48 w-48 rounded-full bg-indigo-400/15 blur-3xl" />
+        <div className="pointer-events-none absolute -right-20 bottom-0 h-56 w-56 rounded-full bg-blue-400/15 blur-3xl" />
+        <CardHeader className="relative z-10 flex flex-col gap-2 border-b border-white/40 pb-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800/60">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-500">
+              <ArrowUpDown className="h-4 w-4" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-semibold text-slate-900 dark:text-white">
+                Sort Priorities
+              </CardTitle>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Tap a mode to focus your review queue. Tap again to flip
+                direction.
+              </p>
+            </div>
+          </div>
+          <Badge className="rounded-full border border-white/40 bg-white/40 px-3 py-1 text-xs font-semibold tracking-wide text-slate-500 uppercase dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300">
+            {sortOption.field.toUpperCase()} ·{" "}
+            {sortOption.direction === "asc" ? "Ascending" : "Descending"}
+          </Badge>
+        </CardHeader>
+        <CardContent className="relative z-10 p-5">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {[
+              {
+                field: "title" as const,
+                label: "Title",
+                helper: "Alphabetical preview",
+                icon: Type,
+                accent: "from-slate-400/20 via-slate-500/10 to-transparent",
+              },
+              {
+                field: "status" as const,
+                label: "Status",
+                helper: "Group by review workflow",
+                icon: ListFilter,
+                accent: "from-emerald-400/20 via-emerald-500/10 to-transparent",
+              },
+              {
+                field: "confidence" as const,
+                label: "Confidence",
+                helper: "Highest certainty first",
+                icon: Sparkles,
+                accent: "from-violet-400/20 via-violet-500/10 to-transparent",
+              },
+              {
+                field: "chapters_read" as const,
+                label: "Chapters Read",
+                helper: "Prioritize deep progress",
+                icon: BookOpen,
+                accent: "from-amber-400/20 via-amber-500/10 to-transparent",
+              },
+            ].map(({ field, label, helper, icon: Icon, accent }) => {
+              const isActive = sortOption.field === field;
+              let directionLabel: string;
+              if (isActive) {
+                directionLabel =
+                  sortOption.direction === "asc" ? "Ascending" : "Descending";
+              } else {
+                directionLabel = "Tap to sort";
               }
-              size="sm"
-              onClick={() => handleSortChange("confidence")}
-              className="h-8"
-            >
-              Confidence{renderSortIndicator("confidence")}
-            </Button>
 
-            <Button
-              variant={
-                sortOption.field === "chapters_read" ? "secondary" : "outline"
-              }
-              size="sm"
-              onClick={() => handleSortChange("chapters_read")}
-              className="h-8"
-            >
-              Chapters Read{renderSortIndicator("chapters_read")}
-            </Button>
+              return (
+                <button
+                  key={field}
+                  type="button"
+                  onClick={() => handleSortChange(field)}
+                  className={cn(
+                    "group relative overflow-hidden rounded-2xl border border-white/40 bg-white/65 p-4 text-left shadow-md transition-all hover:translate-y-[-2px] hover:border-white/60 hover:bg-white/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 dark:border-slate-800/60 dark:bg-slate-900/65 dark:hover:border-slate-700",
+                    isActive &&
+                      "ring-offset-background ring-2 ring-indigo-400 ring-offset-2",
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "absolute inset-0 bg-gradient-to-br opacity-40 transition-opacity duration-300 group-hover:opacity-70",
+                      accent,
+                    )}
+                  />
+                  <div className="relative flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            "flex h-9 w-9 items-center justify-center rounded-full border border-white/50 bg-white/70 text-slate-600 dark:border-slate-700 dark:bg-slate-900/70",
+                            isActive && "border-indigo-400/50 text-indigo-500",
+                          )}
+                        >
+                          <Icon className="h-4 w-4" />
+                        </span>
+                        <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                          {label}
+                        </span>
+                      </div>
+                      <Badge
+                        variant="secondary"
+                        className="flex items-center gap-1 rounded-full border border-white/40 bg-white/60 px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-slate-500 uppercase dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300"
+                      >
+                        {directionLabel}
+                        {renderSortIndicator(field)}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {helper}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
 
       {/* Confidence accuracy notice */}
-      <Alert
-        variant="default"
-        className="mb-4 border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200"
-      >
-        <AlertTriangle className="h-4 w-4" />
-        <AlertTitle className="font-semibold">
-          About Confidence Percentages
-        </AlertTitle>
-        <AlertDescription>
-          <p className="mt-1 text-sm">
-            Please note that confidence match percentages are approximate and
-            may not always be accurate. It&apos;s recommended to review matches
-            manually, especially for manga with similar titles or multiple
-            adaptations.
-          </p>
-          <p className="mt-2 text-sm">
-            If you encounter cases where confidence scores are severely wrong or
-            misleading, please{" "}
+      <div className="relative mb-4 overflow-hidden rounded-3xl border border-amber-400/40 bg-amber-50/80 p-5 shadow-xl shadow-amber-500/10 backdrop-blur dark:border-amber-500/30 dark:bg-amber-900/25">
+        <div className="pointer-events-none absolute -top-20 left-10 h-48 w-48 rounded-full bg-amber-400/25 blur-3xl" />
+        <div className="pointer-events-none absolute right-8 -bottom-16 h-40 w-40 rounded-full bg-red-400/15 blur-3xl" />
+        <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full border border-amber-500/30 bg-amber-100/70 text-amber-600 shadow-inner dark:border-amber-500/30 dark:bg-amber-900/40 dark:text-amber-200">
+              <ShieldAlert className="h-5 w-5" />
+            </span>
+            <div className="space-y-2">
+              <h3 className="text-base font-semibold text-amber-900 dark:text-amber-100">
+                Confidence percentages are advisory
+              </h3>
+              <p className="text-sm text-amber-900/90 dark:text-amber-100/90">
+                Treat the score as a hint—not a guarantee. Always glance over
+                matches with similar titles, alternate editions, or multiple
+                adaptations.
+              </p>
+              <p className="text-sm text-amber-900/90 dark:text-amber-100/90">
+                Found a confidence outlier? Let me know so I can improve the
+                matching for everyone.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col gap-3 md:items-end">
+            <Badge className="rounded-full border border-amber-500/20 bg-amber-200/70 px-3 py-1 text-xs font-semibold tracking-wide text-amber-700 uppercase dark:border-amber-500/30 dark:bg-amber-900/40 dark:text-amber-100">
+              Manual review recommended
+            </Badge>
             <a
               href="https://github.com/RLAlpha49/KenmeiToAnilist/issues"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-medium underline hover:text-amber-900 dark:hover:text-amber-100"
               onClick={handleOpenExternal(
                 "https://github.com/RLAlpha49/KenmeiToAnilist/issues",
               )}
+              className="inline-flex items-center gap-2 rounded-full border border-amber-500/40 bg-transparent px-4 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-500/10 hover:text-amber-800 dark:border-amber-500/40 dark:text-amber-200 dark:hover:bg-amber-500/20"
             >
-              open an issue on GitHub
-            </a>{" "}
-            with details about the title. This helps improve the confidence
-            system for future matching.
-          </p>
-        </AlertDescription>
-      </Alert>
+              <AlertTriangle className="h-4 w-4" />
+              Report a mismatch
+            </a>
+          </div>
+        </div>
+      </div>
 
       {/* Match list */}
       <div className="space-y-6" aria-live="polite">
@@ -856,983 +930,64 @@ export function MangaMatchingPanel({
               // Extract border color class for clarity
               let borderColorClass = "";
               if (match.status === "matched") {
-                borderColorClass = "border-green-400 dark:border-green-600";
+                borderColorClass =
+                  "border-emerald-300/70 dark:border-emerald-500/60";
               } else if (match.status === "manual") {
-                borderColorClass = "border-blue-400 dark:border-blue-600";
+                borderColorClass = "border-sky-300/70 dark:border-sky-500/60";
               } else if (match.status === "skipped") {
-                borderColorClass = "border-red-400 dark:border-red-600";
+                borderColorClass = "border-rose-300/70 dark:border-rose-500/60";
               } else {
-                borderColorClass = "border-gray-200 dark:border-gray-700";
+                borderColorClass =
+                  "border-slate-200/80 dark:border-slate-700/70";
               }
 
               // Extract status color for the indicator
               let statusBgColorClass = "";
               if (match.status === "matched") {
-                statusBgColorClass = "bg-green-500 dark:bg-green-600";
+                statusBgColorClass =
+                  "bg-gradient-to-b from-emerald-400 to-emerald-600";
               } else if (match.status === "manual") {
-                statusBgColorClass = "bg-blue-500 dark:bg-blue-600";
+                statusBgColorClass = "bg-gradient-to-b from-sky-400 to-sky-600";
               } else if (match.status === "skipped") {
-                statusBgColorClass = "bg-red-500 dark:bg-red-600";
+                statusBgColorClass =
+                  "bg-gradient-to-b from-rose-400 to-rose-600";
               } else {
-                statusBgColorClass = "bg-gray-300 dark:bg-gray-600";
+                statusBgColorClass =
+                  "bg-gradient-to-b from-slate-300 to-slate-500";
+              }
+
+              let glowClass = "";
+              if (match.status === "matched") {
+                glowClass =
+                  "hover:shadow-emerald-500/30 hover:ring-emerald-400/60";
+              } else if (match.status === "manual") {
+                glowClass = "hover:shadow-sky-500/30 hover:ring-sky-400/60";
+              } else if (match.status === "skipped") {
+                glowClass = "hover:shadow-rose-500/25 hover:ring-rose-400/60";
+              } else {
+                glowClass = "hover:shadow-slate-500/20 hover:ring-slate-300/60";
               }
 
               return (
                 <MatchCard
                   key={uniqueKey}
                   match={match}
-                  className={`rounded-lg border ${borderColorClass} bg-white shadow-sm transition-all hover:shadow-md dark:bg-gray-800`}
-                >
-                  {/* Title and Status Bar with color indicator */}
-                  <div
-                    className={`relative overflow-hidden rounded-t-lg border-b border-gray-200 p-4 dark:border-gray-700`}
-                  >
-                    {/* Status color indicator */}
-                    <div
-                      className={`absolute top-0 bottom-0 left-0 w-1.5 ${statusBgColorClass}`}
-                    ></div>
-                    <div className="flex items-center justify-between pl-2">
-                      <div className="flex items-center">
-                        {(() => {
-                          let badgeClass = "";
-                          if (match.status === "matched") {
-                            badgeClass =
-                              "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400";
-                          } else if (match.status === "manual") {
-                            badgeClass =
-                              "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400";
-                          } else if (match.status === "skipped") {
-                            badgeClass =
-                              "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400";
-                          } else {
-                            badgeClass =
-                              "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400";
-                          }
-                          return (
-                            <Badge
-                              variant="outline"
-                              className={`mr-3 ${badgeClass}`}
-                            >
-                              {formatStatusText(match.status)}
-                            </Badge>
-                          );
-                        })()}
-                        <h3 className="line-clamp-1 text-lg font-medium text-gray-900 dark:text-white">
-                          {match.kenmeiManga.title}
-                        </h3>
-                      </div>
-                      <div className="ml-2 flex min-w-[250px] items-center justify-end">
-                        <MatchStatusIndicator
-                          match={match}
-                          formatStatusText={formatStatusText}
-                          createKenmeiUrl={createKenmeiUrl}
-                          handleOpenExternal={handleOpenExternal}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Selected or best match */}
-                  {(match.selectedMatch ||
-                    (match.anilistMatches && match.anilistMatches.length > 0) ||
-                    match.status === "skipped") && (
-                    <div className="border-b border-gray-200 px-4 py-5 dark:border-gray-700">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="group relative flex-shrink-0">
-                            {/* Cover image with proper fallbacks and adult content handling */}
-                            {match.selectedMatch?.coverImage?.large ||
-                            match.selectedMatch?.coverImage?.medium ||
-                            match.anilistMatches?.[0]?.manga?.coverImage
-                              ?.large ||
-                            match.anilistMatches?.[0]?.manga?.coverImage
-                              ?.medium ? (
-                              <div className="relative">
-                                {isAdultContent(
-                                  match.selectedMatch ||
-                                    match.anilistMatches?.[0]?.manga,
-                                ) ? (
-                                  <button
-                                    type="button"
-                                    tabIndex={0}
-                                    aria-label={
-                                      shouldBlurImage(
-                                        `${match.selectedMatch?.id || match.anilistMatches?.[0]?.manga?.id}`,
-                                      )
-                                        ? "Reveal adult content cover image"
-                                        : "Hide adult content cover image"
-                                    }
-                                    onClick={() => {
-                                      toggleImageBlur(
-                                        `${match.selectedMatch?.id || match.anilistMatches?.[0]?.manga?.id}`,
-                                      );
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter" || e.key === " ") {
-                                        e.preventDefault();
-                                        toggleImageBlur(
-                                          `${match.selectedMatch?.id || match.anilistMatches?.[0]?.manga?.id}`,
-                                        );
-                                      }
-                                    }}
-                                    className={`h-44 w-32 rounded border border-gray-200 bg-transparent object-cover p-0 shadow-sm transition-all group-hover:scale-[1.02] group-hover:shadow dark:border-gray-700 ${
-                                      shouldBlurImage(
-                                        `${match.selectedMatch?.id || match.anilistMatches?.[0]?.manga?.id}`,
-                                      )
-                                        ? "cursor-pointer blur-md"
-                                        : ""
-                                    }`}
-                                    style={{ padding: 0, border: "none" }}
-                                  >
-                                    <img
-                                      src={
-                                        match.selectedMatch?.coverImage
-                                          ?.large ||
-                                        match.selectedMatch?.coverImage
-                                          ?.medium ||
-                                        match.anilistMatches[0]?.manga
-                                          ?.coverImage?.large ||
-                                        match.anilistMatches[0]?.manga
-                                          ?.coverImage?.medium
-                                      }
-                                      alt={
-                                        match.selectedMatch?.title?.english ||
-                                        match.selectedMatch?.title?.romaji ||
-                                        match.anilistMatches?.[0]?.manga?.title
-                                          ?.english ||
-                                        match.anilistMatches?.[0]?.manga?.title
-                                          ?.romaji
-                                      }
-                                      className="h-44 w-32 rounded object-cover"
-                                      loading="lazy"
-                                      draggable={false}
-                                    />
-                                  </button>
-                                ) : (
-                                  <img
-                                    src={
-                                      match.selectedMatch?.coverImage?.large ||
-                                      match.selectedMatch?.coverImage?.medium ||
-                                      match.anilistMatches[0]?.manga?.coverImage
-                                        ?.large ||
-                                      match.anilistMatches[0]?.manga?.coverImage
-                                        ?.medium
-                                    }
-                                    alt={
-                                      match.selectedMatch?.title?.english ||
-                                      match.selectedMatch?.title?.romaji ||
-                                      match.anilistMatches?.[0]?.manga?.title
-                                        ?.english ||
-                                      match.anilistMatches?.[0]?.manga?.title
-                                        ?.romaji
-                                    }
-                                    className="h-44 w-32 rounded border border-gray-200 object-cover shadow-sm transition-all group-hover:scale-[1.02] group-hover:shadow dark:border-gray-700"
-                                    loading="lazy"
-                                    draggable={false}
-                                  />
-                                )}
-                                {/* Adult content warning badge */}
-                                {isAdultContent(
-                                  match.selectedMatch ||
-                                    match.anilistMatches?.[0]?.manga,
-                                ) && (
-                                  <div className="absolute top-1 left-1">
-                                    <Badge
-                                      variant="destructive"
-                                      className="bg-red-600 px-1 py-0 text-xs hover:bg-red-700"
-                                      title="Adult Content"
-                                    >
-                                      18+
-                                    </Badge>
-                                  </div>
-                                )}
-                                {/* Click to reveal hint for blurred images */}
-                                {isAdultContent(
-                                  match.selectedMatch ||
-                                    match.anilistMatches?.[0]?.manga,
-                                ) &&
-                                  shouldBlurImage(
-                                    `${match.selectedMatch?.id || match.anilistMatches?.[0]?.manga?.id}`,
-                                  ) && (
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                      <Badge
-                                        variant="secondary"
-                                        className="cursor-pointer text-xs opacity-75"
-                                        onClick={() =>
-                                          toggleImageBlur(
-                                            `${match.selectedMatch?.id || match.anilistMatches?.[0]?.manga?.id}`,
-                                          )
-                                        }
-                                      >
-                                        Click to reveal
-                                      </Badge>
-                                    </div>
-                                  )}
-                              </div>
-                            ) : (
-                              <div className="flex h-44 w-32 items-center justify-center rounded border border-gray-200 bg-gray-100 shadow-sm dark:border-gray-700 dark:bg-gray-700">
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
-                                  No Image
-                                </span>
-                              </div>
-                            )}
-
-                            {/* Confidence badge overlay - only show for high confidence matches */}
-                            {match.anilistMatches &&
-                              match.anilistMatches.length > 0 &&
-                              match.anilistMatches[0]?.confidence !==
-                                undefined &&
-                              match.anilistMatches[0]?.confidence >= 90 && (
-                                <div className="absolute -top-2 -right-2 rounded-full bg-green-100 px-2 py-1 text-xs font-bold text-green-800 shadow-sm dark:bg-green-900 dark:text-green-200">
-                                  {Math.round(
-                                    match.anilistMatches[0].confidence,
-                                  )}
-                                  %
-                                </div>
-                              )}
-
-                            {/* Source badges - show when result came from alternative sources */}
-                            {match.anilistMatches &&
-                              match.anilistMatches.length > 0 && (
-                                <div className="absolute -top-2 -left-2 flex gap-1">
-                                  {/* Comick source badge */}
-                                  {(match.anilistMatches[0]?.sourceInfo
-                                    ?.source === "comick" ||
-                                    match.anilistMatches[0]?.comickSource) && (
-                                    <div
-                                      className="rounded-full bg-orange-100 px-2 py-1 text-xs font-bold text-orange-800 shadow-sm dark:bg-orange-900 dark:text-orange-200"
-                                      title={`Found via Comick: ${match.anilistMatches[0]?.sourceInfo?.title || match.anilistMatches[0]?.comickSource?.title}`}
-                                    >
-                                      Comick
-                                    </div>
-                                  )}
-
-                                  {/* MangaDex source badge */}
-                                  {(match.anilistMatches[0]?.sourceInfo
-                                    ?.source === "mangadex" ||
-                                    match.anilistMatches[0]
-                                      ?.mangaDexSource) && (
-                                    <div
-                                      className="rounded-full bg-blue-100 px-2 py-1 text-xs font-bold text-blue-800 shadow-sm dark:bg-blue-900 dark:text-blue-200"
-                                      title={`Found via MangaDex: ${match.anilistMatches[0]?.sourceInfo?.title || match.anilistMatches[0]?.mangaDexSource?.title}`}
-                                    >
-                                      MangaDex
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                          </div>
-                          <div className="flex flex-col space-y-1">
-                            {match.status === "skipped" &&
-                            !match.selectedMatch &&
-                            !match.anilistMatches?.length ? (
-                              <h4 className="text-lg font-medium text-gray-900 dark:text-white">
-                                {match.kenmeiManga.title}
-                                <span className="ml-2 inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900/30 dark:text-red-300">
-                                  Skipped
-                                </span>
-                              </h4>
-                            ) : (
-                              <h4 className="text-lg font-medium text-gray-900 dark:text-white">
-                                {match.selectedMatch?.title?.english ||
-                                  match.selectedMatch?.title?.romaji ||
-                                  match.anilistMatches?.[0]?.manga?.title
-                                    ?.english ||
-                                  match.anilistMatches?.[0]?.manga?.title
-                                    ?.romaji ||
-                                  "Unknown Title"}
-                              </h4>
-                            )}
-                            {/* Show all available titles */}
-                            <div className="flex flex-col text-sm text-gray-500 dark:text-gray-400">
-                              {/* English title - if different from main display */}
-                              {match.selectedMatch?.title?.english &&
-                                match.selectedMatch?.title?.english !==
-                                  (match.selectedMatch?.title?.romaji ||
-                                    match.anilistMatches?.[0]?.manga?.title
-                                      ?.english ||
-                                    match.anilistMatches?.[0]?.manga?.title
-                                      ?.romaji) && (
-                                  <span>
-                                    English: {match.selectedMatch.title.english}
-                                  </span>
-                                )}
-
-                              {/* Romaji title - if different from main display */}
-                              {match.selectedMatch?.title?.romaji &&
-                                match.selectedMatch?.title?.romaji !==
-                                  match.selectedMatch?.title?.english && (
-                                  <span>
-                                    Romaji: {match.selectedMatch.title.romaji}
-                                  </span>
-                                )}
-
-                              {/* Native title */}
-                              {match.selectedMatch?.title?.native && (
-                                <span>
-                                  Native: {match.selectedMatch.title.native}
-                                </span>
-                              )}
-
-                              {/* Synonyms */}
-                              {match.selectedMatch?.synonyms &&
-                                match.selectedMatch.synonyms.length > 0 && (
-                                  <span>
-                                    Synonyms:{" "}
-                                    {match.selectedMatch.synonyms.join(", ")}
-                                  </span>
-                                )}
-
-                              {/* Fallbacks to anilistMatches if selectedMatch is not available */}
-                              {!match.selectedMatch &&
-                                match.anilistMatches?.[0]?.manga?.title
-                                  ?.english && (
-                                  <span>
-                                    English:{" "}
-                                    {
-                                      match.anilistMatches[0].manga.title
-                                        .english
-                                    }
-                                  </span>
-                                )}
-
-                              {!match.selectedMatch &&
-                                match.anilistMatches?.[0]?.manga?.title
-                                  ?.romaji && (
-                                  <span>
-                                    Romaji:{" "}
-                                    {match.anilistMatches[0].manga.title.romaji}
-                                  </span>
-                                )}
-
-                              {!match.selectedMatch &&
-                                match.anilistMatches?.[0]?.manga?.title
-                                  ?.native && (
-                                  <span>
-                                    Native:{" "}
-                                    {match.anilistMatches[0].manga.title.native}
-                                  </span>
-                                )}
-                            </div>
-
-                            {/* Manga format and status info */}
-                            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                              {match.status !== "skipped" ||
-                              match.selectedMatch ||
-                              match.anilistMatches?.length ? (
-                                <>
-                                  <Badge
-                                    variant="secondary"
-                                    className="font-normal"
-                                  >
-                                    {match.selectedMatch?.format ||
-                                      match.anilistMatches?.[0]?.manga
-                                        ?.format ||
-                                      "Unknown Format"}
-                                  </Badge>
-                                  <Badge
-                                    variant="secondary"
-                                    className="font-normal"
-                                  >
-                                    {match.selectedMatch?.status ||
-                                      match.anilistMatches?.[0]?.manga
-                                        ?.status ||
-                                      "Unknown Status"}
-                                  </Badge>
-                                  {((match.selectedMatch?.chapters &&
-                                    match.selectedMatch.chapters > 0) ||
-                                    (match.anilistMatches?.[0]?.manga
-                                      ?.chapters &&
-                                      match.anilistMatches[0].manga.chapters >
-                                        0)) && (
-                                    <Badge
-                                      variant="secondary"
-                                      className="font-normal"
-                                    >
-                                      {match.selectedMatch?.chapters ||
-                                        match.anilistMatches?.[0]?.manga
-                                          ?.chapters ||
-                                        0}{" "}
-                                      chapters
-                                    </Badge>
-                                  )}
-                                </>
-                              ) : (
-                                <span className="text-gray-500 italic">
-                                  No match information available
-                                </span>
-                              )}
-                            </div>
-
-                            {/* User's current list status (if on their list) */}
-                            {(() => {
-                              const mediaListEntry =
-                                match.selectedMatch?.mediaListEntry ||
-                                match.anilistMatches?.[0]?.manga
-                                  ?.mediaListEntry;
-
-                              if (
-                                !mediaListEntry ||
-                                !isOnUserList(mediaListEntry)
-                              ) {
-                                return null;
-                              }
-
-                              return (
-                                <div className="mt-2 rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20">
-                                  <div className="flex items-center space-x-2">
-                                    <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                                      On Your List:
-                                    </span>
-                                    <Badge
-                                      className={getStatusBadgeColor(
-                                        mediaListEntry.status,
-                                      )}
-                                    >
-                                      {formatMediaListStatus(
-                                        mediaListEntry.status,
-                                      )}
-                                    </Badge>
-                                  </div>
-                                  <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
-                                    <span className="text-blue-700 dark:text-blue-300">
-                                      Progress: {mediaListEntry.progress || 0}
-                                      {((match.selectedMatch?.chapters &&
-                                        match.selectedMatch.chapters > 0) ||
-                                        (match.anilistMatches?.[0]?.manga
-                                          ?.chapters &&
-                                          match.anilistMatches[0].manga
-                                            .chapters > 0)) &&
-                                        ` / ${match.selectedMatch?.chapters || match.anilistMatches?.[0]?.manga?.chapters}`}
-                                    </span>
-                                  </div>
-                                  <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
-                                    <span className="text-blue-700 dark:text-blue-300">
-                                      Score: {formatScore(mediaListEntry.score)}
-                                    </span>
-                                  </div>
-                                </div>
-                              );
-                            })()}
-
-                            {/* Kenmei status info */}
-                            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
-                              <Badge className="bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300">
-                                {formatStatusText(match.kenmeiManga.status)}
-                              </Badge>
-                              <Badge className="bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300">
-                                {match.kenmeiManga.chapters_read} chapters read
-                              </Badge>
-                              {match.kenmeiManga.score > 0 && (
-                                <Badge className="bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300">
-                                  Score: {match.kenmeiManga.score}/10
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end space-y-3">
-                          {match.anilistMatches &&
-                            match.anilistMatches.length > 0 &&
-                            match.anilistMatches[0]?.confidence !==
-                              undefined && (
-                              <ConfidenceBadge
-                                confidence={match.anilistMatches[0].confidence}
-                              />
-                            )}
-                          <div className="flex space-x-2">
-                            {(match.selectedMatch ||
-                              (match.anilistMatches &&
-                                match.anilistMatches.length > 0)) && (
-                              <a
-                                href={`https://anilist.co/manga/${match.selectedMatch?.id || match.anilistMatches?.[0]?.manga?.id || "unknown"}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center rounded-md bg-gray-100 px-2.5 py-1 text-sm text-gray-700 transition-colors hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-                                aria-label="View on AniList (opens in new tab)"
-                                onClick={handleOpenExternal(
-                                  `https://anilist.co/manga/${match.selectedMatch?.id || match.anilistMatches?.[0]?.manga?.id || "unknown"}`,
-                                )}
-                              >
-                                <ExternalLink
-                                  className="mr-1 h-3 w-3"
-                                  aria-hidden="true"
-                                />
-                                AniList
-                              </a>
-                            )}
-                            {(() => {
-                              // Get the appropriate title for Kenmei link - prioritize AniList title for matched entries
-                              const title =
-                                match.selectedMatch?.title?.english ||
-                                match.selectedMatch?.title?.romaji ||
-                                match.anilistMatches?.[0]?.manga?.title
-                                  ?.english ||
-                                match.anilistMatches?.[0]?.manga?.title
-                                  ?.romaji ||
-                                match.kenmeiManga.title;
-
-                              const kenmeiUrl = createKenmeiUrl(title);
-
-                              return kenmeiUrl ? (
-                                <a
-                                  href={kenmeiUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center rounded-md bg-indigo-100 px-2.5 py-1 text-sm text-indigo-700 transition-colors hover:bg-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-300 dark:hover:bg-indigo-800/30"
-                                  aria-label="View on Kenmei (opens in new tab)"
-                                  onClick={handleOpenExternal(kenmeiUrl)}
-                                >
-                                  <ExternalLink
-                                    className="mr-1 h-3 w-3"
-                                    aria-hidden="true"
-                                  />
-                                  Kenmei
-                                  <div className="group relative ml-1 inline-block">
-                                    <Info
-                                      className="h-3 w-3 text-indigo-500 dark:text-indigo-400"
-                                      aria-hidden="true"
-                                    />
-                                    <div className="absolute right-0 bottom-full mb-2 hidden w-48 rounded-md border border-indigo-300 bg-indigo-50 px-2 py-1.5 text-xs text-indigo-900 shadow-md group-hover:block dark:border-indigo-700 dark:bg-indigo-900 dark:text-indigo-100">
-                                      This link is dynamically generated and may
-                                      not work correctly.
-                                    </div>
-                                  </div>
-                                </a>
-                              ) : null;
-                            })()}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Action buttons */}
-                  <div className="flex space-x-2 p-4">
-                    <MatchActions
-                      match={match}
-                      onManualSearch={onManualSearch}
-                      onAcceptMatch={onAcceptMatch}
-                      onRejectMatch={onRejectMatch}
-                      onResetToPending={onResetToPending}
-                      onSelectAlternative={onSelectAlternative}
-                      handleKeyDown={(e, cb) =>
-                        // local handler from parent
-                        (
-                          handleKeyDown as unknown as (
-                            e: React.KeyboardEvent,
-                            cb: () => void,
-                          ) => void
-                        )(e as unknown as React.KeyboardEvent, cb)
-                      }
-                    />
-                  </div>
-
-                  {/* Alternative matches - only show for non-matched entries */}
-                  {match.anilistMatches &&
-                    match.anilistMatches.length > 1 &&
-                    match.status !== "matched" &&
-                    match.status !== "manual" && (
-                      <div className="rounded-b-lg border-t border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50">
-                        <h4 className="mb-3 flex items-center text-sm font-medium text-gray-900 dark:text-white">
-                          <ChevronRight
-                            className="mr-1 h-4 w-4"
-                            aria-hidden="true"
-                          />
-                          Alternative Matches
-                        </h4>
-                        <div className="space-y-2">
-                          {match.anilistMatches
-                            .slice(1, 5)
-                            .map((altMatch, index) => (
-                              <div
-                                key={
-                                  altMatch.manga?.id ||
-                                  altMatch.id ||
-                                  `alt-match-${index}`
-                                }
-                                className="flex items-center justify-between rounded-md border border-gray-200 bg-white p-2 transition-all hover:border-blue-300 hover:shadow dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600"
-                                aria-label={`Select ${
-                                  altMatch.manga?.title?.english ||
-                                  altMatch.manga?.title?.romaji ||
-                                  "Alternative manga"
-                                } as match`}
-                              >
-                                <div className="flex w-full flex-col space-y-2">
-                                  <div className="flex items-center space-x-3">
-                                    <div className="group relative flex-shrink-0">
-                                      {/* Cover image with better fallbacks and adult content handling */}
-                                      {altMatch.manga?.coverImage?.large ||
-                                      altMatch.manga?.coverImage?.medium ? (
-                                        <div className="relative">
-                                          {isAdultContent(altMatch.manga) ? (
-                                            <button
-                                              type="button"
-                                              tabIndex={0}
-                                              aria-label={
-                                                shouldBlurImage(
-                                                  `alt-${altMatch.manga?.id}`,
-                                                )
-                                                  ? "Reveal adult content cover image"
-                                                  : "Hide adult content cover image"
-                                              }
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                toggleImageBlur(
-                                                  `alt-${altMatch.manga?.id}`,
-                                                );
-                                              }}
-                                              onKeyDown={(e) => {
-                                                if (
-                                                  e.key === "Enter" ||
-                                                  e.key === " "
-                                                ) {
-                                                  e.preventDefault();
-                                                  e.stopPropagation();
-                                                  toggleImageBlur(
-                                                    `alt-${altMatch.manga?.id}`,
-                                                  );
-                                                }
-                                              }}
-                                              className={`h-32 w-20 rounded border border-gray-200 bg-transparent object-cover p-0 shadow-sm transition-all group-hover:scale-[1.02] group-hover:shadow dark:border-gray-700 ${
-                                                shouldBlurImage(
-                                                  `alt-${altMatch.manga?.id}`,
-                                                )
-                                                  ? "cursor-pointer blur-md"
-                                                  : ""
-                                              }`}
-                                              style={{
-                                                padding: 0,
-                                                border: "none",
-                                              }}
-                                            >
-                                              <img
-                                                src={
-                                                  altMatch.manga.coverImage
-                                                    .large ||
-                                                  altMatch.manga.coverImage
-                                                    .medium
-                                                }
-                                                alt={
-                                                  altMatch.manga?.title
-                                                    ?.english ||
-                                                  altMatch.manga?.title
-                                                    ?.romaji ||
-                                                  "Alternative manga"
-                                                }
-                                                className="h-32 w-20 rounded object-cover"
-                                                loading="lazy"
-                                                draggable={false}
-                                              />
-                                            </button>
-                                          ) : (
-                                            <img
-                                              src={
-                                                altMatch.manga.coverImage
-                                                  .large ||
-                                                altMatch.manga.coverImage.medium
-                                              }
-                                              alt={
-                                                altMatch.manga?.title
-                                                  ?.english ||
-                                                altMatch.manga?.title?.romaji ||
-                                                "Alternative manga"
-                                              }
-                                              className="h-32 w-20 rounded border border-gray-200 object-cover shadow-sm transition-all group-hover:scale-[1.02] group-hover:shadow dark:border-gray-700"
-                                              loading="lazy"
-                                              draggable={false}
-                                            />
-                                          )}
-                                          {/* Adult content warning badge */}
-                                          {isAdultContent(altMatch.manga) && (
-                                            <div className="absolute top-1 left-1">
-                                              <Badge
-                                                variant="destructive"
-                                                className="bg-red-600 px-1 py-0 text-[10px] hover:bg-red-700"
-                                                title="Adult Content"
-                                              >
-                                                18+
-                                              </Badge>
-                                            </div>
-                                          )}
-                                          {/* Click to reveal hint for blurred images */}
-                                          {isAdultContent(altMatch.manga) &&
-                                            shouldBlurImage(
-                                              `alt-${altMatch.manga?.id}`,
-                                            ) && (
-                                              <div className="absolute inset-0 flex items-center justify-center">
-                                                <Badge
-                                                  variant="secondary"
-                                                  className="cursor-pointer text-[10px] opacity-75"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    toggleImageBlur(
-                                                      `alt-${altMatch.manga?.id}`,
-                                                    );
-                                                  }}
-                                                >
-                                                  Click
-                                                </Badge>
-                                              </div>
-                                            )}
-                                        </div>
-                                      ) : (
-                                        <div className="flex h-32 w-20 items-center justify-center rounded border border-gray-200 bg-gray-100 shadow-sm dark:border-gray-700 dark:bg-gray-700">
-                                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                                            No Image
-                                          </span>
-                                        </div>
-                                      )}
-                                    </div>
-                                    <div className="flex-1">
-                                      <p className="text-base font-medium text-gray-900 dark:text-white">
-                                        {altMatch.manga?.title?.english ||
-                                          altMatch.manga?.title?.romaji ||
-                                          "Unknown Manga"}
-                                      </p>
-                                      {/* Show all available titles */}
-                                      <div className="flex flex-col text-sm text-gray-500 dark:text-gray-400">
-                                        {/* English title - if different from main display */}
-                                        {altMatch.manga?.title?.english &&
-                                          altMatch.manga.title.english !==
-                                            altMatch.manga?.title?.romaji && (
-                                            <span>
-                                              English:{" "}
-                                              {altMatch.manga.title.english}
-                                            </span>
-                                          )}
-
-                                        {/* Romaji title - if different from main display */}
-                                        {altMatch.manga?.title?.romaji &&
-                                          altMatch.manga.title.romaji !==
-                                            altMatch.manga?.title?.english && (
-                                            <span>
-                                              Romaji:{" "}
-                                              {altMatch.manga.title.romaji}
-                                            </span>
-                                          )}
-
-                                        {/* Native title */}
-                                        {altMatch.manga?.title?.native && (
-                                          <span>
-                                            Native:{" "}
-                                            {altMatch.manga.title.native}
-                                          </span>
-                                        )}
-
-                                        {/* Synonyms */}
-                                        {altMatch.manga?.synonyms &&
-                                          altMatch.manga.synonyms.length >
-                                            0 && (
-                                            <span>
-                                              Synonyms:{" "}
-                                              {altMatch.manga.synonyms.join(
-                                                ", ",
-                                              )}
-                                            </span>
-                                          )}
-                                      </div>
-                                      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
-                                        {/* Format */}
-                                        <Badge
-                                          variant="outline"
-                                          className="text-xs font-normal"
-                                        >
-                                          {altMatch.manga?.format || "Unknown"}
-                                        </Badge>
-                                        {/* Status */}
-                                        <Badge
-                                          variant="outline"
-                                          className="text-xs font-normal"
-                                        >
-                                          {altMatch.manga?.status || "Unknown"}
-                                        </Badge>
-                                        {/* Chapters */}
-                                        {altMatch.manga?.chapters &&
-                                          Number(altMatch.manga.chapters) >
-                                            0 && (
-                                            <Badge
-                                              variant="outline"
-                                              className="text-xs font-normal"
-                                            >
-                                              {altMatch.manga.chapters} chapters
-                                            </Badge>
-                                          )}
-                                      </div>
-
-                                      {/* User's current list status for alternative (if on their list) */}
-                                      {(() => {
-                                        const mediaListEntry =
-                                          altMatch.manga?.mediaListEntry;
-
-                                        if (
-                                          !mediaListEntry ||
-                                          !isOnUserList(mediaListEntry)
-                                        ) {
-                                          return null;
-                                        }
-
-                                        return (
-                                          <div className="mt-2 rounded-md bg-blue-50 p-2 dark:bg-blue-900/20">
-                                            <div className="flex items-center space-x-1">
-                                              <span className="text-xs font-medium text-blue-900 dark:text-blue-100">
-                                                On Your List:
-                                              </span>
-                                              <Badge
-                                                className={`${getStatusBadgeColor(mediaListEntry.status)} text-xs`}
-                                              >
-                                                {formatMediaListStatus(
-                                                  mediaListEntry.status,
-                                                )}
-                                              </Badge>
-                                            </div>
-                                            <div className="mt-1 text-xs text-blue-700 dark:text-blue-300">
-                                              Progress:{" "}
-                                              {mediaListEntry.progress || 0}
-                                              {altMatch.manga?.chapters &&
-                                                altMatch.manga.chapters > 0 &&
-                                                ` / ${altMatch.manga.chapters}`}
-                                              <span className="ml-2">
-                                                Score:{" "}
-                                                {formatScore(
-                                                  mediaListEntry.score,
-                                                )}
-                                              </span>
-                                            </div>
-                                            <div className="mt-1 text-xs text-blue-700 dark:text-blue-300">
-                                              <span className="ml-2">
-                                                Score:{" "}
-                                                {formatScore(
-                                                  mediaListEntry.score,
-                                                )}
-                                              </span>
-                                            </div>
-                                          </div>
-                                        );
-                                      })()}
-                                    </div>
-                                    <div className="ml-2 flex flex-col items-end space-y-3">
-                                      {altMatch.confidence !== undefined && (
-                                        <ConfidenceBadge
-                                          confidence={altMatch.confidence}
-                                        />
-                                      )}
-                                      {/* Alternative source badges for alternative matches */}
-                                      <div className="flex flex-col gap-1">
-                                        {/* Comick source badge */}
-                                        {(altMatch.sourceInfo?.source ===
-                                          "comick" ||
-                                          altMatch.comickSource) && (
-                                          <div
-                                            className="rounded-full bg-orange-100 px-2 py-1 text-xs font-bold text-orange-800 shadow-sm dark:bg-orange-900 dark:text-orange-200"
-                                            title={`Found via Comick: ${altMatch.sourceInfo?.title || altMatch.comickSource?.title}`}
-                                          >
-                                            Comick
-                                          </div>
-                                        )}
-                                        {/* MangaDex source badge */}
-                                        {(altMatch.sourceInfo?.source ===
-                                          "mangadex" ||
-                                          altMatch.mangaDexSource) && (
-                                          <div
-                                            className="rounded-full bg-blue-100 px-2 py-1 text-xs font-bold text-blue-800 shadow-sm dark:bg-blue-900 dark:text-blue-200"
-                                            title={`Found via MangaDex: ${altMatch.sourceInfo?.title || altMatch.mangaDexSource?.title}`}
-                                          >
-                                            MangaDex
-                                          </div>
-                                        )}
-                                      </div>
-                                      <div className="flex space-x-2">
-                                        <a
-                                          href={`https://anilist.co/manga/${altMatch.manga?.id || "unknown"}`}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-                                          aria-label="View on AniList (opens in new tab)"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleOpenExternal(
-                                              `https://anilist.co/manga/${altMatch.manga?.id || "unknown"}`,
-                                            )(e);
-                                          }}
-                                        >
-                                          <ExternalLink
-                                            className="mr-1 h-3 w-3"
-                                            aria-hidden="true"
-                                          />
-                                          AniList
-                                        </a>
-                                        {(() => {
-                                          // Get the title for Kenmei link
-                                          const title =
-                                            altMatch.manga?.title?.english ||
-                                            altMatch.manga?.title?.romaji;
-
-                                          const kenmeiUrl =
-                                            createKenmeiUrl(title);
-
-                                          return kenmeiUrl ? (
-                                            <a
-                                              href={kenmeiUrl}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="inline-flex items-center rounded-md bg-indigo-100 px-2 py-1 text-xs text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-300 dark:hover:bg-indigo-800/30"
-                                              aria-label="View on Kenmei (opens in new tab)"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleOpenExternal(kenmeiUrl)(
-                                                  e,
-                                                );
-                                              }}
-                                            >
-                                              <ExternalLink
-                                                className="mr-1 h-3 w-3"
-                                                aria-hidden="true"
-                                              />
-                                              Kenmei
-                                            </a>
-                                          ) : null;
-                                        })()}
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <Separator className="bg-foreground/20 my-2" />
-                                  <div className="mt-2 flex justify-start">
-                                    <Button
-                                      variant="default"
-                                      size="sm"
-                                      className="bg-green-600 text-white hover:bg-green-700"
-                                      onClick={() => {
-                                        // Directly accept the alternative as the match without swapping
-                                        if (onSelectAlternative) {
-                                          onSelectAlternative(
-                                            match,
-                                            index + 1,
-                                            false,
-                                            true,
-                                          );
-                                        }
-                                      }}
-                                      aria-label={`Accept ${
-                                        altMatch.manga?.title?.english ||
-                                        altMatch.manga?.title?.romaji ||
-                                        "Unknown manga"
-                                      } as match (${typeof altMatch.confidence === "number" ? Math.round(altMatch.confidence) + "%" : "Unknown confidence"})`}
-                                    >
-                                      <Check
-                                        className="mr-1 h-3 w-3"
-                                        aria-hidden="true"
-                                      />
-                                      Accept Match
-                                    </Button>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      </div>
-                    )}
-                </MatchCard>
+                  uniqueKey={uniqueKey}
+                  borderColorClass={borderColorClass}
+                  statusBgColorClass={statusBgColorClass}
+                  glowClass={glowClass}
+                  formatStatusText={formatStatusText}
+                  handleOpenExternal={handleOpenExternal}
+                  handleKeyDown={handleKeyDown}
+                  isAdultContent={isAdultContent}
+                  shouldBlurImage={shouldBlurImage}
+                  toggleImageBlur={toggleImageBlur}
+                  onManualSearch={onManualSearch}
+                  onAcceptMatch={onAcceptMatch}
+                  onRejectMatch={onRejectMatch}
+                  onSelectAlternative={onSelectAlternative}
+                  onResetToPending={onResetToPending}
+                />
               );
             })}
           </AnimatePresence>

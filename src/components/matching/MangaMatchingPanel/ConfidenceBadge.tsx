@@ -1,10 +1,15 @@
 import React from "react";
+import { cn } from "@/utils/tailwind";
 
 export interface ConfidenceBadgeProps {
   confidence?: number | null;
+  className?: string;
 }
 
-export function ConfidenceBadge({ confidence }: ConfidenceBadgeProps) {
+export function ConfidenceBadge({
+  confidence,
+  className,
+}: Readonly<ConfidenceBadgeProps>) {
   // If confidence is undefined, null, or NaN, return null (don't render anything)
   if (
     confidence === undefined ||
@@ -18,50 +23,76 @@ export function ConfidenceBadge({ confidence }: ConfidenceBadgeProps) {
   const roundedConfidence = Math.min(99, Math.round(confidence)); // Cap at 99%
 
   // Determine color scheme and label based on confidence level
-  let colorClass = "";
-  let barColorClass = "";
+  let containerClass = "";
+  let chipClass = "";
+  let trackClass = "";
+  let barClass = "";
   let label = "";
 
   if (roundedConfidence >= 90) {
-    colorClass =
-      "bg-green-50 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800";
-    barColorClass = "bg-green-500 dark:bg-green-400";
+    containerClass =
+      "border-emerald-200/70 bg-gradient-to-r from-emerald-100/85 via-emerald-50/70 to-emerald-100/80 text-emerald-900 shadow-[0_14px_40px_-18px_rgba(22,101,52,0.45)] dark:border-emerald-500/40 dark:from-emerald-900/40 dark:via-emerald-900/25 dark:to-emerald-800/35 dark:text-emerald-100";
+    chipClass =
+      "bg-white/85 text-emerald-600 shadow-inner dark:bg-emerald-950/70 dark:text-emerald-100";
+    trackClass = "bg-emerald-200/70 dark:bg-emerald-900/40";
+    barClass = "bg-emerald-500 dark:bg-emerald-400";
     label = "High";
   } else if (roundedConfidence >= 75) {
-    colorClass =
-      "bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800";
-    barColorClass = "bg-blue-500 dark:bg-blue-400";
+    containerClass =
+      "border-blue-200/70 bg-gradient-to-r from-blue-100/80 via-blue-50/65 to-blue-100/75 text-blue-900 shadow-[0_14px_38px_-18px_rgba(37,99,235,0.35)] dark:border-blue-500/35 dark:from-blue-950/40 dark:via-blue-900/25 dark:to-blue-800/35 dark:text-blue-100";
+    chipClass =
+      "bg-white/85 text-blue-600 shadow-inner dark:bg-blue-950/70 dark:text-blue-100";
+    trackClass = "bg-blue-200/70 dark:bg-blue-900/40";
+    barClass = "bg-blue-500 dark:bg-blue-400";
     label = "Good";
   } else if (roundedConfidence >= 50) {
-    colorClass =
-      "bg-yellow-50 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800";
-    barColorClass = "bg-yellow-500 dark:bg-yellow-400";
+    containerClass =
+      "border-amber-200/70 bg-gradient-to-r from-amber-50/80 via-amber-100/65 to-amber-50/75 text-amber-900 shadow-[0_14px_32px_-18px_rgba(217,119,6,0.35)] dark:border-amber-500/30 dark:from-amber-950/50 dark:via-amber-900/30 dark:to-amber-800/35 dark:text-amber-100";
+    chipClass =
+      "bg-white/85 text-amber-600 shadow-inner dark:bg-amber-950/70 dark:text-amber-100";
+    trackClass = "bg-amber-200/70 dark:bg-amber-900/40";
+    barClass = "bg-amber-500 dark:bg-amber-400";
     label = "Medium";
   } else {
-    colorClass =
-      "bg-red-50 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800";
-    barColorClass = "bg-red-500 dark:bg-red-400";
+    containerClass =
+      "border-rose-200/70 bg-gradient-to-r from-rose-100/80 via-rose-50/65 to-rose-100/75 text-rose-900 shadow-[0_14px_32px_-18px_rgba(225,29,72,0.35)] dark:border-rose-500/35 dark:from-rose-950/40 dark:via-rose-900/25 dark:to-rose-800/35 dark:text-rose-100";
+    chipClass =
+      "bg-white/85 text-rose-600 shadow-inner dark:bg-rose-950/70 dark:text-rose-100";
+    trackClass = "bg-rose-200/60 dark:bg-rose-900/40";
+    barClass = "bg-rose-500 dark:bg-rose-400";
     label = "Low";
   }
 
   return (
     <div
-      className={`relative flex flex-col rounded-md border px-2.5 py-1 text-xs font-medium ${colorClass}`}
+      className={cn(
+        "relative flex items-center gap-3 rounded-2xl border px-3 py-2 text-xs font-semibold tracking-[0.18em] uppercase",
+        containerClass,
+        className,
+      )}
       title={`${roundedConfidence}% confidence match`}
       aria-label={`${label} confidence match: ${roundedConfidence}%`}
     >
-      <div className="mb-1 flex items-center justify-between">
-        <span className="mr-1 font-semibold">{label}</span>
-        <span className="font-mono">{roundedConfidence}%</span>
+      <div
+        className={`flex h-9 w-9 items-center justify-center rounded-full text-[13px] font-bold ${chipClass}`}
+      >
+        {roundedConfidence}%
       </div>
-
-      {/* Progress bar background */}
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-        {/* Progress bar indicator */}
+      <div className="flex flex-col gap-1 text-left">
+        <span className="text-[10px] font-semibold tracking-[0.28em] text-current opacity-80">
+          Confidence
+        </span>
+        <span className="text-xs font-bold tracking-normal text-current">
+          {label}
+        </span>
         <div
-          className={`h-full rounded-full ${barColorClass}`}
-          style={{ width: `${roundedConfidence}%` }}
-        ></div>
+          className={`h-1.5 w-28 overflow-hidden rounded-full ${trackClass}`}
+        >
+          <div
+            className={`h-full rounded-full ${barClass}`}
+            style={{ width: `${roundedConfidence}%` }}
+          />
+        </div>
       </div>
     </div>
   );

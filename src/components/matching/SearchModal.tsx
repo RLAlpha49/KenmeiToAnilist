@@ -52,10 +52,10 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && searchTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-x-hidden overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Blurred backdrop */}
           <motion.div
-            className="fixed inset-0 bg-white/10 backdrop-blur-sm transition-all"
+            className="fixed inset-0 bg-slate-950/65 backdrop-blur-2xl transition-all"
             onClick={onClose}
             aria-hidden="true"
             initial={{ opacity: 0 }}
@@ -66,7 +66,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 
           {/* Modal panel with max height and width constraints */}
           <motion.div
-            className="relative z-50 m-4 max-h-[85vh] w-full max-w-6xl overflow-auto rounded-lg bg-white shadow-xl dark:bg-gray-800"
+            className="relative z-50 m-4 max-h-[85vh] w-full max-w-6xl overflow-visible rounded-[32px] border border-white/15 bg-gradient-to-br from-blue-400/25 via-white/15 to-purple-500/20 p-[1.5px] shadow-[0_40px_160px_-60px_rgba(30,64,175,0.7)] backdrop-blur-2xl dark:border-slate-700/40"
             initial={{ opacity: 0, y: 20, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.98 }}
@@ -77,14 +77,16 @@ export const SearchModal: React.FC<SearchModalProps> = ({
               damping: 30,
             }}
           >
-            <MangaSearchPanel
-              key={`search-${searchTarget.id}`}
-              kenmeiManga={searchTarget}
-              onClose={onClose}
-              onSelectMatch={onSelectMatch}
-              token={accessToken || ""}
-              bypassCache={bypassCache}
-            />
+            <div className="max-h-[85vh] overflow-auto rounded-[30px] bg-white/90 p-2 shadow-[inset_0_0_1px_rgba(255,255,255,0.4)] dark:bg-slate-950/85">
+              <MangaSearchPanel
+                key={`search-${searchTarget.id}`}
+                kenmeiManga={searchTarget}
+                onClose={onClose}
+                onSelectMatch={onSelectMatch}
+                token={accessToken || ""}
+                bypassCache={bypassCache}
+              />
+            </div>
           </motion.div>
         </div>
       )}

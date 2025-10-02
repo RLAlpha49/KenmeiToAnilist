@@ -6,7 +6,10 @@ interface Props {
   onDismiss: () => void;
 }
 
-export default function MatchingErrorToast({ error, onDismiss }: Props) {
+export default function MatchingErrorToast({
+  error,
+  onDismiss,
+}: Readonly<Props>) {
   if (!error) return null;
 
   return (

@@ -1,8 +1,15 @@
 import React from "react";
-import { Info } from "lucide-react";
-import { Card, CardContent } from "../../ui/card";
+import { Ban, SatelliteDish } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "../../ui/card";
 import { Switch } from "../../ui/switch";
 import { Label } from "../../ui/label";
+import { Badge } from "../../ui/badge";
 
 export interface AlternativeSearchSettingsCardProps {
   enableMangaDexSearch: boolean;
@@ -16,69 +23,84 @@ export function AlternativeSearchSettingsCard({
   onMangaDexSearchToggle,
 }: Readonly<AlternativeSearchSettingsCardProps>) {
   return (
-    <Card className="mb-4">
-      <CardContent className="p-4">
-        <div className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center space-x-2">
+    <Card className="relative mb-4 overflow-hidden rounded-3xl border border-white/40 bg-white/75 shadow-xl shadow-slate-900/5 backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/70">
+      <div className="pointer-events-none absolute top-0 -left-20 h-48 w-48 rounded-full bg-violet-400/15 blur-3xl" />
+      <div className="pointer-events-none absolute -right-16 bottom-0 h-56 w-56 rounded-full bg-sky-400/15 blur-3xl" />
+      <CardHeader className="relative z-10 flex flex-col gap-3 border-b border-white/40 pb-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800/60">
+        <div>
+          <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-white">
+            <SatelliteDish className="h-4 w-4 text-sky-500" />
+            Alternative Search Channels
+          </CardTitle>
+          <CardDescription className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            Automatically fall back to trusted sources when AniList results are
+            inconclusive.
+          </CardDescription>
+        </div>
+      </CardHeader>
+      <CardContent className="relative z-10 space-y-4 p-5">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="relative overflow-hidden rounded-2xl border border-amber-400/40 bg-amber-50/70 p-4 shadow-md shadow-amber-500/10 dark:border-amber-500/30 dark:bg-amber-900/20">
+            <div className="pointer-events-none absolute -top-16 right-4 h-32 w-32 rounded-full bg-amber-500/20 blur-3xl" />
+            <div className="relative flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
                   <Switch
                     id="comick-search-toggle"
                     checked={false}
-                    disabled={true}
+                    disabled
                     onCheckedChange={onComickSearchToggle}
                   />
                   <Label
                     htmlFor="comick-search-toggle"
-                    className="text-muted-foreground cursor-not-allowed text-sm leading-none font-medium opacity-70"
+                    className="cursor-not-allowed text-sm font-semibold text-amber-800 opacity-80 dark:text-amber-200"
                   >
-                    Enable Comick Alternative Search (Temporarily Disabled)
+                    Comick (Temporarily Unavailable)
                   </Label>
                 </div>
-                <div className="group relative flex">
-                  <Info className="text-muted-foreground h-4 w-4" />
-                  <div className="bg-card absolute bottom-full left-1/2 z-50 mb-2 hidden w-80 -translate-x-1/2 transform rounded-md border px-3 py-2 text-xs font-medium shadow-lg group-hover:block">
-                    Comick has been temporarily taken down. This feature is
-                    disabled until Comick fully transitions as a tracking site
-                    and their API is restored.
-                  </div>
-                </div>
+                <Badge
+                  variant="secondary"
+                  className="flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-200/60 px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-amber-800 uppercase dark:border-amber-500/30 dark:bg-amber-900/30 dark:text-amber-200"
+                >
+                  <Ban className="h-3 w-3" />
+                  Disabled
+                </Badge>
               </div>
-              <div className="ml-6 rounded-md bg-yellow-50 px-3 py-2 text-xs text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300">
-                <strong>Notice:</strong> Comick alternative search is
-                temporarily disabled as Comick has been taken down. The API
-                should hopefully be restored after Comick completes its
-                transition as a tracking site.
-              </div>
+              <p className="text-xs text-amber-800/90 dark:text-amber-100">
+                Comick is undergoing a platform transition. This will be
+                reactivated when their API is available again.
+              </p>
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="mangadex-search-toggle"
-                  checked={enableMangaDexSearch}
-                  onCheckedChange={onMangaDexSearchToggle}
-                />
-                <Label
-                  htmlFor="mangadex-search-toggle"
-                  className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Enable MangaDex Alternative Search
-                </Label>
-              </div>
-              <div className="group relative flex">
-                <Info className="text-muted-foreground h-4 w-4" />
-                <div className="bg-card absolute bottom-full left-1/2 z-50 mb-2 hidden w-80 -translate-x-1/2 transform rounded-md border px-3 py-2 text-xs font-medium shadow-lg group-hover:block">
-                  When enabled, the system will attempt alternative searches
-                  through MangaDex if the initial AniList search doesn&apos;t
-                  find matches. This feature will be automatically ignored when
-                  rate limited and will continue searching normally. Only the
-                  top search result from MangaDex will be used.
+          <div className="relative overflow-hidden rounded-2xl border border-sky-400/40 bg-sky-50/70 p-4 shadow-md shadow-sky-500/10 dark:border-sky-500/30 dark:bg-sky-900/20">
+            <div className="pointer-events-none absolute -bottom-16 left-4 h-32 w-32 rounded-full bg-sky-500/20 blur-3xl" />
+            <div className="relative flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="mangadex-search-toggle"
+                    checked={enableMangaDexSearch}
+                    onCheckedChange={onMangaDexSearchToggle}
+                  />
+                  <Label
+                    htmlFor="mangadex-search-toggle"
+                    className="text-sm font-semibold text-sky-800 dark:text-sky-100"
+                  >
+                    MangaDex Alternative Search
+                  </Label>
                 </div>
+                <Badge
+                  variant="secondary"
+                  className="flex items-center gap-1 rounded-full border border-sky-500/20 bg-sky-100/70 px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-sky-700 uppercase dark:border-sky-500/30 dark:bg-sky-900/40 dark:text-sky-200"
+                >
+                  {enableMangaDexSearch ? "Active" : "Disabled"}
+                </Badge>
               </div>
+              <p className="text-xs text-sky-900/90 dark:text-sky-100">
+                When enabled, AniList searches fall back to MangaDex&apos;s top
+                result if no direct match is found.
+              </p>
             </div>
           </div>
         </div>
