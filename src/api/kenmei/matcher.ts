@@ -33,25 +33,28 @@ export function scoreMatch(
   kenmeiManga: KenmeiManga,
   anilistManga: AniListManga,
 ): number {
-  const title = kenmeiManga.title.toLowerCase();
+  const title = kenmeiManga.title?.toLowerCase() ?? "";
 
-  // Try all available titles
-  const scores: number[] = [];
+  if (!title) return 0;
 
-  if (anilistManga.title.romaji) {
-    scores.push(calculateSimilarity(title, anilistManga.title.romaji));
+  // Collect available AniList titles and compute similarity scores in a compact way
+  const candidateTitles = [
+    anilistManga.title?.romaji,
+    anilistManga.title?.english,
+    anilistManga.title?.native,
+  ];
+
+  let best = 0;
+
+  for (const candidate of candidateTitles) {
+    if (!candidate) continue;
+    const score = calculateSimilarity(title, candidate);
+    if (score > best) best = score;
+    // short-circuit if perfect match
+    if (best >= 1) return 1;
   }
 
-  if (anilistManga.title.english) {
-    scores.push(calculateSimilarity(title, anilistManga.title.english));
-  }
-
-  if (anilistManga.title.native) {
-    scores.push(calculateSimilarity(title, anilistManga.title.native));
-  }
-
-  // Return the best match score
-  return scores.length > 0 ? Math.max(...scores) : 0;
+  return best;
 }
 
 /**
@@ -67,16 +70,24 @@ export function findBestMatch(
   anilistManga: AniListManga[],
   threshold = 0.7,
 ): { manga: AniListManga; score: number } | null {
-  if (!anilistManga.length) return null;
+  if (!anilistManga?.length) return null;
 
-  const matches = anilistManga.map((manga) => ({
-    manga,
-    score: scoreMatch(kenmeiManga, manga),
-  }));
+  // Compute scores and keep only ones that meet threshold early
+  const scored = [] as { manga: AniListManga; score: number }[];
 
-  // Sort by score (descending)
-  matches.sort((a, b) => b.score - a.score);
+  for (const manga of anilistManga) {
+    const score = scoreMatch(kenmeiManga, manga);
+    if (score <= 0) continue;
+    scored.push({ manga, score });
+  }
 
-  // Return best match if it meets the threshold
-  return matches[0].score >= threshold ? matches[0] : null;
+  if (!scored.length) return null;
+
+  // Find the highest scored match without allocating extra arrays via sort
+  let best = scored[0];
+  for (let i = 1; i < scored.length; i++) {
+    if (scored[i].score > best.score) best = scored[i];
+  }
+
+  return best.score >= threshold ? best : null;
 }

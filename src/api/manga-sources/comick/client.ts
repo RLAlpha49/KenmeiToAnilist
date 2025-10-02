@@ -31,14 +31,11 @@ export class ComickClient extends BaseMangaSourceClient<
     // Check cache first
     const cacheKey = `search:${query.toLowerCase()}:${limit}`;
     const cached = this.getCachedData<ComickManga[]>(cacheKey);
+    if (cached) return cached;
 
-    if (cached) {
-      return cached;
-    }
+    console.log(`🔍 Searching Comick for: "${query}" (limit: ${limit})`);
 
     try {
-      console.log(`🔍 Searching Comick for: "${query}" (limit: ${limit})`);
-
       // Use generic manga source API to call the main process instead of direct fetch to avoid CORS issues
       const data = (await globalThis.electronAPI.mangaSource.search(
         "comick",
@@ -47,8 +44,6 @@ export class ComickClient extends BaseMangaSourceClient<
       )) as ComickManga[];
 
       const results = this.parseSearchResponse(data);
-
-      // Cache the results
       this.setCachedData(cacheKey, results);
 
       console.log(
@@ -65,9 +60,9 @@ export class ComickClient extends BaseMangaSourceClient<
    * Get detailed information about a specific Comick manga using IPC.
    */
   public async getMangaDetail(slug: string): Promise<ComickMangaDetail | null> {
-    try {
-      console.log(`📖 Getting Comick manga details for: ${slug}`);
+    console.log(`📖 Getting Comick manga details for: ${slug}`);
 
+    try {
       // Use generic manga source API to call the main process instead of direct fetch to avoid CORS issues
       const rawData = await globalThis.electronAPI.mangaSource.getMangaDetail(
         "comick",
@@ -88,9 +83,7 @@ export class ComickClient extends BaseMangaSourceClient<
    */
   // eslint-disable-next-line
   protected parseSearchResponse(rawResponse: any): ComickManga[] {
-    if (!Array.isArray(rawResponse)) {
-      return [];
-    }
+    if (!Array.isArray(rawResponse)) return [];
 
     // eslint-disable-next-line
     return rawResponse.map((item: any) => ({
@@ -119,9 +112,7 @@ export class ComickClient extends BaseMangaSourceClient<
    */
   // eslint-disable-next-line
   protected parseDetailResponse(rawResponse: any): ComickMangaDetail | null {
-    if (!rawResponse?.comic) {
-      return null;
-    }
+    if (!rawResponse?.comic) return null;
 
     const comic = rawResponse.comic;
 
@@ -164,14 +155,10 @@ export class ComickClient extends BaseMangaSourceClient<
     detail: ComickMangaDetail,
   ): number | null {
     const links = detail.comic?.links;
-    if (!links || typeof links !== "object") {
-      return null;
-    }
+    if (!links || typeof links !== "object") return null;
 
     const anilistId = links.al;
-    if (!anilistId) {
-      return null;
-    }
+    if (!anilistId) return null;
 
     const parsedAnilistId = Number.parseInt(anilistId, 10);
     return Number.isNaN(parsedAnilistId) ? null : parsedAnilistId;

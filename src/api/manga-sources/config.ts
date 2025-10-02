@@ -11,7 +11,17 @@ import { getAppVersion } from "../../utils/app-version";
 /**
  * Configuration for Comick API.
  */
-export const COMICK_CONFIG: MangaSourceConfig = {
+const USER_AGENT = `KenmeiToAniList/${getAppVersion()}`;
+
+const defaultCache = { enabled: true, ttlMinutes: 30 };
+
+const makeConfig = (cfg: MangaSourceConfig): MangaSourceConfig => ({
+  ...cfg,
+  headers: { "User-Agent": USER_AGENT, ...(cfg.headers ?? {}) },
+  cache: cfg.cache ?? defaultCache,
+});
+
+export const COMICK_CONFIG: MangaSourceConfig = makeConfig({
   name: "Comick",
   source: MangaSource.COMICK,
   baseUrl: "https://api.comick.fun",
@@ -19,23 +29,16 @@ export const COMICK_CONFIG: MangaSourceConfig = {
     search: "/v1.0/search?q={query}&limit={limit}&t=false",
     detail: "/comic/{slug}",
   },
-  headers: {
-    "User-Agent": `KenmeiToAniList/${getAppVersion()}`,
-  },
   rateLimit: {
     requestsPerSecond: 10,
     burstLimit: 20,
   },
-  cache: {
-    enabled: true,
-    ttlMinutes: 30,
-  },
-};
+});
 
 /**
  * Configuration for MangaDex API.
  */
-export const MANGADEX_CONFIG: MangaSourceConfig = {
+export const MANGADEX_CONFIG: MangaSourceConfig = makeConfig({
   name: "MangaDex",
   source: MangaSource.MANGADEX,
   baseUrl: "https://api.mangadex.org",
@@ -45,18 +48,11 @@ export const MANGADEX_CONFIG: MangaSourceConfig = {
     detail:
       "/manga/{slug}?includes[]=author&includes[]=artist&includes[]=cover_art",
   },
-  headers: {
-    "User-Agent": `KenmeiToAniList/${getAppVersion()}`,
-  },
   rateLimit: {
     requestsPerSecond: 5, // MangaDex has stricter rate limits
     burstLimit: 10,
   },
-  cache: {
-    enabled: true,
-    ttlMinutes: 30,
-  },
-};
+});
 
 /**
  * Registry of all available manga source configurations.
@@ -71,9 +67,8 @@ export const MANGA_SOURCE_CONFIGS: Record<MangaSource, MangaSourceConfig> = {
  */
 export function getMangaSourceConfig(source: MangaSource): MangaSourceConfig {
   const config = MANGA_SOURCE_CONFIGS[source];
-  if (!config) {
+  if (!config)
     throw new Error(`No configuration found for manga source: ${source}`);
-  }
   return config;
 }
 
@@ -81,7 +76,7 @@ export function getMangaSourceConfig(source: MangaSource): MangaSourceConfig {
  * Get all available manga sources.
  */
 export function getAvailableMangaSources(): MangaSource[] {
-  return Object.keys(MANGA_SOURCE_CONFIGS) as MangaSource[];
+  return Object.keys(MANGA_SOURCE_CONFIGS) as unknown as MangaSource[];
 }
 
 /**

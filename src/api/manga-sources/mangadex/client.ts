@@ -35,17 +35,14 @@ export class MangaDexClient extends BaseMangaSourceClient<
     if (cached) {
       return cached;
     }
+    console.log(`🔍 Searching MangaDex for: "${query}" (limit: ${limit})`);
 
     try {
-      console.log(`🔍 Searching MangaDex for: "${query}" (limit: ${limit})`);
-
       // Make direct HTTP request using the base client's functionality
       const url = this.buildSearchUrl(query, limit);
       const data = await this.makeRequest(url);
 
       const results = this.parseSearchResponse(data);
-
-      // Cache the results
       this.setCachedData(cacheKey, results);
 
       console.log(
@@ -130,17 +127,15 @@ export class MangaDexClient extends BaseMangaSourceClient<
       console.log("🔍 MangaDex: Invalid search response format");
       return [];
     }
-
     // eslint-disable-next-line
     return rawResponse.data.map((item: any) => {
-      const attributes = item.attributes || {};
-      const title = attributes.title || {};
-      const altTitles = attributes.altTitles || [];
+      const attributes = item.attributes ?? {};
+      const titleObj = attributes.title ?? {};
+      const altTitles = attributes.altTitles ?? [];
 
-      // Extract titles using helper methods
-      const primaryTitle = this.extractPrimaryTitle(title);
+      const primaryTitle = this.extractPrimaryTitle(titleObj);
       const alternativeTitles = this.parseAlternativeTitles(
-        title,
+        titleObj,
         altTitles,
         primaryTitle,
       );
@@ -175,16 +170,14 @@ export class MangaDexClient extends BaseMangaSourceClient<
       console.log("📖 MangaDex: Invalid detail response format");
       return null;
     }
-
     const data = rawResponse.data;
-    const attributes = data.attributes || {};
-    const title = attributes.title || {};
-    const altTitles = attributes.altTitles || [];
+    const attributes = data.attributes ?? {};
+    const titleObj = attributes.title ?? {};
+    const altTitles = attributes.altTitles ?? [];
 
-    // Extract titles using helper methods
-    const primaryTitle = this.extractPrimaryTitle(title);
+    const primaryTitle = this.extractPrimaryTitle(titleObj);
     const alternativeTitles = this.parseAlternativeTitles(
-      title,
+      titleObj,
       altTitles,
       primaryTitle,
     );
@@ -193,24 +186,26 @@ export class MangaDexClient extends BaseMangaSourceClient<
     const authors: Array<{ id: string; name: string; slug?: string }> = [];
     const artists: Array<{ id: string; name: string; slug?: string }> = [];
 
-    if (data.relationships) {
-      // eslint-disable-next-line
-      data.relationships.forEach((rel: any) => {
-        if (rel.type === "author" && rel.attributes?.name) {
-          authors.push({
-            id: rel.id,
-            name: rel.attributes.name,
-            slug: rel.id,
-          });
-        } else if (rel.type === "artist" && rel.attributes?.name) {
-          artists.push({
-            id: rel.id,
-            name: rel.attributes.name,
-            slug: rel.id,
-          });
-        }
-      });
+    for (const rel of data.relationships ?? []) {
+      if (rel.type === "author" && rel.attributes?.name) {
+        authors.push({ id: rel.id, name: rel.attributes.name, slug: rel.id });
+        continue;
+      }
+      if (rel.type === "artist" && rel.attributes?.name) {
+        artists.push({ id: rel.id, name: rel.attributes.name, slug: rel.id });
+      }
     }
+
+    const genres =
+      attributes.tags
+        // eslint-disable-next-line
+        ?.filter((tag: any) => tag.attributes?.group === "genre")
+        // eslint-disable-next-line
+        .map((tag: any) => ({
+          id: tag.id,
+          name: tag.attributes.name.en || Object.values(tag.attributes.name)[0],
+          slug: tag.id,
+        })) || [];
 
     return {
       id: data.id,
@@ -226,17 +221,7 @@ export class MangaDexClient extends BaseMangaSourceClient<
       updatedAt: attributes.updatedAt,
       authors,
       artists,
-      genres:
-        attributes.tags
-          // eslint-disable-next-line
-          ?.filter((tag: any) => tag.attributes?.group === "genre")
-          // eslint-disable-next-line
-          .map((tag: any) => ({
-            id: tag.id,
-            name:
-              tag.attributes.name.en || Object.values(tag.attributes.name)[0],
-            slug: tag.id,
-          })) || [],
+      genres,
       alternativeTitles,
       externalLinks: attributes.links
         ? {

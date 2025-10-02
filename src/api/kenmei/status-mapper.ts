@@ -28,12 +28,11 @@ export function mapKenmeiToAniListStatus(
   status: KenmeiStatus,
   customMapping?: Partial<StatusMappingConfig>,
 ): MediaListStatus {
-  // Use custom mapping if provided, otherwise use default
-  if (customMapping?.[status]) {
-    return customMapping[status];
-  }
-
-  return DEFAULT_STATUS_MAPPING[status];
+  // Prefer custom mapping when provided, otherwise fall back to default.
+  return (
+    (customMapping?.[status] as MediaListStatus) ??
+    DEFAULT_STATUS_MAPPING[status]
+  );
 }
 
 /**
@@ -48,36 +47,20 @@ export function mapAniListToKenmeiStatus(
   status: MediaListStatus,
   customMapping?: Partial<StatusMappingConfig>,
 ): KenmeiStatus {
-  // Create a reverse mapping
+  // Build reverse mapping from defaults (AniList -> Kenmei)
   const reverseMapping = new Map<MediaListStatus, KenmeiStatus>();
-
-  // Populate with default mapping
-  for (const [kenmeiStatus, anilistStatus] of Object.entries(
-    DEFAULT_STATUS_MAPPING,
-  )) {
-    reverseMapping.set(anilistStatus, kenmeiStatus as KenmeiStatus);
+  for (const [k, v] of Object.entries(DEFAULT_STATUS_MAPPING)) {
+    reverseMapping.set(v, k as KenmeiStatus);
   }
 
-  // Override with custom mapping if provided
+  // If user provided custom mappings, apply them — set() will overwrite defaults.
   if (customMapping) {
-    for (const [kenmeiStatus, anilistStatus] of Object.entries(customMapping)) {
-      // Find and remove the default entry for this AniList status
-      for (const [key] of reverseMapping.entries()) {
-        if (key === anilistStatus) {
-          reverseMapping.delete(key);
-        }
-      }
-
-      // Add the custom mapping
-      reverseMapping.set(anilistStatus, kenmeiStatus as KenmeiStatus);
+    for (const [k, v] of Object.entries(customMapping)) {
+      reverseMapping.set(v, k as KenmeiStatus);
     }
   }
 
-  // Find the matching Kenmei status
-  const kenmeiStatus = reverseMapping.get(status);
-
-  // Default to "reading" if no mapping is found
-  return kenmeiStatus || "reading";
+  return reverseMapping.get(status) ?? "reading";
 }
 
 /**
@@ -94,15 +77,12 @@ export function createCustomStatusMapping(
 
   // Validate and map preferences to status mapping
   for (const [key, value] of Object.entries(preferences)) {
-    // Validate Kenmei status
     const kenmeiStatus = validateKenmeiStatus(key);
     if (!kenmeiStatus) continue;
 
-    // Validate AniList status
     const anilistStatus = validateAniListStatus(value);
     if (!anilistStatus) continue;
 
-    // Add to custom mapping
     customMapping[kenmeiStatus] = anilistStatus;
   }
 
@@ -115,6 +95,8 @@ export function createCustomStatusMapping(
  * @returns Valid KenmeiStatus or undefined
  */
 function validateKenmeiStatus(status: string): KenmeiStatus | undefined {
+  if (!status) return undefined;
+
   const validStatuses: Set<KenmeiStatus> = new Set([
     "reading",
     "completed",
@@ -123,27 +105,28 @@ function validateKenmeiStatus(status: string): KenmeiStatus | undefined {
     "plan_to_read",
   ]);
 
-  // Check exact match
-  if (validStatuses.has(status as KenmeiStatus)) {
-    return status as KenmeiStatus;
-  }
+  const normalized = status.toLowerCase().trim().replace(/\s+/g, "_");
 
-  // Try to normalize the status
-  const normalized = status.toLowerCase().replace(" ", "_");
-
-  if (validStatuses.has(normalized as KenmeiStatus)) {
+  // Exact or normalized match
+  if (validStatuses.has(status as KenmeiStatus)) return status as KenmeiStatus;
+  if (validStatuses.has(normalized as KenmeiStatus))
     return normalized as KenmeiStatus;
-  }
 
-  // Map common variations
-  if (["planning", "plan"].includes(normalized)) return "plan_to_read";
-  if (["hold", "paused"].includes(normalized)) return "on_hold";
-  if (["complete", "finished"].includes(normalized)) return "completed";
-  if (["read", "current", "reading"].includes(normalized)) return "reading";
-  if (["drop", "dropped"].includes(normalized)) return "dropped";
+  // Lookup common variations
+  const variations: Record<string, KenmeiStatus> = {
+    planning: "plan_to_read",
+    plan: "plan_to_read",
+    hold: "on_hold",
+    paused: "on_hold",
+    complete: "completed",
+    finished: "completed",
+    read: "reading",
+    current: "reading",
+    drop: "dropped",
+    dropped: "dropped",
+  };
 
-  // No valid match found
-  return undefined;
+  return variations[normalized];
 }
 
 /**
@@ -152,6 +135,8 @@ function validateKenmeiStatus(status: string): KenmeiStatus | undefined {
  * @returns Valid MediaListStatus or undefined
  */
 function validateAniListStatus(status: string): MediaListStatus | undefined {
+  if (!status) return undefined;
+
   const validStatuses: Set<MediaListStatus> = new Set([
     "CURRENT",
     "PLANNING",
@@ -161,31 +146,37 @@ function validateAniListStatus(status: string): MediaListStatus | undefined {
     "REPEATING",
   ]);
 
-  // Check exact match
-  if (validStatuses.has(status as MediaListStatus)) {
+  const normalized = status.toUpperCase().trim().replace(/\s+/g, "_");
+
+  if (validStatuses.has(status as MediaListStatus))
     return status as MediaListStatus;
-  }
-
-  // Try to normalize the status
-  const normalized = status.toUpperCase().replace(" ", "_");
-
-  if (validStatuses.has(normalized as MediaListStatus)) {
+  if (validStatuses.has(normalized as MediaListStatus))
     return normalized as MediaListStatus;
-  }
 
-  // Map common variations
-  if (["PLAN", "PLANNING_TO_READ", "PTR", "PTW"].includes(normalized))
-    return "PLANNING";
-  if (["WATCHING", "READING", "CURRENT"].includes(normalized)) return "CURRENT";
-  if (["DONE", "COMPLETE", "FINISHED", "COMPLETED"].includes(normalized))
-    return "COMPLETED";
-  if (["DROP", "QUIT", "DROPPED"].includes(normalized)) return "DROPPED";
-  if (["HOLD", "ON_HOLD", "PAUSED"].includes(normalized)) return "PAUSED";
-  if (["REPEAT", "REREADING", "REWATCHING", "REPEATING"].includes(normalized))
-    return "REPEATING";
+  const variations: Record<string, MediaListStatus> = {
+    PLAN: "PLANNING",
+    PTR: "PLANNING",
+    PTW: "PLANNING",
+    WATCHING: "CURRENT",
+    READING: "CURRENT",
+    CURRENT: "CURRENT",
+    DONE: "COMPLETED",
+    COMPLETE: "COMPLETED",
+    FINISHED: "COMPLETED",
+    DROPPED: "DROPPED",
+    DROP: "DROPPED",
+    QUIT: "DROPPED",
+    HOLD: "PAUSED",
+    ON_HOLD: "PAUSED",
+    PAUSED: "PAUSED",
+    REPEAT: "REPEATING",
+    REREADING: "REPEATING",
+    REWATCHING: "REPEATING",
+    REPEATING: "REPEATING",
+    PLANNING_TO_READ: "PLANNING",
+  } as const;
 
-  // No valid match found
-  return undefined;
+  return variations[normalized];
 }
 
 /**

@@ -67,41 +67,43 @@ function initializeSearchCache(): void {
     const storageKey = "anilist_search_cache";
     const cachedData = localStorage.getItem(storageKey);
 
-    if (cachedData) {
-      const parsedCache = JSON.parse(cachedData);
-      let loadedCount = 0;
-
-      // Only use cache entries that haven't expired
-      const now = Date.now();
-
-      // Merge with our in-memory cache
-      for (const key of Object.keys(parsedCache)) {
-        const entry = parsedCache[key];
-        if (now - entry.timestamp < CACHE_EXPIRATION) {
-          searchCache[key] = entry;
-          loadedCount++;
-        }
-      }
-
-      console.log(
-        `Loaded ${loadedCount} cached search results from localStorage`,
-      );
-
-      // Immediately notify the manga service to sync caches
-      // This needs to be done after a small delay to avoid circular dependencies
-      setTimeout(() => {
-        try {
-          // Create a custom event that manga-search-service can listen for
-          const event = new CustomEvent("anilist:search-cache-initialized", {
-            detail: { count: loadedCount },
-          });
-          globalThis.dispatchEvent(event);
-          console.log("Dispatched cache initialization event");
-        } catch (e) {
-          console.error("Failed to dispatch cache event:", e);
-        }
-      }, 100);
+    if (!cachedData) {
+      return;
     }
+
+    const parsedCache = JSON.parse(cachedData);
+    let loadedCount = 0;
+
+    // Only use cache entries that haven't expired
+    const now = Date.now();
+
+    // Merge with our in-memory cache
+    for (const key of Object.keys(parsedCache)) {
+      const entry = parsedCache[key];
+      if (entry && now - entry.timestamp < CACHE_EXPIRATION) {
+        searchCache[key] = entry;
+        loadedCount++;
+      }
+    }
+
+    console.log(
+      `Loaded ${loadedCount} cached search results from localStorage`,
+    );
+
+    // Immediately notify the manga service to sync caches
+    // This needs to be done after a small delay to avoid circular dependencies
+    setTimeout(() => {
+      try {
+        // Create a custom event that manga-search-service can listen for
+        const event = new CustomEvent("anilist:search-cache-initialized", {
+          detail: { count: loadedCount },
+        });
+        globalThis.dispatchEvent(event);
+        console.log(`Dispatched cache initialization event`);
+      } catch (e) {
+        console.error("Failed to dispatch cache event", e);
+      }
+    }, 100);
   } catch (error) {
     console.error("Error loading search cache from localStorage:", error);
   }
@@ -734,22 +736,22 @@ function checkDirectRateLimitError(errorObj: {
   retryAfter?: number;
   message?: string;
 }): Error | null {
-  if (errorObj.status === 429 || errorObj.isRateLimited) {
-    console.warn("📛 DETECTED RATE LIMIT in getUserMangaList", {
-      status: errorObj.status,
-      isRateLimited: errorObj.isRateLimited,
-      retryAfter: errorObj.retryAfter,
-      message: errorObj.message,
-    });
-
-    return createRateLimitError(
-      errorObj.message || "Rate limit exceeded",
-      errorObj.status || 429,
-      errorObj.retryAfter || 60,
-    );
+  if (errorObj.status !== 429 && !errorObj.isRateLimited) {
+    return null;
   }
 
-  return null;
+  console.warn("📛 DETECTED RATE LIMIT in getUserMangaList", {
+    status: errorObj.status,
+    isRateLimited: errorObj.isRateLimited,
+    retryAfter: errorObj.retryAfter,
+    message: errorObj.message,
+  });
+
+  return createRateLimitError(
+    errorObj.message || "Rate limit exceeded",
+    errorObj.status || 429,
+    errorObj.retryAfter || 60,
+  );
 }
 
 /**
@@ -759,10 +761,14 @@ function checkDirectRateLimitError(errorObj: {
  * @returns Rate limit error if detected, null otherwise.
  */
 function checkRateLimitInMessage(errorObj: { message?: string }): Error | null {
+  if (!errorObj.message) {
+    return null;
+  }
+
+  const lowerMessage = errorObj.message.toLowerCase();
   if (
-    !errorObj.message ||
-    (!errorObj.message.toLowerCase().includes("rate limit") &&
-      !errorObj.message.toLowerCase().includes("too many requests"))
+    !lowerMessage.includes("rate limit") &&
+    !lowerMessage.includes("too many requests")
   ) {
     return null;
   }
@@ -815,26 +821,28 @@ export async function getUserMangaList(
   } catch (error: unknown) {
     console.error("Error fetching user manga list:", error);
 
-    // Type guard to check if error is an object with specific properties
-    if (error && typeof error === "object") {
-      const errorObj = error as {
-        status?: number;
-        isRateLimited?: boolean;
-        retryAfter?: number;
-        message?: string;
-      };
+    // Early return if error is not an object
+    if (!error || typeof error !== "object") {
+      throw error;
+    }
 
-      // Check for direct rate limit errors
-      const directRateLimitError = checkDirectRateLimitError(errorObj);
-      if (directRateLimitError) {
-        throw directRateLimitError;
-      }
+    const errorObj = error as {
+      status?: number;
+      isRateLimited?: boolean;
+      retryAfter?: number;
+      message?: string;
+    };
 
-      // Check for rate limit mentions in error messages
-      const messageBasisRateLimitError = checkRateLimitInMessage(errorObj);
-      if (messageBasisRateLimitError) {
-        throw messageBasisRateLimitError;
-      }
+    // Check for direct rate limit errors
+    const directRateLimitError = checkDirectRateLimitError(errorObj);
+    if (directRateLimitError) {
+      throw directRateLimitError;
+    }
+
+    // Check for rate limit mentions in error messages
+    const messageBasisRateLimitError = checkRateLimitInMessage(errorObj);
+    if (messageBasisRateLimitError) {
+      throw messageBasisRateLimitError;
     }
 
     throw error;
@@ -870,20 +878,15 @@ async function getAuthenticatedUserID(
       abortSignal,
     );
 
-    // Handle multiple possible response formats
-    let viewerId: number | undefined;
-
     // Try to extract the Viewer data from different potential structures
+    // Standard structure
     if (viewerResponse?.data?.Viewer?.id) {
-      // Standard structure
-      viewerId = viewerResponse.data.Viewer.id;
-    } else if (viewerResponse?.data?.data?.Viewer?.id) {
-      // Nested data structure
-      viewerId = viewerResponse.data.data.Viewer.id;
+      return viewerResponse.data.Viewer.id;
     }
 
-    if (viewerId) {
-      return viewerId;
+    // Nested data structure
+    if (viewerResponse?.data?.data?.Viewer?.id) {
+      return viewerResponse.data.data.Viewer.id;
     }
 
     // If the above approach failed, try a direct query
@@ -900,7 +903,9 @@ async function getAuthenticatedUserID(
     // Try to extract user ID from various response formats
     if (directViewerResponse?.data?.Viewer?.id) {
       return directViewerResponse.data.Viewer.id;
-    } else if (directViewerResponse?.data?.data?.Viewer?.id) {
+    }
+
+    if (directViewerResponse?.data?.data?.Viewer?.id) {
       return directViewerResponse.data.data.Viewer.id;
     }
 
@@ -962,9 +967,13 @@ function extractMediaListCollection(
 ): MediaListCollection | null {
   if (response?.data?.MediaListCollection) {
     return response.data.MediaListCollection;
-  } else if (response?.data?.data?.MediaListCollection) {
+  }
+
+  // Check nested data structure
+  if (response?.data?.data?.MediaListCollection) {
     return response.data.data.MediaListCollection;
   }
+
   return null;
 }
 
@@ -1001,7 +1010,7 @@ function handleChunkError(
   // For other errors, log and continue if we have some data
   console.error(`Error fetching chunk ${currentChunk}:`, error);
 
-  // If we have some data already, we'll return it, otherwise propagate the error
+  // If we have no data, propagate the error
   if (Object.keys(mediaMap).length === 0) {
     throw error;
   }
@@ -1112,11 +1121,11 @@ async function fetchCompleteUserMediaList(
         totalEntriesProcessed += chunkEntryCount;
 
         // Check if we need to fetch more chunks
-        if (shouldFetchNextChunk(chunkEntryCount, perChunk)) {
-          currentChunk++;
-        } else {
-          hasNextChunk = false;
+        if (!shouldFetchNextChunk(chunkEntryCount, perChunk)) {
+          break;
         }
+
+        currentChunk++;
       } catch (error: unknown) {
         // Handle chunk error and determine if we should continue
         const shouldContinue = handleChunkError(error, currentChunk, mediaMap);

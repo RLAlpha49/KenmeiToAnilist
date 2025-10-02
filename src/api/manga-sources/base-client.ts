@@ -110,57 +110,54 @@ export abstract class BaseMangaSourceClient<
    */
   // eslint-disable-next-line
   protected async makeRequest(url: string): Promise<any> {
+    // Prefer any User-Agent provided in the config, otherwise use app version
+    const defaultUserAgent = `KenmeiToAniList/${getAppVersion()}`;
+    const userAgent = this.config.headers?.["User-Agent"] ?? defaultUserAgent;
+
     const headers = {
       Accept: "application/json",
-      "User-Agent": `KenmeiToAniList/${getAppVersion()}`,
+      "User-Agent": userAgent,
       ...this.config.headers,
     };
 
     console.log(`🌐 ${this.config.name}: Making request to ${url}`);
 
-    const response = await fetch(url, {
-      method: "GET",
-      headers,
-    });
+    const response = await fetch(url, { method: "GET", headers });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-    return await response.json();
+    return response.json();
   }
 
   /**
    * Check if cache is enabled and valid for a given key.
    */
   protected isCacheValid(key: string): boolean {
-    if (!this.config.cache?.enabled) {
-      return false;
-    }
+    if (!this.config.cache?.enabled) return false;
 
     const cached = this.cache[key];
-    return cached && Date.now() - cached.timestamp < this.cacheExpiry;
+    if (!cached) return false;
+
+    const age = Date.now() - (cached.timestamp ?? 0);
+    return age < this.cacheExpiry;
   }
 
   /**
    * Get data from cache if valid.
    */
   protected getCachedData<T>(key: string): T | null {
-    if (!this.isCacheValid(key)) {
-      return null;
-    }
+    if (!this.isCacheValid(key)) return null;
 
+    const entry = this.cache[key];
     console.log(`🎯 ${this.config.name}: Cache hit for "${key}"`);
-    return this.cache[key].data as T;
+    return entry.data as T;
   }
 
   /**
    * Store data in cache with current timestamp.
    */
   protected setCachedData<T>(key: string, data: T): void {
-    if (!this.config.cache?.enabled) {
-      return;
-    }
+    if (!this.config.cache?.enabled) return;
 
     this.cache[key] = {
       data,
@@ -178,9 +175,7 @@ export abstract class BaseMangaSourceClient<
         `🔗 ${this.config.name}: Extracting AniList ID for "${manga.title}"`,
       );
 
-      // Get detailed info which includes external links
       const detail = await this.getMangaDetail(manga.slug);
-
       if (!detail) {
         console.log(
           `🔗 No detail data found for ${this.config.name} manga: ${manga.title}`,
@@ -189,18 +184,17 @@ export abstract class BaseMangaSourceClient<
       }
 
       const anilistId = this.extractAniListIdFromDetail(detail);
-
       if (anilistId) {
         console.log(
           `🎯 Found AniList ID ${anilistId} for ${this.config.name} manga: ${manga.title}`,
         );
-      } else {
-        console.log(
-          `🔗 No AniList ID found for ${this.config.name} manga: ${manga.title}`,
-        );
+        return anilistId;
       }
 
-      return anilistId;
+      console.log(
+        `🔗 No AniList ID found for ${this.config.name} manga: ${manga.title}`,
+      );
+      return null;
     } catch (error) {
       console.error(
         `❌ Failed to extract AniList ID for ${this.config.name} manga ${manga.title}:`,
@@ -226,8 +220,7 @@ export abstract class BaseMangaSourceClient<
 
       // Search on this source
       const sourceResults = await this.searchManga(query, limit);
-
-      if (!sourceResults || sourceResults.length === 0) {
+      if (!sourceResults?.length) {
         console.log(`📦 No ${this.config.name} results found for "${query}"`);
         return [];
       }
@@ -236,20 +229,17 @@ export abstract class BaseMangaSourceClient<
         `📦 Found ${sourceResults.length} ${this.config.name} results, extracting AniList IDs...`,
       );
 
-      // Extract AniList IDs from source results
       const anilistIds: number[] = [];
       const sourceMap = new Map<number, TMangaEntry>();
 
       for (const sourceManga of sourceResults) {
         const anilistId = await this.extractAniListId(sourceManga);
-
-        if (anilistId) {
-          anilistIds.push(anilistId);
-          sourceMap.set(anilistId, sourceManga);
-        }
+        if (!anilistId) continue;
+        anilistIds.push(anilistId);
+        sourceMap.set(anilistId, sourceManga);
       }
 
-      if (anilistIds.length === 0) {
+      if (!anilistIds.length) {
         console.log(
           `🔗 No AniList links found in ${this.config.name} results for "${query}"`,
         );
@@ -260,10 +250,8 @@ export abstract class BaseMangaSourceClient<
         `🎯 Found ${anilistIds.length} AniList IDs from ${this.config.name}: [${anilistIds.join(", ")}]`,
       );
 
-      // Fetch AniList manga details
       const anilistManga = await getMangaByIds(anilistIds, accessToken);
-
-      if (!anilistManga || anilistManga.length === 0) {
+      if (!anilistManga?.length) {
         console.log(
           `❌ Failed to fetch AniList manga for IDs: [${anilistIds.join(", ")}]`,
         );

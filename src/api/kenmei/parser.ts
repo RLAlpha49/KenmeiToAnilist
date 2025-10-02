@@ -28,39 +28,33 @@ export function parseKenmeiExport(
   options: Partial<KenmeiParseOptions> = {},
 ): KenmeiExport {
   const parseOptions = { ...DEFAULT_PARSE_OPTIONS, ...options };
-
   try {
     const data = JSON.parse(fileContent);
 
-    // Validate the structure of the data
-    if (parseOptions.validateStructure) {
-      if (!data.manga || !Array.isArray(data.manga)) {
-        throw new Error(
-          "Invalid Kenmei export: missing or invalid manga array",
-        );
+    if (!parseOptions.validateStructure) return data as KenmeiExport;
+
+    // Quick shape check
+    if (!data?.manga || !Array.isArray(data.manga)) {
+      throw new Error("Invalid Kenmei export: missing or invalid manga array");
+    }
+
+    // Validate and normalize each manga entry
+    for (const [index, manga] of data.manga.entries()) {
+      if (!manga?.title) {
+        throw new Error(`Manga at index ${index} is missing a title`);
       }
 
-      // Validate each manga entry
-      for (const [index, manga] of data.manga.entries()) {
-        if (!manga.title) {
-          throw new Error(`Manga at index ${index} is missing a title`);
-        }
-
-        if (!manga.status || !isValidStatus(manga.status)) {
-          manga.status = parseOptions.defaultStatus;
-        }
-
-        if (typeof manga.chapters_read !== "number") {
-          manga.chapters_read = 0;
-        }
+      if (!manga.status || !isValidStatus(manga.status)) {
+        manga.status = parseOptions.defaultStatus;
       }
+
+      if (typeof manga.chapters_read !== "number") manga.chapters_read = 0;
     }
 
     return data as KenmeiExport;
   } catch (error) {
-    if (error instanceof SyntaxError) {
+    if (error instanceof SyntaxError)
       throw new Error("Invalid JSON format in export file");
-    }
     throw error;
   }
 }
@@ -75,14 +69,14 @@ function createDefaultMangaEntry(
 ): KenmeiManga {
   return {
     ...manga,
-    status: manga.status || defaultStatus,
+    status: manga.status ?? defaultStatus,
     chapters_read:
       typeof manga.chapters_read === "number" ? manga.chapters_read : 0,
     score: typeof manga.score === "number" ? manga.score : 0,
-    id: manga.id || index,
-    url: manga.url || "",
-    created_at: manga.created_at || new Date().toISOString(),
-    updated_at: manga.updated_at || new Date().toISOString(),
+    id: manga.id ?? index,
+    url: manga.url ?? "",
+    created_at: manga.created_at ?? new Date().toISOString(),
+    updated_at: manga.updated_at ?? new Date().toISOString(),
   };
 }
 
@@ -103,25 +97,24 @@ function processSingleManga(
       parseOptions,
     );
     processedEntries.push(validatedManga);
+    return;
   } catch (error) {
-    if (error instanceof Error) {
-      validationErrors.push({
-        mangaTitle: manga.title || `Unknown manga at index ${index}`,
-        field: "general",
-        message: error.message,
-        index,
-      });
-    }
+    const message = error instanceof Error ? error.message : String(error);
+    validationErrors.push({
+      mangaTitle: manga.title ?? `Unknown manga at index ${index}`,
+      field: "general",
+      message,
+      index,
+    });
 
-    // If we allow partial data, continue processing despite errors
-    if (parseOptions.allowPartialData && manga.title) {
-      const defaultManga = createDefaultMangaEntry(
-        manga,
-        index,
-        parseOptions.defaultStatus,
-      );
-      processedEntries.push(defaultManga);
-    }
+    if (!parseOptions.allowPartialData || !manga.title) return;
+
+    const defaultManga = createDefaultMangaEntry(
+      manga,
+      index,
+      parseOptions.defaultStatus,
+    );
+    processedEntries.push(defaultManga);
   }
 }
 
@@ -143,15 +136,19 @@ export function processKenmeiMangaBatches(
   const validationErrors: ValidationError[] = [];
   const processedEntries: KenmeiManga[] = [];
 
-  // Process in batches
+  if (mangaList.length === 0) {
+    return {
+      processedEntries,
+      validationErrors,
+      totalEntries: 0,
+      successfulEntries: 0,
+    };
+  }
+
   for (let i = 0; i < mangaList.length; i += batchSize) {
     const batch = mangaList.slice(i, i + batchSize);
-
-    // Process each manga in the batch
-    for (let j = 0; j < batch.length; j++) {
-      const manga = batch[j];
+    for (const [j, manga] of batch.entries()) {
       const index = i + j;
-
       processSingleManga(
         manga,
         index,
@@ -185,28 +182,20 @@ function validateAndNormalizeManga(
 ): KenmeiManga {
   const errors: string[] = [];
 
-  // Check required fields
-  if (!manga.title) {
-    errors.push("Missing title");
-  }
+  if (!manga?.title) errors.push("Missing title");
 
-  // Validate status
-  if (!manga.status || !isValidStatus(manga.status)) {
+  if (!manga.status || !isValidStatus(manga.status))
     manga.status = options.defaultStatus;
-  }
 
-  // Normalize numeric fields
   manga.chapters_read =
     typeof manga.chapters_read === "number" ? manga.chapters_read : 0;
   manga.volumes_read =
     typeof manga.volumes_read === "number" ? manga.volumes_read : 0;
   manga.score = typeof manga.score === "number" ? manga.score : 0;
 
-  // Ensure we have dates
-  manga.created_at = manga.created_at || new Date().toISOString();
-  manga.updated_at = manga.updated_at || new Date().toISOString();
+  manga.created_at = manga.created_at ?? new Date().toISOString();
+  manga.updated_at = manga.updated_at ?? new Date().toISOString();
 
-  // If we have critical errors and don't allow partial data, throw
   if (errors.length > 0 && !options.allowPartialData) {
     throw new Error(
       `Validation failed for manga at index ${index}: ${errors.join(", ")}`,
@@ -222,32 +211,28 @@ function validateAndNormalizeManga(
  * @returns Whether the status is valid
  */
 function isValidStatus(status: string): boolean {
-  return [
+  const valid = new Set([
     "reading",
     "completed",
     "on_hold",
     "dropped",
     "plan_to_read",
-  ].includes(status);
+  ]);
+  return valid.has(status);
 }
 
 /**
  * Validate CSV data structure and headers
  */
 function validateCsvStructure(rows: string[][]): string[] {
-  if (rows.length < 2) {
+  if (!rows || rows.length < 2)
     throw new Error("CSV file does not contain enough data");
-  }
 
-  // Get headers from the first line, normalize them to avoid issues with spaces or case
-  const headers = rows[0].map((header) => header.trim().toLowerCase());
-
-  // Validate required headers
+  const headers = rows[0].map((h) => h.trim().toLowerCase());
   const requiredHeaders = ["title"];
   for (const required of requiredHeaders) {
-    if (!headers.includes(required)) {
+    if (!headers.includes(required))
       throw new Error(`CSV is missing required header: ${required}`);
-    }
   }
 
   return headers;
@@ -261,16 +246,17 @@ function shouldSkipRow(
   headers: string[],
   rowIndex: number,
 ): boolean {
-  // Skip rows that don't have enough fields (likely incomplete/malformed data)
-  if (values.length < 2) {
+  if (!values || values.length < 2) {
     console.warn(
-      `Skipping row ${rowIndex + 1} with insufficient fields: ${values.join(",")}`,
+      `Skipping row ${rowIndex + 1} with insufficient fields: ${values?.join(",")}`,
     );
     return true;
   }
 
-  // Skip rows where the title is just a number or looks like a chapter reference
-  const potentialTitle = values[headers.indexOf("title")];
+  const titleIndex = headers.indexOf("title");
+  const potentialTitle = titleIndex >= 0 ? values[titleIndex] : undefined;
+  if (!potentialTitle) return false;
+
   if (
     /^(Chapter|Ch\.|Vol\.|Volume) \d+$/i.test(potentialTitle) ||
     /^\d+$/.test(potentialTitle)
@@ -292,12 +278,10 @@ function createEntryMapping(
   values: string[],
 ): Record<string, string> {
   const entry: Record<string, string> = {};
-  for (let index = 0; index < headers.length; index++) {
-    const header = headers[index];
-    if (index < values.length) {
-      entry[header] = values[index];
-    }
-  }
+  headers.forEach((header, idx) => {
+    if (idx < values.length && values[idx] !== undefined)
+      entry[header] = values[idx];
+  });
   return entry;
 }
 
@@ -306,8 +290,7 @@ function createEntryMapping(
  */
 function parseIntSafe(value: string | undefined): number | undefined {
   if (!value) return undefined;
-  // Remove any non-numeric characters except decimal point
-  const cleanValue = value.replaceAll(/[^\d.]/g, "");
+  const cleanValue = value.replace(/[^\d.-]/g, "").trim();
   if (!cleanValue) return undefined;
   const parsed = Number.parseInt(cleanValue, 10);
   return Number.isNaN(parsed) ? undefined : parsed;
@@ -320,12 +303,8 @@ function findValue(
   entry: Record<string, string>,
   mappings: string[],
 ): string | undefined {
-  for (const mapping of mappings) {
-    if (entry[mapping] !== undefined) {
-      return entry[mapping];
-    }
-  }
-  return undefined;
+  const key = mappings.find((m) => entry[m] !== undefined);
+  return key ? entry[key] : undefined;
 }
 
 /**
@@ -382,20 +361,19 @@ function createMangaEntry(
   },
 ): KenmeiManga {
   // Parse chapter and volume numbers
-  const chaptersRead = parseIntSafe(fieldValues.chapterValue);
+  const chaptersRead = parseIntSafe(fieldValues.chapterValue) ?? 0;
   const volumesRead = parseIntSafe(fieldValues.volumeValue);
 
-  // Convert to proper types
   return {
-    id: Number.parseInt(entry.id || "0"),
+    id: Number.parseInt(entry.id ?? "0"),
     title: entry.title,
     status: validateStatus(fieldValues.statusValue),
     score: fieldValues.scoreValue
       ? Number.parseFloat(fieldValues.scoreValue)
       : 0,
-    url: fieldValues.urlValue || "",
+    url: fieldValues.urlValue ?? "",
     cover_url: entry.cover_url,
-    chapters_read: chaptersRead ?? 0,
+    chapters_read: chaptersRead,
     total_chapters: entry.total_chapters
       ? Number.parseInt(entry.total_chapters)
       : undefined,
@@ -403,12 +381,12 @@ function createMangaEntry(
     total_volumes: entry.total_volumes
       ? Number.parseInt(entry.total_volumes)
       : undefined,
-    notes: fieldValues.notesValue || "",
+    notes: fieldValues.notesValue ?? "",
     last_read_at: fieldValues.lastReadAt,
     created_at:
-      entry.created_at || fieldValues.dateValue || new Date().toISOString(),
+      entry.created_at ?? fieldValues.dateValue ?? new Date().toISOString(),
     updated_at:
-      entry.updated_at || fieldValues.dateValue || new Date().toISOString(),
+      entry.updated_at ?? fieldValues.dateValue ?? new Date().toISOString(),
     author: entry.author,
     alternative_titles: entry.alternative_titles
       ? entry.alternative_titles.split(";")
@@ -426,18 +404,15 @@ function processValidationResults(
   if (!parseOptions.validateStructure) return;
 
   const result = processKenmeiMangaBatches(manga, 100, parseOptions);
-
   if (result.validationErrors.length > 0 && !parseOptions.allowPartialData) {
     throw new Error(
       `${result.validationErrors.length} validation errors found in CSV import`,
     );
   }
 
-  // Use the processed entries if we have them
-  if (result.processedEntries.length > 0) {
-    manga.length = 0; // Clear the array
-    manga.push(...result.processedEntries);
-  }
+  if (result.processedEntries.length === 0) return;
+  manga.length = 0;
+  manga.push(...result.processedEntries);
 }
 
 /**
@@ -470,21 +445,11 @@ export const parseKenmeiCsvExport = (
     // Skip the header row
     for (let i = 1; i < rows.length; i++) {
       const values = rows[i];
+      if (shouldSkipRow(values, headers, i)) continue;
 
-      // Skip invalid rows
-      if (shouldSkipRow(values, headers, i)) {
-        continue;
-      }
-
-      // Create entry mapping from headers and values
       const entry = createEntryMapping(headers, values);
-
-      // Extract all field values
       const fieldValues = extractFieldValues(entry);
-
-      // Create manga entry
-      const mangaEntry = createMangaEntry(entry, fieldValues);
-      manga.push(mangaEntry);
+      manga.push(createMangaEntry(entry, fieldValues));
     }
 
     // Process validation if enabled
@@ -578,32 +543,34 @@ function parseCSVRows(csvContent: string): string[][] {
  */
 function validateStatus(status: string | undefined): KenmeiStatus {
   // Handle undefined or empty status
-  if (!status) {
-    return "reading";
-  }
+  if (!status) return "reading";
 
-  const validStatuses: KenmeiStatus[] = [
+  const normalized = status.trim().toLowerCase().replace(/\s+/g, "_");
+  const valid = new Set<KenmeiStatus>([
     "reading",
     "completed",
     "on_hold",
     "dropped",
     "plan_to_read",
-  ];
-  const normalized = status.toLowerCase().replace(" ", "_");
+  ]);
+  if (valid.has(normalized as KenmeiStatus)) return normalized as KenmeiStatus;
 
-  if (validStatuses.includes(normalized as KenmeiStatus)) {
-    return normalized as KenmeiStatus;
+  switch (normalized) {
+    case "planning":
+    case "plan":
+      return "plan_to_read";
+    case "hold":
+    case "paused":
+      return "on_hold";
+    case "complete":
+    case "finished":
+      return "completed";
+    case "read":
+    case "current":
+      return "reading";
+    default:
+      return "reading";
   }
-
-  // Map common variations
-  if (normalized === "planning" || normalized === "plan") return "plan_to_read";
-  if (normalized === "hold" || normalized === "paused") return "on_hold";
-  if (normalized === "complete" || normalized === "finished")
-    return "completed";
-  if (normalized === "read" || normalized === "current") return "reading";
-
-  // Default if no match
-  return "reading";
 }
 
 /**
@@ -636,21 +603,17 @@ export function extractMangaMetadata(manga: KenmeiManga[]): {
 
   for (const entry of manga) {
     // Count statuses
-    statusCounts[entry.status]++;
+    statusCounts[entry.status] = (statusCounts[entry.status] ?? 0) + 1;
 
-    // Track scores
     if (entry.score > 0) {
       totalScore += entry.score;
       scoredEntries++;
     }
 
-    // Track chapters
-    totalChaptersRead += entry.chapters_read || 0;
+    totalChaptersRead += entry.chapters_read ?? 0;
 
-    // Check if we have volume data
-    if (entry.volumes_read !== undefined || entry.total_volumes !== undefined) {
+    if (entry.volumes_read !== undefined || entry.total_volumes !== undefined)
       hasVolumesData = true;
-    }
   }
 
   return {

@@ -19,23 +19,63 @@ class MangaSourceRegistry {
    * Initialize the registry with available clients.
    */
   private async initialize(): Promise<void> {
-    if (this.initialized) {
-      return;
-    }
+    if (this.initialized) return;
 
-    // Dynamically import clients to avoid circular dependencies
-    try {
-      const { comickClient } = await import("./comick/client");
-      this.registerClient(MangaSource.COMICK, comickClient);
-    } catch (error) {
-      console.error("Failed to initialize Comick client:", error);
-    }
+    // Load known clients in parallel to reduce startup latency and
+    // keep the happy path clear. Individual failures are logged but do
+    // not prevent other clients from registering.
+    const loaders = [
+      {
+        source: MangaSource.COMICK,
+        path: "./comick/client",
+        exportName: "comickClient",
+      },
+      {
+        source: MangaSource.MANGADEX,
+        path: "./mangadex/client",
+        exportName: "mangaDexClient",
+      },
+    ] as const;
 
-    try {
-      const { mangaDexClient } = await import("./mangadex/client");
-      this.registerClient(MangaSource.MANGADEX, mangaDexClient);
-    } catch (error) {
-      console.error("Failed to initialize MangaDex client:", error);
+    type Loader = (typeof loaders)[number];
+    type LoadResult = {
+      loader: Loader;
+      client?: BaseMangaSourceClient;
+      error?: unknown;
+    };
+
+    const isClient = (obj: unknown): obj is BaseMangaSourceClient => {
+      return (
+        typeof obj === "object" &&
+        obj !== null &&
+        typeof (obj as Record<string, unknown>)["searchManga"] === "function"
+      );
+    };
+
+    const promises = loaders.map(async (l): Promise<LoadResult> => {
+      try {
+        const mod = await import(l.path);
+        const candidate = (mod as Record<string, unknown>)[l.exportName];
+        if (isClient(candidate)) {
+          return { loader: l, client: candidate };
+        }
+        return {
+          loader: l,
+          error: new Error(`Export ${l.exportName} not found or invalid`),
+        };
+      } catch (err) {
+        return { loader: l, error: err };
+      }
+    });
+
+    const results = await Promise.all(promises);
+
+    for (const res of results) {
+      if (res.client) {
+        this.registerClient(res.loader.source, res.client);
+        continue;
+      }
+      console.error(`Failed to initialize ${res.loader.path}:`, res.error);
     }
 
     this.initialized = true;
@@ -62,6 +102,20 @@ class MangaSourceRegistry {
   }
 
   /**
+   * Internal helper to get a client or throw a clear error.
+   * This reduces duplication across public methods that require a client.
+   */
+  private async getClientOrThrow(
+    source: MangaSource,
+  ): Promise<BaseMangaSourceClient> {
+    const client = await this.getClient(source);
+    if (!client) {
+      throw new Error(`Manga source not available: ${source}`);
+    }
+    return client;
+  }
+
+  /**
    * Get all registered manga sources.
    */
   public getAvailableSources(): MangaSource[] {
@@ -83,11 +137,7 @@ class MangaSourceRegistry {
     query: string,
     limit?: number,
   ): Promise<T[]> {
-    const client = await this.getClient(source);
-    if (!client) {
-      throw new Error(`Manga source not available: ${source}`);
-    }
-
+    const client = await this.getClientOrThrow(source);
     return client.searchManga(query, limit) as Promise<T[]>;
   }
 
@@ -98,11 +148,7 @@ class MangaSourceRegistry {
     source: MangaSource,
     slug: string,
   ): Promise<T | null> {
-    const client = await this.getClient(source);
-    if (!client) {
-      throw new Error(`Manga source not available: ${source}`);
-    }
-
+    const client = await this.getClientOrThrow(source);
     return client.getMangaDetail(slug) as Promise<T | null>;
   }
 
@@ -115,11 +161,7 @@ class MangaSourceRegistry {
     accessToken: string,
     limit?: number,
   ) {
-    const client = await this.getClient(source);
-    if (!client) {
-      throw new Error(`Manga source not available: ${source}`);
-    }
-
+    const client = await this.getClientOrThrow(source);
     return client.searchAndGetAniListManga(query, accessToken, limit);
   }
 
@@ -131,10 +173,7 @@ class MangaSourceRegistry {
     queries: string[],
   ): Promise<number> {
     const client = await this.getClient(source);
-    if (!client) {
-      return 0;
-    }
-
+    if (!client) return 0;
     return client.clearCache(queries);
   }
 
@@ -143,10 +182,7 @@ class MangaSourceRegistry {
    */
   public async getCacheStatus(source: MangaSource) {
     const client = await this.getClient(source);
-    if (!client) {
-      return null;
-    }
-
+    if (!client) return null;
     return client.getCacheStatus();
   }
 }

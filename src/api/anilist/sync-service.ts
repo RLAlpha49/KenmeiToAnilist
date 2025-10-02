@@ -25,27 +25,20 @@ function buildVariablesForExistingEntry(
     mediaId: entry.mediaId,
   };
 
-  if (!entry.previousValues) {
-    return variables;
-  }
+  if (!entry.previousValues) return variables;
 
   // Only include fields that have changed
-  if (entry.status !== entry.previousValues.status) {
+  if (entry.status !== entry.previousValues.status)
     variables.status = entry.status;
-  }
 
-  if (entry.progress !== entry.previousValues.progress) {
+  if (entry.progress !== entry.previousValues.progress)
     variables.progress = entry.progress;
-  }
 
-  if (entry.score !== entry.previousValues.score) {
+  if (entry.score !== entry.previousValues.score)
     variables.score = entry.score || 0;
-  }
 
   // Only include private flag if it's explicitly set
-  if (entry.private !== undefined) {
-    variables.private = entry.private;
-  }
+  if (entry.private !== undefined) variables.private = entry.private;
 
   return variables;
 }
@@ -59,17 +52,13 @@ function buildVariablesForNewEntry(entry: AniListMediaEntry): GraphQLVariables {
     status: entry.status,
   };
 
-  if (typeof entry.progress === "number" && entry.progress >= 0) {
+  if (typeof entry.progress === "number" && entry.progress >= 0)
     variables.progress = entry.progress;
-  }
 
-  if (typeof entry.score === "number" && entry.score >= 0) {
+  if (typeof entry.score === "number" && entry.score >= 0)
     variables.score = entry.score;
-  }
 
-  if (entry.private !== undefined) {
-    variables.private = entry.private;
-  }
+  if (entry.private !== undefined) variables.private = entry.private;
 
   return variables;
 }
@@ -123,19 +112,14 @@ function buildStep3VariablesForNewEntry(
     mediaId: entry.mediaId,
   };
 
-  if (entry.status) {
-    variables.status = entry.status;
-  }
+  if (entry.status) variables.status = entry.status;
 
   // Include score for new entries if it has a value
-  if (typeof entry.score === "number" && entry.score > 0) {
+  if (typeof entry.score === "number" && entry.score > 0)
     variables.score = entry.score;
-  }
 
   // Include private flag if set
-  if (entry.private !== undefined) {
-    variables.private = entry.private;
-  }
+  if (entry.private !== undefined) variables.private = entry.private;
 
   return variables;
 }
@@ -151,23 +135,19 @@ function buildStep3VariablesForExistingEntry(
   };
 
   // For existing entries, only include status if it's changed
-  if (entry.status !== entry.previousValues!.status) {
+  if (entry.status !== entry.previousValues!.status)
     variables.status = entry.status;
-  }
 
   // Include score if available and changed
   if (
     entry.score !== entry.previousValues!.score &&
     typeof entry.score === "number" &&
     entry.score >= 0
-  ) {
+  )
     variables.score = entry.score;
-  }
 
   // Include private flag if set
-  if (entry.private !== undefined) {
-    variables.private = entry.private;
-  }
+  if (entry.private !== undefined) variables.private = entry.private;
 
   return variables;
 }
@@ -229,19 +209,14 @@ function applyIncrementalSyncStep(
 function extractRetryAfterTime(
   errors: { extensions?: { retryAfter?: number }; message: string }[],
 ): number {
-  let retryAfter = 60000; // Default to 60 seconds
+  const retryAfter = 60000; // Default to 60 seconds
 
   for (const err of errors) {
-    if (err.extensions?.retryAfter) {
-      retryAfter = Number(err.extensions.retryAfter) * 1000;
-      break;
-    }
+    if (err.extensions?.retryAfter)
+      return Number(err.extensions.retryAfter) * 1000;
 
     const timeMatch = new RegExp(/(\d+)\s*(?:second|sec|s)/i).exec(err.message);
-    if (timeMatch?.[1]) {
-      retryAfter = Number(timeMatch[1]) * 1000;
-      break;
-    }
+    if (timeMatch?.[1]) return Number(timeMatch[1]) * 1000;
   }
 
   return retryAfter;
@@ -342,9 +317,8 @@ function is500ServerError(error: unknown, errorMessage: string): boolean {
     if (
       error.message.includes("500") ||
       error.message.includes("Internal Server Error")
-    ) {
+    )
       return true;
-    }
   }
 
   if (
@@ -352,9 +326,8 @@ function is500ServerError(error: unknown, errorMessage: string): boolean {
     error !== null &&
     "status" in error &&
     (error as { status?: number }).status === 500
-  ) {
+  )
     return true;
-  }
 
   if (typeof errorMessage === "string") {
     try {
@@ -362,9 +335,8 @@ function is500ServerError(error: unknown, errorMessage: string): boolean {
         errorMessage.includes('"status": 500') ||
         errorMessage.includes('"status":500') ||
         errorMessage.includes("Internal Server Error")
-      ) {
+      )
         return true;
-      }
     } catch {
       // Ignore parsing errors
     }
@@ -393,12 +365,11 @@ function logErrorDetails(
       `   [${operationId}] Stack trace:`,
       error.stack || "No stack trace available",
     );
-  }
 
-  if (error instanceof TypeError && error.message.includes("fetch")) {
-    console.error(
-      `   [${operationId}] Network error detected. Possible connectivity issue.`,
-    );
+    if (error instanceof TypeError && error.message.includes("fetch"))
+      console.error(
+        `   [${operationId}] Network error detected. Possible connectivity issue.`,
+      );
   }
 
   console.error(`   [${operationId}] Entry details:`, {
@@ -657,16 +628,16 @@ export async function deleteMangaEntry(
       return {
         success: true,
       };
-    } else {
-      console.error(
-        `❌ [${operationId}] Missing DeleteMediaListEntry in response:`,
-        JSON.stringify(response, null, 2),
-      );
-      return {
-        success: false,
-        error: "Delete failed: Entry was not deleted",
-      };
     }
+
+    console.error(
+      `❌ [${operationId}] Missing DeleteMediaListEntry in response:`,
+      JSON.stringify(response, null, 2),
+    );
+    return {
+      success: false,
+      error: "Delete failed: Entry was not deleted",
+    };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(
@@ -703,21 +674,15 @@ function calculateNewEntrySteps(entry: AniListMediaEntry): number[] {
     entry.status || entry.score || entry.private !== undefined;
 
   // For new entries with progress > 1, use incremental steps
-  if (targetProgress > 1) {
+  if (targetProgress > 1)
     steps.push(1, 2); // Step 1: progress = 1, Step 2: progress = target
-  } else if (targetProgress === 1) {
-    steps.push(1); // Step 1: progress = 1
-  }
+  else if (targetProgress === 1) steps.push(1); // Step 1: progress = 1
 
   // Always include step 3 for new entries to set status and other metadata
-  if (hasMetadata) {
-    steps.push(3);
-  }
+  if (hasMetadata) steps.push(3);
 
   // If no progress and no metadata, just add everything in one step
-  if (steps.length === 0) {
-    steps.push(1);
-  }
+  if (steps.length === 0) steps.push(1);
 
   return steps;
 }
@@ -740,11 +705,8 @@ function calculateExistingEntrySteps(entry: AniListMediaEntry): number[] {
 
   // Add progress steps based on change amount
   if (progressChanged) {
-    if (progressDelta === 1) {
-      steps.push(1);
-    } else if (progressDelta > 1) {
-      steps.push(1, 2);
-    }
+    if (progressDelta === 1) steps.push(1);
+    else if (progressDelta > 1) steps.push(1, 2);
   }
 
   // Add metadata step if needed
@@ -786,9 +748,7 @@ function getIncrementalSteps(entry: AniListMediaEntry): number[] {
   const prev = entry.previousValues;
 
   // For new entries (no previousValues)
-  if (!prev) {
-    return calculateNewEntrySteps(entry);
-  }
+  if (!prev) return calculateNewEntrySteps(entry);
 
   // For existing entries (original logic)
   return calculateExistingEntrySteps(entry);
@@ -826,13 +786,10 @@ async function handleRateLimitRetry(
     const remainingMs = Math.max(0, endTime - currentTime);
     progress.retryAfter = remainingMs;
 
-    if (onProgress) {
-      onProgress({ ...progress });
-    }
+    if (onProgress) onProgress({ ...progress });
 
-    if (remainingMs <= 0 || abortSignal?.aborted) {
+    if (remainingMs <= 0 || abortSignal?.aborted)
       clearInterval(countdownInterval);
-    }
   }, 1000);
 
   await new Promise<void>((resolve) => {
@@ -841,9 +798,7 @@ async function handleRateLimitRetry(
       progress.rateLimited = false;
       progress.retryAfter = null;
 
-      if (onProgress) {
-        onProgress({ ...progress });
-      }
+      if (onProgress) onProgress({ ...progress });
 
       resolve();
     }, retryAfterMs);
@@ -869,6 +824,8 @@ function organizeEntriesByMediaId(
   const entriesByMediaId: Record<number, AniListMediaEntry[]> = {};
 
   for (const entry of entries) {
+    if (!entriesByMediaId[entry.mediaId]) entriesByMediaId[entry.mediaId] = [];
+
     if (entry.syncMetadata?.useIncrementalSync) {
       const steps = getIncrementalSteps(entry);
       for (const step of steps) {
@@ -877,15 +834,9 @@ function organizeEntriesByMediaId(
           ...entry.syncMetadata,
           step: step,
         };
-        if (!entriesByMediaId[entry.mediaId]) {
-          entriesByMediaId[entry.mediaId] = [];
-        }
         entriesByMediaId[entry.mediaId].push(stepEntry);
       }
     } else {
-      if (!entriesByMediaId[entry.mediaId]) {
-        entriesByMediaId[entry.mediaId] = [];
-      }
       entriesByMediaId[entry.mediaId].push(entry);
     }
   }
@@ -968,9 +919,8 @@ async function processEntryStep(
   context: EntryProcessingContext,
 ): Promise<{ success: boolean; error?: string; shouldRetry: boolean }> {
   // Update progress step
-  if (isIncremental) {
+  if (isIncremental)
     context.progress.currentStep = entry.syncMetadata?.step || entryIndex + 1;
-  }
 
   if (context.onProgress) {
     console.log(
@@ -981,9 +931,8 @@ async function processEntryStep(
 
   try {
     // Rate limiting delay
-    if (context.apiCallsCompleted.count > 0) {
+    if (context.apiCallsCompleted.count > 0)
       await new Promise((resolve) => setTimeout(resolve, REQUEST_INTERVAL));
-    }
 
     const result = await updateMangaEntry(entry, context.token);
     context.apiCallsCompleted.count++;
@@ -1000,13 +949,12 @@ async function processEntryStep(
     }
 
     // Handle unsuccessful result
-    if (!result.success) {
+    if (!result.success)
       return {
         success: false,
         error: result.error,
         shouldRetry: false,
       };
-    }
 
     return { success: true, shouldRetry: false };
   } catch (error) {
@@ -1059,9 +1007,7 @@ async function processMediaEntries(
   const entriesForMediaId = entriesByMediaId[mediaIdNum];
   const mediaIdStr = String(mediaIdNum);
 
-  if (!entriesForMediaId) {
-    return { success: true }; // Skip if not present
-  }
+  if (!entriesForMediaId) return { success: true }; // Skip if not present
 
   console.log(
     `[SYNC] Starting manga ${mediaIdNum} (${progress.completed + 1} of ${progress.total})`,
@@ -1218,9 +1164,7 @@ export async function syncMangaBatch(
     retryAfter: null,
   };
 
-  if (onProgress) {
-    onProgress({ ...progress });
-  }
+  if (onProgress) onProgress({ ...progress });
 
   const apiCallsCompleted = { count: 0 };
 
@@ -1248,21 +1192,18 @@ export async function syncMangaBatch(
       progress.successful++;
     } else {
       progress.failed++;
-      if (result.error) {
+      if (result.error)
         errors.push({
           mediaId: mediaIdNum,
           error: result.error,
         });
-      }
     }
 
     // Clear current entry info
     progress.currentEntry = null;
     progress.currentStep = null;
 
-    if (onProgress) {
-      onProgress({ ...progress });
-    }
+    if (onProgress) onProgress({ ...progress });
   }
 
   return generateSyncReport(entries, progress, errors);

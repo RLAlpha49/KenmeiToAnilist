@@ -317,6 +317,45 @@ let lastRequestTime = 0;
 const requestQueue: { resolve: (value: void) => void }[] = [];
 let processingQueue = false;
 
+// Manual pause state for matching requests
+let manualPauseActive = false;
+let pauseWaiters: Array<() => void> = [];
+
+const resolvePauseWaiters = () => {
+  const currentWaiters = pauseWaiters;
+  pauseWaiters = [];
+  currentWaiters.forEach((resolve) => resolve());
+};
+
+async function waitWhileManuallyPaused(): Promise<void> {
+  while (manualPauseActive) {
+    await new Promise<void>((resolve) => pauseWaiters.push(resolve));
+  }
+}
+
+export function setManualMatchingPause(paused: boolean): void {
+  if (paused) {
+    manualPauseActive = true;
+  } else if (manualPauseActive) {
+    manualPauseActive = false;
+    resolvePauseWaiters();
+  }
+
+  try {
+    globalThis.dispatchEvent?.(
+      new CustomEvent("matching:manual-pause", {
+        detail: { paused },
+      }),
+    );
+  } catch (error) {
+    console.error("Error dispatching manual pause event:", error);
+  }
+}
+
+export function isManualMatchingPaused(): boolean {
+  return manualPauseActive;
+}
+
 /**
  * Options for rate-limited search functions
  */
@@ -432,6 +471,7 @@ async function processRateLimitQueue(): Promise<void> {
   processingQueue = true;
 
   while (requestQueue.length > 0) {
+    await waitWhileManuallyPaused();
     const now = Date.now();
     const timeSinceLastRequest = now - lastRequestTime;
 
@@ -475,6 +515,8 @@ async function searchWithRateLimit(
   retryCount: number = 0,
   bypassCache: boolean = false,
 ): Promise<SearchResult<AniListManga>> {
+  await waitWhileManuallyPaused();
+
   // Only wait for rate limit if requested (first request in a batch should wait, subsequent ones should not)
   if (acquireLimit) {
     await acquireRateLimit();
@@ -522,6 +564,8 @@ async function advancedSearchWithRateLimit(
   } = {},
   options: SearchRateLimitOptions = {},
 ): Promise<SearchResult<AniListManga>> {
+  await waitWhileManuallyPaused();
+
   const {
     page = 1,
     perPage = 50,
@@ -553,6 +597,7 @@ async function advancedSearchWithRateLimit(
         `Advanced search error, retrying (${retryCount + 1}/3): ${query}`,
       );
       await sleep(1000 * (retryCount + 1)); // Exponential backoff
+      await waitWhileManuallyPaused();
 
       // Retry with incremented retry count
       return advancedSearchWithRateLimit(query, filters, {

@@ -59,16 +59,12 @@ export function normalizeString(text: string, caseSensitive = false): string {
   if (!text) return "";
 
   // Replace special characters and normalize spacing
-  let normalized = text
+  const replaced = text
     .replaceAll(/[^\w\s]/gi, " ") // Replace special chars with space
     .replaceAll(/\s+/g, " ") // Collapse multiple spaces
     .trim();
 
-  if (!caseSensitive) {
-    normalized = normalized.toLowerCase();
-  }
-
-  return normalized;
+  return caseSensitive ? replaced : replaced.toLowerCase();
 }
 
 /**
@@ -255,9 +251,11 @@ function calculateFinalScore(
     return { confidence: 0, isExactMatch: false, matchedField: "none" };
   }
 
-  // Get the highest score and its field
-  scores.sort((a, b) => b.score - a.score);
-  const topScore = scores[0];
+  // Get the highest score and its field (avoid mutating the array)
+  const topScore = scores.reduce(
+    (best, cur) => (cur.score > best.score ? cur : best),
+    scores[0],
+  );
 
   // Apply title preference weighting
   let adjustedScore = topScore.score;
@@ -351,51 +349,74 @@ export function findBestMatches(
 ): MangaMatchResult {
   const matchConfig = { ...DEFAULT_MATCH_CONFIG, ...config };
 
-  // Calculate match scores for each AniList manga
-  const matchResults = anilistMangaList.map((manga) => {
-    const matchScore = scoreMatch(kenmeiManga, manga, matchConfig);
-    return {
-      manga,
-      confidence: matchScore.confidence,
-      isExactMatch: matchScore.isExactMatch,
-      matchedField: matchScore.matchedField,
-    };
-  });
+  // Calculate match scores for each AniList manga and sort descending
+  const matchResults = anilistMangaList
+    .map((manga) => {
+      const matchScore = scoreMatch(kenmeiManga, manga, matchConfig);
+      return {
+        manga,
+        confidence: matchScore.confidence,
+        isExactMatch: matchScore.isExactMatch,
+        matchedField: matchScore.matchedField,
+      } as const;
+    })
+    .sort((a, b) => b.confidence - a.confidence);
 
-  // Sort by confidence score (descending)
-  matchResults.sort((a, b) => b.confidence - a.confidence);
-
-  // Take only the top matches
+  // Take only the top matches and exclude zero-confidence entries
   const topMatches = matchResults
     .slice(0, matchConfig.maxMatches)
-    .filter((match) => match.confidence > 0);
-
-  // Determine the match status
-  let status: MangaMatchResult["status"];
+    .filter((m) => m.confidence > 0);
 
   if (topMatches.length === 0) {
-    status = "pending"; // No matches found
-  } else if (topMatches[0].isExactMatch) {
-    status = "matched"; // Found an exact match
-  } else if (
-    topMatches[0].confidence >= matchConfig.confidenceThreshold &&
-    (topMatches.length === 1 ||
-      topMatches[0].confidence - topMatches[1].confidence > 20)
-  ) {
-    status = "matched"; // High confidence and significant gap to next match
-  } else {
-    status = "pending"; // Multiple potential matches or low confidence
+    return {
+      kenmeiManga,
+      anilistMatches: [],
+      status: "pending",
+      selectedMatch: undefined,
+      matchDate: new Date(),
+    };
   }
 
-  // Format as MangaMatchResult
+  if (topMatches[0].isExactMatch) {
+    return {
+      kenmeiManga,
+      anilistMatches: topMatches.map(({ manga, confidence }) => ({
+        manga,
+        confidence,
+      })),
+      status: "matched",
+      selectedMatch: topMatches[0].manga,
+      matchDate: new Date(),
+    };
+  }
+
+  const hasHighConfidence =
+    topMatches[0].confidence >= matchConfig.confidenceThreshold &&
+    (topMatches.length === 1 ||
+      topMatches[0].confidence - topMatches[1].confidence > 20);
+
+  if (hasHighConfidence) {
+    return {
+      kenmeiManga,
+      anilistMatches: topMatches.map(({ manga, confidence }) => ({
+        manga,
+        confidence,
+      })),
+      status: "matched",
+      selectedMatch: topMatches[0].manga,
+      matchDate: new Date(),
+    };
+  }
+
+  // Multiple potential matches or low confidence => pending
   return {
     kenmeiManga,
     anilistMatches: topMatches.map(({ manga, confidence }) => ({
       manga,
       confidence,
     })),
-    status,
-    selectedMatch: status === "matched" ? topMatches[0].manga : undefined,
+    status: "pending",
+    selectedMatch: undefined,
     matchDate: new Date(),
   };
 }
@@ -414,16 +435,9 @@ export async function processBatchMatches(
   anilistMangaMap: Map<string, AniListManga[]>,
   config: Partial<MatchEngineConfig> = {},
 ): Promise<MangaMatchResult[]> {
-  const results: MangaMatchResult[] = [];
-
-  for (const kenmeiManga of kenmeiMangaList) {
+  return kenmeiMangaList.map((kenmeiManga) => {
     const searchKey = normalizeString(kenmeiManga.title).slice(0, 10);
     const potentialMatches = anilistMangaMap.get(searchKey) || [];
-
-    // Find matches
-    const matchResult = findBestMatches(kenmeiManga, potentialMatches, config);
-    results.push(matchResult);
-  }
-
-  return results;
+    return findBestMatches(kenmeiManga, potentialMatches, config);
+  });
 }

@@ -72,10 +72,8 @@ export function processKenmeiExport(
       processOptions.parseOptions,
     );
   } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(`Failed to process Kenmei data: ${error.message}`);
-    }
-    throw new Error("Failed to process Kenmei data: Unknown error");
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    throw new Error(`Failed to process Kenmei data: ${msg}`);
   }
 }
 
@@ -108,27 +106,36 @@ export function prepareEntryForSync(
   );
 
   // Determine progress (chapters vs volumes)
-  const progress = manga.chapters_read;
-  let progressVolumes: number | undefined = manga.volumes_read;
-
-  // If we prefer volumes and have volume data, set progress to volumes
-  if (processOptions.preferVolumes && manga.volumes_read !== undefined) {
-    progressVolumes = manga.volumes_read;
-  }
+  // Use guard clauses and prefer explicit undefined over nullish values
+  const progress = manga.chapters_read ?? 0;
+  const hasVolumeData =
+    manga.volumes_read !== undefined && manga.volumes_read !== null;
+  // If preferVolumes and volume data exists, expose progressVolumes else undefined
+  const progressVolumes =
+    processOptions.preferVolumes && hasVolumeData
+      ? manga.volumes_read
+      : (manga.volumes_read ?? undefined);
 
   // Normalize score if needed (Kenmei uses 1-10, AniList uses 1-100 or 1-10 depending on settings)
-  let score: number | undefined = manga.score;
-  if (processOptions.normalizeScores && score > 0) {
+  let rawScore = manga.score ?? undefined;
+  if (
+    processOptions.normalizeScores &&
+    typeof rawScore === "number" &&
+    rawScore > 0
+  ) {
     // We'll assume AniList is using the 100-point scale
-    score = Math.round(score * 10);
+    rawScore = Math.round(rawScore * 10);
   }
+
+  const score =
+    typeof rawScore === "number" && rawScore > 0 ? rawScore : undefined;
 
   return {
     mediaId: anilistMatch.id,
     status,
     progress,
     progressVolumes,
-    score: score > 0 ? score : undefined,
+    score,
   };
 }
 
@@ -153,18 +160,16 @@ export function extractReadingStats(manga: KenmeiManga[]): {
   const statusBreakdown: Record<string, number> = {};
 
   for (const entry of manga) {
-    // Count chapters and volumes
-    totalChapters += entry.chapters_read || 0;
-    totalVolumes += entry.volumes_read || 0;
+    totalChapters += entry.chapters_read ?? 0;
+    totalVolumes += entry.volumes_read ?? 0;
 
-    // Count completed and in-progress manga
     if (entry.status === "completed") {
       completedManga++;
-    } else if (entry.status === "reading") {
+    }
+    if (entry.status === "reading") {
       inProgressManga++;
     }
 
-    // Track status breakdown
     statusBreakdown[entry.status] = (statusBreakdown[entry.status] || 0) + 1;
   }
 
@@ -196,8 +201,9 @@ export async function processMangaInBatches<T>(
   // Process in batches
   for (let i = 0; i < entries.length; i += batchSize) {
     const batch = entries.slice(i, i + batchSize);
+    if (batch.length === 0) continue;
     const batchResults = await processFn(batch);
-    results.push(...batchResults);
+    if (batchResults && batchResults.length > 0) results.push(...batchResults);
   }
 
   return results;
@@ -221,31 +227,22 @@ export function filterMangaEntries(
   },
 ): KenmeiManga[] {
   return entries.filter((entry) => {
-    // Filter by status
-    if (criteria.status && !criteria.status.includes(entry.status)) {
-      return false;
+    if (criteria.status?.length) {
+      if (!criteria.status.includes(entry.status)) return false;
     }
 
-    // Filter by minimum chapters
-    if (
-      criteria.minChapters !== undefined &&
-      entry.chapters_read < criteria.minChapters
-    ) {
-      return false;
+    if (criteria.minChapters !== undefined) {
+      if ((entry.chapters_read ?? 0) < criteria.minChapters) return false;
     }
 
-    // Filter by having progress
-    if (
-      criteria.hasProgress &&
-      entry.chapters_read <= 0 &&
-      (!entry.volumes_read || entry.volumes_read <= 0)
-    ) {
-      return false;
+    if (criteria.hasProgress) {
+      const chapters = entry.chapters_read ?? 0;
+      const volumes = entry.volumes_read ?? 0;
+      if (chapters <= 0 && volumes <= 0) return false;
     }
 
-    // Filter by having score
-    if (criteria.hasScore && (!entry.score || entry.score <= 0)) {
-      return false;
+    if (criteria.hasScore) {
+      if ((entry.score ?? 0) <= 0) return false;
     }
 
     return true;
