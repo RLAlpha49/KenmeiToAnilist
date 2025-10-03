@@ -32,4 +32,4 @@ jobs:
       - name: Install dependencies
         run: npm ci --force
       - name: Check formatting
-        run: npm run format
+        run: npx prettier --check .
