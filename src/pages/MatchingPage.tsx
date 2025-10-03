@@ -4,12 +4,6 @@
  * @description Matching page component for the Kenmei to AniList sync tool. Handles manga matching, review, rematch, and sync preparation.
  */
 
-// TODO: If a user is currently auto matching, if the user is not on the matching page there should be some way to see that it is matching in the background. Maybe something in the header or a floating notice at the top of the pages that can be expanded to show some information.
-
-// TODO: Fix when switching to another page and back that all the timings seem to be null. It shows no estimated time remaining, elapsed, or average time per manga. Another issue related to this is when the timings are messed up and the matching got rate limited, it set the elapsed time to a very big number of 488732 hours.
-
-// TODO: Fix built app not searching mangadex when enabled.
-
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { KenmeiManga } from "../api/kenmei/types";

@@ -78,6 +78,7 @@ export const useMatchingProcess = ({
     pauseTimeTracking,
     resumeTimeTracking,
     isPaused: isTimeEstimatePaused,
+    setTimeEstimate,
   } = useTimeEstimate();
 
   // Pending manga
@@ -130,6 +131,15 @@ export const useMatchingProcess = ({
         });
         setStatusMessage(globalThis.matchingProcessState.statusMessage);
         setDetailMessage(globalThis.matchingProcessState.detailMessage);
+
+        // Restore time estimate from global state if available
+        if (globalThis.matchingProcessState.timeEstimate) {
+          setTimeEstimate(globalThis.matchingProcessState.timeEstimate);
+          console.log(
+            "Restored time estimate from global state",
+            globalThis.matchingProcessState.timeEstimate,
+          );
+        }
 
         return;
       }

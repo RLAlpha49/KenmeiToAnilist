@@ -86,9 +86,18 @@ export const useTimeEstimate = () => {
         const remainingItems = total - current;
         const estimatedRemainingMs = avgTimePerItem * remainingItems;
 
-        // Cap at 24 hours for sanity
+        // Cap at 24 hours for sanity and add validation
         const maxTimeMs = 24 * 60 * 60 * 1000;
-        const cappedEstimatedMs = Math.min(estimatedRemainingMs, maxTimeMs);
+
+        // Validate that the estimated time is reasonable (not NaN, Infinity, or negative)
+        const isValidEstimate =
+          Number.isFinite(estimatedRemainingMs) &&
+          estimatedRemainingMs >= 0 &&
+          estimatedRemainingMs < Number.MAX_SAFE_INTEGER;
+
+        const cappedEstimatedMs = isValidEstimate
+          ? Math.min(estimatedRemainingMs, maxTimeMs)
+          : 0;
 
         // Update state with new estimate
         const newEstimate = {
@@ -121,24 +130,43 @@ export const useTimeEstimate = () => {
    * @source
    */
   const initializeTimeTracking = useCallback(() => {
-    processingStartTimeRef.current = Date.now();
-    lastProcessedCountRef.current = 0;
-    lastTimeUpdateRef.current = processingStartTimeRef.current;
-    processingTimesRef.current = [];
-    pauseCountRef.current = 0;
-    pauseStartRef.current = null;
-    setIsPaused(false);
+    const now = Date.now();
 
-    // Reset time estimate state
-    const initialEstimate = {
-      startTime: processingStartTimeRef.current,
-      averageTimePerManga: 0,
-      estimatedRemainingSeconds: 0,
-    };
+    // Only reset if we don't have a running process with valid timing data
+    const shouldReset =
+      !globalThis.matchingProcessState?.isRunning ||
+      !globalThis.matchingProcessState?.timeEstimate ||
+      processingTimesRef.current.length === 0;
 
-    setTimeEstimate(initialEstimate);
+    if (shouldReset) {
+      processingStartTimeRef.current = now;
+      lastProcessedCountRef.current = 0;
+      lastTimeUpdateRef.current = now;
+      processingTimesRef.current = [];
+      pauseCountRef.current = 0;
+      pauseStartRef.current = null;
+      setIsPaused(false);
 
-    return initialEstimate;
+      // Reset time estimate state
+      const initialEstimate = {
+        startTime: now,
+        averageTimePerManga: 0,
+        estimatedRemainingSeconds: 0,
+      };
+
+      setTimeEstimate(initialEstimate);
+      return initialEstimate;
+    } else {
+      // Restore from global state
+      console.log("Preserving existing time tracking data");
+      return (
+        globalThis.matchingProcessState?.timeEstimate || {
+          startTime: now,
+          averageTimePerManga: 0,
+          estimatedRemainingSeconds: 0,
+        }
+      );
+    }
   }, []);
 
   const pauseTimeTracking = useCallback(() => {
@@ -179,5 +207,6 @@ export const useTimeEstimate = () => {
     pauseTimeTracking,
     resumeTimeTracking,
     isPaused,
+    setTimeEstimate,
   };
 };

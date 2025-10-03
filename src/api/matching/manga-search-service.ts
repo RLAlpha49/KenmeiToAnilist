@@ -26,6 +26,7 @@ import {
 } from "./match-engine";
 import { calculateEnhancedSimilarity } from "../../utils/enhanced-similarity";
 import { getMatchConfig } from "../../utils/storage";
+import { mangaSourceRegistry, MangaSource } from "../manga-sources";
 
 // Titles to ignore during automatic matching (but allow in manual searches)
 const IGNORED_AUTOMATIC_MATCH_TITLES = new Set([
@@ -2523,9 +2524,6 @@ async function executeComickFallback(
   );
 
   try {
-    const { mangaSourceRegistry, MangaSource } = await import(
-      "../manga-sources"
-    );
     const comickLimit = 1;
 
     console.log(`🔍 Searching Comick with limit ${comickLimit} for "${title}"`);
@@ -2617,9 +2615,6 @@ async function executeMangaDexFallback(
   );
 
   try {
-    const { mangaSourceRegistry, MangaSource } = await import(
-      "../manga-sources"
-    );
     const mangaDexLimit = 1;
 
     console.log(

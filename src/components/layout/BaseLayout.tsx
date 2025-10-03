@@ -6,6 +6,7 @@
 import React from "react";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
+import { BackgroundMatchingIndicator } from "./BackgroundMatchingIndicator";
 
 /**
  * BaseLayout React component that provides the main application layout with header, footer, and content area.
@@ -28,6 +29,8 @@ export default function BaseLayout({
       </div>
 
       <Header />
+
+      <BackgroundMatchingIndicator />
 
       <main className="relative z-[1] flex-1 overflow-auto px-4 py-6 md:px-6">
         <div className="container mx-auto">
