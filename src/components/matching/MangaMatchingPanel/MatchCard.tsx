@@ -80,7 +80,7 @@ export default function MatchCard({
   let primaryBlurKey: string | undefined;
   if (primaryMatchCandidate?.id !== undefined) {
     primaryBlurKey = `${primaryMatchCandidate.id}`;
-  } else if (match.anilistMatches?.[0]?.manga?.id !== undefined) {
+  } else if (typeof match.anilistMatches?.[0]?.manga?.id === "number") {
     primaryBlurKey = `${match.anilistMatches[0].manga.id}`;
   } else {
     primaryBlurKey = undefined;

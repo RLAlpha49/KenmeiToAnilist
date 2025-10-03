@@ -97,7 +97,8 @@ const applyFormat = (format: string, args: unknown[]): string => {
   let i = 0;
   const tokens = ["%%", "%s", "%d", "%i", "%f", "%o", "%O", "%c"];
 
-  const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escapeRegex = (s: string) =>
+    s.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const objectDefaultString = (v: unknown) => Object.prototype.toString.call(v);
 
   const stringifyObject = (v: unknown): string => {
@@ -105,7 +106,7 @@ const applyFormat = (format: string, args: unknown[]): string => {
     try {
       const json = JSON.stringify(v);
       // JSON.stringify can return undefined for some values; fallback to default
-      return json === undefined ? objectDefaultString(v) : json;
+      return json ?? objectDefaultString(v);
     } catch {
       return objectDefaultString(v);
     }

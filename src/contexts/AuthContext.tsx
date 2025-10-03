@@ -312,6 +312,27 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     }
   };
 
+  const handleOpenWindowError = (err: unknown, ignoreMessage?: string) => {
+    if (isBrowserAuthFlow) {
+      console.log(
+        ignoreMessage ||
+          "Browser auth flow in progress - ignoring window.close error...",
+      );
+      return;
+    }
+
+    console.error("Login window error:", err);
+    const msg =
+      err instanceof Error
+        ? err.message
+        : "Failed to open authentication window";
+    toast.error(msg);
+    setError(msg);
+    setStatusMessage(null);
+    setIsLoading(false);
+    setIsBrowserAuthFlow(false);
+  };
+
   const refreshToken = async () => {
     try {
       setIsLoading(true);
@@ -343,23 +364,10 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
       try {
         await openOAuthWindow(oauthUrl, redirectUri);
       } catch (err) {
-        if (isBrowserAuthFlow) {
-          // If the browser auth flow is active we may receive window-close errors we can ignore
-          console.log(
-            "Browser auth flow in progress - ignoring window.close error...",
-          );
-        } else {
-          console.error("Login window error:", err);
-          const msg =
-            err instanceof Error
-              ? err.message
-              : "Failed to open authentication window";
-          toast.error(msg);
-          setError(msg);
-          setStatusMessage(null);
-          setIsLoading(false);
-          setIsBrowserAuthFlow(false);
-        }
+        handleOpenWindowError(
+          err,
+          "Browser auth flow in progress - ignoring window.close error...",
+        );
       }
 
       // The rest of the authentication process happens in the code received listener
@@ -425,22 +433,10 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
           );
         }
       } catch (err) {
-        if (isBrowserAuthFlow) {
-          console.log(
-            "Browser auth flow in progress - ignoring globalThis.close error...",
-          );
-        } else {
-          console.error("Login window error:", err);
-          const msg =
-            err instanceof Error
-              ? err.message
-              : "Failed to open authentication window";
-          toast.error(msg);
-          setError(msg);
-          setStatusMessage(null);
-          setIsLoading(false);
-          setIsBrowserAuthFlow(false);
-        }
+        handleOpenWindowError(
+          err,
+          "Browser auth flow in progress - ignoring globalThis.close error...",
+        );
       }
 
       // The rest of the authentication process happens in the code received listener

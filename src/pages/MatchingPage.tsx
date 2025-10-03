@@ -1130,10 +1130,6 @@ export function MatchingPage() {
 
                   if (stillNeedProcessing > 0) {
                     needsProcessing = true;
-                    unprocessedCount = Math.max(
-                      unprocessedCount,
-                      stillNeedProcessing,
-                    );
                   }
                 }
 

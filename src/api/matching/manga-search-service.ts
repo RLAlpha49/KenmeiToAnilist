@@ -3173,53 +3173,63 @@ function categorizeMangaForBatching(
   };
 }
 
+type CachedResultsStorage = {
+  cachedResults: Record<number, AniListManga[]>;
+  cachedComickSources: Record<
+    number,
+    Map<
+      number,
+      {
+        title: string;
+        slug: string;
+        comickId: string;
+        foundViaComick: boolean;
+      }
+    >
+  >;
+  cachedMangaDexSources: Record<
+    number,
+    Map<
+      number,
+      {
+        title: string;
+        slug: string;
+        mangaDexId: string;
+        foundViaMangaDex: boolean;
+      }
+    >
+  >;
+};
+
+type UpdateProgressCallbacks = {
+  updateProgress: (index: number, title?: string) => void;
+};
+
+type KnownMangaData = {
+  knownMangaIds: { index: number; id: number }[];
+  mangaList: KenmeiManga[];
+  uncachedManga: { index: number; manga: KenmeiManga }[];
+};
+
+type KnownMangaConfig = {
+  searchConfig: SearchServiceConfig;
+  token: string | undefined;
+};
+
+type KnownMangaControl = {
+  shouldCancel: (() => boolean) | undefined;
+  abortSignal: AbortSignal | undefined;
+};
+
 /**
  * Process manga with known IDs by fetching them in batches
  */
 async function processKnownMangaIds(
-  data: {
-    knownMangaIds: { index: number; id: number }[];
-    mangaList: KenmeiManga[];
-    uncachedManga: { index: number; manga: KenmeiManga }[];
-  },
-  config: {
-    searchConfig: SearchServiceConfig;
-    token: string | undefined;
-  },
-  control: {
-    shouldCancel: (() => boolean) | undefined;
-    abortSignal: AbortSignal | undefined;
-  },
-  callbacks: {
-    updateProgress: (index: number, title?: string) => void;
-  },
-  storage: {
-    cachedResults: Record<number, AniListManga[]>;
-    cachedComickSources: Record<
-      number,
-      Map<
-        number,
-        {
-          title: string;
-          slug: string;
-          comickId: string;
-          foundViaComick: boolean;
-        }
-      >
-    >;
-    cachedMangaDexSources: Record<
-      number,
-      Map<
-        number,
-        {
-          title: string;
-          slug: string;
-          mangaDexId: string;
-          foundViaMangaDex: boolean;
-        }
-      >
-    >;
-  },
+  data: KnownMangaData,
+  config: KnownMangaConfig,
+  control: KnownMangaControl,
+  callbacks: UpdateProgressCallbacks,
+  storage: CachedResultsStorage,
 ): Promise<void> {
   const { knownMangaIds, mangaList, uncachedManga } = data;
   const { searchConfig, token } = config;
@@ -3285,44 +3295,13 @@ async function processUncachedManga(
     mangaList: KenmeiManga[];
     reportedIndices: Set<number>;
   },
-  config: {
-    token: string | undefined;
-    searchConfig: SearchServiceConfig;
-  },
+  config: { token: string | undefined; searchConfig: SearchServiceConfig },
   control: {
     abortSignal: AbortSignal | undefined;
     checkCancellation: () => void;
   },
-  callbacks: {
-    updateProgress: (index: number, title?: string) => void;
-  },
-  storage: {
-    cachedResults: Record<number, AniListManga[]>;
-    cachedComickSources: Record<
-      number,
-      Map<
-        number,
-        {
-          title: string;
-          slug: string;
-          comickId: string;
-          foundViaComick: boolean;
-        }
-      >
-    >;
-    cachedMangaDexSources: Record<
-      number,
-      Map<
-        number,
-        {
-          title: string;
-          slug: string;
-          mangaDexId: string;
-          foundViaMangaDex: boolean;
-        }
-      >
-    >;
-  },
+  callbacks: UpdateProgressCallbacks,
+  storage: CachedResultsStorage,
 ): Promise<void> {
   const { uncachedManga, mangaList, reportedIndices } = data;
   const { token, searchConfig } = config;

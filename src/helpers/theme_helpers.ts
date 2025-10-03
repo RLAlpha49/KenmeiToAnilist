@@ -53,29 +53,51 @@ export async function getCurrentTheme(): Promise<ThemePreferences> {
  * @source
  */
 export async function setTheme(newTheme: ThemeMode) {
-  let isDarkMode: boolean;
-
+  // Delegate to the explicit mode methods for clarity and single-responsibility
   switch (newTheme) {
     case "dark":
-      await globalThis.themeMode.dark();
-      isDarkMode = true;
-      break;
+      return enableDarkMode();
     case "light":
-      await globalThis.themeMode.light();
-      isDarkMode = false;
-      break;
-    case "system": {
-      isDarkMode = await globalThis.themeMode.system();
-      break;
-    }
+      return enableLightMode();
+    case "system":
+    default:
+      return applySystemTheme();
   }
+}
 
-  updateDocumentTheme(isDarkMode);
-  storage.setItem(THEME_KEY, newTheme);
-
-  // Notify any listeners that theme has changed
+/**
+ * Enable dark mode: update system, DOM and persist preference.
+ * @returns true when dark mode is enabled
+ */
+export async function enableDarkMode(): Promise<boolean> {
+  await globalThis.themeMode.dark();
+  updateDocumentTheme("dark");
+  storage.setItem(THEME_KEY, "dark");
   document.dispatchEvent(new CustomEvent("themeToggled"));
+  return true;
+}
 
+/**
+ * Enable light mode: update system, DOM and persist preference.
+ * @returns false when dark mode is disabled
+ */
+export async function enableLightMode(): Promise<boolean> {
+  await globalThis.themeMode.light();
+  updateDocumentTheme("light");
+  storage.setItem(THEME_KEY, "light");
+  document.dispatchEvent(new CustomEvent("themeToggled"));
+  return false;
+}
+
+/**
+ * Apply the system theme: query the system and update DOM and storage.
+ * @returns true if the system theme is dark
+ */
+export async function applySystemTheme(): Promise<boolean> {
+  const isDarkMode = await globalThis.themeMode.system();
+  updateDocumentTheme(isDarkMode ? "dark" : "light");
+  storage.setItem(THEME_KEY, "system");
+  document.dispatchEvent(new CustomEvent("themeToggled"));
   return isDarkMode;
 }
 
@@ -89,9 +111,7 @@ export async function toggleTheme() {
   const { local } = await getCurrentTheme();
   // If current theme is dark or not set, switch to light, otherwise switch to dark
   const newTheme = local === "dark" ? "light" : "dark";
-
-  const isDarkMode = await setTheme(newTheme);
-  return isDarkMode;
+  return setTheme(newTheme);
 }
 
 /**
@@ -127,8 +147,11 @@ export async function syncThemeWithLocal() {
  * @param isDarkMode - Whether dark mode should be enabled.
  * @source
  */
-export function updateDocumentTheme(isDarkMode: boolean) {
-  if (isDarkMode) {
+/**
+ * Update the document's class list to reflect the current theme mode.
+ */
+export function updateDocumentTheme(mode: "dark" | "light") {
+  if (mode === "dark") {
     document.documentElement.classList.add("dark");
   } else {
     document.documentElement.classList.remove("dark");

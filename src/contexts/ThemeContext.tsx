@@ -14,9 +14,11 @@ import React, {
 import { ThemeMode } from "@/types/theme-mode";
 import {
   getCurrentTheme,
-  setTheme as setThemeHelper,
   ThemePreferences,
   updateDocumentTheme,
+  enableDarkMode,
+  enableLightMode,
+  applySystemTheme,
 } from "@/helpers/theme_helpers";
 
 /**
@@ -59,16 +61,23 @@ export function ThemeProvider({
       setTheme(currentTheme);
 
       // Add null check before accessing local property
-      const isDark =
-        (currentTheme?.local || currentTheme?.system || "light") === "dark";
+      const mode = currentTheme?.local || currentTheme?.system || "light";
+      let resolvedMode: "dark" | "light";
+      if (mode === "dark" || mode === "light") {
+        resolvedMode = mode;
+      } else {
+        // Resolve system mode to dark/light explicitly
+        resolvedMode = (await globalThis.themeMode.system()) ? "dark" : "light";
+      }
+      const isDark = resolvedMode === "dark";
       setIsDarkMode(isDark);
-      updateDocumentTheme(isDark);
+      updateDocumentTheme(resolvedMode);
     } catch (error) {
       console.error("Failed to initialize theme:", error);
       // Fallback to light theme
       setTheme({ system: "light", local: "light" });
       setIsDarkMode(false);
-      updateDocumentTheme(false);
+      updateDocumentTheme("light");
     }
   }, []);
 
@@ -89,7 +98,14 @@ export function ThemeProvider({
   }, [initializeTheme]);
 
   const setThemeMode = async (mode: ThemeMode) => {
-    const newIsDarkMode = await setThemeHelper(mode);
+    let newIsDarkMode: boolean;
+    if (mode === "dark") {
+      newIsDarkMode = await enableDarkMode();
+    } else if (mode === "light") {
+      newIsDarkMode = await enableLightMode();
+    } else {
+      newIsDarkMode = await applySystemTheme();
+    }
     setTheme(await getCurrentTheme());
     setIsDarkMode(newIsDarkMode);
     return newIsDarkMode;
