@@ -98,6 +98,8 @@ export function SettingsPage() {
     toggleDebug,
     storageDebuggerEnabled,
     setStorageDebuggerEnabled,
+    logViewerEnabled,
+    setLogViewerEnabled,
   } = useDebug();
 
   const prevCredentialSourceRef = useRef<"default" | "custom">(
@@ -1831,9 +1833,10 @@ export function SettingsPage() {
                         <div className="flex gap-3">
                           <AlertTriangle className="mt-0.5 h-4 w-4 text-yellow-400" />
                           <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                            <strong>Heads up:</strong> Debug tools provide
-                            direct access to persistent storage. Misuse can
-                            impact application stability.
+                            <strong>Heads up:</strong> Debug tools expose
+                            persistent data and captured logs that may include
+                            sensitive information. Enable them only on trusted
+                            devices and disable when finished troubleshooting.
                           </p>
                         </div>
                       </div>
@@ -1842,14 +1845,40 @@ export function SettingsPage() {
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
                               <h4 className="text-sm font-semibold">
+                                Log viewer
+                              </h4>
+                            </div>
+                            <p className="text-muted-foreground text-xs">
+                              Inspect captured console output, filter by
+                              severity, and export logs for support.
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground text-xs">
+                              Enable panel
+                            </span>
+                            <Switch
+                              id="log-viewer-enabled"
+                              checked={logViewerEnabled}
+                              onCheckedChange={(checked) =>
+                                setLogViewerEnabled(Boolean(checked))
+                              }
+                            />
+                          </div>
+                        </div>
+                        <p className="text-muted-foreground mt-3 text-xs">
+                          Logs can contain access tokens or other
+                          personally-identifiable information. Review before
+                          exporting or sharing.
+                        </p>
+                      </div>
+                      <div className="border-border/60 bg-background/40 rounded-2xl border border-dashed p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-sm font-semibold">
                                 Storage debugger
                               </h4>
-                              <Badge
-                                variant="outline"
-                                className="border-primary/40 text-primary text-[10px] tracking-wide uppercase"
-                              >
-                                Beta
-                              </Badge>
                             </div>
                             <p className="text-muted-foreground text-xs">
                               Inspect and edit Electron Store alongside

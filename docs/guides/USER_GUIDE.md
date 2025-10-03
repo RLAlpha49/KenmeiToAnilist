@@ -19,6 +19,7 @@ A comprehensive guide to using Kenmei to AniList for migrating and synchronizing
   - [Sync Process](#sync-process)
 - [Troubleshooting](#-troubleshooting)
   - [Common Import Issues](#common-import-issues)
+  - [Collecting Debug Logs](#collecting-debug-logs)
 - [Getting Help](#-getting-help)
 
 ## 🚀 Getting Started
@@ -128,6 +129,16 @@ Configure what to sync:
 - Re-authenticate with AniList
 - Check internet connection
 - Verify AniList service status
+
+### Collecting Debug Logs
+
+If support asks for application logs or you need to diagnose an issue without developer tools:
+
+1. Navigate to **Settings → Data → Debug tools**.
+2. Enable the **Debug menu** toggle, then switch on the **Log viewer** panel.
+3. Open the header and select the bug icon to launch the **Debug Command Center**.
+4. Choose the **Log Viewer** tab to inspect captured console output, filter messages by severity, or search by keyword.
+5. Click **Export JSON** to download the most recent logs. Review the file before sharing—entries may include sensitive details.
 
 ## 📞 Getting Help
 

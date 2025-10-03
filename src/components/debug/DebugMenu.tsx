@@ -12,8 +12,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
-import { Bug } from "lucide-react";
+import { Bug, ScrollText } from "lucide-react";
 import { StorageDebugger } from "./StorageDebugger";
+import { LogViewer } from "./LogViewer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Badge } from "../ui/badge";
 import { useDebug } from "../../contexts/DebugContext";
@@ -35,7 +36,7 @@ interface DebugMenuProps {
 }
 
 export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
-  const { storageDebuggerEnabled } = useDebug();
+  const { storageDebuggerEnabled, logViewerEnabled } = useDebug();
 
   const panels = useMemo(() => {
     const entries: DebugPanelDefinition[] = [];
@@ -69,8 +70,23 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
       });
     }
 
+    if (logViewerEnabled) {
+      entries.push({
+        id: "logs",
+        label: "Log Viewer",
+        description:
+          "Review captured console output, filter by severity, and export logs for support.",
+        icon: (
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-purple-500/10 text-purple-500">
+            <ScrollText className="h-5 w-5" />
+          </div>
+        ),
+        element: <LogViewer />,
+      });
+    }
+
     return entries;
-  }, [storageDebuggerEnabled]);
+  }, [logViewerEnabled, storageDebuggerEnabled]);
 
   const [activePanel, setActivePanel] = useState<string>(panels[0]?.id ?? "");
 
@@ -142,7 +158,7 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
               className="flex min-h-0 flex-1"
             >
               <div className="flex min-h-0 flex-col gap-6 lg:flex-row">
-                <div className="border-border/60 bg-background/40 relative flex w-full flex-col overflow-hidden rounded-2xl border shadow-sm lg:w-64">
+                <div className="border-border/80 bg-muted/10 relative flex w-full flex-col overflow-hidden rounded-2xl border shadow-sm lg:w-64">
                   <ScrollArea type="always" className="flex h-full w-full">
                     <div className="p-2">
                       <TabsList
@@ -154,13 +170,19 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
                             key={panel.id}
                             value={panel.id}
                             className={cn(
-                              "group w-full flex-none justify-start gap-3 rounded-xl border border-transparent px-3 py-3 text-left text-sm transition-all",
+                              "group w-full flex-none justify-start gap-3 rounded-xl border px-3 py-3 text-left text-sm transition-all",
                               "h-auto min-h-[3.25rem]",
-                              "data-[state=active]:border-primary/30 data-[state=active]:bg-primary/10 data-[state=active]:text-primary",
-                              "hover:border-primary/20 hover:bg-primary/5",
+                              // default card appearance
+                              "bg-background/90 border-border/40",
+                              // active state: stronger background, border, subtle shadow and left accent
+                              "data-[state=active]:bg-primary/10 data-[state=active]:border-primary/40 data-[state=active]:text-primary data-[state=active]:shadow-md",
+                              "data-[state=active]:-ml-1 data-[state=active]:pl-4",
+                              "data-[state=active]:before:bg-primary/60 data-[state=active]:before:absolute data-[state=active]:before:top-0 data-[state=active]:before:left-0 data-[state=active]:before:h-full data-[state=active]:before:w-1 data-[state=active]:before:rounded-l-md data-[state=active]:before:content-['']",
+                              "hover:border-primary/30 hover:bg-primary/5",
                               // Ensure text can wrap instead of overflowing
                               "min-w-0 break-words whitespace-normal",
                             )}
+                            style={{ position: "relative" }}
                           >
                             <div className="flex items-start gap-3">
                               <div className="flex-shrink-0">{panel.icon}</div>
@@ -181,7 +203,7 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
                 </div>
 
                 {/* Content column */}
-                <div className="border-border/60 bg-muted/20 relative flex-1 overflow-hidden rounded-2xl border shadow-inner">
+                <div className="border-border/80 bg-background/95 relative flex-1 overflow-hidden rounded-2xl border shadow-inner">
                   <div className="from-primary/10 absolute inset-x-12 top-0 h-24 rounded-b-full bg-gradient-to-b to-transparent blur-3xl" />
                   <div className="relative h-full min-h-0 overflow-y-auto p-4">
                     {panels.map((panel) => (
