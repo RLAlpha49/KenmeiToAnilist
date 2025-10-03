@@ -20,7 +20,7 @@ export default function AuthRequiredCard({ onGoToSettings }: Readonly<Props>) {
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.35)_0%,rgba(255,255,255,0)_70%)] opacity-80 dark:bg-[radial-gradient(circle_at_top,_rgba(96,165,250,0.25)_0%,rgba(15,23,42,0)_78%)]" />
         <CardContent className="relative flex flex-col gap-5 p-7 text-left sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-1 items-start gap-4">
-            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/15 text-blue-600 shadow-inner shadow-blue-200/40 dark:bg-blue-500/18 dark:text-blue-300">
+            <span className="flex h-14 w-28 items-center justify-center rounded-2xl bg-blue-500/15 text-blue-600 shadow-inner shadow-blue-200/40 dark:bg-blue-500/18 dark:text-blue-300">
               <AlertCircle className="h-6 w-6" />
             </span>
             <div className="space-y-2">
@@ -34,16 +34,6 @@ export default function AuthRequiredCard({ onGoToSettings }: Readonly<Props>) {
                 Sign in with your AniList account so we can fetch and update
                 your manga library securely. This only takes a moment.
               </p>
-              <ul className="space-y-1 text-sm text-slate-500 dark:text-slate-400">
-                <li className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
-                  <span>Sync your Kenmei titles with AniList instantly</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
-                  <span>Keep progress, scores, and statuses in harmony</span>
-                </li>
-              </ul>
             </div>
           </div>
           <div className="flex flex-shrink-0 flex-col items-stretch gap-3 sm:items-end">
@@ -53,9 +43,6 @@ export default function AuthRequiredCard({ onGoToSettings }: Readonly<Props>) {
             >
               <LogIn className="h-4 w-4" /> Launch settings
             </Button>
-            <p className="text-xs font-medium tracking-[0.28em] text-slate-400 uppercase dark:text-slate-500">
-              Secure AniList OAuth
-            </p>
           </div>
         </CardContent>
       </Card>

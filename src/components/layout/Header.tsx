@@ -4,10 +4,8 @@
  * @description Application header component with logo, navigation, theme toggle, and window controls.
  */
 
-// TODO: Nav items should be highlighted when active
-
 import React, { useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import ToggleTheme from "../ToggleTheme";
 import { Button } from "../ui/button";
 import {
@@ -69,6 +67,34 @@ export function Header() {
   const { isDebugEnabled } = useDebug();
   const [isDebugMenuOpen, setIsDebugMenuOpen] = useState(false);
 
+  const location = useLocation();
+
+  function getPathname(loc: unknown): string {
+    if (typeof loc !== "object" || loc === null) return "/";
+
+    const keyPaths: Array<string[]> = [
+      ["pathname"],
+      ["current", "pathname"],
+      ["current", "location", "pathname"],
+      ["location", "pathname"],
+    ];
+
+    for (const path of keyPaths) {
+      let cur: unknown = loc;
+      let i = 0;
+      while (i < path.length && typeof cur === "object" && cur !== null) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        cur = (cur as any)[path[i]];
+        i += 1;
+      }
+      if (typeof cur === "string") return cur;
+    }
+
+    return "/";
+  }
+
+  const pathname = getPathname(location);
+
   return (
     <TooltipProvider>
       <header className="border-border bg-background/80 sticky top-0 z-40 border-b backdrop-blur-xl">
@@ -104,30 +130,39 @@ export function Header() {
               <div className="non-draggable">
                 <NavigationMenu>
                   <NavigationMenuList className="bg-background/60 flex rounded-full p-1 text-xs font-medium shadow-inner ring-1 shadow-black/5 ring-white/40 backdrop-blur-sm dark:bg-slate-950/60 dark:ring-white/10">
-                    {NAV_ITEMS.map(({ label, to, icon: Icon }) => (
-                      <NavigationMenuItem key={label}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <NavigationMenuLink
-                              asChild
-                              className={cn(
-                                "group text-muted-foreground inline-flex h-9 items-center justify-center rounded-full px-3 text-xs font-medium tracking-wide transition-all",
-                                "hover:text-foreground focus-visible:ring-primary/40 hover:bg-white/70 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent focus-visible:outline-hidden",
-                                "data-[state=open]:text-primary data-[state=open]:bg-white/80 dark:hover:bg-slate-900/70 dark:data-[state=open]:bg-slate-900/80",
-                              )}
-                            >
-                              <Link to={to} className="flex items-center gap-2">
-                                <Icon className="h-4 w-4" />
-                                <span className="max-lg:hidden">{label}</span>
-                              </Link>
-                            </NavigationMenuLink>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom" className="lg:hidden">
-                            {label}
-                          </TooltipContent>
-                        </Tooltip>
-                      </NavigationMenuItem>
-                    ))}
+                    {NAV_ITEMS.map(({ label, to, icon: Icon }) => {
+                      const isActive =
+                        to === "/" ? pathname === "/" : pathname.startsWith(to);
+                      return (
+                        <NavigationMenuItem key={label}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <NavigationMenuLink
+                                asChild
+                                className={cn(
+                                  "group text-muted-foreground inline-flex h-9 items-center justify-center rounded-full px-3 text-xs font-medium tracking-wide transition-all",
+                                  "hover:text-foreground focus-visible:ring-primary/40 hover:bg-white/70 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent focus-visible:outline-hidden",
+                                  "data-[state=open]:text-primary data-[state=open]:bg-white/80 dark:hover:bg-slate-900/70 dark:data-[state=open]:bg-slate-900/80",
+                                  isActive &&
+                                    "text-primary bg-white/80 dark:bg-slate-900/80",
+                                )}
+                              >
+                                <Link
+                                  to={to}
+                                  className="flex items-center gap-2"
+                                >
+                                  <Icon className="h-4 w-4" />
+                                  <span className="max-lg:hidden">{label}</span>
+                                </Link>
+                              </NavigationMenuLink>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" className="lg:hidden">
+                              {label}
+                            </TooltipContent>
+                          </Tooltip>
+                        </NavigationMenuItem>
+                      );
+                    })}
                   </NavigationMenuList>
                 </NavigationMenu>
               </div>
