@@ -549,7 +549,7 @@ function validateStatus(status: string | undefined): KenmeiStatus {
   // Handle undefined or empty status
   if (!status) return "reading";
 
-  const normalized = status.trim().toLowerCase().replace(/\s+/g, "_");
+  const normalized = status.trim().toLowerCase().replaceAll(" ", "_");
   const valid = new Set<KenmeiStatus>([
     "reading",
     "completed",

@@ -244,6 +244,12 @@ export function MatchingPage() {
         globalThis.matchingProcessState.detailMessage,
       );
 
+      if (globalThis.matchingProcessState.timeEstimate) {
+        matchingProcess.setTimeEstimate(
+          globalThis.matchingProcessState.timeEstimate,
+        );
+      }
+
       // Mark as initialized to prevent auto-starting
       matchingProcess.matchingInitialized.current = true;
       matchingProcess.setIsInitializing(false);
@@ -598,6 +604,30 @@ export function MatchingPage() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []); // Only run once when component mounts
+
+  useEffect(() => {
+    // Only reload when the matching process transitions from loading to not loading
+    if (!matchingProcess.isLoading && !matchingProcess.isInitializing) {
+      // Use a small delay to ensure all state updates have been flushed
+      const timeoutId = setTimeout(() => {
+        const savedResults = getSavedMatchResults();
+        if (savedResults && savedResults.length > 0) {
+          // Only update if we have saved results and current results might be stale
+          if (
+            matchResults.length === 0 ||
+            matchResults.length !== savedResults.length
+          ) {
+            console.log(
+              `Reloading match results from storage: ${savedResults.length} results found (current: ${matchResults.length})`,
+            );
+            setMatchResults(savedResults as MangaMatchResult[]);
+          }
+        }
+      }, 100);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [matchingProcess.isLoading, matchingProcess.isInitializing]);
 
   // Add an effect to listen for re-search empty matches events
   useEffect(() => {

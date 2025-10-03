@@ -3,6 +3,7 @@
  * @module MatchingProgressPanel
  * @description React component for displaying the progress of the manga matching process, including progress bar, status, and time estimate.
  */
+
 import React, { ReactNode, useMemo } from "react";
 import { MatchingProgress, TimeEstimate } from "../../types/matching";
 import { formatTimeRemaining } from "../../utils/timeUtils";

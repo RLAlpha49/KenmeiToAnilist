@@ -232,7 +232,7 @@ export function DebugProvider({
       const payload = {
         exportedAt: new Date().toISOString(),
         userAgent:
-          typeof navigator !== "undefined" ? navigator.userAgent : undefined,
+          typeof navigator === "undefined" ? undefined : navigator.userAgent,
         totalEntries: entries.length,
         maxEntries: MAX_LOG_ENTRIES,
         logs: serialiseLogEntries(entries),
@@ -242,7 +242,10 @@ export function DebugProvider({
       const blob = new Blob([json], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const timestamp = new Date()
+        .toISOString()
+        .replaceAll(":", "-")
+        .replaceAll(".", "-");
       link.href = url;
       link.download = `kenmei-debug-logs-${timestamp}.json`;
       document.body.appendChild(link);

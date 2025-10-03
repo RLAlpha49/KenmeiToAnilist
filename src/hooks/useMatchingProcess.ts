@@ -884,5 +884,6 @@ export const useMatchingProcess = ({
     pauseTimeTracking,
     resumeTimeTracking,
     isRateLimitPaused,
+    setTimeEstimate,
   };
 };

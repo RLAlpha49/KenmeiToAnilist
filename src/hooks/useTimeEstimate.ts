@@ -157,15 +157,32 @@ export const useTimeEstimate = () => {
       setTimeEstimate(initialEstimate);
       return initialEstimate;
     } else {
-      // Restore from global state
+      // Restore from global state and populate refs for continued tracking
       console.log("Preserving existing time tracking data");
-      return (
-        globalThis.matchingProcessState?.timeEstimate || {
-          startTime: now,
-          averageTimePerManga: 0,
-          estimatedRemainingSeconds: 0,
+      const globalEstimate = globalThis.matchingProcessState?.timeEstimate;
+
+      if (globalEstimate) {
+        // Restore refs so calculateTimeEstimate can continue working
+        processingStartTimeRef.current = globalEstimate.startTime;
+        lastProcessedCountRef.current =
+          globalThis.matchingProcessState?.progress.current || 0;
+        lastTimeUpdateRef.current = now;
+
+        // If we have an average time, populate processingTimesRef with it
+        // so we maintain continuity in time estimates
+        if (globalEstimate.averageTimePerManga > 0) {
+          processingTimesRef.current = [globalEstimate.averageTimePerManga];
         }
-      );
+
+        setTimeEstimate(globalEstimate);
+        return globalEstimate;
+      }
+
+      return {
+        startTime: now,
+        averageTimePerManga: 0,
+        estimatedRemainingSeconds: 0,
+      };
     }
   }, []);
 

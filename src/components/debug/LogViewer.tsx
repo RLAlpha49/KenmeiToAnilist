@@ -297,10 +297,10 @@ export function LogViewer(): React.ReactElement {
                 return (
                   <div
                     key={entry.id}
-                    className="border-border/60 bg-background/90 hover:border-primary/30 rounded-lg border p-3 shadow-sm transition"
+                    className="border-border/60 bg-background/90 hover:border-primary/30 min-w-0 rounded-lg border p-3 shadow-sm transition"
                   >
                     <div className="flex flex-col gap-3 md:grid md:grid-cols-[auto,1fr,auto] md:items-start md:gap-4">
-                      <div className="text-muted-foreground flex items-start gap-2 text-xs">
+                      <div className="text-muted-foreground flex min-w-0 items-start gap-2 text-xs">
                         <Badge
                           variant="outline"
                           className={cn(
@@ -334,13 +334,15 @@ export function LogViewer(): React.ReactElement {
                         </div>
                       </div>
 
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between font-mono text-[13px] leading-relaxed break-words whitespace-pre-wrap">
-                          {highlight(
-                            entry.message || "(no message)",
-                            searchTerm,
-                          )}
-                          <div className="text-muted-foreground flex items-center justify-end gap-2 text-xs">
+                      <div className="min-w-0 space-y-2 text-sm">
+                        <div className="flex items-center justify-between font-mono text-[13px] leading-relaxed">
+                          <div className="min-w-0 pr-2 break-words whitespace-pre-wrap">
+                            {highlight(
+                              entry.message || "(no message)",
+                              searchTerm,
+                            )}
+                          </div>
+                          <div className="text-muted-foreground flex flex-shrink-0 items-center justify-end gap-2 text-xs">
                             <Button
                               size="icon"
                               variant="ghost"
@@ -398,7 +400,7 @@ function TruncatedSource({
 
   return (
     <div className="text-muted-foreground mt-1 flex items-center gap-2 text-xs">
-      <div className="max-w-full break-words">
+      <div className="max-w-[60ch] truncate break-words">
         {highlight(display, query)}
         {needsTruncate && !expanded && (
           <span className="text-muted-foreground">…</span>

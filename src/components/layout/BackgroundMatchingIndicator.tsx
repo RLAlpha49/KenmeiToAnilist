@@ -194,7 +194,7 @@ export function BackgroundMatchingIndicator() {
                       </div>
                       <div className="text-foreground text-sm font-medium">
                         {matchingState.averageTimePerManga
-                          ? formatTime(matchingState.averageTimePerManga)
+                          ? formatTime(matchingState.averageTimePerManga / 1000)
                           : "calculating..."}
                       </div>
                     </div>

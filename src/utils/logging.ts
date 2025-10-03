@@ -90,35 +90,45 @@ const serialiseArgument = (value: unknown): string => {
 /**
  * Simple implementation of console-like format string replacement.
  * Supports %s, %d, %i, %f, %o, %O and falls back to string conversion.
+ * For %o/%O, objects are JSON-stringified if possible, otherwise '[object Object]'.
  */
 const applyFormat = (format: string, args: unknown[]): string => {
   let i = 0;
-  return format.replace(/%[sdifoOc%]/g, (match) => {
-    if (match === "%%") return "%";
-    const arg = args[i++];
-    if (arg === undefined) return "";
-    switch (match) {
-      case "%s":
-        return String(arg);
-      case "%d":
-      case "%i":
-        return Number(arg).toString();
-      case "%f":
-        return parseFloat(String(arg)).toString();
-      case "%o":
-      case "%O":
-        try {
-          return typeof arg === "object" ? JSON.stringify(arg) : String(arg);
-        } catch {
+  // Use replaceAll for each supported token
+  const tokens = ["%%", "%s", "%d", "%i", "%f", "%o", "%O", "%c"];
+  let result = format;
+  for (const token of tokens) {
+    result = result.replaceAll(token, () => {
+      if (token === "%%") return "%";
+      const arg = args[i++];
+      if (arg === undefined) return "";
+      switch (token) {
+        case "%s":
           return String(arg);
-        }
-      case "%c":
-        // CSS specifier - ignore in serialised output
-        return "";
-      default:
-        return String(arg);
-    }
-  });
+        case "%d":
+        case "%i":
+          return Number(arg).toString();
+        case "%f":
+          return Number.parseFloat(String(arg)).toString();
+        case "%o":
+        case "%O":
+          if (typeof arg === "object" && arg !== null) {
+            try {
+              return JSON.stringify(arg);
+            } catch {
+              return "[object Object]";
+            }
+          }
+          return String(arg);
+        case "%c":
+          // CSS specifier - ignore in serialised output
+          return "";
+        default:
+          return String(arg);
+      }
+    });
+  }
+  return result;
 };
 
 /** Count how many format placeholders in `format` will consume an argument. */
@@ -160,7 +170,7 @@ const inferIsDebug = (level: LogLevel, message: string): boolean => {
 
 class LogCollector {
   #entries: LogEntry[] = [];
-  #listeners = new Set<(entries: LogEntry[]) => void>();
+  readonly #listeners = new Set<(entries: LogEntry[]) => void>();
 
   getEntries(): LogEntry[] {
     return this.#entries;
@@ -205,7 +215,7 @@ class LogCollector {
       message,
       details,
       timestamp,
-      source: extractSourceFromStack(new Error().stack),
+      source: extractSourceFromStack(new Error(message).stack),
       isDebug: inferIsDebug(level, message),
     };
 
@@ -220,7 +230,9 @@ class LogCollector {
 
   #notify() {
     const snapshot = this.#entries;
-    this.#listeners.forEach((listener) => listener(snapshot));
+    for (const listener of this.#listeners) {
+      listener(snapshot);
+    }
   }
 }
 
@@ -246,33 +258,33 @@ export function installConsoleInterceptor(): () => void {
     };
   }
 
-  if (typeof window === "undefined") {
+  if (typeof globalThis.window === "undefined") {
     return () => {
       // no console interception in non-browser environments
     };
   }
 
-  LOG_LEVELS.forEach((level) => {
+  for (const level of LOG_LEVELS) {
     const original =
       assignableConsole[level]?.bind(console) ?? console.log.bind(console);
     originalConsoleMethods.set(level, original);
 
     assignableConsole[level] = (...args: unknown[]) => {
       logCollector.addEntry(level, args);
-      original(...(args as unknown[]));
+      original(...args);
     };
-  });
+  }
 
   interceptorInstalled = true;
 
   return () => {
     if (!interceptorInstalled) return;
-    LOG_LEVELS.forEach((level) => {
+    for (const level of LOG_LEVELS) {
       const original = originalConsoleMethods.get(level);
       if (original) {
         assignableConsole[level] = original;
       }
-    });
+    }
     interceptorInstalled = false;
     originalConsoleMethods.clear();
   };
