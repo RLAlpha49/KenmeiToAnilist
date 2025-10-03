@@ -4,7 +4,7 @@
  * @description React component for displaying the progress of the manga matching process, including progress bar, status, and time estimate.
  */
 
-import React, { ReactNode, useMemo } from "react";
+import React, { ReactNode, useMemo, useState, useEffect } from "react";
 import { MatchingProgress, TimeEstimate } from "../../types/matching";
 import { formatTimeRemaining } from "../../utils/timeUtils";
 import {
@@ -12,7 +12,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
   CardFooter,
 } from "../../components/ui/card";
 import { Progress } from "../../components/ui/progress";
@@ -272,7 +271,6 @@ const generateStats = ({
  * @property isCancelling - Whether the process is currently being cancelled.
  * @property progress - The current progress state of the matching process.
  * @property statusMessage - The main status message to display.
- * @property detailMessage - Additional detail message to display.
  * @property timeEstimate - Estimated time remaining for the process.
  * @property onCancelProcess - Callback to cancel the matching process.
  * @property onPauseProcess - Callback to pause the matching process (optional).
@@ -290,7 +288,6 @@ export interface MatchingProgressProps {
   isCancelling: boolean;
   progress: MatchingProgress;
   statusMessage: string;
-  detailMessage: ReactNode;
   timeEstimate: TimeEstimate;
   onCancelProcess: () => void;
   onPauseProcess?: () => void;
@@ -315,7 +312,6 @@ export interface MatchingProgressProps {
  *   isCancelling={false}
  *   progress={progress}
  *   statusMessage="Matching..."
- *   detailMessage={detail}
  *   timeEstimate={estimate}
  *   onCancelProcess={handleCancel}
  * />
@@ -325,7 +321,6 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
   isCancelling,
   progress,
   statusMessage,
-  detailMessage,
   timeEstimate,
   onCancelProcess,
   onPauseProcess,
@@ -348,7 +343,7 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
     ? Math.max(progress.total - progress.current, 0)
     : 0;
 
-  const elapsedSeconds = useMemo(() => {
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(() => {
     if (!timeEstimate.startTime || progress.current <= 0) {
       return 0;
     }
@@ -356,7 +351,64 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
       0,
       Math.round((Date.now() - timeEstimate.startTime) / 1000),
     );
-  }, [progress.current, timeEstimate.startTime]);
+  });
+
+  // Track when the time estimate was last updated to calculate live remaining time
+  const [estimateSnapshot, setEstimateSnapshot] = useState<{
+    remainingSeconds: number;
+    capturedAt: number;
+  }>(() => ({
+    remainingSeconds: timeEstimate.estimatedRemainingSeconds,
+    capturedAt: Date.now(),
+  }));
+
+  // Update snapshot when timeEstimate changes
+  useEffect(() => {
+    setEstimateSnapshot({
+      remainingSeconds: timeEstimate.estimatedRemainingSeconds,
+      capturedAt: Date.now(),
+    });
+  }, [timeEstimate.estimatedRemainingSeconds]);
+
+  // Calculate live remaining time that decreases as actual time passes
+  const [liveRemainingSeconds, setLiveRemainingSeconds] = useState<number>(
+    () => timeEstimate.estimatedRemainingSeconds,
+  );
+
+  // Update elapsed time and live remaining time every second when matching is active
+  useEffect(() => {
+    if (!timeEstimate.startTime || progress.current <= 0) {
+      setElapsedSeconds(0);
+      setLiveRemainingSeconds(0);
+      return;
+    }
+
+    // Initial update
+    const updateTimes = () => {
+      const now = Date.now();
+      setElapsedSeconds(
+        Math.max(0, Math.round((now - timeEstimate.startTime) / 1000)),
+      );
+
+      // Calculate how much time has actually passed since the estimate was captured
+      const secondsSinceEstimate = Math.floor(
+        (now - estimateSnapshot.capturedAt) / 1000,
+      );
+      // Subtract elapsed time from the snapshot to get live remaining time
+      const calculatedRemaining = Math.max(
+        0,
+        estimateSnapshot.remainingSeconds - secondsSinceEstimate,
+      );
+      setLiveRemainingSeconds(calculatedRemaining);
+    };
+
+    updateTimes();
+
+    // Update every second while matching is active
+    const intervalId = setInterval(updateTimes, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [timeEstimate.startTime, progress.current, estimateSnapshot]);
 
   const formattedElapsed = formatCompactDuration(elapsedSeconds);
   const averageSecondsPerManga =
@@ -367,8 +419,7 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
     Math.round(averageSecondsPerManga),
   );
 
-  const showEta =
-    progress.current > 0 && timeEstimate.estimatedRemainingSeconds > 0;
+  const showEta = progress.current > 0 && liveRemainingSeconds > 0;
 
   const stats = useMemo(
     () =>
@@ -403,7 +454,7 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
     <Card className="relative isolate mb-8 overflow-hidden border">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.18)_0%,rgba(255,255,255,0)_70%)] dark:bg-[radial-gradient(circle_at_top,_rgba(30,64,175,0.14)_0%,rgba(15,23,42,0)_82%)]" />
 
-      <CardHeader className="relative z-10 space-y-4 pb-6">
+      <CardHeader className="relative z-10 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           {(() => {
             const badgeConfig = getBadgeConfig({
@@ -440,10 +491,6 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
             ? "Wrapping up safely..."
             : statusMessage || "Matching your manga library"}
         </CardTitle>
-        <CardDescription className="text-base text-slate-600 dark:text-slate-300/90">
-          {detailMessage ||
-            "Sit tight while we cross-reference your titles with AniList."}
-        </CardDescription>
       </CardHeader>
 
       <CardContent className="relative z-10 space-y-6 pb-6">
@@ -491,10 +538,10 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
                   Estimated finish
                 </p>
                 <p className="text-xl font-semibold text-slate-900 dark:text-white">
-                  {formatTimeRemaining(timeEstimate.estimatedRemainingSeconds)}
+                  ~{formatTimeRemaining(liveRemainingSeconds)}
                 </p>
                 <p className="text-xs text-slate-600 dark:text-slate-300">
-                  ~{remainingCount.toLocaleString()} manga remaining
+                  {remainingCount.toLocaleString()} manga remaining
                 </p>
               </div>
             </div>

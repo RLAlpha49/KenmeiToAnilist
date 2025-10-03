@@ -58,7 +58,6 @@ export function LoadingView({
           isCancelling={matchingProcess.isCancelling}
           progress={matchingProcess.progress}
           statusMessage={matchingProcess.statusMessage}
-          detailMessage={matchingProcess.detailMessage}
           timeEstimate={matchingProcess.timeEstimate}
           onCancelProcess={matchingProcess.handleCancelProcess}
           onPauseProcess={matchingProcess.handlePauseMatching}
