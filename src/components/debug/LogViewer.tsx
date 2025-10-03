@@ -388,10 +388,10 @@ export function LogViewer(): React.ReactElement {
 function TruncatedSource({
   source,
   query,
-}: {
+}: Readonly<{
   source: string;
   query: string;
-}): React.ReactElement {
+}>): React.ReactElement {
   const [expanded, setExpanded] = useState(false);
   const maxChars = 80;
   const needsTruncate = source.length > maxChars;

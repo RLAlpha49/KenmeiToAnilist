@@ -90,44 +90,67 @@ const serialiseArgument = (value: unknown): string => {
 /**
  * Simple implementation of console-like format string replacement.
  * Supports %s, %d, %i, %f, %o, %O and falls back to string conversion.
- * For %o/%O, objects are JSON-stringified if possible, otherwise '[object Object]'.
+ * objects are JSON-stringified if possible,
+ * otherwise the object's default stringification (e.g. "[object Object]") is used.
  */
 const applyFormat = (format: string, args: unknown[]): string => {
   let i = 0;
-  // Use replaceAll for each supported token
   const tokens = ["%%", "%s", "%d", "%i", "%f", "%o", "%O", "%c"];
+
+  const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const objectDefaultString = (v: unknown) => Object.prototype.toString.call(v);
+
+  const stringifyObject = (v: unknown): string => {
+    if (v === null) return "null";
+    try {
+      const json = JSON.stringify(v);
+      // JSON.stringify can return undefined for some values; fallback to default
+      return json === undefined ? objectDefaultString(v) : json;
+    } catch {
+      return objectDefaultString(v);
+    }
+  };
+
+  const stringifyGeneral = (arg: unknown): string =>
+    typeof arg === "object" && arg !== null
+      ? stringifyObject(arg)
+      : String(arg);
+
   let result = format;
   for (const token of tokens) {
-    result = result.replaceAll(token, () => {
+    const re = new RegExp(escapeRegex(token), "g");
+    result = result.replace(re, () => {
       if (token === "%%") return "%";
       const arg = args[i++];
       if (arg === undefined) return "";
+
       switch (token) {
         case "%s":
-          return String(arg);
+          return typeof arg === "object" && arg !== null
+            ? stringifyObject(arg)
+            : String(arg);
         case "%d":
         case "%i":
-          return Number(arg).toString();
+          if (typeof arg === "object" && arg !== null)
+            return stringifyObject(arg);
+          // Coerce to number then to string (NaN will be "NaN")
+          return String(Number(arg));
         case "%f":
-          return Number.parseFloat(String(arg)).toString();
+          if (typeof arg === "object" && arg !== null)
+            return stringifyObject(arg);
+          return String(Number.parseFloat(String(arg)));
         case "%o":
         case "%O":
-          if (typeof arg === "object" && arg !== null) {
-            try {
-              return JSON.stringify(arg);
-            } catch {
-              return "[object Object]";
-            }
-          }
-          return String(arg);
+          return stringifyGeneral(arg);
         case "%c":
           // CSS specifier - ignore in serialised output
           return "";
         default:
-          return String(arg);
+          return stringifyGeneral(arg);
       }
     });
   }
+
   return result;
 };
 
@@ -258,7 +281,7 @@ export function installConsoleInterceptor(): () => void {
     };
   }
 
-  if (typeof globalThis.window === "undefined") {
+  if (globalThis.window === undefined) {
     return () => {
       // no console interception in non-browser environments
     };
