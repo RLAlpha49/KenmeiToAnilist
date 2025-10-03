@@ -105,7 +105,7 @@ function validateKenmeiStatus(status: string): KenmeiStatus | undefined {
     "plan_to_read",
   ]);
 
-  const normalized = status.toLowerCase().trim().replace(/\s+/g, "_");
+  const normalized = status.toLowerCase().trim().replaceAll(" ", "_");
 
   // Exact or normalized match
   if (validStatuses.has(status as KenmeiStatus)) return status as KenmeiStatus;
@@ -146,7 +146,7 @@ function validateAniListStatus(status: string): MediaListStatus | undefined {
     "REPEATING",
   ]);
 
-  const normalized = status.toUpperCase().trim().replace(/\s+/g, "_");
+  const normalized = status.toUpperCase().trim().replaceAll(" ", "_");
 
   if (validStatuses.has(status as MediaListStatus))
     return status as MediaListStatus;

@@ -820,10 +820,10 @@ export const useMatchingProcess = ({
 
     if (rateLimitState.isRateLimited) {
       const detail = buildRateLimitDetail();
-      if (!isRateLimitPaused) {
-        handleEnterRateLimit(detail);
-      } else {
+      if (isRateLimitPaused) {
         handleUpdateRateLimitDetail(detail);
+      } else {
+        handleEnterRateLimit(detail);
       }
     } else if (isRateLimitPaused) {
       handleExitRateLimit();

@@ -7,7 +7,7 @@
 // TODO: For all TODOs, only show debug features when debug mode is enabled. Each debug feature should have its own panel/section that can be toggled on/off in settings.
 // TODO: There should be an overall "Enable Debug Mode" toggle in settings and the user should be warned that debug mode may expose sensitive information.
 
-// TODO: Add ability to view log messages. This is not useful in development and is meant for production environments.
+// TODO: Add ability to view log messages. This is not useful in development and is meant for production environments since developer tools are disabled.
 // TODO: May need to update log messages to distinguish between normal logs and debug logs.
 // TODO: Add ability to export logs to a file for easier sharing when reporting issues.
 

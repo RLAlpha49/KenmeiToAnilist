@@ -278,10 +278,12 @@ function createEntryMapping(
   values: string[],
 ): Record<string, string> {
   const entry: Record<string, string> = {};
-  headers.forEach((header, idx) => {
-    if (idx < values.length && values[idx] !== undefined)
+  for (let idx = 0; idx < headers.length; idx++) {
+    const header = headers[idx];
+    if (idx < values.length && values[idx] !== undefined) {
       entry[header] = values[idx];
-  });
+    }
+  }
   return entry;
 }
 
@@ -290,7 +292,7 @@ function createEntryMapping(
  */
 function parseIntSafe(value: string | undefined): number | undefined {
   if (!value) return undefined;
-  const cleanValue = value.replace(/[^\d.-]/g, "").trim();
+  const cleanValue = value.replaceAll(/[^\d.-]/g, "").trim();
   if (!cleanValue) return undefined;
   const parsed = Number.parseInt(cleanValue, 10);
   return Number.isNaN(parsed) ? undefined : parsed;
@@ -430,8 +432,10 @@ export const parseKenmeiCsvExport = (
   const parseOptions = { ...DEFAULT_PARSE_OPTIONS, ...options };
 
   try {
-    // Replace Windows line breaks with Unix style
-    const normalizedCsv = csvString.replaceAll("\r\n", "\n");
+    // Normalize line breaks to Unix style using replaceAll
+    const normalizedCsv = csvString
+      .replaceAll("\r\n", "\n")
+      .replaceAll("\r", "\n");
 
     // Parse CSV rows properly, respecting quoted fields
     const rows = parseCSVRows(normalizedCsv);

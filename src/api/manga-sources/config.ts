@@ -17,7 +17,7 @@ const defaultCache = { enabled: true, ttlMinutes: 30 };
 
 const makeConfig = (cfg: MangaSourceConfig): MangaSourceConfig => ({
   ...cfg,
-  headers: { "User-Agent": USER_AGENT, ...(cfg.headers ?? {}) },
+  headers: { "User-Agent": USER_AGENT, ...cfg.headers },
   cache: cfg.cache ?? defaultCache,
 });
 

@@ -274,7 +274,44 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     return unsubscribe;
   }, []);
 
-  // Refresh token function - shows status messages like initial auth
+  const storeCredentialsAndBuildUrl = async (
+    incoming: APICredentials,
+  ): Promise<{ oauthUrl: string; redirectUri: string }> => {
+    // Normalize redirect URI
+    let redirectUri = incoming.redirectUri;
+    const creds = { ...incoming };
+    if (
+      !redirectUri.startsWith("http://") &&
+      !redirectUri.startsWith("https://")
+    ) {
+      redirectUri = `http://${redirectUri}`;
+      creds.redirectUri = redirectUri;
+    }
+
+    setStatusMessage("Storing credentials...");
+    const storeResult = await globalThis.electronAuth.storeCredentials(creds);
+    if (!storeResult.success) {
+      toast.error(storeResult.error || "Failed to store credentials");
+      throw new Error(storeResult.error || "Failed to store credentials");
+    }
+
+    const clientId = encodeURIComponent(creds.clientId);
+    const encodedRedirectUri = encodeURIComponent(redirectUri);
+    const oauthUrl = `https://anilist.co/api/v2/oauth/authorize?client_id=${clientId}&redirect_uri=${encodedRedirectUri}&response_type=code`;
+    return { oauthUrl, redirectUri };
+  };
+
+  const openOAuthWindow = async (oauthUrl: string, redirectUri: string) => {
+    const result = await globalThis.electronAuth.openOAuthWindow(
+      oauthUrl,
+      redirectUri,
+    );
+    if (!result.success) {
+      toast.error(result.error || "Failed to open authentication window");
+      throw new Error(result.error || "Failed to open authentication window");
+    }
+  };
+
   const refreshToken = async () => {
     try {
       setIsLoading(true);
@@ -296,47 +333,18 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
               redirectUri: DEFAULT_ANILIST_CONFIG.redirectUri,
             };
 
-      // Make sure the redirectUri is properly formatted with http://
-      let redirectUri = credentials.redirectUri;
-      if (
-        !redirectUri.startsWith("http://") &&
-        !redirectUri.startsWith("https://")
-      ) {
-        redirectUri = `http://${redirectUri}`;
-        credentials.redirectUri = redirectUri;
-      }
-
-      // Store the credentials securely
-      setStatusMessage("Storing credentials...");
-      const storeResult =
-        await globalThis.electronAuth.storeCredentials(credentials);
-      if (!storeResult.success) {
-        toast.error(storeResult.error || "Failed to store credentials");
-        throw new Error(storeResult.error || "Failed to store credentials");
-      }
-
-      // Generate the OAuth URL
-      const clientId = encodeURIComponent(credentials.clientId);
-      const encodedRedirectUri = encodeURIComponent(redirectUri);
-      const oauthUrl = `https://anilist.co/api/v2/oauth/authorize?client_id=${clientId}&redirect_uri=${encodedRedirectUri}&response_type=code`;
+      // Store credentials and build OAuth URL
+      const { oauthUrl, redirectUri } =
+        await storeCredentialsAndBuildUrl(credentials);
 
       setStatusMessage("Opening authentication window...");
 
-      // Open the OAuth window
+      // Open the OAuth window and handle transient window-close errors
       try {
-        const result = await globalThis.electronAuth.openOAuthWindow(
-          oauthUrl,
-          redirectUri,
-        );
-
-        if (!result.success) {
-          toast.error(result.error || "Failed to open authentication window");
-          throw new Error(
-            result.error || "Failed to open authentication window",
-          );
-        }
+        await openOAuthWindow(oauthUrl, redirectUri);
       } catch (err) {
         if (isBrowserAuthFlow) {
+          // If the browser auth flow is active we may receive window-close errors we can ignore
           console.log(
             "Browser auth flow in progress - ignoring window.close error...",
           );

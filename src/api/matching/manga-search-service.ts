@@ -325,7 +325,9 @@ let pauseWaiters: Array<() => void> = [];
 const resolvePauseWaiters = () => {
   const currentWaiters = pauseWaiters;
   pauseWaiters = [];
-  currentWaiters.forEach((resolve) => resolve());
+  for (const resolve of currentWaiters) {
+    resolve();
+  }
 };
 
 async function waitWhileManuallyPaused(): Promise<void> {
