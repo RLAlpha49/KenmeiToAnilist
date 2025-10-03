@@ -5,7 +5,16 @@
  */
 
 import React from "react";
-import { AlertCircle, Loader2 } from "lucide-react";
+import {
+  AlertCircle,
+  Loader2,
+  RefreshCcw,
+  Library,
+  UserPlus,
+  ListChecks,
+  Sparkles,
+  CheckCircle2,
+} from "lucide-react";
 import { Button } from "../ui/button";
 import { UserMediaList, MangaMatchResult } from "../../api/anilist/types";
 import { SyncConfig } from "../../utils/storage";
@@ -50,190 +59,246 @@ export const ChangesSummary: React.FC<ChangesSummaryProps> = ({
   mangaMatches,
   syncConfig,
 }) => {
+  const totalLibraryEntries = Object.keys(userLibrary || {}).length;
+  const totalMatched = mangaMatches.filter(
+    (match) => match.status !== "skipped",
+  ).length;
+  const newEntriesCount = mangaMatches.filter(
+    (match) => match.selectedMatch && !userLibrary[match.selectedMatch.id],
+  ).length;
+
+  const updatesCount = mangaMatches.filter((match) => {
+    if (!match.selectedMatch) return false;
+
+    const anilist = match.selectedMatch;
+    const kenmei = match.kenmeiManga;
+    const userEntry = userLibrary[anilist.id];
+
+    if (
+      !userEntry ||
+      (userEntry.status === "COMPLETED" && syncConfig.preserveCompletedStatus)
+    ) {
+      return false;
+    }
+
+    const statusWillChange = syncConfig.prioritizeAniListStatus
+      ? false
+      : getEffectiveStatus(kenmei, syncConfig) !== userEntry.status;
+
+    const progressWillChange = syncConfig.prioritizeAniListProgress
+      ? (kenmei.chapters_read || 0) > (userEntry.progress || 0)
+      : (kenmei.chapters_read || 0) !== (userEntry.progress || 0);
+
+    const anilistScore = Number(userEntry.score || 0);
+    const kenmeiScore = Number(kenmei.score || 0);
+    const scoreWillChange =
+      syncConfig.prioritizeAniListScore &&
+      userEntry.score &&
+      Number(userEntry.score) > 0
+        ? false
+        : kenmei.score > 0 &&
+          (anilistScore === 0 || Math.abs(kenmeiScore - anilistScore) >= 0.5);
+
+    const privacyWillChange = syncConfig.setPrivate && !userEntry.private;
+
+    return (
+      statusWillChange ||
+      progressWillChange ||
+      scoreWillChange ||
+      privacyWillChange
+    );
+  }).length;
+
+  const readinessRatio =
+    totalMatched > 0
+      ? Math.min(100, Math.round((entriesWithChanges / totalMatched) * 100))
+      : 0;
+
+  const metrics = [
+    {
+      label: "Kenmei matches",
+      value: totalMatched,
+      helper: "after skipping dismissed items",
+      icon: Sparkles,
+      accent:
+        "from-blue-400/70 via-blue-400/10 to-transparent dark:from-blue-500/40 dark:via-blue-500/5",
+    },
+    {
+      label: "AniList references",
+      value: totalLibraryEntries,
+      helper: "from your library snapshot",
+      icon: Library,
+      accent:
+        "from-indigo-400/70 via-indigo-400/10 to-transparent dark:from-indigo-500/40 dark:via-indigo-500/5",
+    },
+    {
+      label: "New entries",
+      value: newEntriesCount,
+      helper: "will be created on sync",
+      icon: UserPlus,
+      accent:
+        "from-emerald-400/70 via-emerald-400/10 to-transparent dark:from-emerald-500/40 dark:via-emerald-500/5",
+    },
+    {
+      label: "Updates queued",
+      value: updatesCount,
+      helper: "existing titles getting changes",
+      icon: ListChecks,
+      accent:
+        "from-amber-400/70 via-amber-400/10 to-transparent dark:from-amber-500/40 dark:via-amber-500/5",
+    },
+  ];
+
   return (
-    <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
-      <h3 className="flex items-center text-sm font-medium">
-        <AlertCircle className="mr-2 h-4 w-4 text-amber-500" />
-        Changes Summary
-      </h3>
-      <p className="text-muted-foreground mt-1 text-sm">
-        {entriesWithChanges} entries will be synchronized to your AniList
-        account.
-      </p>
-
-      {libraryLoading && (
-        <div className="text-muted-foreground mt-2 flex items-center gap-2 text-xs">
-          <Loader2 className="h-3 w-3 animate-spin" />
-          Loading your AniList library for comparison...
-        </div>
-      )}
-
-      {libraryError && (
-        <div className="mt-2 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
-          <AlertCircle className="h-3 w-3" />
-          {!isRateLimited && <span>{libraryError}</span>}
-
-          {/* Only show Try Again button when not rate limited */}
-          {!isRateLimited && (
-            <Button
-              variant="link"
-              className="h-auto px-0 py-0 text-xs"
-              onClick={onLibraryRefresh}
-            >
-              Try Again
-            </Button>
-          )}
-        </div>
-      )}
-
-      {!libraryLoading &&
-        !libraryError &&
-        userLibrary &&
-        Object.keys(userLibrary).length > 0 && (
-          <div className="mt-2 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400">
-              <div className="h-3 w-3 rounded-full bg-emerald-500"></div>
-              <span>
-                Found{" "}
-                <span className="font-semibold">
-                  {Object.keys(userLibrary).length}
-                </span>{" "}
-                unique entries in your AniList library for comparison
-              </span>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 text-xs"
-              onClick={onLibraryRefresh}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="mr-1"
-              >
-                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-                <path d="M21 3v5h-5" />
-                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-                <path d="M8 16H3v5" />
-              </svg>
-              Refresh
-            </Button>
+    <div className="rounded-3xl border border-slate-200/70 bg-white/80 p-5 shadow-sm backdrop-blur-xl dark:border-slate-800/70 dark:bg-slate-950/60">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="space-y-3">
+          <div className="inline-flex items-center gap-2 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-600 dark:bg-amber-500/10 dark:text-amber-300">
+            <Sparkles className="h-4 w-4" />
+            Sync scope overview
           </div>
-        )}
-
-      {!libraryLoading && !libraryError && (
-        <div className="mt-4 rounded bg-blue-50 p-2 text-xs text-blue-600 dark:bg-blue-900/20 dark:text-blue-400">
-          <div className="mb-1 font-semibold">Manga Statistics:</div>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-            <div>
-              <span className="text-slate-600 dark:text-slate-400">
-                Kenmei manga:
-              </span>{" "}
-              {mangaMatches.length}
+          <div className="flex items-baseline gap-3">
+            <span className="text-3xl font-semibold text-slate-900 dark:text-slate-100">
+              {entriesWithChanges}
+            </span>
+            <span className="text-sm text-slate-500 dark:text-slate-400">
+              entries will sync
+            </span>
+          </div>
+          <p className="max-w-xl text-xs text-slate-500 dark:text-slate-400">
+            Adjust your configuration and filters to match only the changes you
+            want to push.
+          </p>
+        </div>
+        <div className="flex w-full items-center gap-3 md:w-auto">
+          <div className="hidden h-16 w-16 items-center justify-center rounded-full border border-blue-200/80 bg-blue-50/70 text-lg font-semibold text-blue-600 md:flex dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-300">
+            {readinessRatio}%
+          </div>
+          <div className="min-w-[180px] flex-1">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800/60">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 transition-all duration-300"
+                style={{ width: `${readinessRatio}%` }}
+              />
             </div>
-            <div>
-              <span className="text-slate-600 dark:text-slate-400">
-                AniList library:
-              </span>{" "}
-              {Object.keys(userLibrary).length}
+            <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+              <span>{entriesWithChanges} ready</span>
+              <span>{totalMatched} reviewed</span>
             </div>
-            <div>
-              <span className="text-slate-600 dark:text-slate-400">
-                New entries:
-              </span>{" "}
-              {
-                mangaMatches.filter(
-                  (match) =>
-                    match.selectedMatch && !userLibrary[match.selectedMatch.id],
-                ).length
-              }
-            </div>
-            <div>
-              <span className="text-slate-600 dark:text-slate-400">
-                Updates:
-              </span>{" "}
-              {
-                mangaMatches.filter((match) => {
-                  // Only count manga that will actually have changes
-                  if (!match.selectedMatch) return false;
+          </div>
+        </div>
+      </div>
 
-                  const anilist = match.selectedMatch;
-                  const kenmei = match.kenmeiManga;
-                  const userEntry = userLibrary[anilist.id];
-
-                  // Skip if not in user library or if completed and we're preserving completed status
-                  if (
-                    !userEntry ||
-                    (userEntry.status === "COMPLETED" &&
-                      syncConfig.preserveCompletedStatus)
-                  ) {
-                    return false;
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {(() => {
+          let libraryStatusContent: React.ReactNode;
+          if (libraryLoading) {
+            libraryStatusContent = (
+              <>
+                <Loader2 className="h-3 w-3 animate-spin text-slate-500 dark:text-slate-400" />
+                <span className="text-slate-500 dark:text-slate-400">
+                  Loading your AniList library for comparison...
+                </span>
+              </>
+            );
+          } else if (libraryError) {
+            libraryStatusContent = (
+              <>
+                <AlertCircle className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                <span
+                  className={
+                    isRateLimited
+                      ? "text-blue-600 dark:text-blue-300"
+                      : "text-amber-600 dark:text-amber-400"
                   }
-
-                  // Check if any values will change based on sync configuration
-                  let statusWillChange: boolean;
-                  if (userEntry) {
-                    if (syncConfig.prioritizeAniListStatus) {
-                      statusWillChange = false;
-                    } else {
-                      statusWillChange =
-                        getEffectiveStatus(kenmei, syncConfig) !==
-                        userEntry.status;
-                    }
-                  } else {
-                    statusWillChange = true;
-                  }
-
-                  const progressWillChange =
-                    syncConfig.prioritizeAniListProgress
-                      ? // Will only change if Kenmei has more chapters read than AniList
-                        (kenmei.chapters_read || 0) > (userEntry.progress || 0)
-                      : (kenmei.chapters_read || 0) !==
-                        (userEntry.progress || 0);
-
-                  const anilistScore = Number(userEntry.score || 0);
-                  const kenmeiScore = Number(kenmei.score || 0);
-                  const scoreWillChange =
-                    syncConfig.prioritizeAniListScore &&
-                    userEntry.score &&
-                    Number(userEntry.score) > 0
-                      ? false
-                      : kenmei.score > 0 &&
-                        (anilistScore === 0 ||
-                          Math.abs(kenmeiScore - anilistScore) >= 0.5);
-
-                  // Check if privacy will change
-                  const privacyWillChange =
-                    syncConfig.setPrivate && !userEntry.private;
-
-                  // Count entry only if at least one value will change
-                  return (
-                    statusWillChange ||
-                    progressWillChange ||
-                    scoreWillChange ||
-                    privacyWillChange
-                  );
-                }).length
-              }
+                >
+                  {isRateLimited
+                    ? "AniList API rate limit reached. Waiting to retry..."
+                    : libraryError}
+                </span>
+              </>
+            );
+          } else if (totalLibraryEntries > 0) {
+            libraryStatusContent = (
+              <>
+                <CheckCircle2 className="h-3 w-3 text-emerald-500 dark:text-emerald-400" />
+                <span className="text-emerald-600 dark:text-emerald-400">
+                  Found {totalLibraryEntries} AniList entries for comparison.
+                </span>
+              </>
+            );
+          } else {
+            libraryStatusContent = (
+              <>
+                <Sparkles className="h-3 w-3 text-blue-500 dark:text-blue-300" />
+                <span className="text-slate-500 dark:text-slate-400">
+                  Library comparison will appear once loaded.
+                </span>
+              </>
+            );
+          }
+          return (
+            <div className="flex items-center gap-2 text-xs">
+              {libraryStatusContent}
             </div>
-          </div>
+          );
+        })()}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onLibraryRefresh}
+          disabled={libraryLoading || isRateLimited}
+          className="inline-flex items-center gap-2 rounded-full border-slate-300/70 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-blue-300 hover:bg-blue-50/70 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700/70 dark:text-slate-200 dark:hover:border-blue-700 dark:hover:bg-blue-950/30"
+        >
+          <RefreshCcw
+            className={`h-3 w-3 ${libraryLoading ? "animate-spin" : ""}`}
+          />
+          {libraryLoading
+            ? "Refreshing..."
+            : isRateLimited
+              ? "Rate limit active"
+              : "Refresh Library"}
+        </Button>
+      </div>
 
-          <div className="mt-2 border-t border-blue-200 pt-2 text-amber-600 dark:border-blue-800 dark:text-amber-400">
-            <strong className="text-xs">Note:</strong> Media entries with
-            &ldquo;Hide from status lists&rdquo; option set to true and not
-            associated with any custom lists will not be returned by the query
-            and will be treated as not in your library.
-          </div>
-        </div>
-      )}
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {metrics.map((metric) => {
+          const Icon = metric.icon;
+          return (
+            <div
+              key={metric.label}
+              className="relative overflow-hidden rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm backdrop-blur-sm transition hover:border-blue-200/60 hover:shadow-md dark:border-slate-800/60 dark:bg-slate-950/50 dark:hover:border-blue-900/50"
+            >
+              <div
+                className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${metric.accent} opacity-70`}
+              />
+              <div className="relative flex items-start justify-between gap-3">
+                <div>
+                  <span className="text-xs font-medium tracking-wide text-slate-500 uppercase dark:text-slate-400">
+                    {metric.label}
+                  </span>
+                  <div className="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">
+                    {metric.value}
+                  </div>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {metric.helper}
+                  </span>
+                </div>
+                <div className="rounded-full bg-white/70 p-2 text-slate-500 shadow-sm dark:bg-slate-900/50 dark:text-slate-400">
+                  <Icon className="h-4 w-4" />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-blue-100/60 bg-blue-50/80 px-4 py-3 text-xs text-blue-600 dark:border-blue-900/50 dark:bg-blue-950/20 dark:text-blue-300">
+        <strong className="font-semibold">Note:</strong> Media entries with
+        &ldquo;Hide from status lists&rdquo; enabled and not associated with any
+        custom lists will not be returned by the AniList API and will be treated
+        as new entries.
+      </div>
     </div>
   );
 };

@@ -98,7 +98,7 @@ const applyFormat = (format: string, args: unknown[]): string => {
   const tokens = ["%%", "%s", "%d", "%i", "%f", "%o", "%O", "%c"];
 
   const escapeRegex = (s: string) =>
-    s.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    s.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
   const objectDefaultString = (v: unknown) => Object.prototype.toString.call(v);
 
   const stringifyObject = (v: unknown): string => {

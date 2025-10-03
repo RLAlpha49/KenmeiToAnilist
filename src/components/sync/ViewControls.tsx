@@ -49,16 +49,25 @@ export const ViewControls: React.FC<ViewControlsProps> = ({
   filters,
   setFilters,
 }) => {
+  const activeFilterCount =
+    Number(filters.status !== "all") +
+    Number(filters.changes !== "with-changes") +
+    Number(filters.library !== "all");
+
+  const isDefaultSort =
+    sortOption.field === "title" && sortOption.direction === "asc";
+
   return (
-    <div className="mb-4 flex items-center justify-between">
-      {/* Display Mode Toggle */}
-      <div className="flex items-center gap-2">
-        <span className="text-muted-foreground text-sm">View:</span>
-        <div className="border-input bg-background inline-flex items-center rounded-md border p-1">
+    <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/70 bg-white/80 p-3 shadow-sm backdrop-blur-sm lg:flex-row lg:items-center lg:justify-between dark:border-slate-800/60 dark:bg-slate-950/50">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold tracking-[0.2em] text-slate-500 uppercase dark:text-slate-400">
+          View Mode
+        </span>
+        <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-slate-50/60 p-1 dark:border-slate-800/60 dark:bg-slate-900/40">
           <Button
-            variant={displayMode === "cards" ? "default" : "ghost"}
+            variant="ghost"
             size="sm"
-            className="h-8 rounded-sm px-2"
+            className={`h-8 rounded-full px-3 text-xs font-semibold transition ${displayMode === "cards" ? "bg-blue-500/90 text-white shadow" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900/50"}`}
             onClick={() => setDisplayMode("cards")}
           >
             <svg
@@ -81,9 +90,9 @@ export const ViewControls: React.FC<ViewControlsProps> = ({
             Cards
           </Button>
           <Button
-            variant={displayMode === "compact" ? "default" : "ghost"}
+            variant="ghost"
             size="sm"
-            className="h-8 rounded-sm px-2"
+            className={`h-8 rounded-full px-3 text-xs font-semibold transition ${displayMode === "compact" ? "bg-blue-500/90 text-white shadow" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900/50"}`}
             onClick={() => setDisplayMode("compact")}
           >
             <svg
@@ -107,22 +116,23 @@ export const ViewControls: React.FC<ViewControlsProps> = ({
         </div>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
         {/* Sort Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`h-9 rounded-full border px-3 text-xs font-semibold transition ${isDefaultSort ? "border-slate-200/70 text-slate-600 hover:border-blue-200/60 hover:bg-blue-50/60 dark:border-slate-800/60 dark:text-slate-300 dark:hover:border-blue-900/40 dark:hover:bg-blue-900/30" : "border-blue-300/70 bg-blue-50/70 text-blue-600 shadow-sm dark:border-blue-900/50 dark:bg-blue-900/40 dark:text-blue-200"}`}
+            >
               <SortAsc className="mr-1 h-4 w-4" />
               Sort
-              {sortOption.field !== "title" ||
-              sortOption.direction !== "asc" ? (
-                <span className="ml-1 text-xs opacity-70">
-                  (
-                  {sortOption.field.charAt(0).toUpperCase() +
-                    sortOption.field.slice(1)}
-                  , {sortOption.direction === "asc" ? "↑" : "↓"})
+              {!isDefaultSort && (
+                <span className="ml-1 text-[10px] tracking-wide uppercase">
+                  {sortOption.field},{" "}
+                  {sortOption.direction === "asc" ? "↑" : "↓"}
                 </span>
-              ) : null}
+              )}
               <span className="sr-only">Sort</span>
             </Button>
           </DropdownMenuTrigger>
@@ -214,7 +224,7 @@ export const ViewControls: React.FC<ViewControlsProps> = ({
                     field: opt.key as SortOption["field"],
                   }))
                 }
-                className="flex justify-between"
+                className="flex items-center justify-between text-sm"
               >
                 {opt.label}
                 {sortOption.field === opt.key && <Check className="h-4 w-4" />}
@@ -226,9 +236,18 @@ export const ViewControls: React.FC<ViewControlsProps> = ({
         {/* Filter Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`relative h-9 rounded-full border px-3 text-xs font-semibold transition ${activeFilterCount > 0 ? "border-blue-300/70 bg-blue-50/70 text-blue-600 shadow-sm dark:border-blue-900/50 dark:bg-blue-900/40 dark:text-blue-200" : "border-slate-200/70 text-slate-600 hover:border-blue-200/60 hover:bg-blue-50/60 dark:border-slate-800/60 dark:text-slate-300 dark:hover:border-blue-900/40 dark:hover:bg-blue-900/30"}`}
+            >
               <Filter className="mr-1 h-4 w-4" />
               Filter
+              {activeFilterCount > 0 && (
+                <span className="ml-2 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-[10px] font-semibold text-white dark:bg-blue-400">
+                  {activeFilterCount}
+                </span>
+              )}
               <span className="sr-only">Filter</span>
             </Button>
           </DropdownMenuTrigger>
@@ -250,7 +269,7 @@ export const ViewControls: React.FC<ViewControlsProps> = ({
                     status: s.key as FilterOptions["status"],
                   }))
                 }
-                className="flex justify-between"
+                className="flex items-center justify-between text-sm"
               >
                 {s.label}
                 {filters.status === s.key && <Check className="h-4 w-4" />}
@@ -272,7 +291,7 @@ export const ViewControls: React.FC<ViewControlsProps> = ({
                     changes: c.key as FilterOptions["changes"],
                   }))
                 }
-                className="flex justify-between"
+                className="flex items-center justify-between text-sm"
               >
                 {c.label}
                 {filters.changes === c.key && <Check className="h-4 w-4" />}
@@ -294,7 +313,7 @@ export const ViewControls: React.FC<ViewControlsProps> = ({
                     library: l.key as FilterOptions["library"],
                   }))
                 }
-                className="flex justify-between"
+                className="flex items-center justify-between text-sm"
               >
                 {l.label}
                 {filters.library === l.key && <Check className="h-4 w-4" />}
@@ -306,7 +325,7 @@ export const ViewControls: React.FC<ViewControlsProps> = ({
         <Button
           variant="ghost"
           size="sm"
-          className="h-8"
+          className="h-9 rounded-full border border-slate-200/70 px-4 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-100 dark:border-slate-800/60 dark:text-slate-300 dark:hover:border-slate-700 dark:hover:bg-slate-900/40"
           onClick={() => {
             setSortOption({ field: "title", direction: "asc" });
             setFilters({

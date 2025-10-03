@@ -34,7 +34,7 @@ export default function BaseLayout({
 
       <main className="relative z-[1] flex-1 overflow-auto px-4 py-6 md:px-6">
         <div className="container mx-auto">
-          <div className="bg-background/70 rounded-3xl border border-white/20 p-3 shadow-[0_20px_80px_-50px_rgba(59,130,246,0.6)] backdrop-blur-xl transition-colors dark:border-white/5 dark:bg-slate-950/70">
+          <div className="bg-background/70 rounded-3xl border border-white/20 p-0 shadow-[0_20px_80px_-50px_rgba(59,130,246,0.6)] backdrop-blur-xl transition-colors dark:border-white/5 dark:bg-slate-950/70">
             {children}
           </div>
         </div>
