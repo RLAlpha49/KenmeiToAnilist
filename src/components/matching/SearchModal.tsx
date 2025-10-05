@@ -54,7 +54,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
       return;
     }
 
-    if (typeof window === "undefined" || typeof document === "undefined") {
+    if (globalThis.window === undefined || typeof document === "undefined") {
       return;
     }
 
@@ -79,7 +79,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   }, [isOpen]);
 
   const portalTarget =
-    typeof window !== "undefined" && typeof document !== "undefined"
+    globalThis.window !== undefined && typeof document !== "undefined"
       ? document.body
       : null;
 

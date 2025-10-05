@@ -18,58 +18,59 @@ export function filterMangaMatches(
   userLibrary: UserMediaList,
   syncConfig: SyncConfig,
 ): MangaMatchResult[] {
+  const statusMap = {
+    reading: "reading",
+    completed: "completed",
+    planned: "plan_to_read",
+    paused: "on_hold",
+    dropped: "dropped",
+  } as const;
+
+  const matchesStatus = (match: MangaMatchResult) => {
+    if (filters.status === "all") return true;
+    const mapped = (statusMap as Record<string, string>)[filters.status];
+    return mapped === match.kenmeiManga.status.toLowerCase();
+  };
+
+  const matchesChanges = (match: MangaMatchResult) => {
+    if (filters.changes === "all") return true;
+
+    const anilist = match.selectedMatch!;
+    const userEntry = userLibrary[anilist.id];
+
+    const isCompletedAndPreserved =
+      userEntry &&
+      userEntry.status === "COMPLETED" &&
+      syncConfig.preserveCompletedStatus;
+
+    if (isCompletedAndPreserved) {
+      return filters.changes !== "with-changes";
+    }
+
+    const changeCount = getChangeCount(match, userLibrary, syncConfig);
+    const hasChanges = changeCount > 0;
+
+    if (filters.changes === "with-changes") return hasChanges;
+    if (filters.changes === "no-changes") return !hasChanges;
+    return true;
+  };
+
+  const matchesLibrary = (match: MangaMatchResult) => {
+    if (filters.library === "all") return true;
+    const anilist = match.selectedMatch!;
+    const isNewEntry = !userLibrary[anilist.id];
+    if (filters.library === "new") return isNewEntry;
+    if (filters.library === "existing") return !isNewEntry;
+    return true;
+  };
+
   return mangaMatches
     .filter((match) => match.status === "matched" || match.status === "manual")
     .filter((match) => match.selectedMatch !== undefined)
-    .filter((match) => {
-      // Status filter
-      const statusMap = {
-        reading: "reading",
-        completed: "completed",
-        planned: "plan_to_read",
-        paused: "on_hold",
-        dropped: "dropped",
-      } as const;
-
-      const statusMatches =
-        filters.status === "all" ||
-        (statusMap as Record<string, string>)[filters.status] ===
-          match.kenmeiManga.status.toLowerCase();
-
-      if (!statusMatches) return false;
-
-      // Changes filter
-      if (filters.changes !== "all") {
-        const anilist = match.selectedMatch!;
-        const userEntry = userLibrary[anilist.id];
-
-        const isCompletedAndPreserved =
-          userEntry &&
-          userEntry.status === "COMPLETED" &&
-          syncConfig.preserveCompletedStatus;
-
-        if (isCompletedAndPreserved) {
-          if (filters.changes === "with-changes") return false;
-        } else {
-          // Use shared helper getChangeCount to calculate exact change count
-          const changeCount = getChangeCount(match, userLibrary, syncConfig);
-          const hasChanges = changeCount > 0;
-
-          if (filters.changes === "with-changes" && !hasChanges) return false;
-          if (filters.changes === "no-changes" && hasChanges) return false;
-        }
-      }
-
-      // Library filter
-      if (filters.library !== "all") {
-        const anilist = match.selectedMatch!;
-        const isNewEntry = !userLibrary[anilist.id];
-        if (filters.library === "new" && !isNewEntry) return false;
-        if (filters.library === "existing" && isNewEntry) return false;
-      }
-
-      return true;
-    });
+    .filter(
+      (match) =>
+        matchesStatus(match) && matchesChanges(match) && matchesLibrary(match),
+    );
 }
 
 /**

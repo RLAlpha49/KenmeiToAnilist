@@ -87,12 +87,6 @@ const serialiseArgument = (value: unknown): string => {
   }
 };
 
-/**
- * Simple implementation of console-like format string replacement.
- * Supports %s, %d, %i, %f, %o, %O and falls back to string conversion.
- * objects are JSON-stringified if possible,
- * otherwise the object's default stringification (e.g. "[object Object]") is used.
- */
 const applyFormat = (format: string, args: unknown[]): string => {
   let i = 0;
   const tokens = ["%%", "%s", "%d", "%i", "%f", "%o", "%O", "%c"];
@@ -127,19 +121,13 @@ const applyFormat = (format: string, args: unknown[]): string => {
 
       switch (token) {
         case "%s":
-          return typeof arg === "object" && arg !== null
-            ? stringifyObject(arg)
-            : String(arg);
+          return stringifyGeneral(arg);
         case "%d":
         case "%i":
-          if (typeof arg === "object" && arg !== null)
-            return stringifyObject(arg);
-          // Coerce to number then to string (NaN will be "NaN")
-          return String(Number(arg));
         case "%f":
           if (typeof arg === "object" && arg !== null)
             return stringifyObject(arg);
-          return String(Number.parseFloat(String(arg)));
+          return String(Number(arg));
         case "%o":
         case "%O":
           return stringifyGeneral(arg);
