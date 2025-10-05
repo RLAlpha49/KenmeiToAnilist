@@ -397,22 +397,18 @@ export function SettingsPage() {
   };
 
   const handleClearCache = async () => {
-    try {
-      // Start clearing process and show loading state
-      setCacheCleared(false);
-      setIsClearing(true);
-      setError(null);
+    setCacheCleared(false);
+    setIsClearing(true);
+    setError(null);
 
-      // Get all cache clearing functions
-      const { clearMangaCache, cacheDebugger } = await import(
-        "../api/matching/manga-search-service"
-      );
-      const { clearSearchCache } = await import("../api/anilist/client");
+    const anySelected = Object.values(cachesToClear).some(Boolean);
+    if (!anySelected) {
+      setIsClearing(false);
+      return;
+    }
 
-      console.log("🧹 Starting selective cache clearing...");
-
-      // Define which localStorage keys belong to which cache type
-      const cacheKeysByType = {
+    const getCacheKeysByType = (): Record<string, string[]> => {
+      const base: Record<string, string[]> = {
         auth: ["authState", "customCredentials", "useCustomCredentials"],
         search: ["anilist_search_cache"],
         manga: ["anilist_manga_cache"],
@@ -423,73 +419,60 @@ export function SettingsPage() {
         other: ["cache_version"],
       };
 
-      // Additional keys from STORAGE_KEYS constant
-      if (STORAGE_KEYS) {
-        for (const [key, value] of Object.entries(STORAGE_KEYS)) {
-          if (typeof value === "string") {
-            // Add to appropriate category based on key name
-            if (key.includes("MATCH") || key.includes("REVIEW")) {
-              if (!cacheKeysByType.review.includes(value)) {
-                cacheKeysByType.review.push(value);
-              }
-            } else if (key.includes("IMPORT")) {
-              if (!cacheKeysByType.import.includes(value)) {
-                cacheKeysByType.import.push(value);
-              }
-            } else if (key.includes("CACHE")) {
-              if (!cacheKeysByType.other.includes(value)) {
-                cacheKeysByType.other.push(value);
-              }
-            }
-          }
+      if (!STORAGE_KEYS) return base;
+
+      for (const [key, value] of Object.entries(STORAGE_KEYS)) {
+        if (typeof value !== "string") continue;
+        if (key.includes("MATCH") || key.includes("REVIEW")) {
+          if (!base.review.includes(value)) base.review.push(value);
+        } else if (key.includes("IMPORT")) {
+          if (!base.import.includes(value)) base.import.push(value);
+        } else if (key.includes("CACHE")) {
+          if (!base.other.includes(value)) base.other.push(value);
         }
       }
 
-      // Clear Search Cache if selected
-      if (cachesToClear.search) {
-        clearSearchCache();
-        console.log("🧹 Search cache cleared");
-      }
+      return base;
+    };
 
-      // Clear Manga Cache if selected
-      if (cachesToClear.manga) {
-        clearMangaCache();
-        console.log("🧹 Manga cache cleared");
-      }
-
-      // If both search and manga are selected, use the full reset
-      if (cachesToClear.search && cachesToClear.manga) {
-        cacheDebugger.resetAllCaches();
-        console.log("🧹 All in-memory caches reset");
-      }
-
-      // Get all localStorage keys to clear based on selections
-      const keysToRemove: string[] = [];
-
-      for (const [type, selected] of Object.entries(cachesToClear)) {
-        if (selected && cacheKeysByType[type as keyof typeof cacheKeysByType]) {
-          keysToRemove.push(
-            ...cacheKeysByType[type as keyof typeof cacheKeysByType],
-          );
+    const clearExternalCaches = async (services: {
+      clearSearchCache?: () => void;
+      clearMangaCache?: () => void;
+      cacheDebugger?: { resetAllCaches?: () => void };
+    }) => {
+      try {
+        if (
+          cachesToClear.search &&
+          typeof services.clearSearchCache === "function"
+        ) {
+          services.clearSearchCache();
+          console.log("🧹 Search cache cleared");
         }
+        if (
+          cachesToClear.manga &&
+          typeof services.clearMangaCache === "function"
+        ) {
+          services.clearMangaCache();
+          console.log("🧹 Manga cache cleared");
+        }
+        if (
+          cachesToClear.search &&
+          cachesToClear.manga &&
+          services.cacheDebugger?.resetAllCaches
+        ) {
+          services.cacheDebugger.resetAllCaches();
+          console.log("🧹 All in-memory caches reset");
+        }
+      } catch (e) {
+        console.warn("Failed to clear external caches", e);
       }
+    };
 
-      // Remove duplicates
-      const uniqueKeysToRemove = [...new Set(keysToRemove)];
-
-      console.log(
-        "🧹 Clearing the following localStorage keys:",
-        uniqueKeysToRemove,
-      );
-
-      // Clear selected localStorage keys
-      for (const cacheKey of uniqueKeysToRemove) {
+    const clearStorageKeys = (keys: string[]) => {
+      for (const cacheKey of keys) {
         try {
           localStorage.removeItem(cacheKey);
-          if (
-            globalThis.electronStore &&
-            typeof globalThis.electronStore.removeItem === "function"
-          ) {
+          if (globalThis.electronStore?.removeItem instanceof Function) {
             globalThis.electronStore.removeItem(cacheKey);
             console.log(`🧹 Cleared Electron Store cache: ${cacheKey}`);
           }
@@ -498,33 +481,26 @@ export function SettingsPage() {
           console.warn(`Failed to clear cache: ${cacheKey}`, e);
         }
       }
+    };
 
-      // Clear IndexedDB if any cache is selected
-      if (Object.values(cachesToClear).some(Boolean)) {
-        try {
-          const DBDeleteRequest =
-            globalThis.indexedDB.deleteDatabase("anilist-cache");
-          DBDeleteRequest.onsuccess = () =>
-            console.log("🧹 Successfully deleted IndexedDB database");
-          DBDeleteRequest.onerror = () =>
-            console.error("Error deleting IndexedDB database");
-        } catch (e) {
-          console.warn("Failed to clear IndexedDB:", e);
-        }
+    const deleteIndexedDB = () => {
+      try {
+        const req = globalThis.indexedDB?.deleteDatabase("anilist-cache");
+        if (!req) return;
+        req.onsuccess = () =>
+          console.log("🧹 Successfully deleted IndexedDB database");
+        req.onerror = () => console.error("Error deleting IndexedDB database");
+      } catch (e) {
+        console.warn("Failed to clear IndexedDB:", e);
       }
+    };
 
-      console.log("🧹 Selected caches cleared");
-
-      // Show success message
-      setCacheCleared(true);
-
-      // Create a summary of cleared caches for user feedback
+    const showResultSummary = () => {
       const clearedSummary = Object.entries(cachesToClear)
         .filter(([, selected]) => selected)
         .map(([type]) => `✅ Cleared ${type} cache`)
         .join("\n");
 
-      // Show a detailed summary to the user
       try {
         globalThis.alert(
           "Cache Cleared Successfully!\n\n" +
@@ -534,21 +510,52 @@ export function SettingsPage() {
       } catch (e) {
         console.warn("Failed to show alert:", e);
       }
+    };
 
+    try {
+      // Get all cache clearing functions
+      const { clearMangaCache, cacheDebugger } = await import(
+        "../api/matching/manga-search-service"
+      );
+      const { clearSearchCache } = await import("../api/anilist/client");
+
+      await clearExternalCaches({
+        clearSearchCache,
+        clearMangaCache,
+        cacheDebugger,
+      });
+
+      const keysByType = getCacheKeysByType();
+      const keysToRemove: string[] = [];
+
+      for (const [type, selected] of Object.entries(cachesToClear)) {
+        if (!selected) continue;
+        const keys = keysByType[type];
+        if (Array.isArray(keys)) keysToRemove.push(...keys);
+      }
+
+      const uniqueKeys = [...new Set(keysToRemove)];
+      console.log("🧹 Clearing the following localStorage keys:", uniqueKeys);
+
+      clearStorageKeys(uniqueKeys);
+
+      if (anySelected) deleteIndexedDB();
+
+      console.log("🧹 Selected caches cleared");
+      setCacheCleared(true);
+      showResultSummary();
       setTimeout(() => setCacheCleared(false), 5000);
-
-      // Remove loading state
-      setIsClearing(false);
-    } catch (error) {
-      console.error("Error clearing cache:", error);
+    } catch (err) {
+      console.error("Error clearing cache:", err);
       setError(
         createError(
           ErrorType.SYSTEM,
-          error instanceof Error
-            ? error.message
+          err instanceof Error
+            ? err.message
             : "An unexpected error occurred while clearing cache",
         ),
       );
+    } finally {
       setIsClearing(false);
     }
   };

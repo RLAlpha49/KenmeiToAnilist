@@ -206,11 +206,12 @@ export function HomePage() {
     [key: string]: unknown;
   }
 
-  // Load import stats from storage on component mount
+  // Load import stats & related data on mount
   useEffect(() => {
-    const importStats = getImportStats();
-    if (importStats) {
-      // Update stats from stored data
+    const loadImportStats = () => {
+      const importStats = getImportStats();
+      if (!importStats) return;
+
       const statusCounts = importStats.statusCounts || {};
       setStats((prev) => ({
         ...prev,
@@ -222,77 +223,88 @@ export function HomePage() {
         planToRead: statusCounts.plan_to_read || 0,
         lastSync: importStats.timestamp || null,
       }));
-    }
+    };
 
-    // Get match status data
-    try {
-      const matchResultsStr = localStorage.getItem("match_results");
-
-      if (matchResultsStr) {
-        const matchResults = JSON.parse(matchResultsStr);
-        const totalCount = matchResults ? Object.keys(matchResults).length : 0;
-
-        if (totalCount > 0) {
-          // Count pending and skipped matches by iterating through match results
-          let pendingCount = 0;
-          let skippedCount = 0;
-
-          for (const result of Object.values(matchResults)) {
-            // Type cast the unknown result to our MatchResult interface
-            const matchResult = result as MatchResult;
-
-            // Check if entry is explicitly marked as skipped
-            if (matchResult.status === "skipped") {
-              skippedCount++;
-            }
-            // Check if the entry genuinely needs review
-            else if (
-              matchResult.status === "pending" ||
-              (matchResult.needsReview === true &&
-                !matchResult.selectedMatch) ||
-              (matchResult.status !== "skipped" && !matchResult.selectedMatch)
-            ) {
-              pendingCount++;
-            }
-          }
-
-          setMatchStatus({
-            pendingMatches: pendingCount,
-            skippedMatches: skippedCount,
-            totalMatches: totalCount,
-            status: pendingCount === 0 ? "complete" : "pending",
-          });
-        } else {
+    const parseMatchResults = () => {
+      try {
+        const matchResultsStr = localStorage.getItem("match_results");
+        if (!matchResultsStr) {
           setMatchStatus({
             pendingMatches: 0,
             skippedMatches: 0,
             totalMatches: 0,
             status: "none",
           });
+          return;
         }
-      }
-    } catch (error) {
-      console.error("Error retrieving match status:", error);
-    }
 
-    try {
-      const stats = JSON.parse(
-        storage.getItem(STORAGE_KEYS.SYNC_STATS) || "{}",
-      );
-      setSyncStats({
-        lastSyncTime: stats.lastSyncTime || null,
-        entriesSynced: stats.entriesSynced || 0,
-        failedSyncs: stats.failedSyncs || 0,
-        totalSyncs: stats.totalSyncs || 0,
-      });
-    } catch {
-      setSyncStats({
-        lastSyncTime: null,
-        entriesSynced: 0,
-        failedSyncs: 0,
-        totalSyncs: 0,
-      });
-    }
+        const matchResults = JSON.parse(matchResultsStr) || {};
+        const entries = Object.values(matchResults);
+        const totalCount = entries.length;
+
+        if (totalCount === 0) {
+          setMatchStatus({
+            pendingMatches: 0,
+            skippedMatches: 0,
+            totalMatches: 0,
+            status: "none",
+          });
+          return;
+        }
+
+        let pendingCount = 0;
+        let skippedCount = 0;
+
+        for (const result of entries) {
+          const matchResult = result as MatchResult;
+
+          if (matchResult.status === "skipped") {
+            skippedCount++;
+            continue;
+          }
+
+          const needsReview =
+            matchResult.status === "pending" ||
+            (matchResult.needsReview === true && !matchResult.selectedMatch) ||
+            (matchResult.status !== "skipped" && !matchResult.selectedMatch);
+
+          if (needsReview) pendingCount++;
+        }
+
+        setMatchStatus({
+          pendingMatches: pendingCount,
+          skippedMatches: skippedCount,
+          totalMatches: totalCount,
+          status: pendingCount === 0 ? "complete" : "pending",
+        });
+      } catch (error) {
+        console.error("Error retrieving match status:", error);
+      }
+    };
+
+    const loadSyncStats = () => {
+      try {
+        const raw = storage.getItem(STORAGE_KEYS.SYNC_STATS) || "{}";
+        const parsed = JSON.parse(raw);
+        setSyncStats({
+          lastSyncTime: parsed.lastSyncTime || null,
+          entriesSynced: parsed.entriesSynced || 0,
+          failedSyncs: parsed.failedSyncs || 0,
+          totalSyncs: parsed.totalSyncs || 0,
+        });
+      } catch {
+        setSyncStats({
+          lastSyncTime: null,
+          entriesSynced: 0,
+          failedSyncs: 0,
+          totalSyncs: 0,
+        });
+      }
+    };
+
+    loadImportStats();
+    parseMatchResults();
+    loadSyncStats();
   }, []);
 
   const formatNumber = (value: number) => value.toLocaleString();

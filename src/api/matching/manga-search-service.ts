@@ -85,37 +85,35 @@ function initializeMangaService(): void {
     globalThis.addEventListener(
       "anilist:search-results-updated",
       (event: Event) => {
-        if (event instanceof CustomEvent) {
-          const { search, results, timestamp } = event.detail;
+        if (!(event instanceof CustomEvent)) return;
 
-          if (search && results && Array.isArray(results)) {
-            // Add each individual manga to our manga cache
-            for (const manga of results) {
-              if (manga.title) {
-                // Cache by romaji title
-                if (manga.title.romaji) {
-                  const mangaKey = generateCacheKey(manga.title.romaji);
-                  mangaCache[mangaKey] = {
-                    manga: [manga],
-                    timestamp: timestamp || Date.now(),
-                  };
-                }
+        const { results, timestamp } =
+          (event.detail as {
+            search?: string;
+            results?: AniListManga[];
+            timestamp?: number;
+          }) ?? {};
 
-                // Also cache by English title if available
-                if (manga.title.english) {
-                  const engKey = generateCacheKey(manga.title.english);
-                  mangaCache[engKey] = {
-                    manga: [manga],
-                    timestamp: timestamp || Date.now(),
-                  };
-                }
-              }
-            }
+        if (!Array.isArray(results) || results.length === 0) return;
 
-            // Save the updated cache
-            saveCache();
-          }
+        const ts = timestamp ?? Date.now();
+
+        const cacheByTitle = (
+          title: string | null | undefined,
+          manga: AniListManga,
+        ) => {
+          if (!title) return;
+          const key = generateCacheKey(title);
+          mangaCache[key] = { manga: [manga], timestamp: ts };
+        };
+
+        for (const manga of results) {
+          if (!manga?.title) continue;
+          cacheByTitle(manga.title.romaji, manga);
+          cacheByTitle(manga.title.english, manga);
         }
+
+        saveCache();
       },
     );
   }
@@ -4200,61 +4198,41 @@ export const cacheDebugger = {
    * @returns boolean True if an entry was cleared, false if no entry was found
    */
   clearCacheEntryForTitle(title: string): boolean {
-    // Generate cache key for the title
     const mainKey = generateCacheKey(title);
     let cleared = false;
 
-    // Check if we have this entry in the cache
+    // Remove direct cache entry if present
     if (mangaCache[mainKey]) {
       delete mangaCache[mainKey];
       cleared = true;
     }
 
-    // Try alternate forms of the title (English title/native title)
-    // This should only match EXACT English/Native titles, not partial matches
     const titleLower = title.toLowerCase().trim();
 
-    // Track entries to remove (to avoid modifying while iterating)
-    const keysToRemove: string[] = [];
+    const isExactTitleMatch = (m?: AniListManga): boolean => {
+      if (!m?.title) return false;
+      const romaji = m.title.romaji?.toLowerCase().trim() ?? "";
+      const english = m.title.english?.toLowerCase().trim() ?? "";
+      return romaji === titleLower || english === titleLower;
+    };
 
-    // Look for entries that may be this exact manga but stored under a different title variant
-    for (const key of Object.keys(mangaCache)) {
-      if (key === mainKey) continue; // Skip the main key we already handled
+    // Collect keys to remove by checking if any entry's manga list contains an exact match
+    const keysToRemove = Object.keys(mangaCache).filter((key) => {
+      if (key === mainKey) return false; // already handled
+      const entry = mangaCache[key];
+      if (!entry || !Array.isArray(entry.manga) || entry.manga.length === 0)
+        return false;
+      return entry.manga.some(isExactTitleMatch);
+    });
 
-      // Check if this cache entry is for this specific manga (by exact title match)
-      const entries = mangaCache[key].manga;
-
-      for (const manga of entries) {
-        if (!manga.title) continue;
-
-        // Only compare exact matches for English/romaji titles
-        const romajiTitle = manga.title.romaji
-          ? manga.title.romaji.toLowerCase().trim()
-          : "";
-        const englishTitle = manga.title.english
-          ? manga.title.english.toLowerCase().trim()
-          : "";
-
-        // Only delete if it's an exact title match, not partial matches
-        if (
-          (romajiTitle && romajiTitle === titleLower) ||
-          (englishTitle && englishTitle === titleLower)
-        ) {
-          keysToRemove.push(key);
-          break; // No need to check other manga in this entry
-        }
-      }
-    }
-
-    // Remove the entries outside the loop to avoid concurrent modification
+    // Remove collected keys
     if (keysToRemove.length > 0) {
-      for (const key of keysToRemove) {
-        delete mangaCache[key];
+      for (const k of keysToRemove) {
+        delete mangaCache[k];
       }
       cleared = true;
     }
 
-    // Save the updated cache if we cleared anything
     if (cleared) {
       saveCache();
     }

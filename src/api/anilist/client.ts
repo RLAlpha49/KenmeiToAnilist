@@ -418,30 +418,40 @@ function isCacheValid<T>(cache: Cache<T>, key: string): boolean {
 }
 
 /**
+ * Options for executing a search query.
+ */
+interface SearchQueryOptions {
+  query: string;
+  variables: Record<string, unknown>;
+  search: string;
+  cacheKey: string;
+  searchType: string;
+  token?: string;
+  bypassCache?: boolean;
+  page?: number;
+  perPage?: number;
+}
+
+/**
  * Core search logic shared between basic and advanced search.
  *
- * @param query - The GraphQL query to execute.
- * @param variables - Variables for the query.
- * @param search - Search query string for logging/caching.
- * @param cacheKey - Cache key for this search.
- * @param searchType - Type of search for logging.
- * @param token - Optional access token.
- * @param bypassCache - Optional parameter to bypass cache.
- * @param page - Page number for error handling.
- * @param perPage - Results per page for error handling.
+ * @param options - Search query options.
  * @returns Promise resolving to search results.
  */
 async function executeSearchQuery(
-  query: string,
-  variables: Record<string, unknown>,
-  search: string,
-  cacheKey: string,
-  searchType: string,
-  token?: string,
-  bypassCache?: boolean,
-  page: number = 1,
-  perPage: number = 50,
+  options: SearchQueryOptions,
 ): Promise<SearchResult<AniListManga>> {
+  const {
+    query,
+    variables,
+    search,
+    cacheKey,
+    searchType,
+    token,
+    bypassCache = false,
+    page = 1,
+    perPage = 50,
+  } = options;
   // Check cache first
   if (!bypassCache && isCacheValid(searchCache, cacheKey)) {
     console.log(`📋 Using cached ${searchType} results for: "${search}"`);
@@ -565,17 +575,17 @@ export async function searchManga(
   const cacheKey = generateCacheKey(search, page, perPage);
   const variables = { search, page, perPage };
 
-  return executeSearchQuery(
-    SEARCH_MANGA,
+  return executeSearchQuery({
+    query: SEARCH_MANGA,
     variables,
     search,
     cacheKey,
-    "Searching",
+    searchType: "Searching",
     token,
     bypassCache,
     page,
     perPage,
-  );
+  });
 }
 
 /**
@@ -612,17 +622,17 @@ export async function advancedSearchManga(
     format_in: filters.formats,
   };
 
-  return executeSearchQuery(
-    ADVANCED_SEARCH_MANGA,
+  return executeSearchQuery({
+    query: ADVANCED_SEARCH_MANGA,
     variables,
     search,
     cacheKey,
-    "Advanced search",
+    searchType: "Advanced search",
     token,
     bypassCache,
     page,
     perPage,
-  );
+  });
 }
 
 /**

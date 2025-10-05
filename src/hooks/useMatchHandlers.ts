@@ -262,7 +262,9 @@ export const useMatchHandlers = (
       directAccept = false,
     ) => {
       console.log(
-        `${directAccept ? "Directly accepting" : "Switching main match with"} alternative #${alternativeIndex} for "${match.kenmeiManga.title}"${autoAccept && !directAccept ? " and auto-accepting" : ""}`,
+        `${directAccept ? "Directly accepting" : "Switching main match with"} alternative #${alternativeIndex} for "${match.kenmeiManga.title}"${
+          autoAccept && !directAccept ? " and auto-accepting" : ""
+        }`,
       );
 
       // Find the match index in the current state
@@ -272,31 +274,23 @@ export const useMatchHandlers = (
         return;
       }
 
-      // Get the up-to-date match from the current state
+      // Get up-to-date match and validate alternatives
       const currentMatch = matchResults[index];
-
-      // Safety check - verify alternatives exist
-      if (
-        !currentMatch.anilistMatches ||
-        currentMatch.anilistMatches.length <= alternativeIndex
-      ) {
+      const alternatives = currentMatch.anilistMatches ?? [];
+      if (alternativeIndex < 0 || alternativeIndex >= alternatives.length) {
         console.error(`Alternative at index ${alternativeIndex} doesn't exist`);
         return;
       }
 
-      // Get the selected alternative
-      const selectedAlternative = currentMatch.anilistMatches[alternativeIndex];
-
+      const selectedAlternative = alternatives[alternativeIndex];
       if (!selectedAlternative?.manga) {
         console.error("Selected alternative is invalid");
         return;
       }
 
-      // Create a copy of all match results
       const updatedResults = [...matchResults];
 
-      if (directAccept) {
-        // Direct accept mode - just select the alternative as the match without swapping
+      const directAcceptHandler = () => {
         console.log(
           `Directly accepting alternative "${
             selectedAlternative.manga.title?.english ||
@@ -305,27 +299,24 @@ export const useMatchHandlers = (
           }" as the match with confidence ${selectedAlternative.confidence}%`,
         );
 
-        // Update the match with the selected alternative, don't change alternatives array
-        // Move the selected alternative to the front of the array to ensure its confidence is preserved
-        const rearrangedMatches = [...currentMatch.anilistMatches];
-        rearrangedMatches.splice(alternativeIndex, 1); // Remove from current position
-        rearrangedMatches.unshift(selectedAlternative); // Add to beginning
+        // Move selected alternative to front to preserve confidence display
+        const rearranged = [...alternatives];
+        rearranged.splice(alternativeIndex, 1);
+        rearranged.unshift(selectedAlternative);
 
         updatedResults[index] = {
           ...currentMatch,
           selectedMatch: { ...selectedAlternative.manga },
-          anilistMatches: rearrangedMatches, // Use the rearranged array where selected alt is first
+          anilistMatches: rearranged,
           status: "matched" as const,
           matchDate: new Date(),
         };
-      } else {
-        // Standard swap mode
-        // Get the current main match (which could be the first alternative if selectedMatch is not set)
+      };
+
+      const swapHandler = () => {
         const currentMainMatch =
           currentMatch.selectedMatch ||
-          (currentMatch.anilistMatches.length > 0
-            ? currentMatch.anilistMatches[0].manga
-            : null);
+          (alternatives.length > 0 ? alternatives[0].manga : null);
 
         if (!currentMainMatch) {
           console.error("No main match to swap with");
@@ -344,47 +335,41 @@ export const useMatchHandlers = (
           }" with confidence ${selectedAlternative.confidence}%`,
         );
 
-        // Create a fresh copy of the alternatives array
-        const newAnilistMatches = [...currentMatch.anilistMatches];
+        const newAnilistMatches = [...alternatives];
+        // Determine confidence for the main match when demoted
+        const mainMatchConfidence = alternatives[0]?.confidence ?? 75;
 
-        // Calculate confidence for the current main match (for when we put it in alternatives)
-        const mainMatchConfidence =
-          currentMatch.anilistMatches[0]?.confidence || 75;
-
-        // Create an entry for the current main match to add to alternatives
         const mainAsAlternative = {
           id: currentMainMatch.id,
           manga: { ...currentMainMatch },
           confidence: mainMatchConfidence,
         };
 
-        // Remove the selected alternative from the list
+        // Remove the selected alternative and insert demoted main at front
         newAnilistMatches.splice(alternativeIndex, 1);
-
-        // Insert the current main match as the first alternative
         newAnilistMatches.unshift(mainAsAlternative);
 
-        // Insert the selected alternative's confidence as the first item's confidence
-        // This ensures the confidence is displayed in the main match section
-        if (selectedAlternative.confidence !== undefined) {
-          newAnilistMatches[0] = {
-            ...selectedAlternative,
-            manga: { ...selectedAlternative.manga },
-          };
-        }
+        // Ensure the first item represents the selected alternative (with its confidence)
+        newAnilistMatches[0] = {
+          ...selectedAlternative,
+          manga: { ...selectedAlternative.manga },
+        };
 
-        // Update the match object with the new selected match and alternatives
         updatedResults[index] = {
           ...currentMatch,
           selectedMatch: { ...selectedAlternative.manga },
           anilistMatches: newAnilistMatches,
-          // If autoAccept is true, immediately set the status to "matched"
           status: autoAccept ? "matched" : currentMatch.status,
           matchDate: new Date(),
         };
+      };
+
+      if (directAccept) {
+        directAcceptHandler();
+      } else {
+        swapHandler();
       }
 
-      // Save the updates
       updateMatchResults(updatedResults);
     },
     [findMatchIndex, matchResults, updateMatchResults],

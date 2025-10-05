@@ -188,65 +188,63 @@ export const usePendingManga = () => {
     console.log("Checking for pending manga in storage...");
     const pendingMangaJson = storage.getItem(STORAGE_KEYS.PENDING_MANGA);
 
-    if (pendingMangaJson) {
-      try {
-        const pendingMangaData = JSON.parse(pendingMangaJson) as KenmeiManga[];
-
-        // Validate that we have a proper array with manga objects
-        if (Array.isArray(pendingMangaData) && pendingMangaData.length > 0) {
-          // Validate that each item has minimum required properties for a manga
-          const validManga = pendingMangaData.filter(
-            (manga) =>
-              manga &&
-              typeof manga === "object" &&
-              "id" in manga &&
-              "title" in manga,
-          );
-
-          if (validManga.length > 0) {
-            console.log(
-              `Found ${validManga.length} valid pending manga from interrupted operation` +
-                (validManga.length === pendingMangaData.length
-                  ? ""
-                  : ` (filtered out ${pendingMangaData.length - validManga.length} invalid entries)`),
-            );
-
-            // Only set valid manga
-            setPendingManga(validManga);
-            console.log(
-              "Setting pendingManga state with found valid pending manga",
-            );
-
-            // Clear storage if we filtered out invalid entries
-            if (validManga.length !== pendingMangaData.length) {
-              savePendingManga(validManga);
-            }
-
-            return validManga;
-          } else {
-            console.log(
-              "No valid manga objects found in pending manga data - clearing storage",
-            );
-            storage.removeItem(STORAGE_KEYS.PENDING_MANGA);
-          }
-        } else {
-          console.log(
-            "Pending manga list was empty or not an array - clearing storage",
-          );
-          storage.removeItem(STORAGE_KEYS.PENDING_MANGA);
-        }
-      } catch (e) {
-        console.error("Failed to parse pending manga from storage:", e);
-        // Clear invalid data
-        storage.removeItem(STORAGE_KEYS.PENDING_MANGA);
-      }
-    } else {
+    if (!pendingMangaJson) {
       console.log("No pending manga found in storage");
+      setPendingManga([]);
+      return null;
     }
 
-    // Reset state if we didn't find valid data
-    setPendingManga([]);
-    return null;
+    let pendingMangaData: unknown;
+    try {
+      pendingMangaData = JSON.parse(pendingMangaJson);
+    } catch (e) {
+      console.error("Failed to parse pending manga from storage:", e);
+      storage.removeItem(STORAGE_KEYS.PENDING_MANGA);
+      setPendingManga([]);
+      return null;
+    }
+
+    if (!Array.isArray(pendingMangaData) || pendingMangaData.length === 0) {
+      console.log(
+        "Pending manga list was empty or not an array - clearing storage",
+      );
+      storage.removeItem(STORAGE_KEYS.PENDING_MANGA);
+      setPendingManga([]);
+      return null;
+    }
+
+    const isValidManga = (m: unknown): m is KenmeiManga =>
+      !!m &&
+      typeof m === "object" &&
+      "id" in m &&
+      "title" in (m as Record<string, unknown>);
+
+    const validManga = pendingMangaData.filter(isValidManga);
+
+    if (validManga.length === 0) {
+      console.log(
+        "No valid manga objects found in pending manga data - clearing storage",
+      );
+      storage.removeItem(STORAGE_KEYS.PENDING_MANGA);
+      setPendingManga([]);
+      return null;
+    }
+
+    console.log(
+      `Found ${validManga.length} valid pending manga from interrupted operation` +
+        (validManga.length === pendingMangaData.length
+          ? ""
+          : ` (filtered out ${pendingMangaData.length - validManga.length} invalid entries)`),
+    );
+
+    setPendingManga(validManga);
+    console.log("Setting pendingManga state with found valid pending manga");
+
+    if (validManga.length !== pendingMangaData.length) {
+      savePendingManga(validManga);
+    }
+
+    return validManga;
   };
 
   return {
