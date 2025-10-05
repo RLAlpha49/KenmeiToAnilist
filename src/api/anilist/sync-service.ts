@@ -748,10 +748,20 @@ function getIncrementalSteps(entry: AniListMediaEntry): number[] {
   const prev = entry.previousValues;
 
   // For new entries (no previousValues)
-  if (!prev) return calculateNewEntrySteps(entry);
+  if (!prev) {
+    const steps = calculateNewEntrySteps(entry);
+    const resumeFromStep = entry.syncMetadata?.resumeFromStep;
+    return resumeFromStep
+      ? steps.filter((step) => step >= resumeFromStep)
+      : steps;
+  }
 
   // For existing entries (original logic)
-  return calculateExistingEntrySteps(entry);
+  const steps = calculateExistingEntrySteps(entry);
+  const resumeFromStep = entry.syncMetadata?.resumeFromStep;
+  return resumeFromStep
+    ? steps.filter((step) => step >= resumeFromStep)
+    : steps;
 }
 
 /**
@@ -1089,8 +1099,11 @@ function generateSyncReport(
   progress: SyncProgress,
   errors: { mediaId: number; error: string }[],
 ): SyncReport {
+  const attemptedEntries =
+    progress.successful + progress.failed + progress.skipped;
+
   const report: SyncReport = {
-    totalEntries: entries.length,
+    totalEntries: attemptedEntries,
     successfulUpdates: progress.successful,
     failedUpdates: progress.failed,
     skippedEntries: progress.skipped,
@@ -1144,15 +1157,16 @@ export async function syncMangaBatch(
   // Organize entries by media ID for handling incremental sync properly
   const entriesByMediaId = organizeEntriesByMediaId(entries);
 
-  // Determine processing order
+  // Determine processing order and unique entry count
   const userOrderMediaIds = determineProcessingOrder(
     displayOrderMediaIds,
     entriesByMediaId,
   );
+  const uniqueEntryCount = userOrderMediaIds.length;
 
-  // Use the original entries length for progress calculation, not media IDs
+  // Track progress against unique media IDs rather than incremental steps
   const progress: SyncProgress = {
-    total: entries.length,
+    total: uniqueEntryCount,
     completed: 0,
     successful: 0,
     failed: 0,

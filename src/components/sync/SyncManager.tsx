@@ -4,9 +4,7 @@
  * @description React component for managing and displaying the synchronization process of manga entries with AniList, including progress, error handling, and incremental sync options.
  */
 
-// TODO: Add ability to pause and resume sync mid-process. Should save current state and allow resuming from where it left off.
-
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { SyncProgress, SyncReport } from "../../api/anilist/sync-service";
 import { AniListMediaEntry } from "../../api/anilist/types";
 import {
@@ -19,6 +17,7 @@ import {
   Gauge,
   ShieldAlert,
   TimerReset,
+  PauseCircle,
 } from "lucide-react";
 import {
   Card,
@@ -45,13 +44,21 @@ const ProgressDisplay: React.FC<{
   const statusMessage = (() => {
     if (status === "syncing") {
       return `${remainingEntries} entr${remainingEntries === 1 ? "y" : "ies"} remaining`;
-    } else if (status === "completed") {
-      return "All updates finished successfully.";
-    } else if (status === "failed") {
-      return "Some entries need attention; review the details below.";
-    } else {
-      return "Ready to begin synchronization.";
     }
+
+    if (status === "paused") {
+      return `${remainingEntries} entr${remainingEntries === 1 ? "y" : "ies"} waiting to resume.`;
+    }
+
+    if (status === "completed") {
+      return "All updates finished successfully.";
+    }
+
+    if (status === "failed") {
+      return "Some entries need attention; review the details below.";
+    }
+
+    return "Ready to begin synchronization.";
   })();
 
   return (
@@ -99,7 +106,12 @@ const StatusAlerts: React.FC<{
   incrementalSync: boolean;
   onIncrementalSyncChange?: (value: boolean) => void;
   autoStart: boolean;
-  syncState?: { error?: string | null };
+  syncState?: {
+    error?: string | null;
+    resumeMetadata?: {
+      timestamp: number;
+    } | null;
+  };
 }> = ({
   status,
   entries,
@@ -156,11 +168,11 @@ const StatusAlerts: React.FC<{
   if (status === "syncing") {
     return (
       <Alert className="mb-4 border-blue-200/70 bg-blue-50/80 backdrop-blur-md dark:border-blue-800/60 dark:bg-blue-900/30">
-        <div className="flex w-full items-start gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow">
-            <RefreshCw className="h-5 w-5 animate-spin" />
+        <div className="flex min-w-[35vw] gap-3">
+          <div className="flex h-10 w-20 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow">
+            <RefreshCw className="h-5 w-10 animate-spin" />
           </div>
-          <div className="flex-1">
+          <div className="min-w-full flex-1">
             <AlertTitle className="text-blue-800 dark:text-blue-200">
               Synchronization in progress
             </AlertTitle>
@@ -175,14 +187,44 @@ const StatusAlerts: React.FC<{
     );
   }
 
+  if (status === "paused") {
+    const pausedAt = syncState?.resumeMetadata?.timestamp
+      ? new Date(syncState.resumeMetadata.timestamp).toLocaleTimeString()
+      : null;
+
+    return (
+      <Alert className="mb-4 border-amber-200/70 bg-amber-50/80 backdrop-blur-md dark:border-amber-800/60 dark:bg-amber-900/30">
+        <div className="flex min-w-[35vw] gap-3">
+          <div className="flex h-10 w-20 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow">
+            <PauseCircle className="h-5 w-10" />
+          </div>
+          <div className="min-w-full flex-1">
+            <AlertTitle className="text-amber-800 dark:text-amber-200">
+              Synchronization paused
+            </AlertTitle>
+            <AlertDescription className="mt-1 text-sm text-amber-700/80 dark:text-amber-200/80">
+              Your progress is saved. Resume whenever you&apos;re ready to pick
+              up where you left off.
+              {pausedAt && (
+                <span className="ml-1 inline-block text-xs text-amber-600/70 dark:text-amber-300/70">
+                  Paused at {pausedAt}
+                </span>
+              )}
+            </AlertDescription>
+          </div>
+        </div>
+      </Alert>
+    );
+  }
+
   if (status === "completed") {
     return (
       <Alert className="mb-4 border-emerald-200/70 bg-emerald-50/80 backdrop-blur-md dark:border-emerald-800/50 dark:bg-emerald-900/20">
-        <div className="flex w-full items-start gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow">
-            <CheckCircle className="h-5 w-5" />
+        <div className="flex min-w-[35vw] gap-3">
+          <div className="flex h-10 w-20 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow">
+            <CheckCircle className="h-5 w-10" />
           </div>
-          <div className="flex-1">
+          <div className="min-w-full flex-1">
             <AlertTitle className="text-emerald-800 dark:text-emerald-200">
               Synchronization complete
             </AlertTitle>
@@ -199,11 +241,11 @@ const StatusAlerts: React.FC<{
   if (status === "failed") {
     return (
       <Alert className="mb-4 border-rose-200/70 bg-rose-50/80 backdrop-blur-md dark:border-rose-900/60 dark:bg-rose-950/30">
-        <div className="flex w-full items-start gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-red-500 text-white shadow">
-            <ShieldAlert className="h-5 w-5" />
+        <div className="flex min-w-[35vw] gap-3">
+          <div className="flex h-10 w-20 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-red-500 text-white shadow">
+            <ShieldAlert className="h-5 w-10" />
           </div>
-          <div className="flex-1">
+          <div className="min-w-full flex-1">
             <AlertTitle className="text-rose-800 dark:text-rose-200">
               Synchronization interrupted
             </AlertTitle>
@@ -429,8 +471,19 @@ const SyncActions: React.FC<{
   status: string;
   onStartSync: () => void;
   onCancel: () => void;
+  onPause?: () => void;
+  onResume?: () => void;
+  canResume?: boolean;
   syncState?: { report?: SyncReport | null };
-}> = ({ status, onStartSync, onCancel, syncState }) => {
+}> = ({
+  status,
+  onStartSync,
+  onCancel,
+  onPause,
+  onResume,
+  canResume,
+  syncState,
+}) => {
   if (status === "idle") {
     return (
       <>
@@ -455,14 +508,50 @@ const SyncActions: React.FC<{
 
   if (status === "syncing") {
     return (
-      <Button
-        variant="destructive"
-        onClick={onCancel}
-        className="gap-2 bg-gradient-to-r from-rose-500 to-red-500 text-white shadow-md shadow-rose-500/30 transition hover:from-rose-500 hover:to-red-500"
-      >
-        <ShieldAlert className="h-4 w-4" />
-        Cancel sync
-      </Button>
+      <>
+        {onPause && (
+          <Button
+            variant="outline"
+            onClick={onPause}
+            className="gap-2 border-slate-300/60 bg-white/70 text-slate-600 transition hover:bg-white dark:border-slate-700/60 dark:bg-slate-950/60 dark:text-slate-200"
+          >
+            <PauseCircle className="h-4 w-4 text-amber-500" />
+            Pause sync
+          </Button>
+        )}
+        <Button
+          variant="destructive"
+          onClick={onCancel}
+          className="gap-2 bg-gradient-to-r from-rose-500 to-red-500 text-white shadow-md shadow-rose-500/30 transition hover:from-rose-500 hover:to-red-500"
+        >
+          <ShieldAlert className="h-4 w-4" />
+          Cancel sync
+        </Button>
+      </>
+    );
+  }
+
+  if (status === "paused") {
+    return (
+      <>
+        <Button
+          variant="outline"
+          onClick={onCancel}
+          className="gap-2 border-slate-300/60 bg-white/70 text-slate-600 transition hover:bg-white dark:border-slate-700/60 dark:bg-slate-950/60 dark:text-slate-200"
+        >
+          <TimerReset className="h-4 w-4 text-slate-500 dark:text-slate-300" />
+          Close
+        </Button>
+        {onResume && canResume && (
+          <Button
+            onClick={onResume}
+            className="gap-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-lg shadow-blue-500/30 transition hover:from-blue-500 hover:via-indigo-500 hover:to-purple-500"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Resume sync
+          </Button>
+        )}
+      </>
     );
   }
 
@@ -523,6 +612,12 @@ export interface SyncManagerProps {
     progress: SyncProgress | null;
     report: SyncReport | null;
     error: string | null;
+    isPaused?: boolean;
+    resumeAvailable?: boolean;
+    resumeMetadata?: {
+      remainingMediaIds: number[];
+      timestamp: number;
+    } | null;
   };
   syncActions?: {
     startSync: (
@@ -532,6 +627,13 @@ export interface SyncManagerProps {
       displayOrderMediaIds?: number[],
     ) => Promise<void>;
     cancelSync: () => void;
+    pauseSync?: () => void;
+    resumeSync?: (
+      entries: AniListMediaEntry[],
+      token: string,
+      _?: undefined,
+      displayOrderMediaIds?: number[],
+    ) => Promise<void>;
   };
   incrementalSync?: boolean;
   onIncrementalSyncChange?: (value: boolean) => void;
@@ -551,10 +653,49 @@ const SyncManager: React.FC<SyncManagerProps> = ({
   displayOrderMediaIds,
 }) => {
   const { rateLimitState } = useRateLimit();
+  const [progressBaseline, setProgressBaseline] = useState<SyncProgress | null>(
+    null,
+  );
+  const [resumeOffsets, setResumeOffsets] = useState({
+    initialized: false,
+    completed: 0,
+    successful: 0,
+    failed: 0,
+    skipped: 0,
+  });
+
+  useEffect(() => {
+    if (syncState?.isPaused && syncState.progress) {
+      setProgressBaseline(syncState.progress);
+    }
+  }, [syncState?.isPaused, syncState?.progress]);
+
+  useEffect(() => {
+    if (syncState?.resumeAvailable && syncState.progress && !progressBaseline) {
+      setProgressBaseline(syncState.progress);
+    }
+  }, [progressBaseline, syncState?.progress, syncState?.resumeAvailable]);
+
+  useEffect(() => {
+    if (
+      !syncState?.isActive &&
+      !syncState?.isPaused &&
+      !syncState?.resumeAvailable
+    ) {
+      setProgressBaseline(null);
+      setResumeOffsets({
+        initialized: false,
+        completed: 0,
+        successful: 0,
+        failed: 0,
+        skipped: 0,
+      });
+    }
+  }, [syncState?.isActive, syncState?.isPaused, syncState?.resumeAvailable]);
 
   // Use progress from sync-service, fallback to default
-  const progress = syncState?.progress || {
-    total: entries.length,
+  const defaultProgress: SyncProgress = {
+    total: progressBaseline?.total ?? entries.length,
     completed: 0,
     successful: 0,
     failed: 0,
@@ -566,24 +707,136 @@ const SyncManager: React.FC<SyncManagerProps> = ({
     retryAfter: null,
   };
 
-  // Use progress.completed and progress.total directly
-  const completedEntries = progress.completed;
-  const totalEntries = progress.total;
+  const liveProgress = syncState?.progress ?? null;
+
+  const computeStatus = (s?: SyncManagerProps["syncState"]) => {
+    if (!s) return "idle" as const;
+    if (s.isActive) return "syncing" as const;
+    if (s.isPaused || s.resumeAvailable) return "paused" as const;
+    if (s.report)
+      return s.report.failedUpdates > 0
+        ? ("failed" as const)
+        : ("completed" as const);
+    if (s.error) return "failed" as const;
+    return "idle" as const;
+  };
+
+  const status = computeStatus(syncState);
+
+  useEffect(() => {
+    if (
+      status === "syncing" &&
+      progressBaseline &&
+      (progressBaseline.completed > 0 ||
+        progressBaseline.successful > 0 ||
+        progressBaseline.failed > 0 ||
+        progressBaseline.skipped > 0) &&
+      liveProgress &&
+      !resumeOffsets.initialized
+    ) {
+      setResumeOffsets({
+        initialized: true,
+        completed: liveProgress.completed,
+        successful: liveProgress.successful,
+        failed: liveProgress.failed,
+        skipped: liveProgress.skipped,
+      });
+    }
+
+    if (status !== "syncing" || !progressBaseline) {
+      if (resumeOffsets.initialized || resumeOffsets.completed !== 0) {
+        setResumeOffsets({
+          initialized: false,
+          completed: 0,
+          successful: 0,
+          failed: 0,
+          skipped: 0,
+        });
+      }
+    }
+  }, [status, progressBaseline, liveProgress, resumeOffsets]);
+
+  const displayProgress = useMemo<SyncProgress>(() => {
+    if (!progressBaseline && !liveProgress) {
+      return defaultProgress;
+    }
+
+    if (!progressBaseline) {
+      return liveProgress ?? defaultProgress;
+    }
+
+    if (!liveProgress) {
+      return progressBaseline;
+    }
+
+    if (status === "paused") {
+      return {
+        ...progressBaseline,
+        currentEntry:
+          liveProgress.currentEntry ?? progressBaseline.currentEntry,
+        currentStep: liveProgress.currentStep ?? progressBaseline.currentStep,
+        totalSteps: liveProgress.totalSteps ?? progressBaseline.totalSteps,
+        rateLimited: liveProgress.rateLimited,
+        retryAfter: liveProgress.retryAfter,
+      };
+    }
+
+    const combinedTotal =
+      progressBaseline.total || liveProgress.total || defaultProgress.total;
+
+    const liveCompletedOffset = resumeOffsets.initialized
+      ? resumeOffsets.completed
+      : 0;
+    const liveSuccessfulOffset = resumeOffsets.initialized
+      ? resumeOffsets.successful
+      : 0;
+    const liveFailedOffset = resumeOffsets.initialized
+      ? resumeOffsets.failed
+      : 0;
+    const liveSkippedOffset = resumeOffsets.initialized
+      ? resumeOffsets.skipped
+      : 0;
+
+    const incrementalCompleted = Math.max(
+      (liveProgress.completed ?? 0) - liveCompletedOffset,
+      0,
+    );
+    const incrementalSuccessful = Math.max(
+      (liveProgress.successful ?? 0) - liveSuccessfulOffset,
+      0,
+    );
+    const incrementalFailed = Math.max(
+      (liveProgress.failed ?? 0) - liveFailedOffset,
+      0,
+    );
+    const incrementalSkipped = Math.max(
+      (liveProgress.skipped ?? 0) - liveSkippedOffset,
+      0,
+    );
+
+    return {
+      ...liveProgress,
+      total: combinedTotal,
+      completed: Math.min(
+        combinedTotal,
+        progressBaseline.completed + incrementalCompleted,
+      ),
+      successful: progressBaseline.successful + incrementalSuccessful,
+      failed: progressBaseline.failed + incrementalFailed,
+      skipped: progressBaseline.skipped + incrementalSkipped,
+      rateLimited: liveProgress.rateLimited,
+      retryAfter: liveProgress.retryAfter,
+    };
+  }, [defaultProgress, liveProgress, progressBaseline, resumeOffsets, status]);
+
+  const completedEntries = displayProgress.completed;
+  const totalEntries = displayProgress.total;
   const progressPercentage =
     totalEntries > 0 ? Math.floor((completedEntries / totalEntries) * 100) : 0;
 
-  // Determine status based on the hook's state
-  let status: "idle" | "syncing" | "completed" | "failed" = "idle";
-  if (syncState?.isActive) {
-    status = "syncing";
-  } else if (syncState?.report) {
-    status = syncState.report.failedUpdates > 0 ? "failed" : "completed";
-  } else if (syncState?.error) {
-    status = "failed";
-  }
-
   const remainingEntries = Math.max(totalEntries - completedEntries, 0);
-  const retryAfterMs = progress.retryAfter ?? rateLimitState.retryAfter ?? null;
+  const retryAfterMs =
+    displayProgress.retryAfter ?? rateLimitState.retryAfter ?? null;
   const retryAfterSeconds =
     typeof retryAfterMs === "number"
       ? Math.max(Math.ceil(retryAfterMs / 1000), 1)
@@ -615,6 +868,14 @@ const SyncManager: React.FC<SyncManagerProps> = ({
             "bg-rose-500/10 text-rose-600 ring-1 ring-inset ring-rose-500/30 dark:text-rose-300",
           iconClass: "text-rose-500",
         };
+      case "paused":
+        return {
+          label: "Paused",
+          icon: PauseCircle,
+          badgeClass:
+            "bg-amber-500/10 text-amber-600 ring-1 ring-inset ring-amber-500/30 dark:text-amber-300",
+          iconClass: "text-amber-500",
+        };
       case "idle":
       default:
         return {
@@ -631,6 +892,7 @@ const SyncManager: React.FC<SyncManagerProps> = ({
 
   // Handle start synchronization
   const handleStartSync = async () => {
+    setProgressBaseline(null);
     if (syncActions?.startSync) {
       if (incrementalSync) {
         const processedEntries = entries.map((entry) => {
@@ -687,6 +949,19 @@ const SyncManager: React.FC<SyncManagerProps> = ({
     }
     if (onCancel) {
       onCancel();
+    }
+    setProgressBaseline(null);
+  };
+
+  const handlePause = () => {
+    if (syncActions?.pauseSync) {
+      syncActions.pauseSync();
+    }
+  };
+
+  const handleResume = () => {
+    if (syncActions?.resumeSync) {
+      syncActions.resumeSync(entries, token, undefined, displayOrderMediaIds);
     }
   };
 
@@ -769,7 +1044,7 @@ const SyncManager: React.FC<SyncManagerProps> = ({
         />
 
         <CurrentEntryDisplay
-          progress={progress}
+          progress={displayProgress}
           entries={entries}
           status={status}
           incrementalSync={incrementalSync}
@@ -784,7 +1059,7 @@ const SyncManager: React.FC<SyncManagerProps> = ({
                 Successful
               </div>
               <p className="text-3xl leading-none font-bold text-emerald-600 dark:text-emerald-200">
-                {progress.successful}
+                {displayProgress.successful}
               </p>
               <span className="text-xs text-emerald-600/80 dark:text-emerald-200/70">
                 Synced cleanly
@@ -800,10 +1075,10 @@ const SyncManager: React.FC<SyncManagerProps> = ({
                 Failed
               </div>
               <p className="text-3xl leading-none font-bold text-rose-600 dark:text-rose-200">
-                {progress.failed}
+                {displayProgress.failed}
               </p>
               <span className="text-xs text-rose-600/80 dark:text-rose-200/70">
-                {progress.failed > 0 ? "Needs follow-up" : "No failures"}
+                {displayProgress.failed > 0 ? "Needs follow-up" : "No failures"}
               </span>
             </div>
           </div>
@@ -873,8 +1148,8 @@ const SyncManager: React.FC<SyncManagerProps> = ({
         )}
 
         {status === "syncing" &&
-          (progress.rateLimited || rateLimitState.isRateLimited) &&
-          (progress.retryAfter !== null ||
+          (displayProgress.rateLimited || rateLimitState.isRateLimited) &&
+          (displayProgress.retryAfter !== null ||
             rateLimitState.retryAfter !== undefined) && (
             <div className="overflow-hidden rounded-3xl border border-rose-200/60 bg-rose-50/80 p-5 shadow-sm backdrop-blur dark:border-rose-900/50 dark:bg-rose-950/30">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -916,6 +1191,9 @@ const SyncManager: React.FC<SyncManagerProps> = ({
           status={status}
           onStartSync={handleStartSync}
           onCancel={handleCancel}
+          onPause={handlePause}
+          onResume={handleResume}
+          canResume={syncState?.resumeAvailable ?? false}
           syncState={syncState}
         />
       </CardFooter>

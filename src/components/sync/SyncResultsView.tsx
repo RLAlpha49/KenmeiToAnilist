@@ -86,7 +86,7 @@ const SyncResultsView: React.FC<SyncResultsViewProps> = ({
               Completed on {formattedTime}
             </CardDescription>
           </div>
-          <div className="flex h-16 w-16 flex-col items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/30">
+          <div className="flex h-18 w-18 flex-col items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/30">
             <span className="text-[10px] tracking-[0.25em] uppercase">
               Success
             </span>

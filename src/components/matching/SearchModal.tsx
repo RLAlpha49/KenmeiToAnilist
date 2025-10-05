@@ -3,11 +3,12 @@
  * @module SearchModal
  * @description React component for displaying a modal to search and select AniList manga matches for a given Kenmei manga.
  */
-import React from "react";
+import React, { useEffect } from "react";
 import { KenmeiManga } from "../../api/kenmei/types";
 import { AniListManga } from "../../api/anilist/types";
 import { MangaSearchPanel } from "./MangaSearchPanel";
 import { motion, AnimatePresence } from "framer-motion";
+import { createPortal } from "react-dom";
 
 /**
  * Props for the SearchModal component.
@@ -48,8 +49,46 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   onClose,
   onSelectMatch,
 }) => {
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    if (typeof window === "undefined" || typeof document === "undefined") {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    const previousPaddingRight = document.body.style.paddingRight;
+    const previousScrollBehavior = document.body.style.scrollBehavior;
+
+    const scrollbarWidth =
+      window.innerWidth - document.documentElement.clientWidth;
+
+    document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+    document.body.style.scrollBehavior = "auto";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.paddingRight = previousPaddingRight;
+      document.body.style.scrollBehavior = previousScrollBehavior;
+    };
+  }, [isOpen]);
+
+  const portalTarget =
+    typeof window !== "undefined" && typeof document !== "undefined"
+      ? document.body
+      : null;
+
+  if (!portalTarget) {
+    return null;
+  }
+
   // Don't return null; let AnimatePresence handle the transition
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && searchTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -64,7 +103,6 @@ export const SearchModal: React.FC<SearchModalProps> = ({
             transition={{ duration: 0.2 }}
           ></motion.div>
 
-          {/* Modal panel with max height and width constraints */}
           <motion.div
             className="relative z-50 m-4 max-h-[85vh] w-full max-w-6xl overflow-visible rounded-[32px] border border-white/15 bg-gradient-to-br from-blue-400/25 via-white/15 to-purple-500/20 p-[1.5px] shadow-[0_40px_160px_-60px_rgba(30,64,175,0.7)] backdrop-blur-2xl dark:border-slate-700/40"
             initial={{ opacity: 0, y: 20, scale: 0.98 }}
@@ -90,6 +128,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    portalTarget,
   );
 };

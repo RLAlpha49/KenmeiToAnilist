@@ -4,7 +4,7 @@
  * @description Custom React hook for managing AniList synchronization, including batch sync, progress tracking, error handling, and exporting reports in the Kenmei to AniList sync tool.
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   syncMangaBatch,
   SyncReport,
@@ -16,6 +16,85 @@ import {
   exportSyncReport,
   saveSyncReportToHistory,
 } from "../utils/export-utils";
+import { storage, STORAGE_KEYS } from "../utils/storage";
+
+/**
+ * Snapshot of an in-progress synchronization session for pause/resume support.
+ */
+interface SyncResumeSnapshot {
+  entries: AniListMediaEntry[];
+  uniqueMediaIds: number[];
+  completedMediaIds: number[];
+  remainingMediaIds: number[];
+  progress: SyncProgress;
+  currentEntry: {
+    mediaId: number;
+    resumeFromStep?: number;
+  } | null;
+  reportFragment: PersistedSyncReport | null;
+
+  timestamp: number;
+}
+
+type PersistedSyncReport = Omit<SyncReport, "timestamp"> & {
+  timestamp: string;
+};
+
+const SNAPSHOT_STORAGE_KEY = STORAGE_KEYS.ACTIVE_SYNC_SNAPSHOT;
+
+const cloneEntry = (entry: AniListMediaEntry): AniListMediaEntry => ({
+  ...entry,
+  previousValues: entry.previousValues ? { ...entry.previousValues } : null,
+  syncMetadata: entry.syncMetadata ? { ...entry.syncMetadata } : null,
+});
+
+const cloneEntries = (entries: AniListMediaEntry[]): AniListMediaEntry[] =>
+  entries.map(cloneEntry);
+
+const toPersistedReport = (report: SyncReport): PersistedSyncReport => ({
+  ...report,
+  timestamp: report.timestamp.toISOString(),
+});
+
+const fromPersistedReport = (
+  report: PersistedSyncReport | null,
+): SyncReport | null => {
+  if (!report) return null;
+  return {
+    ...report,
+    timestamp: new Date(report.timestamp),
+  };
+};
+
+const mergeReports = (
+  baseReport: SyncReport | null,
+  newReport: SyncReport,
+): SyncReport => {
+  if (!baseReport) return newReport;
+
+  return {
+    totalEntries: baseReport.totalEntries + newReport.totalEntries,
+    successfulUpdates:
+      baseReport.successfulUpdates + newReport.successfulUpdates,
+    failedUpdates: baseReport.failedUpdates + newReport.failedUpdates,
+    skippedEntries: baseReport.skippedEntries + newReport.skippedEntries,
+    errors: [...baseReport.errors, ...newReport.errors],
+    timestamp: newReport.timestamp,
+  };
+};
+
+const saveSnapshotToStorage = (snapshot: SyncResumeSnapshot | null): void => {
+  if (!snapshot) {
+    storage.removeItem(SNAPSHOT_STORAGE_KEY);
+    return;
+  }
+
+  try {
+    storage.setItem(SNAPSHOT_STORAGE_KEY, JSON.stringify(snapshot));
+  } catch (error) {
+    console.error("Failed to persist sync snapshot:", error);
+  }
+};
 
 /**
  * Represents the state of the synchronization process.
@@ -34,6 +113,12 @@ interface SynchronizationState {
   report: SyncReport | null;
   error: string | null;
   abortController: AbortController | null;
+  isPaused: boolean;
+  resumeAvailable: boolean;
+  resumeMetadata: {
+    remainingMediaIds: number[];
+    timestamp: number;
+  } | null;
 }
 
 /**
@@ -55,6 +140,13 @@ interface SynchronizationActions {
     displayOrderMediaIds?: number[],
   ) => Promise<void>;
   cancelSync: () => void;
+  pauseSync: () => void;
+  resumeSync: (
+    entries: AniListMediaEntry[],
+    token: string,
+    _?: undefined,
+    displayOrderMediaIds?: number[],
+  ) => Promise<void>;
   exportErrors: () => void;
   exportReport: () => void;
   reset: () => void;
@@ -81,7 +173,174 @@ export function useSynchronization(): [
     report: null,
     error: null,
     abortController: null,
+    isPaused: false,
+    resumeAvailable: false,
+    resumeMetadata: null,
   });
+  const resumeSnapshotRef = useRef<SyncResumeSnapshot | null>(null);
+  const initialEntriesRef = useRef<AniListMediaEntry[]>([]);
+  const uniqueMediaIdsRef = useRef<number[]>([]);
+  const pauseRequestedRef = useRef(false);
+  const resumeRequestedRef = useRef(false);
+  const hasLoadedSnapshotRef = useRef(false);
+
+  const updateSnapshotFromProgress = (
+    progress: SyncProgress | null,
+    entriesForRun: AniListMediaEntry[],
+  ) => {
+    if (!progress) {
+      resumeSnapshotRef.current = null;
+      initialEntriesRef.current = [];
+      uniqueMediaIdsRef.current = [];
+      saveSnapshotToStorage(null);
+      setState((prev) => ({
+        ...prev,
+        resumeAvailable: false,
+        resumeMetadata: null,
+      }));
+      return;
+    }
+
+    const uniqueMediaIds = uniqueMediaIdsRef.current;
+
+    if (!uniqueMediaIds.length) {
+      resumeSnapshotRef.current = null;
+      saveSnapshotToStorage(null);
+      return;
+    }
+
+    const completedCount = Math.min(progress.completed, uniqueMediaIds.length);
+    const completedMediaIds = uniqueMediaIds.slice(0, completedCount);
+    const remainingMediaIds = uniqueMediaIds.slice(completedCount);
+
+    if (
+      remainingMediaIds.length === 0 &&
+      (!progress.currentEntry || completedCount === uniqueMediaIds.length)
+    ) {
+      resumeSnapshotRef.current = null;
+      initialEntriesRef.current = [];
+      saveSnapshotToStorage(null);
+      setState((prev) => ({
+        ...prev,
+        resumeAvailable: false,
+        resumeMetadata: null,
+      }));
+      return;
+    }
+
+    const pendingEntries = cloneEntries(
+      entriesForRun.filter((entry) =>
+        remainingMediaIds.includes(entry.mediaId),
+      ),
+    );
+
+    if (progress.currentEntry) {
+      const pendingIndex = pendingEntries.findIndex(
+        (entry) => entry.mediaId === progress.currentEntry?.mediaId,
+      );
+
+      if (pendingIndex !== -1) {
+        const metadata = pendingEntries[pendingIndex].syncMetadata;
+        if (metadata?.useIncrementalSync && progress.currentStep) {
+          pendingEntries[pendingIndex] = {
+            ...pendingEntries[pendingIndex],
+            syncMetadata: {
+              ...metadata,
+              resumeFromStep: progress.currentStep,
+            },
+          };
+        }
+      }
+    }
+
+    const snapshot: SyncResumeSnapshot = {
+      entries: pendingEntries,
+      uniqueMediaIds: [...uniqueMediaIds],
+      completedMediaIds,
+      remainingMediaIds,
+      progress: {
+        ...progress,
+        currentEntry: progress.currentEntry
+          ? { ...progress.currentEntry }
+          : null,
+      },
+      currentEntry: progress.currentEntry
+        ? {
+            mediaId: progress.currentEntry.mediaId,
+            resumeFromStep: progress.currentStep ?? undefined,
+          }
+        : null,
+      reportFragment: resumeSnapshotRef.current?.reportFragment ?? null,
+      timestamp: Date.now(),
+    };
+
+    resumeSnapshotRef.current = snapshot;
+    initialEntriesRef.current = pendingEntries;
+    saveSnapshotToStorage(snapshot);
+    setState((prev) => ({
+      ...prev,
+      resumeAvailable: true,
+      resumeMetadata: {
+        remainingMediaIds,
+        timestamp: snapshot.timestamp,
+      },
+    }));
+  };
+
+  const clearResumeSnapshot = () => {
+    resumeSnapshotRef.current = null;
+    initialEntriesRef.current = [];
+    uniqueMediaIdsRef.current = [];
+    saveSnapshotToStorage(null);
+    setState((prev) => ({
+      ...prev,
+      resumeAvailable: false,
+      resumeMetadata: null,
+    }));
+  };
+
+  useEffect(() => {
+    if (hasLoadedSnapshotRef.current) return;
+    hasLoadedSnapshotRef.current = true;
+
+    const storedSnapshot = storage.getItem(SNAPSHOT_STORAGE_KEY);
+    if (!storedSnapshot) return;
+
+    try {
+      const parsed: SyncResumeSnapshot = JSON.parse(storedSnapshot);
+
+      if (!parsed?.remainingMediaIds?.length) {
+        storage.removeItem(SNAPSHOT_STORAGE_KEY);
+        return;
+      }
+
+      resumeSnapshotRef.current = {
+        ...parsed,
+        progress: {
+          ...parsed.progress,
+          currentEntry: parsed.progress.currentEntry
+            ? { ...parsed.progress.currentEntry }
+            : null,
+        },
+      };
+      initialEntriesRef.current = cloneEntries(parsed.entries || []);
+      uniqueMediaIdsRef.current = [...parsed.uniqueMediaIds];
+
+      setState((prev) => ({
+        ...prev,
+        progress: parsed.progress ?? prev.progress,
+        isPaused: true,
+        resumeAvailable: true,
+        resumeMetadata: {
+          remainingMediaIds: parsed.remainingMediaIds,
+          timestamp: parsed.timestamp,
+        },
+      }));
+    } catch (error) {
+      console.error("Failed to load stored sync snapshot:", error);
+      storage.removeItem(SNAPSHOT_STORAGE_KEY);
+    }
+  }, []);
 
   /**
    * Starts a synchronization operation for the provided AniList media entries.
@@ -122,6 +381,18 @@ export function useSynchronization(): [
         return;
       }
 
+      const isResume = resumeRequestedRef.current;
+      resumeRequestedRef.current = false;
+
+      if (!isResume && resumeSnapshotRef.current) {
+        clearResumeSnapshot();
+      }
+
+      const existingReportFragment = isResume
+        ? fromPersistedReport(resumeSnapshotRef.current?.reportFragment ?? null)
+        : null;
+      pauseRequestedRef.current = false;
+
       try {
         // Create new AbortController for this operation
         const abortController = new AbortController();
@@ -131,24 +402,36 @@ export function useSynchronization(): [
           displayOrderMediaIds && displayOrderMediaIds.length > 0
             ? displayOrderMediaIds
             : Array.from(new Set(entries.map((e) => e.mediaId)));
+        uniqueMediaIdsRef.current = [...uniqueMediaIds];
+        initialEntriesRef.current = cloneEntries(entries);
+
+        const initialProgress: SyncProgress = {
+          total: uniqueMediaIds.length,
+          completed: 0,
+          successful: 0,
+          failed: 0,
+          skipped: 0,
+          currentEntry: null,
+          currentStep: null,
+          totalSteps: null,
+          rateLimited: false,
+          retryAfter: null,
+        };
+
+        let lastReportedProgress: SyncProgress = initialProgress;
+
         setState((prev) => ({
           ...prev,
           isActive: true,
           error: null,
           abortController,
-          progress: {
-            total: uniqueMediaIds.length,
-            completed: 0,
-            successful: 0,
-            failed: 0,
-            skipped: 0,
-            currentEntry: null,
-            currentStep: null,
-            totalSteps: null,
-            rateLimited: false,
-            retryAfter: null,
-          },
+          progress: initialProgress,
+          isPaused: false,
+          resumeAvailable: false,
+          resumeMetadata: null,
         }));
+
+        updateSnapshotFromProgress(initialProgress, initialEntriesRef.current);
 
         console.log("Total entries to sync:", entries.length);
 
@@ -249,9 +532,11 @@ export function useSynchronization(): [
             }
 
             // Process each incremental entry individually through all its steps
-            let overallProgress = regularEntries.length;
             let successfulUpdates = syncReport.successfulUpdates;
             let failedUpdates = syncReport.failedUpdates;
+            let skippedUpdates = syncReport.skippedEntries;
+            let overallProgress =
+              successfulUpdates + failedUpdates + skippedUpdates;
             const errors = [...syncReport.errors];
 
             // Create custom progress tracker
@@ -267,28 +552,32 @@ export function useSynchronization(): [
                 else failedUpdates++;
               }
 
+              const nextProgress: SyncProgress = {
+                ...lastReportedProgress,
+                completed: overallProgress,
+                total: uniqueMediaIds.length,
+                successful: successfulUpdates,
+                failed: failedUpdates,
+                skipped: skippedUpdates,
+                currentEntry: {
+                  mediaId: entry.mediaId,
+                  title: entry.title || `Manga #${entry.mediaId}`,
+                  coverImage: entry.coverImage || "",
+                },
+                currentStep: step,
+                totalSteps: entry.syncMetadata?.useIncrementalSync ? 3 : null,
+              };
+
+              lastReportedProgress = nextProgress;
+
               setState((prev) => ({
                 ...prev,
-                progress: {
-                  ...prev.progress!,
-                  completed: overallProgress,
-                  total: uniqueMediaIds.length,
-                  successful: successfulUpdates,
-                  failed: failedUpdates,
-                  // Add currentEntry information for UI display
-                  currentEntry: {
-                    mediaId: entry.mediaId,
-                    title: entry.title || `Manga #${entry.mediaId}`,
-                    coverImage: entry.coverImage || "",
-                  },
-                  // Add step information if applicable
-                  currentStep: step,
-                  totalSteps: entry.syncMetadata?.useIncrementalSync ? 3 : null,
-                  // Keep rate limiting status information
-                  rateLimited: prev.progress?.rateLimited || false,
-                  retryAfter: prev.progress?.retryAfter || null,
-                },
+                progress: nextProgress,
               }));
+              updateSnapshotFromProgress(
+                nextProgress,
+                initialEntriesRef.current,
+              );
             };
 
             // Process each entry that needs incremental sync sequentially
@@ -336,15 +625,35 @@ export function useSynchronization(): [
                 }
 
                 // Add any errors to our collection
-                if (syncResult.failedUpdates > 0) {
-                  failedUpdates += syncResult.failedUpdates;
+                successfulUpdates += syncResult.successfulUpdates;
+                failedUpdates += syncResult.failedUpdates;
+                skippedUpdates += syncResult.skippedEntries;
+                overallProgress += syncResult.totalEntries;
+                if (syncResult.errors.length) {
                   errors.push(...syncResult.errors);
-                } else {
-                  successfulUpdates++;
                 }
 
-                // Update final progress after all steps are done
-                overallProgress++;
+                const finalizedProgress: SyncProgress = {
+                  ...lastReportedProgress,
+                  completed: overallProgress,
+                  total: uniqueMediaIds.length,
+                  successful: successfulUpdates,
+                  failed: failedUpdates,
+                  skipped: skippedUpdates,
+                  currentEntry: lastReportedProgress.currentEntry,
+                  currentStep: null,
+                  totalSteps: lastReportedProgress.totalSteps,
+                };
+
+                lastReportedProgress = finalizedProgress;
+                setState((prev) => ({
+                  ...prev,
+                  progress: finalizedProgress,
+                }));
+                updateSnapshotFromProgress(
+                  finalizedProgress,
+                  initialEntriesRef.current,
+                );
 
                 console.log(`Completed all steps for ${entry.mediaId}`);
               } catch (error) {
@@ -353,23 +662,44 @@ export function useSynchronization(): [
                   error,
                 );
                 failedUpdates++;
+                overallProgress++;
                 if (error instanceof Error) {
                   errors.push({
                     mediaId: entry.mediaId,
                     error: error.message,
                   });
                 }
+                const failedProgress: SyncProgress = {
+                  ...lastReportedProgress,
+                  completed: overallProgress,
+                  total: uniqueMediaIds.length,
+                  successful: successfulUpdates,
+                  failed: failedUpdates,
+                  skipped: skippedUpdates,
+                  currentEntry: lastReportedProgress.currentEntry,
+                  currentStep: null,
+                  totalSteps: lastReportedProgress.totalSteps,
+                };
+                lastReportedProgress = failedProgress;
+                setState((prev) => ({
+                  ...prev,
+                  progress: failedProgress,
+                }));
+                updateSnapshotFromProgress(
+                  failedProgress,
+                  initialEntriesRef.current,
+                );
                 // Continue with next entry
               }
             }
 
             // Create final report
             syncReport = {
-              successfulUpdates: successfulUpdates,
-              failedUpdates: failedUpdates,
-              totalEntries: entries.length,
-              skippedEntries: 0,
-              errors: errors,
+              successfulUpdates,
+              failedUpdates,
+              totalEntries: successfulUpdates + failedUpdates + skippedUpdates,
+              skippedEntries: skippedUpdates,
+              errors,
               timestamp: new Date(),
             };
 
@@ -386,25 +716,83 @@ export function useSynchronization(): [
             entries,
             token,
             (progress) => {
+              const normalizedProgress: SyncProgress = {
+                ...progress,
+                total: uniqueMediaIds.length,
+              };
+              lastReportedProgress = normalizedProgress;
               setState((prev) => ({
                 ...prev,
-                progress,
+                progress: normalizedProgress,
               }));
+              updateSnapshotFromProgress(
+                normalizedProgress,
+                initialEntriesRef.current,
+              );
             },
             abortController.signal,
             uniqueMediaIds,
           );
         }
 
-        // Save report to history
-        saveSyncReportToHistory(syncReport);
+        if (pauseRequestedRef.current) {
+          const partialReport = mergeReports(
+            existingReportFragment,
+            syncReport,
+          );
 
-        // Update state with results
+          if (!resumeSnapshotRef.current) {
+            updateSnapshotFromProgress(
+              lastReportedProgress,
+              initialEntriesRef.current,
+            );
+          }
+
+          if (resumeSnapshotRef.current) {
+            resumeSnapshotRef.current.reportFragment =
+              toPersistedReport(partialReport);
+            resumeSnapshotRef.current.progress = {
+              ...lastReportedProgress,
+            };
+            resumeSnapshotRef.current.timestamp = Date.now();
+            saveSnapshotToStorage(resumeSnapshotRef.current);
+          }
+
+          setState((prev) => ({
+            ...prev,
+            isActive: false,
+            isPaused: true,
+            report: partialReport,
+            error: null,
+            abortController: null,
+            resumeAvailable: true,
+            resumeMetadata: resumeSnapshotRef.current
+              ? {
+                  remainingMediaIds:
+                    resumeSnapshotRef.current.remainingMediaIds,
+                  timestamp: resumeSnapshotRef.current.timestamp,
+                }
+              : prev.resumeMetadata,
+          }));
+
+          return;
+        }
+
+        const finalReport = mergeReports(existingReportFragment, syncReport);
+
+        if (!pauseRequestedRef.current) {
+          saveSyncReportToHistory(finalReport);
+          clearResumeSnapshot();
+        }
+
         setState((prev) => ({
           ...prev,
           isActive: false,
-          report: syncReport,
+          isPaused: false,
+          report: finalReport,
           abortController: null,
+          resumeAvailable: false,
+          resumeMetadata: null,
         }));
       } catch (error) {
         console.error("Sync operation failed:", error);
@@ -413,10 +801,12 @@ export function useSynchronization(): [
           isActive: false,
           error: error instanceof Error ? error.message : String(error),
           abortController: null,
+          isPaused: false,
+          resumeAvailable: prev.resumeAvailable,
         }));
       }
     },
-    [state.isActive],
+    [clearResumeSnapshot, state.isActive],
   );
 
   /**
@@ -439,7 +829,12 @@ export function useSynchronization(): [
         error: "Synchronization cancelled by user",
         // Preserve the current report if any (partial results)
         report: prev.report || null,
+        isPaused: false,
+        resumeAvailable: false,
+        resumeMetadata: null,
       }));
+      pauseRequestedRef.current = false;
+      clearResumeSnapshot();
 
       // Add a message to make it clear the operation has been canceled
       console.log(
@@ -447,7 +842,65 @@ export function useSynchronization(): [
         "color: red; font-weight: bold",
       );
     }
+  }, [clearResumeSnapshot, state.abortController]);
+
+  const pauseSync = useCallback(() => {
+    if (state.abortController) {
+      console.log("Pause requested - stopping current sync after current task");
+      pauseRequestedRef.current = true;
+      state.abortController.abort();
+    }
   }, [state.abortController]);
+
+  const resumeSync = useCallback(
+    async (
+      entries: AniListMediaEntry[],
+      token: string,
+      _unused?: undefined,
+      displayOrderMediaIds?: number[],
+    ) => {
+      const snapshot = resumeSnapshotRef.current;
+
+      if (!snapshot) {
+        console.warn("No paused synchronization state available to resume.");
+        return;
+      }
+
+      const remainingIds = snapshot.remainingMediaIds;
+      if (!remainingIds || remainingIds.length === 0) {
+        console.warn("Paused state contains no remaining entries.");
+        clearResumeSnapshot();
+        return;
+      }
+
+      const sourceEntries =
+        snapshot.entries && snapshot.entries.length > 0
+          ? snapshot.entries
+          : entries;
+
+      const entriesToResume = cloneEntries(
+        (sourceEntries.length > 0 ? sourceEntries : entries).filter((entry) =>
+          remainingIds.includes(entry.mediaId),
+        ),
+      );
+
+      if (!entriesToResume.length) {
+        console.warn("No matching entries found to resume.");
+        clearResumeSnapshot();
+        return;
+      }
+
+      resumeRequestedRef.current = true;
+
+      await startSync(
+        entriesToResume,
+        token,
+        _unused,
+        displayOrderMediaIds?.length ? displayOrderMediaIds : remainingIds,
+      );
+    },
+    [clearResumeSnapshot, startSync],
+  );
 
   /**
    * Exports the error log from the last synchronization report to a file.
@@ -483,20 +936,26 @@ export function useSynchronization(): [
    * @source
    */
   const reset = useCallback(() => {
+    clearResumeSnapshot();
     setState({
       isActive: false,
       progress: null,
       report: null,
       error: null,
       abortController: null,
+      isPaused: false,
+      resumeAvailable: false,
+      resumeMetadata: null,
     });
-  }, []);
+  }, [clearResumeSnapshot]);
 
   return [
     state,
     {
       startSync,
       cancelSync,
+      pauseSync,
+      resumeSync,
       exportErrors,
       exportReport,
       reset,

@@ -106,6 +106,7 @@ export interface AniListMediaEntry {
     isRetry?: boolean;
     retryTimestamp?: number;
     retryCount?: number;
+    resumeFromStep?: number;
   } | null;
 }
 

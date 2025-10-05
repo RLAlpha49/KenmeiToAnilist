@@ -85,6 +85,6 @@ export function formatScore(score: number): string {
 /**
  * Check if a manga entry is on the user's list
  */
-export function isOnUserList(mediaListEntry?: { id: number } | null): boolean {
+export function isOnUserList(mediaListEntry?: { id?: number } | null): boolean {
   return Boolean(mediaListEntry?.id);
 }

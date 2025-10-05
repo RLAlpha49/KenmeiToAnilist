@@ -277,6 +277,7 @@ export const STORAGE_KEYS = {
   SYNC_STATS: "sync_stats",
   MATCH_CONFIG: "match_config",
   IGNORED_DUPLICATES: "ignored_duplicates",
+  ACTIVE_SYNC_SNAPSHOT: "active_sync_snapshot",
 };
 
 /**

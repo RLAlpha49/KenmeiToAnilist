@@ -253,11 +253,15 @@ export const ChangesSummary: React.FC<ChangesSummaryProps> = ({
           <RefreshCcw
             className={`h-3 w-3 ${libraryLoading ? "animate-spin" : ""}`}
           />
-          {libraryLoading
-            ? "Refreshing..."
-            : isRateLimited
-              ? "Rate limit active"
-              : "Refresh Library"}
+          {(() => {
+            if (libraryLoading) {
+              return "Refreshing...";
+            } else if (isRateLimited) {
+              return "Rate limit active";
+            } else {
+              return "Refresh Library";
+            }
+          })()}
         </Button>
       </div>
 

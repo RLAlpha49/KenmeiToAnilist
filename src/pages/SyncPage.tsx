@@ -9,7 +9,13 @@ import { useNavigate } from "@tanstack/react-router";
 import { useAuth } from "../hooks/useAuth";
 import { useSynchronization } from "../hooks/useSynchronization";
 import { useRateLimit } from "../contexts/RateLimitContext";
-import { UserMediaList, MangaMatchResult } from "../api/anilist/types";
+import {
+  UserMediaList,
+  MangaMatchResult,
+  UserMediaEntry,
+  AniListManga,
+} from "../api/anilist/types";
+import { KenmeiManga } from "../api/kenmei/types";
 import {
   getSavedMatchResults,
   getSyncConfig,
@@ -210,6 +216,134 @@ export function SyncPage() {
     }
   }, []);
 
+  // Handle rate limit errors
+  type ApiError = {
+    isRateLimited?: boolean;
+    status?: number;
+    retryAfter?: number;
+    message?: string;
+    name?: string;
+  };
+
+  const handleRateLimitError = (
+    error: ApiError,
+    controller: AbortController,
+    fetchLibrary: (attempt: number) => void,
+  ) => {
+    const err = error;
+
+    console.warn("📛 DETECTED RATE LIMIT in SyncPage:", {
+      isRateLimited: err.isRateLimited,
+      status: err.status,
+      retryAfter: err.retryAfter,
+    });
+
+    const retryDelay = err.retryAfter ? err.retryAfter : 60;
+
+    setRateLimit(
+      true,
+      retryDelay,
+      "AniList API rate limit reached. Waiting to retry...",
+    );
+    setLibraryLoading(false);
+    setLibraryError("AniList API rate limit reached. Waiting to retry...");
+
+    const timer = setTimeout(() => {
+      if (!controller.signal.aborted) {
+        console.log("Rate limit timeout complete, retrying...");
+        setLibraryLoading(true);
+        setLibraryError(null);
+        fetchLibrary(0);
+      }
+    }, retryDelay * 1000);
+
+    return () => clearTimeout(timer);
+  };
+
+  // Handle server errors with retry logic
+  const handleServerError = (
+    error: ApiError,
+    attempt: number,
+    controller: AbortController,
+    fetchLibrary: (attempt: number) => void,
+  ) => {
+    const err = error;
+
+    const message = err.message || "";
+    const isServerError =
+      message.includes("500") ||
+      message.includes("502") ||
+      message.includes("503") ||
+      message.includes("504") ||
+      message.toLowerCase().includes("network error");
+
+    if (!isServerError || attempt >= maxRetries) {
+      return false;
+    }
+
+    const backoffDelay = Math.pow(2, attempt) * 1000;
+    setLibraryError(
+      `AniList server error. Retrying in ${backoffDelay / 1000} seconds (${attempt + 1}/${maxRetries})...`,
+    );
+
+    const timer = setTimeout(() => {
+      if (!controller.signal.aborted) {
+        fetchLibrary(attempt + 1);
+      }
+    }, backoffDelay);
+
+    return () => clearTimeout(timer);
+  };
+
+  // Handle fetch library success
+  const handleFetchSuccess = (library: UserMediaList) => {
+    console.log(
+      `Loaded ${Object.keys(library).length} entries from user's AniList library`,
+    );
+    setUserLibrary(library);
+    setLibraryLoading(false);
+    setLibraryError(null);
+    setRetryCount(0);
+  };
+
+  // Handle fetch library error
+  const handleFetchError = (
+    error: ApiError,
+    attempt: number,
+    controller: AbortController,
+    fetchLibrary: (attempt: number) => void,
+  ) => {
+    const err = error;
+    if (err.name === "AbortError") return;
+
+    console.error("Failed to load user library:", err);
+    console.log("Error object structure:", JSON.stringify(err, null, 2));
+
+    // Check for rate limiting
+    if (err.isRateLimited || err.status === 429) {
+      return handleRateLimitError(err, controller, fetchLibrary);
+    }
+
+    // Check for server error
+    const serverErrorResult = handleServerError(
+      err,
+      attempt,
+      controller,
+      fetchLibrary,
+    );
+    if (serverErrorResult) {
+      return serverErrorResult;
+    }
+
+    // Default error handling
+    setLibraryError(
+      err.message ||
+        "Failed to load your AniList library. Synchronization can still proceed, but comparison data will not be shown.",
+    );
+    setUserLibrary({});
+    setLibraryLoading(false);
+  };
+
   // Fetch the user's AniList library for comparison
   useEffect(() => {
     if (token && mangaMatches.length > 0) {
@@ -225,92 +359,9 @@ export function SyncPage() {
         setRetryCount(attempt);
 
         getUserMangaList(token, controller.signal)
-          .then((library) => {
-            console.log(
-              `Loaded ${Object.keys(library).length} entries from user's AniList library`,
-            );
-            setUserLibrary(library);
-            setLibraryLoading(false);
-            setLibraryError(null);
-            setRetryCount(0);
-          })
+          .then(handleFetchSuccess)
           .catch((error) => {
-            if (error.name === "AbortError") return;
-
-            console.error("Failed to load user library:", error);
-            console.log(
-              "Error object structure:",
-              JSON.stringify(error, null, 2),
-            );
-
-            // Check for rate limiting - with our new client updates, this should be more reliable
-            if (error.isRateLimited || error.status === 429) {
-              console.warn("📛 DETECTED RATE LIMIT in SyncPage:", {
-                isRateLimited: error.isRateLimited,
-                status: error.status,
-                retryAfter: error.retryAfter,
-              });
-
-              const retryDelay = error.retryAfter ? error.retryAfter : 60;
-
-              // Update the global rate limit state
-              setRateLimit(
-                true,
-                retryDelay,
-                "AniList API rate limit reached. Waiting to retry...",
-              );
-
-              // Set library loading state
-              setLibraryLoading(false);
-              setLibraryError(
-                "AniList API rate limit reached. Waiting to retry...",
-              );
-
-              // Set a timer to retry after the delay
-              const timer = setTimeout(() => {
-                if (!controller.signal.aborted) {
-                  console.log("Rate limit timeout complete, retrying...");
-                  setLibraryLoading(true);
-                  setLibraryError(null);
-                  fetchLibrary(0); // Reset retry count for rate limits
-                }
-              }, retryDelay * 1000);
-
-              return () => clearTimeout(timer);
-            }
-
-            // Check for server error (5xx) or network error
-            const isServerError =
-              error.message?.includes("500") ||
-              error.message?.includes("502") ||
-              error.message?.includes("503") ||
-              error.message?.includes("504") ||
-              error.message?.toLowerCase().includes("network error");
-
-            if (isServerError && attempt < maxRetries) {
-              // Exponential backoff for retries (1s, 2s, 4s)
-              const backoffDelay = Math.pow(2, attempt) * 1000;
-              setLibraryError(
-                `AniList server error. Retrying in ${backoffDelay / 1000} seconds (${attempt + 1}/${maxRetries})...`,
-              );
-
-              // Set a timer to retry
-              const timer = setTimeout(() => {
-                if (!controller.signal.aborted) {
-                  fetchLibrary(attempt + 1);
-                }
-              }, backoffDelay);
-
-              return () => clearTimeout(timer);
-            }
-
-            // If we get here, either it's not a server error or we've exceeded retry attempts
-            setLibraryError(
-              error.message ||
-                "Failed to load your AniList library. Synchronization can still proceed, but comparison data will not be shown.",
-            );
-            setUserLibrary({});
-            setLibraryLoading(false);
+            handleFetchError(error, attempt, controller, fetchLibrary);
           });
       };
 
@@ -467,6 +518,335 @@ export function SyncPage() {
     setWasCancelled(false);
     refreshUserLibrary();
     setViewMode("preview");
+  };
+
+  const renderStatusBadge = (
+    statusWillChange: boolean,
+    userEntry: UserMediaEntry | undefined,
+    kenmei: KenmeiManga,
+    syncConfig: SyncConfig,
+  ) => {
+    if (!statusWillChange) return null;
+
+    const fromStatus = userEntry?.status || "None";
+    const toStatus = getEffectiveStatus(kenmei, syncConfig);
+
+    if (fromStatus === toStatus) return null;
+
+    return (
+      <Badge
+        variant="outline"
+        className="border-blue-400/70 bg-blue-50/60 px-2 py-0 text-[10px] text-blue-600 shadow-sm dark:border-blue-500/40 dark:bg-blue-900/40 dark:text-blue-300"
+      >
+        {fromStatus} → {toStatus}
+      </Badge>
+    );
+  };
+
+  const renderProgressBadge = (
+    progressWillChange: boolean,
+    userEntry: UserMediaEntry | undefined,
+    kenmei: KenmeiManga,
+    syncConfig: SyncConfig,
+  ) => {
+    if (!progressWillChange) return null;
+
+    const fromProgress = userEntry?.progress || 0;
+    let toProgress: number;
+
+    if (syncConfig.prioritizeAniListProgress) {
+      if (userEntry?.progress && userEntry.progress > 0) {
+        toProgress =
+          (kenmei.chapters_read || 0) > userEntry.progress
+            ? kenmei.chapters_read || 0
+            : userEntry.progress;
+      } else {
+        toProgress = kenmei.chapters_read || 0;
+      }
+    } else {
+      toProgress = kenmei.chapters_read || 0;
+    }
+
+    if (fromProgress === toProgress) return null;
+
+    return (
+      <Badge
+        variant="outline"
+        className="border-green-400/70 bg-green-50/60 px-2 py-0 text-[10px] text-green-600 shadow-sm dark:border-green-500/40 dark:bg-green-900/30 dark:text-green-300"
+      >
+        {fromProgress} → {toProgress} ch
+      </Badge>
+    );
+  };
+
+  const renderScoreBadge = (
+    scoreWillChange: boolean,
+    userEntry: UserMediaEntry | undefined,
+    kenmei: KenmeiManga,
+  ) => {
+    if (!scoreWillChange) return null;
+
+    const fromScore = userEntry?.score || 0;
+    const toScore = kenmei.score || 0;
+
+    if (fromScore === toScore) return null;
+
+    return (
+      <Badge
+        variant="outline"
+        className="border-amber-400/70 bg-amber-50/60 px-2 py-0 text-[10px] text-amber-600 shadow-sm dark:border-amber-500/40 dark:bg-amber-900/30 dark:text-amber-300"
+      >
+        {fromScore} → {toScore}/10
+      </Badge>
+    );
+  };
+
+  const renderPrivacyBadge = (
+    userEntry: UserMediaEntry | undefined,
+    syncConfig: SyncConfig,
+  ) => {
+    const shouldShowBadge = userEntry
+      ? syncConfig.setPrivate && !userEntry.private
+      : syncConfig.setPrivate;
+
+    if (!shouldShowBadge) return null;
+
+    return (
+      <Badge
+        variant="outline"
+        className="border-purple-400/70 bg-purple-50/60 px-2 py-0 text-[10px] text-purple-600 shadow-sm dark:border-purple-500/40 dark:bg-purple-900/30 dark:text-purple-300"
+      >
+        {userEntry ? "Yes" : "No"}
+      </Badge>
+    );
+  };
+
+  const renderPrivacyDisplay = (
+    userEntry: UserMediaEntry | undefined,
+    syncConfig: SyncConfig,
+    isCurrentAniList: boolean,
+  ) => {
+    let privacyClass = "text-xs font-medium";
+    const willChange = userEntry
+      ? syncConfig.setPrivate && !userEntry.private
+      : syncConfig.setPrivate;
+
+    if (isCurrentAniList) {
+      if (willChange) {
+        privacyClass += " text-muted-foreground line-through";
+      }
+      return (
+        <span className={privacyClass}>
+          {userEntry?.private ? "Yes" : "No"}
+        </span>
+      );
+    } else {
+      if (willChange) {
+        privacyClass += " text-blue-700 dark:text-blue-300";
+      }
+      const privacyDisplay =
+        syncConfig.setPrivate || userEntry?.private ? "Yes" : "No";
+      return <span className={privacyClass}>{privacyDisplay}</span>;
+    }
+  };
+
+  const renderAfterSyncProgress = (
+    userEntry: UserMediaEntry | undefined,
+    kenmei: KenmeiManga,
+    anilist: AniListManga | undefined,
+    syncConfig: SyncConfig,
+    progressWillChange: boolean,
+  ) => {
+    let afterSyncProgress: number;
+    if (syncConfig.prioritizeAniListProgress) {
+      if (userEntry?.progress && userEntry.progress > 0) {
+        afterSyncProgress =
+          (kenmei.chapters_read || 0) > userEntry.progress
+            ? kenmei.chapters_read || 0
+            : userEntry.progress;
+      } else {
+        afterSyncProgress = kenmei.chapters_read || 0;
+      }
+    } else {
+      afterSyncProgress = kenmei.chapters_read || 0;
+    }
+
+    return (
+      <span
+        className={`text-xs font-medium ${
+          progressWillChange ? "text-blue-700 dark:text-blue-300" : ""
+        }`}
+      >
+        {afterSyncProgress} ch
+        {anilist?.chapters ? ` / ${anilist.chapters}` : ""}
+      </span>
+    );
+  };
+
+  const renderAfterSyncScore = (
+    userEntry: UserMediaEntry | undefined,
+    kenmei: KenmeiManga,
+    scoreWillChange: boolean,
+  ) => {
+    let scoreDisplay: string;
+    if (scoreWillChange) {
+      scoreDisplay = kenmei.score ? `${kenmei.score}/10` : "None";
+    } else {
+      scoreDisplay = userEntry?.score ? `${userEntry.score}/10` : "None";
+    }
+
+    return (
+      <span
+        className={`text-xs font-medium ${
+          scoreWillChange ? "text-blue-700 dark:text-blue-300" : ""
+        }`}
+      >
+        {scoreDisplay}
+      </span>
+    );
+  };
+
+  // Helper function to render manga cover image
+  const renderMangaCover = (
+    anilist: AniListManga | undefined,
+    isNewEntry: boolean,
+    isCompleted: boolean,
+  ) => {
+    return (
+      <div className="relative flex h-[200px] flex-shrink-0 items-center justify-center pl-3">
+        {anilist?.coverImage?.large || anilist?.coverImage?.medium ? (
+          <motion.div
+            layout="position"
+            animate={{
+              transition: { type: false },
+            }}
+          >
+            <img
+              src={anilist?.coverImage?.large || anilist?.coverImage?.medium}
+              alt={anilist?.title?.romaji || ""}
+              className="h-full w-[145px] rounded-sm object-cover"
+            />
+          </motion.div>
+        ) : (
+          <div className="flex h-[200px] items-center justify-center rounded-sm bg-slate-200 dark:bg-slate-800">
+            <span className="text-muted-foreground text-xs">No Cover</span>
+          </div>
+        )}
+
+        {/* Status Badges */}
+        <div className="absolute top-2 left-4 flex flex-col gap-1">
+          {isNewEntry && <Badge className="bg-emerald-500">New</Badge>}
+          {isCompleted && (
+            <Badge
+              variant="outline"
+              className="border-amber-500 text-amber-700 dark:text-amber-400"
+            >
+              Completed
+            </Badge>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Helper function to render change badges
+  const renderChangeBadges = (
+    statusWillChange: boolean,
+    progressWillChange: boolean,
+    scoreWillChange: boolean,
+    userEntry: UserMediaEntry | undefined,
+    syncConfig: SyncConfig,
+  ) => {
+    return (
+      <div className="mt-1 flex flex-wrap gap-1">
+        {statusWillChange && (
+          <Badge
+            variant="outline"
+            className="border-blue-400/70 bg-blue-50/60 px-1.5 py-0 text-xs text-blue-600 shadow-sm dark:border-blue-500/50 dark:bg-blue-900/40 dark:text-blue-300"
+          >
+            Status
+          </Badge>
+        )}
+        {progressWillChange && (
+          <Badge
+            variant="outline"
+            className="border-green-400/70 bg-green-50/60 px-1.5 py-0 text-xs text-green-600 shadow-sm dark:border-green-500/50 dark:bg-green-900/30 dark:text-green-300"
+          >
+            Progress
+          </Badge>
+        )}
+        {scoreWillChange && (
+          <Badge
+            variant="outline"
+            className="border-amber-400/70 bg-amber-50/60 px-1.5 py-0 text-xs text-amber-600 shadow-sm dark:border-amber-500/40 dark:bg-amber-900/30 dark:text-amber-300"
+          >
+            Score
+          </Badge>
+        )}
+        {userEntry
+          ? syncConfig.setPrivate &&
+            !userEntry.private && (
+              <Badge
+                variant="outline"
+                className="border-purple-400/70 bg-purple-50/60 px-1.5 py-0 text-xs text-purple-600 shadow-sm dark:border-purple-500/50 dark:bg-purple-900/30 dark:text-purple-300"
+              >
+                Privacy
+              </Badge>
+            )
+          : syncConfig.setPrivate && (
+              <Badge
+                variant="outline"
+                className="border-purple-400/70 bg-purple-50/60 px-1.5 py-0 text-xs text-purple-600 shadow-sm dark:border-purple-500/50 dark:bg-purple-900/30 dark:text-purple-300"
+              >
+                Privacy
+              </Badge>
+            )}
+      </div>
+    );
+  };
+
+  // Helper function to render current AniList data
+  const renderCurrentAniListData = (
+    userEntry: UserMediaEntry | undefined,
+    anilist: AniListManga | undefined,
+    statusWillChange: boolean,
+    progressWillChange: boolean,
+    scoreWillChange: boolean,
+    syncConfig: SyncConfig,
+  ) => {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground text-xs">Status:</span>
+          <span
+            className={`text-xs font-medium ${statusWillChange ? "text-muted-foreground line-through" : ""}`}
+          >
+            {userEntry?.status || "None"}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground text-xs">Progress:</span>
+          <span
+            className={`text-xs font-medium ${progressWillChange ? "text-muted-foreground line-through" : ""}`}
+          >
+            {userEntry?.progress || 0} ch
+            {anilist?.chapters ? ` / ${anilist.chapters}` : ""}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground text-xs">Score:</span>
+          <span
+            className={`text-xs font-medium ${scoreWillChange ? "text-muted-foreground line-through" : ""}`}
+          >
+            {userEntry?.score ? `${userEntry.score}/10` : "None"}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground text-xs">Private:</span>
+          {renderPrivacyDisplay(userEntry, syncConfig, true)}
+        </div>
+      </div>
+    );
   };
 
   // If any error condition is true, show the appropriate error message
@@ -728,52 +1108,12 @@ export function SyncPage() {
                                     >
                                       <Card className="group overflow-hidden border border-slate-200/70 bg-white/80 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-200/70 hover:shadow-xl dark:border-slate-800/60 dark:bg-slate-950/60">
                                         <div className="flex">
-                                          {/* Manga Cover Image - Updated styling */}
-                                          <div className="relative flex h-[200px] flex-shrink-0 items-center justify-center pl-3">
-                                            {anilist.coverImage?.large ||
-                                            anilist.coverImage?.medium ? (
-                                              <motion.div
-                                                layout="position"
-                                                animate={{
-                                                  transition: { type: false },
-                                                }}
-                                              >
-                                                <img
-                                                  src={
-                                                    anilist.coverImage?.large ||
-                                                    anilist.coverImage?.medium
-                                                  }
-                                                  alt={
-                                                    anilist.title.romaji || ""
-                                                  }
-                                                  className="h-full w-[145px] rounded-sm object-cover"
-                                                />
-                                              </motion.div>
-                                            ) : (
-                                              <div className="flex h-[200px] items-center justify-center rounded-sm bg-slate-200 dark:bg-slate-800">
-                                                <span className="text-muted-foreground text-xs">
-                                                  No Cover
-                                                </span>
-                                              </div>
-                                            )}
-
-                                            {/* Status Badges - Removed Manual badge */}
-                                            <div className="absolute top-2 left-4 flex flex-col gap-1">
-                                              {isNewEntry && (
-                                                <Badge className="bg-emerald-500">
-                                                  New
-                                                </Badge>
-                                              )}
-                                              {isCompleted && (
-                                                <Badge
-                                                  variant="outline"
-                                                  className="border-amber-500 text-amber-700 dark:text-amber-400"
-                                                >
-                                                  Completed
-                                                </Badge>
-                                              )}
-                                            </div>
-                                          </div>
+                                          {/* Manga Cover Image */}
+                                          {renderMangaCover(
+                                            anilist,
+                                            isNewEntry,
+                                            isCompleted,
+                                          )}
 
                                           {/* Content */}
                                           <div className="flex-1 p-4">
@@ -785,53 +1125,13 @@ export function SyncPage() {
                                                 </h3>
                                                 {changeCount > 0 &&
                                                 !isCompleted ? (
-                                                  <div className="mt-1 flex flex-wrap gap-1">
-                                                    {statusWillChange && (
-                                                      <Badge
-                                                        variant="outline"
-                                                        className="border-blue-400/70 bg-blue-50/60 px-1.5 py-0 text-xs text-blue-600 shadow-sm dark:border-blue-500/50 dark:bg-blue-900/40 dark:text-blue-300"
-                                                      >
-                                                        Status
-                                                      </Badge>
-                                                    )}
-
-                                                    {progressWillChange && (
-                                                      <Badge
-                                                        variant="outline"
-                                                        className="border-green-400/70 bg-green-50/60 px-1.5 py-0 text-xs text-green-600 shadow-sm dark:border-green-500/50 dark:bg-green-900/30 dark:text-green-300"
-                                                      >
-                                                        Progress
-                                                      </Badge>
-                                                    )}
-
-                                                    {scoreWillChange && (
-                                                      <Badge
-                                                        variant="outline"
-                                                        className="border-amber-400/70 bg-amber-50/60 px-1.5 py-0 text-xs text-amber-600 shadow-sm dark:border-amber-500/40 dark:bg-amber-900/30 dark:text-amber-300"
-                                                      >
-                                                        Score
-                                                      </Badge>
-                                                    )}
-
-                                                    {userEntry
-                                                      ? syncConfig.setPrivate &&
-                                                        !userEntry.private && (
-                                                          <Badge
-                                                            variant="outline"
-                                                            className="border-purple-400/70 bg-purple-50/60 px-1.5 py-0 text-xs text-purple-600 shadow-sm dark:border-purple-500/50 dark:bg-purple-900/30 dark:text-purple-300"
-                                                          >
-                                                            Privacy
-                                                          </Badge>
-                                                        )
-                                                      : syncConfig.setPrivate && (
-                                                          <Badge
-                                                            variant="outline"
-                                                            className="border-purple-400/70 bg-purple-50/60 px-1.5 py-0 text-xs text-purple-600 shadow-sm dark:border-purple-500/50 dark:bg-purple-900/30 dark:text-purple-300"
-                                                          >
-                                                            Privacy
-                                                          </Badge>
-                                                        )}
-                                                  </div>
+                                                  renderChangeBadges(
+                                                    statusWillChange,
+                                                    progressWillChange,
+                                                    scoreWillChange,
+                                                    userEntry,
+                                                    syncConfig,
+                                                  )
                                                 ) : (
                                                   <div className="mt-1">
                                                     <Badge
@@ -872,80 +1172,14 @@ export function SyncPage() {
                                                     New addition to your library
                                                   </div>
                                                 ) : (
-                                                  <div className="space-y-2">
-                                                    <div className="flex items-center justify-between">
-                                                      <span className="text-muted-foreground text-xs">
-                                                        Status:
-                                                      </span>
-                                                      <span
-                                                        className={`text-xs font-medium ${statusWillChange ? "text-muted-foreground line-through" : ""}`}
-                                                      >
-                                                        {userEntry?.status ||
-                                                          "None"}
-                                                      </span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between">
-                                                      <span className="text-muted-foreground text-xs">
-                                                        Progress:
-                                                      </span>
-                                                      <span
-                                                        className={`text-xs font-medium ${progressWillChange ? "text-muted-foreground line-through" : ""}`}
-                                                      >
-                                                        {userEntry?.progress ||
-                                                          0}{" "}
-                                                        ch
-                                                        {anilist.chapters
-                                                          ? ` / ${anilist.chapters}`
-                                                          : ""}
-                                                      </span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between">
-                                                      <span className="text-muted-foreground text-xs">
-                                                        Score:
-                                                      </span>
-                                                      <span
-                                                        className={`text-xs font-medium ${scoreWillChange ? "text-muted-foreground line-through" : ""}`}
-                                                      >
-                                                        {userEntry?.score
-                                                          ? `${userEntry.score}/10`
-                                                          : "None"}
-                                                      </span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between">
-                                                      <span className="text-muted-foreground text-xs">
-                                                        Private:
-                                                      </span>
-                                                      {(() => {
-                                                        let privacyClass =
-                                                          "text-xs font-medium";
-                                                        if (userEntry) {
-                                                          if (
-                                                            syncConfig.setPrivate &&
-                                                            !userEntry.private
-                                                          ) {
-                                                            privacyClass +=
-                                                              " text-muted-foreground line-through";
-                                                          }
-                                                        } else if (
-                                                          syncConfig.setPrivate
-                                                        ) {
-                                                          privacyClass +=
-                                                            " text-muted-foreground line-through";
-                                                        }
-                                                        return (
-                                                          <span
-                                                            className={
-                                                              privacyClass
-                                                            }
-                                                          >
-                                                            {userEntry?.private
-                                                              ? "Yes"
-                                                              : "No"}
-                                                          </span>
-                                                        );
-                                                      })()}
-                                                    </div>
-                                                  </div>
+                                                  renderCurrentAniListData(
+                                                    userEntry,
+                                                    anilist,
+                                                    statusWillChange,
+                                                    progressWillChange,
+                                                    scoreWillChange,
+                                                    syncConfig,
+                                                  )
                                                 )}
                                               </div>
 
@@ -972,122 +1206,33 @@ export function SyncPage() {
                                                     <span className="text-xs text-blue-500 dark:text-blue-400">
                                                       Progress:
                                                     </span>
-                                                    {(() => {
-                                                      let afterSyncProgress: number;
-                                                      if (
-                                                        syncConfig.prioritizeAniListProgress
-                                                      ) {
-                                                        if (
-                                                          userEntry?.progress &&
-                                                          userEntry.progress > 0
-                                                        ) {
-                                                          afterSyncProgress =
-                                                            (kenmei.chapters_read ||
-                                                              0) >
-                                                            userEntry.progress
-                                                              ? kenmei.chapters_read ||
-                                                                0
-                                                              : userEntry.progress;
-                                                        } else {
-                                                          afterSyncProgress =
-                                                            kenmei.chapters_read ||
-                                                            0;
-                                                        }
-                                                      } else {
-                                                        afterSyncProgress =
-                                                          kenmei.chapters_read ||
-                                                          0;
-                                                      }
-                                                      return (
-                                                        <span
-                                                          className={`text-xs font-medium ${progressWillChange ? "text-blue-700 dark:text-blue-300" : ""}`}
-                                                        >
-                                                          {afterSyncProgress} ch
-                                                          {anilist.chapters
-                                                            ? ` / ${anilist.chapters}`
-                                                            : ""}
-                                                        </span>
-                                                      );
-                                                    })()}
+                                                    {renderAfterSyncProgress(
+                                                      userEntry,
+                                                      kenmei,
+                                                      anilist,
+                                                      syncConfig,
+                                                      progressWillChange,
+                                                    )}
                                                   </div>
                                                   <div className="flex items-center justify-between">
                                                     <span className="text-xs text-blue-500 dark:text-blue-400">
                                                       Score:
                                                     </span>
-                                                    {(() => {
-                                                      let scoreDisplay: string;
-                                                      if (scoreWillChange) {
-                                                        scoreDisplay =
-                                                          kenmei.score
-                                                            ? `${kenmei.score}/10`
-                                                            : "None";
-                                                      } else {
-                                                        scoreDisplay =
-                                                          userEntry?.score
-                                                            ? `${userEntry.score}/10`
-                                                            : "None";
-                                                      }
-                                                      return (
-                                                        <span
-                                                          className={`text-xs font-medium ${scoreWillChange ? "text-blue-700 dark:text-blue-300" : ""}`}
-                                                        >
-                                                          {scoreDisplay}
-                                                        </span>
-                                                      );
-                                                    })()}
+                                                    {renderAfterSyncScore(
+                                                      userEntry,
+                                                      kenmei,
+                                                      scoreWillChange,
+                                                    )}
                                                   </div>
                                                   <div className="flex items-center justify-between">
                                                     <span className="text-xs text-blue-500 dark:text-blue-400">
                                                       Private:
                                                     </span>
-                                                    {(() => {
-                                                      let privacyClass =
-                                                        "text-xs font-medium";
-                                                      if (userEntry) {
-                                                        if (
-                                                          syncConfig.setPrivate &&
-                                                          !userEntry.private
-                                                        ) {
-                                                          privacyClass +=
-                                                            " text-blue-700 dark:text-blue-300";
-                                                        }
-                                                      } else if (
-                                                        syncConfig.setPrivate
-                                                      ) {
-                                                        privacyClass +=
-                                                          " text-blue-700 dark:text-blue-300";
-                                                      }
-                                                      let privacyDisplay: string;
-                                                      if (userEntry) {
-                                                        if (
-                                                          syncConfig.setPrivate
-                                                        ) {
-                                                          privacyDisplay =
-                                                            "Yes";
-                                                        } else if (
-                                                          userEntry.private
-                                                        ) {
-                                                          privacyDisplay =
-                                                            "Yes";
-                                                        } else {
-                                                          privacyDisplay = "No";
-                                                        }
-                                                      } else {
-                                                        privacyDisplay =
-                                                          syncConfig.setPrivate
-                                                            ? "Yes"
-                                                            : "No";
-                                                      }
-                                                      return (
-                                                        <span
-                                                          className={
-                                                            privacyClass
-                                                          }
-                                                        >
-                                                          {privacyDisplay}
-                                                        </span>
-                                                      );
-                                                    })()}
+                                                    {renderPrivacyDisplay(
+                                                      userEntry,
+                                                      syncConfig,
+                                                      false,
+                                                    )}
                                                   </div>
                                                 </div>
                                               </div>
@@ -1261,119 +1406,27 @@ export function SyncPage() {
                                         <div className="flex flex-shrink-0 items-center gap-1">
                                           {!isNewEntry && !isCompleted && (
                                             <>
-                                              {(() => {
-                                                if (!statusWillChange)
-                                                  return null;
-
-                                                const fromStatus =
-                                                  userEntry?.status || "None";
-                                                const toStatus =
-                                                  getEffectiveStatus(
-                                                    kenmei,
-                                                    syncConfig,
-                                                  );
-
-                                                // Only show badge if values are actually different
-                                                if (fromStatus === toStatus)
-                                                  return null;
-
-                                                return (
-                                                  <Badge
-                                                    variant="outline"
-                                                    className="border-blue-400/70 bg-blue-50/60 px-2 py-0 text-[10px] text-blue-600 shadow-sm dark:border-blue-500/40 dark:bg-blue-900/40 dark:text-blue-300"
-                                                  >
-                                                    {fromStatus} → {toStatus}
-                                                  </Badge>
-                                                );
-                                              })()}
-
-                                              {(() => {
-                                                if (!progressWillChange)
-                                                  return null;
-
-                                                const fromProgress =
-                                                  userEntry?.progress || 0;
-                                                let toProgress: number;
-                                                if (
-                                                  syncConfig.prioritizeAniListProgress
-                                                ) {
-                                                  if (
-                                                    userEntry?.progress &&
-                                                    userEntry.progress > 0
-                                                  ) {
-                                                    toProgress =
-                                                      (kenmei.chapters_read ||
-                                                        0) > userEntry.progress
-                                                        ? kenmei.chapters_read ||
-                                                          0
-                                                        : userEntry.progress;
-                                                  } else {
-                                                    toProgress =
-                                                      kenmei.chapters_read || 0;
-                                                  }
-                                                } else {
-                                                  toProgress =
-                                                    kenmei.chapters_read || 0;
-                                                }
-
-                                                // Only show badge if values are actually different
-                                                if (fromProgress === toProgress)
-                                                  return null;
-
-                                                return (
-                                                  <Badge
-                                                    variant="outline"
-                                                    className="border-green-400/70 bg-green-50/60 px-2 py-0 text-[10px] text-green-600 shadow-sm dark:border-green-500/40 dark:bg-green-900/30 dark:text-green-300"
-                                                  >
-                                                    {fromProgress} →{" "}
-                                                    {toProgress} ch
-                                                  </Badge>
-                                                );
-                                              })()}
-
-                                              {(() => {
-                                                if (!scoreWillChange)
-                                                  return null;
-
-                                                const fromScore =
-                                                  userEntry?.score || 0;
-                                                const toScore =
-                                                  kenmei.score || 0;
-
-                                                // Only show badge if values are actually different
-                                                if (fromScore === toScore)
-                                                  return null;
-
-                                                return (
-                                                  <Badge
-                                                    variant="outline"
-                                                    className="border-amber-400/70 bg-amber-50/60 px-2 py-0 text-[10px] text-amber-600 shadow-sm dark:border-amber-500/40 dark:bg-amber-900/30 dark:text-amber-300"
-                                                  >
-                                                    {fromScore} → {toScore}/10
-                                                  </Badge>
-                                                );
-                                              })()}
-
-                                              {userEntry
-                                                ? syncConfig.setPrivate &&
-                                                  !userEntry.private && (
-                                                    <Badge
-                                                      variant="outline"
-                                                      className="border-purple-400/70 bg-purple-50/60 px-2 py-0 text-[10px] text-purple-600 shadow-sm dark:border-purple-500/40 dark:bg-purple-900/30 dark:text-purple-300"
-                                                    >
-                                                      {userEntry.private
-                                                        ? "Yes"
-                                                        : "No"}
-                                                    </Badge>
-                                                  )
-                                                : syncConfig.setPrivate && (
-                                                    <Badge
-                                                      variant="outline"
-                                                      className="border-purple-400/70 bg-purple-50/60 px-2 py-0 text-[10px] text-purple-600 shadow-sm dark:border-purple-500/40 dark:bg-purple-900/30 dark:text-purple-300"
-                                                    >
-                                                      {userEntry ? "Yes" : "No"}
-                                                    </Badge>
-                                                  )}
+                                              {renderStatusBadge(
+                                                statusWillChange,
+                                                userEntry,
+                                                kenmei,
+                                                syncConfig,
+                                              )}
+                                              {renderProgressBadge(
+                                                progressWillChange,
+                                                userEntry,
+                                                kenmei,
+                                                syncConfig,
+                                              )}
+                                              {renderScoreBadge(
+                                                scoreWillChange,
+                                                userEntry,
+                                                kenmei,
+                                              )}
+                                              {renderPrivacyBadge(
+                                                userEntry,
+                                                syncConfig,
+                                              )}
 
                                               {changeCount === 0 && (
                                                 <span className="px-1 text-[10px] text-slate-500 dark:text-slate-400">
@@ -1597,7 +1650,7 @@ export function SyncPage() {
   };
 
   return (
-    <div className="relative min-h-[calc(100vh-3rem)] overflow-hidden">
+    <div className="relative min-h-0 overflow-hidden">
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute top-[-10%] left-[8%] h-64 w-64 rounded-full bg-blue-200/50 blur-3xl dark:bg-blue-500/20" />
         <div className="absolute top-1/3 right-[-12%] h-80 w-80 rounded-full bg-indigo-200/40 blur-3xl dark:bg-indigo-500/15" />
