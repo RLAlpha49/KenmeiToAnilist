@@ -4,7 +4,13 @@
  * @description React context provider for authentication state and actions, including login, logout, and credential management.
  */
 
-import React, { useState, useEffect, ReactNode, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  ReactNode,
+  useRef,
+  useCallback,
+} from "react";
 import { toast } from "sonner";
 import { storage } from "../utils/storage";
 import {
@@ -15,6 +21,7 @@ import {
 } from "../types/auth";
 import { AuthContext } from "./AuthContextDefinition";
 import { DEFAULT_ANILIST_CONFIG } from "../config/anilist";
+import { useDebug, StateInspectorHandle } from "./DebugContext";
 
 /**
  * Props for the AuthProvider component.
@@ -24,6 +31,15 @@ import { DEFAULT_ANILIST_CONFIG } from "../config/anilist";
  */
 interface AuthProviderProps {
   children: ReactNode;
+}
+
+interface AuthDebugSnapshot {
+  authState: AuthState;
+  isLoading: boolean;
+  error: string | null;
+  statusMessage: string | null;
+  isBrowserAuthFlow: boolean;
+  customCredentials: APICredentials | null;
 }
 
 /**
@@ -68,6 +84,84 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
   const authAttemptRef = useRef(0);
   // Lock credential source during an active OAuth flow to avoid mismatches
   const lockedCredentialSourceRef = useRef<null | ("default" | "custom")>(null);
+  const { registerStateInspector: registerAuthStateInspector } = useDebug();
+  const authInspectorHandleRef =
+    useRef<StateInspectorHandle<AuthDebugSnapshot> | null>(null);
+  const authSnapshotRef = useRef<AuthDebugSnapshot | null>(null);
+  const getAuthSnapshotRef = useRef<() => AuthDebugSnapshot>(() => ({
+    authState,
+    isLoading,
+    error,
+    statusMessage,
+    isBrowserAuthFlow,
+    customCredentials,
+  }));
+  getAuthSnapshotRef.current = () => ({
+    authState,
+    isLoading,
+    error,
+    statusMessage,
+    isBrowserAuthFlow,
+    customCredentials,
+  });
+
+  const applyAuthDebugSnapshot = useCallback(
+    (snapshot: AuthDebugSnapshot) => {
+      setAuthState(snapshot.authState);
+      setIsLoading(snapshot.isLoading);
+      setError(snapshot.error);
+      setStatusMessage(snapshot.statusMessage);
+      setIsBrowserAuthFlow(snapshot.isBrowserAuthFlow);
+      setCustomCredentials(snapshot.customCredentials);
+      authSnapshotRef.current = snapshot;
+    },
+    [
+      setAuthState,
+      setIsLoading,
+      setError,
+      setStatusMessage,
+      setIsBrowserAuthFlow,
+      setCustomCredentials,
+    ],
+  );
+
+  useEffect(() => {
+    const snapshot = getAuthSnapshotRef.current();
+    authSnapshotRef.current = snapshot;
+    authInspectorHandleRef.current?.publish(snapshot);
+  }, [
+    authState,
+    isLoading,
+    error,
+    statusMessage,
+    isBrowserAuthFlow,
+    customCredentials,
+  ]);
+
+  useEffect(() => {
+    if (!registerAuthStateInspector) return;
+
+    authSnapshotRef.current = getAuthSnapshotRef.current();
+
+    const handle = registerAuthStateInspector<AuthDebugSnapshot>({
+      id: "auth-state",
+      label: "Authentication",
+      description:
+        "Authentication context session, credentials, and flow state.",
+      group: "Application",
+      getSnapshot: () =>
+        authSnapshotRef.current ?? getAuthSnapshotRef.current(),
+      setSnapshot: applyAuthDebugSnapshot,
+    });
+
+    authInspectorHandleRef.current = handle;
+
+    return () => {
+      handle.unregister();
+      authInspectorHandleRef.current = null;
+      authSnapshotRef.current = null;
+    };
+  }, [registerAuthStateInspector, applyAuthDebugSnapshot]);
 
   // Update storage only when state meaningfully changes
   useEffect(() => {

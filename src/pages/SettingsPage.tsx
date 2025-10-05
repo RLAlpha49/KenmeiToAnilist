@@ -100,6 +100,8 @@ export function SettingsPage() {
     setStorageDebuggerEnabled,
     logViewerEnabled,
     setLogViewerEnabled,
+    stateInspectorEnabled,
+    setStateInspectorEnabled,
   } = useDebug();
 
   const prevCredentialSourceRef = useRef<"default" | "custom">(
@@ -421,14 +423,25 @@ export function SettingsPage() {
 
       if (!STORAGE_KEYS) return base;
 
+      const pushIfMissing = (arr: string[], value: string) => {
+        if (!arr.includes(value)) arr.push(value);
+      };
+
+      const rules: { patterns: string[]; target: string[] }[] = [
+        { patterns: ["MATCH", "REVIEW"], target: base.review },
+        { patterns: ["IMPORT"], target: base.import },
+        { patterns: ["CACHE"], target: base.other },
+      ];
+
       for (const [key, value] of Object.entries(STORAGE_KEYS)) {
         if (typeof value !== "string") continue;
-        if (key.includes("MATCH") || key.includes("REVIEW")) {
-          if (!base.review.includes(value)) base.review.push(value);
-        } else if (key.includes("IMPORT")) {
-          if (!base.import.includes(value)) base.import.push(value);
-        } else if (key.includes("CACHE")) {
-          if (!base.other.includes(value)) base.other.push(value);
+
+        // Apply the first matching rule
+        for (const { patterns, target } of rules) {
+          if (patterns.some((p) => key.includes(p))) {
+            pushIfMissing(target, value);
+            break;
+          }
         }
       }
 
@@ -472,7 +485,10 @@ export function SettingsPage() {
       for (const cacheKey of keys) {
         try {
           localStorage.removeItem(cacheKey);
-          if (globalThis.electronStore?.removeItem instanceof Function) {
+          if (
+            globalThis.electronStore &&
+            typeof globalThis.electronStore.removeItem === "function"
+          ) {
             globalThis.electronStore.removeItem(cacheKey);
             console.log(`🧹 Cleared Electron Store cache: ${cacheKey}`);
           }
@@ -1905,6 +1921,38 @@ export function SettingsPage() {
                             />
                           </div>
                         </div>
+                      </div>
+                      <div className="border-border/60 bg-background/40 rounded-2xl border border-dashed p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-sm font-semibold">
+                                State inspector
+                              </h4>
+                            </div>
+                            <p className="text-muted-foreground text-xs">
+                              View live auth, sync, and settings state. Edit
+                              snapshots to simulate runtime scenarios safely.
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground text-xs">
+                              Enable panel
+                            </span>
+                            <Switch
+                              id="state-inspector-enabled"
+                              checked={stateInspectorEnabled}
+                              onCheckedChange={(checked) =>
+                                setStateInspectorEnabled(Boolean(checked))
+                              }
+                            />
+                          </div>
+                        </div>
+                        <p className="text-muted-foreground mt-3 text-xs">
+                          Changes applied through the inspector update in-app
+                          state immediately. Export values before experimenting
+                          for easy rollback.
+                        </p>
                       </div>
                     </div>
                   ) : (

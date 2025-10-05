@@ -23,16 +23,16 @@ import { DebugProvider } from "./contexts/DebugContext";
  */
 export default function App() {
   return (
-    <ThemeProvider>
-      <DebugProvider>
+    <DebugProvider>
+      <ThemeProvider>
         <AuthProvider>
           <RateLimitProvider>
             <RouterProvider router={router} />
             <SonnerProvider />
           </RateLimitProvider>
         </AuthProvider>
-      </DebugProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </DebugProvider>
   );
 }
 

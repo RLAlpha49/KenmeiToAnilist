@@ -8,8 +8,6 @@
 
 // TODO: API request/response viewer for debugging API issues. Should be able to see request URL, method, headers, body, response status, headers, body, and time taken. Should be able to filter by endpoint and status code.
 
-// TODO: Add ability to view application state (e.g. auth state, sync state, settings) for debugging purposes. Allow modifying state for testing.
-
 // TODO: IPC communication viewer for debugging IPC issues. Should be able to see messages sent/received, channels, and data. Should be able to filter.
 
 // TODO: Event logger to track user actions and application events for debugging purposes. Should be able to filter by event type and time range.
@@ -22,6 +20,7 @@ import React, {
   useEffect,
   useState,
   useCallback,
+  useRef,
 } from "react";
 import {
   installConsoleInterceptor,
@@ -30,6 +29,14 @@ import {
   serialiseLogEntries,
   MAX_LOG_ENTRIES,
 } from "../utils/logging";
+import {
+  getSyncConfig,
+  saveSyncConfig,
+  type SyncConfig,
+  getMatchConfig,
+  saveMatchConfig,
+  type MatchConfig,
+} from "../utils/storage";
 
 /**
  * The shape of the debug context value provided to consumers.
@@ -53,6 +60,15 @@ interface DebugContextType {
   logViewerEnabled: boolean;
   setLogViewerEnabled: (enabled: boolean) => void;
   toggleLogViewer: () => void;
+  stateInspectorEnabled: boolean;
+  setStateInspectorEnabled: (enabled: boolean) => void;
+  toggleStateInspector: () => void;
+  stateInspectorSources: StateInspectorSourceSnapshot[];
+  registerStateInspector: <T>(
+    config: StateInspectorRegistration<T>,
+  ) => StateInspectorHandle<T>;
+  applyStateInspectorUpdate: (id: string, value: unknown) => void;
+  refreshStateInspectorSource: (id: string) => void;
   logEntries: LogEntry[];
   clearLogs: () => void;
   exportLogs: () => void;
@@ -67,12 +83,81 @@ const DEBUG_FEATURE_TOGGLES_KEY = "debug-feature-toggles";
 type DebugFeatureToggles = {
   storageDebugger: boolean;
   logViewer: boolean;
+  stateInspector: boolean;
 };
 
 const DEFAULT_FEATURE_TOGGLES: DebugFeatureToggles = {
   storageDebugger: true,
   logViewer: true,
+  stateInspector: true,
 };
+
+export interface StateInspectorRegistration<T> {
+  id: string;
+  label: string;
+  description?: string;
+  group?: string;
+  getSnapshot: () => T;
+  setSnapshot?: (value: T) => void;
+  serialize?: (value: T) => unknown;
+  deserialize?: (value: unknown) => T;
+}
+
+interface StateInspectorSourceInternal {
+  id: string;
+  label: string;
+  description?: string;
+  group: string;
+  getSnapshot: () => unknown;
+  setSnapshot?: (value: unknown) => void;
+  serialize: (value: unknown) => unknown;
+  deserialize: (value: unknown) => unknown;
+  latestRawValue: unknown;
+  latestDisplayValue: unknown;
+  lastUpdated: number;
+}
+
+export interface StateInspectorSourceSnapshot {
+  id: string;
+  label: string;
+  description?: string;
+  group: string;
+  value: unknown;
+  lastUpdated: number;
+  canEdit: boolean;
+}
+
+export interface StateInspectorHandle<T> {
+  publish: (value: T) => void;
+  unregister: () => void;
+}
+
+interface SettingsDebugSnapshot {
+  syncConfig: SyncConfig;
+  matchConfig: MatchConfig;
+}
+
+function toStateInspectorSnapshots(
+  sources: Map<string, StateInspectorSourceInternal>,
+): StateInspectorSourceSnapshot[] {
+  return Array.from(sources.values())
+    .sort((a, b) => {
+      const groupCompare = a.group.localeCompare(b.group);
+      if (groupCompare !== 0) {
+        return groupCompare;
+      }
+      return a.label.localeCompare(b.label);
+    })
+    .map((source) => ({
+      id: source.id,
+      label: source.label,
+      description: source.description,
+      group: source.group,
+      value: source.latestDisplayValue,
+      lastUpdated: source.lastUpdated,
+      canEdit: Boolean(source.setSnapshot),
+    }));
+}
 
 /**
  * Provides debug context to its children, managing debug state and persistence.
@@ -89,9 +174,16 @@ export function DebugProvider({
     DEFAULT_FEATURE_TOGGLES,
   );
   const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
+  const [stateSourceSnapshots, setStateSourceSnapshots] = useState<
+    StateInspectorSourceSnapshot[]
+  >([]);
+  const stateSourcesRef = useRef(
+    new Map<string, StateInspectorSourceInternal>(),
+  );
 
   const storageDebuggerEnabled = featureToggles.storageDebugger;
   const logViewerEnabled = featureToggles.logViewer;
+  const stateInspectorEnabled = featureToggles.stateInspector;
 
   useEffect(() => {
     // Only install the console interceptor when BOTH debug mode AND the log viewer feature are enabled.
@@ -217,6 +309,186 @@ export function DebugProvider({
     }));
   }, [persistFeatureToggles]);
 
+  const setStateInspectorEnabled = useCallback(
+    (enabled: boolean) => {
+      persistFeatureToggles((prev) => ({
+        ...prev,
+        stateInspector: enabled,
+      }));
+    },
+    [persistFeatureToggles],
+  );
+
+  const toggleStateInspector = useCallback(() => {
+    persistFeatureToggles((prev) => ({
+      ...prev,
+      stateInspector: !prev.stateInspector,
+    }));
+  }, [persistFeatureToggles]);
+
+  const registerStateInspector = useCallback(
+    <T,>(config: StateInspectorRegistration<T>): StateInspectorHandle<T> => {
+      const serialize = config.serialize
+        ? (value: unknown) => config.serialize!(value as T) as unknown
+        : (value: unknown) => value;
+      const deserialize = config.deserialize
+        ? (value: unknown) => config.deserialize!(value) as unknown
+        : (value: unknown) => value;
+      const getSnapshot = () => config.getSnapshot() as unknown;
+      const setSnapshot = config.setSnapshot
+        ? (value: unknown) => {
+            (config.setSnapshot as (next: T) => void)(value as T);
+          }
+        : undefined;
+
+      const initialRaw = getSnapshot();
+      const initialDisplay = serialize(initialRaw);
+      const internal: StateInspectorSourceInternal = {
+        id: config.id,
+        label: config.label,
+        description: config.description,
+        group: config.group ?? "General",
+        getSnapshot,
+        setSnapshot,
+        serialize,
+        deserialize,
+        latestRawValue: initialRaw,
+        latestDisplayValue: initialDisplay,
+        lastUpdated: Date.now(),
+      };
+
+      const nextSources = new Map(stateSourcesRef.current);
+      nextSources.set(config.id, internal);
+      stateSourcesRef.current = nextSources;
+      setStateSourceSnapshots(toStateInspectorSnapshots(nextSources));
+
+      return {
+        publish: (value: T) => {
+          const current = stateSourcesRef.current.get(config.id);
+          if (!current) return;
+          const next = {
+            ...current,
+            latestRawValue: value,
+            latestDisplayValue: current.serialize(value as unknown),
+            lastUpdated: Date.now(),
+          } satisfies StateInspectorSourceInternal;
+          const map = new Map(stateSourcesRef.current);
+          map.set(config.id, next);
+          stateSourcesRef.current = map;
+          setStateSourceSnapshots(toStateInspectorSnapshots(map));
+        },
+        unregister: () => {
+          const current = new Map(stateSourcesRef.current);
+          current.delete(config.id);
+          stateSourcesRef.current = current;
+          setStateSourceSnapshots(toStateInspectorSnapshots(current));
+        },
+      };
+    },
+    [],
+  );
+
+  const refreshStateInspectorSource = useCallback((id: string) => {
+    const source = stateSourcesRef.current.get(id);
+    if (!source) return;
+    try {
+      const snapshot = source.getSnapshot();
+      const map = new Map(stateSourcesRef.current);
+      map.set(id, {
+        ...source,
+        latestRawValue: snapshot,
+        latestDisplayValue: source.serialize(snapshot),
+        lastUpdated: Date.now(),
+      });
+      stateSourcesRef.current = map;
+      setStateSourceSnapshots(toStateInspectorSnapshots(map));
+    } catch (error) {
+      console.error("Failed to refresh state inspector source", {
+        id,
+        error,
+      });
+    }
+  }, []);
+
+  const applyStateInspectorUpdate = useCallback(
+    (id: string, value: unknown) => {
+      const source = stateSourcesRef.current.get(id);
+      if (!source) {
+        throw new Error(`Unknown state inspector source: ${id}`);
+      }
+
+      if (!source.setSnapshot) {
+        throw new Error(`State inspector source '${id}' is read-only`);
+      }
+
+      const nextValue = source.deserialize(value);
+
+      try {
+        source.setSnapshot(nextValue);
+        const refreshed = source.getSnapshot();
+        const map = new Map(stateSourcesRef.current);
+        map.set(id, {
+          ...source,
+          latestRawValue: refreshed,
+          latestDisplayValue: source.serialize(refreshed),
+          lastUpdated: Date.now(),
+        });
+        stateSourcesRef.current = map;
+        setStateSourceSnapshots(toStateInspectorSnapshots(map));
+      } catch (error) {
+        console.error("Failed to apply state inspector update", {
+          id,
+          error,
+        });
+        throw error;
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const settingsId = "settings-state";
+    try {
+      const handle = registerStateInspector<SettingsDebugSnapshot>({
+        id: settingsId,
+        label: "Application Settings",
+        description:
+          "Persisted sync and matching configuration stored in local preferences.",
+        group: "Settings",
+        getSnapshot: () => ({
+          syncConfig: getSyncConfig(),
+          matchConfig: getMatchConfig(),
+        }),
+        setSnapshot: (snapshot) => {
+          if (snapshot.syncConfig) {
+            saveSyncConfig(snapshot.syncConfig);
+          }
+          if (snapshot.matchConfig) {
+            saveMatchConfig(snapshot.matchConfig);
+          }
+        },
+        serialize: (snapshot) => ({
+          syncConfig: snapshot.syncConfig,
+          matchConfig: snapshot.matchConfig,
+        }),
+        deserialize: (value) => {
+          const candidate = value as Partial<SettingsDebugSnapshot> | null;
+          return {
+            syncConfig: candidate?.syncConfig ?? getSyncConfig(),
+            matchConfig: candidate?.matchConfig ?? getMatchConfig(),
+          } satisfies SettingsDebugSnapshot;
+        },
+      });
+
+      return () => {
+        handle.unregister();
+      };
+    } catch (error) {
+      console.error("Failed to register settings state inspector", error);
+      return undefined;
+    }
+  }, [registerStateInspector]);
+
   const clearLogs = useCallback(() => {
     logCollector.clear();
   }, []);
@@ -268,6 +540,13 @@ export function DebugProvider({
       logViewerEnabled,
       setLogViewerEnabled,
       toggleLogViewer,
+      stateInspectorEnabled,
+      setStateInspectorEnabled,
+      toggleStateInspector,
+      stateInspectorSources: stateSourceSnapshots,
+      registerStateInspector,
+      applyStateInspectorUpdate,
+      refreshStateInspectorSource,
       logEntries,
       clearLogs,
       exportLogs,
@@ -283,6 +562,13 @@ export function DebugProvider({
       logViewerEnabled,
       setLogViewerEnabled,
       toggleLogViewer,
+      stateInspectorEnabled,
+      setStateInspectorEnabled,
+      toggleStateInspector,
+      stateSourceSnapshots,
+      registerStateInspector,
+      applyStateInspectorUpdate,
+      refreshStateInspectorSource,
       logEntries,
       clearLogs,
       exportLogs,

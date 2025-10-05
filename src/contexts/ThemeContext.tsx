@@ -10,6 +10,7 @@ import React, {
   useEffect,
   useState,
   useCallback,
+  useRef,
 } from "react";
 import { ThemeMode } from "@/types/theme-mode";
 import {
@@ -20,6 +21,7 @@ import {
   enableLightMode,
   applySystemTheme,
 } from "@/helpers/theme_helpers";
+import { useDebug, StateInspectorHandle } from "./DebugContext";
 
 /**
  * The shape of the theme context value provided to consumers.
@@ -35,6 +37,11 @@ interface ThemeContextType {
   isDarkMode: boolean;
   setThemeMode: (mode: ThemeMode) => Promise<boolean>;
   toggleTheme: () => Promise<boolean>;
+}
+
+interface ThemeDebugSnapshot {
+  theme: ThemePreferences;
+  isDarkMode: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -54,6 +61,53 @@ export function ThemeProvider({
     local: null,
   });
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const { registerStateInspector: registerThemeStateInspector } = useDebug();
+  const themeInspectorHandleRef =
+    useRef<StateInspectorHandle<ThemeDebugSnapshot> | null>(null);
+  const themeSnapshotRef = useRef<ThemeDebugSnapshot | null>(null);
+  const getThemeSnapshotRef = useRef<() => ThemeDebugSnapshot>(() => ({
+    theme,
+    isDarkMode,
+  }));
+  getThemeSnapshotRef.current = () => ({
+    theme,
+    isDarkMode,
+  });
+
+  const emitThemeSnapshot = useCallback(() => {
+    if (!themeInspectorHandleRef.current) return;
+    const snapshot = getThemeSnapshotRef.current();
+    themeSnapshotRef.current = snapshot;
+    themeInspectorHandleRef.current.publish(snapshot);
+  }, []);
+
+  const applyThemeDebugSnapshot = useCallback(
+    (snapshot: ThemeDebugSnapshot) => {
+      setTheme((prev) => ({
+        system: snapshot.theme?.system ?? prev.system,
+        local: snapshot.theme?.local ?? prev.local,
+      }));
+
+      const computedIsDark = (() => {
+        if (typeof snapshot.isDarkMode === "boolean")
+          return snapshot.isDarkMode;
+        if (snapshot.theme?.local === "dark") return true;
+        if (snapshot.theme?.local === "light") return false;
+        return undefined;
+      })();
+
+      if (computedIsDark !== undefined) {
+        setIsDarkMode(computedIsDark);
+      }
+
+      const resolvedMode =
+        snapshot.theme?.local ?? (computedIsDark ? "dark" : "light");
+      if (resolvedMode === "dark" || resolvedMode === "light") {
+        updateDocumentTheme(resolvedMode);
+      }
+    },
+    [],
+  );
 
   const initializeTheme = useCallback(async () => {
     try {
@@ -96,6 +150,35 @@ export function ThemeProvider({
       document.removeEventListener("themeToggled", handleThemeChange);
     };
   }, [initializeTheme]);
+
+  useEffect(() => {
+    emitThemeSnapshot();
+  }, [theme, isDarkMode, emitThemeSnapshot]);
+
+  useEffect(() => {
+    if (!registerThemeStateInspector) return;
+
+    themeSnapshotRef.current = getThemeSnapshotRef.current();
+
+    const handle = registerThemeStateInspector<ThemeDebugSnapshot>({
+      id: "theme-state",
+      label: "Theme",
+      description:
+        "Current theme preferences and resolved dark mode flag applied to the document.",
+      group: "Application",
+      getSnapshot: () =>
+        themeSnapshotRef.current ?? getThemeSnapshotRef.current(),
+      setSnapshot: applyThemeDebugSnapshot,
+    });
+
+    themeInspectorHandleRef.current = handle;
+
+    return () => {
+      handle.unregister();
+      themeInspectorHandleRef.current = null;
+      themeSnapshotRef.current = null;
+    };
+  }, [registerThemeStateInspector, applyThemeDebugSnapshot]);
 
   const setThemeMode = async (mode: ThemeMode) => {
     let newIsDarkMode: boolean;

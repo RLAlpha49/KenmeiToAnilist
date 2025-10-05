@@ -17,6 +17,7 @@ import {
   saveSyncReportToHistory,
 } from "../utils/export-utils";
 import { storage, STORAGE_KEYS } from "../utils/storage";
+import { useDebug, StateInspectorHandle } from "../contexts/DebugContext";
 
 /**
  * Snapshot of an in-progress synchronization session for pause/resume support.
@@ -152,6 +153,44 @@ interface SynchronizationActions {
   reset: () => void;
 }
 
+type DebuggableSynchronizationState = Omit<
+  SynchronizationState,
+  "abortController"
+> & {
+  abortController: {
+    aborted: boolean;
+    reason?: unknown;
+  } | null;
+};
+
+interface SyncDebugSnapshot {
+  state: DebuggableSynchronizationState;
+  resumeSnapshot: SyncResumeSnapshot | null;
+  pendingEntriesCount: number;
+  uniqueMediaIds: number[];
+  pauseRequested: boolean;
+  resumeRequested: boolean;
+}
+
+const toDebugSyncState = (
+  input: SynchronizationState,
+): DebuggableSynchronizationState => ({
+  ...input,
+  abortController: input.abortController
+    ? {
+        aborted: input.abortController.signal.aborted,
+        reason: (input.abortController.signal as { reason?: unknown }).reason,
+      }
+    : null,
+});
+
+const fromDebugSyncState = (
+  input: DebuggableSynchronizationState,
+): SynchronizationState => ({
+  ...input,
+  abortController: null,
+});
+
 /**
  * Hook that provides methods and state for managing AniList synchronization.
  *
@@ -183,6 +222,112 @@ export function useSynchronization(): [
   const pauseRequestedRef = useRef(false);
   const resumeRequestedRef = useRef(false);
   const hasLoadedSnapshotRef = useRef(false);
+  const { registerStateInspector: registerSyncStateInspector } = useDebug();
+  const syncInspectorHandleRef =
+    useRef<StateInspectorHandle<SyncDebugSnapshot> | null>(null);
+  const syncSnapshotRef = useRef<SyncDebugSnapshot | null>(null);
+  const getSyncSnapshotRef = useRef<() => SyncDebugSnapshot>(() => ({
+    state: toDebugSyncState(state),
+    resumeSnapshot: resumeSnapshotRef.current
+      ? {
+          ...resumeSnapshotRef.current,
+          entries: cloneEntries(resumeSnapshotRef.current.entries),
+        }
+      : null,
+    pendingEntriesCount: initialEntriesRef.current.length,
+    uniqueMediaIds: [...uniqueMediaIdsRef.current],
+    pauseRequested: pauseRequestedRef.current,
+    resumeRequested: resumeRequestedRef.current,
+  }));
+
+  getSyncSnapshotRef.current = () => ({
+    state: toDebugSyncState(state),
+    resumeSnapshot: resumeSnapshotRef.current
+      ? {
+          ...resumeSnapshotRef.current,
+          entries: cloneEntries(resumeSnapshotRef.current.entries),
+        }
+      : null,
+    pendingEntriesCount: initialEntriesRef.current.length,
+    uniqueMediaIds: [...uniqueMediaIdsRef.current],
+    pauseRequested: pauseRequestedRef.current,
+    resumeRequested: resumeRequestedRef.current,
+  });
+
+  const emitSyncSnapshot = useCallback(() => {
+    if (!syncInspectorHandleRef.current) return;
+    const snapshot = getSyncSnapshotRef.current();
+    syncSnapshotRef.current = snapshot;
+    syncInspectorHandleRef.current.publish(snapshot);
+  }, []);
+
+  const applySyncDebugSnapshot = useCallback(
+    (snapshot: SyncDebugSnapshot) => {
+      if (snapshot.state) {
+        setState((prev) => ({
+          ...prev,
+          ...fromDebugSyncState(snapshot.state),
+        }));
+      }
+
+      if (Array.isArray(snapshot.uniqueMediaIds)) {
+        uniqueMediaIdsRef.current = [...snapshot.uniqueMediaIds];
+      }
+
+      if (typeof snapshot.pauseRequested === "boolean") {
+        pauseRequestedRef.current = snapshot.pauseRequested;
+      }
+
+      if (typeof snapshot.resumeRequested === "boolean") {
+        resumeRequestedRef.current = snapshot.resumeRequested;
+      }
+
+      if (snapshot.resumeSnapshot !== undefined) {
+        resumeSnapshotRef.current = snapshot.resumeSnapshot
+          ? {
+              ...snapshot.resumeSnapshot,
+              entries: cloneEntries(snapshot.resumeSnapshot.entries || []),
+            }
+          : null;
+        initialEntriesRef.current = snapshot.resumeSnapshot
+          ? cloneEntries(snapshot.resumeSnapshot.entries || [])
+          : [];
+      }
+
+      syncSnapshotRef.current = getSyncSnapshotRef.current();
+      emitSyncSnapshot();
+    },
+    [emitSyncSnapshot, setState],
+  );
+
+  useEffect(() => {
+    emitSyncSnapshot();
+  }, [state, emitSyncSnapshot]);
+
+  useEffect(() => {
+    if (!registerSyncStateInspector) return;
+
+    syncSnapshotRef.current = getSyncSnapshotRef.current();
+
+    const handle = registerSyncStateInspector<SyncDebugSnapshot>({
+      id: "sync-state",
+      label: "Synchronization",
+      description:
+        "AniList sync engine status, resume metadata, and control signals.",
+      group: "Application",
+      getSnapshot: () =>
+        syncSnapshotRef.current ?? getSyncSnapshotRef.current(),
+      setSnapshot: applySyncDebugSnapshot,
+    });
+
+    syncInspectorHandleRef.current = handle;
+
+    return () => {
+      handle.unregister();
+      syncInspectorHandleRef.current = null;
+      syncSnapshotRef.current = null;
+    };
+  }, [registerSyncStateInspector, applySyncDebugSnapshot]);
 
   const updateSnapshotFromProgress = (
     progress: SyncProgress | null,
@@ -285,6 +430,8 @@ export function useSynchronization(): [
         timestamp: snapshot.timestamp,
       },
     }));
+
+    emitSyncSnapshot();
   };
 
   const clearResumeSnapshot = () => {
@@ -297,6 +444,8 @@ export function useSynchronization(): [
       resumeAvailable: false,
       resumeMetadata: null,
     }));
+
+    emitSyncSnapshot();
   };
 
   useEffect(() => {
@@ -827,8 +976,9 @@ export function useSynchronization(): [
       console.log("Pause requested - stopping current sync after current task");
       pauseRequestedRef.current = true;
       state.abortController.abort();
+      emitSyncSnapshot();
     }
-  }, [state.abortController]);
+  }, [state.abortController, emitSyncSnapshot]);
 
   const resumeSync = useCallback(
     async (
@@ -869,6 +1019,7 @@ export function useSynchronization(): [
       }
 
       resumeRequestedRef.current = true;
+      emitSyncSnapshot();
 
       await startSync(
         entriesToResume,
@@ -877,7 +1028,7 @@ export function useSynchronization(): [
         displayOrderMediaIds?.length ? displayOrderMediaIds : remainingIds,
       );
     },
-    [clearResumeSnapshot, startSync],
+    [clearResumeSnapshot, emitSyncSnapshot, startSync],
   );
 
   /**
@@ -925,7 +1076,8 @@ export function useSynchronization(): [
       resumeAvailable: false,
       resumeMetadata: null,
     });
-  }, [clearResumeSnapshot]);
+    emitSyncSnapshot();
+  }, [clearResumeSnapshot, emitSyncSnapshot]);
 
   return [
     state,

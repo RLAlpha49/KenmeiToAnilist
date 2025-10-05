@@ -10,8 +10,11 @@ import React, {
   useState,
   ReactNode,
   useEffect,
+  useRef,
+  useCallback,
 } from "react";
 import { toast } from "sonner";
+import { useDebug, StateInspectorHandle } from "./DebugContext";
 
 /**
  * The shape of the rate limit state managed by the context.
@@ -45,6 +48,11 @@ interface RateLimitContextType {
   clearRateLimit: () => void;
 }
 
+interface RateLimitDebugSnapshot {
+  rateLimitState: RateLimitState;
+  toastId: string | null;
+}
+
 const RateLimitContext = createContext<RateLimitContextType | undefined>(
   undefined,
 );
@@ -67,6 +75,32 @@ export function RateLimitProvider({
 
   // Use string type only for toast ID to fix TypeScript error
   const [toastId, setToastId] = useState<string | null>(null);
+  const { registerStateInspector: registerRateLimitInspector } = useDebug();
+  const rateLimitInspectorHandleRef =
+    useRef<StateInspectorHandle<RateLimitDebugSnapshot> | null>(null);
+  const rateLimitSnapshotRef = useRef<RateLimitDebugSnapshot | null>(null);
+  const getRateLimitSnapshotRef = useRef<() => RateLimitDebugSnapshot>(() => ({
+    rateLimitState,
+    toastId,
+  }));
+  getRateLimitSnapshotRef.current = () => ({ rateLimitState, toastId });
+
+  const emitRateLimitSnapshot = useCallback(() => {
+    if (!rateLimitInspectorHandleRef.current) return;
+    const snapshot = getRateLimitSnapshotRef.current();
+    rateLimitSnapshotRef.current = snapshot;
+    rateLimitInspectorHandleRef.current.publish(snapshot);
+  }, []);
+
+  const applyRateLimitDebugSnapshot = useCallback(
+    (snapshot: RateLimitDebugSnapshot) => {
+      if (snapshot.rateLimitState) {
+        setRateLimitState(snapshot.rateLimitState);
+      }
+      setToastId(snapshot.toastId ?? null);
+    },
+    [],
+  );
 
   // Function to set rate limit state
   const setRateLimit = (
@@ -179,6 +213,35 @@ export function RateLimitProvider({
       setToastId(null);
     }
   }, [rateLimitState.isRateLimited, rateLimitState.retryAfter]);
+
+  useEffect(() => {
+    emitRateLimitSnapshot();
+  }, [rateLimitState, toastId, emitRateLimitSnapshot]);
+
+  useEffect(() => {
+    if (!registerRateLimitInspector) return;
+
+    rateLimitSnapshotRef.current = getRateLimitSnapshotRef.current();
+
+    const handle = registerRateLimitInspector<RateLimitDebugSnapshot>({
+      id: "rate-limit-state",
+      label: "Rate Limit",
+      description:
+        "AniList API rate limit flags, retry timestamp, and active toast identifier.",
+      group: "Application",
+      getSnapshot: () =>
+        rateLimitSnapshotRef.current ?? getRateLimitSnapshotRef.current(),
+      setSnapshot: applyRateLimitDebugSnapshot,
+    });
+
+    rateLimitInspectorHandleRef.current = handle;
+
+    return () => {
+      handle.unregister();
+      rateLimitInspectorHandleRef.current = null;
+      rateLimitSnapshotRef.current = null;
+    };
+  }, [registerRateLimitInspector, applyRateLimitDebugSnapshot]);
 
   const contextValue = React.useMemo(
     () => ({ rateLimitState, setRateLimit, clearRateLimit }),

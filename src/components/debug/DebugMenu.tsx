@@ -12,9 +12,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
-import { Bug, ScrollText } from "lucide-react";
+import { Braces, Bug, ScrollText } from "lucide-react";
 import { StorageDebugger } from "./StorageDebugger";
 import { LogViewer } from "./LogViewer";
+import { StateInspector } from "./StateInspector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Badge } from "../ui/badge";
 import { useDebug } from "../../contexts/DebugContext";
@@ -36,7 +37,8 @@ interface DebugMenuProps {
 }
 
 export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
-  const { storageDebuggerEnabled, logViewerEnabled } = useDebug();
+  const { storageDebuggerEnabled, logViewerEnabled, stateInspectorEnabled } =
+    useDebug();
 
   const panels = useMemo(() => {
     const entries: DebugPanelDefinition[] = [];
@@ -85,8 +87,23 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
       });
     }
 
+    if (stateInspectorEnabled) {
+      entries.push({
+        id: "state",
+        label: "State Inspector",
+        description:
+          "Inspect registered application state snapshots and safely mutate values for testing.",
+        icon: (
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-amber-500/10 text-amber-500">
+            <Braces className="h-5 w-5" />
+          </div>
+        ),
+        element: <StateInspector />,
+      });
+    }
+
     return entries;
-  }, [logViewerEnabled, storageDebuggerEnabled]);
+  }, [logViewerEnabled, stateInspectorEnabled, storageDebuggerEnabled]);
 
   const [activePanel, setActivePanel] = useState<string>(panels[0]?.id ?? "");
 
