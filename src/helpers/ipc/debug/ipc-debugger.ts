@@ -48,24 +48,10 @@ const safeClone = (value: unknown): unknown => {
   }
 
   try {
-    if (typeof structuredClone === "function") {
-      return structuredClone(value);
-    }
+    return structuredClone(value);
   } catch {
-    // Ignore clone failures and fall back to JSON/string representations.
+    return Object.prototype.toString.call(value);
   }
-
-  if (value && typeof value === "object") {
-    try {
-      return typeof structuredClone === "function"
-        ? structuredClone(value)
-        : JSON.parse(JSON.stringify(value));
-    } catch {
-      return Object.prototype.toString.call(value);
-    }
-  }
-
-  return value;
 };
 
 const summarise = (value: unknown): string => {

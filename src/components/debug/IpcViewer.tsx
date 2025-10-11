@@ -404,7 +404,7 @@ const IpcEntry = React.memo(function IpcEntry({
   }
 
   return (
-    <div className="border-border/60 bg-background/95 hover:border-primary/30 max-w-[25vw] overflow-hidden rounded-lg border p-4 shadow-sm transition">
+  <div className="border-border/60 bg-background/95 hover:border-primary/30 w-full max-w-full lg:max-w-xl overflow-hidden rounded-lg border p-4 shadow-sm transition">
       <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <Badge
