@@ -104,7 +104,7 @@ export function StateInspector(): React.ReactElement {
       for (const source of stateInspectorSources) {
         const previous = prev[source.id];
         const formatted = safeStringify(source.value);
-        if (previous && previous.isDirty) {
+        if (previous?.isDirty) {
           nextState[source.id] = previous;
         } else {
           nextState[source.id] = {

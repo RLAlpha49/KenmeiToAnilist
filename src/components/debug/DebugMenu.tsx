@@ -12,10 +12,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
-import { Braces, Bug, ScrollText } from "lucide-react";
+import { Braces, Bug, ScrollText, Radio } from "lucide-react";
 import { StorageDebugger } from "./StorageDebugger";
 import { LogViewer } from "./LogViewer";
 import { StateInspector } from "./StateInspector";
+import { IpcViewer } from "./IpcViewer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Badge } from "../ui/badge";
 import { useDebug } from "../../contexts/DebugContext";
@@ -37,8 +38,12 @@ interface DebugMenuProps {
 }
 
 export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
-  const { storageDebuggerEnabled, logViewerEnabled, stateInspectorEnabled } =
-    useDebug();
+  const {
+    storageDebuggerEnabled,
+    logViewerEnabled,
+    stateInspectorEnabled,
+    ipcViewerEnabled,
+  } = useDebug();
 
   const panels = useMemo(() => {
     const entries: DebugPanelDefinition[] = [];
@@ -102,8 +107,28 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
       });
     }
 
+    if (ipcViewerEnabled) {
+      entries.push({
+        id: "ipc",
+        label: "IPC Traffic",
+        description:
+          "Monitor renderer ↔ main process messages, filter by channel, and inspect payloads.",
+        icon: (
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-sky-500/10 text-sky-500">
+            <Radio className="h-5 w-5" />
+          </div>
+        ),
+        element: <IpcViewer />,
+      });
+    }
+
     return entries;
-  }, [logViewerEnabled, stateInspectorEnabled, storageDebuggerEnabled]);
+  }, [
+    ipcViewerEnabled,
+    logViewerEnabled,
+    stateInspectorEnabled,
+    storageDebuggerEnabled,
+  ]);
 
   const [activePanel, setActivePanel] = useState<string>(panels[0]?.id ?? "");
 
@@ -192,10 +217,8 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
                               // default card appearance
                               "bg-background/90 border-border/40",
                               // active state: stronger background, border, subtle shadow and left accent
-                              "data-[state=active]:bg-primary/10 data-[state=active]:border-primary/40 data-[state=active]:text-primary data-[state=active]:shadow-md",
-                              "data-[state=active]:-ml-1 data-[state=active]:pl-4",
-                              "data-[state=active]:before:bg-primary/60 data-[state=active]:before:absolute data-[state=active]:before:top-0 data-[state=active]:before:left-0 data-[state=active]:before:h-full data-[state=active]:before:w-1 data-[state=active]:before:rounded-l-md data-[state=active]:before:content-['']",
-                              "hover:border-primary/30 hover:bg-primary/5",
+                              "data-[state=active]:!bg-background/30 data-[state=active]:!border-primary/40 data-[state=active]:!text-primary data-[state=active]:!shadow-md",
+                              "hover:!border-primary/30 hover:!bg-primary/5",
                               // Ensure text can wrap instead of overflowing
                               "min-w-0 break-words whitespace-normal",
                             )}

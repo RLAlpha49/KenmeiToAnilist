@@ -12,6 +12,7 @@ declare const MAIN_WINDOW_VITE_NAME: string;
 // Import types that are referenced in the global declarations
 import type { APICredentials, TokenExchangeResponse } from "./types/auth";
 import type { TokenExchangeParams } from "./types/api";
+import type { IpcLogEntry } from "./types/debug";
 
 /**
  * Augment the global ImportMeta interface for Vite environment variables.
@@ -37,6 +38,17 @@ interface ElectronWindow {
   minimize: () => Promise<void>;
   maximize: () => Promise<void>;
   close: () => Promise<void>;
+}
+
+interface ElectronIpcDebugBridge {
+  ipc: {
+    maxEntries: number;
+    getEvents: () => IpcLogEntry[];
+    subscribe: (callback: (entries: IpcLogEntry[]) => void) => () => void;
+    clear: () => void;
+    setEnabled: (value: boolean) => void;
+    isEnabled: () => boolean;
+  };
 }
 
 /**
@@ -166,6 +178,8 @@ declare global {
       }) => Promise<TokenExchangeResponse>;
     };
 
+    electronDebug?: ElectronIpcDebugBridge;
+
     // Custom application state properties
     matchingProcessState?: MatchingProcessState;
     activeAbortController?: AbortController;
@@ -181,6 +195,8 @@ declare global {
     var electronAPI: Window["electronAPI"];
     // eslint-disable-next-line no-var
     var electronAuth: Window["electronAuth"];
+    // eslint-disable-next-line no-var
+    var electronDebug: Window["electronDebug"] | undefined;
     // eslint-disable-next-line no-var
     var matchingProcessState: MatchingProcessState | undefined;
     // eslint-disable-next-line no-var

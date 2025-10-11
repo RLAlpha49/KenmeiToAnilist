@@ -8,8 +8,6 @@
 
 // TODO: API request/response viewer for debugging API issues. Should be able to see request URL, method, headers, body, response status, headers, body, and time taken. Should be able to filter by endpoint and status code.
 
-// TODO: IPC communication viewer for debugging IPC issues. Should be able to see messages sent/received, channels, and data. Should be able to filter.
-
 // TODO: Event logger to track user actions and application events for debugging purposes. Should be able to filter by event type and time range.
 
 // TODO: Rate limiting/debugging for API requests. Show current rate limit status and history of requests made. Allow simulating rate limit exceeded errors for testing.
@@ -37,6 +35,7 @@ import {
   saveMatchConfig,
   type MatchConfig,
 } from "../utils/storage";
+import type { IpcLogEntry } from "@/types/debug";
 
 /**
  * The shape of the debug context value provided to consumers.
@@ -69,6 +68,12 @@ interface DebugContextType {
   ) => StateInspectorHandle<T>;
   applyStateInspectorUpdate: (id: string, value: unknown) => void;
   refreshStateInspectorSource: (id: string) => void;
+  ipcViewerEnabled: boolean;
+  setIpcViewerEnabled: (enabled: boolean) => void;
+  toggleIpcViewer: () => void;
+  ipcEvents: IpcLogEntry[];
+  clearIpcEvents: () => void;
+  maxIpcEntries: number;
   logEntries: LogEntry[];
   clearLogs: () => void;
   exportLogs: () => void;
@@ -84,12 +89,15 @@ type DebugFeatureToggles = {
   storageDebugger: boolean;
   logViewer: boolean;
   stateInspector: boolean;
+  ipcViewer: boolean;
 };
 
+// Default all features to off for production
 const DEFAULT_FEATURE_TOGGLES: DebugFeatureToggles = {
-  storageDebugger: true,
-  logViewer: true,
-  stateInspector: true,
+  storageDebugger: false,
+  logViewer: false,
+  stateInspector: false,
+  ipcViewer: false,
 };
 
 export interface StateInspectorRegistration<T> {
@@ -174,6 +182,13 @@ export function DebugProvider({
     DEFAULT_FEATURE_TOGGLES,
   );
   const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
+  const [ipcEvents, setIpcEvents] = useState<IpcLogEntry[]>([]);
+  const [maxIpcEntries, setMaxIpcEntries] = useState<number>(() => {
+    if (typeof window !== "undefined" && window.electronDebug?.ipc) {
+      return window.electronDebug.ipc.maxEntries;
+    }
+    return 500;
+  });
   const [stateSourceSnapshots, setStateSourceSnapshots] = useState<
     StateInspectorSourceSnapshot[]
   >([]);
@@ -184,6 +199,7 @@ export function DebugProvider({
   const storageDebuggerEnabled = featureToggles.storageDebugger;
   const logViewerEnabled = featureToggles.logViewer;
   const stateInspectorEnabled = featureToggles.stateInspector;
+  const ipcViewerEnabled = featureToggles.ipcViewer;
 
   useEffect(() => {
     // Only install the console interceptor when BOTH debug mode AND the log viewer feature are enabled.
@@ -209,6 +225,42 @@ export function DebugProvider({
       unsubscribe();
     };
   }, [isDebugEnabled, logViewerEnabled]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const bridge = window.electronDebug?.ipc;
+    if (!bridge) return;
+    setMaxIpcEntries(bridge.maxEntries);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const bridge = window.electronDebug?.ipc;
+    if (!bridge) {
+      return;
+    }
+
+    // Enable/disable IPC tracking based on debug mode and feature toggle
+    const shouldTrack = isDebugEnabled && ipcViewerEnabled;
+    bridge.setEnabled(shouldTrack);
+
+    if (!shouldTrack) {
+      setIpcEvents([]);
+      return;
+    }
+
+    setIpcEvents(bridge.getEvents());
+    const unsubscribe = bridge.subscribe((entries) => {
+      setIpcEvents(entries);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [isDebugEnabled, ipcViewerEnabled]);
 
   // Load debug state from localStorage on initialization
   useEffect(() => {
@@ -326,10 +378,27 @@ export function DebugProvider({
     }));
   }, [persistFeatureToggles]);
 
+  const setIpcViewerEnabled = useCallback(
+    (enabled: boolean) => {
+      persistFeatureToggles((prev) => ({
+        ...prev,
+        ipcViewer: enabled,
+      }));
+    },
+    [persistFeatureToggles],
+  );
+
+  const toggleIpcViewer = useCallback(() => {
+    persistFeatureToggles((prev) => ({
+      ...prev,
+      ipcViewer: !prev.ipcViewer,
+    }));
+  }, [persistFeatureToggles]);
+
   const registerStateInspector = useCallback(
     <T,>(config: StateInspectorRegistration<T>): StateInspectorHandle<T> => {
       const serialize = config.serialize
-        ? (value: unknown) => config.serialize!(value as T) as unknown
+        ? (value: unknown) => config.serialize!(value as T)
         : (value: unknown) => value;
       const deserialize = config.deserialize
         ? (value: unknown) => config.deserialize!(value) as unknown
@@ -493,6 +562,11 @@ export function DebugProvider({
     logCollector.clear();
   }, []);
 
+  const clearIpcEvents = useCallback(() => {
+    if (typeof window === "undefined") return;
+    window.electronDebug?.ipc.clear();
+  }, []);
+
   const exportLogs = useCallback(() => {
     const entries = logCollector.getEntries();
     if (!entries.length) {
@@ -543,10 +617,16 @@ export function DebugProvider({
       stateInspectorEnabled,
       setStateInspectorEnabled,
       toggleStateInspector,
+      ipcViewerEnabled,
+      setIpcViewerEnabled,
+      toggleIpcViewer,
       stateInspectorSources: stateSourceSnapshots,
       registerStateInspector,
       applyStateInspectorUpdate,
       refreshStateInspectorSource,
+      ipcEvents,
+      clearIpcEvents,
+      maxIpcEntries,
       logEntries,
       clearLogs,
       exportLogs,
@@ -565,10 +645,16 @@ export function DebugProvider({
       stateInspectorEnabled,
       setStateInspectorEnabled,
       toggleStateInspector,
+      ipcViewerEnabled,
+      setIpcViewerEnabled,
+      toggleIpcViewer,
       stateSourceSnapshots,
       registerStateInspector,
       applyStateInspectorUpdate,
       refreshStateInspectorSource,
+      ipcEvents,
+      clearIpcEvents,
+      maxIpcEntries,
       logEntries,
       clearLogs,
       exportLogs,

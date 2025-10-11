@@ -103,71 +103,127 @@ export function RateLimitProvider({
   );
 
   // Function to set rate limit state
-  const setRateLimit = (
-    isLimited: boolean,
-    retryTime?: number,
-    message?: string,
-  ) => {
-    const retryTimestamp = retryTime ? Date.now() + retryTime * 1000 : null;
+  const setRateLimit = useCallback(
+    (isLimited: boolean, retryTime?: number, message?: string) => {
+      const retryTimestamp = retryTime ? Date.now() + retryTime * 1000 : null;
 
-    console.log("Setting rate limit state:", {
-      isLimited,
-      retryTimestamp,
-      message,
-    });
+      console.log("Setting rate limit state:", {
+        isLimited,
+        retryTimestamp,
+        message,
+      });
 
-    setRateLimitState({
-      isRateLimited: isLimited,
-      retryAfter: retryTimestamp,
-      message:
-        message ||
-        "AniList API rate limit reached. Please wait before making more requests.",
-    });
-  };
+      setRateLimitState({
+        isRateLimited: isLimited,
+        retryAfter: retryTimestamp,
+        message:
+          message ||
+          "AniList API rate limit reached. Please wait before making more requests.",
+      });
+    },
+    [],
+  );
 
   // Function to clear rate limit state
-  const clearRateLimit = () => {
+  const clearRateLimit = useCallback(() => {
     setRateLimitState({
       isRateLimited: false,
       retryAfter: null,
       message: null,
     });
-  };
+  }, []);
 
-  // Periodically check rate limit status from main process
+  const rateLimitStateRef = useRef(rateLimitState);
   useEffect(() => {
-    // Skip if we're in a browser environment without Electron
+    rateLimitStateRef.current = rateLimitState;
+  }, [rateLimitState]);
+
+  const isCheckingRef = useRef(false);
+
+  const checkRateLimitStatus = useCallback(async () => {
     if (!globalThis.electronAPI?.anilist?.getRateLimitStatus) return;
+    if (isCheckingRef.current) return;
 
-    const checkRateLimitStatus = async () => {
-      try {
-        const status =
-          await globalThis.electronAPI.anilist.getRateLimitStatus();
+    isCheckingRef.current = true;
+    try {
+      const status = await globalThis.electronAPI.anilist.getRateLimitStatus();
 
-        if (status.isRateLimited) {
-          setRateLimitState({
-            isRateLimited: true,
-            retryAfter: status.retryAfter,
-            message:
-              "AniList API rate limit reached. Please wait before making more requests.",
-          });
-        } else if (rateLimitState.isRateLimited) {
-          // Clear rate limit if it was previously set but is now cleared
-          clearRateLimit();
-        }
-      } catch (error) {
-        console.error("Error checking rate limit status:", error);
+      if (status.isRateLimited) {
+        setRateLimitState({
+          isRateLimited: true,
+          retryAfter: status.retryAfter,
+          message:
+            "AniList API rate limit reached. Please wait before making more requests.",
+        });
+      } else if (rateLimitStateRef.current.isRateLimited) {
+        clearRateLimit();
+      }
+    } catch (error) {
+      console.error("Error checking rate limit status:", error);
+    } finally {
+      isCheckingRef.current = false;
+    }
+  }, [clearRateLimit]);
+
+  useEffect(() => {
+    void checkRateLimitStatus();
+  }, [checkRateLimitStatus]);
+
+  useEffect(() => {
+    const handleRequestComplete = () => {
+      void checkRateLimitStatus();
+    };
+
+    globalThis.addEventListener(
+      "anilist:request:completed",
+      handleRequestComplete,
+    );
+
+    return () => {
+      globalThis.removeEventListener(
+        "anilist:request:completed",
+        handleRequestComplete,
+      );
+    };
+  }, [checkRateLimitStatus]);
+
+  useEffect(() => {
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+    const startPolling = () => {
+      if (pollTimer) return;
+      pollTimer = setInterval(() => {
+        void checkRateLimitStatus();
+      }, 3000);
+      void checkRateLimitStatus();
+    };
+
+    const stopPolling = () => {
+      if (!pollTimer) return;
+      clearInterval(pollTimer);
+      pollTimer = null;
+    };
+
+    const handleMatchingState = (event: Event) => {
+      const detail = (event as CustomEvent<{ isRunning: boolean }>).detail;
+      if (detail?.isRunning) {
+        startPolling();
+      } else {
+        stopPolling();
       }
     };
 
-    // Check immediately on component mount
-    checkRateLimitStatus();
+    if (globalThis.matchingProcessState?.isRunning) {
+      startPolling();
+    }
 
-    // Then check periodically
-    const interval = setInterval(checkRateLimitStatus, 1000);
+    globalThis.addEventListener("matching:state", handleMatchingState);
 
-    return () => clearInterval(interval);
-  }, [rateLimitState.isRateLimited]);
+    return () => {
+      stopPolling();
+      globalThis.removeEventListener("matching:state", handleMatchingState);
+    };
+  }, [checkRateLimitStatus]);
 
   // Listen for global rate limiting events
   useEffect(() => {

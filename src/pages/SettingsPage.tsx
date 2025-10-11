@@ -102,6 +102,8 @@ export function SettingsPage() {
     setLogViewerEnabled,
     stateInspectorEnabled,
     setStateInspectorEnabled,
+    ipcViewerEnabled,
+    setIpcViewerEnabled,
   } = useDebug();
 
   const prevCredentialSourceRef = useRef<"default" | "custom">(
@@ -409,6 +411,24 @@ export function SettingsPage() {
       return;
     }
 
+    const pushIfMissing = (arr: string[], value: string) => {
+      if (!arr.includes(value)) arr.push(value);
+    };
+
+    const matchStorageKeyToRule = (
+      key: string,
+      value: string,
+      rules: { patterns: string[]; target: string[] }[],
+    ): boolean => {
+      for (const { patterns, target } of rules) {
+        if (patterns.some((p) => key.includes(p))) {
+          pushIfMissing(target, value);
+          return true;
+        }
+      }
+      return false;
+    };
+
     const getCacheKeysByType = (): Record<string, string[]> => {
       const base: Record<string, string[]> = {
         auth: ["authState", "customCredentials", "useCustomCredentials"],
@@ -421,26 +441,18 @@ export function SettingsPage() {
         other: ["cache_version"],
       };
 
-      if (!STORAGE_KEYS) return base;
+      if (STORAGE_KEYS && typeof STORAGE_KEYS === "object") {
+        const rules: { patterns: string[]; target: string[] }[] = [
+          { patterns: ["MATCH", "REVIEW"], target: base.review },
+          { patterns: ["IMPORT"], target: base.import },
+          { patterns: ["CACHE"], target: base.other },
+        ];
 
-      const pushIfMissing = (arr: string[], value: string) => {
-        if (!arr.includes(value)) arr.push(value);
-      };
-
-      const rules: { patterns: string[]; target: string[] }[] = [
-        { patterns: ["MATCH", "REVIEW"], target: base.review },
-        { patterns: ["IMPORT"], target: base.import },
-        { patterns: ["CACHE"], target: base.other },
-      ];
-
-      for (const [key, value] of Object.entries(STORAGE_KEYS)) {
-        if (typeof value !== "string") continue;
-
-        // Apply the first matching rule
-        for (const { patterns, target } of rules) {
-          if (patterns.some((p) => key.includes(p))) {
-            pushIfMissing(target, value);
-            break;
+        for (const [key, value] of Object.entries(STORAGE_KEYS)) {
+          if (typeof value !== "string") continue;
+          const matched = matchStorageKeyToRule(key, value, rules);
+          if (!matched) {
+            pushIfMissing(base.other, value);
           }
         }
       }
@@ -1952,6 +1964,38 @@ export function SettingsPage() {
                           Changes applied through the inspector update in-app
                           state immediately. Export values before experimenting
                           for easy rollback.
+                        </p>
+                      </div>
+                      <div className="border-border/60 bg-background/40 rounded-2xl border border-dashed p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-sm font-semibold">
+                                IPC traffic monitor
+                              </h4>
+                            </div>
+                            <p className="text-muted-foreground text-xs">
+                              Capture renderer ↔ main IPC messages for
+                              troubleshooting communication issues.
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground text-xs">
+                              Enable panel
+                            </span>
+                            <Switch
+                              id="ipc-viewer-enabled"
+                              checked={ipcViewerEnabled}
+                              onCheckedChange={(checked) =>
+                                setIpcViewerEnabled(Boolean(checked))
+                              }
+                            />
+                          </div>
+                        </div>
+                        <p className="text-muted-foreground mt-3 text-xs">
+                          When disabled, IPC messages are not recorded – enable
+                          only while debugging to avoid collecting unnecessary
+                          data.
                         </p>
                       </div>
                     </div>

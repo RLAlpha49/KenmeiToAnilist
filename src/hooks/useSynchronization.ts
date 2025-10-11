@@ -98,6 +98,91 @@ const saveSnapshotToStorage = (snapshot: SyncResumeSnapshot | null): void => {
 };
 
 /**
+ * Helper function to create and update progress for incremental sync entries.
+ */
+const createProgressUpdater = (
+  uniqueIds: number[],
+  initialPartialReport: SyncReport,
+  setState: React.Dispatch<React.SetStateAction<SynchronizationState>>,
+  updateSnapshotFromProgress: (
+    progress: SyncProgress | null,
+    entriesForRun: AniListMediaEntry[],
+  ) => void,
+  initialEntriesRef: { current: AniListMediaEntry[] },
+  onProgressUpdate: (p: SyncProgress) => void,
+) => {
+  let successfulUpdates = initialPartialReport.successfulUpdates;
+  let failedUpdates = initialPartialReport.failedUpdates;
+  let skippedUpdates = initialPartialReport.skippedEntries;
+  let overallProgress = successfulUpdates + failedUpdates + skippedUpdates;
+
+  let lastReportedProgress: SyncProgress = {
+    total: uniqueIds.length,
+    completed: overallProgress,
+    successful: successfulUpdates,
+    failed: failedUpdates,
+    skipped: skippedUpdates,
+    currentEntry: null,
+    currentStep: null,
+    totalSteps: null,
+    rateLimited: false,
+    retryAfter: null,
+  };
+
+  const updateProgressLocal = (
+    entry: AniListMediaEntry,
+    step: number | null = null,
+    stepCompleted = false,
+    success = true,
+  ) => {
+    if (stepCompleted) {
+      overallProgress++;
+      if (success) successfulUpdates++;
+      else failedUpdates++;
+    }
+    const next: SyncProgress = {
+      ...lastReportedProgress,
+      completed: overallProgress,
+      total: uniqueIds.length,
+      successful: successfulUpdates,
+      failed: failedUpdates,
+      skipped: skippedUpdates,
+      currentEntry: {
+        mediaId: entry.mediaId,
+        title: entry.title || `Manga #${entry.mediaId}`,
+        coverImage: entry.coverImage || "",
+      },
+      currentStep: step,
+      totalSteps: entry.syncMetadata?.useIncrementalSync ? 3 : null,
+      rateLimited: false,
+      retryAfter: null,
+    };
+    lastReportedProgress = next;
+    setState((prev) => ({ ...prev, progress: next }));
+    updateSnapshotFromProgress(next, initialEntriesRef.current);
+    onProgressUpdate(next);
+  };
+
+  return {
+    updateProgressLocal,
+    getCounters: () => ({
+      successfulUpdates,
+      failedUpdates,
+      skippedUpdates,
+      overallProgress,
+    }),
+    incrementSuccess: () => successfulUpdates++,
+    incrementFailed: () => failedUpdates++,
+    incrementSkipped: () => skippedUpdates++,
+    addProgress: (count: number) => (overallProgress += count),
+    getLastProgress: () => lastReportedProgress,
+    setLastProgress: (progress: SyncProgress) => {
+      lastReportedProgress = progress;
+    },
+  };
+};
+
+/**
  * Represents the state of the synchronization process.
  *
  * @property isActive - Indicates if a synchronization is currently active.
@@ -120,6 +205,257 @@ interface SynchronizationState {
     remainingMediaIds: number[];
     timestamp: number;
   } | null;
+}
+
+/**
+ * Run a regular batch sync operation and return the report.
+ */
+async function runRegularBatch(
+  batchEntries: AniListMediaEntry[],
+  tokenArg: string,
+  abortSignal: AbortSignal,
+  uniqueIds: number[],
+  onProgressUpdate: (p: SyncProgress) => void,
+): Promise<SyncReport> {
+  if (batchEntries.length === 0) {
+    return {
+      totalEntries: 0,
+      successfulUpdates: 0,
+      failedUpdates: 0,
+      skippedEntries: 0,
+      errors: [],
+      timestamp: new Date(),
+    };
+  }
+  return await syncMangaBatch(
+    batchEntries,
+    tokenArg,
+    (progress) => {
+      const normalized: SyncProgress = {
+        ...progress,
+        total: uniqueIds.length,
+      };
+      onProgressUpdate(normalized);
+    },
+    abortSignal,
+    uniqueIds,
+  );
+}
+
+/**
+ * Context object for incremental sync operations to reduce parameter count.
+ */
+interface IncrementalSyncContext {
+  incEntries: AniListMediaEntry[];
+  tokenArg: string;
+  abortSignal: AbortSignal;
+  uniqueIds: number[];
+  initialPartialReport: SyncReport;
+  setState: React.Dispatch<React.SetStateAction<SynchronizationState>>;
+  updateSnapshotFromProgress: (
+    progress: SyncProgress | null,
+    entriesForRun: AniListMediaEntry[],
+  ) => void;
+  initialEntriesRef: { current: AniListMediaEntry[] };
+  onProgressUpdate: (p: SyncProgress) => void;
+}
+
+/**
+ * Handle the pause scenario: persist partial report and update state.
+ */
+function handlePausedSync(
+  existingReportFragment: SyncReport | null,
+  syncReport: SyncReport,
+  lastReportedProgress: SyncProgress,
+  resumeSnapshotRef: { current: SyncResumeSnapshot | null },
+  updateSnapshotFromProgress: (
+    progress: SyncProgress | null,
+    entriesForRun: AniListMediaEntry[],
+  ) => void,
+  initialEntriesRef: { current: AniListMediaEntry[] },
+  setState: React.Dispatch<React.SetStateAction<SynchronizationState>>,
+): void {
+  const partialReport = mergeReports(existingReportFragment, syncReport);
+
+  if (!resumeSnapshotRef.current) {
+    updateSnapshotFromProgress(lastReportedProgress, initialEntriesRef.current);
+  }
+
+  if (resumeSnapshotRef.current) {
+    resumeSnapshotRef.current.reportFragment = toPersistedReport(partialReport);
+    resumeSnapshotRef.current.progress = { ...lastReportedProgress };
+    resumeSnapshotRef.current.timestamp = Date.now();
+    saveSnapshotToStorage(resumeSnapshotRef.current);
+  }
+
+  setState((prev) => ({
+    ...prev,
+    isActive: false,
+    isPaused: true,
+    report: partialReport,
+    error: null,
+    abortController: null,
+    resumeAvailable: true,
+    resumeMetadata: resumeSnapshotRef.current
+      ? {
+          remainingMediaIds: resumeSnapshotRef.current.remainingMediaIds,
+          timestamp: resumeSnapshotRef.current.timestamp,
+        }
+      : prev.resumeMetadata,
+  }));
+}
+
+/**
+ * Finalize the sync operation: save report and update state.
+ */
+function finalizeSyncOperation(
+  existingReportFragment: SyncReport | null,
+  syncReport: SyncReport,
+  pauseRequested: boolean,
+  clearResumeSnapshot: () => void,
+  setState: React.Dispatch<React.SetStateAction<SynchronizationState>>,
+): void {
+  const finalReport = mergeReports(existingReportFragment, syncReport);
+
+  if (!pauseRequested) {
+    saveSyncReportToHistory(finalReport);
+    clearResumeSnapshot();
+  }
+
+  setState((prev) => ({
+    ...prev,
+    isActive: false,
+    isPaused: false,
+    report: finalReport,
+    abortController: null,
+    resumeAvailable: false,
+    resumeMetadata: null,
+  }));
+}
+
+/**
+ * Process incremental entries sequentially and merge into report.
+ */
+async function runIncrementalEntries(
+  context: IncrementalSyncContext,
+): Promise<SyncReport> {
+  const {
+    incEntries,
+    tokenArg,
+    abortSignal,
+    uniqueIds,
+    initialPartialReport,
+    setState,
+    updateSnapshotFromProgress,
+    initialEntriesRef,
+    onProgressUpdate,
+  } = context;
+  const progressUpdater = createProgressUpdater(
+    uniqueIds,
+    initialPartialReport,
+    setState,
+    updateSnapshotFromProgress,
+    initialEntriesRef,
+    onProgressUpdate,
+  );
+
+  const errors = [...initialPartialReport.errors];
+
+  for (const entry of incEntries) {
+    if (abortSignal.aborted) {
+      console.log("Incremental sync cancelled - stopping processing");
+      break;
+    }
+
+    try {
+      const syncResult = await syncMangaBatch(
+        [entry],
+        tokenArg,
+        (progress) => {
+          if (progress.currentEntry) {
+            progressUpdater.updateProgressLocal(
+              entry,
+              progress.currentStep ?? null,
+              false,
+              true,
+            );
+          }
+        },
+        abortSignal,
+        uniqueIds,
+      );
+
+      if (abortSignal.aborted) {
+        console.log(`Sync aborted during processing of entry ${entry.mediaId}`);
+        break;
+      }
+
+      const counters = progressUpdater.getCounters();
+      const successfulUpdates =
+        counters.successfulUpdates + syncResult.successfulUpdates;
+      const failedUpdates = counters.failedUpdates + syncResult.failedUpdates;
+      const skippedUpdates =
+        counters.skippedUpdates + syncResult.skippedEntries;
+      const overallProgress =
+        counters.overallProgress + syncResult.totalEntries;
+
+      if (syncResult.errors.length) errors.push(...syncResult.errors);
+
+      const finalized: SyncProgress = {
+        ...progressUpdater.getLastProgress(),
+        completed: overallProgress,
+        total: uniqueIds.length,
+        successful: successfulUpdates,
+        failed: failedUpdates,
+        skipped: skippedUpdates,
+        currentStep: null,
+      };
+
+      progressUpdater.setLastProgress(finalized);
+      setState((prev) => ({ ...prev, progress: finalized }));
+      updateSnapshotFromProgress(finalized, initialEntriesRef.current);
+
+      console.log(`Completed all steps for ${entry.mediaId}`);
+    } catch (err) {
+      console.error(
+        `Error processing incremental sync for entry ${entry.mediaId}:`,
+        err,
+      );
+
+      const counters = progressUpdater.getCounters();
+      const failedUpdates = counters.failedUpdates + 1;
+      const overallProgress = counters.overallProgress + 1;
+
+      if (err instanceof Error) {
+        errors.push({ mediaId: entry.mediaId, error: err.message });
+      }
+
+      const failedProgress: SyncProgress = {
+        ...progressUpdater.getLastProgress(),
+        completed: overallProgress,
+        total: uniqueIds.length,
+        failed: failedUpdates,
+        currentStep: null,
+      };
+
+      progressUpdater.setLastProgress(failedProgress);
+      setState((prev) => ({ ...prev, progress: failedProgress }));
+      updateSnapshotFromProgress(failedProgress, initialEntriesRef.current);
+    }
+  }
+
+  const finalCounters = progressUpdater.getCounters();
+  return {
+    successfulUpdates: finalCounters.successfulUpdates,
+    failedUpdates: finalCounters.failedUpdates,
+    totalEntries:
+      finalCounters.successfulUpdates +
+      finalCounters.failedUpdates +
+      finalCounters.skippedUpdates,
+    skippedEntries: finalCounters.skippedUpdates,
+    errors,
+    timestamp: new Date(),
+  };
 }
 
 /**
@@ -535,12 +871,9 @@ export function useSynchronization(): [
 
       pauseRequestedRef.current = false;
 
-      // Initialize controller, ids, progress
-      const initRun = (): {
-        abortController: AbortController;
-        uniqueMediaIds: number[];
-        lastProgress: SyncProgress;
-      } => {
+      // Main orchestration
+      try {
+        // Initialize controller, ids, progress
         const abortController = new AbortController();
         const uniqueMediaIds =
           displayOrderMediaIds && displayOrderMediaIds.length > 0
@@ -575,210 +908,7 @@ export function useSynchronization(): [
 
         updateSnapshotFromProgress(initialProgress, initialEntriesRef.current);
 
-        return {
-          abortController,
-          uniqueMediaIds,
-          lastProgress: initialProgress,
-        };
-      };
-
-      // Run a regular batch and return report
-      const runRegularBatch = async (
-        batchEntries: AniListMediaEntry[],
-        tokenArg: string,
-        abortSignal: AbortSignal,
-        uniqueIds: number[],
-        onProgressUpdate: (p: SyncProgress) => void,
-      ): Promise<SyncReport> => {
-        if (batchEntries.length === 0) {
-          return {
-            totalEntries: 0,
-            successfulUpdates: 0,
-            failedUpdates: 0,
-            skippedEntries: 0,
-            errors: [],
-            timestamp: new Date(),
-          };
-        }
-        return await syncMangaBatch(
-          batchEntries,
-          tokenArg,
-          (progress) => {
-            const normalized: SyncProgress = {
-              ...progress,
-              total: uniqueIds.length,
-            };
-            onProgressUpdate(normalized);
-          },
-          abortSignal,
-          uniqueIds,
-        );
-      };
-
-      // Process incremental entries sequentially and merge into report
-      const runIncrementalEntries = async (
-        incEntries: AniListMediaEntry[],
-        tokenArg: string,
-        abortSignal: AbortSignal,
-        uniqueIds: number[],
-        initialPartialReport: SyncReport,
-        onProgressUpdate: (p: SyncProgress) => void,
-      ): Promise<SyncReport> => {
-        // Start from an initial partial report
-        let successfulUpdates = initialPartialReport.successfulUpdates;
-        let failedUpdates = initialPartialReport.failedUpdates;
-        let skippedUpdates = initialPartialReport.skippedEntries;
-        let overallProgress =
-          successfulUpdates + failedUpdates + skippedUpdates;
-        const errors = [...initialPartialReport.errors];
-        let lastReportedProgress: SyncProgress = {
-          total: uniqueIds.length,
-          completed: overallProgress,
-          successful: successfulUpdates,
-          failed: failedUpdates,
-          skipped: skippedUpdates,
-          currentEntry: null,
-          currentStep: null,
-          totalSteps: null,
-          rateLimited: false,
-          retryAfter: null,
-        };
-
-        const updateProgressLocal = (
-          entry: AniListMediaEntry,
-          step: number | null = null,
-          stepCompleted = false,
-          success = true,
-        ) => {
-          if (stepCompleted) {
-            overallProgress++;
-            if (success) successfulUpdates++;
-            else failedUpdates++;
-          }
-          const next: SyncProgress = {
-            ...lastReportedProgress,
-            completed: overallProgress,
-            total: uniqueIds.length,
-            successful: successfulUpdates,
-            failed: failedUpdates,
-            skipped: skippedUpdates,
-            currentEntry: {
-              mediaId: entry.mediaId,
-              title: entry.title || `Manga #${entry.mediaId}`,
-              coverImage: entry.coverImage || "",
-            },
-            currentStep: step,
-            totalSteps: entry.syncMetadata?.useIncrementalSync ? 3 : null,
-            rateLimited: false,
-            retryAfter: null,
-          };
-          lastReportedProgress = next;
-          setState((prev) => ({ ...prev, progress: next }));
-          updateSnapshotFromProgress(next, initialEntriesRef.current);
-          onProgressUpdate(next);
-        };
-
-        for (const entry of incEntries) {
-          if (abortSignal.aborted) {
-            console.log("Incremental sync cancelled - stopping processing");
-            break;
-          }
-          try {
-            const syncResult = await syncMangaBatch(
-              [entry],
-              tokenArg,
-              (progress) => {
-                if (progress.currentEntry) {
-                  updateProgressLocal(
-                    entry,
-                    progress.currentStep ?? null,
-                    false,
-                    true,
-                  );
-                }
-              },
-              abortSignal,
-              uniqueIds,
-            );
-
-            if (abortSignal.aborted) {
-              console.log(
-                `Sync aborted during processing of entry ${entry.mediaId}`,
-              );
-              break;
-            }
-
-            successfulUpdates += syncResult.successfulUpdates;
-            failedUpdates += syncResult.failedUpdates;
-            skippedUpdates += syncResult.skippedEntries;
-            overallProgress += syncResult.totalEntries;
-            if (syncResult.errors.length) errors.push(...syncResult.errors);
-
-            const finalized: SyncProgress = {
-              ...lastReportedProgress,
-              completed: overallProgress,
-              total: uniqueIds.length,
-              successful: successfulUpdates,
-              failed: failedUpdates,
-              skipped: skippedUpdates,
-              currentEntry: lastReportedProgress.currentEntry,
-              currentStep: null,
-              totalSteps: lastReportedProgress.totalSteps,
-              rateLimited: false,
-              retryAfter: null,
-            };
-
-            lastReportedProgress = finalized;
-            setState((prev) => ({ ...prev, progress: finalized }));
-            updateSnapshotFromProgress(finalized, initialEntriesRef.current);
-
-            console.log(`Completed all steps for ${entry.mediaId}`);
-          } catch (err) {
-            console.error(
-              `Error processing incremental sync for entry ${entry.mediaId}:`,
-              err,
-            );
-            failedUpdates++;
-            overallProgress++;
-            if (err instanceof Error) {
-              errors.push({ mediaId: entry.mediaId, error: err.message });
-            }
-            const failedProgress: SyncProgress = {
-              ...lastReportedProgress,
-              completed: overallProgress,
-              total: uniqueIds.length,
-              successful: successfulUpdates,
-              failed: failedUpdates,
-              skipped: skippedUpdates,
-              currentEntry: lastReportedProgress.currentEntry,
-              currentStep: null,
-              totalSteps: lastReportedProgress.totalSteps,
-              rateLimited: false,
-              retryAfter: null,
-            };
-            lastReportedProgress = failedProgress;
-            setState((prev) => ({ ...prev, progress: failedProgress }));
-            updateSnapshotFromProgress(
-              failedProgress,
-              initialEntriesRef.current,
-            );
-            // continue to next entry
-          }
-        }
-
-        return {
-          successfulUpdates,
-          failedUpdates,
-          totalEntries: successfulUpdates + failedUpdates + skippedUpdates,
-          skippedEntries: skippedUpdates,
-          errors,
-          timestamp: new Date(),
-        };
-      };
-
-      // Main orchestration
-      try {
-        const { abortController, uniqueMediaIds, lastProgress } = initRun();
+        const lastProgress = initialProgress;
         let lastReportedProgress = lastProgress;
         let syncReport: SyncReport;
 
@@ -831,16 +961,19 @@ export function useSynchronization(): [
           );
 
           // Then incremental entries sequentially
-          const incReport = await runIncrementalEntries(
-            incrementalEntries,
-            token,
-            abortController.signal,
-            uniqueMediaIds,
-            syncReport,
-            () => {
+          const incReport = await runIncrementalEntries({
+            incEntries: incrementalEntries,
+            tokenArg: token,
+            abortSignal: abortController.signal,
+            uniqueIds: uniqueMediaIds,
+            initialPartialReport: syncReport,
+            setState,
+            updateSnapshotFromProgress,
+            initialEntriesRef,
+            onProgressUpdate: () => {
               /* no-op: runIncrementalEntries updates state directly */
             },
-          );
+          });
 
           syncReport = incReport;
           console.log("Incremental sync completed successfully");
@@ -865,62 +998,26 @@ export function useSynchronization(): [
 
         // If pause was requested, persist partial report and snapshot
         if (pauseRequestedRef.current) {
-          const partialReport = mergeReports(
+          handlePausedSync(
             existingReportFragment,
             syncReport,
+            lastReportedProgress,
+            resumeSnapshotRef,
+            updateSnapshotFromProgress,
+            initialEntriesRef,
+            setState,
           );
-
-          if (!resumeSnapshotRef.current) {
-            updateSnapshotFromProgress(
-              lastReportedProgress,
-              initialEntriesRef.current,
-            );
-          }
-
-          if (resumeSnapshotRef.current) {
-            resumeSnapshotRef.current.reportFragment =
-              toPersistedReport(partialReport);
-            resumeSnapshotRef.current.progress = { ...lastReportedProgress };
-            resumeSnapshotRef.current.timestamp = Date.now();
-            saveSnapshotToStorage(resumeSnapshotRef.current);
-          }
-
-          setState((prev) => ({
-            ...prev,
-            isActive: false,
-            isPaused: true,
-            report: partialReport,
-            error: null,
-            abortController: null,
-            resumeAvailable: true,
-            resumeMetadata: resumeSnapshotRef.current
-              ? {
-                  remainingMediaIds:
-                    resumeSnapshotRef.current.remainingMediaIds,
-                  timestamp: resumeSnapshotRef.current.timestamp,
-                }
-              : prev.resumeMetadata,
-          }));
-
           return;
         }
 
-        const finalReport = mergeReports(existingReportFragment, syncReport);
-
-        if (!pauseRequestedRef.current) {
-          saveSyncReportToHistory(finalReport);
-          clearResumeSnapshot();
-        }
-
-        setState((prev) => ({
-          ...prev,
-          isActive: false,
-          isPaused: false,
-          report: finalReport,
-          abortController: null,
-          resumeAvailable: false,
-          resumeMetadata: null,
-        }));
+        // Finalize the sync operation
+        finalizeSyncOperation(
+          existingReportFragment,
+          syncReport,
+          pauseRequestedRef.current,
+          clearResumeSnapshot,
+          setState,
+        );
       } catch (error) {
         console.error("Sync operation failed:", error);
         setState((prev) => ({

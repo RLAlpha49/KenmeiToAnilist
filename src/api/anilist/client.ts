@@ -182,6 +182,7 @@ async function handleElectronRequest<T>(
   bypassCache?: boolean,
   abortSignal?: AbortSignal,
 ): Promise<AniListResponse<T>> {
+  let succeeded = false;
   try {
     // Use the correct call format for the main process
     const response = await globalThis.electronAPI.anilist.request(
@@ -196,10 +197,19 @@ async function handleElectronRequest<T>(
       throw new DOMException("The operation was aborted", "AbortError");
     }
 
+    succeeded = true;
     return response as AniListResponse<T>;
   } catch (error) {
     console.error(`❌ [${requestId}] Error during AniList API request:`, error);
     throw error;
+  } finally {
+    if (typeof globalThis.dispatchEvent === "function") {
+      globalThis.dispatchEvent(
+        new CustomEvent("anilist:request:completed", {
+          detail: { succeeded },
+        }),
+      );
+    }
   }
 }
 

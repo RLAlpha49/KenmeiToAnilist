@@ -94,6 +94,15 @@ export const useMatchingProcess = ({
   const [cacheClearingCount, setCacheClearingCount] = useState(0);
   const [isManuallyPaused, setIsManuallyPaused] = useState(false);
 
+  const notifyMatchingState = useCallback((isRunning: boolean) => {
+    if (typeof globalThis.dispatchEvent !== "function") return;
+    globalThis.dispatchEvent(
+      new CustomEvent("matching:state", {
+        detail: { isRunning },
+      }),
+    );
+  }, []);
+
   /**
    * Starts the batch matching process for the provided manga list.
    *
@@ -161,6 +170,7 @@ export const useMatchingProcess = ({
         timeEstimate: initialEstimate,
         lastUpdated: Date.now(),
       };
+      notifyMatchingState(true);
 
       const abortController = new AbortController();
       globalThis.activeAbortController = abortController;
@@ -372,6 +382,7 @@ export const useMatchingProcess = ({
         if (globalThis.matchingProcessState) {
           globalThis.matchingProcessState.isRunning = false;
         }
+        notifyMatchingState(false);
       }
     },
     [
@@ -381,6 +392,7 @@ export const useMatchingProcess = ({
       initializeTimeTracking,
       savePendingManga,
       setPendingManga,
+      notifyMatchingState,
     ],
   );
 
