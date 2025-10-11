@@ -53,13 +53,13 @@ let searchCacheInitialized = false;
 function initializeSearchCache(): void {
   // Skip if already initialized
   if (searchCacheInitialized) {
-    console.log(
-      "Search cache already initialized, skipping duplicate initialization",
+    console.debug(
+      "[AniListClient] 💾 Search cache already initialized, skipping duplicate initialization",
     );
     return;
   }
 
-  console.log("Initializing AniList search cache...");
+  console.debug("[AniListClient] 💾 Initializing AniList search cache...");
   searchCacheInitialized = true;
 
   try {
@@ -86,8 +86,8 @@ function initializeSearchCache(): void {
       }
     }
 
-    console.log(
-      `Loaded ${loadedCount} cached search results from localStorage`,
+    console.debug(
+      `[AniListClient] 💾 Loaded ${loadedCount} cached search results from localStorage`,
     );
 
     // Immediately notify the manga service to sync caches
@@ -99,13 +99,18 @@ function initializeSearchCache(): void {
           detail: { count: loadedCount },
         });
         globalThis.dispatchEvent(event);
-        console.log(`Dispatched cache initialization event`);
+        console.debug(
+          `[AniListClient] 📤 Dispatched cache initialization event`,
+        );
       } catch (e) {
-        console.error("Failed to dispatch cache event", e);
+        console.error("[AniListClient] ❌ Failed to dispatch cache event", e);
       }
     }, 100);
   } catch (error) {
-    console.error("Error loading search cache from localStorage:", error);
+    console.error(
+      "[AniListClient] ❌ Error loading search cache from localStorage:",
+      error,
+    );
   }
 }
 
@@ -117,7 +122,10 @@ function persistSearchCache(): void {
     const storageKey = "anilist_search_cache";
     localStorage.setItem(storageKey, JSON.stringify(searchCache));
   } catch (error) {
-    console.error("Error saving search cache to localStorage:", error);
+    console.error(
+      "[AniListClient] ❌ Error saving search cache to localStorage:",
+      error,
+    );
   }
 }
 
@@ -200,7 +208,10 @@ async function handleElectronRequest<T>(
     succeeded = true;
     return response as AniListResponse<T>;
   } catch (error) {
-    console.error(`❌ [${requestId}] Error during AniList API request:`, error);
+    console.error(
+      `[AniListClient] ❌ [${requestId}] Error during AniList API request:`,
+      error,
+    );
     throw error;
   } finally {
     if (typeof globalThis.dispatchEvent === "function") {
@@ -232,7 +243,10 @@ async function processHttpError(
     errorData = { raw: errorText };
   }
 
-  console.error(`❌ [${requestId}] HTTP Error ${response.status}:`, errorData);
+  console.error(
+    `[AniListClient] ❌ [${requestId}] HTTP Error ${response.status}:`,
+    errorData,
+  );
 
   // Check for rate limiting
   if (response.status === 429) {
@@ -250,7 +264,10 @@ async function processHttpError(
         }),
       );
     } catch (e) {
-      console.error("Failed to dispatch rate limit event:", e);
+      console.error(
+        "[AniListClient] ❌ Failed to dispatch rate limit event:",
+        e,
+      );
     }
 
     const error = {
@@ -299,12 +316,18 @@ async function handleBrowserRequest<T>(
 
     // Check for GraphQL errors
     if (jsonResponse.errors) {
-      console.error(`⚠️ [${requestId}] GraphQL Errors:`, jsonResponse.errors);
+      console.error(
+        `[AniListClient] ⚠️ [${requestId}] GraphQL Errors:`,
+        jsonResponse.errors,
+      );
     }
 
     return jsonResponse as AniListResponse<T>;
   } catch (error) {
-    console.error(`❌ [${requestId}] Error during AniList API request:`, error);
+    console.error(
+      `[AniListClient] ❌ [${requestId}] Error during AniList API request:`,
+      error,
+    );
     throw error;
   }
 }
@@ -381,7 +404,7 @@ export async function getAccessToken(
   redirectUri: string,
   code: string,
 ): Promise<{ access_token: string; token_type: string; expires_in: number }> {
-  console.log("🔑 getAccessToken starting with:", {
+  console.debug("[AniListClient] 🔑 getAccessToken starting with:", {
     clientId: clientId.substring(0, 2) + "...",
     redirectUri,
     codeLength: code.length,
@@ -464,12 +487,14 @@ async function executeSearchQuery(
   } = options;
   // Check cache first
   if (!bypassCache && isCacheValid(searchCache, cacheKey)) {
-    console.log(`📋 Using cached ${searchType} results for: "${search}"`);
+    console.debug(
+      `[AniListClient] � Using cached ${searchType} results for: "${search}"`,
+    );
     return searchCache[cacheKey].data;
   }
 
-  console.log(
-    `🔍 ${searchType} for manga: "${search}"${searchType === "Advanced search" ? " with filters" : ""} (page ${page})`,
+  console.info(
+    `[AniListClient] 🔍 ${searchType} for manga: "${search}"${searchType === "Advanced search" ? " with filters" : ""} (page ${page})`,
   );
 
   try {
@@ -479,12 +504,12 @@ async function executeSearchQuery(
       Page?: SearchResult<AniListManga>["Page"];
     }>(query, variables, token, undefined, bypassCache);
 
-    console.log(`🔍 ${searchType} response:`, response);
+    console.debug(`[AniListClient] 🔍 ${searchType} response:`, response);
 
     // Validate response structure
     if (!response?.data) {
       console.error(
-        `Invalid API response for ${searchType.toLowerCase()} "${search}":`,
+        `[AniListClient] ❌ Invalid API response for ${searchType.toLowerCase()} "${search}":`,
         response,
       );
       throw new Error(`Invalid API response: missing data property`);
@@ -509,8 +534,8 @@ async function executeSearchQuery(
     }
 
     // Log results
-    console.log(
-      `🔍 Found ${result.Page.media.length} manga for ${searchType.toLowerCase()} "${search}" (page ${page}/${result.Page.pageInfo?.lastPage || 1})`,
+    console.info(
+      `[AniListClient] ✅ Found ${result.Page.media.length} manga for ${searchType.toLowerCase()} "${search}" (page ${page}/${result.Page.pageInfo?.lastPage || 1})`,
     );
 
     // Cache results
@@ -521,8 +546,8 @@ async function executeSearchQuery(
       };
 
       persistSearchCache();
-      console.log(
-        `💾 Cached ${result.Page.media.length} ${searchType.toLowerCase()} results for "${search}"`,
+      console.debug(
+        `[AniListClient] 💾 Cached ${result.Page.media.length} ${searchType.toLowerCase()} results for "${search}"`,
       );
     }
 
@@ -538,13 +563,19 @@ async function executeSearchQuery(
         });
         globalThis.dispatchEvent(event);
       } catch (e) {
-        console.error("Failed to dispatch search results event:", e);
+        console.error(
+          "[AniListClient] ❌ Failed to dispatch search results event:",
+          e,
+        );
       }
     }
 
     return result;
   } catch (error) {
-    console.error(`Error in ${searchType.toLowerCase()} for: ${search}`, error);
+    console.error(
+      `[AniListClient] ❌ Error in ${searchType.toLowerCase()} for: ${search}`,
+      error,
+    );
 
     // Return empty result to prevent crashing
     const emptyResult: SearchResult<AniListManga> = {
@@ -659,13 +690,13 @@ export function clearSearchCache(searchQuery?: string): void {
         delete searchCache[key];
       }
     }
-    console.log(`Cleared search cache for: ${searchQuery}`);
+    console.info(`[AniListClient] 🗑️ Cleared search cache for: ${searchQuery}`);
   } else {
     // Clear all cache
     for (const key of Object.keys(searchCache)) {
       delete searchCache[key];
     }
-    console.log("Cleared all search cache");
+    console.info("[AniListClient] 🗑️ Cleared all search cache");
   }
 
   // Update localStorage with the cleared cache
@@ -675,7 +706,10 @@ export function clearSearchCache(searchQuery?: string): void {
   globalThis.electronAPI.anilist
     .clearCache(searchQuery)
     .catch((error: Error) => {
-      console.error("Failed to clear main process cache:", error);
+      console.error(
+        "[AniListClient] ❌ Failed to clear main process cache:",
+        error,
+      );
     });
 }
 
@@ -719,7 +753,10 @@ export async function getMangaByIds(
     // Safely access media array or return empty array if not found
     return responseData.Page?.media || [];
   } catch (error) {
-    console.error(`Error fetching manga by IDs [${ids.join(", ")}]:`, error);
+    console.error(
+      `[AniListClient] ❌ Error fetching manga by IDs [${ids.join(", ")}]:`,
+      error,
+    );
     throw error;
   }
 }
@@ -760,7 +797,7 @@ function checkDirectRateLimitError(errorObj: {
     return null;
   }
 
-  console.warn("📛 DETECTED RATE LIMIT in getUserMangaList", {
+  console.warn("[AniListClient] 📛 DETECTED RATE LIMIT in getUserMangaList", {
     status: errorObj.status,
     isRateLimited: errorObj.isRateLimited,
     retryAfter: errorObj.retryAfter,
@@ -830,7 +867,10 @@ export async function getUserMangaList(
   try {
     // Get the user's ID first
     const viewerId = await getAuthenticatedUserID(token, abortSignal);
-    console.log("Successfully retrieved user ID:", viewerId);
+    console.debug(
+      "[AniListClient] ✅ Successfully retrieved user ID:",
+      viewerId,
+    );
 
     if (!viewerId) {
       throw new Error("Failed to get your AniList user ID");
@@ -839,7 +879,7 @@ export async function getUserMangaList(
     // Fetch all manga lists using multiple chunks if needed
     return await fetchCompleteUserMediaList(viewerId, token, abortSignal);
   } catch (error: unknown) {
-    console.error("Error fetching user manga list:", error);
+    console.error("[AniListClient] ❌ Error fetching user manga list:", error);
 
     // Early return if error is not an object
     if (!error || typeof error !== "object") {
@@ -910,7 +950,9 @@ async function getAuthenticatedUserID(
     }
 
     // If the above approach failed, try a direct query
-    console.log("First viewer query failed, trying direct query approach");
+    console.debug(
+      "[AniListClient] 🔄 First viewer query failed, trying direct query approach",
+    );
     const directViewerResponse = await request<ViewerResponse>(
       `query { Viewer { id name } }`,
       {},
@@ -918,7 +960,10 @@ async function getAuthenticatedUserID(
       abortSignal,
     );
 
-    console.log("Direct viewer query response:", directViewerResponse);
+    console.debug(
+      "[AniListClient] 📥 Direct viewer query response:",
+      directViewerResponse,
+    );
 
     // Try to extract user ID from various response formats
     if (directViewerResponse?.data?.Viewer?.id) {
@@ -930,12 +975,15 @@ async function getAuthenticatedUserID(
     }
 
     console.error(
-      "Could not extract user ID from any response:",
+      "[AniListClient] ❌ Could not extract user ID from any response:",
       directViewerResponse,
     );
     return undefined;
   } catch (error) {
-    console.error("Error getting authenticated user ID:", error);
+    console.error(
+      "[AniListClient] ❌ Error getting authenticated user ID:",
+      error,
+    );
     throw error;
   }
 }
@@ -1028,7 +1076,10 @@ function handleChunkError(
   }
 
   // For other errors, log and continue if we have some data
-  console.error(`Error fetching chunk ${currentChunk}:`, error);
+  console.error(
+    `[AniListClient] ❌ Error fetching chunk ${currentChunk}:`,
+    error,
+  );
 
   // If we have no data, propagate the error
   if (Object.keys(mediaMap).length === 0) {
@@ -1052,7 +1103,7 @@ function shouldFetchNextChunk(
 ): boolean {
   // If this chunk has fewer entries than the perChunk limit, we've reached the end
   if (chunkEntryCount < perChunk) {
-    console.log("Reached the end of user's manga list");
+    console.debug("[AniListClient] ✅ Reached the end of user's manga list");
     return false;
   }
   return true;
@@ -1077,8 +1128,8 @@ async function fetchAndProcessChunk(
   abortSignal: AbortSignal | undefined,
   mediaMap: UserMediaList,
 ): Promise<number> {
-  console.log(
-    `Fetching chunk ${currentChunk} (${perChunk} entries per chunk)...`,
+  console.debug(
+    `[AniListClient] 📥 Fetching chunk ${currentChunk} (${perChunk} entries per chunk)...`,
   );
 
   const response = await request<MediaListCollectionResponse>(
@@ -1093,7 +1144,7 @@ async function fetchAndProcessChunk(
 
   if (!mediaListCollection?.lists) {
     console.error(
-      `Invalid media list response for chunk ${currentChunk}:`,
+      `[AniListClient] ❌ Invalid media list response for chunk ${currentChunk}:`,
       response,
     );
     return 0; // Return 0 to indicate no entries processed
@@ -1104,8 +1155,8 @@ async function fetchAndProcessChunk(
     mediaMap,
   );
 
-  console.log(
-    `Processed ${chunkEntryCount} entries from chunk ${currentChunk}`,
+  console.debug(
+    `[AniListClient] ✅ Processed ${chunkEntryCount} entries from chunk ${currentChunk}`,
   );
 
   return chunkEntryCount;
@@ -1155,17 +1206,20 @@ async function fetchCompleteUserMediaList(
       }
     }
 
-    console.log(
-      `📚 Successfully mapped ${Object.keys(mediaMap).length} manga entries (processed ${totalEntriesProcessed} total entries)`,
+    console.info(
+      `[AniListClient] 📚 Successfully mapped ${Object.keys(mediaMap).length} manga entries (processed ${totalEntriesProcessed} total entries)`,
     );
     return mediaMap;
   } catch (error) {
-    console.error(`Error fetching manga list in chunks:`, error);
+    console.error(
+      `[AniListClient] ❌ Error fetching manga list in chunks:`,
+      error,
+    );
 
     // If we got any entries, return what we have
     if (Object.keys(mediaMap).length > 0) {
-      console.log(
-        `Returning partial manga list with ${Object.keys(mediaMap).length} entries`,
+      console.warn(
+        `[AniListClient] ⚠️ Returning partial manga list with ${Object.keys(mediaMap).length} entries`,
       );
       return mediaMap;
     }
@@ -1184,13 +1238,13 @@ function processMediaListCollectionChunk(
 ): number {
   let entriesProcessed = 0;
 
-  console.log(
-    `Retrieved ${mediaListCollection.lists.length} lists in this chunk`,
+  console.debug(
+    `[AniListClient] 📦 Retrieved ${mediaListCollection.lists.length} lists in this chunk`,
   );
 
   for (const list of mediaListCollection.lists) {
     if (!list.entries) {
-      console.warn(`List "${list.name}" has no entries`);
+      console.warn(`[AniListClient] ⚠️ List "${list.name}" has no entries`);
       continue;
     }
 
@@ -1198,7 +1252,10 @@ function processMediaListCollectionChunk(
 
     for (const entry of list.entries) {
       if (!entry.media || !entry.mediaId) {
-        console.warn("Found entry without media data:", entry);
+        console.warn(
+          "[AniListClient] ⚠️ Found entry without media data:",
+          entry,
+        );
         continue;
       }
 

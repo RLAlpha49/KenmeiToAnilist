@@ -168,7 +168,10 @@ export function MangaMatchingPanel({
       };
       saveMatchConfig(updatedConfig);
     } catch (error) {
-      console.error("Failed to save Comick search setting:", error);
+      console.error(
+        "[MatchingPanel] Failed to save Comick search setting:",
+        error,
+      );
       // Revert the state if saving failed
       setEnableComickSearch(!enabled);
     }
@@ -185,7 +188,10 @@ export function MangaMatchingPanel({
       };
       saveMatchConfig(updatedConfig);
     } catch (error) {
-      console.error("Failed to save MangaDex search setting:", error);
+      console.error(
+        "[MatchingPanel] Failed to save MangaDex search setting:",
+        error,
+      );
       // Revert the state if saving failed
       setEnableMangaDexSearch(!enabled);
     }
@@ -490,8 +496,8 @@ export function MangaMatchingPanel({
         (!match.anilistMatches || match.anilistMatches.length === 0),
     );
 
-    console.log(
-      `Skipping ${pendingWithNoMatches.length} pending manga with no matches`,
+    console.debug(
+      `[MatchingPanel] Skipping ${pendingWithNoMatches.length} pending manga with no matches`,
     );
 
     // Skip all matches at once if possible
@@ -555,8 +561,8 @@ export function MangaMatchingPanel({
         match.anilistMatches.length > 0,
     );
 
-    console.log(
-      `Accepting ${pendingWithMatches.length} pending manga with matches`,
+    console.debug(
+      `[MatchingPanel] Accepting ${pendingWithMatches.length} pending manga with matches`,
     );
 
     // Accept all matches at once if possible
@@ -619,8 +625,8 @@ export function MangaMatchingPanel({
       (match) => !match.anilistMatches || match.anilistMatches.length === 0,
     );
 
-    console.log(
-      `Re-searching ${mangaWithoutMatches.length} manga without any matches`,
+    console.debug(
+      `[MatchingPanel] Re-searching ${mangaWithoutMatches.length} manga without any matches`,
     );
 
     if (mangaWithoutMatches.length > 0) {
@@ -663,8 +669,8 @@ export function MangaMatchingPanel({
     // Find all skipped manga
     const skippedManga = matches.filter((match) => match.status === "skipped");
 
-    console.log(
-      `Resetting ${skippedManga.length} skipped manga to pending status`,
+    console.debug(
+      `[MatchingPanel] Resetting ${skippedManga.length} skipped manga to pending status`,
     );
 
     // Reset all these manga to pending status

@@ -94,12 +94,17 @@ export interface UpdateInfo {
  * @source
  */
 export async function checkForUpdates(): Promise<UpdateInfo> {
+  console.debug("[AppVersion] Checking for app updates...");
+
   try {
     const response = await fetch(
       "https://api.github.com/repos/RLAlpha49/kenmei-to-anilist/releases/latest",
     );
 
     if (!response.ok) {
+      console.warn(
+        `[AppVersion] ⚠️ Failed to fetch latest release: HTTP ${response.status}`,
+      );
       return {
         hasUpdate: false,
         latestVersion: "",
@@ -117,13 +122,23 @@ export async function checkForUpdates(): Promise<UpdateInfo> {
       currentVersion &&
       compareVersions(latestVersion, currentVersion) > 0;
 
+    if (hasUpdate) {
+      console.info(
+        `[AppVersion] 🆕 Update available: ${currentVersion} → ${latestVersion}`,
+      );
+    } else {
+      console.debug(
+        `[AppVersion] ✅ App is up to date (current: ${currentVersion}, latest: ${latestVersion})`,
+      );
+    }
+
     return {
       hasUpdate,
       latestVersion,
       releaseUrl: data.html_url || "",
     };
   } catch (error) {
-    console.error("Error checking for updates:", error);
+    console.error("[AppVersion] ❌ Error checking for updates:", error);
     return {
       hasUpdate: false,
       latestVersion: "",

@@ -14,28 +14,31 @@ import { contextBridge, ipcRenderer } from "electron";
  */
 export function exposeAuthContext() {
   // For debugging
-  console.log("Setting up auth context bridge...");
+  console.debug("[AuthContext] Setting up auth context bridge...");
 
   contextBridge.exposeInMainWorld("electronAuth", {
     openOAuthWindow: (oauthUrl: string, redirectUri: string) => {
-      console.log("Renderer requesting to open OAuth window", {
+      console.debug("[AuthContext] Renderer requesting to open OAuth window", {
         oauthUrl,
         redirectUri,
       });
       return ipcRenderer.invoke("auth:openOAuthWindow", oauthUrl, redirectUri);
     },
     storeCredentials: (credentials: APICredentials) => {
-      console.log("Renderer requesting to store credentials", {
+      console.debug("[AuthContext] Renderer requesting to store credentials", {
         source: credentials.source,
       });
       return ipcRenderer.invoke("auth:storeCredentials", credentials);
     },
     getCredentials: (source: "default" | "custom") => {
-      console.log("Renderer requesting credentials for", source);
+      console.debug(
+        "[AuthContext] Renderer requesting credentials for",
+        source,
+      );
       return ipcRenderer.invoke("auth:getCredentials", source);
     },
     cancelAuth: () => {
-      console.log("Renderer requesting to cancel auth");
+      console.debug("[AuthContext] Renderer requesting to cancel auth");
       return ipcRenderer.invoke("auth:cancel");
     },
     exchangeToken: (params: {
@@ -44,7 +47,7 @@ export function exposeAuthContext() {
       redirectUri: string;
       code: string;
     }) => {
-      console.log("Renderer requesting token exchange");
+      console.debug("[AuthContext] Renderer requesting token exchange");
       return ipcRenderer.invoke("auth:exchangeToken", params);
     },
     onCodeReceived: (callback: (data: { code: string }) => void) => {
@@ -53,7 +56,7 @@ export function exposeAuthContext() {
 
       // Add the event listener for the auth code
       ipcRenderer.on("auth:codeReceived", (_, data) => {
-        console.log("Received auth code from main process", {
+        console.debug("[AuthContext] Received auth code from main process", {
           codeLength: data?.code?.length || 0,
         });
         callback(data);
@@ -70,7 +73,7 @@ export function exposeAuthContext() {
 
       // Add the event listener for auth cancellation
       ipcRenderer.on("auth:cancelled", () => {
-        console.log("Auth was cancelled");
+        console.debug("[AuthContext] Auth was cancelled");
         callback();
       });
 
@@ -85,7 +88,7 @@ export function exposeAuthContext() {
 
       // Add the event listener for status updates
       ipcRenderer.on("auth:status", (_, message) => {
-        console.log("Status update:", message);
+        console.debug("[AuthContext] Status update:", message);
         callback(message);
       });
 
@@ -96,5 +99,5 @@ export function exposeAuthContext() {
     },
   });
 
-  console.log("Auth context bridge setup complete");
+  console.info("[AuthContext] Auth context bridge setup complete");
 }

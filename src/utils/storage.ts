@@ -135,7 +135,7 @@ export const storage = {
             // Only log errors in development
             if (process.env.NODE_ENV === "development") {
               console.error(
-                `Error retrieving ${key} from electron-store:`,
+                `[Storage] Error retrieving ${key} from electron-store:`,
                 error,
               );
             }
@@ -144,7 +144,7 @@ export const storage = {
 
       return value;
     } catch (error) {
-      console.error(`Error getting item from storage: ${key}`, error);
+      console.error(`[Storage] Error getting item from storage: ${key}`, error);
       return null;
     }
   },
@@ -158,8 +158,13 @@ export const storage = {
     try {
       // Check if value changed to avoid redundant operations
       if (storageCache[key] === value) {
+        console.debug(`[Storage] 🔍 Skipping redundant write for key: ${key}`);
         return;
       }
+
+      console.debug(
+        `[Storage] 🔍 Setting item: ${key} (${value.length} bytes)`,
+      );
 
       // Update cache
       storageCache[key] = value;
@@ -170,14 +175,17 @@ export const storage = {
       // Also store in electronStore if available
       if (globalThis.electronStore) {
         globalThis.electronStore.setItem(key, value).catch((error) => {
-          // Only log errors in development
-          if (process.env.NODE_ENV === "development") {
-            console.error(`Error storing ${key} in electron-store:`, error);
-          }
+          console.error(
+            `[Storage] ❌ Error storing ${key} in electron-store:`,
+            error,
+          );
         });
       }
     } catch (error) {
-      console.error(`Error setting item in storage: ${key}`, error);
+      console.error(
+        `[Storage] ❌ Error setting item in storage: ${key}`,
+        error,
+      );
     }
   },
 
@@ -187,6 +195,8 @@ export const storage = {
    */
   removeItem: (key: string): void => {
     try {
+      console.debug(`[Storage] 🔍 Removing item: ${key}`);
+
       // Remove from cache
       delete storageCache[key];
 
@@ -196,14 +206,17 @@ export const storage = {
       // Also remove from electronStore if available
       if (globalThis.electronStore) {
         globalThis.electronStore.removeItem(key).catch((error) => {
-          // Only log errors in development
-          if (process.env.NODE_ENV === "development") {
-            console.error(`Error removing ${key} from electron-store:`, error);
-          }
+          console.error(
+            `[Storage] ❌ Error removing ${key} from electron-store:`,
+            error,
+          );
         });
       }
     } catch (error) {
-      console.error(`Error removing item from storage: ${key}`, error);
+      console.error(
+        `[Storage] ❌ Error removing item from storage: ${key}`,
+        error,
+      );
     }
   },
 
@@ -212,7 +225,10 @@ export const storage = {
    */
   clear: (): void => {
     try {
+      console.info("[Storage] 🗑️ Clearing all storage...");
+
       // Clear cache
+      const keyCount = Object.keys(storageCache).length;
       for (const key of Object.keys(storageCache)) {
         delete storageCache[key];
       }
@@ -223,14 +239,13 @@ export const storage = {
       // Also clear electronStore if available
       if (globalThis.electronStore) {
         globalThis.electronStore.clear().catch((error) => {
-          // Only log errors in development
-          if (process.env.NODE_ENV === "development") {
-            console.error("Error clearing electron-store:", error);
-          }
+          console.error("[Storage] ❌ Error clearing electron-store:", error);
         });
       }
+
+      console.info(`[Storage] ✅ Cleared ${keyCount} keys from storage`);
     } catch (error) {
-      console.error("Error clearing storage", error);
+      console.error("[Storage] ❌ Error clearing storage", error);
     }
   },
 
@@ -243,21 +258,32 @@ export const storage = {
   getItemAsync: async (key: string): Promise<string | null> => {
     if (globalThis.electronStore) {
       try {
+        console.debug(`[Storage] 🔍 Async getting item: ${key}`);
         const value = await globalThis.electronStore.getItem(key);
         if (value !== null) {
+          console.debug(
+            `[Storage] ✅ Found item: ${key} (${value.length} bytes)`,
+          );
           localStorage.setItem(key, value); // keep localStorage in sync
           storageCache[key] = value;
+        } else {
+          console.debug(`[Storage] 🔍 Item not found: ${key}`);
         }
         return value;
       } catch (error) {
-        if (process.env.NODE_ENV === "development") {
-          console.error(`Error retrieving ${key} from electron-store:`, error);
-        }
+        console.error(
+          `[Storage] ❌ Error retrieving ${key} from electron-store:`,
+          error,
+        );
+        console.debug("[Storage] 🔍 Falling back to localStorage");
         // fallback to localStorage
         return localStorage.getItem(key);
       }
     }
     // fallback if no electronStore
+    console.debug(
+      `[Storage] 🔍 No electron-store available, using localStorage for ${key}`,
+    );
     return localStorage.getItem(key);
   },
 };
@@ -365,6 +391,9 @@ export const DEFAULT_MATCH_CONFIG: MatchConfig = {
  */
 export function saveKenmeiData(data: KenmeiData): void {
   try {
+    console.info(
+      `[Storage] 💾 Saving Kenmei data: ${data.manga?.length || 0} entries`,
+    );
     storage.setItem(STORAGE_KEYS.KENMEI_DATA, JSON.stringify(data));
 
     // Also save import stats for quick access on dashboard
@@ -378,13 +407,19 @@ export function saveKenmeiData(data: KenmeiData): void {
 
     // Save the current cache version if not already saved
     if (!storage.getItem(STORAGE_KEYS.CACHE_VERSION)) {
+      console.debug(
+        "[Storage] 🔍 Setting cache version to:",
+        CURRENT_CACHE_VERSION,
+      );
       storage.setItem(
         STORAGE_KEYS.CACHE_VERSION,
         CURRENT_CACHE_VERSION.toString(),
       );
     }
+
+    console.info("[Storage] ✅ Kenmei data saved successfully");
   } catch (error) {
-    console.error("Error saving Kenmei data to storage", error);
+    console.error("[Storage] ❌ Error saving Kenmei data to storage", error);
   }
 }
 
@@ -400,10 +435,22 @@ export function saveKenmeiData(data: KenmeiData): void {
  */
 export function getKenmeiData(): KenmeiData | null {
   try {
+    console.debug("[Storage] 🔍 Retrieving Kenmei data...");
     const data = storage.getItem(STORAGE_KEYS.KENMEI_DATA);
-    return data ? JSON.parse(data) : null;
+    if (data) {
+      const parsed = JSON.parse(data);
+      console.info(
+        `[Storage] ✅ Retrieved Kenmei data: ${parsed.manga?.length || 0} entries`,
+      );
+      return parsed;
+    }
+    console.debug("[Storage] 🔍 No Kenmei data found");
+    return null;
   } catch (error) {
-    console.error("Error retrieving Kenmei data from storage", error);
+    console.error(
+      "[Storage] ❌ Error retrieving Kenmei data from storage",
+      error,
+    );
     return null;
   }
 }
@@ -420,10 +467,22 @@ export function getKenmeiData(): KenmeiData | null {
  */
 export function getImportStats(): ImportStats | null {
   try {
+    console.debug("[Storage] 🔍 Retrieving import stats...");
     const stats = storage.getItem(STORAGE_KEYS.IMPORT_STATS);
-    return stats ? JSON.parse(stats) : null;
+    if (stats) {
+      const parsed = JSON.parse(stats);
+      console.debug(
+        `[Storage] ✅ Retrieved import stats: ${parsed.total} total entries`,
+      );
+      return parsed;
+    }
+    console.debug("[Storage] 🔍 No import stats found");
+    return null;
   } catch (error) {
-    console.error("Error retrieving import stats from storage", error);
+    console.error(
+      "[Storage] ❌ Error retrieving import stats from storage",
+      error,
+    );
     return null;
   }
 }
@@ -462,6 +521,8 @@ export function getStatusCountsFromData(
  */
 export function getSavedMatchResults(): MatchResult[] | null {
   try {
+    console.debug("[Storage] 🔍 Retrieving saved match results...");
+
     // Check cache version compatibility
     const savedVersion = Number.parseInt(
       storage.getItem(STORAGE_KEYS.CACHE_VERSION) || "0",
@@ -469,15 +530,24 @@ export function getSavedMatchResults(): MatchResult[] | null {
     );
     if (savedVersion !== CURRENT_CACHE_VERSION && savedVersion !== 0) {
       console.warn(
-        `Cache version mismatch. Saved: ${savedVersion}, Current: ${CURRENT_CACHE_VERSION}`,
+        `[Storage] ⚠️ Cache version mismatch. Saved: ${savedVersion}, Current: ${CURRENT_CACHE_VERSION}`,
       );
       return null; // Consider the cache invalid if versions don't match
     }
 
     const savedResults = storage.getItem(STORAGE_KEYS.MATCH_RESULTS);
-    return savedResults ? JSON.parse(savedResults) : null;
+    if (savedResults) {
+      const parsed = JSON.parse(savedResults);
+      console.info(`[Storage] ✅ Retrieved ${parsed.length} match results`);
+      return parsed;
+    }
+    console.debug("[Storage] 🔍 No match results found");
+    return null;
   } catch (error) {
-    console.error("Error retrieving saved match results from storage", error);
+    console.error(
+      "[Storage] ❌ Error retrieving saved match results from storage",
+      error,
+    );
     return null;
   }
 }
@@ -495,6 +565,10 @@ export function getSavedMatchResults(): MatchResult[] | null {
  */
 export function mergeMatchResults(newResults: MatchResult[]): MatchResult[] {
   try {
+    console.info(
+      `[Storage] 🔄 Merging ${newResults.length} new match results...`,
+    );
+
     // Get existing results
     const existingResults = getSavedMatchResults();
     if (
@@ -502,12 +576,14 @@ export function mergeMatchResults(newResults: MatchResult[]): MatchResult[] {
       !Array.isArray(existingResults) ||
       existingResults.length === 0
     ) {
-      console.log("No existing match results to merge, using new results");
+      console.info(
+        "[Storage] ✅ No existing match results to merge, using new results",
+      );
       return newResults;
     }
 
-    console.log(
-      `Merging ${newResults.length} new results with ${existingResults.length} existing results`,
+    console.debug(
+      `[Storage] 🔍 Merging ${newResults.length} new results with ${existingResults.length} existing results`,
     );
 
     // Create a map of existing results for quick lookup by both ID and title
@@ -592,27 +668,29 @@ export function mergeMatchResults(newResults: MatchResult[]): MatchResult[] {
     );
 
     if (unprocessedExistingResults.length > 0) {
-      console.log(
-        `Adding ${unprocessedExistingResults.length} existing results that weren't in the new batch`,
+      console.debug(
+        `[Storage] 🔍 Adding ${unprocessedExistingResults.length} existing results that weren't in the new batch`,
       );
     }
 
     // Combine processed results with unprocessed existing results
     const mergedResults = [...processedResults, ...unprocessedExistingResults];
 
-    console.log(`Merged results: ${mergedResults.length} total items`);
+    console.debug(
+      `[Storage] 🔍 Merged results: ${mergedResults.length} total items`,
+    );
 
     // Check how many preserved matches we have
     const preservedCount = mergedResults.filter(
       (m) => m.status !== "pending",
     ).length;
-    console.log(
-      `Preserved ${preservedCount} user reviews from previous imports`,
+    console.info(
+      `[Storage] ✅ Merge complete: ${mergedResults.length} total, preserved ${preservedCount} user reviews`,
     );
 
     return mergedResults;
   } catch (error) {
-    console.error("Error merging match results", error);
+    console.error("[Storage] ❌ Error merging match results", error);
     return newResults; // Fall back to new results on error
   }
 }
@@ -631,7 +709,7 @@ export function saveSyncConfig(config: SyncConfig): void {
   try {
     storage.setItem(STORAGE_KEYS.SYNC_CONFIG, JSON.stringify(config));
   } catch (error) {
-    console.error("Error saving sync config to storage", error);
+    console.error("[Storage] Error saving sync config to storage", error);
   }
 }
 
@@ -650,7 +728,7 @@ export function getSyncConfig(): SyncConfig {
     const config = storage.getItem(STORAGE_KEYS.SYNC_CONFIG);
     return config ? JSON.parse(config) : DEFAULT_SYNC_CONFIG;
   } catch (error) {
-    console.error("Error retrieving sync config from storage", error);
+    console.error("[Storage] Error retrieving sync config from storage", error);
     return DEFAULT_SYNC_CONFIG;
   }
 }
@@ -669,7 +747,7 @@ export function saveMatchConfig(config: MatchConfig): void {
   try {
     storage.setItem(STORAGE_KEYS.MATCH_CONFIG, JSON.stringify(config));
   } catch (error) {
-    console.error("Error saving match config to storage", error);
+    console.error("[Storage] Error saving match config to storage", error);
   }
 }
 
@@ -688,7 +766,10 @@ export function getMatchConfig(): MatchConfig {
     const config = storage.getItem(STORAGE_KEYS.MATCH_CONFIG);
     return config ? JSON.parse(config) : DEFAULT_MATCH_CONFIG;
   } catch (error) {
-    console.error("Error retrieving match config from storage", error);
+    console.error(
+      "[Storage] Error retrieving match config from storage",
+      error,
+    );
     return DEFAULT_MATCH_CONFIG;
   }
 }
@@ -730,7 +811,7 @@ export function addIgnoredDuplicate(
 
     storage.setItem(STORAGE_KEYS.IGNORED_DUPLICATES, JSON.stringify(ignored));
   } catch (error) {
-    console.error("Error saving ignored duplicate to storage", error);
+    console.error("[Storage] Error saving ignored duplicate to storage", error);
   }
 }
 
@@ -745,7 +826,10 @@ export function getIgnoredDuplicates(): IgnoredDuplicate[] {
     const ignored = storage.getItem(STORAGE_KEYS.IGNORED_DUPLICATES);
     return ignored ? JSON.parse(ignored) : [];
   } catch (error) {
-    console.error("Error retrieving ignored duplicates from storage", error);
+    console.error(
+      "[Storage] Error retrieving ignored duplicates from storage",
+      error,
+    );
     return [];
   }
 }
@@ -762,7 +846,10 @@ export function removeIgnoredDuplicate(anilistId: number): void {
     const filtered = ignored.filter((item) => item.anilistId !== anilistId);
     storage.setItem(STORAGE_KEYS.IGNORED_DUPLICATES, JSON.stringify(filtered));
   } catch (error) {
-    console.error("Error removing ignored duplicate from storage", error);
+    console.error(
+      "[Storage] Error removing ignored duplicate from storage",
+      error,
+    );
   }
 }
 
@@ -775,7 +862,10 @@ export function clearIgnoredDuplicates(): void {
   try {
     storage.removeItem(STORAGE_KEYS.IGNORED_DUPLICATES);
   } catch (error) {
-    console.error("Error clearing ignored duplicates from storage", error);
+    console.error(
+      "[Storage] Error clearing ignored duplicates from storage",
+      error,
+    );
   }
 }
 
@@ -791,7 +881,7 @@ export function isAniListIdIgnored(anilistId: number): boolean {
     const ignored = getIgnoredDuplicates();
     return ignored.some((item) => item.anilistId === anilistId);
   } catch (error) {
-    console.error("Error checking if AniList ID is ignored", error);
+    console.error("[Storage] Error checking if AniList ID is ignored", error);
     return false;
   }
 }

@@ -158,7 +158,7 @@ export const useTimeEstimate = () => {
       return initialEstimate;
     } else {
       // Restore from global state and populate refs for continued tracking
-      console.log("Preserving existing time tracking data");
+      console.debug("[TimeEstimate] Preserving existing time tracking data");
       const globalEstimate = globalThis.matchingProcessState?.timeEstimate;
 
       if (globalEstimate) {

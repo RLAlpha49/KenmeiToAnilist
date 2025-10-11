@@ -45,19 +45,22 @@ export function handleLibraryRefresh(params: LibraryRefreshParams): void {
 
   getUserMangaList(token, controller.signal)
     .then((library) => {
-      console.log(
-        `Loaded ${Object.keys(library).length} entries from user's AniList library`,
+      console.info(
+        `[LibrarySync] Loaded ${Object.keys(library).length} entries from user's AniList library`,
       );
       setUserLibrary(library);
       setLibraryLoading(false);
     })
     .catch((error) => {
       if (error.name !== "AbortError") {
-        console.error("Failed to load user library again:", error);
+        console.error(
+          "[LibrarySync] Failed to load user library again:",
+          error,
+        );
 
         // Check for rate limiting - with our new client updates, this should be more reliable
         if (error.isRateLimited || error.status === 429) {
-          console.warn("📛 DETECTED RATE LIMIT in SyncPage:", {
+          console.warn("[LibrarySync] 📛 DETECTED RATE LIMIT in SyncPage:", {
             isRateLimited: error.isRateLimited,
             status: error.status,
             retryAfter: error.retryAfter,
@@ -66,8 +69,8 @@ export function handleLibraryRefresh(params: LibraryRefreshParams): void {
           const retryDelay = error.retryAfter ? error.retryAfter : 60;
           const retryTimestamp = Date.now() + retryDelay;
 
-          console.log(
-            `Setting rate limited state with retry after: ${retryTimestamp} (in ${retryDelay / 1000}s)`,
+          console.debug(
+            `[LibrarySync] Setting rate limited state with retry after: ${retryTimestamp} (in ${retryDelay / 1000}s)`,
           );
 
           setRateLimit(

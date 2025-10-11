@@ -107,7 +107,7 @@ export function RateLimitProvider({
     (isLimited: boolean, retryTime?: number, message?: string) => {
       const retryTimestamp = retryTime ? Date.now() + retryTime * 1000 : null;
 
-      console.log("Setting rate limit state:", {
+      console.debug("[RateLimitContext] Setting rate limit state:", {
         isLimited,
         retryTimestamp,
         message,
@@ -159,7 +159,10 @@ export function RateLimitProvider({
         clearRateLimit();
       }
     } catch (error) {
-      console.error("Error checking rate limit status:", error);
+      console.error(
+        "[RateLimitContext] Error checking rate limit status:",
+        error,
+      );
     } finally {
       isCheckingRef.current = false;
     }
@@ -167,7 +170,7 @@ export function RateLimitProvider({
 
   useEffect(() => {
     checkRateLimitStatus().catch((err) =>
-      console.error("checkRateLimitStatus error:", err),
+      console.error("[RateLimitContext] checkRateLimitStatus error:", err),
     );
   }, [checkRateLimitStatus]);
 
@@ -177,11 +180,11 @@ export function RateLimitProvider({
     if (pollTimerRef.current) return;
     pollTimerRef.current = setInterval(() => {
       checkRateLimitStatus().catch((err) =>
-        console.error("checkRateLimitStatus error:", err),
+        console.error("[RateLimitContext] checkRateLimitStatus error:", err),
       );
     }, 3000);
     checkRateLimitStatus().catch((err) =>
-      console.error("checkRateLimitStatus error:", err),
+      console.error("[RateLimitContext] checkRateLimitStatus error:", err),
     );
   }, [checkRateLimitStatus]);
 
@@ -205,7 +208,7 @@ export function RateLimitProvider({
 
   const handleRequestComplete = useCallback(() => {
     checkRateLimitStatus().catch((err) =>
-      console.error("checkRateLimitStatus error:", err),
+      console.error("[RateLimitContext] checkRateLimitStatus error:", err),
     );
   }, [checkRateLimitStatus]);
 
@@ -242,7 +245,10 @@ export function RateLimitProvider({
       const customEvent = event as CustomEvent;
       if (customEvent.detail) {
         const { retryAfter, message } = customEvent.detail;
-        console.log("Received rate limit event:", customEvent.detail);
+        console.debug(
+          "[RateLimitContext] Received rate limit event:",
+          customEvent.detail,
+        );
         setRateLimit(true, retryAfter, message);
       }
     };

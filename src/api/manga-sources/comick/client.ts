@@ -33,7 +33,9 @@ export class ComickClient extends BaseMangaSourceClient<
     const cached = this.getCachedData<ComickManga[]>(cacheKey);
     if (cached) return cached;
 
-    console.log(`🔍 Searching Comick for: "${query}" (limit: ${limit})`);
+    console.info(
+      `[Comick] 🔍 Searching Comick for: "${query}" (limit: ${limit})`,
+    );
 
     try {
       // Use generic manga source API to call the main process instead of direct fetch to avoid CORS issues
@@ -46,12 +48,12 @@ export class ComickClient extends BaseMangaSourceClient<
       const results = this.parseSearchResponse(data);
       this.setCachedData(cacheKey, results);
 
-      console.log(
-        `📦 Comick search found ${results?.length || 0} results for "${query}"`,
+      console.info(
+        `[Comick] 📦 Comick search found ${results?.length || 0} results for "${query}"`,
       );
       return results;
     } catch (error) {
-      console.error(`❌ Comick search failed for "${query}":`, error);
+      console.error(`[Comick] ❌ Comick search failed for "${query}":`, error);
       return [];
     }
   }
@@ -60,7 +62,7 @@ export class ComickClient extends BaseMangaSourceClient<
    * Get detailed information about a specific Comick manga using IPC.
    */
   public async getMangaDetail(slug: string): Promise<ComickMangaDetail | null> {
-    console.log(`📖 Getting Comick manga details for: ${slug}`);
+    console.debug(`[Comick] 📖 Getting Comick manga details for: ${slug}`);
 
     try {
       // Use generic manga source API to call the main process instead of direct fetch to avoid CORS issues
@@ -71,7 +73,7 @@ export class ComickClient extends BaseMangaSourceClient<
       return this.parseDetailResponse(rawData);
     } catch (error) {
       console.error(
-        `❌ Failed to get Comick manga details for ${slug}:`,
+        `[Comick] ❌ Failed to get Comick manga details for ${slug}:`,
         error,
       );
       return null;

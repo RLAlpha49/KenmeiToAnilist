@@ -29,7 +29,9 @@ export interface ImportResults {
 export function normalizeMangaItems(
   manga: KenmeiMangaItem[],
 ): NormalizedMangaItem[] {
-  return manga.map((item, idx) => ({
+  console.debug(`[MangaImport] Normalizing ${manga.length} manga items`);
+
+  const normalized = manga.map((item, idx) => ({
     id: (item as { id?: string | number }).id ?? `import_${Date.now()}_${idx}`,
     title: item.title,
     status: item.status,
@@ -41,20 +43,36 @@ export function normalizeMangaItems(
     updated_at: item.updated_at,
     last_read_at: item.last_read_at,
   }));
+
+  console.debug(
+    `[MangaImport] Successfully normalized ${normalized.length} items`,
+  );
+  return normalized;
 }
 
 /**
  * Get previous manga data from localStorage
  */
 export function getPreviousMangaData(): NormalizedMangaItem[] {
+  console.debug(
+    "[MangaImport] Retrieving previous manga data from localStorage",
+  );
+
   const previousKenmeiData = localStorage.getItem("kenmei_data");
-  if (!previousKenmeiData) return [];
+  if (!previousKenmeiData) {
+    console.debug("[MangaImport] No previous kenmei data found");
+    return [];
+  }
 
   try {
     const parsedData = JSON.parse(previousKenmeiData);
-    return parsedData.manga || [];
+    const manga = parsedData.manga || [];
+    console.info(
+      `[MangaImport] Retrieved ${manga.length} previous manga entries`,
+    );
+    return manga;
   } catch (e) {
-    console.error("Failed to parse previous kenmei data:", e);
+    console.error("[MangaImport] ❌ Failed to parse previous kenmei data:", e);
     return [];
   }
 }
@@ -66,6 +84,10 @@ export function mergeMangaData(
   previousManga: NormalizedMangaItem[],
   normalizedManga: NormalizedMangaItem[],
 ): { mergedManga: NormalizedMangaItem[]; results: ImportResults } {
+  console.debug(
+    `[MangaImport] Merging ${normalizedManga.length} new items with ${previousManga.length} existing items`,
+  );
+
   const mergedManga = [...previousManga];
   const previousTitles = new Set(
     previousManga.map((m) => m.title.toLowerCase()),
@@ -108,6 +130,10 @@ export function mergeMangaData(
     }
   }
 
+  console.info(
+    `[MangaImport] ✅ Merge complete: ${newMangaCount} new, ${updatedMangaCount} updated, ${mergedManga.length} total`,
+  );
+
   return {
     mergedManga,
     results: {
@@ -122,7 +148,9 @@ export function mergeMangaData(
  * Ensure all manga have proper IDs and required fields
  */
 export function validateMangaData(manga: NormalizedMangaItem[]): KenmeiManga[] {
-  return manga.map((mangaItem, idx) => ({
+  console.debug(`[MangaImport] Validating ${manga.length} manga items`);
+
+  const validated = manga.map((mangaItem, idx) => ({
     id: mangaItem.id ?? `merged_${Date.now()}_${idx}`,
     title: mangaItem.title,
     status: mangaItem.status,
@@ -134,16 +162,29 @@ export function validateMangaData(manga: NormalizedMangaItem[]): KenmeiManga[] {
     updated_at: mangaItem.updated_at ?? new Date().toISOString(),
     last_read_at: mangaItem.last_read_at,
   }));
+
+  console.debug(
+    `[MangaImport] Validation complete for ${validated.length} items`,
+  );
+  return validated;
 }
 
 /**
  * Update existing match results with new manga data
  */
 export function updateMatchResults(validMergedManga: KenmeiManga[]): boolean {
+  console.debug("[MangaImport] Attempting to update existing match results");
+
   const matchResultsRaw = localStorage.getItem("match_results");
-  if (!matchResultsRaw) return false;
+  if (!matchResultsRaw) {
+    console.debug("[MangaImport] No existing match results found");
+    return false;
+  }
 
   const matchResults: MatchResult[] = JSON.parse(matchResultsRaw);
+  console.debug(
+    `[MangaImport] Found ${matchResults.length} existing match results to update`,
+  );
 
   // Create maps for quick lookup by id or title with better null handling
   const mangaById = new Map(
@@ -187,8 +228,11 @@ export function updateMatchResults(validMergedManga: KenmeiManga[]): boolean {
   });
 
   if (updated) {
-    console.log(
-      `Updated ${updatedResults.filter((_, i) => updatedResults[i] !== matchResults[i]).length} existing matches with new import data`,
+    const updatedCount = updatedResults.filter(
+      (_, i) => updatedResults[i] !== matchResults[i],
+    ).length;
+    console.info(
+      `[MangaImport] Updated ${updatedCount} existing matches with new import data`,
     );
     const updatedResultsJson = JSON.stringify(updatedResults);
     if (globalThis.electronStore) {
@@ -203,8 +247,8 @@ export function updateMatchResults(validMergedManga: KenmeiManga[]): boolean {
  * Clear pending manga storage after import
  */
 export function clearPendingMangaStorage(): void {
-  console.log(
-    "Clearing pending manga storage after import to force recalculation",
+  console.debug(
+    "[MangaImport] Clearing pending manga storage after import to force recalculation",
   );
   if (globalThis.electronStore) {
     globalThis.electronStore.removeItem("pending_manga");

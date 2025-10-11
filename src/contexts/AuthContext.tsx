@@ -66,7 +66,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
           return parsedState;
         }
       } catch (err) {
-        console.error("Failed to parse stored auth state:", err);
+        console.error("[AuthContext] Failed to parse stored auth state:", err);
       }
     }
     return {
@@ -208,7 +208,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
         throw new Error("Failed to retrieve user profile");
       }
     } catch (profileError) {
-      console.error("Profile fetch error:", profileError);
+      console.error("[AuthContext] Profile fetch error:", profileError);
       // Still authenticated but with limited info - use defaults
       setAuthState((prevState) => ({
         ...prevState,
@@ -238,7 +238,9 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
 
         // Guard against stale events if user restarted login mid-flow
         if (currentAttempt !== authAttemptRef.current) {
-          console.warn("Stale auth code event ignored (attempt id mismatch)");
+          console.warn(
+            "[AuthContext] Stale auth code event ignored (attempt id mismatch)",
+          );
           toast.warning("Ignored outdated authentication response.");
           return;
         }
@@ -261,12 +263,15 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
           credentialsResponse.credentials,
         );
 
-        console.log("Exchanging auth code for token with credentials:", {
-          clientId: clientId.substring(0, 4) + "...",
-          redirectUri,
-          codeLength: data.code.length,
-          codeStart: data.code.substring(0, 10) + "...",
-        });
+        console.debug(
+          "[AuthContext] Exchanging auth code for token with credentials:",
+          {
+            clientId: clientId.substring(0, 4) + "...",
+            redirectUri,
+            codeLength: data.code.length,
+            codeStart: data.code.substring(0, 10) + "...",
+          },
+        );
 
         // Exchange the code for an access token
         setStatusMessage("Exchanging auth code for token...");
@@ -282,7 +287,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
         // Re-check attempt id after async boundary to prevent stale token applying
         if (currentAttempt !== authAttemptRef.current) {
           console.warn(
-            "Discarding token from stale auth attempt (attempt id changed)",
+            "[AuthContext] Discarding token from stale auth attempt (attempt id changed)",
           );
           toast.warning(
             "Discarded token from an outdated authentication attempt.",
@@ -297,7 +302,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
         }
 
         const tokenResponse = tokenExchangeResult.token;
-        console.log("Token received:", {
+        console.info("[AuthContext] Token received:", {
           expires_in: tokenResponse.expires_in,
           token_type: tokenResponse.token_type,
           token_length: tokenResponse.access_token.length,
@@ -323,7 +328,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
         // Clear credential lock after flow completes
         lockedCredentialSourceRef.current = null;
       } catch (err: unknown) {
-        console.error("Authentication error:", err);
+        console.error("[AuthContext] Authentication error:", err);
         toast.error(
           err instanceof Error ? err.message : "Authentication failed",
         );
@@ -408,14 +413,15 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
 
   const handleOpenWindowError = (err: unknown, ignoreMessage?: string) => {
     if (isBrowserAuthFlow) {
-      console.log(
+      console.debug(
+        "[AuthContext]",
         ignoreMessage ||
           "Browser auth flow in progress - ignoring window.close error...",
       );
       return;
     }
 
-    console.error("Login window error:", err);
+    console.error("[AuthContext] Login window error:", err);
     const msg =
       err instanceof Error
         ? err.message
@@ -466,7 +472,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
 
       // The rest of the authentication process happens in the code received listener
     } catch (err: unknown) {
-      console.error("Token refresh error:", err);
+      console.error("[AuthContext] Token refresh error:", err);
       const msg = err instanceof Error ? err.message : "Token refresh failed";
       toast.error(msg);
       setError(msg);
@@ -535,7 +541,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
 
       // The rest of the authentication process happens in the code received listener
     } catch (err: unknown) {
-      console.error("Login error:", err);
+      console.error("[AuthContext] Login error:", err);
       const msg = err instanceof Error ? err.message : "Login failed";
       toast.error(msg);
       setError(msg);
@@ -578,7 +584,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to cancel authentication";
-      console.error("Cancel auth error:", err);
+      console.error("[AuthContext] Cancel auth error:", err);
       toast.error(message);
     }
   };
@@ -590,7 +596,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
       // Prevent switching source during an active OAuth browser flow
       if (isBrowserAuthFlow) {
         console.warn(
-          "Credential source change ignored during active auth flow",
+          "[AuthContext] Credential source change ignored during active auth flow",
         );
         return;
       }

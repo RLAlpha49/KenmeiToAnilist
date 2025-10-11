@@ -120,7 +120,9 @@ export abstract class BaseMangaSourceClient<
       ...this.config.headers,
     };
 
-    console.log(`🌐 ${this.config.name}: Making request to ${url}`);
+    console.debug(
+      `[MangaSourceBase] 🌐 ${this.config.name}: Making request to ${url}`,
+    );
 
     const response = await fetch(url, { method: "GET", headers });
 
@@ -149,7 +151,9 @@ export abstract class BaseMangaSourceClient<
     if (!this.isCacheValid(key)) return null;
 
     const entry = this.cache[key];
-    console.log(`🎯 ${this.config.name}: Cache hit for "${key}"`);
+    console.debug(
+      `[MangaSourceBase] 🎯 ${this.config.name}: Cache hit for "${key}"`,
+    );
     return entry.data as T;
   }
 
@@ -171,33 +175,33 @@ export abstract class BaseMangaSourceClient<
    */
   public async extractAniListId(manga: TMangaEntry): Promise<number | null> {
     try {
-      console.log(
-        `🔗 ${this.config.name}: Extracting AniList ID for "${manga.title}"`,
+      console.debug(
+        `[MangaSourceBase] 🔗 ${this.config.name}: Extracting AniList ID for "${manga.title}"`,
       );
 
       const detail = await this.getMangaDetail(manga.slug);
       if (!detail) {
-        console.log(
-          `🔗 No detail data found for ${this.config.name} manga: ${manga.title}`,
+        console.debug(
+          `[MangaSourceBase] 🔗 No detail data found for ${this.config.name} manga: ${manga.title}`,
         );
         return null;
       }
 
       const anilistId = this.extractAniListIdFromDetail(detail);
       if (anilistId) {
-        console.log(
-          `🎯 Found AniList ID ${anilistId} for ${this.config.name} manga: ${manga.title}`,
+        console.debug(
+          `[MangaSourceBase] 🎯 Found AniList ID ${anilistId} for ${this.config.name} manga: ${manga.title}`,
         );
         return anilistId;
       }
 
-      console.log(
-        `🔗 No AniList ID found for ${this.config.name} manga: ${manga.title}`,
+      console.debug(
+        `[MangaSourceBase] 🔗 No AniList ID found for ${this.config.name} manga: ${manga.title}`,
       );
       return null;
     } catch (error) {
       console.error(
-        `❌ Failed to extract AniList ID for ${this.config.name} manga ${manga.title}:`,
+        `[MangaSourceBase] ❌ Failed to extract AniList ID for ${this.config.name} manga ${manga.title}:`,
         error,
       );
       return null;
@@ -214,19 +218,21 @@ export abstract class BaseMangaSourceClient<
     limit: number = 1,
   ): Promise<EnhancedAniListManga[]> {
     try {
-      console.log(
-        `🔍 Starting ${this.config.name} search for "${query}" with limit ${limit}`,
+      console.info(
+        `[MangaSourceBase] 🔍 Starting ${this.config.name} search for "${query}" with limit ${limit}`,
       );
 
       // Search on this source
       const sourceResults = await this.searchManga(query, limit);
       if (!sourceResults?.length) {
-        console.log(`📦 No ${this.config.name} results found for "${query}"`);
+        console.debug(
+          `[MangaSourceBase] 📦 No ${this.config.name} results found for "${query}"`,
+        );
         return [];
       }
 
-      console.log(
-        `📦 Found ${sourceResults.length} ${this.config.name} results, extracting AniList IDs...`,
+      console.debug(
+        `[MangaSourceBase] 📦 Found ${sourceResults.length} ${this.config.name} results, extracting AniList IDs...`,
       );
 
       const anilistIds: number[] = [];
@@ -240,20 +246,20 @@ export abstract class BaseMangaSourceClient<
       }
 
       if (!anilistIds.length) {
-        console.log(
-          `🔗 No AniList links found in ${this.config.name} results for "${query}"`,
+        console.debug(
+          `[MangaSourceBase] 🔗 No AniList links found in ${this.config.name} results for "${query}"`,
         );
         return [];
       }
 
-      console.log(
-        `🎯 Found ${anilistIds.length} AniList IDs from ${this.config.name}: [${anilistIds.join(", ")}]`,
+      console.info(
+        `[MangaSourceBase] 🎯 Found ${anilistIds.length} AniList IDs from ${this.config.name}: [${anilistIds.join(", ")}]`,
       );
 
       const anilistManga = await getMangaByIds(anilistIds, accessToken);
       if (!anilistManga?.length) {
-        console.log(
-          `❌ Failed to fetch AniList manga for IDs: [${anilistIds.join(", ")}]`,
+        console.warn(
+          `[MangaSourceBase] ❌ Failed to fetch AniList manga for IDs: [${anilistIds.join(", ")}]`,
         );
         return [];
       }
@@ -278,13 +284,13 @@ export abstract class BaseMangaSourceClient<
         },
       );
 
-      console.log(
-        `✅ Successfully enhanced ${enhancedManga.length} AniList manga with ${this.config.name} source info`,
+      console.info(
+        `[MangaSourceBase] ✅ Successfully enhanced ${enhancedManga.length} AniList manga with ${this.config.name} source info`,
       );
       return enhancedManga;
     } catch (error) {
       console.error(
-        `❌ ${this.config.name} search and AniList fetch failed for "${query}":`,
+        `[MangaSourceBase] ❌ ${this.config.name} search and AniList fetch failed for "${query}":`,
         error,
       );
       return [];
@@ -309,7 +315,9 @@ export abstract class BaseMangaSourceClient<
       }
     }
 
-    console.log(`🧹 Cleared ${clearedCount} ${this.config.name} cache entries`);
+    console.info(
+      `[MangaSourceBase] 🧹 Cleared ${clearedCount} ${this.config.name} cache entries`,
+    );
     return clearedCount;
   }
 

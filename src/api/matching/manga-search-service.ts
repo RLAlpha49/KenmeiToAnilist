@@ -58,13 +58,13 @@ let serviceInitialized = false;
 function initializeMangaService(): void {
   // Skip if already initialized
   if (serviceInitialized) {
-    console.log(
-      "Manga search service already initialized, skipping duplicate initialization",
+    console.debug(
+      "[MangaSearchService] Manga search service already initialized, skipping duplicate initialization",
     );
     return;
   }
 
-  console.log("Initializing manga search service...");
+  console.info("[MangaSearchService] Initializing manga search service...");
   serviceInitialized = true;
 
   // Sync with client cache on initialization
@@ -75,8 +75,8 @@ function initializeMangaService(): void {
     listenersRegistered = true;
 
     globalThis.addEventListener("anilist:search-cache-initialized", () => {
-      console.log(
-        "Received search cache initialization event, syncing caches...",
+      console.debug(
+        "[MangaSearchService] Received search cache initialization event, syncing caches...",
       );
       syncWithClientCache();
     });
@@ -128,12 +128,12 @@ function initializeMangaService(): void {
           writable: false,
           enumerable: false,
         });
-        console.log(
-          "AniList cache debugger available at globalThis.__anilistCacheDebug",
+        console.debug(
+          "[MangaSearchService] AniList cache debugger available at globalThis.__anilistCacheDebug",
         );
       }
     } catch (e) {
-      console.error("Error setting up cache debugger:", e);
+      console.error("[MangaSearchService] Error setting up cache debugger:", e);
     }
   }
 }
@@ -171,12 +171,12 @@ function processMangaCache(cachedMangaData: string): number {
       }
     }
 
-    console.log(
-      `Loaded ${Object.keys(parsedCache).length} cached manga from localStorage`,
+    console.debug(
+      `[MangaSearchService] Loaded ${Object.keys(parsedCache).length} cached manga from localStorage`,
     );
     return loadedCount;
   } catch (e) {
-    console.error("Error parsing cached manga data:", e);
+    console.error("[MangaSearchService] Error parsing cached manga data:", e);
     return 0;
   }
 }
@@ -256,14 +256,14 @@ function processSearchCache(cachedSearchData: string): void {
     }
 
     if (totalImportedCount > 0) {
-      console.log(
-        `Imported ${totalImportedCount} manga entries from search cache to manga cache`,
+      console.debug(
+        `[MangaSearchService] Imported ${totalImportedCount} manga entries from search cache to manga cache`,
       );
       // Save the updated cache
       saveCache();
     }
   } catch (e) {
-    console.error("Error processing search cache:", e);
+    console.error("[MangaSearchService] Error processing search cache:", e);
   }
 }
 
@@ -292,7 +292,7 @@ function syncWithClientCache(): void {
       processSearchCache(cachedSearchData);
     }
   } catch (e) {
-    console.error("Error accessing localStorage:", e);
+    console.error("[MangaSearchService] Error accessing localStorage:", e);
   }
 }
 
@@ -302,7 +302,10 @@ function saveCache(): void {
     try {
       localStorage.setItem("anilist_manga_cache", JSON.stringify(mangaCache));
     } catch (e) {
-      console.error("Error saving cache to localStorage:", e);
+      console.error(
+        "[MangaSearchService] Error saving cache to localStorage:",
+        e,
+      );
     }
   }
 }
@@ -349,7 +352,10 @@ export function setManualMatchingPause(paused: boolean): void {
       }),
     );
   } catch (error) {
-    console.error("Error dispatching manual pause event:", error);
+    console.error(
+      "[MangaSearchService] Error dispatching manual pause event:",
+      error,
+    );
   }
 }
 
@@ -529,7 +535,9 @@ async function searchWithRateLimit(
   } catch (error: unknown) {
     // Retry logic for transient errors
     if (retryCount < 3) {
-      console.warn(`Search error, retrying (${retryCount + 1}/3): ${query}`);
+      console.warn(
+        `[MangaSearchService] Search error, retrying (${retryCount + 1}/3): ${query}`,
+      );
       await sleep(1000 * (retryCount + 1)); // Exponential backoff
 
       // Retry with incremented retry count
@@ -595,7 +603,7 @@ async function advancedSearchWithRateLimit(
     // Retry logic for transient errors
     if (retryCount < 3) {
       console.warn(
-        `Advanced search error, retrying (${retryCount + 1}/3): ${query}`,
+        `[MangaSearchService] Advanced search error, retrying (${retryCount + 1}/3): ${query}`,
       );
       await sleep(1000 * (retryCount + 1)); // Exponential backoff
       await waitWhileManuallyPaused();
@@ -803,7 +811,9 @@ function checkDirectMatches(
   for (const { text, source } of normalizedTitles) {
     // Perfect match
     if (text === normalizedSearchTitle) {
-      console.log(`💯 Perfect match found for title: "${text}" (${source})`);
+      console.debug(
+        `[MangaSearchService] 💯 Perfect match found for title: "${text}" (${source})`,
+      );
       return 1;
     }
 
@@ -818,13 +828,13 @@ function checkDirectMatches(
           manga.title.english || manga.title.romaji || "",
         )
       ) {
-        console.log(
-          `⭐ Article-only difference detected between "${normalizedSearchTitle}" and "${text}" (${source}) - very high score`,
+        console.debug(
+          `[MangaSearchService] ⭐ Article-only difference detected between "${normalizedSearchTitle}" and "${text}" (${source}) - very high score`,
         );
         return 0.97;
       }
-      console.log(
-        `✅ Search title "${searchTitle}" is a substantial part of "${text}" (${source})`,
+      console.debug(
+        `[MangaSearchService] ✅ Search title "${searchTitle}" is a substantial part of "${text}" (${source})`,
       );
       return 0.85;
     }
@@ -837,13 +847,13 @@ function checkDirectMatches(
           manga.title.english || manga.title.romaji || "",
         )
       ) {
-        console.log(
-          `⭐ Article-only difference detected between "${text}" and "${searchTitle}" (${source}) - very high score`,
+        console.debug(
+          `[MangaSearchService] ⭐ Article-only difference detected between "${text}" and "${searchTitle}" (${source}) - very high score`,
         );
         return 0.97;
       }
-      console.log(
-        `✅ Title "${text}" is a substantial part of search "${searchTitle}" (${source})`,
+      console.debug(
+        `[MangaSearchService] ✅ Title "${text}" is a substantial part of search "${searchTitle}" (${source})`,
       );
       return 0.8;
     }
@@ -902,8 +912,8 @@ function checkEnhancedSimilarityScore(
   const similarityThreshold = normalizedSearchTitle.length < 10 ? 0.6 : 0.5;
 
   if (similarity > similarityThreshold) {
-    console.log(
-      `🔍 High text similarity (${similarity.toFixed(2)}) between "${text}" and "${searchTitle}" (${source})`,
+    console.debug(
+      `[MangaSearchService] 🔍 High text similarity (${similarity.toFixed(2)}) between "${text}" and "${searchTitle}" (${source})`,
     );
     return Math.max(0.6, similarity * 0.95);
   }
@@ -928,8 +938,8 @@ function checkWordMatching(
     // Calculate word matching score
     const wordMatchScore = calculateWordMatchScore(titleWords, searchWords);
     if (wordMatchScore > 0) {
-      console.log(
-        `✅ High word match ratio (${((wordMatchScore - 0.75) / 0.6 + 0.75).toFixed(2)}) between "${text}" and "${searchTitle}" (${source}) - score: ${wordMatchScore.toFixed(2)}`,
+      console.debug(
+        `[MangaSearchService] ✅ High word match ratio (${((wordMatchScore - 0.75) / 0.6 + 0.75).toFixed(2)}) between "${text}" and "${searchTitle}" (${source}) - score: ${wordMatchScore.toFixed(2)}`,
       );
 
       if (wordMatchScore > 0.9) {
@@ -977,11 +987,11 @@ function checkLegacyMatching(
       specialCharTitle !== normalizedTitle ||
       specialCharSearchTitle !== normalizedSearchTitle
     ) {
-      console.log(
-        `🔡 Special character replacement: "${normalizedTitle}" → "${specialCharTitle}"`,
+      console.debug(
+        `[MangaSearchService] 🔡 Special character replacement: "${normalizedTitle}" → "${specialCharTitle}"`,
       );
-      console.log(
-        `🔡 Special character replacement: "${normalizedSearchTitle}" → "${specialCharSearchTitle}"`,
+      console.debug(
+        `[MangaSearchService] 🔡 Special character replacement: "${normalizedSearchTitle}" → "${specialCharSearchTitle}"`,
       );
     }
 
@@ -1068,7 +1078,7 @@ function checkExactTitleMatch(
     normalizedTitle === normalizedSearchTitle ||
     specialCharTitle === specialCharSearchTitle
   ) {
-    console.log(`💯 Perfect match found for "${title}"`);
+    console.debug(`[MangaSearchService] 💯 Perfect match found for "${title}"`);
     return 1;
   }
 
@@ -1076,7 +1086,9 @@ function checkExactTitleMatch(
     .replace(/@\w+$|[@(（][^)）]*[)）]$/, "")
     .trim();
   if (titleWithoutSuffix === normalizedSearchTitle) {
-    console.log(`💯 Perfect match found after removing suffix: "${title}"`);
+    console.debug(
+      `[MangaSearchService] 💯 Perfect match found after removing suffix: "${title}"`,
+    );
     return 0.95;
   }
 
@@ -1084,8 +1096,8 @@ function checkExactTitleMatch(
     .replace(/@\w+$|[@(（][^)）]*[)）]$/, "")
     .trim();
   if (specialCharTitleWithoutSuffix === specialCharSearchTitle) {
-    console.log(
-      `💯 Perfect match found after removing suffix and fixing special chars: "${title}"`,
+    console.debug(
+      `[MangaSearchService] 💯 Perfect match found after removing suffix and fixing special chars: "${title}"`,
     );
     return 0.95;
   }
@@ -1109,8 +1121,8 @@ function checkPartialTitleMatch(
       specialCharTitle.includes(specialCharSearchTitle)) &&
     normalizedSearchTitle.length > 6
   ) {
-    console.log(
-      `✅ Found search title as substantial part of full title: "${title}" contains "${searchTitle}"`,
+    console.debug(
+      `[MangaSearchService] ✅ Found search title as substantial part of full title: "${title}" contains "${searchTitle}"`,
     );
     return 0.85;
   }
@@ -1140,8 +1152,8 @@ function checkWordSimilarity(
 
   const wordMatchRatio = matchingWordCount / totalWords;
   if (wordMatchRatio >= 0.75) {
-    console.log(
-      `🔤 High word match ratio (${wordMatchRatio.toFixed(2)}) between "${title}" and "${searchTitle}"`,
+    console.debug(
+      `[MangaSearchService] 🔤 High word match ratio (${wordMatchRatio.toFixed(2)}) between "${title}" and "${searchTitle}"`,
     );
     return 0.8 + (wordMatchRatio - 0.75) * 0.8;
   }
@@ -1164,8 +1176,8 @@ function checkContainedTitle(
   );
   if (completeTitleBonus > 0) {
     const containedScore = 0.85 + completeTitleBonus * 0.1;
-    console.log(
-      `🔍 Search title "${searchTitle}" completely contained in "${title}" with score ${containedScore.toFixed(2)}`,
+    console.debug(
+      `[MangaSearchService] 🔍 Search title "${searchTitle}" completely contained in "${title}" with score ${containedScore.toFixed(2)}`,
     );
     return containedScore;
   }
@@ -1186,8 +1198,8 @@ function checkEnhancedSimilarity(
   const similarityThreshold = normalizedSearchTitle.length < 10 ? 0.6 : 0.45;
 
   if (similarity > similarityThreshold) {
-    console.log(
-      `🔍 High similarity (${similarity.toFixed(2)}) between "${title}" and "${searchTitle}"`,
+    console.debug(
+      `[MangaSearchService] 🔍 High similarity (${similarity.toFixed(2)}) between "${title}" and "${searchTitle}"`,
     );
     return Math.max(0.8, similarity);
   }
@@ -1209,8 +1221,8 @@ function checkSeasonPatterns(
     normalizedSearchTitle,
   );
   if (seasonMatchScore > 0) {
-    console.log(
-      `🔍 Season pattern match found between "${title}" and "${searchTitle}" with score ${seasonMatchScore.toFixed(2)}`,
+    console.debug(
+      `[MangaSearchService] 🔍 Season pattern match found between "${title}" and "${searchTitle}" with score ${seasonMatchScore.toFixed(2)}`,
     );
     return seasonMatchScore;
   }
@@ -1251,8 +1263,8 @@ function checkSubsetMatch(
     const wordMatchScore =
       baseScore + lengthFactor + coverageFactor + orderFactor;
 
-    console.log(
-      `🔍 Word match for "${processedTitle}" with composite score ${wordMatchScore.toFixed(2)} ` +
+    console.debug(
+      `[MangaSearchService] 🔍 Word match for "${processedTitle}" with composite score ${wordMatchScore.toFixed(2)} ` +
         `(length: ${lengthFactor.toFixed(2)}, coverage: ${coverageFactor.toFixed(2)}, order: ${orderFactor.toFixed(2)})`,
     );
 
@@ -1271,13 +1283,15 @@ function checkSubsetMatch(
 function calculateMatchScore(manga: AniListManga, searchTitle: string): number {
   // Handle empty search title
   if (!searchTitle || searchTitle.trim() === "") {
-    console.log(`⚠️ Empty search title provided for manga ID ${manga.id}`);
+    console.warn(
+      `[MangaSearchService] ⚠️ Empty search title provided for manga ID ${manga.id}`,
+    );
     return -1;
   }
 
   // Log for debugging
-  console.log(
-    `🔍 Calculating match score for "${searchTitle}" against manga ID ${manga.id}, titles:`,
+  console.debug(
+    `[MangaSearchService] 🔍 Calculating match score for "${searchTitle}" against manga ID ${manga.id}, titles:`,
     {
       english: manga.title.english,
       romaji: manga.title.romaji,
@@ -1288,7 +1302,10 @@ function calculateMatchScore(manga: AniListManga, searchTitle: string): number {
 
   // If we have synonyms, log them explicitly for better debugging
   if (manga.synonyms && manga.synonyms.length > 0) {
-    console.log(`📚 Synonyms for manga ID ${manga.id}:`, manga.synonyms);
+    console.debug(
+      `[MangaSearchService] 📚 Synonyms for manga ID ${manga.id}:`,
+      manga.synonyms,
+    );
   }
 
   // Collect all manga titles
@@ -1331,8 +1348,8 @@ function calculateMatchScore(manga: AniListManga, searchTitle: string): number {
     importantWords,
   );
 
-  console.log(
-    `🔍 Final match score for "${searchTitle}": ${legacyMatch.toFixed(2)}`,
+  console.debug(
+    `[MangaSearchService] 🔍 Final match score for "${searchTitle}": ${legacyMatch.toFixed(2)}`,
   );
   return legacyMatch;
 }
@@ -1484,11 +1501,11 @@ function isDifferenceOnlyArticles(title1: string, title2: string): boolean {
     .split(/\s+/)
     .filter((word) => word.length > 0);
 
-  console.log(
-    `🔍 Checking article difference between "${title1}" and "${title2}"`,
+  console.debug(
+    `[MangaSearchService] 🔍 Checking article difference between "${title1}" and "${title2}"`,
   );
-  console.log(
-    `  Normalized: ["${norm1.join('", "')}"] vs ["${norm2.join('", "')}"]`,
+  console.debug(
+    `[MangaSearchService]   Normalized: ["${norm1.join('", "')}"] vs ["${norm2.join('", "')}"]`,
   );
 
   // Find the longer and shorter word arrays
@@ -1497,7 +1514,7 @@ function isDifferenceOnlyArticles(title1: string, title2: string): boolean {
 
   // If they have the same number of words, they're not article-different
   if (longer.length === shorter.length) {
-    console.log(`  Same length, not article difference`);
+    console.debug(`[MangaSearchService]   Same length, not article difference`);
     return false;
   }
 
@@ -1505,8 +1522,8 @@ function isDifferenceOnlyArticles(title1: string, title2: string): boolean {
   const longerWithoutArticles = longer.filter((word) => !articles.has(word));
   const shorterWithoutArticles = shorter.filter((word) => !articles.has(word));
 
-  console.log(
-    `  Without articles: ["${longerWithoutArticles.join('", "')}"] vs ["${shorterWithoutArticles.join('", "')}"]`,
+  console.debug(
+    `[MangaSearchService]   Without articles: ["${longerWithoutArticles.join('", "')}"] vs ["${shorterWithoutArticles.join('", "')}"]`,
   );
 
   // If after removing articles, they're identical, then the difference was only articles
@@ -1516,7 +1533,9 @@ function isDifferenceOnlyArticles(title1: string, title2: string): boolean {
       (word, index) => word === shorterWithoutArticles[index],
     );
 
-  console.log(`  Article-only difference: ${isArticleOnly}`);
+  console.debug(
+    `[MangaSearchService]   Article-only difference: ${isArticleOnly}`,
+  );
   return isArticleOnly;
 }
 
@@ -1648,16 +1667,16 @@ function shouldSkipManga(
 ): boolean {
   // Skip Light Novels
   if (manga.format === "NOVEL" || manga.format === "LIGHT_NOVEL") {
-    console.log(
-      `⏭️ Skipping light novel: ${manga.title?.romaji || manga.title?.english || "unknown"}`,
+    console.debug(
+      `[MangaSearchService] ⏭️ Skipping light novel: ${manga.title?.romaji || manga.title?.english || "unknown"}`,
     );
     return true;
   }
 
   // Skip ignored titles for automatic matching (but allow for manual searches)
   if (!isManualSearch && shouldIgnoreForAutomaticMatching(manga)) {
-    console.log(
-      `⏭️ Skipping ignored title for automatic matching: ${manga.title?.romaji || manga.title?.english || "unknown"}`,
+    console.debug(
+      `[MangaSearchService] ⏭️ Skipping ignored title for automatic matching: ${manga.title?.romaji || manga.title?.english || "unknown"}`,
     );
     return true;
   }
@@ -1691,7 +1710,9 @@ function checkExactMatch(manga: AniListManga, searchTitle: string): boolean {
       normalTitle === normalSearch ||
       calculateEnhancedSimilarity(normalTitle, normalSearch) > 88
     ) {
-      console.log(`✅ Found good title match: "${title}" for "${searchTitle}"`);
+      console.debug(
+        `[MangaSearchService] ✅ Found good title match: "${title}" for "${searchTitle}"`,
+      );
       return true;
     }
 
@@ -1708,7 +1729,9 @@ function checkExactMatch(manga: AniListManga, searchTitle: string): boolean {
     );
     // Require at least 2 words for this to be valid, otherwise matches might be too loose
     if (allWordsFound && searchWords.length >= 2) {
-      console.log(`✅ All search words found in title: "${title}"`);
+      console.debug(
+        `[MangaSearchService] ✅ All search words found in title: "${title}"`,
+      );
       return true;
     }
   }
@@ -1725,7 +1748,9 @@ function shouldIncludeMangaExact(
   searchTitle: string,
   results: AniListManga[],
 ): { include: boolean; adjustedScore: number } {
-  console.log(`🔍 Checking titles for exact match against "${searchTitle}"`);
+  console.debug(
+    `[MangaSearchService] 🔍 Checking titles for exact match against "${searchTitle}"`,
+  );
 
   // In exact matching mode, do a thorough check of all titles
   // This ensures we don't miss matches due to normalization differences
@@ -1734,16 +1759,16 @@ function shouldIncludeMangaExact(
   // If this is an exact match run and we have a good score or manually found a good match
   // Increased threshold from 0.5 to 0.6 for stricter inclusion
   if (score > 0.6 || foundGoodMatch || results.length <= 2) {
-    console.log(
-      `✅ Including manga "${manga.title?.romaji || manga.title?.english}" with score: ${score}`,
+    console.debug(
+      `[MangaSearchService] ✅ Including manga "${manga.title?.romaji || manga.title?.english}" with score: ${score}`,
     );
     return {
       include: true,
       adjustedScore: foundGoodMatch ? Math.max(score, 0.75) : score,
     };
   } else {
-    console.log(
-      `❌ Excluding manga "${manga.title?.romaji || manga.title?.english}" with score: ${score} (below threshold)`,
+    console.debug(
+      `[MangaSearchService] ❌ Excluding manga "${manga.title?.romaji || manga.title?.english}" with score: ${score} (below threshold)`,
     );
     return { include: false, adjustedScore: score };
   }
@@ -1758,13 +1783,13 @@ function shouldIncludeMangaRegular(
   results: AniListManga[],
 ): { include: boolean; adjustedScore: number } {
   if (score > 0.15 || results.length <= 2) {
-    console.log(
-      `✅ Including manga "${manga.title?.romaji || manga.title?.english}" with score: ${score}`,
+    console.debug(
+      `[MangaSearchService] ✅ Including manga "${manga.title?.romaji || manga.title?.english}" with score: ${score}`,
     );
     return { include: true, adjustedScore: score };
   } else {
-    console.log(
-      `❌ Excluding manga "${manga.title?.romaji || manga.title?.english}" with score: ${score} (below threshold)`,
+    console.debug(
+      `[MangaSearchService] ❌ Excluding manga "${manga.title?.romaji || manga.title?.english}" with score: ${score} (below threshold)`,
     );
     return { include: false, adjustedScore: score };
   }
@@ -1806,8 +1831,8 @@ function rankMangaCore(
 
   // Always include at least one result if available, even with low score
   if (scoredResults.length === 0 && results.length > 0) {
-    console.log(
-      `🔄 No results matched score threshold but including top result anyway`,
+    console.debug(
+      `[MangaSearchService] 🔄 No results matched score threshold but including top result anyway`,
     );
     const bestGuess = results[0];
     scoredResults.push({
@@ -1816,8 +1841,8 @@ function rankMangaCore(
     });
   }
 
-  console.log(
-    `🏆 Ranked results: ${scoredResults.length} manga after filtering and ranking`,
+  console.debug(
+    `[MangaSearchService] 🏆 Ranked results: ${scoredResults.length} manga after filtering and ranking`,
   );
 
   // Return just the manga objects, preserving the new order
@@ -1848,14 +1873,20 @@ function rankMangaResults(
  * @param cacheKey - The cache key for the title
  */
 function handleCacheBypass(title: string, cacheKey: string): void {
-  console.log(`🔥 Fresh search: Explicitly clearing cache for "${title}"`);
+  console.debug(
+    `[MangaSearchService] 🔥 Fresh search: Explicitly clearing cache for "${title}"`,
+  );
 
   if (mangaCache[cacheKey]) {
     delete mangaCache[cacheKey];
-    console.log(`🧹 Removed existing cache entry for "${title}"`);
+    console.debug(
+      `[MangaSearchService] 🧹 Removed existing cache entry for "${title}"`,
+    );
     saveCache();
   } else {
-    console.log(`🔍 No existing cache entry found for "${title}" to clear`);
+    console.debug(
+      `[MangaSearchService] 🔍 No existing cache entry found for "${title}" to clear`,
+    );
   }
 }
 
@@ -1871,7 +1902,7 @@ function processCachedResults(
 ): MangaSearchResponse | null {
   if (!isCacheValid(cacheKey)) return null;
 
-  console.log(`Using cache for ${title}`);
+  console.debug(`[MangaSearchService] Using cache for ${title}`);
   let filteredManga = mangaCache[cacheKey].manga.filter(
     (manga) => manga.format !== "NOVEL" && manga.format !== "LIGHT_NOVEL",
   );
@@ -1885,8 +1916,8 @@ function processCachedResults(
     const afterFilter = filteredManga.length;
 
     if (beforeFilter > afterFilter) {
-      console.log(
-        `🚫 Filtered out ${beforeFilter - afterFilter} one-shot(s) from cached results for "${title}"`,
+      console.debug(
+        `[MangaSearchService] 🚫 Filtered out ${beforeFilter - afterFilter} one-shot(s) from cached results for "${title}"`,
       );
     }
   }
@@ -1898,22 +1929,22 @@ function processCachedResults(
     const afterFilter = filteredManga.length;
 
     if (beforeFilter > afterFilter) {
-      console.log(
-        `🚫 Filtered out ${beforeFilter - afterFilter} adult content manga from cached results for "${title}"`,
+      console.debug(
+        `[MangaSearchService] 🚫 Filtered out ${beforeFilter - afterFilter} adult content manga from cached results for "${title}"`,
       );
     }
   }
 
-  console.log(
-    `⚖️ Calculating fresh confidence scores for ${filteredManga.length} cached matches`,
+  console.debug(
+    `[MangaSearchService] ⚖️ Calculating fresh confidence scores for ${filteredManga.length} cached matches`,
   );
 
   const matches = filteredManga.map((manga) => {
     const confidence = calculateConfidence(title, manga);
     const titleTypePriority = calculateTitleTypePriority(manga, title);
 
-    console.log(
-      `⚖️ Cached match confidence for "${manga.title?.english || manga.title?.romaji}": ${confidence}% (priority: ${titleTypePriority})`,
+    console.debug(
+      `[MangaSearchService] ⚖️ Cached match confidence for "${manga.title?.english || manga.title?.romaji}": ${confidence}% (priority: ${titleTypePriority})`,
     );
 
     return { manga, confidence, titleTypePriority };
@@ -1947,11 +1978,14 @@ function processCachedResults(
 function handleSearchError(error: unknown, searchQuery: string): void {
   if (error instanceof Error) {
     console.error(
-      `Error searching for manga "${searchQuery}": ${error.message}`,
+      `[MangaSearchService] Error searching for manga "${searchQuery}": ${error.message}`,
       error,
     );
   } else {
-    console.error(`Error searching for manga "${searchQuery}"`, error);
+    console.error(
+      `[MangaSearchService] Error searching for manga "${searchQuery}"`,
+      error,
+    );
   }
 }
 
@@ -1972,8 +2006,8 @@ function shouldContinuePagination(
   singlePageMode: boolean,
 ): boolean {
   if (singlePageMode) {
-    console.log(
-      `🔍 Single page mode: Fetched page ${currentPage}, stopping search`,
+    console.debug(
+      `[MangaSearchService] 🔍 Single page mode: Fetched page ${currentPage}, stopping search`,
     );
     return false;
   }
@@ -1996,13 +2030,16 @@ function validateSearchResult(
   searchQuery: string,
 ): boolean {
   if (!searchResult?.Page) {
-    console.error(`Invalid search result for "${searchQuery}":`, searchResult);
+    console.error(
+      `[MangaSearchService] Invalid search result for "${searchQuery}":`,
+      searchResult,
+    );
     return false;
   }
 
   if (!searchResult.Page.media) {
     console.error(
-      `Search result for "${searchQuery}" missing media array:`,
+      `[MangaSearchService] Search result for "${searchQuery}" missing media array:`,
       searchResult,
     );
     searchResult.Page.media = [];
@@ -2010,7 +2047,7 @@ function validateSearchResult(
 
   if (!searchResult.Page.pageInfo) {
     console.error(
-      `Search result for "${searchQuery}" missing pageInfo:`,
+      `[MangaSearchService] Search result for "${searchQuery}" missing pageInfo:`,
       searchResult,
     );
     return false;
@@ -2079,8 +2116,8 @@ async function executeSearchLoop(
   let lastPageInfo: PageInfo | undefined = undefined;
   const singlePageMode = specificPage !== undefined;
 
-  console.log(
-    `🌐 Making network request to AniList API for "${searchQuery}" - bypassCache=${searchConfig.bypassCache}`,
+  console.info(
+    `[MangaSearchService] 🌐 Making network request to AniList API for "${searchQuery}" - bypassCache=${searchConfig.bypassCache}`,
   );
 
   while (hasNextPage && results.length < searchConfig.maxSearchResults) {
@@ -2097,14 +2134,14 @@ async function executeSearchLoop(
         token,
       );
 
-      console.log(
-        `🔍 Search response for "${searchQuery}" page ${currentPage}: ${searchResult?.Page?.media?.length || 0} results`,
+      console.debug(
+        `[MangaSearchService] 🔍 Search response for "${searchQuery}" page ${currentPage}: ${searchResult?.Page?.media?.length || 0} results`,
       );
 
       // Log detailed results if cache is bypassed
       if (searchConfig.bypassCache && searchResult?.Page?.media?.length > 0) {
-        console.log(
-          `🔍 Titles received from API:`,
+        console.debug(
+          `[MangaSearchService] 🔍 Titles received from API:`,
           searchResult.Page.media.map((m) => ({
             id: m.id,
             romaji: m.title?.romaji,
@@ -2155,8 +2192,8 @@ function processSearchResults(
   title: string,
   searchConfig: SearchServiceConfig,
 ): AniListManga[] {
-  console.log(
-    `🔍 Found ${results.length} raw results for "${title}" before filtering/ranking`,
+  console.debug(
+    `[MangaSearchService] 🔍 Found ${results.length} raw results for "${title}" before filtering/ranking`,
   );
 
   let exactMatchMode = searchConfig.exactMatchingOnly;
@@ -2172,13 +2209,15 @@ function processSearchResults(
     searchConfig.bypassCache,
   );
 
-  console.log(
-    `🔍 Search complete for "${title}": Found ${results.length} results, ranked to ${rankedResults.length} relevant matches`,
+  console.info(
+    `[MangaSearchService] 🔍 Search complete for "${title}": Found ${results.length} results, ranked to ${rankedResults.length} relevant matches`,
   );
 
   // Cache results if not bypassing cache
   if (searchConfig.bypassCache) {
-    console.log(`🔍 MANUAL SEARCH: Skipping cache save for "${title}"`);
+    console.debug(
+      `[MangaSearchService] 🔍 MANUAL SEARCH: Skipping cache save for "${title}"`,
+    );
   } else {
     const cacheKey = generateCacheKey(title);
     mangaCache[cacheKey] = {
@@ -2212,8 +2251,8 @@ function applyContentFiltering(
       const afterFilter = filteredResults.length;
 
       if (beforeFilter > afterFilter) {
-        console.log(
-          `🚫 Filtered out ${beforeFilter - afterFilter} one-shot(s) during automatic matching for "${title}"`,
+        console.debug(
+          `[MangaSearchService] 🚫 Filtered out ${beforeFilter - afterFilter} one-shot(s) during automatic matching for "${title}"`,
         );
       }
     }
@@ -2224,8 +2263,8 @@ function applyContentFiltering(
       const afterFilter = filteredResults.length;
 
       if (beforeFilter > afterFilter) {
-        console.log(
-          `🚫 Filtered out ${beforeFilter - afterFilter} adult content manga during automatic matching for "${title}"`,
+        console.debug(
+          `[MangaSearchService] 🚫 Filtered out ${beforeFilter - afterFilter} adult content manga during automatic matching for "${title}"`,
         );
       }
     }
@@ -2243,8 +2282,8 @@ function handleNoResultsFallback(
   searchConfig: SearchServiceConfig,
 ): AniListManga[] {
   if (filteredResults.length === 0 && originalResults.length > 0) {
-    console.log(
-      `⚠️ No matches passed filtering, but including raw API results anyway`,
+    console.warn(
+      `[MangaSearchService] ⚠️ No matches passed filtering, but including raw API results anyway`,
     );
 
     const fallbackResults = originalResults
@@ -2253,8 +2292,8 @@ function handleNoResultsFallback(
         (manga) => manga.format !== "NOVEL" && manga.format !== "LIGHT_NOVEL",
       );
 
-    console.log(
-      `🔍 Including these API results:`,
+    console.debug(
+      `[MangaSearchService] 🔍 Including these API results:`,
       fallbackResults.map((m) => ({
         id: m.id,
         romaji: m.title?.romaji,
@@ -2270,8 +2309,8 @@ function handleNoResultsFallback(
     filteredResults.length === 0 &&
     originalResults.length > 0
   ) {
-    console.log(
-      `⚠️ MANUAL SEARCH with no ranked results - forcing inclusion of API results`,
+    console.warn(
+      `[MangaSearchService] ⚠️ MANUAL SEARCH with no ranked results - forcing inclusion of API results`,
     );
     return originalResults.filter(
       (manga) => manga.format !== "NOVEL" && manga.format !== "LIGHT_NOVEL",
@@ -2306,8 +2345,8 @@ function processComickResults(
     const confidence = calculateConfidence(title, manga);
     const titleTypePriority = calculateTitleTypePriority(manga, title);
 
-    console.log(
-      `⚖️ Comick result confidence for "${manga.title?.english || manga.title?.romaji}": ${confidence}% (found via Comick: ${enhancedManga.sourceInfo?.title || "unknown"})`,
+    console.debug(
+      `[MangaSearchService] ⚖️ Comick result confidence for "${manga.title?.english || manga.title?.romaji}": ${confidence}% (found via Comick: ${enhancedManga.sourceInfo?.title || "unknown"})`,
     );
 
     return { manga, confidence, titleTypePriority };
@@ -2345,8 +2384,8 @@ function applyComickFiltering(
     const afterFilter = filteredResults.length;
 
     if (beforeFilter > afterFilter) {
-      console.log(
-        `🚫 Filtered out ${beforeFilter - afterFilter} one-shot(s) from Comick results for "${title}"`,
+      console.debug(
+        `[MangaSearchService] 🚫 Filtered out ${beforeFilter - afterFilter} one-shot(s) from Comick results for "${title}"`,
       );
     }
   }
@@ -2357,8 +2396,8 @@ function applyComickFiltering(
     const afterFilter = filteredResults.length;
 
     if (beforeFilter > afterFilter) {
-      console.log(
-        `🚫 Filtered out ${beforeFilter - afterFilter} adult content from Comick results for "${title}"`,
+      console.debug(
+        `[MangaSearchService] 🚫 Filtered out ${beforeFilter - afterFilter} adult content from Comick results for "${title}"`,
       );
     }
   }
@@ -2396,8 +2435,8 @@ function processMangaDexResults(
     const confidence = calculateConfidence(title, manga);
     const titleTypePriority = calculateTitleTypePriority(manga, title);
 
-    console.log(
-      `⚖️ MangaDex result confidence for "${manga.title?.english || manga.title?.romaji}": ${confidence}% (found via MangaDex: ${enhancedManga.sourceInfo?.title || "unknown"})`,
+    console.debug(
+      `[MangaSearchService] ⚖️ MangaDex result confidence for "${manga.title?.english || manga.title?.romaji}": ${confidence}% (found via MangaDex: ${enhancedManga.sourceInfo?.title || "unknown"})`,
     );
 
     return { manga, confidence, titleTypePriority };
@@ -2435,8 +2474,8 @@ function applyMangaDexFiltering(
     const afterFilter = filteredResults.length;
 
     if (beforeFilter > afterFilter) {
-      console.log(
-        `🚫 Filtered out ${beforeFilter - afterFilter} one-shot(s) from MangaDex results for "${title}"`,
+      console.debug(
+        `[MangaSearchService] 🚫 Filtered out ${beforeFilter - afterFilter} one-shot(s) from MangaDex results for "${title}"`,
       );
     }
   }
@@ -2447,8 +2486,8 @@ function applyMangaDexFiltering(
     const afterFilter = filteredResults.length;
 
     if (beforeFilter > afterFilter) {
-      console.log(
-        `🚫 Filtered out ${beforeFilter - afterFilter} adult content from MangaDex results for "${title}"`,
+      console.debug(
+        `[MangaSearchService] 🚫 Filtered out ${beforeFilter - afterFilter} adult content from MangaDex results for "${title}"`,
       );
     }
   }
@@ -2519,14 +2558,16 @@ async function executeComickFallback(
     return { results: finalResults, comickSourceMap };
   }
 
-  console.log(
-    `🎯 No AniList results found for "${title}", trying Comick fallback...`,
+  console.info(
+    `[MangaSearchService] 🎯 No AniList results found for "${title}", trying Comick fallback...`,
   );
 
   try {
     const comickLimit = 1;
 
-    console.log(`🔍 Searching Comick with limit ${comickLimit} for "${title}"`);
+    console.debug(
+      `[MangaSearchService] 🔍 Searching Comick with limit ${comickLimit} for "${title}"`,
+    );
 
     const comickResults = await mangaSourceRegistry.searchAndGetAniListManga(
       MangaSource.COMICK,
@@ -2536,12 +2577,14 @@ async function executeComickFallback(
     );
 
     if (comickResults.length === 0) {
-      console.log(`📦 No Comick results found for "${title}"`);
+      console.debug(
+        `[MangaSearchService] 📦 No Comick results found for "${title}"`,
+      );
       return { results: finalResults, comickSourceMap };
     }
 
-    console.log(
-      `✅ Comick found ${comickResults.length} results for "${title}"`,
+    console.info(
+      `[MangaSearchService] ✅ Comick found ${comickResults.length} results for "${title}"`,
     );
 
     // Process the Comick results
@@ -2551,8 +2594,8 @@ async function executeComickFallback(
       comickSourceMap,
     );
 
-    console.log(
-      `🎯 Using ${processedResults.length} Comick results as fallback for "${title}"`,
+    console.debug(
+      `[MangaSearchService] 🎯 Using ${processedResults.length} Comick results as fallback for "${title}"`,
     );
 
     // Apply filtering to Comick results
@@ -2564,7 +2607,10 @@ async function executeComickFallback(
 
     return { results: processedResults, comickSourceMap };
   } catch (error) {
-    console.error(`❌ Comick fallback failed for "${title}":`, error);
+    console.error(
+      `[MangaSearchService] ❌ Comick fallback failed for "${title}":`,
+      error,
+    );
     return { results: finalResults, comickSourceMap };
   }
 }
@@ -2610,15 +2656,15 @@ async function executeMangaDexFallback(
     return { results: finalResults, mangaDexSourceMap };
   }
 
-  console.log(
-    `🎯 No AniList results found for "${title}", trying MangaDex fallback...`,
+  console.info(
+    `[MangaSearchService] 🎯 No AniList results found for "${title}", trying MangaDex fallback...`,
   );
 
   try {
     const mangaDexLimit = 1;
 
-    console.log(
-      `🔍 Searching MangaDex with limit ${mangaDexLimit} for "${title}"`,
+    console.debug(
+      `[MangaSearchService] 🔍 Searching MangaDex with limit ${mangaDexLimit} for "${title}"`,
     );
 
     const mangaDexResults = await mangaSourceRegistry.searchAndGetAniListManga(
@@ -2629,12 +2675,14 @@ async function executeMangaDexFallback(
     );
 
     if (mangaDexResults.length === 0) {
-      console.log(`📦 No MangaDex results found for "${title}"`);
+      console.debug(
+        `[MangaSearchService] 📦 No MangaDex results found for "${title}"`,
+      );
       return { results: finalResults, mangaDexSourceMap };
     }
 
-    console.log(
-      `✅ MangaDex found ${mangaDexResults.length} results for "${title}"`,
+    console.info(
+      `[MangaSearchService] ✅ MangaDex found ${mangaDexResults.length} results for "${title}"`,
     );
 
     // Process the MangaDex results
@@ -2644,8 +2692,8 @@ async function executeMangaDexFallback(
       mangaDexSourceMap,
     );
 
-    console.log(
-      `🎯 Using ${processedResults.length} MangaDex results as fallback for "${title}"`,
+    console.debug(
+      `[MangaSearchService] 🎯 Using ${processedResults.length} MangaDex results as fallback for "${title}"`,
     );
 
     // Apply filtering to MangaDex results
@@ -2657,7 +2705,10 @@ async function executeMangaDexFallback(
 
     return { results: processedResults, mangaDexSourceMap };
   } catch (error) {
-    console.error(`❌ MangaDex fallback failed for "${title}":`, error);
+    console.error(
+      `[MangaSearchService] ❌ MangaDex fallback failed for "${title}":`,
+      error,
+    );
     return { results: finalResults, mangaDexSourceMap };
   }
 }
@@ -2715,8 +2766,8 @@ function mergeSourceResults(
   for (const manga of comickResults) {
     if (seenIds.has(manga.id)) {
       // If duplicate, keep the Comick source info
-      console.log(
-        `🔄 Found duplicate manga ID ${manga.id} from Comick, keeping source info`,
+      console.debug(
+        `[MangaSearchService] 🔄 Found duplicate manga ID ${manga.id} from Comick, keeping source info`,
       );
     } else {
       seenIds.add(manga.id);
@@ -2728,8 +2779,8 @@ function mergeSourceResults(
   for (const manga of mangaDexResults) {
     if (seenIds.has(manga.id)) {
       // If duplicate, keep the MangaDex source info
-      console.log(
-        `🔄 Found duplicate manga ID ${manga.id} from MangaDex, keeping source info`,
+      console.debug(
+        `[MangaSearchService] 🔄 Found duplicate manga ID ${manga.id} from MangaDex, keeping source info`,
       );
     } else {
       seenIds.add(manga.id);
@@ -2737,8 +2788,8 @@ function mergeSourceResults(
     }
   }
 
-  console.log(
-    `🔗 Merged results: ${originalResults.length} original + ${comickResults.length} Comick + ${mangaDexResults.length} MangaDex = ${mergedResults.length} unique results`,
+  console.debug(
+    `[MangaSearchService] 🔗 Merged results: ${originalResults.length} original + ${comickResults.length} Comick + ${mangaDexResults.length} MangaDex = ${mergedResults.length} unique results`,
   );
 
   return {
@@ -2813,10 +2864,12 @@ function buildFinalResponse(
   >,
   lastPageInfo?: PageInfo,
 ): MangaSearchResponse {
-  console.log(`🔍 Final result count: ${finalResults.length} manga`);
+  console.debug(
+    `[MangaSearchService] 🔍 Final result count: ${finalResults.length} manga`,
+  );
 
-  console.log(
-    `⚖️ Calculating fresh confidence scores for ${finalResults.length} matches`,
+  console.debug(
+    `[MangaSearchService] ⚖️ Calculating fresh confidence scores for ${finalResults.length} matches`,
   );
 
   const matches = finalResults.map((manga) => {
@@ -2830,8 +2883,8 @@ function buildFinalResponse(
       typeof title === "string" ? title : "",
     );
 
-    console.log(
-      `⚖️ Confidence for "${manga.title?.english || manga.title?.romaji}": ${confidence}% (priority: ${titleTypePriority})`,
+    console.debug(
+      `[MangaSearchService] ⚖️ Confidence for "${manga.title?.english || manga.title?.romaji}": ${confidence}% (priority: ${titleTypePriority})`,
     );
 
     return {
@@ -2900,8 +2953,8 @@ export async function searchMangaByTitle(
       return cachedResult;
     }
   } else if (searchConfig.exactMatchingOnly) {
-    console.log(
-      `🔍 MANUAL SEARCH: Ensuring exact matching is correctly configured`,
+    console.debug(
+      `[MangaSearchService] 🔍 MANUAL SEARCH: Ensuring exact matching is correctly configured`,
     );
     searchConfig.exactMatchingOnly = true;
   }
@@ -2949,8 +3002,8 @@ export async function searchMangaByTitle(
 
   // Only use fallback sources if no AniList results were found
   if (filteredResults.length === 0) {
-    console.log(
-      `🎯 No AniList results found for "${title}", trying fallback sources...`,
+    console.info(
+      `[MangaSearchService] 🎯 No AniList results found for "${title}", trying fallback sources...`,
     );
 
     // Try both fallback sources when enabled
@@ -2980,8 +3033,8 @@ export async function searchMangaByTitle(
     comickSourceMap = mergedResults.comickSourceMap;
     mangaDexSourceMap = mergedResults.mangaDexSourceMap;
   } else {
-    console.log(
-      `✅ Found ${filteredResults.length} AniList results for "${title}", skipping fallback sources`,
+    console.debug(
+      `[MangaSearchService] ✅ Found ${filteredResults.length} AniList results for "${title}", skipping fallback sources`,
     );
   }
 
@@ -3122,8 +3175,8 @@ function categorizeMangaForBatching(
 
   // If we're bypassing cache, treat all manga as uncached
   if (searchConfig.bypassCache) {
-    console.log(
-      `🚨 FRESH SEARCH: Bypassing cache for all ${mangaList.length} manga titles`,
+    console.info(
+      `[MangaSearchService] 🚨 FRESH SEARCH: Bypassing cache for all ${mangaList.length} manga titles`,
     );
 
     // Put all manga in the uncached list
@@ -3131,7 +3184,9 @@ function categorizeMangaForBatching(
       uncachedManga.push({ index, manga });
     }
   } else {
-    console.log(`Checking cache for ${mangaList.length} manga titles...`);
+    console.debug(
+      `[MangaSearchService] Checking cache for ${mangaList.length} manga titles...`,
+    );
 
     // Check cache for all manga first
     for (const [index, manga] of mangaList.entries()) {
@@ -3147,7 +3202,9 @@ function categorizeMangaForBatching(
         cachedResults[index] = mangaCache[cacheKey].manga;
         cachedComickSources[index] = new Map(); // Cached results from direct AniList cache don't have Comick source info
         cachedMangaDexSources[index] = new Map();
-        console.log(`Found cached results for: ${manga.title}`);
+        console.debug(
+          `[MangaSearchService] Found cached results for: ${manga.title}`,
+        );
 
         // Immediately update progress for cached manga
         updateProgress(index, manga.title);
@@ -3157,8 +3214,8 @@ function categorizeMangaForBatching(
       }
     }
 
-    console.log(
-      `Found ${Object.keys(cachedResults).length} cached manga, ${knownMangaIds.length} have known IDs, ${uncachedManga.length} require searching`,
+    console.info(
+      `[MangaSearchService] Found ${Object.keys(cachedResults).length} cached manga, ${knownMangaIds.length} have known IDs, ${uncachedManga.length} require searching`,
     );
   }
 
@@ -3240,7 +3297,9 @@ async function processKnownMangaIds(
   }
 
   const ids = knownMangaIds.map((item) => item.id);
-  console.log(`Fetching ${ids.length} manga with known IDs...`);
+  console.info(
+    `[MangaSearchService] Fetching ${ids.length} manga with known IDs...`,
+  );
 
   // Get manga by IDs in batches, passing the abort signal
   const batchedManga = await getBatchedMangaIds(
@@ -3393,15 +3452,17 @@ async function processUncachedManga(
       cachedResults[index] = mangaCache[cacheKey].manga;
       cachedComickSources[index] = new Map(); // Cached results don't have Comick source info
       cachedMangaDexSources[index] = new Map();
-      console.log(`Using cache for ${manga.title} (found during processing)`);
+      console.debug(
+        `[MangaSearchService] Using cache for ${manga.title} (found during processing)`,
+      );
       // Update progress for this manga
       updateProgress(index, manga.title);
       return;
     }
 
     // Search for this manga
-    console.log(
-      `Searching for manga: ${manga.title} (${reportedIndices.size}/${mangaList.length})`,
+    console.debug(
+      `[MangaSearchService] Searching for manga: ${manga.title} (${reportedIndices.size}/${mangaList.length})`,
     );
 
     // Update progress for this manga before search
@@ -3614,7 +3675,7 @@ async function processUncachedManga(
     // Wait for all processing to complete
     await completionPromise;
   } catch (error) {
-    console.log("Processing cancelled:", error);
+    console.warn("[MangaSearchService] Processing cancelled:", error);
 
     // If this is a cancellation, we need to propagate it
     if (
@@ -3646,8 +3707,8 @@ function applyMatchFiltering(
     const afterFilter = filteredMatches.length;
 
     if (beforeFilter > afterFilter) {
-      console.log(
-        `🚫 Filtered out ${beforeFilter - afterFilter} one-shot(s) for "${mangaTitle}" during batch matching`,
+      console.debug(
+        `[MangaSearchService] 🚫 Filtered out ${beforeFilter - afterFilter} one-shot(s) for "${mangaTitle}" during batch matching`,
       );
     }
   }
@@ -3659,8 +3720,8 @@ function applyMatchFiltering(
     const afterFilter = filteredMatches.length;
 
     if (beforeFilter > afterFilter) {
-      console.log(
-        `🚫 Filtered out ${beforeFilter - afterFilter} adult content manga for "${mangaTitle}" during batch matching`,
+      console.debug(
+        `[MangaSearchService] 🚫 Filtered out ${beforeFilter - afterFilter} adult content manga for "${mangaTitle}" during batch matching`,
       );
     }
   }
@@ -3876,13 +3937,17 @@ export async function batchMatchManga(
   const checkCancellation = () => {
     // Check the abort signal first
     if (abortSignal?.aborted) {
-      console.log("Batch matching process aborted by abort signal");
+      console.info(
+        "[MangaSearchService] Batch matching process aborted by abort signal",
+      );
       throw new Error("Operation aborted by abort signal");
     }
 
     // Then check the cancellation function
     if (shouldCancel?.()) {
-      console.log("Batch matching process cancelled by user");
+      console.info(
+        "[MangaSearchService] Batch matching process cancelled by user",
+      );
       throw new Error("Operation cancelled by user");
     }
 
@@ -3898,6 +3963,10 @@ export async function batchMatchManga(
   };
 
   try {
+    console.info(
+      `[MangaSearchService] 🚀 Starting batch matching for ${mangaList.length} manga entries`,
+    );
+
     // Categorize manga based on cache status
     const {
       cachedResults,
@@ -3906,6 +3975,10 @@ export async function batchMatchManga(
       uncachedManga,
       knownMangaIds,
     } = categorizeMangaForBatching(mangaList, searchConfig, updateProgress);
+
+    console.debug(
+      `[MangaSearchService] 🔍 Categorization: ${Object.keys(cachedResults).length} cached, ${uncachedManga.length} uncached, ${knownMangaIds.length} known IDs`,
+    );
 
     // Check for cancellation
     checkCancellation();
@@ -3932,7 +4005,7 @@ export async function batchMatchManga(
         { cachedResults, cachedComickSources, cachedMangaDexSources },
       );
     } catch (error) {
-      console.log("Processing cancelled:", error);
+      console.warn("[MangaSearchService] Processing cancelled:", error);
 
       // If we got here due to cancellation, return the partial results we've managed to gather
       if (
@@ -3940,7 +4013,9 @@ export async function batchMatchManga(
         (error.message.includes("cancelled") ||
           error.message.includes("aborted"))
       ) {
-        console.log(`Cancellation completed, returning partial results`);
+        console.info(
+          `[MangaSearchService] Cancellation completed, returning partial results`,
+        );
 
         return handleCancellationResults(mangaList, cachedResults);
       }
@@ -3952,8 +4027,10 @@ export async function batchMatchManga(
     // Check for cancellation after the batch completes
     checkCancellation();
 
+    console.debug("[MangaSearchService] 🔍 Compiling final match results...");
+
     // Compile final results
-    return compileMatchResults(
+    const finalResults = compileMatchResults(
       mangaList,
       cachedResults,
       cachedComickSources,
@@ -3961,15 +4038,26 @@ export async function batchMatchManga(
       checkCancellation,
       updateProgress,
     );
+
+    console.info(
+      `[MangaSearchService] ✅ Batch matching complete: ${finalResults.length} results`,
+    );
+
+    return finalResults;
   } catch (error) {
-    console.error("Error in batch matching process:", error);
+    console.error(
+      "[MangaSearchService] ❌ Error in batch matching process:",
+      error,
+    );
 
     // If we got here due to cancellation, return whatever partial results we have
     if (
       error instanceof Error &&
       (error.message.includes("cancelled") || error.message.includes("aborted"))
     ) {
-      console.log(`Cancellation detected, returning partial results`);
+      console.info(
+        `[MangaSearchService] Cancellation detected, returning partial results`,
+      );
       // We don't have access to the variables in this scope, so return empty array
       return [];
     }
@@ -3993,9 +4081,14 @@ export async function preloadCommonManga(
   token?: string,
   config: Partial<SearchServiceConfig> = {},
 ): Promise<void> {
+  console.info(
+    `[MangaSearchService] 📥 Preloading ${titles.length} common manga titles...`,
+  );
   const searchConfig = { ...DEFAULT_SEARCH_CONFIG, ...config };
 
   // Process in batches to respect rate limits
+  let preloadedCount = 0;
+
   for (let i = 0; i < titles.length; i += searchConfig.batchSize) {
     const batch = titles.slice(i, i + searchConfig.batchSize);
 
@@ -4006,9 +4099,14 @@ export async function preloadCommonManga(
       // Only search if not already in cache
       if (!isCacheValid(cacheKey)) {
         await searchMangaByTitle(title, token, searchConfig);
+        preloadedCount++;
       }
     }
   }
+
+  console.info(
+    `[MangaSearchService] ✅ Preloading complete: ${preloadedCount} new titles cached`,
+  );
 }
 
 /**
@@ -4017,9 +4115,16 @@ export async function preloadCommonManga(
  * @source
  */
 export function clearMangaCache(): void {
+  const keyCount = Object.keys(mangaCache).length;
+  console.info(
+    `[MangaSearchService] 🗑️ Clearing manga cache: ${keyCount} entries`,
+  );
+
   for (const key of Object.keys(mangaCache)) {
     delete mangaCache[key];
   }
+
+  console.info("[MangaSearchService] ✅ Manga cache cleared successfully");
 }
 
 /**
@@ -4108,7 +4213,10 @@ export const cacheDebugger = {
           storedSearchCount = Object.keys(parsed).length;
         }
       } catch (e) {
-        console.error("Error checking localStorage cache:", e);
+        console.error(
+          "[MangaSearchService] Error checking localStorage cache:",
+          e,
+        );
       }
     }
 
@@ -4169,8 +4277,8 @@ export const cacheDebugger = {
    */
   forceSyncCaches(): void {
     syncWithClientCache();
-    console.log("Cache sync forced, current status:");
-    console.log(this.getCacheStatus());
+    console.info("[MangaSearchService] Cache sync forced, current status:");
+    console.debug("[MangaSearchService]", this.getCacheStatus());
   },
 
   /**
@@ -4185,9 +4293,14 @@ export const cacheDebugger = {
       try {
         localStorage.removeItem("anilist_manga_cache");
         localStorage.removeItem("anilist_search_cache");
-        console.log("All AniList caches have been cleared");
+        console.info(
+          "[MangaSearchService] All AniList caches have been cleared",
+        );
       } catch (e) {
-        console.error("Error clearing localStorage caches:", e);
+        console.error(
+          "[MangaSearchService] Error clearing localStorage caches:",
+          e,
+        );
       }
     }
   },
@@ -4248,7 +4361,9 @@ export const cacheDebugger = {
   clearCacheForTitles(titles: string[]): number {
     if (!titles || titles.length === 0) return 0;
 
-    console.log(`Clearing cache for ${titles.length} manga titles...`);
+    console.debug(
+      `[MangaSearchService] Clearing cache for ${titles.length} manga titles...`,
+    );
     let entriesCleared = 0;
     let notFoundCount = 0;
 
@@ -4261,8 +4376,8 @@ export const cacheDebugger = {
       }
     }
 
-    console.log(
-      `Cleared ${entriesCleared} cache entries (${notFoundCount} titles had no existing cache entries)`,
+    console.info(
+      `[MangaSearchService] Cleared ${entriesCleared} cache entries (${notFoundCount} titles had no existing cache entries)`,
     );
     return entriesCleared;
   },
@@ -4277,9 +4392,14 @@ export const cacheDebugger = {
     try {
       localStorage.removeItem("anilist_manga_cache");
       localStorage.removeItem("anilist_search_cache");
-      console.log("All AniList caches cleared successfully");
+      console.info(
+        "[MangaSearchService] All AniList caches cleared successfully",
+      );
     } catch (e) {
-      console.error("Error clearing localStorage caches:", e);
+      console.error(
+        "[MangaSearchService] Error clearing localStorage caches:",
+        e,
+      );
     }
 
     return this.getCacheStatus();
@@ -4287,15 +4407,17 @@ export const cacheDebugger = {
 
   printCacheKeysFor(title: string) {
     const key = generateCacheKey(title);
-    console.log(`Cache key for "${title}": ${key}`);
+    console.debug(`[MangaSearchService] Cache key for "${title}": ${key}`);
 
     // Check if we have a cache entry for this title
     if (mangaCache[key]) {
-      console.log(
-        `Found in-memory cache entry for "${title}" with ${mangaCache[key].manga.length} results`,
+      console.debug(
+        `[MangaSearchService] Found in-memory cache entry for "${title}" with ${mangaCache[key].manga.length} results`,
       );
     } else {
-      console.log(`No in-memory cache entry found for "${title}"`);
+      console.debug(
+        `[MangaSearchService] No in-memory cache entry found for "${title}"`,
+      );
     }
 
     return key;
@@ -4357,7 +4479,7 @@ export async function getBatchedMangaIds(
       results.push(...batchResults);
     } catch (error) {
       console.error(
-        `Error fetching manga batch ${i} to ${i + batchSize}:`,
+        `[MangaSearchService] Error fetching manga batch ${i} to ${i + batchSize}:`,
         error,
       );
       // Continue with next batch even if one fails
@@ -4379,8 +4501,8 @@ function calculateConfidence(searchTitle: string, manga: AniListManga): number {
   // Calculate the match score first - always use original search title, not manga's own title
   const score = calculateMatchScore(manga, searchTitle);
 
-  console.log(
-    `Calculating confidence for match score: ${score.toFixed(3)} between "${searchTitle}" and "${manga.title.english || manga.title.romaji}"`,
+  console.debug(
+    `[MangaSearchService] Calculating confidence for match score: ${score.toFixed(3)} between "${searchTitle}" and "${manga.title.english || manga.title.romaji}"`,
   );
 
   if (score <= 0) {
@@ -4425,7 +4547,9 @@ export function clearCacheForTitles(titles: string[]): {
   remainingCacheSize: number;
   titlesWithNoCache: number;
 } {
-  console.log(`Clearing cache for ${titles.length} manga titles...`);
+  console.debug(
+    `[MangaSearchService] Clearing cache for ${titles.length} manga titles...`,
+  );
 
   let clearedCount = 0;
   let titlesWithNoCache = 0;
@@ -4447,8 +4571,8 @@ export function clearCacheForTitles(titles: string[]): {
     saveCache();
   }
 
-  console.log(
-    `Cleared ${clearedCount} cache entries (${titlesWithNoCache} titles had no existing cache entries)`,
+  console.info(
+    `[MangaSearchService] Cleared ${clearedCount} cache entries (${titlesWithNoCache} titles had no existing cache entries)`,
   );
 
   return {

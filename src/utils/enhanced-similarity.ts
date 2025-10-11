@@ -407,8 +407,8 @@ export function calculateEnhancedSimilarity(
     const penalizedScore = basicSimilarity * lengthPenalty;
 
     if (finalConfig.debug) {
-      console.log(
-        `Length penalty applied: ${str1} vs ${str2}, ratio: ${lengthRatio.toFixed(2)}, score: ${(penalizedScore * 100).toFixed(1)}`,
+      console.debug(
+        `[Similarity] Length penalty applied: ${str1} vs ${str2}, ratio: ${lengthRatio.toFixed(2)}, score: ${(penalizedScore * 100).toFixed(1)}`,
       );
     }
 
@@ -441,13 +441,23 @@ export function calculateEnhancedSimilarity(
   const finalScore = Math.round(weightedScore * 100);
 
   if (finalConfig.debug) {
-    console.log(`Similarity calculation for "${str1}" vs "${str2}":`);
-    console.log(`  Exact: ${(exactMatch * 100).toFixed(1)}%`);
-    console.log(`  Substring: ${(substringMatch * 100).toFixed(1)}%`);
-    console.log(`  Word Order: ${(wordOrderSim * 100).toFixed(1)}%`);
-    console.log(`  Character: ${(characterSim * 100).toFixed(1)}%`);
-    console.log(`  Semantic: ${(semanticSim * 100).toFixed(1)}%`);
-    console.log(`  Final: ${finalScore}%`);
+    console.debug(
+      `[Similarity] Similarity calculation for "${str1}" vs "${str2}":`,
+    );
+    console.debug(`[Similarity]   Exact: ${(exactMatch * 100).toFixed(1)}%`);
+    console.debug(
+      `[Similarity]   Substring: ${(substringMatch * 100).toFixed(1)}%`,
+    );
+    console.debug(
+      `[Similarity]   Word Order: ${(wordOrderSim * 100).toFixed(1)}%`,
+    );
+    console.debug(
+      `[Similarity]   Character: ${(characterSim * 100).toFixed(1)}%`,
+    );
+    console.debug(
+      `[Similarity]   Semantic: ${(semanticSim * 100).toFixed(1)}%`,
+    );
+    console.debug(`[Similarity]   Final: ${finalScore}%`);
   }
 
   return Math.min(100, Math.max(0, finalScore));

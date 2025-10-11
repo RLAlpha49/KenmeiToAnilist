@@ -19,6 +19,7 @@ function exportJsonFile(
   timestamp: Date | string,
 ): void {
   try {
+    console.debug(`[Export] 🔍 Exporting ${filenamePrefix} file...`);
     const jsonContent = JSON.stringify(data, null, 2);
     const blob = new Blob([jsonContent], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -26,13 +27,18 @@ function exportJsonFile(
     link.href = url;
     const date = new Date(timestamp);
     const dateStr = date.toISOString().split("T")[0];
-    link.download = `${filenamePrefix}-${dateStr}.json`;
+    const filename = `${filenamePrefix}-${dateStr}.json`;
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
+    console.info(`[Export] ✅ Successfully exported: ${filename}`);
   } catch (error) {
-    console.error(`Failed to export ${filenamePrefix} file:`, error);
+    console.error(
+      `[Export] ❌ Failed to export ${filenamePrefix} file:`,
+      error,
+    );
   }
 }
 
@@ -50,9 +56,14 @@ function exportJsonFile(
  */
 export function exportSyncErrorLog(report: SyncReport): void {
   if (!report?.errors?.length) {
-    console.warn("No errors to export");
+    console.warn("[Export] ⚠️ No errors to export");
     return;
   }
+
+  console.info(
+    `[Export] 📤 Exporting error log: ${report.errors.length} errors`,
+  );
+
   const errorLog = {
     timestamp: report.timestamp,
     totalEntries: report.totalEntries,
@@ -61,7 +72,6 @@ export function exportSyncErrorLog(report: SyncReport): void {
     errors: report.errors,
   };
   exportJsonFile(errorLog, "anilist-sync-errors", report.timestamp);
-  console.log("Error log exported successfully");
 }
 
 /**
@@ -78,11 +88,14 @@ export function exportSyncErrorLog(report: SyncReport): void {
  */
 export function exportSyncReport(report: SyncReport): void {
   if (!report) {
-    console.warn("No report to export");
+    console.warn("[Export] ⚠️ No report to export");
     return;
   }
+
+  console.info(
+    `[Export] 📤 Exporting sync report: ${report.totalEntries} total entries`,
+  );
   exportJsonFile(report, "anilist-sync-report", report.timestamp);
-  console.log("Sync report exported successfully");
 }
 
 /**
@@ -112,8 +125,8 @@ export function saveSyncReportToHistory(report: SyncReport): void {
     // Save back to localStorage
     localStorage.setItem(storageKey, JSON.stringify(updatedHistory));
 
-    console.log("Sync report saved to history");
+    console.debug("[Export] Sync report saved to history");
   } catch (error) {
-    console.error("Failed to save sync report to history:", error);
+    console.error("[Export] Failed to save sync report to history:", error);
   }
 }

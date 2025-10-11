@@ -174,10 +174,14 @@ const extractSourceFromStack = (stack?: string): string | undefined => {
 /**
  * Determines whether a log entry should be treated as a debug-focused message.
  */
-const inferIsDebug = (level: LogLevel, message: string): boolean => {
+const inferIsDebug = (level: LogLevel): boolean => {
   if (level === "debug") return true;
-  const lower = message.toLowerCase();
-  return lower.startsWith("[debug]") || lower.includes("debug:");
+
+  // "log" level is also considered debug (fallback/trace level)
+  if (level === "log") return true;
+
+  // info, warn, and error are not debug messages
+  return false;
 };
 
 class LogCollector {
@@ -228,7 +232,7 @@ class LogCollector {
       details,
       timestamp,
       source: extractSourceFromStack(new Error(message).stack),
-      isDebug: inferIsDebug(level, message),
+      isDebug: inferIsDebug(level),
     };
 
     this.#entries = [...this.#entries, entry].slice(-MAX_LOG_ENTRIES);

@@ -469,14 +469,16 @@ export const parseKenmeiCsvExport = (
       manga,
     };
 
-    console.log(`Successfully parsed ${manga.length} manga entries from CSV`);
+    console.info(
+      `[KenmeiParser] ✅ Successfully parsed ${manga.length} manga entries from CSV`,
+    );
     return kenmeiExport;
   } catch (error) {
     if (error instanceof Error) {
-      console.error("CSV parsing error:", error.message);
+      console.error("[KenmeiParser] ❌ CSV parsing error:", error.message);
       throw new Error(`Failed to parse CSV: ${error.message}`);
     }
-    console.error("Unknown CSV parsing error");
+    console.error("[KenmeiParser] ❌ Unknown CSV parsing error");
     throw new Error("Failed to parse CSV: Unknown error");
   }
 };

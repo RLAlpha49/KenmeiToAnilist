@@ -48,8 +48,8 @@ export const useMatchHandlers = (
 
       // If not found by ID, try alternative methods
       if (index === -1) {
-        console.log(
-          `Could not find match with ID ${kenmeiManga.id}, trying fallback methods...`,
+        console.debug(
+          `[MatchHandlers] Could not find match with ID ${kenmeiManga.id}, trying fallback methods...`,
         );
 
         // Fallback 1: Try finding by exact title match
@@ -67,19 +67,21 @@ export const useMatchHandlers = (
 
           if (index === -1) {
             console.error(
-              `Could not find match for "${kenmeiManga.title}" to update`,
+              `[MatchHandlers] Could not find match for "${kenmeiManga.title}" to update`,
             );
             return -1;
           } else {
-            console.log(
-              `Found match by case-insensitive title at index ${index}`,
+            console.debug(
+              `[MatchHandlers] Found match by case-insensitive title at index ${index}`,
             );
           }
         } else {
-          console.log(`Found match by exact title at index ${index}`);
+          console.debug(
+            `[MatchHandlers] Found match by exact title at index ${index}`,
+          );
         }
       } else {
-        console.log(`Found match by ID at index ${index}`);
+        console.debug(`[MatchHandlers] Found match by ID at index ${index}`);
       }
 
       return index;
@@ -95,7 +97,10 @@ export const useMatchHandlers = (
    */
   const handleManualSearch = useCallback(
     (manga: KenmeiManga) => {
-      console.log("handleManualSearch called with manga:", manga);
+      console.debug(
+        "[MatchHandlers] handleManualSearch called with manga:",
+        manga,
+      );
 
       // Find the match
       const index = findMatchIndex(manga);
@@ -133,9 +138,14 @@ export const useMatchHandlers = (
           STORAGE_KEYS.MATCH_RESULTS,
           JSON.stringify(updatedResults),
         );
-        console.log("Successfully saved updated match results to storage");
+        console.debug(
+          "[MatchHandlers] Successfully saved updated match results to storage",
+        );
       } catch (storageError) {
-        console.error("Failed to save match results to storage:", storageError);
+        console.error(
+          "[MatchHandlers] Failed to save match results to storage:",
+          storageError,
+        );
       }
     },
     [setMatchResults],
@@ -161,8 +171,8 @@ export const useMatchHandlers = (
     ) => {
       // Check if this is a batch operation
       if ("isBatchOperation" in match && match.isBatchOperation) {
-        console.log(
-          `Processing batch ${actionName} operation for ${match.matches.length} matches`,
+        console.debug(
+          `[MatchHandlers] Processing batch ${actionName} operation for ${match.matches.length} matches`,
         );
 
         // For batch operations, we simply replace the entire match results array
@@ -172,15 +182,18 @@ export const useMatchHandlers = (
       }
 
       // Regular single match processing
-      console.log(`handle${actionName} called with match:`, match);
+      console.debug(
+        `[MatchHandlers] handle${actionName} called with match:`,
+        match,
+      );
 
       // Find the match
       const index = findMatchIndex(match as MangaMatchResult);
       if (index === -1) return;
 
       const singleMatch = match as MangaMatchResult;
-      console.log(
-        `${actionName === "Accept" ? "Accepting" : "Skipping"} match for ${singleMatch.kenmeiManga.title}, current status: ${singleMatch.status}`,
+      console.debug(
+        `[MatchHandlers] ${actionName === "Accept" ? "Accepting" : "Skipping"} match for ${singleMatch.kenmeiManga.title}, current status: ${singleMatch.status}`,
       );
 
       // Create a copy of the results and update the status
@@ -197,8 +210,8 @@ export const useMatchHandlers = (
       // Update the array with the new object
       updatedResults[index] = updatedMatch;
 
-      console.log(
-        `Updated match status to: ${updatedMatch.status}, title: ${updatedMatch.kenmeiManga.title}`,
+      console.debug(
+        `[MatchHandlers] Updated match status to: ${updatedMatch.status}, title: ${updatedMatch.kenmeiManga.title}`,
       );
 
       updateMatchResults(updatedResults);
@@ -261,8 +274,8 @@ export const useMatchHandlers = (
       autoAccept = false,
       directAccept = false,
     ) => {
-      console.log(
-        `${directAccept ? "Directly accepting" : "Switching main match with"} alternative #${alternativeIndex} for "${match.kenmeiManga.title}"${
+      console.debug(
+        `[MatchHandlers] ${directAccept ? "Directly accepting" : "Switching main match with"} alternative #${alternativeIndex} for "${match.kenmeiManga.title}"${
           autoAccept && !directAccept ? " and auto-accepting" : ""
         }`,
       );
@@ -270,7 +283,9 @@ export const useMatchHandlers = (
       // Find the match index in the current state
       const index = findMatchIndex(match);
       if (index === -1) {
-        console.error(`Match not found for ${match.kenmeiManga.title}`);
+        console.error(
+          `[MatchHandlers] Match not found for ${match.kenmeiManga.title}`,
+        );
         return;
       }
 
@@ -278,21 +293,23 @@ export const useMatchHandlers = (
       const currentMatch = matchResults[index];
       const alternatives = currentMatch.anilistMatches ?? [];
       if (alternativeIndex < 0 || alternativeIndex >= alternatives.length) {
-        console.error(`Alternative at index ${alternativeIndex} doesn't exist`);
+        console.error(
+          `[MatchHandlers] Alternative at index ${alternativeIndex} doesn't exist`,
+        );
         return;
       }
 
       const selectedAlternative = alternatives[alternativeIndex];
       if (!selectedAlternative?.manga) {
-        console.error("Selected alternative is invalid");
+        console.error("[MatchHandlers] Selected alternative is invalid");
         return;
       }
 
       const updatedResults = [...matchResults];
 
       const directAcceptHandler = () => {
-        console.log(
-          `Directly accepting alternative "${
+        console.debug(
+          `[MatchHandlers] Directly accepting alternative "${
             selectedAlternative.manga.title?.english ||
             selectedAlternative.manga.title?.romaji ||
             "Unknown"
@@ -319,12 +336,12 @@ export const useMatchHandlers = (
           (alternatives.length > 0 ? alternatives[0].manga : null);
 
         if (!currentMainMatch) {
-          console.error("No main match to swap with");
+          console.error("[MatchHandlers] No main match to swap with");
           return;
         }
 
-        console.log(
-          `Swapping main match "${
+        console.debug(
+          `[MatchHandlers] Swapping main match "${
             currentMainMatch.title?.english ||
             currentMainMatch.title?.romaji ||
             "Unknown"
@@ -387,12 +404,15 @@ export const useMatchHandlers = (
         | MangaMatchResult
         | { isBatchOperation: boolean; matches: MangaMatchResult[] },
     ) => {
-      console.log("handleResetToPending called with match:", match);
+      console.debug(
+        "[MatchHandlers] handleResetToPending called with match:",
+        match,
+      );
 
       // Check if this is a batch operation
       if ("isBatchOperation" in match && match.isBatchOperation) {
-        console.log(
-          `Processing batch reset operation for ${match.matches.length} matches`,
+        console.debug(
+          `[MatchHandlers] Processing batch reset operation for ${match.matches.length} matches`,
         );
 
         // For batch operations, we simply replace the entire match results array
@@ -406,8 +426,8 @@ export const useMatchHandlers = (
       const index = findMatchIndex(match as MangaMatchResult);
       if (index === -1) return;
 
-      console.log(
-        `Resetting match for ${(match as MangaMatchResult).kenmeiManga.title} from ${(match as MangaMatchResult).status} to pending`,
+      console.debug(
+        `[MatchHandlers] Resetting match for ${(match as MangaMatchResult).kenmeiManga.title} from ${(match as MangaMatchResult).status} to pending`,
       );
 
       // Create a copy of the results and update the status
@@ -422,8 +442,8 @@ export const useMatchHandlers = (
         ? currentMatch.anilistMatches[0].manga
         : undefined;
 
-      console.log(
-        `Restoring original main match: ${originalMainMatch?.title?.english || originalMainMatch?.title?.romaji || "None"}`,
+      console.debug(
+        `[MatchHandlers] Restoring original main match: ${originalMainMatch?.title?.english || originalMainMatch?.title?.romaji || "None"}`,
       );
 
       // Create a new object reference to ensure React detects the change
@@ -438,8 +458,8 @@ export const useMatchHandlers = (
       // Update the array with the new object
       updatedResults[index] = updatedMatch;
 
-      console.log(
-        `Updated match status from ${(match as MangaMatchResult).status} to pending for: ${updatedMatch.kenmeiManga.title}`,
+      console.debug(
+        `[MatchHandlers] Updated match status from ${(match as MangaMatchResult).status} to pending for: ${updatedMatch.kenmeiManga.title}`,
       );
 
       updateMatchResults(updatedResults);
@@ -463,11 +483,14 @@ export const useMatchHandlers = (
       });
 
       if (!searchTarget) {
-        console.error("No manga target was set for search");
+        console.error("[MatchHandlers] No manga target was set for search");
         return;
       }
 
-      console.log("Handling selection of manga from search:", manga.title);
+      console.debug(
+        "[MatchHandlers] Handling selection of manga from search:",
+        manga.title,
+      );
 
       // Find the match
       const matchIndex = findMatchIndex(searchTarget);
@@ -475,8 +498,8 @@ export const useMatchHandlers = (
 
       // Get the existing match
       const existingMatch = matchResults[matchIndex];
-      console.log(
-        `Updating manga: "${existingMatch.kenmeiManga.title}" with selected match: "${manga.title.english || manga.title.romaji}"`,
+      console.debug(
+        `[MatchHandlers] Updating manga: "${existingMatch.kenmeiManga.title}" with selected match: "${manga.title.english || manga.title.romaji}"`,
       );
 
       // Create a copy of the results
@@ -495,8 +518,8 @@ export const useMatchHandlers = (
 
       if (alternativeIndex >= 0 && existingMatch.anilistMatches) {
         // The selected manga is already in the alternatives, so just switch to it
-        console.log(
-          `Selected manga is alternative #${alternativeIndex}, switching instead of creating manual match`,
+        console.debug(
+          `[MatchHandlers] Selected manga is alternative #${alternativeIndex}, switching instead of creating manual match`,
         );
 
         updatedResults[matchIndex] = {

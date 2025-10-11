@@ -164,12 +164,15 @@ export function MangaSearchPanel({
     pageNum: number,
     startTime: number,
   ) => {
-    console.log(`🔎 Detected AniList ID search: ${mangaId}`);
+    console.debug(`[SearchPanel] 🔎 Detected AniList ID search: ${mangaId}`);
 
     const idResults = await getMangaByIds([mangaId], token);
 
     if (idResults.length > 0) {
-      console.log(`🔎 Found manga by ID ${mangaId}:`, idResults[0]);
+      console.debug(
+        `[SearchPanel] 🔎 Found manga by ID ${mangaId}:`,
+        idResults[0],
+      );
 
       const idMatches: MangaMatch[] = idResults.map((manga) => ({
         manga,
@@ -181,7 +184,7 @@ export function MangaSearchPanel({
         currentPage: 1,
       });
     } else {
-      console.log(`⚠️ No manga found for ID ${mangaId}`);
+      console.debug(`[SearchPanel] ⚠️ No manga found for ID ${mangaId}`);
       if (pageNum === 1) {
         setSearchResults([]);
       }
@@ -189,8 +192,8 @@ export function MangaSearchPanel({
     }
 
     const endTime = performance.now();
-    console.log(
-      `🔎 Search completed in ${(endTime - startTime).toFixed(2)}ms for ID ${mangaId}`,
+    console.debug(
+      `[SearchPanel] 🔎 Search completed in ${(endTime - startTime).toFixed(2)}ms for ID ${mangaId}`,
     );
   };
 
@@ -200,7 +203,7 @@ export function MangaSearchPanel({
     pageNum: number,
     startTime: number,
   ) => {
-    console.log(`🔎 Performing title search for: "${query}"`);
+    console.info(`[SearchPanel] 🔎 Performing title search for: "${query}"`);
 
     const searchConfig = {
       bypassCache: !!bypassCache,
@@ -209,7 +212,7 @@ export function MangaSearchPanel({
       exactMatchingOnly: false,
     };
 
-    console.log(`🔎 Search config:`, searchConfig);
+    console.debug(`[SearchPanel] 🔎 Search config:`, searchConfig);
 
     const searchResponse = await searchMangaByTitle(
       query,
@@ -223,10 +226,12 @@ export function MangaSearchPanel({
     const pageInfo = searchResponse.pageInfo;
     const endTime = performance.now();
 
-    console.log(
-      `🔎 Search completed in ${(endTime - startTime).toFixed(2)}ms for "${query}"`,
+    console.debug(
+      `[SearchPanel] 🔎 Search completed in ${(endTime - startTime).toFixed(2)}ms for "${query}"`,
     );
-    console.log(`🔎 Search returned ${results.length} results for "${query}"`);
+    console.info(
+      `[SearchPanel] 🔎 Search returned ${results.length} results for "${query}"`,
+    );
 
     logSearchResults(results, query);
     updateSearchResults(results, pageNum, pageInfo);
@@ -235,8 +240,8 @@ export function MangaSearchPanel({
   // Log search results for debugging
   const logSearchResults = (results: MangaMatch[], query: string) => {
     if (results.length > 0) {
-      console.log(
-        `🔎 Titles received:`,
+      console.debug(
+        `[SearchPanel] 🔎 Titles received:`,
         results.map((m) => ({
           title: m.manga.title?.romaji || m.manga.title?.english || "unknown",
           confidence: m.confidence.toFixed(1),
@@ -244,8 +249,8 @@ export function MangaSearchPanel({
         })),
       );
     } else {
-      console.log(
-        `⚠️ No results found for "${query}" - this could indicate a cache or display issue`,
+      console.debug(
+        `[SearchPanel] ⚠️ No results found for "${query}" - this could indicate a cache or display issue`,
       );
     }
   };
@@ -257,11 +262,11 @@ export function MangaSearchPanel({
     pageInfo?: { hasNextPage: boolean; currentPage: number },
   ) => {
     if (pageNum === 1) {
-      console.log(`🔎 Resetting search results`);
+      console.debug(`[SearchPanel] 🔎 Resetting search results`);
       setSearchResults(results);
     } else {
-      console.log(
-        `🔎 Appending ${results.length} results to existing ${searchResults.length} results`,
+      console.debug(
+        `[SearchPanel] 🔎 Appending ${results.length} results to existing ${searchResults.length} results`,
       );
       setSearchResults((prev) => {
         const existingIds = new Set(prev.map((match) => match.manga.id));
@@ -269,8 +274,8 @@ export function MangaSearchPanel({
           (match) => !existingIds.has(match.manga.id),
         );
 
-        console.log(
-          `🔎 Adding ${newUniqueResults.length} unique results (filtered ${results.length - newUniqueResults.length} duplicates)`,
+        console.debug(
+          `[SearchPanel] 🔎 Adding ${newUniqueResults.length} unique results (filtered ${results.length - newUniqueResults.length} duplicates)`,
         );
 
         return [...prev, ...newUniqueResults];
@@ -278,17 +283,19 @@ export function MangaSearchPanel({
     }
 
     if (pageInfo) {
-      console.log(`🔎 Using API pagination info:`, pageInfo);
+      console.debug(`[SearchPanel] 🔎 Using API pagination info:`, pageInfo);
       setHasNextPage(pageInfo.hasNextPage);
       setPage(pageInfo.currentPage);
     } else {
-      console.log(`🔎 No pagination info available, using fallback logic`);
+      console.debug(
+        `[SearchPanel] 🔎 No pagination info available, using fallback logic`,
+      );
       setHasNextPage(false);
       setPage(pageNum);
     }
 
-    console.log(
-      `🔎 UI state updated: searchResults.length=${results.length}, hasNextPage=${pageInfo?.hasNextPage || false}, page=${pageInfo?.currentPage || pageNum}`,
+    console.debug(
+      `[SearchPanel] 🔎 UI state updated: searchResults.length=${results.length}, hasNextPage=${pageInfo?.hasNextPage || false}, page=${pageInfo?.currentPage || pageNum}`,
     );
   };
 
@@ -299,8 +306,8 @@ export function MangaSearchPanel({
     setError(null);
 
     try {
-      console.log(
-        `🔎 Starting search for: "${query}" with bypassCache=${!!bypassCache}, page=${pageNum}`,
+      console.info(
+        `[SearchPanel] 🔎 Starting search for: "${query}" with bypassCache=${!!bypassCache}, page=${pageNum}`,
       );
       const startTime = performance.now();
 
@@ -314,19 +321,21 @@ export function MangaSearchPanel({
       }
 
       const endTime = performance.now();
-      console.log(
-        `🔎 Search completed in ${(endTime - startTime).toFixed(2)}ms for "${query}"`,
+      console.debug(
+        `[SearchPanel] 🔎 Search completed in ${(endTime - startTime).toFixed(2)}ms for "${query}"`,
       );
     } catch (error) {
-      console.error("Error searching manga:", error);
+      console.error("[SearchPanel] Error searching manga:", error);
       setError("Failed to search for manga. Please try again.");
       if (pageNum === 1) {
         setSearchResults([]);
-        console.log(`⚠️ Search error - cleared results`);
+        console.debug(`[SearchPanel] ⚠️ Search error - cleared results`);
       }
     } finally {
       setIsSearching(false);
-      console.log(`🔎 Search complete, isSearching set to false`);
+      console.debug(
+        `[SearchPanel] 🔎 Search complete, isSearching set to false`,
+      );
     }
   };
 

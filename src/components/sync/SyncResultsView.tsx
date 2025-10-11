@@ -66,7 +66,13 @@ const SyncResultsView: React.FC<SyncResultsViewProps> = ({
 
   // Handle export of error log
   const handleExportErrors = () => {
-    if (!report.errors.length || !onExportErrors) return;
+    if (!report.errors.length || !onExportErrors) {
+      console.warn(
+        "[SyncResults] ⚠️ No errors to export or export handler missing",
+      );
+      return;
+    }
+    console.info(`[SyncResults] 📤 Exporting ${report.errors.length} errors`);
     onExportErrors();
   };
 

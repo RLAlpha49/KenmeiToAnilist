@@ -19,11 +19,15 @@ import * as Sentry from "@sentry/electron/main";
 import "dotenv/config";
 
 // --- Sentry Initialization ---
+console.info(
+  `[Main] 🚀 Initializing app v${app.getVersion()} in ${process.env.NODE_ENV || "production"} mode`,
+);
 Sentry.init({
   dsn: process.env.SENTRY_DSN || undefined,
   environment: process.env.NODE_ENV,
   release: app.getVersion(),
 });
+console.debug("[Main] 🔍 Sentry initialized");
 // --- End Sentry Initialization ---
 
 // Handle Windows Squirrel events
@@ -50,6 +54,9 @@ if (process.platform === "win32") {
     switch (squirrelCommand) {
       case "--squirrel-install":
       case "--squirrel-updated":
+        console.info(
+          `[Main] 📦 Handling Squirrel ${squirrelCommand === "--squirrel-install" ? "install" : "update"} event`,
+        );
         // Always create desktop and start menu shortcuts
         app.setAppUserModelId("com.rlapps.kenmeitoanilist");
 
@@ -61,13 +68,17 @@ if (process.platform === "win32") {
           "Desktop,StartMenu",
         ]);
 
+        console.info("[Main] ✅ Shortcuts created successfully");
         return true;
       case "--squirrel-uninstall":
+        console.info("[Main] 🗑️ Handling Squirrel uninstall event");
         // Remove shortcuts
         spawnSync(updateDotExe, ["--removeShortcut", exeName]);
 
+        console.info("[Main] ✅ Shortcuts removed successfully");
         return true;
       case "--squirrel-obsolete":
+        console.debug("[Main] 🔍 Handling Squirrel obsolete event");
         return true;
     }
     return false;
@@ -96,6 +107,7 @@ process.env.VITE_APP_VERSION = app.getVersion();
  * Sets up the preload script, window options, and loads the appropriate URL or file depending on environment.
  */
 function createWindow() {
+  console.info("[Main] 🪟 Creating main application window...");
   const preload = path.join(__dirname, "preload.js");
   const mainWindow = new BrowserWindow({
     width: 1200,
@@ -109,15 +121,25 @@ function createWindow() {
     },
     titleBarStyle: "hidden",
   });
+
+  console.debug("[Main] 🔍 Registering IPC listeners...");
   registerListeners(mainWindow);
 
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+    console.debug(
+      `[Main] 🔍 Loading dev server: ${MAIN_WINDOW_VITE_DEV_SERVER_URL}`,
+    );
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
   } else {
-    mainWindow.loadFile(
-      path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
+    const filePath = path.join(
+      __dirname,
+      `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`,
     );
+    console.debug(`[Main] 🔍 Loading file: ${filePath}`);
+    mainWindow.loadFile(filePath);
   }
+
+  console.info("[Main] ✅ Main window created successfully");
 }
 
 /**
@@ -130,23 +152,33 @@ function createWindow() {
 async function installExtensions() {
   try {
     const result = await installExtension(REACT_DEVELOPER_TOOLS);
-    console.log(`Extensions installed successfully: ${result.name}`);
-  } catch {
-    console.error("Failed to install extensions");
+    console.info(`[Main] Extensions installed successfully: ${result.name}`);
+  } catch (error) {
+    console.error("[Main] Failed to install extensions:", error);
   }
 }
 
-app.whenReady().then(createWindow).then(installExtensions);
+app
+  .whenReady()
+  .then(() => {
+    console.info("[Main] ✅ App ready event received");
+    return createWindow();
+  })
+  .then(installExtensions);
 
 //osX only
 app.on("window-all-closed", () => {
+  console.info("[Main] 🪟 All windows closed");
   if (process.platform !== "darwin") {
+    console.info("[Main] 👋 Quitting app (non-macOS)");
     app.quit();
   }
 });
 
 app.on("activate", () => {
+  console.debug("[Main] 🔍 App activated");
   if (BrowserWindow.getAllWindows().length === 0) {
+    console.info("[Main] 🪟 No windows open, creating new window");
     createWindow();
   }
 });

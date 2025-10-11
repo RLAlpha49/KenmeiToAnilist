@@ -40,8 +40,8 @@ export function MatchActions({
       className={`${buttonBaseClass} bg-gradient-to-r from-indigo-500 via-indigo-400 to-sky-400 text-white shadow-[0_10px_30px_-12px_rgba(79,70,229,0.65)] hover:shadow-[0_18px_40px_-15px_rgba(14,165,233,0.55)] focus-visible:ring-indigo-400/70 dark:from-indigo-500 dark:via-indigo-400 dark:to-sky-500`}
       onClick={() => {
         if (match.status === "pending") {
-          console.log(
-            `Clicked Search Manually for manga ID: ${match.kenmeiManga.id}, title: ${match.kenmeiManga.title}`,
+          console.debug(
+            `[MatchActions] Clicked Search Manually for manga ID: ${match.kenmeiManga.id}, title: ${match.kenmeiManga.title}`,
           );
         }
         if (onManualSearch) onManualSearch(match.kenmeiManga);
@@ -79,8 +79,8 @@ export function MatchActions({
             <Button
               className={`${buttonBaseClass} bg-gradient-to-r from-emerald-500 via-emerald-400 to-lime-400 text-white shadow-[0_12px_32px_-15px_rgba(16,185,129,0.6)] hover:shadow-[0_20px_45px_-18px_rgba(101,163,13,0.55)] focus-visible:ring-emerald-400/80 dark:from-emerald-500 dark:via-emerald-400 dark:to-lime-500`}
               onClick={() => {
-                console.log(
-                  `Clicked Accept Match for manga ID: ${match.kenmeiManga.id}, title: ${match.kenmeiManga.title}`,
+                console.debug(
+                  `[MatchActions] Clicked Accept Match for manga ID: ${match.kenmeiManga.id}, title: ${match.kenmeiManga.title}`,
                 );
                 if (onAcceptMatch) onAcceptMatch(match);
               }}

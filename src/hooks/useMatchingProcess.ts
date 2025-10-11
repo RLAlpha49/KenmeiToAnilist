@@ -185,7 +185,7 @@ export const useMatchingProcess = ({
           setPendingManga([]);
         }
       } catch (e) {
-        console.error("Failed to persist match results:", e);
+        console.error("[MatchingProcess] Failed to persist match results:", e);
       }
     },
     [calculatePendingManga, savePendingManga, setPendingManga],
@@ -223,7 +223,7 @@ export const useMatchingProcess = ({
   );
 
   const handleMatchingError = useCallback((err: unknown) => {
-    console.error("Matching error:", err);
+    console.error("[MatchingProcess] Matching error:", err);
 
     if (cancelMatchingRef.current) {
       setError("Matching process was cancelled");
@@ -398,7 +398,10 @@ export const useMatchingProcess = ({
         }
 
         const finalCacheStatus = cacheDebugger.getCacheStatus();
-        console.log("Cache status after matching:", finalCacheStatus);
+        console.debug(
+          "[MatchingProcess] Cache status after matching:",
+          finalCacheStatus,
+        );
 
         // Normal completion: merge, persist, and clear pending
         await persistMergedResults(
@@ -456,7 +459,9 @@ export const useMatchingProcess = ({
           const kenmeiData = JSON.parse(kenmeiDataJson);
           const allManga = kenmeiData.manga || [];
 
-          console.log(`Found ${allManga.length} total manga in storage`);
+          console.info(
+            `[MatchingProcess] Found ${allManga.length} total manga in storage`,
+          );
 
           if (allManga.length > 0) {
             // Find manga that haven't been processed yet using comprehensive ID and title matching
@@ -480,16 +485,18 @@ export const useMatchingProcess = ({
             );
 
             if (comprehensiveUnmatched.length > 0) {
-              console.log(
-                `Found ${comprehensiveUnmatched.length} unmatched manga using comprehensive ID and title comparison`,
+              console.info(
+                `[MatchingProcess] Found ${comprehensiveUnmatched.length} unmatched manga using comprehensive ID and title comparison`,
               );
-              console.log(
-                "Sample unmatched manga:",
+              console.debug(
+                "[MatchingProcess] Sample unmatched manga:",
                 comprehensiveUnmatched
                   .slice(0, 5)
                   .map((m: KenmeiManga) => ({ id: m.id, title: m.title })),
               );
-              console.log("Starting matching process with all unmatched manga");
+              console.info(
+                "[MatchingProcess] Starting matching process with all unmatched manga",
+              );
 
               // Set the pendingManga explicitly to the full list of unmatched manga
               // This ensures the correct count is shown in the UI
@@ -501,13 +508,16 @@ export const useMatchingProcess = ({
           }
         }
       } catch (error) {
-        console.error("Error processing all manga for resume:", error);
+        console.error(
+          "[MatchingProcess] Error processing all manga for resume:",
+          error,
+        );
       }
 
       // If we couldn't find unmatched manga by comparing all manga, try using pendingManga state
       if (pendingManga.length > 0) {
-        console.log(
-          `Resuming matching process with ${pendingManga.length} remaining manga from pendingManga state`,
+        console.info(
+          `[MatchingProcess] Resuming matching process with ${pendingManga.length} remaining manga from pendingManga state`,
         );
 
         // Add a check to ensure we're not duplicating already processed manga using comprehensive matching
@@ -525,8 +535,8 @@ export const useMatchingProcess = ({
           return !idMatch && !titleMatch;
         });
 
-        console.log(
-          `Filtered out ${pendingManga.length - uniquePendingManga.length} already processed manga, remaining: ${uniquePendingManga.length}`,
+        console.info(
+          `[MatchingProcess] Filtered out ${pendingManga.length - uniquePendingManga.length} already processed manga, remaining: ${uniquePendingManga.length}`,
         );
 
         if (uniquePendingManga.length > 0) {
@@ -534,7 +544,9 @@ export const useMatchingProcess = ({
           startMatching(uniquePendingManga, false, setMatchResults);
           return;
         } else {
-          console.log("All pending manga have already been processed");
+          console.info(
+            "[MatchingProcess] All pending manga have already been processed",
+          );
           savePendingManga([]); // Clear the pending manga since they're already processed
         }
       }
@@ -545,13 +557,15 @@ export const useMatchingProcess = ({
         .map((r) => r.kenmeiManga);
 
       if (unmatchedFromResults.length > 0) {
-        console.log(
-          `Resuming with ${unmatchedFromResults.length} unmatched manga from results as last resort`,
+        console.info(
+          `[MatchingProcess] Resuming with ${unmatchedFromResults.length} unmatched manga from results as last resort`,
         );
         startMatching(unmatchedFromResults, false, setMatchResults);
       } else {
         // If we got here, there's nothing to resume
-        console.log("No pending manga found to resume matching");
+        console.info(
+          "[MatchingProcess] No pending manga found to resume matching",
+        );
         savePendingManga([]); // Ensure pending manga is cleared
         setError("No pending manga found to resume matching.");
       }
@@ -572,7 +586,7 @@ export const useMatchingProcess = ({
     ) {
       savePendingManga([]);
       setError(null);
-      console.log("Resume cancelled, pending manga cleared");
+      console.info("[MatchingProcess] Resume cancelled, pending manga cleared");
     }
   }, [savePendingManga]);
 
@@ -591,7 +605,9 @@ export const useMatchingProcess = ({
       cancelMatchingRef.current = true;
       setStatusMessage("Cancelling process...");
       setDetailMessage("Immediately stopping all operations");
-      console.log("User requested cancellation - stopping all operations");
+      console.info(
+        "[MatchingProcess] User requested cancellation - stopping all operations",
+      );
 
       // Update global tracking state
       if (globalThis.matchingProcessState) {
@@ -602,7 +618,7 @@ export const useMatchingProcess = ({
 
       // If we have an active abort controller, use it to abort immediately
       if (globalThis.activeAbortController) {
-        console.log("Aborting all in-progress requests");
+        console.info("[MatchingProcess] Aborting all in-progress requests");
         globalThis.activeAbortController.abort();
       }
     }

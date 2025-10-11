@@ -76,8 +76,8 @@ function handleIncrementalStep1(
     progress: previousProgress + 1,
   };
 
-  console.log(
-    `📊 [${operationId}] Incremental sync step 1: Updating progress from ${previousProgress} to ${variables.progress} (incrementing by 1)`,
+  console.debug(
+    `[AniListSync] 📊 [${operationId}] Incremental sync step 1: Updating progress from ${previousProgress} to ${variables.progress} (incrementing by 1)`,
   );
 
   return variables;
@@ -95,8 +95,8 @@ function handleIncrementalStep2(
     progress: entry.progress,
   };
 
-  console.log(
-    `📊 [${operationId}] Incremental sync step 2: Updating progress to final value ${entry.progress}`,
+  console.debug(
+    `[AniListSync] 📊 [${operationId}] Incremental sync step 2: Updating progress to final value ${entry.progress}`,
   );
 
   return variables;
@@ -173,8 +173,8 @@ function handleIncrementalStep3(
 
   const updateInfo =
     changes.length > 0 ? changes.join(", ") : "no additional fields";
-  console.log(
-    `📊 [${operationId}] Incremental sync step 3: Updating ${updateInfo}`,
+  console.debug(
+    `[AniListSync] 📊 [${operationId}] Incremental sync step 3: Updating ${updateInfo}`,
   );
 
   return variables;
@@ -242,12 +242,12 @@ function handleGraphQLErrors(
   operationId: string,
 ): SyncResult {
   const errorMessages = errors.map((err) => err.message).join(", ");
-  console.error(`❌ [${operationId}] GraphQL errors:`, errors);
+  console.error(`[AniListSync] ❌ [${operationId}] GraphQL errors:`, errors);
 
   if (isRateLimitError(errors)) {
     const retryAfter = extractRetryAfterTime(errors);
     console.warn(
-      `⚠️ [${operationId}] Rate limited! Will retry after ${retryAfter / 1000} seconds`,
+      `[AniListSync] ⚠️ [${operationId}] Rate limited! Will retry after ${retryAfter / 1000} seconds`,
     );
 
     return {
@@ -284,8 +284,8 @@ function handleResponseData(
   const responseData = response.data?.data ?? response.data;
 
   if (responseData?.SaveMediaListEntry?.id) {
-    console.log(
-      `✅ [${operationId}] Successfully updated entry with ID ${mediaId}`,
+    console.debug(
+      `[AniListSync] ✅ [${operationId}] Successfully updated entry with ID ${mediaId}`,
     );
     return {
       success: true,
@@ -354,25 +354,29 @@ function logErrorDetails(
   operationId: string,
 ): void {
   console.error(
-    `❌ [${operationId}] Error updating entry ${entry.mediaId}:`,
+    `[AniListSync] ❌ [${operationId}] Error updating entry ${entry.mediaId}:`,
     error,
   );
 
   if (error instanceof Error) {
-    console.error(`   [${operationId}] Error type: ${error.name}`);
-    console.error(`   [${operationId}] Error message: ${error.message}`);
     console.error(
-      `   [${operationId}] Stack trace:`,
+      `[AniListSync]    [${operationId}] Error type: ${error.name}`,
+    );
+    console.error(
+      `[AniListSync]    [${operationId}] Error message: ${error.message}`,
+    );
+    console.error(
+      `[AniListSync]    [${operationId}] Stack trace:`,
       error.stack || "No stack trace available",
     );
 
     if (error instanceof TypeError && error.message.includes("fetch"))
       console.error(
-        `   [${operationId}] Network error detected. Possible connectivity issue.`,
+        `[AniListSync]    [${operationId}] Network error detected. Possible connectivity issue.`,
       );
   }
 
-  console.error(`   [${operationId}] Entry details:`, {
+  console.error(`[AniListSync]    [${operationId}] Entry details:`, {
     mediaId: entry.mediaId,
     title: entry.title,
     status: entry.status,
@@ -491,7 +495,9 @@ export async function updateMangaEntry(
   const operationId = `${entry.mediaId}-${Date.now().toString(36).substring(4, 10)}`;
 
   if (!token) {
-    console.error(`❌ [${operationId}] No authentication token provided`);
+    console.error(
+      `[AniListSync] ❌ [${operationId}] No authentication token provided`,
+    );
     return {
       success: false,
       mediaId: entry.mediaId,
@@ -568,12 +574,14 @@ export async function deleteMangaEntry(
   // Generate an operation ID for tracking in logs
   const operationId = `del-${entryId}-${Date.now().toString(36).substring(4, 10)}`;
 
-  console.log(
-    `🗑️ [${operationId}] Starting delete operation for entry ID ${entryId}`,
+  console.info(
+    `[AniListSync] 🗑️ [${operationId}] Starting delete operation for entry ID ${entryId}`,
   );
 
   if (!token) {
-    console.error(`❌ [${operationId}] No authentication token provided`);
+    console.error(
+      `[AniListSync] ❌ [${operationId}] No authentication token provided`,
+    );
     return {
       success: false,
       error: "No authentication token provided",
@@ -622,8 +630,8 @@ export async function deleteMangaEntry(
     const responseData = response.data?.data ?? response.data;
 
     if (responseData?.DeleteMediaListEntry?.deleted) {
-      console.log(
-        `✅ [${operationId}] Successfully deleted entry with ID ${entryId}`,
+      console.info(
+        `[AniListSync] ✅ [${operationId}] Successfully deleted entry with ID ${entryId}`,
       );
       return {
         success: true,
@@ -631,7 +639,7 @@ export async function deleteMangaEntry(
     }
 
     console.error(
-      `❌ [${operationId}] Missing DeleteMediaListEntry in response:`,
+      `[AniListSync] ❌ [${operationId}] Missing DeleteMediaListEntry in response:`,
       JSON.stringify(response, null, 2),
     );
     return {
@@ -647,10 +655,14 @@ export async function deleteMangaEntry(
 
     // Try to get more detailed information from the error object
     if (error instanceof Error) {
-      console.error(`   [${operationId}] Error type: ${error.name}`);
-      console.error(`   [${operationId}] Error message: ${error.message}`);
       console.error(
-        `   [${operationId}] Stack trace:`,
+        `[AniListSync]    [${operationId}] Error type: ${error.name}`,
+      );
+      console.error(
+        `[AniListSync]    [${operationId}] Error message: ${error.message}`,
+      );
+      console.error(
+        `[AniListSync]    [${operationId}] Stack trace:`,
         error.stack || "No stack trace available",
       );
     }
@@ -784,7 +796,7 @@ async function handleRateLimitRetry(
   progress.retryAfter = retryAfterMs;
 
   if (onProgress) {
-    console.log(`[PROGRESS] Rate limited: retryAfter=${retryAfterMs}`);
+    console.warn(`[AniListSync] ⏳ Rate limited: retryAfter=${retryAfterMs}ms`);
     onProgress({ ...progress });
   }
 
@@ -933,8 +945,8 @@ async function processEntryStep(
     context.progress.currentStep = entry.syncMetadata?.step || entryIndex + 1;
 
   if (context.onProgress) {
-    console.log(
-      `[PROGRESS] Updating progress: completed=${context.progress.completed}, total=${context.progress.total}, currentMediaId=${context.mediaIdStr}, currentStep=${context.progress.currentStep}, isIncremental=${isIncremental}`,
+    console.debug(
+      `[AniListSync] 📊 Progress update: completed=${context.progress.completed}/${context.progress.total}, mediaId=${context.mediaIdStr}, step=${context.progress.currentStep}, incremental=${isIncremental}`,
     );
     context.onProgress({ ...context.progress });
   }
@@ -973,10 +985,10 @@ async function processEntryStep(
     const errorOpId = `err-${context.mediaIdStr}-${entry.syncMetadata?.step || 0}-${Date.now().toString(36).substring(4, 10)}`;
 
     console.error(
-      `❌ [${errorOpId}] Error updating entry ${context.mediaIdStr}:`,
+      `[AniListSync] ❌ [${errorOpId}] Error updating entry ${context.mediaIdStr}:`,
       error,
     );
-    console.error(`   [${errorOpId}] Entry details:`, {
+    console.error(`[AniListSync]    [${errorOpId}] Entry details:`, {
       mediaId: entry.mediaId,
       title: entry.title,
       status: entry.status,
@@ -1019,12 +1031,12 @@ async function processMediaEntries(
 
   if (!entriesForMediaId) return { success: true }; // Skip if not present
 
-  console.log(
-    `[SYNC] Starting manga ${mediaIdNum} (${progress.completed + 1} of ${progress.total})`,
+  console.debug(
+    `[AniListSync] 📚 Starting sync for manga ${mediaIdNum} (${progress.completed + 1}/${progress.total})`,
   );
 
   if (abortSignal?.aborted) {
-    console.log("Sync operation aborted by user");
+    console.info("[AniListSync] ⏹️ Sync operation aborted by user");
     return { success: false, error: "Aborted by user" };
   }
 
@@ -1048,7 +1060,7 @@ async function processMediaEntries(
   let entryIndex = 0;
   while (entryIndex < entriesForMediaId.length) {
     if (abortSignal?.aborted) {
-      console.log("Sync operation aborted by user");
+      console.info("[AniListSync] ⏹️ Sync operation aborted by user");
       break;
     }
 
@@ -1127,10 +1139,10 @@ function generateSyncReport(
     };
     storage.setItem(STORAGE_KEYS.SYNC_STATS, JSON.stringify(syncStats));
   } catch (e) {
-    console.error("Failed to save sync stats:", e);
+    console.error("[AniListSync] ❌ Failed to save sync stats:", e);
   }
 
-  console.log("Sync completed:", report);
+  console.info("[AniListSync] ✅ Sync completed:", report);
   return report;
 }
 
@@ -1185,7 +1197,7 @@ export async function syncMangaBatch(
   // Process each media ID in order
   for (const mediaIdNum of userOrderMediaIds) {
     if (abortSignal?.aborted) {
-      console.log("Sync operation aborted by user");
+      console.info("[AniListSync] ⏹️ Sync operation aborted by user");
       break;
     }
 
@@ -1246,8 +1258,8 @@ export async function retryFailedUpdates(
     failedMediaIds.includes(entry.mediaId),
   );
 
-  console.log(
-    `🔄 Retrying ${entriesToRetry.length} failed updates out of ${entries.length} total entries`,
+  console.info(
+    `[AniListSync] 🔄 Retrying ${entriesToRetry.length} failed updates out of ${entries.length} total entries`,
   );
 
   // Add retry metadata to each entry

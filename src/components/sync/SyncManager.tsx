@@ -892,9 +892,15 @@ const SyncManager: React.FC<SyncManagerProps> = ({
 
   // Handle start synchronization
   const handleStartSync = async () => {
+    console.info(
+      `[SyncManager] 🚀 Starting sync with ${entries.length} entries (incremental: ${incrementalSync})`,
+    );
     setProgressBaseline(null);
     if (syncActions?.startSync) {
       if (incrementalSync) {
+        console.debug(
+          "[SyncManager] 🔍 Processing entries for incremental sync...",
+        );
         const processedEntries = entries.map((entry) => {
           // For new entries (no previousValues), use incremental sync if progress > 1
           if (!entry.previousValues) {
@@ -925,6 +931,13 @@ const SyncManager: React.FC<SyncManagerProps> = ({
             },
           };
         });
+        const incrementalCount = processedEntries.filter(
+          (e) => e.syncMetadata?.useIncrementalSync,
+        ).length;
+        console.info(
+          `[SyncManager] ✅ Prepared ${incrementalCount} entries for incremental sync`,
+        );
+
         await syncActions.startSync(
           processedEntries,
           token,
@@ -932,6 +945,7 @@ const SyncManager: React.FC<SyncManagerProps> = ({
           displayOrderMediaIds,
         );
       } else {
+        console.debug("[SyncManager] 🔍 Starting standard sync...");
         await syncActions.startSync(
           entries,
           token,
@@ -944,6 +958,7 @@ const SyncManager: React.FC<SyncManagerProps> = ({
 
   // Handle cancellation
   const handleCancel = () => {
+    console.info("[SyncManager] 🛑 Cancelling sync operation");
     if (syncActions?.cancelSync) {
       syncActions.cancelSync();
     }
@@ -954,12 +969,14 @@ const SyncManager: React.FC<SyncManagerProps> = ({
   };
 
   const handlePause = () => {
+    console.info("[SyncManager] ⏸️ Pausing sync operation");
     if (syncActions?.pauseSync) {
       syncActions.pauseSync();
     }
   };
 
   const handleResume = () => {
+    console.info("[SyncManager] ▶️ Resuming sync operation");
     if (syncActions?.resumeSync) {
       syncActions.resumeSync(entries, token, undefined, displayOrderMediaIds);
     }

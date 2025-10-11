@@ -256,8 +256,8 @@ export function SettingsPage() {
     if (isLoading) {
       // If loading state persists for more than 20 seconds, trigger a refresh
       timeoutId = setTimeout(() => {
-        console.log(
-          "Loading state persisted for too long - triggering refresh",
+        console.warn(
+          "[Settings] Loading state persisted for too long - triggering refresh",
         );
         handleRefreshPage();
       }, 20000);
@@ -271,10 +271,15 @@ export function SettingsPage() {
   // Add a useEffect to load custom credential settings from localStorage on initial mount
   useEffect(() => {
     try {
+      console.debug("[Settings] 🔍 Loading custom credential settings...");
+
       // Load custom credentials toggle state
       const savedUseCustom = localStorage.getItem("useCustomCredentials");
       if (savedUseCustom) {
         setUseCustomCredentials(JSON.parse(savedUseCustom));
+        console.debug(
+          `[Settings] 🔍 Custom credentials enabled: ${savedUseCustom}`,
+        );
       }
 
       // Load saved custom credentials if they exist
@@ -287,6 +292,8 @@ export function SettingsPage() {
           credentials.redirectUri ||
             `http://localhost:${DEFAULT_AUTH_PORT}/callback`,
         );
+
+        console.info("[Settings] ✅ Loaded custom credentials from storage");
 
         // Also update context with saved credentials
         if (
@@ -302,12 +309,18 @@ export function SettingsPage() {
         }
       }
     } catch (err) {
-      console.error("Failed to load saved credential settings:", err);
+      console.error(
+        "[Settings] ❌ Failed to load saved credential settings:",
+        err,
+      );
     }
   }, []);
 
   // Save custom credentials toggle state whenever it changes
   useEffect(() => {
+    console.debug(
+      `[Settings] 🔍 Saving custom credentials toggle: ${useCustomCredentials}`,
+    );
     localStorage.setItem(
       "useCustomCredentials",
       JSON.stringify(useCustomCredentials),
@@ -317,6 +330,7 @@ export function SettingsPage() {
   // Save custom credentials whenever they change
   useEffect(() => {
     if (clientId || clientSecret || redirectUri) {
+      console.debug("[Settings] 🔍 Saving custom credentials to storage");
       localStorage.setItem(
         "customCredentials",
         JSON.stringify({
@@ -357,6 +371,10 @@ export function SettingsPage() {
 
   const handleLogin = async () => {
     try {
+      console.info(
+        `[Settings] 🔐 Initiating AniList login (${useCustomCredentials ? "custom" : "default"} credentials)`,
+      );
+
       // Create credentials object based on source
       const credentials: APICredentials = useCustomCredentials
         ? {
@@ -373,7 +391,9 @@ export function SettingsPage() {
           };
 
       await login(credentials);
+      console.info("[Settings] ✅ Login initiated successfully");
     } catch (err: unknown) {
+      console.error("[Settings] ❌ Login failed:", err);
       setError(
         createError(
           ErrorType.AUTHENTICATION,
@@ -387,8 +407,11 @@ export function SettingsPage() {
 
   const handleCancelAuth = async () => {
     try {
+      console.info("[Settings] 🚫 Cancelling authentication...");
       await cancelAuth();
+      console.info("[Settings] ✅ Authentication cancelled successfully");
     } catch (err) {
+      console.error("[Settings] ❌ Failed to cancel authentication:", err);
       setError(
         createError(
           ErrorType.AUTHENTICATION,
@@ -401,15 +424,24 @@ export function SettingsPage() {
   };
 
   const handleClearCache = async () => {
+    console.info("[Settings] 🗑️ Starting cache clear operation...");
     setCacheCleared(false);
     setIsClearing(true);
     setError(null);
 
     const anySelected = Object.values(cachesToClear).some(Boolean);
     if (!anySelected) {
+      console.warn("[Settings] ⚠️ No cache types selected for clearing");
       setIsClearing(false);
       return;
     }
+
+    console.debug(
+      "[Settings] 🔍 Cache types selected:",
+      Object.entries(cachesToClear)
+        .filter(([, v]) => v)
+        .map(([k]) => k),
+    );
 
     const pushIfMissing = (arr: string[], value: string) => {
       if (!arr.includes(value)) arr.push(value);
@@ -471,14 +503,14 @@ export function SettingsPage() {
           typeof services.clearSearchCache === "function"
         ) {
           services.clearSearchCache();
-          console.log("🧹 Search cache cleared");
+          console.debug("[Settings] 🧹 Search cache cleared");
         }
         if (
           cachesToClear.manga &&
           typeof services.clearMangaCache === "function"
         ) {
           services.clearMangaCache();
-          console.log("🧹 Manga cache cleared");
+          console.debug("[Settings] 🧹 Manga cache cleared");
         }
         if (
           cachesToClear.search &&
@@ -486,10 +518,10 @@ export function SettingsPage() {
           services.cacheDebugger?.resetAllCaches
         ) {
           services.cacheDebugger.resetAllCaches();
-          console.log("🧹 All in-memory caches reset");
+          console.debug("[Settings] 🧹 All in-memory caches reset");
         }
       } catch (e) {
-        console.warn("Failed to clear external caches", e);
+        console.warn("[Settings] Failed to clear external caches", e);
       }
     };
 
@@ -502,11 +534,13 @@ export function SettingsPage() {
             typeof globalThis.electronStore.removeItem === "function"
           ) {
             globalThis.electronStore.removeItem(cacheKey);
-            console.log(`🧹 Cleared Electron Store cache: ${cacheKey}`);
+            console.debug(
+              `[Settings] 🧹 Cleared Electron Store cache: ${cacheKey}`,
+            );
           }
-          console.log(`🧹 Cleared cache: ${cacheKey}`);
+          console.debug(`[Settings] 🧹 Cleared cache: ${cacheKey}`);
         } catch (e) {
-          console.warn(`Failed to clear cache: ${cacheKey}`, e);
+          console.warn(`[Settings] Failed to clear cache: ${cacheKey}`, e);
         }
       }
     };
@@ -516,10 +550,13 @@ export function SettingsPage() {
         const req = globalThis.indexedDB?.deleteDatabase("anilist-cache");
         if (!req) return;
         req.onsuccess = () =>
-          console.log("🧹 Successfully deleted IndexedDB database");
-        req.onerror = () => console.error("Error deleting IndexedDB database");
+          console.debug(
+            "[Settings] 🧹 Successfully deleted IndexedDB database",
+          );
+        req.onerror = () =>
+          console.error("[Settings] Error deleting IndexedDB database");
       } catch (e) {
-        console.warn("Failed to clear IndexedDB:", e);
+        console.warn("[Settings] Failed to clear IndexedDB:", e);
       }
     };
 
@@ -536,7 +573,7 @@ export function SettingsPage() {
             "\n\nYou may need to restart the application for all changes to take effect.",
         );
       } catch (e) {
-        console.warn("Failed to show alert:", e);
+        console.warn("[Settings] Failed to show alert:", e);
       }
     };
 
@@ -563,18 +600,21 @@ export function SettingsPage() {
       }
 
       const uniqueKeys = [...new Set(keysToRemove)];
-      console.log("🧹 Clearing the following localStorage keys:", uniqueKeys);
+      console.debug(
+        "[Settings] 🧹 Clearing the following localStorage keys:",
+        uniqueKeys,
+      );
 
       clearStorageKeys(uniqueKeys);
 
       if (anySelected) deleteIndexedDB();
 
-      console.log("🧹 Selected caches cleared");
+      console.info("[Settings] ✅ Selected caches cleared successfully");
       setCacheCleared(true);
       showResultSummary();
       setTimeout(() => setCacheCleared(false), 5000);
     } catch (err) {
-      console.error("Error clearing cache:", err);
+      console.error("[Settings] ❌ Error clearing cache:", err);
       setError(
         createError(
           ErrorType.SYSTEM,
@@ -589,10 +629,12 @@ export function SettingsPage() {
   };
 
   const dismissError = () => {
+    console.debug("[Settings] 🔍 Dismissing error message");
     setError(null);
   };
 
   const handleRefreshPage = () => {
+    console.info("[Settings] 🔄 Refreshing page...");
     // Clear error states and status messages
     setError(null);
     globalThis.location.reload();
@@ -676,7 +718,7 @@ export function SettingsPage() {
             : "Latest sync details captured locally.",
       };
     } catch (err) {
-      console.error("Error parsing sync history: ", err);
+      console.error("[Settings] Error parsing sync history:", err);
       return {
         label: "Never",
         hint: "Sync history could not be parsed.",
@@ -686,6 +728,7 @@ export function SettingsPage() {
 
   // Fetch update info from GitHub
   const handleCheckForUpdates = async () => {
+    console.info("[Settings] 🔍 Checking for updates...");
     setIsCheckingUpdate(true);
     setUpdateError(null);
     setUpdateInfo(null);
@@ -693,7 +736,12 @@ export function SettingsPage() {
       const response = await fetch(
         "https://api.github.com/repos/RLAlpha49/KenmeiToAnilist/releases?per_page=10",
       );
-      if (!response.ok) throw new Error("Failed to fetch releases");
+      if (!response.ok) {
+        console.warn(
+          `[Settings] ⚠️ Failed to fetch releases: HTTP ${response.status}`,
+        );
+        throw new Error("Failed to fetch releases");
+      }
       type Release = {
         draft: boolean;
         prerelease: boolean;
@@ -717,7 +765,9 @@ export function SettingsPage() {
         url: release.html_url,
         isBeta: !!release.prerelease,
       });
+      console.info(`[Settings] ✅ Update check complete: ${release.tag_name}`);
     } catch (e) {
+      console.error("[Settings] ❌ Error checking for updates:", e);
       setUpdateError(e instanceof Error ? e.message : "Unknown error");
     } finally {
       setIsCheckingUpdate(false);

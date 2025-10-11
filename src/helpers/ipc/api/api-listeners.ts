@@ -71,8 +71,8 @@ async function handleRateLimit(): Promise<void> {
   const now = Date.now();
   if (now < rateLimitResetTime) {
     const waitTime = rateLimitResetTime - now;
-    console.log(
-      `Rate limited, waiting ${Math.round(waitTime / 1000)}s before retrying`,
+    console.warn(
+      `[ApiIPC] Rate limited, waiting ${Math.round(waitTime / 1000)}s before retrying`,
     );
     await sleep(waitTime);
   }
@@ -154,16 +154,20 @@ async function handleRateLimitResponse(
 
   if (retryAfter && !Number.isNaN(Number(retryAfter))) {
     waitTime = Number(retryAfter) * 1000;
-    console.log(`Rate limited with Retry-After header: ${retryAfter}s`);
+    console.warn(
+      `[ApiIPC] Rate limited with Retry-After header: ${retryAfter}s`,
+    );
   } else {
     waitTime = 5000 * Math.pow(2, retryCount);
-    console.log(`Rate limited, using exponential backoff: ${waitTime / 1000}s`);
+    console.warn(
+      `[ApiIPC] Rate limited, using exponential backoff: ${waitTime / 1000}s`,
+    );
   }
 
   rateLimitResetTime = Date.now() + waitTime;
   const searchTerm = getSearchTermFromVariables(variables);
-  console.log(
-    `Rate limited for "${searchTerm}", waiting ${Math.round(waitTime / 1000)}s before retry #${retryCount + 1}`,
+  console.warn(
+    `[ApiIPC] Rate limited for "${searchTerm}", waiting ${Math.round(waitTime / 1000)}s before retry #${retryCount + 1}`,
   );
   await sleep(waitTime);
 
@@ -196,8 +200,8 @@ async function handleServerError(
 
   const waitTime = 3000 * Math.pow(2, retryCount);
   const searchTerm = getSearchTermFromVariables(variables);
-  console.log(
-    `Server error ${response.status} for "${searchTerm}", waiting ${Math.round(waitTime / 1000)}s before retry #${retryCount + 1}`,
+  console.warn(
+    `[ApiIPC] Server error ${response.status} for "${searchTerm}", waiting ${Math.round(waitTime / 1000)}s before retry #${retryCount + 1}`,
   );
 
   await sleep(waitTime);
@@ -217,8 +221,8 @@ async function handleNetworkError(
 ): Promise<Record<string, unknown>> {
   if (error.name === "FetchError" && retryCount < MAX_RETRY_ATTEMPTS) {
     const waitTime = 1000 * Math.pow(2, retryCount);
-    console.log(
-      `Network error, retrying in ${waitTime / 1000}s (attempt ${retryCount + 1}/${MAX_RETRY_ATTEMPTS})`,
+    console.warn(
+      `[ApiIPC] Network error, retrying in ${waitTime / 1000}s (attempt ${retryCount + 1}/${MAX_RETRY_ATTEMPTS})`,
     );
     await sleep(waitTime);
     return requestAniList(query, variables, token, retryCount + 1);
@@ -346,7 +350,7 @@ export function setupAniListAPI() {
   // Handle graphQL requests
   ipcMain.handle("anilist:request", async (_, query, variables, token) => {
     try {
-      console.log("Handling AniList API request in main process");
+      console.debug("[ApiIPC] Handling AniList API request in main process");
 
       // Extract and remove bypassCache from variables to avoid sending it to the API
       const bypassCache = variables?.bypassCache;
@@ -364,7 +368,9 @@ export function setupAniListAPI() {
         const cacheKey = generateCacheKey(query, variables);
 
         if (isCacheValid(searchCache, cacheKey)) {
-          console.log(`Using cached search results for: ${variables.search}`);
+          console.debug(
+            `[ApiIPC] Using cached search results for: ${variables.search}`,
+          );
           return {
             success: true,
             data: searchCache[cacheKey].data,
@@ -373,7 +379,9 @@ export function setupAniListAPI() {
       }
 
       if (isSearchQuery && bypassCache) {
-        console.log(`Bypassing cache for search: ${variables.search}`);
+        console.debug(
+          `[ApiIPC] Bypassing cache for search: ${variables.search}`,
+        );
       }
 
       const response = await requestAniList(query, variables, token);
@@ -392,7 +400,7 @@ export function setupAniListAPI() {
         data: response,
       };
     } catch (error) {
-      console.error("Error in anilist:request:", error);
+      console.error("[ApiIPC] Error in anilist:request:", error);
       return {
         success: false,
         error,
@@ -437,7 +445,7 @@ export function setupAniListAPI() {
         token: data,
       };
     } catch (error) {
-      console.error("Error in anilist:exchangeToken:", error);
+      console.error("[ApiIPC] Error in anilist:exchangeToken:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -448,11 +456,11 @@ export function setupAniListAPI() {
   // Handle opening external links in the default browser
   ipcMain.handle("shell:openExternal", async (_, url) => {
     try {
-      console.log(`Opening external URL in default browser: ${url}`);
+      console.debug(`[ApiIPC] Opening external URL in default browser: ${url}`);
       await shell.openExternal(url);
       return { success: true };
     } catch (error) {
-      console.error("Error opening external URL:", error);
+      console.error("[ApiIPC] Error opening external URL:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -501,8 +509,8 @@ export function setupAniListAPI() {
           "../../../api/manga-sources/types"
         );
 
-        console.log(
-          `🔍 ${source} API: Searching for "${query}" with limit ${limit}`,
+        console.info(
+          `[ApiIPC] 🔍 ${source} API: Searching for "${query}" with limit ${limit}`,
         );
 
         const sourceEnum = Object.values(MangaSource).find(
@@ -518,13 +526,16 @@ export function setupAniListAPI() {
           limit,
         );
 
-        console.log(
-          `📦 ${source} API: Found ${Array.isArray(data) ? data.length : 0} results for "${query}"`,
+        console.info(
+          `[ApiIPC] 📦 ${source} API: Found ${Array.isArray(data) ? data.length : 0} results for "${query}"`,
         );
 
         return data || [];
       } catch (error) {
-        console.error(`❌ ${source} search failed for "${query}":`, error);
+        console.error(
+          `[ApiIPC] ❌ ${source} search failed for "${query}":`,
+          error,
+        );
         throw error;
       }
     },
@@ -541,7 +552,9 @@ export function setupAniListAPI() {
           "../../../api/manga-sources/types"
         );
 
-        console.log(`📖 ${source} API: Getting manga details for "${slug}"`);
+        console.info(
+          `[ApiIPC] 📖 ${source} API: Getting manga details for "${slug}"`,
+        );
 
         // Convert string value to enum (e.g., "mangadex" -> MangaSource.MANGADX)
         // Find the enum value that matches the string value
@@ -554,11 +567,16 @@ export function setupAniListAPI() {
 
         const data = await mangaSourceRegistry.getMangaDetail(sourceEnum, slug);
 
-        console.log(`📖 ${source} API: Retrieved details for "${slug}"`);
+        console.info(
+          `[ApiIPC] 📖 ${source} API: Retrieved details for "${slug}"`,
+        );
 
         return data || null;
       } catch (error) {
-        console.error(`❌ ${source} manga detail failed for "${slug}":`, error);
+        console.error(
+          `[ApiIPC] ❌ ${source} manga detail failed for "${slug}":`,
+          error,
+        );
         throw error;
       }
     },

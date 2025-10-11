@@ -25,8 +25,8 @@ export const usePendingManga = () => {
 
   // Debug effect for pendingManga
   useEffect(() => {
-    console.log(
-      `pendingManga state updated: ${pendingManga.length} manga pending`,
+    console.debug(
+      `[PendingManga] pendingManga state updated: ${pendingManga.length} manga pending`,
     );
   }, [pendingManga]);
 
@@ -44,7 +44,7 @@ export const usePendingManga = () => {
               setPendingManga(parsed);
             } catch (e) {
               console.error(
-                "Failed to parse pending manga from async storage:",
+                "[PendingManga] Failed to parse pending manga from async storage:",
                 e,
               );
               setPendingManga([]);
@@ -68,8 +68,8 @@ export const usePendingManga = () => {
         pendingManga.length > 0 &&
         !globalThis.matchingProcessState?.isRunning
       ) {
-        console.log(
-          `Component unmounting - ensuring ${pendingManga.length} pending manga are saved to storage`,
+        console.debug(
+          `[PendingManga] Component unmounting - ensuring ${pendingManga.length} pending manga are saved to storage`,
         );
         // Save the current pending manga to ensure it persists
         storage.setItem(
@@ -89,23 +89,28 @@ export const usePendingManga = () => {
   const savePendingManga = (mangaList: KenmeiManga[]) => {
     try {
       if (mangaList.length > 0) {
-        console.log(
-          `Saving ${mangaList.length} unprocessed manga for potential resume`,
+        console.debug(
+          `[PendingManga] Saving ${mangaList.length} unprocessed manga for potential resume`,
         );
         storage.setItem(STORAGE_KEYS.PENDING_MANGA, JSON.stringify(mangaList));
         setPendingManga(mangaList);
-        console.log(
-          `Successfully saved ${mangaList.length} pending manga to storage`,
+        console.debug(
+          `[PendingManga] Successfully saved ${mangaList.length} pending manga to storage`,
         );
       } else {
         // Clear pending manga when empty
-        console.log("Clearing pending manga from storage");
+        console.debug("[PendingManga] Clearing pending manga from storage");
         storage.removeItem(STORAGE_KEYS.PENDING_MANGA);
         setPendingManga([]);
-        console.log("Successfully cleared pending manga from storage");
+        console.debug(
+          "[PendingManga] Successfully cleared pending manga from storage",
+        );
       }
     } catch (error) {
-      console.error("Failed to save pending manga to storage:", error);
+      console.error(
+        "[PendingManga] Failed to save pending manga to storage:",
+        error,
+      );
     }
   };
 
@@ -121,8 +126,8 @@ export const usePendingManga = () => {
     processedResults: MangaMatchResult[],
     allManga: KenmeiManga[],
   ) => {
-    console.log(
-      `Calculating pending manga: all manga count = ${allManga.length}, processed results = ${processedResults.length}`,
+    console.debug(
+      `[PendingManga] Calculating pending manga: all manga count = ${allManga.length}, processed results = ${processedResults.length}`,
     );
 
     // Build sets for both IDs and titles with proper null/undefined handling - convert IDs to strings for consistent comparison
@@ -138,8 +143,8 @@ export const usePendingManga = () => {
         .map((title) => title.toLowerCase()),
     );
 
-    console.log(
-      `Found ${processedIds.size} processed IDs and ${processedTitles.size} processed titles`,
+    console.debug(
+      `[PendingManga] Found ${processedIds.size} processed IDs and ${processedTitles.size} processed titles`,
     );
 
     // Filter manga that are NOT in either set (comprehensive matching)
@@ -157,8 +162,8 @@ export const usePendingManga = () => {
 
       // Debug logging for the first few manga
       if (debugCount < 3 && shouldInclude) {
-        console.log(
-          `Manga "${m.title}" (ID: ${m.id}): idMatch=${idMatch}, titleMatch=${titleMatch}, shouldInclude=${shouldInclude}`,
+        console.debug(
+          `[PendingManga] Manga "${m.title}" (ID: ${m.id}): idMatch=${idMatch}, titleMatch=${titleMatch}, shouldInclude=${shouldInclude}`,
         );
         debugCount++;
       }
@@ -166,12 +171,12 @@ export const usePendingManga = () => {
       return shouldInclude;
     });
 
-    console.log(
-      `Comprehensive ID/title approach found ${pending.length} pending manga`,
+    console.debug(
+      `[PendingManga] Comprehensive ID/title approach found ${pending.length} pending manga`,
     );
     if (pending.length > 0) {
-      console.log(
-        "Sample pending manga:",
+      console.debug(
+        "[PendingManga] Sample pending manga:",
         pending.slice(0, 5).map((m) => ({ id: m.id, title: m.title })),
       );
     }
@@ -185,11 +190,11 @@ export const usePendingManga = () => {
    * @source
    */
   const loadPendingManga = (): KenmeiManga[] | null => {
-    console.log("Checking for pending manga in storage...");
+    console.debug("[PendingManga] Checking for pending manga in storage...");
     const pendingMangaJson = storage.getItem(STORAGE_KEYS.PENDING_MANGA);
 
     if (!pendingMangaJson) {
-      console.log("No pending manga found in storage");
+      console.debug("[PendingManga] No pending manga found in storage");
       setPendingManga([]);
       return null;
     }
@@ -198,15 +203,18 @@ export const usePendingManga = () => {
     try {
       pendingMangaData = JSON.parse(pendingMangaJson);
     } catch (e) {
-      console.error("Failed to parse pending manga from storage:", e);
+      console.error(
+        "[PendingManga] Failed to parse pending manga from storage:",
+        e,
+      );
       storage.removeItem(STORAGE_KEYS.PENDING_MANGA);
       setPendingManga([]);
       return null;
     }
 
     if (!Array.isArray(pendingMangaData) || pendingMangaData.length === 0) {
-      console.log(
-        "Pending manga list was empty or not an array - clearing storage",
+      console.debug(
+        "[PendingManga] Pending manga list was empty or not an array - clearing storage",
       );
       storage.removeItem(STORAGE_KEYS.PENDING_MANGA);
       setPendingManga([]);
@@ -222,23 +230,25 @@ export const usePendingManga = () => {
     const validManga = pendingMangaData.filter(isValidManga);
 
     if (validManga.length === 0) {
-      console.log(
-        "No valid manga objects found in pending manga data - clearing storage",
+      console.debug(
+        "[PendingManga] No valid manga objects found in pending manga data - clearing storage",
       );
       storage.removeItem(STORAGE_KEYS.PENDING_MANGA);
       setPendingManga([]);
       return null;
     }
 
-    console.log(
-      `Found ${validManga.length} valid pending manga from interrupted operation` +
+    console.info(
+      `[PendingManga] Found ${validManga.length} valid pending manga from interrupted operation` +
         (validManga.length === pendingMangaData.length
           ? ""
           : ` (filtered out ${pendingMangaData.length - validManga.length} invalid entries)`),
     );
 
     setPendingManga(validManga);
-    console.log("Setting pendingManga state with found valid pending manga");
+    console.debug(
+      "[PendingManga] Setting pendingManga state with found valid pending manga",
+    );
 
     if (validManga.length !== pendingMangaData.length) {
       savePendingManga(validManga);

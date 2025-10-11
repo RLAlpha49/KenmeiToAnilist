@@ -433,8 +433,10 @@ export function HomePage() {
 
     const parseMatchResults = () => {
       try {
+        console.debug("[HomePage] 🔍 Loading match results...");
         const matchResultsStr = localStorage.getItem("match_results");
         if (!matchResultsStr) {
+          console.debug("[HomePage] 🔍 No match results found");
           setMatchStatus(getEmptyMatchStatus());
           return;
         }
@@ -444,11 +446,16 @@ export function HomePage() {
         const totalCount = entries.length;
 
         if (totalCount === 0) {
+          console.debug("[HomePage] 🔍 Match results empty");
           setMatchStatus(getEmptyMatchStatus());
           return;
         }
 
         const { pendingCount, skippedCount } = calculateMatchCounts(entries);
+
+        console.info(
+          `[HomePage] ✅ Loaded match status: ${totalCount} total, ${pendingCount} pending, ${skippedCount} skipped`,
+        );
 
         setMatchStatus({
           pendingMatches: pendingCount,
@@ -457,12 +464,13 @@ export function HomePage() {
           status: pendingCount === 0 ? "complete" : "pending",
         });
       } catch (error) {
-        console.error("Error retrieving match status:", error);
+        console.error("[HomePage] ❌ Error retrieving match status:", error);
       }
     };
 
     const loadSyncStats = () => {
       try {
+        console.debug("[HomePage] 🔍 Loading sync stats...");
         const raw = storage.getItem(STORAGE_KEYS.SYNC_STATS) || "{}";
         const parsed = JSON.parse(raw);
         setSyncStats({
@@ -471,7 +479,11 @@ export function HomePage() {
           failedSyncs: parsed.failedSyncs || 0,
           totalSyncs: parsed.totalSyncs || 0,
         });
-      } catch {
+        console.info(
+          `[HomePage] ✅ Loaded sync stats: ${parsed.totalSyncs || 0} total syncs, ${parsed.entriesSynced || 0} entries synced`,
+        );
+      } catch (error) {
+        console.error("[HomePage] ❌ Error loading sync stats:", error);
         setSyncStats({
           lastSyncTime: null,
           entriesSynced: 0,
@@ -481,6 +493,7 @@ export function HomePage() {
       }
     };
 
+    console.debug("[HomePage] 🔍 Initializing HomePage data...");
     loadImportStats();
     parseMatchResults();
     loadSyncStats();
@@ -499,7 +512,8 @@ export function HomePage() {
         " " +
         date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
       );
-    } catch {
+    } catch (error) {
+      console.warn("[HomePage] ⚠️ Invalid date format:", dateString, error);
       return "Invalid date";
     }
   };

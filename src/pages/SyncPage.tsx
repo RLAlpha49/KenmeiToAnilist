@@ -104,7 +104,7 @@ export function SyncPage() {
   useEffect(() => {
     // Check if user is authenticated
     if (!authState.isAuthenticated || !token) {
-      console.log("User not authenticated, showing auth error");
+      console.debug("[SyncPage] User not authenticated, showing auth error");
       setAuthError(true);
       return;
     } else {
@@ -118,7 +118,9 @@ export function SyncPage() {
       !Array.isArray(savedResults) ||
       savedResults.length === 0
     ) {
-      console.log("No match results found, showing match data error");
+      console.debug(
+        "[SyncPage] No match results found, showing match data error",
+      );
       setMatchDataError(true);
       return;
     } else {
@@ -131,15 +133,17 @@ export function SyncPage() {
     );
 
     if (validMatches.length === 0) {
-      console.log("No valid matches found, showing valid matches error");
+      console.debug(
+        "[SyncPage] No valid matches found, showing valid matches error",
+      );
       setValidMatchesError(true);
       return;
     } else {
       setValidMatchesError(false);
     }
 
-    console.log(
-      `Found ${validMatches.length} valid matches for synchronization`,
+    console.debug(
+      `[SyncPage] Found ${validMatches.length} valid matches for synchronization`,
     );
   }, [authState.isAuthenticated, token]);
 
@@ -209,10 +213,12 @@ export function SyncPage() {
   useEffect(() => {
     const savedResults = getSavedMatchResults();
     if (savedResults && Array.isArray(savedResults)) {
-      console.log(`Loaded ${savedResults.length} match results from storage`);
+      console.debug(
+        `[SyncPage] Loaded ${savedResults.length} match results from storage`,
+      );
       setMangaMatches(savedResults as MangaMatchResult[]);
     } else {
-      console.error("No match results found in storage");
+      console.error("[SyncPage] No match results found in storage");
     }
   }, []);
 
@@ -232,7 +238,7 @@ export function SyncPage() {
   ) => {
     const err = error;
 
-    console.warn("📛 DETECTED RATE LIMIT in SyncPage:", {
+    console.warn("[SyncPage] 📛 DETECTED RATE LIMIT:", {
       isRateLimited: err.isRateLimited,
       status: err.status,
       retryAfter: err.retryAfter,
@@ -250,7 +256,7 @@ export function SyncPage() {
 
     const timer = setTimeout(() => {
       if (!controller.signal.aborted) {
-        console.log("Rate limit timeout complete, retrying...");
+        console.info("[SyncPage] Rate limit timeout complete, retrying...");
         setLibraryLoading(true);
         setLibraryError(null);
         fetchLibrary(0);
@@ -297,8 +303,8 @@ export function SyncPage() {
 
   // Handle fetch library success
   const handleFetchSuccess = (library: UserMediaList) => {
-    console.log(
-      `Loaded ${Object.keys(library).length} entries from user's AniList library`,
+    console.info(
+      `[SyncPage] Loaded ${Object.keys(library).length} entries from user's AniList library`,
     );
     setUserLibrary(library);
     setLibraryLoading(false);
@@ -316,8 +322,11 @@ export function SyncPage() {
     const err = error;
     if (err.name === "AbortError") return;
 
-    console.error("Failed to load user library:", err);
-    console.log("Error object structure:", JSON.stringify(err, null, 2));
+    console.error("[SyncPage] Failed to load user library:", err);
+    console.debug(
+      "[SyncPage] Error object structure:",
+      JSON.stringify(err, null, 2),
+    );
 
     // Check for rate limiting
     if (err.isRateLimited || err.status === 429) {
@@ -353,8 +362,8 @@ export function SyncPage() {
       const controller = new AbortController();
 
       const fetchLibrary = (attempt = 0) => {
-        console.log(
-          `Fetching AniList library (attempt ${attempt + 1}/${maxRetries + 1})`,
+        console.debug(
+          `[SyncPage] Fetching AniList library (attempt ${attempt + 1}/${maxRetries + 1})`,
         );
         setRetryCount(attempt);
 

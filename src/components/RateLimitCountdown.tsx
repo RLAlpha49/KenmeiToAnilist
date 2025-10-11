@@ -31,8 +31,8 @@ export function RateLimitCountdown({
     const calcTimeRemaining = () => {
       const diff = retryAfter - Date.now();
       const result = Math.max(diff, 0);
-      console.log(
-        `Calculated remaining time: ${result}ms (${Math.ceil(result / 1000)}s)`,
+      console.debug(
+        `[RateLimitCountdown] Calculated remaining time: ${result}ms (${Math.ceil(result / 1000)}s)`,
       );
       return result;
     };
@@ -40,11 +40,16 @@ export function RateLimitCountdown({
     const initialRemaining = calcTimeRemaining();
     setTimeRemaining(initialRemaining);
     setInitialDuration(initialRemaining); // Store the initial duration
-    console.log("Initial time remaining set to:", initialRemaining);
+    console.debug(
+      "[RateLimitCountdown] Initial time remaining set to:",
+      initialRemaining,
+    );
 
     // If the initial time is already 0, call onComplete immediately
     if (initialRemaining === 0) {
-      console.log("Initial time is zero, calling onComplete immediately");
+      console.debug(
+        "[RateLimitCountdown] Initial time is zero, calling onComplete immediately",
+      );
       onComplete();
       return () => {}; // No interval to clean up
     }
@@ -55,7 +60,9 @@ export function RateLimitCountdown({
       setTimeRemaining(remaining);
 
       if (remaining <= 0) {
-        console.log("Countdown reached zero, calling onComplete");
+        console.debug(
+          "[RateLimitCountdown] Countdown reached zero, calling onComplete",
+        );
         clearInterval(interval);
         onComplete();
       }
@@ -63,7 +70,7 @@ export function RateLimitCountdown({
 
     // Cleanup interval on unmount
     return () => {
-      console.log("RateLimitCountdown unmounting, clearing interval");
+      console.debug("[RateLimitCountdown] unmounting, clearing interval");
       clearInterval(interval);
     };
   }, [retryAfter, onComplete]);

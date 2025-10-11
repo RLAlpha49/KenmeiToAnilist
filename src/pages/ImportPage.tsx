@@ -49,6 +49,11 @@ export function ImportPage() {
   );
 
   const handleFileLoaded = (data: KenmeiData) => {
+    console.info(
+      `[Import] 📁 File loaded successfully: ${data.manga.length} manga entries`,
+    );
+    console.debug(`[Import] 🔍 Previous match count: ${previousMatchCount}`);
+
     setImportData(data);
     setError(null);
     setImportSuccess(false);
@@ -62,6 +67,8 @@ export function ImportPage() {
   };
 
   const handleError = (error: AppError, toastId?: string) => {
+    console.error(`[Import] ❌ Import error (${error.type}):`, error.message);
+
     setError(error);
     setImportData(null);
     setImportSuccess(false);
@@ -86,9 +93,13 @@ export function ImportPage() {
 
   const handleImport = async () => {
     if (!importData) {
+      console.warn("[Import] ⚠️ Cannot import - no data loaded");
       return;
     }
 
+    console.info(
+      `[Import] 🚀 Starting import process for ${importData.manga.length} entries`,
+    );
     setIsLoading(true);
 
     const loadingToastId = toast.loading("Processing your library", {
@@ -120,11 +131,11 @@ export function ImportPage() {
         normalizedManga,
       );
 
-      console.log(
-        `Import results: Previous: ${previousManga.length}, New file: ${normalizedManga.length}, Final merged: ${mergedManga.length}`,
+      console.info(
+        `[Import] Import results: Previous: ${previousManga.length}, New file: ${normalizedManga.length}, Final merged: ${mergedManga.length}`,
       );
-      console.log(
-        `Changes: ${results.newMangaCount} new manga, ${results.updatedMangaCount} updated manga`,
+      console.info(
+        `[Import] Changes: ${results.newMangaCount} new manga, ${results.updatedMangaCount} updated manga`,
       );
 
       // Ensure all manga have proper IDs and required fields
@@ -138,6 +149,9 @@ export function ImportPage() {
       clearPendingMangaStorage();
 
       // Show success state briefly before redirecting
+      console.info("[Import] ✅ Import completed successfully");
+      console.debug("[Import] 🔍 Redirecting to review page...");
+
       setImportSuccess(true);
       setProgress(100);
 
@@ -153,7 +167,7 @@ export function ImportPage() {
       }, 1500);
     } catch (err) {
       // Handle any errors that might occur during storage
-      console.error("Storage error:", err);
+      console.error("[Import] ❌ Storage error:", err);
       handleError(
         createError(
           ErrorType.STORAGE,
@@ -168,10 +182,12 @@ export function ImportPage() {
   };
 
   const dismissError = () => {
+    console.debug("[Import] 🔍 Dismissing error message");
     setError(null);
   };
 
   const resetForm = () => {
+    console.info("[Import] 🔄 Resetting import form");
     setImportData(null);
     setError(null);
     setImportSuccess(false);
@@ -183,6 +199,7 @@ export function ImportPage() {
 
   useEffect(() => {
     // Check if we have previous match results
+    console.debug("[Import] 🔍 Checking for previous match results...");
     const savedResults = getSavedMatchResults();
     if (savedResults && Array.isArray(savedResults)) {
       const reviewedCount = savedResults.filter(
@@ -192,7 +209,12 @@ export function ImportPage() {
           m.status === "skipped",
       ).length;
 
+      console.info(
+        `[Import] ✅ Found ${reviewedCount} previously reviewed matches`,
+      );
       setPreviousMatchCount(reviewedCount);
+    } else {
+      console.debug("[Import] 🔍 No previous match results found");
     }
   }, []);
 

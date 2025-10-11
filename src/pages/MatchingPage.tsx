@@ -175,14 +175,16 @@ export function MatchingPage() {
   // Add debug effect for matching results
   useEffect(() => {
     if (matchResults.length > 0) {
-      console.log("matchResults updated - Current status counts:");
+      console.debug(
+        "[MatchingPage] matchResults updated - Current status counts:",
+      );
       const statusCounts = {
         matched: matchResults.filter((m) => m.status === "matched").length,
         pending: matchResults.filter((m) => m.status === "pending").length,
         manual: matchResults.filter((m) => m.status === "manual").length,
         skipped: matchResults.filter((m) => m.status === "skipped").length,
       };
-      console.log("Status counts:", statusCounts);
+      console.debug("[MatchingPage] Status counts:", statusCounts);
     }
   }, [matchResults]);
 
@@ -210,7 +212,7 @@ export function MatchingPage() {
    */
   const checkAuthenticationStatus = (): boolean => {
     if (!authState.isAuthenticated || !authState.accessToken) {
-      console.log("User not authenticated, showing auth error");
+      console.info("[MatchingPage] User not authenticated, showing auth error");
       matchingProcess.setError(
         "Authentication Required. You need to connect your AniList account to match manga.",
       );
@@ -228,7 +230,9 @@ export function MatchingPage() {
    */
   const restoreRunningProcessState = (): boolean => {
     if (globalThis.matchingProcessState?.isRunning) {
-      console.log("Detected running matching process, restoring state");
+      console.info(
+        "[MatchingPage] Detected running matching process, restoring state",
+      );
 
       // Restore the matching process state
       matchingProcess.setIsLoading(true);
@@ -266,7 +270,7 @@ export function MatchingPage() {
     hasResults: boolean;
     savedResults?: MangaMatchResult[];
   } => {
-    console.log("Loading saved match results immediately...");
+    console.info("[MatchingPage] Loading saved match results immediately...");
     const savedResults = getSavedMatchResults();
 
     if (
@@ -274,8 +278,8 @@ export function MatchingPage() {
       Array.isArray(savedResults) &&
       savedResults.length > 0
     ) {
-      console.log(
-        `Found ${savedResults.length} existing match results - loading immediately`,
+      console.info(
+        `[MatchingPage] Found ${savedResults.length} existing match results - loading immediately`,
       );
       setMatchResults(savedResults as MangaMatchResult[]);
 
@@ -287,8 +291,8 @@ export function MatchingPage() {
           m.status === "skipped",
       ).length;
 
-      console.log(
-        `${reviewedCount} manga have already been reviewed (${Math.round((reviewedCount / savedResults.length) * 100)}% complete)`,
+      console.info(
+        `[MatchingPage] ${reviewedCount} manga have already been reviewed (${Math.round((reviewedCount / savedResults.length) * 100)}% complete)`,
       );
 
       return {
@@ -297,7 +301,7 @@ export function MatchingPage() {
       };
     }
 
-    console.log("No saved match results found");
+    console.info("[MatchingPage] No saved match results found");
     return { hasResults: false };
   };
 
@@ -311,8 +315,8 @@ export function MatchingPage() {
   ): void => {
     if (importedManga.length === 0) return;
 
-    console.log(
-      "Have both saved results and imported manga - calculating unmatched manga",
+    console.info(
+      "[MatchingPage] Have both saved results and imported manga - calculating unmatched manga",
     );
 
     const calculatedPendingManga = pendingMangaState.calculatePendingManga(
@@ -321,12 +325,12 @@ export function MatchingPage() {
     );
 
     if (calculatedPendingManga.length > 0) {
-      console.log(
-        `Calculated ${calculatedPendingManga.length} manga that still need to be processed`,
+      console.info(
+        `[MatchingPage] Calculated ${calculatedPendingManga.length} manga that still need to be processed`,
       );
       pendingMangaState.savePendingManga(calculatedPendingManga);
-      console.log(
-        `Saved ${calculatedPendingManga.length} pending manga to storage for resume`,
+      console.debug(
+        `[MatchingPage] Saved ${calculatedPendingManga.length} pending manga to storage for resume`,
       );
     } else {
       handleDiscrepancyDetection(savedResults, importedManga);
@@ -341,16 +345,16 @@ export function MatchingPage() {
     savedResults: MangaMatchResult[],
     importedManga: KenmeiManga[],
   ): void => {
-    console.log("No pending manga found in calculation");
+    console.debug("[MatchingPage] No pending manga found in calculation");
 
     // If there's a clear discrepancy between total manga and processed manga,
     // force a calculation of pending manga by finding the actual missing manga
     if (importedManga.length > savedResults.length) {
-      console.log(
-        `⚠️ Discrepancy detected! Total manga: ${importedManga.length}, Processed: ${savedResults.length}`,
+      console.warn(
+        `[MatchingPage] ⚠️ Discrepancy detected! Total manga: ${importedManga.length}, Processed: ${savedResults.length}`,
       );
-      console.log(
-        "Finding actual missing manga using comprehensive title and ID matching",
+      console.info(
+        "[MatchingPage] Finding actual missing manga using comprehensive title and ID matching",
       );
 
       const actualMissingManga = findActualMissingManga(
@@ -359,19 +363,19 @@ export function MatchingPage() {
       );
 
       if (actualMissingManga.length > 0) {
-        console.log(
-          `Found ${actualMissingManga.length} actual missing manga that need processing`,
+        console.info(
+          `[MatchingPage] Found ${actualMissingManga.length} actual missing manga that need processing`,
         );
-        console.log(
-          "Sample missing manga:",
+        console.debug(
+          "[MatchingPage] Sample missing manga:",
           actualMissingManga
             .slice(0, 5)
             .map((m) => ({ id: m.id, title: m.title })),
         );
         pendingMangaState.savePendingManga(actualMissingManga);
       } else {
-        console.log(
-          "No actual missing manga found despite count discrepancy - all manga may already be processed",
+        console.info(
+          "[MatchingPage] No actual missing manga found despite count discrepancy - all manga may already be processed",
         );
       }
     }
@@ -393,12 +397,12 @@ export function MatchingPage() {
       savedResults.map((r) => r.kenmeiManga.title.toLowerCase()),
     );
 
-    console.log(
-      `Processed IDs (first 10):`,
+    console.debug(
+      `[MatchingPage] Processed IDs (first 10):`,
       Array.from(processedIds).slice(0, 10),
     );
-    console.log(
-      `Processed titles (first 5):`,
+    console.debug(
+      `[MatchingPage] Processed titles (first 5):`,
       Array.from(processedTitles).slice(0, 5),
     );
 
@@ -411,8 +415,8 @@ export function MatchingPage() {
 
       // Debug log for first few manga being checked
       if (actualMissingManga.length < 5) {
-        console.log(
-          `Checking manga "${manga.title}" (ID: ${manga.id}): idMatch=${idMatch}, titleMatch=${titleMatch}, shouldInclude=${!idMatch && !titleMatch}`,
+        console.debug(
+          `[MatchingPage] Checking manga "${manga.title}" (ID: ${manga.id}): idMatch=${idMatch}, titleMatch=${titleMatch}, shouldInclude=${!idMatch && !titleMatch}`,
         );
       }
 
@@ -443,7 +447,7 @@ export function MatchingPage() {
 
     // Preload the cache service to ensure it's initialized
     import("../api/matching/manga-search-service").then((module) => {
-      console.log("Preloaded manga search service");
+      console.debug("[MatchingPage] Preloaded manga search service");
       // Force cache sync
       if (module.cacheDebugger) {
         module.cacheDebugger.forceSyncCaches();
@@ -454,13 +458,17 @@ export function MatchingPage() {
         importedManga.length &&
         !matchingProcess.matchingInitialized.current
       ) {
-        console.log("Starting initial matching process with imported manga");
+        console.info(
+          "[MatchingPage] Starting initial matching process with imported manga",
+        );
         matchingProcess.matchingInitialized.current = true;
 
         // Start matching process automatically
         matchingProcess.startMatching(importedManga, false, setMatchResults);
       } else if (!importedManga.length) {
-        console.log("No imported manga found, redirecting to import page");
+        console.info(
+          "[MatchingPage] No imported manga found, redirecting to import page",
+        );
         matchingProcess.setError(
           "No manga data found. Please import your data first.",
         );
@@ -468,7 +476,7 @@ export function MatchingPage() {
 
       // Make sure we mark initialization as complete
       matchingProcess.setIsInitializing(false);
-      console.log("*** INITIALIZATION COMPLETE ***");
+      console.info("[MatchingPage] *** INITIALIZATION COMPLETE ***");
     });
   };
 
@@ -487,8 +495,8 @@ export function MatchingPage() {
       return;
     }
 
-    console.log("*** INITIALIZATION START ***");
-    console.log("Initial states:", {
+    console.info("[MatchingPage] *** INITIALIZATION START ***");
+    console.debug("[MatchingPage] Initial states:", {
       isLoading: matchingProcess.isLoading,
       hasError: !!matchingProcess.error,
       matchResultsLength: matchResults.length,
@@ -503,25 +511,27 @@ export function MatchingPage() {
 
     // Skip if this effect has already been run
     if (matchingProcess.matchingInitialized.current) {
-      console.log(
-        "Matching already initialized, skipping duplicate initialization",
+      console.info(
+        "[MatchingPage] Matching already initialized, skipping duplicate initialization",
       );
       matchingProcess.setIsInitializing(false);
       return;
     }
 
-    console.log("Initializing MatchingPage component...");
+    console.info("[MatchingPage] Initializing MatchingPage component...");
 
     // Get imported data from storage to have it available for calculations
     const importedData = getKenmeiData();
     const importedManga = importedData?.manga || [];
 
     if (importedManga.length > 0) {
-      console.log(`Found ${importedManga.length} imported manga from storage`);
+      console.info(
+        `[MatchingPage] Found ${importedManga.length} imported manga from storage`,
+      );
       // Store the imported manga data for later use
       setManga(importedManga as KenmeiManga[]);
     } else {
-      console.log("No imported manga found in storage");
+      console.info("[MatchingPage] No imported manga found in storage");
     }
 
     // Load saved match results and process them
@@ -535,7 +545,9 @@ export function MatchingPage() {
       matchingProcess.matchingInitialized.current = true;
       matchingProcess.setIsInitializing(false);
 
-      console.log("*** INITIALIZATION COMPLETE - Using saved results ***");
+      console.info(
+        "[MatchingPage] *** INITIALIZATION COMPLETE - Using saved results ***",
+      );
       return; // Skip further initialization
     }
 
@@ -558,7 +570,7 @@ export function MatchingPage() {
       if (globalThis.matchingProcessState?.isRunning) {
         const currentState = globalThis.matchingProcessState;
 
-        console.log("Syncing UI with global process state:", {
+        console.debug("[MatchingPage] Syncing UI with global process state:", {
           current: currentState.progress.current,
           total: currentState.progress.total,
           statusMessage: currentState.statusMessage,
@@ -575,7 +587,9 @@ export function MatchingPage() {
         matchingProcess.setDetailMessage(currentState.detailMessage);
       } else {
         // If the process is no longer running, update our loading state
-        console.log("Global process complete, syncing final state");
+        console.info(
+          "[MatchingPage] Global process complete, syncing final state",
+        );
         matchingProcess.setIsLoading(false);
       }
     };
@@ -583,7 +597,9 @@ export function MatchingPage() {
     // Create a visibility change listener to ensure UI updates when page becomes visible
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        console.log("Page became visible, syncing state immediately");
+        console.debug(
+          "[MatchingPage] Page became visible, syncing state immediately",
+        );
         syncUIWithGlobalState();
       }
     };
@@ -617,8 +633,8 @@ export function MatchingPage() {
             matchResults.length === 0 ||
             matchResults.length !== savedResults.length
           ) {
-            console.log(
-              `Reloading match results from storage: ${savedResults.length} results found (current: ${matchResults.length})`,
+            console.info(
+              `[MatchingPage] Reloading match results from storage: ${savedResults.length} results found (current: ${matchResults.length})`,
             );
             setMatchResults(savedResults as MangaMatchResult[]);
           }
@@ -643,7 +659,9 @@ export function MatchingPage() {
 
         // Clear cache entries for each manga being re-searched
         const mangaTitles = mangaToResearch.map((manga) => manga.title);
-        console.log(`🔄 Clearing cache for ${mangaTitles.length} manga titles`);
+        console.info(
+          `[MatchingPage] 🔄 Clearing cache for ${mangaTitles.length} manga titles`,
+        );
         matchingProcess.setStatusMessage(
           `Clearing cache for ${mangaTitles.length} manga titles...`,
         );
@@ -652,8 +670,8 @@ export function MatchingPage() {
         const clearResult = clearCacheForTitles(mangaTitles);
 
         // Log results
-        console.log(
-          `🧹 Cleared ${clearResult.clearedCount} cache entries for re-search`,
+        console.info(
+          `[MatchingPage] 🧹 Cleared ${clearResult.clearedCount} cache entries for re-search`,
         );
 
         // Before starting fresh search, preserve existing results but reset re-searched manga to pending
@@ -680,8 +698,8 @@ export function MatchingPage() {
 
           // Update the results state
           setMatchResults(updatedResults);
-          console.log(
-            `Reset status to pending for ${reSearchTitles.size} manga before re-searching`,
+          console.info(
+            `[MatchingPage] Reset status to pending for ${reSearchTitles.size} manga before re-searching`,
           );
         }
 
@@ -694,7 +712,10 @@ export function MatchingPage() {
         // Start fresh search for the manga
         matchingProcess.startMatching(mangaToResearch, true, setMatchResults);
       } catch (error) {
-        console.error("Failed to clear manga cache entries:", error);
+        console.error(
+          "[MatchingPage] Failed to clear manga cache entries:",
+          error,
+        );
         matchingProcess.setIsCacheClearing(false);
 
         // Continue with re-search even if cache clearing fails
@@ -708,8 +729,8 @@ export function MatchingPage() {
     ) => {
       const { mangaToResearch } = event.detail;
 
-      console.log(
-        `Received request to re-search ${mangaToResearch.length} manga without matches`,
+      console.info(
+        `[MatchingPage] Received request to re-search ${mangaToResearch.length} manga without matches`,
       );
 
       // Reset any previous warnings or cancel state
@@ -718,7 +739,7 @@ export function MatchingPage() {
       matchingProcess.setDetailMessage(null);
 
       if (mangaToResearch.length === 0) {
-        console.log("No manga to re-search, ignoring request");
+        console.info("[MatchingPage] No manga to re-search, ignoring request");
         return;
       }
 
@@ -797,11 +818,11 @@ export function MatchingPage() {
     matchingProcess.cancelMatchingRef.current = false;
     matchingProcess.setDetailMessage(null);
 
-    console.log("=== REMATCH DEBUG INFO ===");
-    console.log(`Total manga in state: ${manga.length}`);
-    console.log(`Total match results: ${matchResults.length}`);
-    console.log(
-      `Displayed unmatched count: ${manga.length - matchResults.length}`,
+    console.debug("[MatchingPage] === REMATCH DEBUG INFO ===");
+    console.debug(`[MatchingPage] Total manga in state: ${manga.length}`);
+    console.debug(`[MatchingPage] Total match results: ${matchResults.length}`);
+    console.debug(
+      `[MatchingPage] Displayed unmatched count: ${manga.length - matchResults.length}`,
     );
 
     // Get manga that have been processed but match selected statuses
@@ -810,19 +831,21 @@ export function MatchingPage() {
         selectedStatuses[manga.status as keyof typeof selectedStatuses] ===
         true,
     );
-    console.log(`Filtered manga from results: ${filteredManga.length}`);
+    console.debug(
+      `[MatchingPage] Filtered manga from results: ${filteredManga.length}`,
+    );
 
     // Find unmatched manga that aren't in matchResults yet
     let unmatchedManga: KenmeiManga[] = [];
     if (selectedStatuses.unmatched) {
-      console.log(
-        "Finding unmatched manga from pending manga list using title-based matching",
+      console.debug(
+        "[MatchingPage] Finding unmatched manga from pending manga list using title-based matching",
       );
 
       // Use pendingManga instead of the entire manga collection for fresh search
       unmatchedManga = pendingMangaState.pendingManga;
-      console.log(
-        `Using pending manga list: ${unmatchedManga.length} manga to process`,
+      console.debug(
+        `[MatchingPage] Using pending manga list: ${unmatchedManga.length} manga to process`,
       );
     }
 
@@ -832,11 +855,13 @@ export function MatchingPage() {
       ...unmatchedManga,
     ];
 
-    console.log(`Total manga to process: ${pendingMangaToProcess.length}`);
-    console.log(
-      "IMPORTANT: Will clear cache entries for selected manga to ensure fresh searches",
+    console.info(
+      `[MatchingPage] Total manga to process: ${pendingMangaToProcess.length}`,
     );
-    console.log("=== END DEBUG INFO ===");
+    console.info(
+      "[MatchingPage] IMPORTANT: Will clear cache entries for selected manga to ensure fresh searches",
+    );
+    console.debug("[MatchingPage] === END DEBUG INFO ===");
 
     // Show more specific error message depending on what's selected
     if (pendingMangaToProcess.length === 0) {
@@ -854,8 +879,8 @@ export function MatchingPage() {
       return;
     }
 
-    console.log(
-      `Rematching ${filteredManga.length} status-filtered manga and ${unmatchedManga.length} unmatched manga`,
+    console.info(
+      `[MatchingPage] Rematching ${filteredManga.length} status-filtered manga and ${unmatchedManga.length} unmatched manga`,
     );
 
     try {
@@ -876,14 +901,14 @@ export function MatchingPage() {
 
       // Get initial cache status for comparison
       const initialCacheStatus = cacheDebugger.getCacheStatus();
-      console.log(
-        `📊 Initial cache status: ${initialCacheStatus.inMemoryCache} entries in memory, ${initialCacheStatus.localStorage.mangaCache} in localStorage`,
+      console.debug(
+        `[MatchingPage] 📊 Initial cache status: ${initialCacheStatus.inMemoryCache} entries in memory, ${initialCacheStatus.localStorage.mangaCache} in localStorage`,
       );
 
       // Clear cache entries for each manga being rematched - use our new dedicated function
       const mangaTitles = pendingMangaToProcess.map((manga) => manga.title);
-      console.log(
-        `🔄 Clearing cache for ${mangaTitles.length} manga titles at once`,
+      console.info(
+        `[MatchingPage] 🔄 Clearing cache for ${mangaTitles.length} manga titles at once`,
       );
       matchingProcess.setStatusMessage(
         `Clearing cache for ${mangaTitles.length} manga titles...`,
@@ -893,12 +918,12 @@ export function MatchingPage() {
       const clearResult = clearCacheForTitles(mangaTitles);
 
       // Log the results
-      console.log(
-        `🧹 Cleared ${clearResult.clearedCount} cache entries for selected manga`,
+      console.info(
+        `[MatchingPage] 🧹 Cleared ${clearResult.clearedCount} cache entries for selected manga`,
       );
       if (clearResult.clearedCount > 0 && mangaTitles.length > 0) {
-        console.log(
-          "Cleared titles:",
+        console.debug(
+          "[MatchingPage] Cleared titles:",
           mangaTitles.slice(0, 5).join(", ") +
             (mangaTitles.length > 5
               ? ` and ${mangaTitles.length - 5} more...`
@@ -907,8 +932,8 @@ export function MatchingPage() {
       }
 
       // Log final cache status
-      console.log(
-        `📊 Final cache status: ${clearResult.remainingCacheSize} entries in memory (removed ${clearResult.clearedCount})`,
+      console.debug(
+        `[MatchingPage] 📊 Final cache status: ${clearResult.remainingCacheSize} entries in memory (removed ${clearResult.clearedCount})`,
       );
 
       // Hide cache clearing notification
@@ -927,8 +952,8 @@ export function MatchingPage() {
         (m) => !mangaIdsToRematch.has(m.kenmeiManga.id),
       );
 
-      console.log(
-        `Preserved ${existingResults.length} existing match results that aren't being rematched`,
+      console.info(
+        `[MatchingPage] Preserved ${existingResults.length} existing match results that aren't being rematched`,
       );
 
       // Start fresh search
@@ -938,7 +963,10 @@ export function MatchingPage() {
         setMatchResults,
       );
     } catch (error) {
-      console.error("Failed to clear manga cache entries:", error);
+      console.error(
+        "[MatchingPage] Failed to clear manga cache entries:",
+        error,
+      );
       matchingProcess.setIsCacheClearing(false);
       // Continue with rematch even if cache clearing fails
       matchingProcess.startMatching(
@@ -1043,8 +1071,8 @@ export function MatchingPage() {
               !matchingProcess.isLoading &&
               !matchingProcess.isInitializing &&
               (() => {
-                console.log(
-                  `Checking if ${pendingMangaState.pendingManga.length || manga.length - matchResults.length} pending manga need processing...`,
+                console.debug(
+                  `[MatchingPage] Checking if ${pendingMangaState.pendingManga.length || manga.length - matchResults.length} pending manga need processing...`,
                 );
 
                 let needsProcessing = false;
@@ -1084,19 +1112,19 @@ export function MatchingPage() {
                     },
                   ).length;
 
-                  console.log(
-                    `Title-based check on stored pending manga: ${needsProcessing ? "Pending manga need processing" : "All pending manga are already processed"}`,
+                  console.debug(
+                    `[MatchingPage] Title-based check on stored pending manga: ${needsProcessing ? "Pending manga need processing" : "All pending manga are already processed"}`,
                   );
-                  console.log(
-                    `${unprocessedCount} manga from stored pending manga need processing`,
+                  console.debug(
+                    `[MatchingPage] ${unprocessedCount} manga from stored pending manga need processing`,
                   );
 
                   if (
                     !needsProcessing &&
                     pendingMangaState.pendingManga.length > 0
                   ) {
-                    console.log(
-                      "All pending manga titles are already in matchResults - clearing pending manga",
+                    console.info(
+                      "[MatchingPage] All pending manga titles are already in matchResults - clearing pending manga",
                     );
                     pendingMangaState.savePendingManga([]);
                   }
@@ -1104,8 +1132,8 @@ export function MatchingPage() {
 
                 // Second check: Count difference between all manga and processed results
                 if (manga.length > matchResults.length) {
-                  console.log(
-                    `${manga.length - matchResults.length} manga still need processing based on count difference`,
+                  console.debug(
+                    `[MatchingPage] ${manga.length - matchResults.length} manga still need processing based on count difference`,
                   );
 
                   // Use comprehensive matching with both IDs and titles to find unprocessed manga
@@ -1124,8 +1152,8 @@ export function MatchingPage() {
                     return !idMatch && !titleMatch;
                   }).length;
 
-                  console.log(
-                    `${stillNeedProcessing} manga actually need processing based on comprehensive ID and title comparison`,
+                  console.debug(
+                    `[MatchingPage] ${stillNeedProcessing} manga actually need processing based on comprehensive ID and title comparison`,
                   );
 
                   if (stillNeedProcessing > 0) {
@@ -1166,8 +1194,8 @@ export function MatchingPage() {
                     return Math.max(unprocessedFromPending, unprocessedFromAll);
                   })()}
                   onResumeMatching={() => {
-                    console.log(
-                      "Resume matching clicked - ensuring unprocessed manga are processed",
+                    console.info(
+                      "[MatchingPage] Resume matching clicked - ensuring unprocessed manga are processed",
                     );
 
                     const processedIds = new Set(

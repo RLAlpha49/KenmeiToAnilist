@@ -435,9 +435,25 @@ export async function processBatchMatches(
   anilistMangaMap: Map<string, AniListManga[]>,
   config: Partial<MatchEngineConfig> = {},
 ): Promise<MangaMatchResult[]> {
-  return kenmeiMangaList.map((kenmeiManga) => {
+  console.info(
+    `[MatchEngine] 🔍 Processing batch matches for ${kenmeiMangaList.length} manga entries`,
+  );
+  console.debug(
+    `[MatchEngine] 🔍 AniList manga map contains ${anilistMangaMap.size} search keys`,
+  );
+
+  const results = kenmeiMangaList.map((kenmeiManga) => {
     const searchKey = normalizeString(kenmeiManga.title).slice(0, 10);
     const potentialMatches = anilistMangaMap.get(searchKey) || [];
     return findBestMatches(kenmeiManga, potentialMatches, config);
   });
+
+  const matchedCount = results.filter(
+    (r) => r.anilistMatches && r.anilistMatches.length > 0,
+  ).length;
+  console.info(
+    `[MatchEngine] ✅ Batch processing complete: ${matchedCount}/${kenmeiMangaList.length} with matches`,
+  );
+
+  return results;
 }

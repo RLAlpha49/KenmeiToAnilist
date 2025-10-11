@@ -53,6 +53,14 @@ export function createError(
   originalError?: unknown,
   code?: string,
 ): AppError {
+  console.debug(
+    "[ErrorHandling] 🔍 Creating error: " +
+      type +
+      " - " +
+      message +
+      (code ? " (" + code + ")" : ""),
+  );
+
   return {
     type,
     message,
@@ -77,6 +85,8 @@ export function createError(
  * @source
  */
 export function handleNetworkError(error: unknown): AppError {
+  console.warn("[ErrorHandling] ⚠️ Handling network error:", error);
+
   // Handle fetch errors and timeouts
   if (
     error instanceof TypeError &&
@@ -208,7 +218,7 @@ export async function fetchWithTimeout(
  * @source
  */
 export function showErrorNotification(error: AppError): void {
-  console.error("Error:", error.message, error);
+  console.error("[ErrorHandling] Error notification:", error.message, error);
 
   if (globalThis.window !== undefined) {
     alert(`Error: ${error.message}`);

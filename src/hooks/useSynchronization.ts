@@ -86,14 +86,21 @@ const mergeReports = (
 
 const saveSnapshotToStorage = (snapshot: SyncResumeSnapshot | null): void => {
   if (!snapshot) {
+    console.debug("[Synchronization] 🔍 Removing sync snapshot from storage");
     storage.removeItem(SNAPSHOT_STORAGE_KEY);
     return;
   }
 
   try {
+    console.debug(
+      `[Synchronization] 🔍 Saving sync snapshot: ${snapshot.remainingMediaIds.length} remaining entries`,
+    );
     storage.setItem(SNAPSHOT_STORAGE_KEY, JSON.stringify(snapshot));
   } catch (error) {
-    console.error("Failed to persist sync snapshot:", error);
+    console.error(
+      "[Synchronization] ❌ Failed to persist sync snapshot:",
+      error,
+    );
   }
 };
 
@@ -363,9 +370,15 @@ async function runIncrementalEntries(
 
   for (const entry of incEntries) {
     if (abortSignal.aborted) {
-      console.log("Incremental sync cancelled - stopping processing");
+      console.info(
+        "[Synchronization] ⏹️ Incremental sync cancelled - stopping processing",
+      );
       break;
     }
+
+    console.debug(
+      `[Synchronization] 🔍 Processing incremental entry: ${entry.title || entry.mediaId}`,
+    );
 
     try {
       const syncResult = await syncMangaBatch(
@@ -386,9 +399,15 @@ async function runIncrementalEntries(
       );
 
       if (abortSignal.aborted) {
-        console.log(`Sync aborted during processing of entry ${entry.mediaId}`);
+        console.info(
+          `[Synchronization] ⏹️ Sync aborted during processing of entry ${entry.mediaId}`,
+        );
         break;
       }
+
+      console.debug(
+        `[Synchronization] ✅ Completed incremental entry: ${entry.title || entry.mediaId}`,
+      );
 
       const counters = progressUpdater.getCounters();
       const successfulUpdates =
@@ -415,10 +434,12 @@ async function runIncrementalEntries(
       setState((prev) => ({ ...prev, progress: finalized }));
       updateSnapshotFromProgress(finalized, initialEntriesRef.current);
 
-      console.log(`Completed all steps for ${entry.mediaId}`);
+      console.debug(
+        `[Synchronization] Completed all steps for ${entry.mediaId}`,
+      );
     } catch (err) {
       console.error(
-        `Error processing incremental sync for entry ${entry.mediaId}:`,
+        `[Synchronization] Error processing incremental sync for entry ${entry.mediaId}:`,
         err,
       );
 
@@ -789,15 +810,27 @@ export function useSynchronization(): [
     hasLoadedSnapshotRef.current = true;
 
     const storedSnapshot = storage.getItem(SNAPSHOT_STORAGE_KEY);
-    if (!storedSnapshot) return;
+    if (!storedSnapshot) {
+      console.debug("[Synchronization] 🔍 No stored sync snapshot found");
+      return;
+    }
+
+    console.debug("[Synchronization] 🔍 Loading stored sync snapshot...");
 
     try {
       const parsed: SyncResumeSnapshot = JSON.parse(storedSnapshot);
 
       if (!parsed?.remainingMediaIds?.length) {
+        console.debug(
+          "[Synchronization] 🔍 Snapshot has no remaining entries, removing...",
+        );
         storage.removeItem(SNAPSHOT_STORAGE_KEY);
         return;
       }
+
+      console.info(
+        `[Synchronization] ✅ Loaded sync snapshot: ${parsed.remainingMediaIds.length} remaining entries`,
+      );
 
       resumeSnapshotRef.current = {
         ...parsed,
@@ -822,7 +855,10 @@ export function useSynchronization(): [
         },
       }));
     } catch (error) {
-      console.error("Failed to load stored sync snapshot:", error);
+      console.error(
+        "[Synchronization] ❌ Failed to load stored sync snapshot:",
+        error,
+      );
       storage.removeItem(SNAPSHOT_STORAGE_KEY);
     }
   }, []);
@@ -846,14 +882,16 @@ export function useSynchronization(): [
       displayOrderMediaIds?: number[],
     ) => {
       if (state.isActive) {
-        console.warn("Sync is already in progress");
+        console.warn("[Synchronization] ⚠️ Sync is already in progress");
         return;
       }
       if (!entries.length) {
+        console.warn("[Synchronization] ⚠️ No entries to synchronize");
         setState((prev) => ({ ...prev, error: "No entries to synchronize" }));
         return;
       }
       if (!token) {
+        console.error("[Synchronization] ❌ No authentication token available");
         setState((prev) => ({
           ...prev,
           error: "No authentication token available",
@@ -863,7 +901,17 @@ export function useSynchronization(): [
 
       const isResume = resumeRequestedRef.current;
       resumeRequestedRef.current = false;
-      if (!isResume && resumeSnapshotRef.current) clearResumeSnapshot();
+
+      console.info(
+        `[Synchronization] ${isResume ? "▶️ Resuming" : "🚀 Starting"} sync for ${entries.length} entries`,
+      );
+
+      if (!isResume && resumeSnapshotRef.current) {
+        console.debug(
+          "[Synchronization] 🔍 Clearing existing resume snapshot for fresh sync",
+        );
+        clearResumeSnapshot();
+      }
 
       const existingReportFragment = isResume
         ? fromPersistedReport(resumeSnapshotRef.current?.reportFragment ?? null)
@@ -917,7 +965,9 @@ export function useSynchronization(): [
         );
 
         if (needsIncrementalSync) {
-          console.log("Using sequential incremental sync mode");
+          console.info(
+            "[Synchronization] ⚙️ Using sequential incremental sync mode",
+          );
           const incrementalEntries = entries
             .filter((e) => e.syncMetadata?.useIncrementalSync)
             .map((entry) => {
@@ -940,11 +990,15 @@ export function useSynchronization(): [
             (e) => !e.syncMetadata?.useIncrementalSync,
           );
 
-          console.log(
-            `Processing ${incrementalEntries.length} entries with incremental sync`,
+          console.info(
+            `[Synchronization] 📚 Processing ${incrementalEntries.length} entries with incremental sync`,
           );
-          console.log(
-            `Processing ${regularEntries.length} entries with regular sync`,
+          console.info(
+            `[Synchronization] 📚 Processing ${regularEntries.length} entries with regular sync`,
+          );
+
+          console.debug(
+            "[Synchronization] 🔍 Starting regular batch processing...",
           );
 
           // Process regular batch first
@@ -976,9 +1030,16 @@ export function useSynchronization(): [
           });
 
           syncReport = incReport;
-          console.log("Incremental sync completed successfully");
+          console.info(
+            "[Synchronization] ✅ Incremental sync completed successfully",
+          );
         } else {
-          console.log("Using standard (non-incremental) sync mode");
+          console.info(
+            "[Synchronization] ⚙️ Using standard (non-incremental) sync mode",
+          );
+          console.debug(
+            "[Synchronization] 🔍 Starting regular batch processing...",
+          );
           syncReport = await runRegularBatch(
             entries,
             token,
@@ -998,6 +1059,9 @@ export function useSynchronization(): [
 
         // If pause was requested, persist partial report and snapshot
         if (pauseRequestedRef.current) {
+          console.info(
+            "[Synchronization] ⏸️ Pausing sync and saving state for resume...",
+          );
           handlePausedSync(
             existingReportFragment,
             syncReport,
@@ -1007,10 +1071,12 @@ export function useSynchronization(): [
             initialEntriesRef,
             setState,
           );
+          console.info("[Synchronization] ✅ Sync paused successfully");
           return;
         }
 
         // Finalize the sync operation
+        console.debug("[Synchronization] 🔍 Finalizing sync operation...");
         finalizeSyncOperation(
           existingReportFragment,
           syncReport,
@@ -1019,7 +1085,7 @@ export function useSynchronization(): [
           setState,
         );
       } catch (error) {
-        console.error("Sync operation failed:", error);
+        console.error("[Synchronization] Sync operation failed:", error);
         setState((prev) => ({
           ...prev,
           isActive: false,
@@ -1043,7 +1109,9 @@ export function useSynchronization(): [
    */
   const cancelSync = useCallback(() => {
     if (state.abortController) {
-      console.log("Cancellation requested - aborting all sync operations");
+      console.info(
+        "[Synchronization] Cancellation requested - aborting all sync operations",
+      );
       state.abortController.abort();
       setState((prev) => ({
         ...prev,
@@ -1061,8 +1129,8 @@ export function useSynchronization(): [
       clearResumeSnapshot();
 
       // Add a message to make it clear the operation has been canceled
-      console.log(
-        "%c🛑 SYNC CANCELLED - All operations stopped",
+      console.info(
+        "%c🛑 [Synchronization] SYNC CANCELLED - All operations stopped",
         "color: red; font-weight: bold",
       );
     }
@@ -1070,10 +1138,16 @@ export function useSynchronization(): [
 
   const pauseSync = useCallback(() => {
     if (state.abortController) {
-      console.log("Pause requested - stopping current sync after current task");
+      console.info(
+        "[Synchronization] ⏸️ Pause requested - stopping current sync after current task",
+      );
       pauseRequestedRef.current = true;
       state.abortController.abort();
       emitSyncSnapshot();
+    } else {
+      console.warn(
+        "[Synchronization] ⚠️ Cannot pause - no active sync operation",
+      );
     }
   }, [state.abortController, emitSyncSnapshot]);
 
@@ -1087,16 +1161,24 @@ export function useSynchronization(): [
       const snapshot = resumeSnapshotRef.current;
 
       if (!snapshot) {
-        console.warn("No paused synchronization state available to resume.");
+        console.warn(
+          "[Synchronization] ⚠️ No paused synchronization state available to resume",
+        );
         return;
       }
 
       const remainingIds = snapshot.remainingMediaIds;
       if (!remainingIds || remainingIds.length === 0) {
-        console.warn("Paused state contains no remaining entries.");
+        console.warn(
+          "[Synchronization] ⚠️ Paused state contains no remaining entries",
+        );
         clearResumeSnapshot();
         return;
       }
+
+      console.info(
+        `[Synchronization] ▶️ Resuming sync with ${remainingIds.length} remaining entries`,
+      );
 
       const sourceEntries =
         snapshot.entries && snapshot.entries.length > 0
@@ -1110,10 +1192,16 @@ export function useSynchronization(): [
       );
 
       if (!entriesToResume.length) {
-        console.warn("No matching entries found to resume.");
+        console.warn(
+          "[Synchronization] ⚠️ No matching entries found to resume",
+        );
         clearResumeSnapshot();
         return;
       }
+
+      console.debug(
+        `[Synchronization] 🔍 Prepared ${entriesToResume.length} entries for resume`,
+      );
 
       resumeRequestedRef.current = true;
       emitSyncSnapshot();
@@ -1138,7 +1226,11 @@ export function useSynchronization(): [
    */
   const exportErrors = useCallback(() => {
     if (state.report) {
+      console.info("[Synchronization] 📤 Exporting error log...");
       exportSyncErrorLog(state.report);
+      console.info("[Synchronization] ✅ Error log exported successfully");
+    } else {
+      console.warn("[Synchronization] ⚠️ No sync report available to export");
     }
   }, [state.report]);
 
@@ -1152,7 +1244,11 @@ export function useSynchronization(): [
    */
   const exportReport = useCallback(() => {
     if (state.report) {
+      console.info("[Synchronization] 📤 Exporting sync report...");
       exportSyncReport(state.report);
+      console.info("[Synchronization] ✅ Sync report exported successfully");
+    } else {
+      console.warn("[Synchronization] ⚠️ No sync report available to export");
     }
   }, [state.report]);
 
@@ -1162,6 +1258,7 @@ export function useSynchronization(): [
    * @source
    */
   const reset = useCallback(() => {
+    console.info("[Synchronization] 🔄 Resetting synchronization state...");
     clearResumeSnapshot();
     setState({
       isActive: false,

@@ -35,7 +35,9 @@ export class MangaDexClient extends BaseMangaSourceClient<
     if (cached) {
       return cached;
     }
-    console.log(`🔍 Searching MangaDex for: "${query}" (limit: ${limit})`);
+    console.info(
+      `[MangaDex] 🔍 Searching MangaDex for: "${query}" (limit: ${limit})`,
+    );
 
     try {
       // Make direct HTTP request using the base client's functionality
@@ -45,12 +47,15 @@ export class MangaDexClient extends BaseMangaSourceClient<
       const results = this.parseSearchResponse(data);
       this.setCachedData(cacheKey, results);
 
-      console.log(
-        `📦 MangaDex search found ${results?.length || 0} results for "${query}"`,
+      console.info(
+        `[MangaDex] 📦 MangaDex search found ${results?.length || 0} results for "${query}"`,
       );
       return results;
     } catch (error) {
-      console.error(`❌ MangaDex search failed for "${query}":`, error);
+      console.error(
+        `[MangaDex] ❌ MangaDex search failed for "${query}":`,
+        error,
+      );
       return [];
     }
   }
@@ -60,7 +65,7 @@ export class MangaDexClient extends BaseMangaSourceClient<
    */
   public async getMangaDetail(id: string): Promise<MangaDexMangaDetail | null> {
     try {
-      console.log(`📖 Getting MangaDex manga details for: ${id}`);
+      console.debug(`[MangaDex] 📖 Getting MangaDex manga details for: ${id}`);
 
       // Make direct HTTP request using the base client's functionality
       const url = this.buildDetailUrl(id);
@@ -68,7 +73,7 @@ export class MangaDexClient extends BaseMangaSourceClient<
       return this.parseDetailResponse(rawData);
     } catch (error) {
       console.error(
-        `❌ Failed to get MangaDex manga details for ${id}:`,
+        `[MangaDex] ❌ Failed to get MangaDex manga details for ${id}:`,
         error,
       );
       return null;
@@ -124,7 +129,7 @@ export class MangaDexClient extends BaseMangaSourceClient<
   // eslint-disable-next-line
   protected parseSearchResponse(rawResponse: any): MangaDexManga[] {
     if (!Array.isArray(rawResponse?.data)) {
-      console.log("🔍 MangaDex: Invalid search response format");
+      console.warn("[MangaDex] 🔍 Invalid search response format");
       return [];
     }
     // eslint-disable-next-line
@@ -167,7 +172,7 @@ export class MangaDexClient extends BaseMangaSourceClient<
   // eslint-disable-next-line
   protected parseDetailResponse(rawResponse: any): MangaDexMangaDetail | null {
     if (!rawResponse?.data) {
-      console.log("📖 MangaDex: Invalid detail response format");
+      console.warn("[MangaDex] 📖 Invalid detail response format");
       return null;
     }
     const data = rawResponse.data;
@@ -246,8 +251,8 @@ export class MangaDexClient extends BaseMangaSourceClient<
       // Check if external links exist
       const links = detail.data?.attributes?.links;
       if (!links) {
-        console.log(
-          `🔗 No external links found for MangaDex manga: ${detail.title}`,
+        console.debug(
+          `[MangaDex] 🔗 No external links found for MangaDex manga: ${detail.title}`,
         );
         return null;
       }
@@ -256,8 +261,8 @@ export class MangaDexClient extends BaseMangaSourceClient<
       const anilistId = links.al;
 
       if (!anilistId) {
-        console.log(
-          `🔗 No AniList ID found for MangaDex manga: ${detail.title}`,
+        console.debug(
+          `[MangaDex] 🔗 No AniList ID found for MangaDex manga: ${detail.title}`,
           { availableLinks: Object.keys(links) },
         );
         return null;
@@ -267,15 +272,15 @@ export class MangaDexClient extends BaseMangaSourceClient<
       const parsedAnilistId = Number.parseInt(anilistId, 10);
 
       if (Number.isNaN(parsedAnilistId)) {
-        console.log(
-          `🔗 Invalid AniList ID format for MangaDex manga: ${detail.title}`,
+        console.warn(
+          `[MangaDex] 🔗 Invalid AniList ID format for MangaDex manga: ${detail.title}`,
           { anilistId },
         );
         return null;
       }
 
-      console.log(
-        `🎯 Found AniList ID ${parsedAnilistId} for MangaDex manga: ${detail.title}`,
+      console.debug(
+        `[MangaDex] 🎯 Found AniList ID ${parsedAnilistId} for MangaDex manga: ${detail.title}`,
       );
 
       return parsedAnilistId;
