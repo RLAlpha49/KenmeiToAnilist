@@ -57,7 +57,9 @@ const safeClone = (value: unknown): unknown => {
 
   if (value && typeof value === "object") {
     try {
-      return JSON.parse(JSON.stringify(value));
+      return typeof structuredClone === "function"
+        ? structuredClone(value)
+        : JSON.parse(JSON.stringify(value));
     } catch {
       return Object.prototype.toString.call(value);
     }

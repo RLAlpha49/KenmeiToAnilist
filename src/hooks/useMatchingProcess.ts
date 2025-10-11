@@ -103,6 +103,162 @@ export const useMatchingProcess = ({
     );
   }, []);
 
+  const updateGlobalState = useCallback(
+    (patch: Partial<NonNullable<typeof globalThis.matchingProcessState>>) => {
+      if (!globalThis.matchingProcessState) return;
+      Object.assign(globalThis.matchingProcessState, patch, {
+        lastUpdated: Date.now(),
+      });
+    },
+    [],
+  );
+
+  const createProgressHandler = useCallback(
+    (withKnownIdsCount: number) => {
+      return (current: number, total: number, currentTitle?: string) => {
+        // Pause/resume time tracking depending on manual pause flag
+        if (isManualMatchingPaused()) {
+          pauseTimeTracking();
+        } else {
+          resumeTimeTracking();
+        }
+
+        setProgress({ current, total, currentTitle: currentTitle || "" });
+        updateGlobalState({
+          progress: { current, total, currentTitle: currentTitle || "" },
+        });
+
+        const completionPercent = Math.min(
+          100,
+          Math.round((current / total) * 100),
+        );
+        const baseDetail = `Processing: ${Math.min(current, total)} of ${total}`;
+        calculateTimeEstimate(current, total);
+
+        if (withKnownIdsCount > 0 && current <= withKnownIdsCount) {
+          const statusMsg = "Batch fetching manga with known IDs";
+          setStatusMessage(statusMsg);
+          setDetailMessage(`${current} of ${withKnownIdsCount}`);
+          updateGlobalState({
+            statusMessage: statusMsg,
+            detailMessage: `${current} of ${withKnownIdsCount}`,
+          });
+          return;
+        }
+
+        const statusMsg = `Matching manga (${completionPercent}% complete)`;
+        setStatusMessage(statusMsg);
+        setDetailMessage(baseDetail);
+        updateGlobalState({
+          statusMessage: statusMsg,
+          detailMessage: `${baseDetail} (${Math.max(0, total - current)} remaining)`,
+        });
+      };
+    },
+    [
+      pauseTimeTracking,
+      resumeTimeTracking,
+      calculateTimeEstimate,
+      updateGlobalState,
+    ],
+  );
+
+  const persistMergedResults = useCallback(
+    async (
+      results: MatchResult[],
+      originalList: KenmeiManga[],
+      setMatchResults: React.Dispatch<React.SetStateAction<MangaMatchResult[]>>,
+    ) => {
+      try {
+        const merged = mergeMatchResults(results);
+        setMatchResults(merged as MangaMatchResult[]);
+        storage.setItem(STORAGE_KEYS.MATCH_RESULTS, JSON.stringify(merged));
+
+        const remaining = calculatePendingManga(
+          merged as MangaMatchResult[],
+          originalList,
+        );
+        if (remaining.length > 0) {
+          savePendingManga(remaining);
+        } else {
+          storage.removeItem(STORAGE_KEYS.PENDING_MANGA);
+          setPendingManga([]);
+        }
+      } catch (e) {
+        console.error("Failed to persist match results:", e);
+      }
+    },
+    [calculatePendingManga, savePendingManga, setPendingManga],
+  );
+
+  const setInitialStatusMessage = useCallback(
+    (
+      cacheStatus: {
+        inMemoryCache: number;
+        localStorage: { mangaCache: number };
+      },
+      withKnownIds: number,
+    ) => {
+      if (
+        cacheStatus.inMemoryCache > 0 ||
+        cacheStatus.localStorage.mangaCache > 0
+      ) {
+        const totalCachedItems =
+          cacheStatus.inMemoryCache +
+          (cacheStatus.localStorage.mangaCache > cacheStatus.inMemoryCache
+            ? cacheStatus.localStorage.mangaCache - cacheStatus.inMemoryCache
+            : 0);
+        setStatusMessage(
+          `Found ${totalCachedItems} cached manga entries from previous searches...`,
+        );
+      } else if (withKnownIds > 0) {
+        setStatusMessage(
+          `Found ${withKnownIds} manga with known AniList IDs - using efficient batch fetching`,
+        );
+      } else {
+        setStatusMessage("Starting matching process...");
+      }
+    },
+    [],
+  );
+
+  const handleMatchingError = useCallback((err: unknown) => {
+    console.error("Matching error:", err);
+
+    if (cancelMatchingRef.current) {
+      setError("Matching process was cancelled");
+      return;
+    }
+
+    let errorMessage = "An error occurred during the matching process.";
+    const apiError = err as ApiError;
+
+    if (apiError?.message) {
+      errorMessage += ` Error: ${apiError.message}`;
+    }
+
+    if (
+      apiError?.name === "TypeError" &&
+      apiError?.message?.includes("fetch")
+    ) {
+      errorMessage =
+        "Failed to connect to AniList API. Please check your internet connection and try again.";
+    } else if (apiError?.status) {
+      if (apiError.status === 401 || apiError.status === 403) {
+        errorMessage =
+          "Authentication failed. Please reconnect your AniList account in Settings.";
+      } else if (apiError.status === 429) {
+        errorMessage =
+          "Rate limit exceeded. Please wait a few minutes and try again.";
+      } else if (apiError.status >= 500) {
+        errorMessage = "AniList server error. Please try again later.";
+      }
+    }
+
+    setError(errorMessage);
+    setDetailedError(apiError);
+  }, []);
+
   /**
    * Starts the batch matching process for the provided manga list.
    *
@@ -175,92 +331,11 @@ export const useMatchingProcess = ({
       const abortController = new AbortController();
       globalThis.activeAbortController = abortController;
 
-      // Update global state conveniently
-      const updateGlobalState = (
-        patch: Partial<typeof globalThis.matchingProcessState>,
-      ) => {
-        if (!globalThis.matchingProcessState) return;
-        Object.assign(globalThis.matchingProcessState, patch, {
-          lastUpdated: Date.now(),
-        });
-      };
-
-      // Progress update logic extracted to simplify branching
-      const onProgress = (
-        current: number,
-        total: number,
-        currentTitle?: string,
-        withKnownIdsCount = 0,
-      ) => {
-        // Pause/resume time tracking depending on manual pause flag
-        if (isManualMatchingPaused()) {
-          pauseTimeTracking();
-        } else {
-          resumeTimeTracking();
-        }
-
-        setProgress({ current, total, currentTitle: currentTitle || "" });
-        updateGlobalState({
-          progress: { current, total, currentTitle: currentTitle || "" },
-        });
-
-        const completionPercent = Math.min(
-          100,
-          Math.round((current / total) * 100),
-        );
-        const baseDetail = `Processing: ${Math.min(current, total)} of ${total}`;
-        calculateTimeEstimate(current, total);
-
-        if (withKnownIdsCount > 0 && current <= withKnownIdsCount) {
-          const statusMsg = "Batch fetching manga with known IDs";
-          setStatusMessage(statusMsg);
-          setDetailMessage(`${current} of ${withKnownIdsCount}`);
-          updateGlobalState({
-            statusMessage: statusMsg,
-            detailMessage: `${current} of ${withKnownIdsCount}`,
-          });
-          return;
-        }
-
-        const statusMsg = `Matching manga (${completionPercent}% complete)`;
-        setStatusMessage(statusMsg);
-        setDetailMessage(baseDetail);
-        updateGlobalState({
-          statusMessage: statusMsg,
-          detailMessage: `${baseDetail} (${Math.max(0, total - current)} remaining)`,
-        });
-      };
-
       // Cancellation check used inside batch
       const checkCancellation = () => {
         if (cancelMatchingRef.current) {
           abortController.abort();
           throw new Error("Matching process was cancelled by user");
-        }
-      };
-
-      // Save merged results after (partial) run
-      const persistMergedResults = async (
-        results: MatchResult[],
-        originalList: KenmeiManga[],
-      ) => {
-        try {
-          const merged = mergeMatchResults(results);
-          setMatchResults(merged as MangaMatchResult[]);
-          storage.setItem(STORAGE_KEYS.MATCH_RESULTS, JSON.stringify(merged));
-
-          const remaining = calculatePendingManga(
-            merged as MangaMatchResult[],
-            originalList,
-          );
-          if (remaining.length > 0) {
-            savePendingManga(remaining);
-          } else {
-            storage.removeItem(STORAGE_KEYS.PENDING_MANGA);
-            setPendingManga([]);
-          }
-        } catch (e) {
-          console.error("Failed to persist match results:", e);
         }
       };
 
@@ -276,25 +351,9 @@ export const useMatchingProcess = ({
           (m) => m.anilistId && Number.isInteger(m.anilistId),
         ).length;
 
-        if (
-          cacheStatus.inMemoryCache > 0 ||
-          cacheStatus.localStorage.mangaCache > 0
-        ) {
-          const totalCachedItems =
-            cacheStatus.inMemoryCache +
-            (cacheStatus.localStorage.mangaCache > cacheStatus.inMemoryCache
-              ? cacheStatus.localStorage.mangaCache - cacheStatus.inMemoryCache
-              : 0);
-          setStatusMessage(
-            `Found ${totalCachedItems} cached manga entries from previous searches...`,
-          );
-        } else if (withKnownIds > 0) {
-          setStatusMessage(
-            `Found ${withKnownIds} manga with known AniList IDs - using efficient batch fetching`,
-          );
-        } else {
-          setStatusMessage("Starting matching process...");
-        }
+        setInitialStatusMessage(cacheStatus, withKnownIds);
+
+        const onProgress = createProgressHandler(withKnownIds);
 
         const results = await batchMatchManga(
           mangaList,
@@ -312,7 +371,7 @@ export const useMatchingProcess = ({
           },
           (current, total, currentTitle) => {
             checkCancellation();
-            onProgress(current, total, currentTitle, withKnownIds);
+            onProgress(current, total, currentTitle);
           },
           () => {
             if (cancelMatchingRef.current) {
@@ -326,7 +385,11 @@ export const useMatchingProcess = ({
         // If the run was cancelled, preserve partial results and inform user
         if (cancelMatchingRef.current) {
           if (results.length > 0) {
-            await persistMergedResults(results as MatchResult[], mangaList);
+            await persistMergedResults(
+              results as MatchResult[],
+              mangaList,
+              setMatchResults,
+            );
           }
           setError(
             "Matching process was cancelled. You can resume from where you left off using the Resume button.",
@@ -338,42 +401,13 @@ export const useMatchingProcess = ({
         console.log("Cache status after matching:", finalCacheStatus);
 
         // Normal completion: merge, persist, and clear pending
-        await persistMergedResults(results as MatchResult[], mangaList);
+        await persistMergedResults(
+          results as MatchResult[],
+          mangaList,
+          setMatchResults,
+        );
       } catch (err: unknown) {
-        console.error("Matching error:", err);
-
-        if (cancelMatchingRef.current) {
-          setError("Matching process was cancelled");
-          return;
-        }
-
-        let errorMessage = "An error occurred during the matching process.";
-        const apiError = err as ApiError;
-
-        if (apiError?.message) {
-          errorMessage += ` Error: ${apiError.message}`;
-        }
-
-        if (
-          apiError?.name === "TypeError" &&
-          apiError?.message?.includes("fetch")
-        ) {
-          errorMessage =
-            "Failed to connect to AniList API. Please check your internet connection and try again.";
-        } else if (apiError?.status) {
-          if (apiError.status === 401 || apiError.status === 403) {
-            errorMessage =
-              "Authentication failed. Please reconnect your AniList account in Settings.";
-          } else if (apiError.status === 429) {
-            errorMessage =
-              "Rate limit exceeded. Please wait a few minutes and try again.";
-          } else if (apiError.status >= 500) {
-            errorMessage = "AniList server error. Please try again later.";
-          }
-        }
-
-        setError(errorMessage);
-        setDetailedError(apiError);
+        handleMatchingError(err);
       } finally {
         setIsLoading(false);
         setIsCancelling(false);
@@ -387,12 +421,14 @@ export const useMatchingProcess = ({
     },
     [
       accessToken,
-      calculateTimeEstimate,
-      calculatePendingManga,
       initializeTimeTracking,
-      savePendingManga,
       setPendingManga,
       notifyMatchingState,
+      updateGlobalState,
+      createProgressHandler,
+      persistMergedResults,
+      setInitialStatusMessage,
+      handleMatchingError,
     ],
   );
 

@@ -184,8 +184,8 @@ export function DebugProvider({
   const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
   const [ipcEvents, setIpcEvents] = useState<IpcLogEntry[]>([]);
   const [maxIpcEntries, setMaxIpcEntries] = useState<number>(() => {
-    if (typeof window !== "undefined" && window.electronDebug?.ipc) {
-      return window.electronDebug.ipc.maxEntries;
+    if (globalThis.window !== undefined && globalThis.electronDebug?.ipc) {
+      return globalThis.electronDebug.ipc.maxEntries;
     }
     return 500;
   });
@@ -227,18 +227,18 @@ export function DebugProvider({
   }, [isDebugEnabled, logViewerEnabled]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const bridge = window.electronDebug?.ipc;
+    if (globalThis.window === undefined) return;
+    const bridge = globalThis.window.electronDebug?.ipc;
     if (!bridge) return;
     setMaxIpcEntries(bridge.maxEntries);
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
+    if (globalThis.window === undefined) {
       return;
     }
 
-    const bridge = window.electronDebug?.ipc;
+    const bridge = globalThis.electronDebug?.ipc;
     if (!bridge) {
       return;
     }
@@ -563,8 +563,8 @@ export function DebugProvider({
   }, []);
 
   const clearIpcEvents = useCallback(() => {
-    if (typeof window === "undefined") return;
-    window.electronDebug?.ipc.clear();
+    if (globalThis.window === undefined) return;
+    globalThis.electronDebug?.ipc.clear();
   }, []);
 
   const exportLogs = useCallback(() => {

@@ -166,14 +166,50 @@ export function RateLimitProvider({
   }, [clearRateLimit]);
 
   useEffect(() => {
-    void checkRateLimitStatus();
+    checkRateLimitStatus().catch((err) =>
+      console.error("checkRateLimitStatus error:", err),
+    );
+  }, [checkRateLimitStatus]);
+
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startPolling = useCallback(() => {
+    if (pollTimerRef.current) return;
+    pollTimerRef.current = setInterval(() => {
+      checkRateLimitStatus().catch((err) =>
+        console.error("checkRateLimitStatus error:", err),
+      );
+    }, 3000);
+    checkRateLimitStatus().catch((err) =>
+      console.error("checkRateLimitStatus error:", err),
+    );
+  }, [checkRateLimitStatus]);
+
+  const stopPolling = useCallback(() => {
+    if (!pollTimerRef.current) return;
+    clearInterval(pollTimerRef.current);
+    pollTimerRef.current = null;
+  }, []);
+
+  const handleMatchingState = useCallback(
+    (event: Event) => {
+      const detail = (event as CustomEvent<{ isRunning: boolean }>).detail;
+      if (detail?.isRunning) {
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    },
+    [startPolling, stopPolling],
+  );
+
+  const handleRequestComplete = useCallback(() => {
+    checkRateLimitStatus().catch((err) =>
+      console.error("checkRateLimitStatus error:", err),
+    );
   }, [checkRateLimitStatus]);
 
   useEffect(() => {
-    const handleRequestComplete = () => {
-      void checkRateLimitStatus();
-    };
-
     globalThis.addEventListener(
       "anilist:request:completed",
       handleRequestComplete,
@@ -185,34 +221,9 @@ export function RateLimitProvider({
         handleRequestComplete,
       );
     };
-  }, [checkRateLimitStatus]);
+  }, [handleRequestComplete]);
 
   useEffect(() => {
-    let pollTimer: ReturnType<typeof setInterval> | null = null;
-
-    const startPolling = () => {
-      if (pollTimer) return;
-      pollTimer = setInterval(() => {
-        void checkRateLimitStatus();
-      }, 3000);
-      void checkRateLimitStatus();
-    };
-
-    const stopPolling = () => {
-      if (!pollTimer) return;
-      clearInterval(pollTimer);
-      pollTimer = null;
-    };
-
-    const handleMatchingState = (event: Event) => {
-      const detail = (event as CustomEvent<{ isRunning: boolean }>).detail;
-      if (detail?.isRunning) {
-        startPolling();
-      } else {
-        stopPolling();
-      }
-    };
-
     if (globalThis.matchingProcessState?.isRunning) {
       startPolling();
     }
@@ -223,7 +234,7 @@ export function RateLimitProvider({
       stopPolling();
       globalThis.removeEventListener("matching:state", handleMatchingState);
     };
-  }, [checkRateLimitStatus]);
+  }, [startPolling, stopPolling, handleMatchingState]);
 
   // Listen for global rate limiting events
   useEffect(() => {

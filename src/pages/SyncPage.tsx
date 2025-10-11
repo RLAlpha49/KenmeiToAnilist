@@ -877,775 +877,731 @@ export function SyncPage() {
     );
   }
 
+  // Render preview view
+  const renderPreviewView = () => {
+    return (
+      <motion.div
+        className="space-y-6"
+        key="preview"
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        variants={staggerContainerVariants}
+      >
+        <motion.div variants={cardVariants} className="space-y-6">
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45 }}
+            className="relative overflow-hidden rounded-3xl border border-slate-200/60 bg-white/80 p-6 shadow-xl backdrop-blur-xl dark:border-slate-800/70 dark:bg-slate-950/60"
+          >
+            <div className="pointer-events-none absolute inset-0 opacity-80">
+              <div className="absolute top-[-6rem] left-1/2 h-56 w-96 -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-400/50 to-indigo-400/50 blur-3xl dark:from-blue-500/25 dark:to-indigo-500/25" />
+              <div className="absolute right-[-3rem] bottom-[-4rem] h-40 w-40 rounded-full bg-gradient-to-br from-slate-200/70 to-transparent blur-3xl dark:from-slate-800/40" />
+            </div>
+            <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+              <div className="max-w-xl space-y-3">
+                <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+                  Finalize your AniList library updates
+                </h1>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  Review detected changes, tune your syncing preferences, and
+                  push a polished update to AniList.
+                </p>
+              </div>
+              <div className="grid w-full gap-3 sm:grid-cols-3 md:w-auto">
+                {heroStats.map((stat) => {
+                  const Icon = stat.icon;
+                  return (
+                    <div
+                      key={stat.label}
+                      className="relative overflow-hidden rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm backdrop-blur-lg dark:border-slate-800/70 dark:bg-slate-950/70"
+                    >
+                      <div
+                        className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${stat.accent} opacity-80`}
+                      />
+                      <div className="relative flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <span className="pr-2 text-xs font-medium tracking-wide text-slate-500 uppercase dark:text-slate-400">
+                            {stat.label}
+                          </span>
+                          <Icon className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                        </div>
+                        <span className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
+                          {stat.value}
+                        </span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                          {stat.helper}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </motion.section>
+
+          <Card className="border border-slate-200/70 bg-white/80 shadow-2xl backdrop-blur-xl dark:border-slate-800/70 dark:bg-slate-950/60">
+            <CardHeader className="space-y-2">
+              <CardTitle className="bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900 bg-clip-text text-2xl font-semibold text-transparent dark:from-slate-100 dark:via-slate-300 dark:to-slate-100">
+                Sync Preview
+              </CardTitle>
+              <CardDescription className="text-sm text-slate-600 dark:text-slate-400">
+                Review the changes that will be applied to your AniList account
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-4 shadow-sm dark:border-slate-800/70 dark:bg-slate-900/40">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <span className="text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400">
+                        Sync readiness
+                      </span>
+                      <div className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">
+                        {entriesWithChanges.length} of {totalMatchedManga}{" "}
+                        entries prepared
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Automatically excludes skipped matches and completed
+                        entries preserved per your settings.
+                      </p>
+                    </div>
+                    <div className="flex w-full items-center gap-3 sm:w-auto">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-blue-200/80 bg-white/80 text-sm font-semibold text-blue-600 dark:border-blue-700/80 dark:bg-blue-900/20 dark:text-blue-300">
+                        {queuedPercentage}%
+                      </div>
+                      <div className="min-w-[140px] flex-1">
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800/60">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 transition-all duration-300"
+                            style={{
+                              width: `${Math.min(queuedPercentage, 100)}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <SyncConfigurationPanel
+                  syncConfig={syncConfig}
+                  setSyncConfig={setSyncConfig}
+                  useCustomThreshold={useCustomThreshold}
+                  setUseCustomThreshold={setUseCustomThreshold}
+                  handleToggleOption={handleToggleOption}
+                />
+
+                <ChangesSummary
+                  entriesWithChanges={entriesWithChanges.length}
+                  libraryLoading={libraryLoading}
+                  libraryError={libraryError}
+                  isRateLimited={rateLimitState.isRateLimited}
+                  onLibraryRefresh={handleLibraryRefresh}
+                  userLibrary={userLibrary}
+                  mangaMatches={mangaMatches}
+                  syncConfig={syncConfig}
+                />
+
+                <ViewControls
+                  displayMode={displayMode}
+                  setDisplayMode={setDisplayMode}
+                  sortOption={sortOption}
+                  setSortOption={setSortOption}
+                  filters={filters}
+                  setFilters={setFilters}
+                />
+
+                {sortedMangaMatches.length !== mangaMatches.length && (
+                  <div className="flex items-center justify-between rounded-xl border border-slate-200/70 bg-slate-50/70 px-3 py-2 text-sm shadow-sm dark:border-slate-800/60 dark:bg-slate-900/50">
+                    <div>
+                      Showing{" "}
+                      <span className="font-medium">
+                        {sortedMangaMatches.length}
+                      </span>{" "}
+                      of{" "}
+                      <span className="font-medium">
+                        {
+                          mangaMatches.filter(
+                            (match) => match.status !== "skipped",
+                          ).length
+                        }
+                      </span>{" "}
+                      manga
+                      {Object.values(filters).some((v) => v !== "all") && (
+                        <span className="text-muted-foreground ml-1">
+                          (filtered)
+                        </span>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 rounded-full border border-transparent px-3 text-xs hover:border-slate-300 hover:bg-slate-100 dark:hover:border-slate-700 dark:hover:bg-slate-800/60"
+                      onClick={() => {
+                        setSortOption({ field: "title", direction: "asc" });
+                        setFilters({
+                          status: "all",
+                          changes: "with-changes",
+                          library: "all",
+                        });
+                      }}
+                    >
+                      Clear Filters
+                    </Button>
+                  </div>
+                )}
+
+                <div className="max-h-[60vh] overflow-y-auto">
+                  <AnimatePresence
+                    initial={false}
+                    mode="wait"
+                    key={displayMode}
+                  >
+                    {displayMode === "cards"
+                      ? renderCardsView()
+                      : renderCompactView()}
+                  </AnimatePresence>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="flex flex-col gap-3 border-t border-slate-200/60 pt-6 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800/80">
+              <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                <span
+                  className={`inline-flex h-2 w-2 rounded-full ${entriesWithChanges.length > 0 ? "bg-emerald-500" : "bg-amber-500"}`}
+                ></span>
+                {entriesWithChanges.length > 0
+                  ? `${entriesWithChanges.length} entries ready to sync`
+                  : "No actionable changes detected yet"}
+              </div>
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                <Button
+                  variant="outline"
+                  onClick={handleCancel}
+                  className="w-full border-slate-300/70 text-slate-700 hover:border-slate-400 hover:bg-slate-100 sm:w-auto dark:border-slate-700/70 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-900"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleStartSync}
+                  disabled={entriesWithChanges.length === 0 || libraryLoading}
+                  className="group relative w-full overflow-hidden rounded-md bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 px-6 py-2 font-semibold text-white shadow-lg transition hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+                >
+                  <span className="absolute inset-0 bg-white/20 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                  <span className="relative flex items-center justify-center gap-2">
+                    <Sparkles className="h-4 w-4" />
+                    Launch Sync
+                  </span>
+                </Button>
+              </div>
+            </CardFooter>
+          </Card>
+        </motion.div>
+      </motion.div>
+    );
+  };
+
+  // Render cards view
+  const renderCardsView = () => {
+    return (
+      <motion.div
+        key="cards-view"
+        variants={fadeVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        transition={viewModeTransition}
+        className="grid grid-cols-1 gap-4"
+      >
+        <AnimatePresence initial={false}>
+          {sortedMangaMatches
+            .slice(0, visibleItems)
+            .map((match, index) => renderCardItem(match, index))}
+        </AnimatePresence>
+        {renderLoadMoreButton()}
+      </motion.div>
+    );
+  };
+
+  // Render compact view
+  const renderCompactView = () => {
+    return (
+      <motion.div
+        key="compact-view"
+        variants={fadeVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        transition={viewModeTransition}
+        className="space-y-1 overflow-hidden rounded-2xl border border-slate-200/70 bg-white/70 shadow-sm backdrop-blur-sm dark:border-slate-800/60 dark:bg-slate-950/50"
+      >
+        <AnimatePresence initial={false}>
+          {sortedMangaMatches
+            .slice(0, visibleItems)
+            .map((match, index) => renderCompactItem(match, index))}
+        </AnimatePresence>
+        {renderLoadMoreButtonCompact()}
+      </motion.div>
+    );
+  };
+
+  // Render individual card item
+  const renderCardItem = (match: MangaMatchResult, index: number) => {
+    const kenmei = match.kenmeiManga;
+    const anilist = match.selectedMatch!;
+    const userEntry = userLibrary[anilist.id];
+
+    const {
+      statusWillChange,
+      progressWillChange,
+      scoreWillChange,
+      isNewEntry,
+      isCompleted,
+      changeCount,
+    } = calculateSyncChanges(kenmei, userEntry, syncConfig);
+
+    return (
+      <motion.div
+        key={`${anilist.id}-${index}`}
+        layout="position"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        transition={{ duration: 0.3 }}
+        layoutId={undefined}
+      >
+        <Card className="group overflow-hidden border border-slate-200/70 bg-white/80 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-200/70 hover:shadow-xl dark:border-slate-800/60 dark:bg-slate-950/60">
+          <div className="flex">
+            {renderMangaCover(anilist, isNewEntry, isCompleted)}
+            <div className="flex-1 p-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="line-clamp-2 max-w-[580px] text-base font-semibold">
+                    {anilist.title.romaji || kenmei.title}
+                  </h3>
+                  {changeCount > 0 && !isCompleted ? (
+                    renderChangeBadges(
+                      statusWillChange,
+                      progressWillChange,
+                      scoreWillChange,
+                      userEntry,
+                      syncConfig,
+                    )
+                  ) : (
+                    <div className="mt-1">
+                      <Badge
+                        variant="outline"
+                        className="border-slate-200/70 bg-slate-100/70 px-1.5 py-0 text-xs text-slate-500 dark:border-slate-700/60 dark:bg-slate-800/50 dark:text-slate-400"
+                      >
+                        {isCompleted ? "Preserving Completed" : "No Changes"}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+                {changeCount > 0 && !isCompleted && (
+                  <div className="rounded-full bg-blue-100/80 px-2 py-1 text-xs font-medium text-blue-600 shadow-sm dark:bg-blue-900/30 dark:text-blue-300">
+                    {changeCount} change{changeCount === 1 ? "" : "s"}
+                  </div>
+                )}
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                <div className="rounded-xl border border-slate-200/60 bg-white/70 p-3 shadow-sm dark:border-slate-800/60 dark:bg-slate-900/40">
+                  <h4 className="text-muted-foreground mb-2 text-xs font-medium">
+                    {isNewEntry ? "Not in Library" : "Current AniList"}
+                  </h4>
+                  {isNewEntry ? (
+                    <div className="text-muted-foreground py-4 text-center text-xs">
+                      New addition to your library
+                    </div>
+                  ) : (
+                    renderCurrentAniListData(
+                      userEntry,
+                      anilist,
+                      statusWillChange,
+                      progressWillChange,
+                      scoreWillChange,
+                      syncConfig,
+                    )
+                  )}
+                </div>
+                <div className="rounded-xl border border-blue-100/60 bg-blue-50/70 p-3 shadow-sm dark:border-blue-900/40 dark:bg-blue-900/20">
+                  <h4 className="mb-2 text-xs font-medium text-blue-600 dark:text-blue-300">
+                    After Sync
+                  </h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-blue-500 dark:text-blue-400">
+                        Status:
+                      </span>
+                      <span
+                        className={`text-xs font-medium ${statusWillChange ? "text-blue-700 dark:text-blue-300" : ""}`}
+                      >
+                        {getEffectiveStatus(kenmei, syncConfig)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-blue-500 dark:text-blue-400">
+                        Progress:
+                      </span>
+                      {renderAfterSyncProgress(
+                        userEntry,
+                        kenmei,
+                        anilist,
+                        syncConfig,
+                        progressWillChange,
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-blue-500 dark:text-blue-400">
+                        Score:
+                      </span>
+                      {renderAfterSyncScore(userEntry, kenmei, scoreWillChange)}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-blue-500 dark:text-blue-400">
+                        Private:
+                      </span>
+                      {renderPrivacyDisplay(userEntry, syncConfig, false)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </motion.div>
+    );
+  };
+
+  // Render individual compact item
+  const renderCompactItem = (match: MangaMatchResult, index: number) => {
+    const kenmei = match.kenmeiManga;
+    const anilist = match.selectedMatch!;
+    const userEntry = userLibrary[anilist.id];
+
+    const {
+      statusWillChange,
+      progressWillChange,
+      scoreWillChange,
+      isNewEntry,
+      isCompleted,
+      changeCount,
+    } = calculateSyncChanges(kenmei, userEntry, syncConfig);
+
+    const baseRowClasses =
+      "group flex items-center rounded-xl px-3 py-2 transition-colors duration-200";
+    let backgroundClass = "";
+    if (isCompleted) {
+      backgroundClass = "bg-amber-50/70 dark:bg-amber-950/20";
+    } else if (isNewEntry) {
+      backgroundClass = "bg-emerald-50/70 dark:bg-emerald-950/20";
+    } else if (index % 2 === 0) {
+      backgroundClass = "bg-white/70 dark:bg-slate-900/40";
+    } else {
+      backgroundClass = "bg-white/60 dark:bg-slate-900/30";
+    }
+
+    return (
+      <motion.div
+        key={`${anilist.id}-${index}`}
+        layout="position"
+        initial={{ opacity: 0, y: 5 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        layoutId={undefined}
+      >
+        <div
+          className={`${baseRowClasses} ${backgroundClass} hover:bg-blue-50/70 dark:hover:bg-slate-900/60`}
+        >
+          <div className="mr-3 flex flex-shrink-0 items-center pl-2">
+            {anilist.coverImage?.large || anilist.coverImage?.medium ? (
+              <motion.div
+                layout="position"
+                animate={{
+                  transition: { type: false },
+                }}
+              >
+                <img
+                  src={anilist.coverImage?.large || anilist.coverImage?.medium}
+                  alt={anilist.title.romaji || ""}
+                  className="h-12 w-8 rounded-sm object-cover"
+                />
+              </motion.div>
+            ) : (
+              <div className="flex h-12 w-8 items-center justify-center rounded-sm bg-slate-200 dark:bg-slate-800">
+                <span className="text-muted-foreground text-[8px]">
+                  No Cover
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="mr-2 min-w-0 flex-1">
+            <div className="truncate text-sm font-medium">
+              {anilist.title.romaji || kenmei.title}
+            </div>
+            <div className="mt-0.5 flex items-center gap-1">
+              {isNewEntry && (
+                <Badge className="bg-emerald-500/80 px-2 py-0 text-[10px] text-white shadow-sm">
+                  New
+                </Badge>
+              )}
+              {isCompleted && (
+                <Badge
+                  variant="outline"
+                  className="border-amber-400/70 bg-amber-50/60 px-2 py-0 text-[10px] text-amber-600 shadow-sm dark:border-amber-500/40 dark:bg-amber-900/30 dark:text-amber-300"
+                >
+                  Completed
+                </Badge>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-shrink-0 items-center gap-1">
+            {!isNewEntry && !isCompleted && (
+              <>
+                {renderStatusBadge(
+                  statusWillChange,
+                  userEntry,
+                  kenmei,
+                  syncConfig,
+                )}
+                {renderProgressBadge(
+                  progressWillChange,
+                  userEntry,
+                  kenmei,
+                  syncConfig,
+                )}
+                {renderScoreBadge(scoreWillChange, userEntry, kenmei)}
+                {renderPrivacyBadge(userEntry, syncConfig)}
+                {changeCount === 0 && (
+                  <span className="px-1 text-[10px] text-slate-500 dark:text-slate-400">
+                    No Changes
+                  </span>
+                )}
+              </>
+            )}
+            {isNewEntry && (
+              <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                Adding to Library
+              </span>
+            )}
+            {isCompleted && (
+              <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                Preserving Completed
+              </span>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
+
+  // Render load more button for cards view
+  const renderLoadMoreButton = () => {
+    if (sortedMangaMatches.length > visibleItems) {
+      return (
+        <div className="py-4 text-center">
+          <Button
+            onClick={() => {
+              setIsLoadingMore(true);
+              const newValue = Math.min(
+                visibleItems + 20,
+                sortedMangaMatches.length,
+              );
+              setTimeout(() => {
+                setVisibleItems(newValue);
+                setIsLoadingMore(false);
+              }, 300);
+            }}
+            variant="outline"
+            className="gap-2"
+            disabled={isLoadingMore}
+          >
+            {isLoadingMore && (
+              <div className="text-primary inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+            )}
+            {isLoadingMore
+              ? "Loading..."
+              : `Load More (${visibleItems} of ${sortedMangaMatches.length})`}
+          </Button>
+        </div>
+      );
+    }
+    if (
+      sortedMangaMatches.length > 0 &&
+      sortedMangaMatches.length <= visibleItems
+    ) {
+      return (
+        <div className="py-4 text-center">
+          <span className="text-muted-foreground text-xs">
+            All items loaded
+          </span>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Render load more button for compact view
+  const renderLoadMoreButtonCompact = () => {
+    if (sortedMangaMatches.length === 0) return null;
+
+    return (
+      <div className="bg-muted/20 py-3 text-center">
+        {sortedMangaMatches.length > visibleItems ? (
+          <Button
+            onClick={() => {
+              setIsLoadingMore(true);
+              const newValue = Math.min(
+                visibleItems + 20,
+                sortedMangaMatches.length,
+              );
+              setTimeout(() => {
+                setVisibleItems(newValue);
+                setIsLoadingMore(false);
+              }, 300);
+            }}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            disabled={isLoadingMore}
+          >
+            {isLoadingMore && (
+              <div className="text-primary inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+            )}
+            {isLoadingMore
+              ? "Loading..."
+              : `Load More (${visibleItems} of ${sortedMangaMatches.length})`}
+          </Button>
+        ) : (
+          <span className="text-muted-foreground text-xs">
+            All items loaded
+          </span>
+        )}
+      </div>
+    );
+  };
+
+  // Render sync view
+  const renderSyncView = () => {
+    return (
+      <motion.div
+        variants={pageVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
+        <SyncManager
+          entries={entriesWithChanges}
+          token={token || ""}
+          onComplete={handleSyncComplete}
+          onCancel={handleCancel}
+          autoStart={false}
+          syncState={state}
+          syncActions={{
+            ...actions,
+            startSync: (entries, token, _unused, displayOrderMediaIds) =>
+              actions.startSync(entries, token, _unused, displayOrderMediaIds),
+          }}
+          incrementalSync={syncConfig.incrementalSync}
+          onIncrementalSyncChange={(value) => {
+            const newConfig = { ...syncConfig, incrementalSync: value };
+            setSyncConfig(newConfig);
+            saveSyncConfig(newConfig);
+          }}
+          displayOrderMediaIds={entriesWithChanges
+            .filter(Boolean)
+            .map((e) => e.mediaId)}
+        />
+      </motion.div>
+    );
+  };
+
+  // Render results view
+  const renderResultsView = () => {
+    if (state.report || wasCancelled) {
+      return (
+        <motion.div
+          variants={pageVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+        >
+          {state.report ? (
+            <SyncResultsView
+              report={state.report}
+              onClose={handleGoHome}
+              onExportErrors={() =>
+                state.report && exportSyncErrorLog(state.report)
+              }
+            />
+          ) : (
+            <div className="flex min-h-[300px] flex-col items-center justify-center">
+              <div className="mb-4">
+                <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
+              </div>
+              <div className="text-lg font-medium text-blue-700 dark:text-blue-300">
+                Loading synchronization results...
+              </div>
+            </div>
+          )}
+          <div className="mt-6 flex justify-center gap-4">
+            <Button onClick={handleGoHome} variant="default">
+              Go Home
+            </Button>
+            <Button onClick={handleBackToReview} variant="outline">
+              Back to Sync Review
+            </Button>
+          </div>
+          {wasCancelled && (
+            <div className="mt-4 text-center text-amber-600 dark:text-amber-400">
+              Synchronization was cancelled. No further entries will be
+              processed.
+            </div>
+          )}
+        </motion.div>
+      );
+    }
+
+    return (
+      <motion.div
+        variants={pageVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
+        <Card className="mx-auto w-full max-w-md p-6 text-center">
+          <CardContent>
+            <AlertCircle className="mx-auto mb-4 h-12 w-12 text-red-500" />
+            <h3 className="text-lg font-medium">Synchronization Error</h3>
+            <p className="mt-2 text-sm text-slate-500">
+              {state.error ||
+                "An unknown error occurred during synchronization."}
+            </p>
+          </CardContent>
+          <CardFooter className="justify-center gap-4">
+            <Button onClick={handleGoHome}>Go Home</Button>
+            <Button onClick={handleBackToReview} variant="outline">
+              Back to Sync Review
+            </Button>
+          </CardFooter>
+        </Card>
+      </motion.div>
+    );
+  };
+
   // Render the appropriate view based on state
   const renderContent = () => {
     switch (viewMode) {
       case "preview":
-        return (
-          <motion.div
-            className="space-y-6"
-            key="preview"
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            variants={staggerContainerVariants}
-          >
-            <motion.div variants={cardVariants} className="space-y-6">
-              <motion.section
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.45 }}
-                className="relative overflow-hidden rounded-3xl border border-slate-200/60 bg-white/80 p-6 shadow-xl backdrop-blur-xl dark:border-slate-800/70 dark:bg-slate-950/60"
-              >
-                <div className="pointer-events-none absolute inset-0 opacity-80">
-                  <div className="absolute top-[-6rem] left-1/2 h-56 w-96 -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-400/50 to-indigo-400/50 blur-3xl dark:from-blue-500/25 dark:to-indigo-500/25" />
-                  <div className="absolute right-[-3rem] bottom-[-4rem] h-40 w-40 rounded-full bg-gradient-to-br from-slate-200/70 to-transparent blur-3xl dark:from-slate-800/40" />
-                </div>
-                <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-                  <div className="max-w-xl space-y-3">
-                    <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-                      Finalize your AniList library updates
-                    </h1>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                      Review detected changes, tune your syncing preferences,
-                      and push a polished update to AniList.
-                    </p>
-                  </div>
-                  <div className="grid w-full gap-3 sm:grid-cols-3 md:w-auto">
-                    {heroStats.map((stat) => {
-                      const Icon = stat.icon;
-                      return (
-                        <div
-                          key={stat.label}
-                          className="relative overflow-hidden rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm backdrop-blur-lg dark:border-slate-800/70 dark:bg-slate-950/70"
-                        >
-                          <div
-                            className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${stat.accent} opacity-80`}
-                          />
-                          <div className="relative flex flex-col gap-2">
-                            <div className="flex items-center justify-between">
-                              <span className="pr-2 text-xs font-medium tracking-wide text-slate-500 uppercase dark:text-slate-400">
-                                {stat.label}
-                              </span>
-                              <Icon className="h-4 w-4 text-slate-400 dark:text-slate-500" />
-                            </div>
-                            <span className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
-                              {stat.value}
-                            </span>
-                            <span className="text-xs text-slate-500 dark:text-slate-400">
-                              {stat.helper}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </motion.section>
-
-              <Card className="border border-slate-200/70 bg-white/80 shadow-2xl backdrop-blur-xl dark:border-slate-800/70 dark:bg-slate-950/60">
-                <CardHeader className="space-y-2">
-                  <CardTitle className="bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900 bg-clip-text text-2xl font-semibold text-transparent dark:from-slate-100 dark:via-slate-300 dark:to-slate-100">
-                    Sync Preview
-                  </CardTitle>
-                  <CardDescription className="text-sm text-slate-600 dark:text-slate-400">
-                    Review the changes that will be applied to your AniList
-                    account
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-4 shadow-sm dark:border-slate-800/70 dark:bg-slate-900/40">
-                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <span className="text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400">
-                            Sync readiness
-                          </span>
-                          <div className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">
-                            {entriesWithChanges.length} of {totalMatchedManga}{" "}
-                            entries prepared
-                          </div>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
-                            Automatically excludes skipped matches and completed
-                            entries preserved per your settings.
-                          </p>
-                        </div>
-                        <div className="flex w-full items-center gap-3 sm:w-auto">
-                          <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-blue-200/80 bg-white/80 text-sm font-semibold text-blue-600 dark:border-blue-700/80 dark:bg-blue-900/20 dark:text-blue-300">
-                            {queuedPercentage}%
-                          </div>
-                          <div className="min-w-[140px] flex-1">
-                            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800/60">
-                              <div
-                                className="h-full rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 transition-all duration-300"
-                                style={{
-                                  width: `${Math.min(queuedPercentage, 100)}%`,
-                                }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <SyncConfigurationPanel
-                      syncConfig={syncConfig}
-                      setSyncConfig={setSyncConfig}
-                      useCustomThreshold={useCustomThreshold}
-                      setUseCustomThreshold={setUseCustomThreshold}
-                      handleToggleOption={handleToggleOption}
-                    />
-
-                    <ChangesSummary
-                      entriesWithChanges={entriesWithChanges.length}
-                      libraryLoading={libraryLoading}
-                      libraryError={libraryError}
-                      isRateLimited={rateLimitState.isRateLimited}
-                      onLibraryRefresh={handleLibraryRefresh}
-                      userLibrary={userLibrary}
-                      mangaMatches={mangaMatches}
-                      syncConfig={syncConfig}
-                    />
-
-                    <ViewControls
-                      displayMode={displayMode}
-                      setDisplayMode={setDisplayMode}
-                      sortOption={sortOption}
-                      setSortOption={setSortOption}
-                      filters={filters}
-                      setFilters={setFilters}
-                    />
-
-                    {sortedMangaMatches.length !== mangaMatches.length && (
-                      <div className="flex items-center justify-between rounded-xl border border-slate-200/70 bg-slate-50/70 px-3 py-2 text-sm shadow-sm dark:border-slate-800/60 dark:bg-slate-900/50">
-                        <div>
-                          Showing{" "}
-                          <span className="font-medium">
-                            {sortedMangaMatches.length}
-                          </span>{" "}
-                          of{" "}
-                          <span className="font-medium">
-                            {
-                              mangaMatches.filter(
-                                (match) => match.status !== "skipped",
-                              ).length
-                            }
-                          </span>{" "}
-                          manga
-                          {Object.values(filters).some((v) => v !== "all") && (
-                            <span className="text-muted-foreground ml-1">
-                              (filtered)
-                            </span>
-                          )}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 rounded-full border border-transparent px-3 text-xs hover:border-slate-300 hover:bg-slate-100 dark:hover:border-slate-700 dark:hover:bg-slate-800/60"
-                          onClick={() => {
-                            setSortOption({ field: "title", direction: "asc" });
-                            setFilters({
-                              status: "all",
-                              changes: "with-changes",
-                              library: "all",
-                            });
-                          }}
-                        >
-                          Clear Filters
-                        </Button>
-                      </div>
-                    )}
-
-                    <div className="max-h-[60vh] overflow-y-auto">
-                      <AnimatePresence
-                        initial={false}
-                        mode="wait"
-                        key={displayMode}
-                      >
-                        {displayMode === "cards" ? (
-                          <motion.div
-                            key="cards-view"
-                            variants={fadeVariants}
-                            initial="hidden"
-                            animate="visible"
-                            exit="exit"
-                            transition={viewModeTransition}
-                            className="grid grid-cols-1 gap-4"
-                          >
-                            <AnimatePresence initial={false}>
-                              {sortedMangaMatches
-                                .slice(0, visibleItems)
-                                .map((match, index) => {
-                                  const kenmei = match.kenmeiManga;
-                                  const anilist = match.selectedMatch!;
-
-                                  // Get the user's existing data for this manga if it exists
-                                  const userEntry = userLibrary[anilist.id];
-
-                                  // Calculate sync changes using helper function
-                                  const {
-                                    statusWillChange,
-                                    progressWillChange,
-                                    scoreWillChange,
-                                    isNewEntry,
-                                    isCompleted,
-                                    changeCount,
-                                  } = calculateSyncChanges(
-                                    kenmei,
-                                    userEntry,
-                                    syncConfig,
-                                  );
-
-                                  return (
-                                    <motion.div
-                                      key={`${anilist.id}-${index}`}
-                                      layout="position"
-                                      initial={{ opacity: 0, y: 20 }}
-                                      animate={{ opacity: 1, y: 0 }}
-                                      exit={{ opacity: 0, scale: 0.9 }}
-                                      transition={{ duration: 0.3 }}
-                                      layoutId={undefined}
-                                    >
-                                      <Card className="group overflow-hidden border border-slate-200/70 bg-white/80 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-200/70 hover:shadow-xl dark:border-slate-800/60 dark:bg-slate-950/60">
-                                        <div className="flex">
-                                          {/* Manga Cover Image */}
-                                          {renderMangaCover(
-                                            anilist,
-                                            isNewEntry,
-                                            isCompleted,
-                                          )}
-
-                                          {/* Content */}
-                                          <div className="flex-1 p-4">
-                                            <div className="flex items-start justify-between">
-                                              <div>
-                                                <h3 className="line-clamp-2 max-w-[580px] text-base font-semibold">
-                                                  {anilist.title.romaji ||
-                                                    kenmei.title}
-                                                </h3>
-                                                {changeCount > 0 &&
-                                                !isCompleted ? (
-                                                  renderChangeBadges(
-                                                    statusWillChange,
-                                                    progressWillChange,
-                                                    scoreWillChange,
-                                                    userEntry,
-                                                    syncConfig,
-                                                  )
-                                                ) : (
-                                                  <div className="mt-1">
-                                                    <Badge
-                                                      variant="outline"
-                                                      className="border-slate-200/70 bg-slate-100/70 px-1.5 py-0 text-xs text-slate-500 dark:border-slate-700/60 dark:bg-slate-800/50 dark:text-slate-400"
-                                                    >
-                                                      {isCompleted
-                                                        ? "Preserving Completed"
-                                                        : "No Changes"}
-                                                    </Badge>
-                                                  </div>
-                                                )}
-                                              </div>
-
-                                              {/* Change Indicator */}
-                                              {changeCount > 0 &&
-                                                !isCompleted && (
-                                                  <div className="rounded-full bg-blue-100/80 px-2 py-1 text-xs font-medium text-blue-600 shadow-sm dark:bg-blue-900/30 dark:text-blue-300">
-                                                    {changeCount} change
-                                                    {changeCount === 1
-                                                      ? ""
-                                                      : "s"}
-                                                  </div>
-                                                )}
-                                            </div>
-
-                                            {/* Comparison Table */}
-                                            <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-                                              <div className="rounded-xl border border-slate-200/60 bg-white/70 p-3 shadow-sm dark:border-slate-800/60 dark:bg-slate-900/40">
-                                                <h4 className="text-muted-foreground mb-2 text-xs font-medium">
-                                                  {isNewEntry
-                                                    ? "Not in Library"
-                                                    : "Current AniList"}
-                                                </h4>
-
-                                                {isNewEntry ? (
-                                                  <div className="text-muted-foreground py-4 text-center text-xs">
-                                                    New addition to your library
-                                                  </div>
-                                                ) : (
-                                                  renderCurrentAniListData(
-                                                    userEntry,
-                                                    anilist,
-                                                    statusWillChange,
-                                                    progressWillChange,
-                                                    scoreWillChange,
-                                                    syncConfig,
-                                                  )
-                                                )}
-                                              </div>
-
-                                              <div className="rounded-xl border border-blue-100/60 bg-blue-50/70 p-3 shadow-sm dark:border-blue-900/40 dark:bg-blue-900/20">
-                                                <h4 className="mb-2 text-xs font-medium text-blue-600 dark:text-blue-300">
-                                                  After Sync
-                                                </h4>
-
-                                                <div className="space-y-2">
-                                                  <div className="flex items-center justify-between">
-                                                    <span className="text-xs text-blue-500 dark:text-blue-400">
-                                                      Status:
-                                                    </span>
-                                                    <span
-                                                      className={`text-xs font-medium ${statusWillChange ? "text-blue-700 dark:text-blue-300" : ""}`}
-                                                    >
-                                                      {getEffectiveStatus(
-                                                        kenmei,
-                                                        syncConfig,
-                                                      )}
-                                                    </span>
-                                                  </div>
-                                                  <div className="flex items-center justify-between">
-                                                    <span className="text-xs text-blue-500 dark:text-blue-400">
-                                                      Progress:
-                                                    </span>
-                                                    {renderAfterSyncProgress(
-                                                      userEntry,
-                                                      kenmei,
-                                                      anilist,
-                                                      syncConfig,
-                                                      progressWillChange,
-                                                    )}
-                                                  </div>
-                                                  <div className="flex items-center justify-between">
-                                                    <span className="text-xs text-blue-500 dark:text-blue-400">
-                                                      Score:
-                                                    </span>
-                                                    {renderAfterSyncScore(
-                                                      userEntry,
-                                                      kenmei,
-                                                      scoreWillChange,
-                                                    )}
-                                                  </div>
-                                                  <div className="flex items-center justify-between">
-                                                    <span className="text-xs text-blue-500 dark:text-blue-400">
-                                                      Private:
-                                                    </span>
-                                                    {renderPrivacyDisplay(
-                                                      userEntry,
-                                                      syncConfig,
-                                                      false,
-                                                    )}
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </Card>
-                                    </motion.div>
-                                  );
-                                })}
-                            </AnimatePresence>
-
-                            {/* Load more button instead of automatic loading */}
-                            {sortedMangaMatches.length > visibleItems ? (
-                              <div className="py-4 text-center">
-                                <Button
-                                  onClick={() => {
-                                    setIsLoadingMore(true);
-                                    const newValue = Math.min(
-                                      visibleItems + 20,
-                                      sortedMangaMatches.length,
-                                    );
-                                    console.log(
-                                      `Loading more items: ${visibleItems} → ${newValue}`,
-                                    );
-
-                                    // Add a small delay to show the loading spinner
-                                    setTimeout(() => {
-                                      setVisibleItems(newValue);
-                                      setIsLoadingMore(false);
-                                    }, 300);
-                                  }}
-                                  variant="outline"
-                                  className="gap-2"
-                                  disabled={isLoadingMore}
-                                >
-                                  {isLoadingMore && (
-                                    <div className="text-primary inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
-                                  )}
-                                  {isLoadingMore
-                                    ? "Loading..."
-                                    : `Load More (${visibleItems} of ${sortedMangaMatches.length})`}
-                                </Button>
-                              </div>
-                            ) : null}
-                            {sortedMangaMatches.length > 0 &&
-                              sortedMangaMatches.length <= visibleItems && (
-                                <div className="py-4 text-center">
-                                  <span className="text-muted-foreground text-xs">
-                                    All items loaded
-                                  </span>
-                                </div>
-                              )}
-                          </motion.div>
-                        ) : (
-                          <motion.div
-                            key="compact-view"
-                            variants={fadeVariants}
-                            initial="hidden"
-                            animate="visible"
-                            exit="exit"
-                            transition={viewModeTransition}
-                            className="space-y-1 overflow-hidden rounded-2xl border border-slate-200/70 bg-white/70 shadow-sm backdrop-blur-sm dark:border-slate-800/60 dark:bg-slate-950/50"
-                          >
-                            <AnimatePresence initial={false}>
-                              {sortedMangaMatches
-                                .slice(0, visibleItems)
-                                .map((match, index) => {
-                                  const kenmei = match.kenmeiManga;
-                                  const anilist = match.selectedMatch!;
-
-                                  // Get the user's existing data for this manga if it exists
-                                  const userEntry = userLibrary[anilist.id];
-
-                                  // Calculate sync changes using helper function
-                                  const {
-                                    statusWillChange,
-                                    progressWillChange,
-                                    scoreWillChange,
-                                    isNewEntry,
-                                    isCompleted,
-                                    changeCount,
-                                  } = calculateSyncChanges(
-                                    kenmei,
-                                    userEntry,
-                                    syncConfig,
-                                  );
-
-                                  const baseRowClasses =
-                                    "group flex items-center rounded-xl px-3 py-2 transition-colors duration-200";
-                                  let backgroundClass = "";
-                                  if (isCompleted) {
-                                    backgroundClass =
-                                      "bg-amber-50/70 dark:bg-amber-950/20";
-                                  } else if (isNewEntry) {
-                                    backgroundClass =
-                                      "bg-emerald-50/70 dark:bg-emerald-950/20";
-                                  } else if (index % 2 === 0) {
-                                    backgroundClass =
-                                      "bg-white/70 dark:bg-slate-900/40";
-                                  } else {
-                                    backgroundClass =
-                                      "bg-white/60 dark:bg-slate-900/30";
-                                  }
-
-                                  return (
-                                    <motion.div
-                                      key={`${anilist.id}-${index}`}
-                                      layout="position"
-                                      initial={{ opacity: 0, y: 5 }}
-                                      animate={{ opacity: 1, y: 0 }}
-                                      exit={{ opacity: 0 }}
-                                      transition={{ duration: 0.2 }}
-                                      layoutId={undefined}
-                                    >
-                                      <div
-                                        className={`${baseRowClasses} ${backgroundClass} hover:bg-blue-50/70 dark:hover:bg-slate-900/60`}
-                                      >
-                                        {/* Thumbnail - Updated styling */}
-                                        <div className="mr-3 flex flex-shrink-0 items-center pl-2">
-                                          {anilist.coverImage?.large ||
-                                          anilist.coverImage?.medium ? (
-                                            <motion.div
-                                              layout="position"
-                                              animate={{
-                                                transition: { type: false },
-                                              }}
-                                            >
-                                              <img
-                                                src={
-                                                  anilist.coverImage?.large ||
-                                                  anilist.coverImage?.medium
-                                                }
-                                                alt={anilist.title.romaji || ""}
-                                                className="h-12 w-8 rounded-sm object-cover"
-                                              />
-                                            </motion.div>
-                                          ) : (
-                                            <div className="flex h-12 w-8 items-center justify-center rounded-sm bg-slate-200 dark:bg-slate-800">
-                                              <span className="text-muted-foreground text-[8px]">
-                                                No Cover
-                                              </span>
-                                            </div>
-                                          )}
-                                        </div>
-
-                                        {/* Title and status */}
-                                        <div className="mr-2 min-w-0 flex-1">
-                                          <div className="truncate text-sm font-medium">
-                                            {anilist.title.romaji ||
-                                              kenmei.title}
-                                          </div>
-                                          <div className="mt-0.5 flex items-center gap-1">
-                                            {isNewEntry && (
-                                              <Badge className="bg-emerald-500/80 px-2 py-0 text-[10px] text-white shadow-sm">
-                                                New
-                                              </Badge>
-                                            )}
-                                            {isCompleted && (
-                                              <Badge
-                                                variant="outline"
-                                                className="border-amber-400/70 bg-amber-50/60 px-2 py-0 text-[10px] text-amber-600 shadow-sm dark:border-amber-500/40 dark:bg-amber-900/30 dark:text-amber-300"
-                                              >
-                                                Completed
-                                              </Badge>
-                                            )}
-                                          </div>
-                                        </div>
-
-                                        {/* Changes */}
-                                        <div className="flex flex-shrink-0 items-center gap-1">
-                                          {!isNewEntry && !isCompleted && (
-                                            <>
-                                              {renderStatusBadge(
-                                                statusWillChange,
-                                                userEntry,
-                                                kenmei,
-                                                syncConfig,
-                                              )}
-                                              {renderProgressBadge(
-                                                progressWillChange,
-                                                userEntry,
-                                                kenmei,
-                                                syncConfig,
-                                              )}
-                                              {renderScoreBadge(
-                                                scoreWillChange,
-                                                userEntry,
-                                                kenmei,
-                                              )}
-                                              {renderPrivacyBadge(
-                                                userEntry,
-                                                syncConfig,
-                                              )}
-
-                                              {changeCount === 0 && (
-                                                <span className="px-1 text-[10px] text-slate-500 dark:text-slate-400">
-                                                  No Changes
-                                                </span>
-                                              )}
-                                            </>
-                                          )}
-
-                                          {isNewEntry && (
-                                            <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
-                                              Adding to Library
-                                            </span>
-                                          )}
-
-                                          {isCompleted && (
-                                            <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">
-                                              Preserving Completed
-                                            </span>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </motion.div>
-                                  );
-                                })}
-                            </AnimatePresence>
-
-                            {/* Load more button for compact view */}
-                            {sortedMangaMatches.length > 0 && (
-                              <div className="bg-muted/20 py-3 text-center">
-                                {sortedMangaMatches.length > visibleItems ? (
-                                  <Button
-                                    onClick={() => {
-                                      setIsLoadingMore(true);
-                                      const newValue = Math.min(
-                                        visibleItems + 20,
-                                        sortedMangaMatches.length,
-                                      );
-                                      console.log(
-                                        `Loading more items: ${visibleItems} → ${newValue}`,
-                                      );
-
-                                      // Add a small delay to show the loading spinner
-                                      setTimeout(() => {
-                                        setVisibleItems(newValue);
-                                        setIsLoadingMore(false);
-                                      }, 300);
-                                    }}
-                                    variant="outline"
-                                    size="sm"
-                                    className="gap-2"
-                                    disabled={isLoadingMore}
-                                  >
-                                    {isLoadingMore && (
-                                      <div className="text-primary inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
-                                    )}
-                                    {isLoadingMore
-                                      ? "Loading..."
-                                      : `Load More (${visibleItems} of ${sortedMangaMatches.length})`}
-                                  </Button>
-                                ) : (
-                                  <span className="text-muted-foreground text-xs">
-                                    All items loaded
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex flex-col gap-3 border-t border-slate-200/60 pt-6 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800/80">
-                  <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                    <span
-                      className={`inline-flex h-2 w-2 rounded-full ${entriesWithChanges.length > 0 ? "bg-emerald-500" : "bg-amber-500"}`}
-                    ></span>
-                    {entriesWithChanges.length > 0
-                      ? `${entriesWithChanges.length} entries ready to sync`
-                      : "No actionable changes detected yet"}
-                  </div>
-                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-                    <Button
-                      variant="outline"
-                      onClick={handleCancel}
-                      className="w-full border-slate-300/70 text-slate-700 hover:border-slate-400 hover:bg-slate-100 sm:w-auto dark:border-slate-700/70 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-900"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleStartSync}
-                      disabled={
-                        entriesWithChanges.length === 0 || libraryLoading
-                      }
-                      className="group relative w-full overflow-hidden rounded-md bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 px-6 py-2 font-semibold text-white shadow-lg transition hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
-                    >
-                      <span className="absolute inset-0 bg-white/20 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                      <span className="relative flex items-center justify-center gap-2">
-                        <Sparkles className="h-4 w-4" />
-                        Launch Sync
-                      </span>
-                    </Button>
-                  </div>
-                </CardFooter>
-              </Card>
-            </motion.div>
-          </motion.div>
-        );
+        return renderPreviewView();
 
       case "sync":
-        return (
-          <motion.div
-            variants={pageVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-          >
-            <SyncManager
-              entries={entriesWithChanges}
-              token={token || ""}
-              onComplete={handleSyncComplete}
-              onCancel={handleCancel}
-              autoStart={false}
-              syncState={state}
-              syncActions={{
-                ...actions,
-                startSync: (entries, token, _unused, displayOrderMediaIds) =>
-                  actions.startSync(
-                    entries,
-                    token,
-                    _unused,
-                    displayOrderMediaIds,
-                  ),
-              }}
-              incrementalSync={syncConfig.incrementalSync}
-              onIncrementalSyncChange={(value) => {
-                const newConfig = { ...syncConfig, incrementalSync: value };
-                setSyncConfig(newConfig);
-                saveSyncConfig(newConfig);
-              }}
-              displayOrderMediaIds={entriesWithChanges
-                .filter(Boolean)
-                .map((e) => e.mediaId)}
-            />
-          </motion.div>
-        );
+        return renderSyncView();
 
-      case "results": {
-        if (state.report || wasCancelled) {
-          return (
-            <motion.div
-              variants={pageVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-            >
-              {state.report ? (
-                <SyncResultsView
-                  report={state.report}
-                  onClose={handleGoHome}
-                  onExportErrors={() =>
-                    state.report && exportSyncErrorLog(state.report)
-                  }
-                />
-              ) : (
-                <div className="flex min-h-[300px] flex-col items-center justify-center">
-                  <div className="mb-4">
-                    <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
-                  </div>
-                  <div className="text-lg font-medium text-blue-700 dark:text-blue-300">
-                    Loading synchronization results...
-                  </div>
-                </div>
-              )}
-              <div className="mt-6 flex justify-center gap-4">
-                <Button onClick={handleGoHome} variant="default">
-                  Go Home
-                </Button>
-                <Button onClick={handleBackToReview} variant="outline">
-                  Back to Sync Review
-                </Button>
-              </div>
-              {wasCancelled && (
-                <div className="mt-4 text-center text-amber-600 dark:text-amber-400">
-                  Synchronization was cancelled. No further entries will be
-                  processed.
-                </div>
-              )}
-            </motion.div>
-          );
-        } else {
-          return (
-            <motion.div
-              variants={pageVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-            >
-              <Card className="mx-auto w-full max-w-md p-6 text-center">
-                <CardContent>
-                  <AlertCircle className="mx-auto mb-4 h-12 w-12 text-red-500" />
-                  <h3 className="text-lg font-medium">Synchronization Error</h3>
-                  <p className="mt-2 text-sm text-slate-500">
-                    {state.error ||
-                      "An unknown error occurred during synchronization."}
-                  </p>
-                </CardContent>
-                <CardFooter className="justify-center gap-4">
-                  <Button onClick={handleGoHome}>Go Home</Button>
-                  <Button onClick={handleBackToReview} variant="outline">
-                    Back to Sync Review
-                  </Button>
-                </CardFooter>
-              </Card>
-            </motion.div>
-          );
-        }
-      }
+      case "results":
+        return renderResultsView();
     }
   };
 

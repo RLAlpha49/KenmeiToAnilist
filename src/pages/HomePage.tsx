@@ -68,6 +68,224 @@ interface SyncStats {
   totalSyncs: number;
 }
 
+// Type for match status
+type MatchStatusType = "none" | "pending" | "complete";
+
+// Define interface for match result objects
+interface MatchResult {
+  status?: string;
+  selectedMatch?: {
+    id: number;
+    title: string;
+    [key: string]: unknown;
+  } | null;
+  needsReview?: boolean;
+  [key: string]: unknown;
+}
+
+const getEmptyMatchStatus = (): {
+  pendingMatches: number;
+  skippedMatches: number;
+  totalMatches: number;
+  status: MatchStatusType;
+} => ({
+  pendingMatches: 0,
+  skippedMatches: 0,
+  totalMatches: 0,
+  status: "none",
+});
+
+const calculateMatchCounts = (entries: unknown[]) => {
+  let pendingCount = 0;
+  let skippedCount = 0;
+
+  for (const result of entries) {
+    const matchResult = result as MatchResult;
+
+    if (matchResult.status === "skipped") {
+      skippedCount++;
+      continue;
+    }
+
+    const needsReview =
+      matchResult.status === "pending" ||
+      (matchResult.needsReview === true && !matchResult.selectedMatch) ||
+      (matchResult.status !== "skipped" && !matchResult.selectedMatch);
+
+    if (needsReview) pendingCount++;
+  }
+
+  return { pendingCount, skippedCount };
+};
+
+const getHeroAction = (
+  isAuthenticated: boolean,
+  totalEntries: number,
+  pendingMatches: number,
+  totalSyncs: number,
+) => {
+  if (!isAuthenticated) {
+    return {
+      label: "Connect AniList",
+      href: "/settings",
+      tone: "from-blue-500 via-indigo-500 to-purple-500",
+    };
+  }
+
+  if (totalEntries === 0) {
+    return {
+      label: "Start Import",
+      href: "/import",
+      tone: "from-green-500 via-emerald-500 to-teal-500",
+    };
+  }
+
+  if (pendingMatches > 0) {
+    return {
+      label: "Review Matches",
+      href: "/review",
+      tone: "from-amber-500 via-orange-500 to-rose-500",
+    };
+  }
+
+  if (totalSyncs === 0) {
+    return {
+      label: "Configure Sync",
+      href: "/settings",
+      tone: "from-purple-500 via-blue-500 to-indigo-500",
+    };
+  }
+
+  return {
+    label: "Run Sync",
+    href: "/sync",
+    tone: "from-fuchsia-500 via-purple-500 to-blue-500",
+  };
+};
+
+const getReviewFootnote = (pendingMatches: number, status: MatchStatusType) => {
+  if (pendingMatches > 0) {
+    return `${pendingMatches.toLocaleString()} pending`;
+  }
+  if (status === "complete") {
+    return "All clear";
+  }
+  return "Auto-matched";
+};
+
+const getReviewAction = (
+  totalEntries: number,
+  isAuthenticated: boolean,
+  username: string | null | undefined,
+  footnote: string,
+) => {
+  if (totalEntries > 0) {
+    return {
+      key: "review",
+      label: "Review matches",
+      description: "Verify smart matches before syncing",
+      to: "/review",
+      icon: ClipboardCheck,
+      tone: "from-emerald-500/20 via-green-500/20 to-transparent",
+      iconClass: "text-emerald-600 dark:text-emerald-300",
+      badgeClass: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300",
+      footnote,
+    };
+  }
+
+  return {
+    key: "connect",
+    label: isAuthenticated ? "AniList connected" : "Connect AniList",
+    description: isAuthenticated
+      ? username || "Authenticated user"
+      : "Authorize AniList to unlock syncing",
+    to: "/settings",
+    icon: isAuthenticated ? UserCheck : AlertCircle,
+    tone: "from-purple-500/20 via-blue-500/20 to-transparent",
+    iconClass: isAuthenticated
+      ? "text-emerald-600 dark:text-emerald-300"
+      : "text-blue-600 dark:text-blue-300",
+    badgeClass: isAuthenticated
+      ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
+      : "bg-blue-500/20 text-blue-700 dark:text-blue-300",
+    footnote: isAuthenticated ? "Ready to review" : "Authentication required",
+  };
+};
+
+const renderVersionBadge = (versionStatus: AppVersionStatus | null) => {
+  if (versionStatus === null) {
+    return (
+      <Badge
+        variant="outline"
+        className="text-muted-foreground rounded-full border-transparent bg-white/60 px-3 py-1 text-xs font-normal dark:bg-white/10"
+      >
+        Checking...
+      </Badge>
+    );
+  }
+
+  if (versionStatus.status === "stable") {
+    return (
+      <Badge
+        variant="outline"
+        className="rounded-full border-transparent bg-emerald-500/20 px-3 py-1 text-xs font-normal text-emerald-800 dark:text-emerald-200"
+      >
+        Stable release
+      </Badge>
+    );
+  }
+
+  if (versionStatus.status === "beta") {
+    return (
+      <Badge
+        variant="outline"
+        className="rounded-full border-transparent bg-amber-400/20 px-3 py-1 text-xs font-normal text-amber-900 dark:text-amber-200"
+      >
+        Beta build
+      </Badge>
+    );
+  }
+
+  return (
+    <Badge
+      variant="outline"
+      className="rounded-full border-transparent bg-blue-500/20 px-3 py-1 text-xs font-normal text-blue-800 dark:text-blue-200"
+    >
+      Development build
+    </Badge>
+  );
+};
+
+const renderMatchStatusBadge = (matchStatus: {
+  status: MatchStatusType;
+  pendingMatches: number;
+}) => {
+  const formatNumber = (value: number) => value.toLocaleString();
+
+  let badgeClass = "";
+  let badgeText = "";
+
+  if (matchStatus.status === "complete") {
+    badgeClass = "bg-emerald-500/20 text-emerald-900 dark:text-emerald-200";
+    badgeText = "Review complete";
+  } else if (matchStatus.status === "pending") {
+    badgeClass = "bg-amber-400/20 text-amber-900 dark:text-amber-300";
+    badgeText = `${formatNumber(matchStatus.pendingMatches)} waiting`;
+  } else {
+    badgeClass = "bg-muted text-muted-foreground";
+    badgeText = "Import first";
+  }
+
+  return (
+    <Badge
+      variant="outline"
+      className={`rounded-full border-transparent px-3 py-1 text-xs font-semibold ${badgeClass}`}
+    >
+      {badgeText}
+    </Badge>
+  );
+};
+
 // Animation variants for staggered children
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -194,18 +412,6 @@ export function HomePage() {
     };
   }, []);
 
-  // Define interface for match result objects
-  interface MatchResult {
-    status?: string;
-    selectedMatch?: {
-      id: number;
-      title: string;
-      [key: string]: unknown;
-    } | null;
-    needsReview?: boolean;
-    [key: string]: unknown;
-  }
-
   // Load import stats & related data on mount
   useEffect(() => {
     const loadImportStats = () => {
@@ -229,12 +435,7 @@ export function HomePage() {
       try {
         const matchResultsStr = localStorage.getItem("match_results");
         if (!matchResultsStr) {
-          setMatchStatus({
-            pendingMatches: 0,
-            skippedMatches: 0,
-            totalMatches: 0,
-            status: "none",
-          });
+          setMatchStatus(getEmptyMatchStatus());
           return;
         }
 
@@ -243,33 +444,11 @@ export function HomePage() {
         const totalCount = entries.length;
 
         if (totalCount === 0) {
-          setMatchStatus({
-            pendingMatches: 0,
-            skippedMatches: 0,
-            totalMatches: 0,
-            status: "none",
-          });
+          setMatchStatus(getEmptyMatchStatus());
           return;
         }
 
-        let pendingCount = 0;
-        let skippedCount = 0;
-
-        for (const result of entries) {
-          const matchResult = result as MatchResult;
-
-          if (matchResult.status === "skipped") {
-            skippedCount++;
-            continue;
-          }
-
-          const needsReview =
-            matchResult.status === "pending" ||
-            (matchResult.needsReview === true && !matchResult.selectedMatch) ||
-            (matchResult.status !== "skipped" && !matchResult.selectedMatch);
-
-          if (needsReview) pendingCount++;
-        }
+        const { pendingCount, skippedCount } = calculateMatchCounts(entries);
 
         setMatchStatus({
           pendingMatches: pendingCount,
@@ -325,50 +504,21 @@ export function HomePage() {
     }
   };
 
-  const heroAction = useMemo(() => {
-    if (!authState.isAuthenticated) {
-      return {
-        label: "Connect AniList",
-        href: "/settings",
-        tone: "from-blue-500 via-indigo-500 to-purple-500",
-      };
-    }
-
-    if (stats.total === 0) {
-      return {
-        label: "Start Import",
-        href: "/import",
-        tone: "from-green-500 via-emerald-500 to-teal-500",
-      };
-    }
-
-    if (matchStatus.pendingMatches > 0) {
-      return {
-        label: "Review Matches",
-        href: "/review",
-        tone: "from-amber-500 via-orange-500 to-rose-500",
-      };
-    }
-
-    if (syncStats.totalSyncs === 0) {
-      return {
-        label: "Configure Sync",
-        href: "/settings",
-        tone: "from-purple-500 via-blue-500 to-indigo-500",
-      };
-    }
-
-    return {
-      label: "Run Sync",
-      href: "/sync",
-      tone: "from-fuchsia-500 via-purple-500 to-blue-500",
-    };
-  }, [
-    authState.isAuthenticated,
-    stats.total,
-    matchStatus.pendingMatches,
-    syncStats.totalSyncs,
-  ]);
+  const heroAction = useMemo(
+    () =>
+      getHeroAction(
+        authState.isAuthenticated,
+        stats.total,
+        matchStatus.pendingMatches,
+        syncStats.totalSyncs,
+      ),
+    [
+      authState.isAuthenticated,
+      stats.total,
+      matchStatus.pendingMatches,
+      syncStats.totalSyncs,
+    ],
+  );
 
   const heroHighlights = useMemo(
     () => [
@@ -449,50 +599,17 @@ export function HomePage() {
         )
       : null;
 
-  let reviewFootnote: string;
-  if (matchStatus.pendingMatches > 0) {
-    reviewFootnote = `${formatNumber(matchStatus.pendingMatches)} pending`;
-  } else if (matchStatus.status === "complete") {
-    reviewFootnote = "All clear";
-  } else {
-    reviewFootnote = "Auto-matched";
-  }
+  const reviewFootnote = getReviewFootnote(
+    matchStatus.pendingMatches,
+    matchStatus.status,
+  );
 
-  const reviewAction =
-    stats.total > 0
-      ? {
-          key: "review",
-          label: "Review matches",
-          description: "Verify smart matches before syncing",
-          to: "/review",
-          icon: ClipboardCheck,
-          tone: "from-emerald-500/20 via-green-500/20 to-transparent",
-          iconClass: "text-emerald-600 dark:text-emerald-300",
-          badgeClass:
-            "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300",
-          footnote: reviewFootnote,
-        }
-      : {
-          key: "connect",
-          label: authState.isAuthenticated
-            ? "AniList connected"
-            : "Connect AniList",
-          description: authState.isAuthenticated
-            ? authState.username || "Authenticated user"
-            : "Authorize AniList to unlock syncing",
-          to: "/settings",
-          icon: authState.isAuthenticated ? UserCheck : AlertCircle,
-          tone: "from-purple-500/20 via-blue-500/20 to-transparent",
-          iconClass: authState.isAuthenticated
-            ? "text-emerald-600 dark:text-emerald-300"
-            : "text-blue-600 dark:text-blue-300",
-          badgeClass: authState.isAuthenticated
-            ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
-            : "bg-blue-500/20 text-blue-700 dark:text-blue-300",
-          footnote: authState.isAuthenticated
-            ? "Ready to review"
-            : "Authentication required",
-        };
+  const reviewAction = getReviewAction(
+    stats.total,
+    authState.isAuthenticated,
+    authState.username,
+    reviewFootnote,
+  );
 
   const quickActionConfigs = [
     {
@@ -748,34 +865,7 @@ export function HomePage() {
                   <p className="text-4xl font-bold text-emerald-700 dark:text-emerald-200">
                     {matchStatusText}
                   </p>
-                  {(() => {
-                    let badgeClass = "";
-                    if (matchStatus.status === "complete") {
-                      badgeClass =
-                        "bg-emerald-500/20 text-emerald-900 dark:text-emerald-200";
-                    } else if (matchStatus.status === "pending") {
-                      badgeClass =
-                        "bg-amber-400/20 text-amber-900 dark:text-amber-300";
-                    } else {
-                      badgeClass = "bg-muted text-muted-foreground";
-                    }
-                    let badgeText = "";
-                    if (matchStatus.status === "pending") {
-                      badgeText = `${formatNumber(matchStatus.pendingMatches)} waiting`;
-                    } else if (matchStatus.status === "complete") {
-                      badgeText = "Review complete";
-                    } else {
-                      badgeText = "Import first";
-                    }
-                    return (
-                      <Badge
-                        variant="outline"
-                        className={`rounded-full border-transparent px-3 py-1 text-xs font-semibold ${badgeClass}`}
-                      >
-                        {badgeText}
-                      </Badge>
-                    );
-                  })()}
+                  {renderMatchStatusBadge(matchStatus)}
                 </div>
                 <div className="flex flex-wrap gap-2 text-xs text-emerald-900/70 dark:text-emerald-100/70">
                   {matchStatus.totalMatches > 0 && (
@@ -968,46 +1058,7 @@ export function HomePage() {
                 Kenmei to AniList Sync Tool • Version {getAppVersion()}
               </p>
               <div className="flex items-center gap-3">
-                {(() => {
-                  if (versionStatus === null) {
-                    return (
-                      <Badge
-                        variant="outline"
-                        className="text-muted-foreground rounded-full border-transparent bg-white/60 px-3 py-1 text-xs font-normal dark:bg-white/10"
-                      >
-                        Checking...
-                      </Badge>
-                    );
-                  }
-                  if (versionStatus.status === "stable") {
-                    return (
-                      <Badge
-                        variant="outline"
-                        className="rounded-full border-transparent bg-emerald-500/20 px-3 py-1 text-xs font-normal text-emerald-800 dark:text-emerald-200"
-                      >
-                        Stable release
-                      </Badge>
-                    );
-                  }
-                  if (versionStatus.status === "beta") {
-                    return (
-                      <Badge
-                        variant="outline"
-                        className="rounded-full border-transparent bg-amber-400/20 px-3 py-1 text-xs font-normal text-amber-900 dark:text-amber-200"
-                      >
-                        Beta build
-                      </Badge>
-                    );
-                  }
-                  return (
-                    <Badge
-                      variant="outline"
-                      className="rounded-full border-transparent bg-blue-500/20 px-3 py-1 text-xs font-normal text-blue-800 dark:text-blue-200"
-                    >
-                      Development build
-                    </Badge>
-                  );
-                })()}
+                {renderVersionBadge(versionStatus)}
                 <a
                   href="https://github.com/RLAlpha49/KenmeiToAnilist"
                   target="_blank"
