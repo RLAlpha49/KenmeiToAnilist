@@ -40,16 +40,71 @@ const generateLogId = (): string => {
 };
 
 /**
+ * Redacts sensitive information from strings.
+ * @param text - The text to redact
+ * @returns The redacted text
+ */
+const redactSensitiveData = (text: string): string => {
+  // Redact potential tokens (long alphanumeric strings that look like tokens)
+  let redacted = text.replace(/\b[\w-]{40,}\b/g, "[REDACTED_TOKEN]");
+
+  // Redact client secrets in query params or JSON
+  redacted = redacted.replace(
+    /(client_secret|clientSecret)["']?\s*[:=]\s*["']?[^"',}\s&]+/gi,
+    "$1=[REDACTED]",
+  );
+
+  // Redact access tokens in various formats
+  redacted = redacted.replace(
+    /(access_token|accessToken|token)["']?\s*[:=]\s*["']?[\w-]{20,}["']?/gi,
+    "$1=[REDACTED]",
+  );
+
+  // Redact authorization headers
+  redacted = redacted.replace(/Bearer\s+[\w-]{20,}/gi, "Bearer [REDACTED]");
+
+  // Redact auth codes (10+ character alphanumeric strings in auth contexts)
+  redacted = redacted.replace(
+    /(code|auth_code|authorization_code)["']?\s*[:=]\s*["']?[\w-]{10,}["']?/gi,
+    "$1=[REDACTED]",
+  );
+
+  return redacted;
+};
+
+let logRedactionEnabled = true;
+
+/**
+ * Enables or disables sensitive data redaction for captured logs.
+ * @param enabled - Whether redaction should be applied to log output.
+ */
+export function setLogRedactionEnabled(enabled: boolean): void {
+  logRedactionEnabled = enabled;
+}
+
+/**
+ * Returns whether sensitive data redaction is currently enabled for captured logs.
+ */
+export function isLogRedactionEnabled(): boolean {
+  return logRedactionEnabled;
+}
+
+const maybeRedact = (text: string): string =>
+  logRedactionEnabled ? redactSensitiveData(text) : text;
+
+/**
  * Attempts to convert a console argument into a serialisable string.
  */
 const serialiseArgument = (value: unknown): string => {
   if (value instanceof Error) {
     const stack = value.stack?.split("\n").slice(0, 5).join("\n");
-    return value.name + ": " + value.message + (stack ? "\n" + stack : "");
+    const errorStr =
+      value.name + ": " + value.message + (stack ? "\n" + stack : "");
+    return maybeRedact(errorStr);
   }
 
   if (typeof value === "string") {
-    return value;
+    return maybeRedact(value);
   }
 
   if (value === undefined) {
@@ -77,7 +132,8 @@ const serialiseArgument = (value: unknown): string => {
   }
 
   try {
-    return JSON.stringify(value, null, 2);
+    const jsonStr = JSON.stringify(value, null, 2);
+    return maybeRedact(jsonStr);
   } catch (error) {
     const errorMessage =
       error instanceof Error

@@ -135,7 +135,11 @@ async function performTokenExchange(params: {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error("[AuthIPC] Token exchange error:", errorText);
+    const redactedError = errorText.replace(
+      /client_secret[^&\s]*/gi,
+      "client_secret=[REDACTED]",
+    );
+    console.error("[AuthIPC] Token exchange error (redacted):", redactedError);
     if (errorText.includes("invalid_client")) {
       console.error(
         "[AuthIPC] Detected invalid_client from AniList. Diagnostics:",
@@ -149,7 +153,7 @@ async function performTokenExchange(params: {
     }
     return {
       success: false,
-      error: `API error: ${response.status} ${errorText}`,
+      error: `API error: ${response.status} ${redactedError}`,
     };
   }
 
@@ -341,7 +345,10 @@ export function addAuthEventListeners(mainWindow: BrowserWindow) {
   // Handle storing and retrieving API credentials
   ipcMain.handle("auth:storeCredentials", async (_, credentials) => {
     try {
-      console.debug("[AuthIPC] Storing credentials:", credentials);
+      console.debug(
+        "[AuthIPC] Storing credentials for source:",
+        credentials?.source,
+      );
       // Store the credentials in memory
       if (credentials?.source) {
         storedCredentials[credentials.source] = credentials;
@@ -406,7 +413,7 @@ export function addAuthEventListeners(mainWindow: BrowserWindow) {
       }
 
       console.info("[AuthIPC] Exchanging token in main process:", {
-        clientId: clientId.substring(0, 4) + "...",
+        clientIdLength: clientId.length,
         redirectUri,
         codeLength: code.length,
       });

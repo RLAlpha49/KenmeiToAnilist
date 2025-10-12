@@ -405,7 +405,7 @@ export async function getAccessToken(
   code: string,
 ): Promise<{ access_token: string; token_type: string; expires_in: number }> {
   console.debug("[AniListClient] 🔑 getAccessToken starting with:", {
-    clientId: clientId.substring(0, 2) + "...",
+    clientIdLength: clientId.length,
     redirectUri,
     codeLength: code.length,
   });

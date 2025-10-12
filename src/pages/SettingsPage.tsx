@@ -100,6 +100,8 @@ export function SettingsPage() {
     setStorageDebuggerEnabled,
     logViewerEnabled,
     setLogViewerEnabled,
+    logRedactionEnabled,
+    setLogRedactionEnabled,
     stateInspectorEnabled,
     setStateInspectorEnabled,
     ipcViewerEnabled,
@@ -1948,6 +1950,30 @@ export function SettingsPage() {
                               onCheckedChange={(checked) =>
                                 setLogViewerEnabled(Boolean(checked))
                               }
+                            />
+                          </div>
+                        </div>
+                        <div className="bg-muted/30 mt-3 flex flex-col gap-3 rounded-lg p-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="space-y-0.5">
+                            <p className="text-sm font-medium">
+                              Redact sensitive data
+                            </p>
+                            <p className="text-muted-foreground text-xs">
+                              Automatically sanitize tokens and credentials in
+                              captured logs.
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground text-xs">
+                              Redact
+                            </span>
+                            <Switch
+                              id="log-redaction-enabled"
+                              checked={logRedactionEnabled}
+                              onCheckedChange={(checked) =>
+                                setLogRedactionEnabled(Boolean(checked))
+                              }
+                              disabled={!logViewerEnabled}
                             />
                           </div>
                         </div>

@@ -193,8 +193,6 @@ function createWindow() {
   mainWindow.webContents.on("did-finish-load", () => {
     console.info("[Main] ✅ Main window content loaded successfully");
     contentLoaded = true;
-    mainWindow.show();
-    closeSplashScreen();
   });
 
   // Handle load failures
@@ -250,7 +248,7 @@ function createWindow() {
           "[Main] ❌ Main window content not loaded, keeping splash visible",
         );
       }
-    }, 500);
+    }, 1500);
   });
 
   console.info("[Main] ✅ Main window created successfully");

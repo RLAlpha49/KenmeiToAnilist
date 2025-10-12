@@ -266,10 +266,9 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
         console.debug(
           "[AuthContext] Exchanging auth code for token with credentials:",
           {
-            clientId: clientId.substring(0, 4) + "...",
+            clientIdLength: clientId.length,
             redirectUri,
             codeLength: data.code.length,
-            codeStart: data.code.substring(0, 10) + "...",
           },
         );
 
@@ -306,7 +305,6 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
           expires_in: tokenResponse.expires_in,
           token_type: tokenResponse.token_type,
           token_length: tokenResponse.access_token.length,
-          token_start: tokenResponse.access_token.substring(0, 5) + "...",
         });
 
         setStatusMessage("Token received! Fetching user profile...");

@@ -26,6 +26,7 @@ import {
   type LogEntry,
   serialiseLogEntries,
   MAX_LOG_ENTRIES,
+  setLogRedactionEnabled as setCollectorLogRedactionEnabled,
 } from "../utils/logging";
 import {
   getSyncConfig,
@@ -59,6 +60,9 @@ interface DebugContextType {
   logViewerEnabled: boolean;
   setLogViewerEnabled: (enabled: boolean) => void;
   toggleLogViewer: () => void;
+  logRedactionEnabled: boolean;
+  setLogRedactionEnabled: (enabled: boolean) => void;
+  toggleLogRedaction: () => void;
   stateInspectorEnabled: boolean;
   setStateInspectorEnabled: (enabled: boolean) => void;
   toggleStateInspector: () => void;
@@ -90,6 +94,7 @@ type DebugFeatureToggles = {
   logViewer: boolean;
   stateInspector: boolean;
   ipcViewer: boolean;
+  redactLogs: boolean;
 };
 
 // Default all features to off for production
@@ -98,6 +103,7 @@ const DEFAULT_FEATURE_TOGGLES: DebugFeatureToggles = {
   logViewer: false,
   stateInspector: false,
   ipcViewer: false,
+  redactLogs: true,
 };
 
 export interface StateInspectorRegistration<T> {
@@ -198,6 +204,7 @@ export function DebugProvider({
 
   const storageDebuggerEnabled = featureToggles.storageDebugger;
   const logViewerEnabled = featureToggles.logViewer;
+  const logRedactionEnabled = featureToggles.redactLogs;
   const stateInspectorEnabled = featureToggles.stateInspector;
   const ipcViewerEnabled = featureToggles.ipcViewer;
 
@@ -210,6 +217,10 @@ export function DebugProvider({
       detachConsole?.();
     };
   }, [isDebugEnabled, logViewerEnabled]);
+
+  useEffect(() => {
+    setCollectorLogRedactionEnabled(logRedactionEnabled);
+  }, [logRedactionEnabled]);
 
   useEffect(() => {
     if (!isDebugEnabled && !logViewerEnabled) {
@@ -358,6 +369,23 @@ export function DebugProvider({
     persistFeatureToggles((prev) => ({
       ...prev,
       logViewer: !prev.logViewer,
+    }));
+  }, [persistFeatureToggles]);
+
+  const setLogRedactionEnabled = useCallback(
+    (enabled: boolean) => {
+      persistFeatureToggles((prev) => ({
+        ...prev,
+        redactLogs: enabled,
+      }));
+    },
+    [persistFeatureToggles],
+  );
+
+  const toggleLogRedaction = useCallback(() => {
+    persistFeatureToggles((prev) => ({
+      ...prev,
+      redactLogs: !prev.redactLogs,
     }));
   }, [persistFeatureToggles]);
 
@@ -614,6 +642,9 @@ export function DebugProvider({
       logViewerEnabled,
       setLogViewerEnabled,
       toggleLogViewer,
+      logRedactionEnabled,
+      setLogRedactionEnabled,
+      toggleLogRedaction,
       stateInspectorEnabled,
       setStateInspectorEnabled,
       toggleStateInspector,
@@ -642,6 +673,9 @@ export function DebugProvider({
       logViewerEnabled,
       setLogViewerEnabled,
       toggleLogViewer,
+      logRedactionEnabled,
+      setLogRedactionEnabled,
+      toggleLogRedaction,
       stateInspectorEnabled,
       setStateInspectorEnabled,
       toggleStateInspector,
