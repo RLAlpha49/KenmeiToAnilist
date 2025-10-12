@@ -140,8 +140,8 @@
 
     <script>
       // Update version from app if available
-      if (window.electronAPI?.getAppVersion) {
-        window.electronAPI.getAppVersion().then((version) => {
+      if (globalThis.electronAPI?.getAppVersion) {
+        globalThis.electronAPI.getAppVersion().then((version) => {
           document.getElementById("version").textContent = `v${version}`;
         });
       }
