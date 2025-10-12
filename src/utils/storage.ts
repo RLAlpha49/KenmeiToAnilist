@@ -260,14 +260,14 @@ export const storage = {
       try {
         console.debug(`[Storage] 🔍 Async getting item: ${key}`);
         const value = await globalThis.electronStore.getItem(key);
-        if (value !== null) {
+        if (value === null) {
+          console.debug(`[Storage] 🔍 Item not found: ${key}`);
+        } else {
           console.debug(
             `[Storage] ✅ Found item: ${key} (${value.length} bytes)`,
           );
           localStorage.setItem(key, value); // keep localStorage in sync
           storageCache[key] = value;
-        } else {
-          console.debug(`[Storage] 🔍 Item not found: ${key}`);
         }
         return value;
       } catch (error) {

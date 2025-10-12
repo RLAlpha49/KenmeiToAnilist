@@ -41,8 +41,6 @@ type PersistedSyncReport = Omit<SyncReport, "timestamp"> & {
   timestamp: string;
 };
 
-const SNAPSHOT_STORAGE_KEY = STORAGE_KEYS.ACTIVE_SYNC_SNAPSHOT;
-
 const cloneEntry = (entry: AniListMediaEntry): AniListMediaEntry => ({
   ...entry,
   previousValues: entry.previousValues ? { ...entry.previousValues } : null,
@@ -87,7 +85,7 @@ const mergeReports = (
 const saveSnapshotToStorage = (snapshot: SyncResumeSnapshot | null): void => {
   if (!snapshot) {
     console.debug("[Synchronization] 🔍 Removing sync snapshot from storage");
-    storage.removeItem(SNAPSHOT_STORAGE_KEY);
+    storage.removeItem(STORAGE_KEYS.ACTIVE_SYNC_SNAPSHOT);
     return;
   }
 
@@ -95,7 +93,10 @@ const saveSnapshotToStorage = (snapshot: SyncResumeSnapshot | null): void => {
     console.debug(
       `[Synchronization] 🔍 Saving sync snapshot: ${snapshot.remainingMediaIds.length} remaining entries`,
     );
-    storage.setItem(SNAPSHOT_STORAGE_KEY, JSON.stringify(snapshot));
+    storage.setItem(
+      STORAGE_KEYS.ACTIVE_SYNC_SNAPSHOT,
+      JSON.stringify(snapshot),
+    );
   } catch (error) {
     console.error(
       "[Synchronization] ❌ Failed to persist sync snapshot:",
@@ -809,7 +810,7 @@ export function useSynchronization(): [
     if (hasLoadedSnapshotRef.current) return;
     hasLoadedSnapshotRef.current = true;
 
-    const storedSnapshot = storage.getItem(SNAPSHOT_STORAGE_KEY);
+    const storedSnapshot = storage.getItem(STORAGE_KEYS.ACTIVE_SYNC_SNAPSHOT);
     if (!storedSnapshot) {
       console.debug("[Synchronization] 🔍 No stored sync snapshot found");
       return;
@@ -824,7 +825,7 @@ export function useSynchronization(): [
         console.debug(
           "[Synchronization] 🔍 Snapshot has no remaining entries, removing...",
         );
-        storage.removeItem(SNAPSHOT_STORAGE_KEY);
+        storage.removeItem(STORAGE_KEYS.ACTIVE_SYNC_SNAPSHOT);
         return;
       }
 
@@ -859,7 +860,7 @@ export function useSynchronization(): [
         "[Synchronization] ❌ Failed to load stored sync snapshot:",
         error,
       );
-      storage.removeItem(SNAPSHOT_STORAGE_KEY);
+      storage.removeItem(STORAGE_KEYS.ACTIVE_SYNC_SNAPSHOT);
     }
   }, []);
 

@@ -10,6 +10,7 @@ import {
   batchMatchManga,
   setManualMatchingPause,
   isManualMatchingPaused,
+  cacheDebugger,
 } from "../api/matching/manga-search-service";
 import { RateLimitState } from "../contexts/RateLimitContext";
 import {
@@ -340,10 +341,6 @@ export const useMatchingProcess = ({
       };
 
       try {
-        const { cacheDebugger } = await import(
-          "../api/matching/manga-search-service"
-        );
-
         const cacheStatus = cacheDebugger.getCacheStatus();
         cacheDebugger.forceSyncCaches();
 

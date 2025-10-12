@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kenmei to AniList</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        width: 100%;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+          Cantarell, sans-serif;
+        overflow: hidden;
+        -webkit-app-region: no-drag;
+      }
+
+      .main-container {
+        padding: 10px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        text-align: center;
+        -webkit-app-region: drag;
+      }
+
+      .splash-container {
+        text-align: center;
+        animation: fadeIn 0.5s ease-in;
+      }
+
+      .logo {
+        width: 128px;
+        height: 128px;
+        margin-bottom: 12px;
+        animation: pulse 2s ease-in-out infinite;
+      }
+
+      .app-name {
+        font-size: 32px;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 8px;
+        letter-spacing: -0.5px;
+      }
+
+      .loading-container {
+        width: 200px;
+        margin: 0 auto;
+      }
+
+      .loading-bar {
+        width: 100%;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+
+      .loading-progress {
+        width: 0%;
+        height: 100%;
+        background: white;
+        border-radius: 2px;
+        animation: loading 1.5s ease-in-out infinite;
+      }
+
+      .version {
+        margin-top: 12px;
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.9);
+        display: block;
+        text-align: center;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+      }
+
+      @keyframes loading {
+        0% {
+          width: 0%;
+          margin-left: 0%;
+        }
+        50% {
+          width: 50%;
+          margin-left: 25%;
+        }
+        100% {
+          width: 0%;
+          margin-left: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="main-container">
+      <div class="splash-container">
+        <img
+          src="k2a-icon-128x128.png"
+          alt="Kenmei to AniList Logo"
+          class="logo"
+        />
+        <div class="app-name">Kenmei to AniList</div>
+        <div class="loading-container">
+          <div class="loading-bar">
+            <div class="loading-progress"></div>
+          </div>
+        </div>
+      </div>
+      <div class="version" id="version">v3.0.0</div>
+    </div>
+
+    <script>
+      // Update version from app if available
+      if (window.electronAPI?.getAppVersion) {
+        window.electronAPI.getAppVersion().then((version) => {
+          document.getElementById("version").textContent = `v${version}`;
+        });
+      }
+    </script>
+  </body>
+</html>

@@ -117,25 +117,6 @@ function initializeMangaService(): void {
       },
     );
   }
-
-  // Make the cache debugger available globally for troubleshooting
-  if (globalThis.window !== undefined) {
-    try {
-      // Only define the property if it doesn't already exist
-      if (!Object.hasOwn(globalThis, "__anilistCacheDebug")) {
-        Object.defineProperty(globalThis, "__anilistCacheDebug", {
-          value: cacheDebugger,
-          writable: false,
-          enumerable: false,
-        });
-        console.debug(
-          "[MangaSearchService] AniList cache debugger available at globalThis.__anilistCacheDebug",
-        );
-      }
-    } catch (e) {
-      console.error("[MangaSearchService] Error setting up cache debugger:", e);
-    }
-  }
 }
 
 // Initialize the service when this module is imported
@@ -4429,6 +4410,32 @@ export const cacheDebugger = {
     };
   },
 };
+
+/**
+ * Set up the cache debugger on the global object for troubleshooting
+ */
+function setupCacheDebugger(): void {
+  if (globalThis.window !== undefined) {
+    try {
+      // Only define the property if it doesn't already exist
+      if (!Object.hasOwn(globalThis, "__anilistCacheDebug")) {
+        Object.defineProperty(globalThis, "__anilistCacheDebug", {
+          value: cacheDebugger,
+          writable: false,
+          enumerable: false,
+        });
+        console.debug(
+          "[MangaSearchService] AniList cache debugger available at globalThis.__anilistCacheDebug",
+        );
+      }
+    } catch (e) {
+      console.error("[MangaSearchService] Error setting up cache debugger:", e);
+    }
+  }
+}
+
+// Set up the debugger after cacheDebugger is defined
+setupCacheDebugger();
 
 /**
  * Fetch manga by IDs in batches.

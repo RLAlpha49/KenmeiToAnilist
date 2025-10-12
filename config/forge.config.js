@@ -28,6 +28,7 @@ const config = {
     buildVersion: appVersion,
     appBundleId: "com.rlapps.kenmeitoanilist",
     name: "Kenmei to Anilist",
+    extraResource: [assetsDir],
   },
   rebuildConfig: {},
   makers: [

@@ -96,15 +96,75 @@ if (squirrelStartup) {
 }
 
 const inDevelopment = process.env.NODE_ENV === "development";
+const enableDevTools =
+  process.env.ENABLE_DEVTOOLS === "1" || process.env.ENABLE_DEVTOOLS === "true";
 
 // Make app version available to the renderer process
 process.env.VITE_APP_VERSION = app.getVersion();
+
+let splashWindow: BrowserWindow | null = null;
+
+const getAssetsPath = () =>
+  inDevelopment
+    ? path.join(__dirname, "../../src/assets")
+    : path.join(process.resourcesPath, "assets");
+
+/**
+ * Creates a splash screen window that displays while the main app loads.
+ *
+ * @remarks
+ * The splash screen is frameless, always on top, and shows a loading animation.
+ */
+function createSplashScreen() {
+  console.info("[Main] 🎨 Creating splash screen...");
+  splashWindow = new BrowserWindow({
+    width: 500,
+    height: 400,
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+    resizable: false,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  const splashPath = path.join(getAssetsPath(), "splash.html");
+
+  console.debug(`[Main] 🔍 Loading splash from: ${splashPath}`);
+  splashWindow.loadFile(splashPath);
+  splashWindow.center();
+
+  splashWindow.webContents.on(
+    "did-fail-load",
+    (_event, errorCode, errorDesc) => {
+      console.error(
+        `[Main] ❌ Failed to load splash screen (${errorCode}): ${errorDesc}`,
+      );
+    },
+  );
+
+  console.info("[Main] ✅ Splash screen created");
+}
+
+/**
+ * Closes the splash screen window.
+ */
+function closeSplashScreen() {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    console.info("[Main] 🎨 Closing splash screen");
+    splashWindow.close();
+    splashWindow = null;
+  }
+}
 
 /**
  * Creates the main application window and registers IPC listeners.
  *
  * @remarks
  * Sets up the preload script, window options, and loads the appropriate URL or file depending on environment.
+ * The window is initially hidden and shown after content loads to prevent visual flashing.
  */
 function createWindow() {
   console.info("[Main] 🪟 Creating main application window...");
@@ -112,8 +172,9 @@ function createWindow() {
   const mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    show: false, // Don't show until ready
     webPreferences: {
-      devTools: inDevelopment,
+      devTools: inDevelopment || enableDevTools,
       contextIsolation: true,
       nodeIntegration: true,
       nodeIntegrationInSubFrames: false,
@@ -124,6 +185,29 @@ function createWindow() {
 
   console.debug("[Main] 🔍 Registering IPC listeners...");
   registerListeners(mainWindow);
+
+  // Track if content loaded successfully
+  let contentLoaded = false;
+
+  // Handle successful load
+  mainWindow.webContents.on("did-finish-load", () => {
+    console.info("[Main] ✅ Main window content loaded successfully");
+    contentLoaded = true;
+    mainWindow.show();
+    closeSplashScreen();
+  });
+
+  // Handle load failures
+  mainWindow.webContents.on(
+    "did-fail-load",
+    (_event, errorCode, errorDescription, validatedURL) => {
+      console.error(
+        `[Main] ❌ Main window failed to load (${errorCode}): ${errorDescription}`,
+      );
+      console.error(`[Main] ❌ Failed URL: ${validatedURL}`);
+      contentLoaded = false;
+    },
+  );
 
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     console.debug(
@@ -136,8 +220,38 @@ function createWindow() {
       `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`,
     );
     console.debug(`[Main] 🔍 Loading file: ${filePath}`);
-    mainWindow.loadFile(filePath);
+    console.debug(`[Main] 🔍 __dirname: ${__dirname}`);
+    console.debug(`[Main] 🔍 MAIN_WINDOW_VITE_NAME: ${MAIN_WINDOW_VITE_NAME}`);
+    console.debug(`[Main] 🔍 app.isPackaged: ${app.isPackaged}`);
+    console.debug(`[Main] 🔍 process.resourcesPath: ${process.resourcesPath}`);
+    mainWindow.loadFile(filePath).catch((err) => {
+      console.error(`[Main] ❌ Failed to load main window file:`, err);
+    });
   }
+
+  // Auto-open DevTools if explicitly enabled via env var
+  if (enableDevTools) {
+    console.info("[Main] 🔧 DevTools enabled via ENABLE_DEVTOOLS env var");
+    mainWindow.webContents.openDevTools({ mode: "right" });
+  }
+
+  // Show main window and close splash when ready
+  mainWindow.once("ready-to-show", () => {
+    console.info("[Main] ✅ Main window ready-to-show event fired");
+
+    // Add a small delay to ensure smooth transition
+    setTimeout(() => {
+      if (contentLoaded) {
+        closeSplashScreen();
+        mainWindow.show();
+        console.info("[Main] ✅ Main window displayed");
+      } else {
+        console.error(
+          "[Main] ❌ Main window content not loaded, keeping splash visible",
+        );
+      }
+    }, 500);
+  });
 
   console.info("[Main] ✅ Main window created successfully");
 }
@@ -162,6 +276,7 @@ app
   .whenReady()
   .then(() => {
     console.info("[Main] ✅ App ready event received");
+    createSplashScreen();
     return createWindow();
   })
   .then(installExtensions);
@@ -179,9 +294,15 @@ app.on("activate", () => {
   console.debug("[Main] 🔍 App activated");
   if (BrowserWindow.getAllWindows().length === 0) {
     console.info("[Main] 🪟 No windows open, creating new window");
+    createSplashScreen();
     createWindow();
   }
 });
 //osX only ends
 
-export { createWindow, installExtensions };
+export {
+  createWindow,
+  createSplashScreen,
+  closeSplashScreen,
+  installExtensions,
+};
