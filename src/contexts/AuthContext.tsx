@@ -408,6 +408,41 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
       throw new Error(storeResult.error || "Failed to store credentials");
     }
 
+    // Verify credentials were actually stored by reading them back
+    setStatusMessage("Verifying credentials...");
+    const verifyResult = await globalThis.electronAuth.getCredentials(
+      creds.source,
+    );
+    if (!verifyResult.success || !verifyResult.credentials) {
+      const errorMsg = "Credential storage verification failed";
+      console.error("[AuthContext] ❌ Verification failed:", {
+        stored: creds,
+        retrieved: verifyResult,
+      });
+      toast.error(errorMsg);
+      throw new Error(errorMsg);
+    }
+
+    // Validate that stored credentials match what we sent
+    const stored = verifyResult.credentials;
+    if (
+      stored.clientId !== creds.clientId ||
+      stored.clientSecret !== creds.clientSecret ||
+      stored.redirectUri !== creds.redirectUri
+    ) {
+      const errorMsg = "Stored credentials do not match";
+      console.error("[AuthContext] ❌ Credential mismatch:", {
+        expected: creds,
+        actual: stored,
+      });
+      toast.error(errorMsg);
+      throw new Error(errorMsg);
+    }
+
+    console.debug(
+      "[AuthContext] ✅ Credentials stored and verified successfully",
+    );
+
     const clientId = encodeURIComponent(creds.clientId);
     const encodedRedirectUri = encodeURIComponent(redirectUri);
     const oauthUrl = `https://anilist.co/api/v2/oauth/authorize?client_id=${clientId}&redirect_uri=${encodedRedirectUri}&response_type=code`;
@@ -544,6 +579,41 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
         toast.error(storeResult.error || "Failed to store credentials");
         throw new Error(storeResult.error || "Failed to store credentials");
       }
+
+      // Verify credentials were actually stored
+      setStatusMessage("Verifying credentials...");
+      const verifyResult = await globalThis.electronAuth.getCredentials(
+        credentials.source,
+      );
+      if (!verifyResult.success || !verifyResult.credentials) {
+        const errorMsg = "Credential storage verification failed";
+        console.error("[AuthContext] ❌ Verification failed:", {
+          stored: credentials,
+          retrieved: verifyResult,
+        });
+        toast.error(errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      // Validate that stored credentials match what we sent
+      const stored = verifyResult.credentials;
+      if (
+        stored.clientId !== credentials.clientId ||
+        stored.clientSecret !== credentials.clientSecret ||
+        stored.redirectUri !== credentials.redirectUri
+      ) {
+        const errorMsg = "Stored credentials do not match";
+        console.error("[AuthContext] ❌ Credential mismatch:", {
+          expected: credentials,
+          actual: stored,
+        });
+        toast.error(errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      console.debug(
+        "[AuthContext] ✅ Credentials stored and verified successfully",
+      );
 
       // Generate the OAuth URL
       const clientId = encodeURIComponent(credentials.clientId);
