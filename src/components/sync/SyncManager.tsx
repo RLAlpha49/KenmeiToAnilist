@@ -4,6 +4,8 @@
  * @description React component for managing and displaying the synchronization process of manga entries with AniList, including progress, error handling, and incremental sync options.
  */
 
+// TODO: Fix marking incremental updates as complete in the beginning causing the progress count to be incorrect. For example If there were 3 entries for incremental updates and 20 total, it would show 3/20 completed at the start before anything and once it gets to 20/20 it would do the 3 incremental updates.
+
 import React, { useEffect, useMemo, useState } from "react";
 import { SyncProgress, SyncReport } from "../../api/anilist/sync-service";
 import { AniListMediaEntry } from "../../api/anilist/types";
@@ -176,6 +178,7 @@ const StatusAlerts: React.FC<{
             <AlertTitle className="text-blue-800 dark:text-blue-200">
               Synchronization in progress
             </AlertTitle>
+            {/* TODO: Alert Description extends past the box */}
             <AlertDescription className="mt-1 text-sm text-blue-700/80 dark:text-blue-200/80">
               {incrementalSync
                 ? "Applying incremental updates to trigger AniList activity merges. Larger entries may take an extra moment."

@@ -612,7 +612,7 @@ export function SettingsPage() {
     try {
       // Get all cache clearing functions
       const { clearMangaCache, cacheDebugger } = await import(
-        "../api/matching/manga-search-service"
+        "../api/matching/search-service"
       );
       const { clearSearchCache } = await import("../api/anilist/client");
 

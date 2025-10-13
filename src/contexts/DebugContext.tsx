@@ -241,7 +241,10 @@ export function DebugProvider({
 
     setLogEntries(logCollector.getEntries());
     const unsubscribe = logCollector.subscribe((entries) => {
-      setLogEntries(entries);
+      // Use queueMicrotask to defer state update and avoid setState during render
+      queueMicrotask(() => {
+        setLogEntries(entries);
+      });
     });
 
     return () => {

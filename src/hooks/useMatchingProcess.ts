@@ -11,7 +11,7 @@ import {
   setManualMatchingPause,
   isManualMatchingPaused,
   cacheDebugger,
-} from "../api/matching/manga-search-service";
+} from "../api/matching/search-service";
 import { RateLimitState } from "../contexts/RateLimitContext";
 import {
   STORAGE_KEYS,

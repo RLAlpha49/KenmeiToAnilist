@@ -4,6 +4,8 @@
  * @description Matching page component for the Kenmei to AniList sync tool. Handles manga matching, review, rematch, and sync preparation.
  */
 
+// TODO: Fix this being logged a lot "[MatchingPage] Global process complete, syncing final state"
+
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { KenmeiManga } from "../api/kenmei/types";
@@ -18,7 +20,7 @@ import { StatusFilterOptions } from "../types/matching";
 import { useMatchingProcess } from "../hooks/useMatchingProcess";
 import { usePendingManga } from "../hooks/usePendingManga";
 import { useMatchHandlers } from "../hooks/useMatchHandlers";
-import { clearCacheForTitles } from "../api/matching/manga-search-service";
+import { clearCacheForTitles } from "../api/matching/search-service";
 import { useRateLimit } from "../contexts/RateLimitContext";
 
 // Components
@@ -171,6 +173,64 @@ export function MatchingPage() {
 
   // Add a ref to track if we've already done initialization
   const hasInitialized = useRef(false);
+
+  // Calculate whether resume is needed and the count of unprocessed manga
+  const resumeState = useMemo(() => {
+    // Create sets for efficient lookup
+    const processedIds = new Set(
+      matchResults.map((r) => r.kenmeiManga.id).filter(Boolean),
+    );
+    const processedTitles = new Set(
+      matchResults.map((r) => r.kenmeiManga.title.toLowerCase()),
+    );
+
+    // Check pending manga from storage
+    const unprocessedFromPending = pendingMangaState.pendingManga.filter(
+      (manga) => {
+        const idMatch = manga.id && processedIds.has(manga.id);
+        const titleMatch = processedTitles.has(manga.title.toLowerCase());
+        return !idMatch && !titleMatch;
+      },
+    );
+
+    // Check count difference
+    const unprocessedFromAll = manga.filter((m) => {
+      const idMatch = m.id && processedIds.has(m.id);
+      const titleMatch = processedTitles.has(m.title.toLowerCase());
+      return !idMatch && !titleMatch;
+    });
+
+    const unprocessedCount = Math.max(
+      unprocessedFromPending.length,
+      unprocessedFromAll.length,
+    );
+
+    const needsProcessing = unprocessedCount > 0;
+
+    return {
+      needsProcessing,
+      unprocessedCount,
+      unprocessedManga: unprocessedFromAll,
+    };
+  }, [matchResults, pendingMangaState.pendingManga, manga]);
+
+  // Clear pending manga if all are processed (prevents infinite loops)
+  useEffect(() => {
+    if (
+      pendingMangaState.pendingManga.length > 0 &&
+      !resumeState.needsProcessing &&
+      !matchingProcess.isLoading
+    ) {
+      console.info(
+        "[MatchingPage] All pending manga are processed - clearing pending manga storage",
+      );
+      pendingMangaState.savePendingManga([]);
+    }
+  }, [
+    resumeState.needsProcessing,
+    pendingMangaState,
+    matchingProcess.isLoading,
+  ]);
 
   // Add debug effect for matching results
   useEffect(() => {
@@ -446,7 +506,7 @@ export function MatchingPage() {
     }
 
     // Preload the cache service to ensure it's initialized
-    import("../api/matching/manga-search-service").then((module) => {
+    import("../api/matching/search-service").then((module) => {
       console.debug("[MatchingPage] Preloaded manga search service");
       // Force cache sync
       if (module.cacheDebugger) {
@@ -655,7 +715,7 @@ export function MatchingPage() {
         await new Promise((resolve) => setTimeout(resolve, 100));
 
         // Get the cache service to clear specific entries
-        await import("../api/matching/manga-search-service");
+        await import("../api/matching/search-service");
 
         // Clear cache entries for each manga being re-searched
         const mangaTitles = mangaToResearch.map((manga) => manga.title);
@@ -895,9 +955,7 @@ export function MatchingPage() {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Get the cache service to clear specific entries
-      const { cacheDebugger } = await import(
-        "../api/matching/manga-search-service"
-      );
+      const { cacheDebugger } = await import("../api/matching/search-service");
 
       // Get initial cache status for comparison
       const initialCacheStatus = cacheDebugger.getCacheStatus();
@@ -1066,157 +1124,20 @@ export function MatchingPage() {
               )}
 
             {/* Resume message when we have pending manga but aren't already in the loading state */}
-            {(pendingMangaState.pendingManga.length > 0 ||
-              manga.length > matchResults.length) &&
+            {resumeState.needsProcessing &&
               !matchingProcess.isLoading &&
-              !matchingProcess.isInitializing &&
-              (() => {
-                console.debug(
-                  `[MatchingPage] Checking if ${pendingMangaState.pendingManga.length || manga.length - matchResults.length} pending manga need processing...`,
-                );
-
-                let needsProcessing = false;
-                let unprocessedCount = 0;
-
-                // First check: Pending manga from storage
-                if (pendingMangaState.pendingManga.length > 0) {
-                  // Use comprehensive matching with both IDs and titles for maximum accuracy
-                  const processedIds = new Set(
-                    matchResults.map((r) => r.kenmeiManga.id).filter(Boolean),
-                  );
-                  const processedTitles = new Set(
-                    matchResults.map((r) => r.kenmeiManga.title.toLowerCase()),
-                  );
-
-                  // Check if any of the pending manga aren't already processed using comprehensive matching
-                  const pendingTitlesAndIds =
-                    pendingMangaState.pendingManga.map((m) => ({
-                      id: m.id,
-                      title: m.title.toLowerCase(),
-                    }));
-
-                  needsProcessing = pendingTitlesAndIds.some((manga) => {
-                    const idMatch = manga.id && processedIds.has(manga.id);
-                    const titleMatch = processedTitles.has(manga.title);
-                    return !idMatch && !titleMatch;
-                  });
-
-                  // Calculate how many manga still need processing using comprehensive matching
-                  unprocessedCount = pendingMangaState.pendingManga.filter(
-                    (manga) => {
-                      const idMatch = manga.id && processedIds.has(manga.id);
-                      const titleMatch = processedTitles.has(
-                        manga.title.toLowerCase(),
-                      );
-                      return !idMatch && !titleMatch;
-                    },
-                  ).length;
-
-                  console.debug(
-                    `[MatchingPage] Title-based check on stored pending manga: ${needsProcessing ? "Pending manga need processing" : "All pending manga are already processed"}`,
-                  );
-                  console.debug(
-                    `[MatchingPage] ${unprocessedCount} manga from stored pending manga need processing`,
-                  );
-
-                  if (
-                    !needsProcessing &&
-                    pendingMangaState.pendingManga.length > 0
-                  ) {
-                    console.info(
-                      "[MatchingPage] All pending manga titles are already in matchResults - clearing pending manga",
-                    );
-                    pendingMangaState.savePendingManga([]);
-                  }
-                }
-
-                // Second check: Count difference between all manga and processed results
-                if (manga.length > matchResults.length) {
-                  console.debug(
-                    `[MatchingPage] ${manga.length - matchResults.length} manga still need processing based on count difference`,
-                  );
-
-                  // Use comprehensive matching with both IDs and titles to find unprocessed manga
-                  const processedIds = new Set(
-                    matchResults.map((r) => r.kenmeiManga.id).filter(Boolean),
-                  );
-                  const processedTitles = new Set(
-                    matchResults.map((r) => r.kenmeiManga.title.toLowerCase()),
-                  );
-
-                  const stillNeedProcessing = manga.filter((m) => {
-                    const idMatch = m.id && processedIds.has(m.id);
-                    const titleMatch = processedTitles.has(
-                      m.title.toLowerCase(),
-                    );
-                    return !idMatch && !titleMatch;
-                  }).length;
-
-                  console.debug(
-                    `[MatchingPage] ${stillNeedProcessing} manga actually need processing based on comprehensive ID and title comparison`,
-                  );
-
-                  if (stillNeedProcessing > 0) {
-                    needsProcessing = true;
-                  }
-                }
-
-                return needsProcessing;
-              })() && (
+              !matchingProcess.isInitializing && (
                 <MatchingResume
-                  pendingMangaCount={(() => {
-                    const processedIds = new Set(
-                      matchResults.map((r) => r.kenmeiManga.id).filter(Boolean),
-                    );
-                    const processedTitles = new Set(
-                      matchResults.map((r) =>
-                        r.kenmeiManga.title.toLowerCase(),
-                      ),
-                    );
-
-                    const unprocessedFromPending =
-                      pendingMangaState.pendingManga.filter((manga) => {
-                        const idMatch = manga.id && processedIds.has(manga.id);
-                        const titleMatch = processedTitles.has(
-                          manga.title.toLowerCase(),
-                        );
-                        return !idMatch && !titleMatch;
-                      }).length;
-
-                    const unprocessedFromAll = manga.filter((m) => {
-                      const idMatch = m.id && processedIds.has(m.id);
-                      const titleMatch = processedTitles.has(
-                        m.title.toLowerCase(),
-                      );
-                      return !idMatch && !titleMatch;
-                    }).length;
-
-                    return Math.max(unprocessedFromPending, unprocessedFromAll);
-                  })()}
+                  pendingMangaCount={resumeState.unprocessedCount}
                   onResumeMatching={() => {
                     console.info(
                       "[MatchingPage] Resume matching clicked - ensuring unprocessed manga are processed",
                     );
 
-                    const processedIds = new Set(
-                      matchResults.map((r) => r.kenmeiManga.id).filter(Boolean),
-                    );
-                    const processedTitles = new Set(
-                      matchResults.map((r) =>
-                        r.kenmeiManga.title.toLowerCase(),
-                      ),
-                    );
-
-                    const unprocessedManga = manga.filter((m) => {
-                      const idMatch = m.id && processedIds.has(m.id);
-                      const titleMatch = processedTitles.has(
-                        m.title.toLowerCase(),
+                    if (resumeState.unprocessedManga.length > 0) {
+                      pendingMangaState.savePendingManga(
+                        resumeState.unprocessedManga,
                       );
-                      return !idMatch && !titleMatch;
-                    });
-
-                    if (unprocessedManga.length > 0) {
-                      pendingMangaState.savePendingManga(unprocessedManga);
                       setTimeout(() => {
                         matchingProcess.handleResumeMatching(
                           matchResults,

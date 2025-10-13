@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { KenmeiManga } from "../../api/kenmei/types";
 import { AniListManga, MangaMatch } from "../../api/anilist/types";
-import { searchMangaByTitle } from "../../api/matching/manga-search-service";
+import { searchMangaByTitle } from "../../api/matching/search-service";
 import { getMangaByIds } from "../../api/anilist/client";
 
 // Import utility functions for media list formatting

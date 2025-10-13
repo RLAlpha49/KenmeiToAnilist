@@ -4,6 +4,8 @@
  * @description React component for displaying the progress of the manga matching process, including progress bar, status, and time estimate.
  */
 
+// TODO: Fix elapsed time breaking when unpausing. It gets set to ~488995h 48m.
+
 import React, { ReactNode, useMemo, useState, useEffect } from "react";
 import { MatchingProgress, TimeEstimate } from "../../types/matching";
 import { formatTimeRemaining } from "../../utils/timeUtils";
@@ -370,6 +372,16 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
     });
   }, [timeEstimate.estimatedRemainingSeconds]);
 
+  // Reset snapshot capturedAt when resuming from pause to start countdown fresh
+  useEffect(() => {
+    if (!isPaused) {
+      setEstimateSnapshot((prev) => ({
+        ...prev,
+        capturedAt: Date.now(),
+      }));
+    }
+  }, [isPaused]);
+
   // Calculate live remaining time that decreases as actual time passes
   const [liveRemainingSeconds, setLiveRemainingSeconds] = useState<number>(
     () => timeEstimate.estimatedRemainingSeconds,
@@ -380,6 +392,11 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
     if (!timeEstimate.startTime || progress.current <= 0) {
       setElapsedSeconds(0);
       setLiveRemainingSeconds(0);
+      return;
+    }
+
+    // Don't update timers when paused
+    if (isPaused) {
       return;
     }
 
@@ -404,11 +421,11 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
 
     updateTimes();
 
-    // Update every second while matching is active
+    // Update every second while matching is active and not paused
     const intervalId = setInterval(updateTimes, 1000);
 
     return () => clearInterval(intervalId);
-  }, [timeEstimate.startTime, progress.current, estimateSnapshot]);
+  }, [timeEstimate.startTime, progress.current, estimateSnapshot, isPaused]);
 
   const formattedElapsed = formatCompactDuration(elapsedSeconds);
   const averageSecondsPerManga =
