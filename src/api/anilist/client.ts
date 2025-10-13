@@ -63,11 +63,11 @@ function initializeSearchCache(): void {
   searchCacheInitialized = true;
 
   try {
-    // Try to load persisted cache from localStorage
     const storageKey = "anilist_search_cache";
     const cachedData = localStorage.getItem(storageKey);
 
     if (!cachedData) {
+      console.debug("[AniListClient] 💾 No cached search data found");
       return;
     }
 
@@ -90,22 +90,15 @@ function initializeSearchCache(): void {
       `[AniListClient] 💾 Loaded ${loadedCount} cached search results from localStorage`,
     );
 
-    // Immediately notify the manga service to sync caches
-    // This needs to be done after a small delay to avoid circular dependencies
-    setTimeout(() => {
-      try {
-        // Create a custom event that manga-search-service can listen for
-        const event = new CustomEvent("anilist:search-cache-initialized", {
-          detail: { count: loadedCount },
-        });
-        globalThis.dispatchEvent(event);
-        console.debug(
-          `[AniListClient] 📤 Dispatched cache initialization event`,
-        );
-      } catch (e) {
-        console.error("[AniListClient] ❌ Failed to dispatch cache event", e);
-      }
-    }, 100);
+    try {
+      const event = new CustomEvent("anilist:search-cache-initialized", {
+        detail: { count: loadedCount },
+      });
+      globalThis.dispatchEvent(event);
+      console.debug(`[AniListClient] 📤 Dispatched cache initialization event`);
+    } catch (e) {
+      console.error("[AniListClient] ❌ Failed to dispatch cache event", e);
+    }
   } catch (error) {
     console.error(
       "[AniListClient] ❌ Error loading search cache from localStorage:",

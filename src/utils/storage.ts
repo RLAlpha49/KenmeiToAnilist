@@ -112,34 +112,13 @@ export const storage = {
         return storageCache[key];
       }
 
-      // For compatibility with existing code, we need to return synchronously
-      // But electronStore API is asynchronous, so we fall back to localStorage
+      // Return from localStorage synchronously
+      // NOTE: For most accurate data, use getItemAsync() which checks electron-store first
       const value = localStorage.getItem(key);
+
       // Cache the value
       if (value !== null) {
         storageCache[key] = value;
-      }
-
-      // Asynchronously update from electron-store if available (won't affect current return)
-      if (globalThis.electronStore) {
-        globalThis.electronStore
-          .getItem(key)
-          .then((electronValue) => {
-            if (electronValue !== null && electronValue !== value) {
-              // Update localStorage and cache if electron-store has a different value
-              localStorage.setItem(key, electronValue);
-              storageCache[key] = electronValue;
-            }
-          })
-          .catch((error) => {
-            // Only log errors in development
-            if (process.env.NODE_ENV === "development") {
-              console.error(
-                `[Storage] Error retrieving ${key} from electron-store:`,
-                error,
-              );
-            }
-          });
       }
 
       return value;
@@ -287,6 +266,57 @@ export const storage = {
     return localStorage.getItem(key);
   },
 };
+
+/**
+ * Initialize storage by syncing electron-store to localStorage
+ * This ensures both storage layers are in sync on app startup
+ * Call this once during app initialization
+ */
+export async function initializeStorage(): Promise<void> {
+  if (!globalThis.electronStore) {
+    console.debug("[Storage] 🔧 Electron store not available, skipping sync");
+    return;
+  }
+
+  try {
+    console.debug("[Storage] 🔄 Syncing electron-store to localStorage...");
+    let syncCount = 0;
+
+    // Sync all known storage keys
+    const keys = Object.values(STORAGE_KEYS);
+
+    for (const key of keys) {
+      try {
+        const electronValue = await globalThis.electronStore.getItem(key);
+        if (electronValue !== null) {
+          localStorage.setItem(key, electronValue);
+          storageCache[key] = electronValue;
+          syncCount++;
+        }
+      } catch (error) {
+        console.error(`[Storage] ⚠️ Failed to sync key ${key}:`, error);
+      }
+    }
+
+    // Also sync auth state
+    try {
+      const authState = await globalThis.electronStore.getItem("authState");
+      if (authState !== null) {
+        localStorage.setItem("authState", authState);
+        storageCache["authState"] = authState;
+        syncCount++;
+      }
+    } catch (error) {
+      console.error("[Storage] ⚠️ Failed to sync authState:", error);
+    }
+
+    console.info(
+      `[Storage] ✅ Synced ${syncCount} keys from electron-store to localStorage`,
+    );
+  } catch (error) {
+    console.error("[Storage] ❌ Storage initialization failed:", error);
+  }
+}
 
 /**
  * Storage keys used for Kenmei data, import stats, match results, and configuration.
