@@ -26,6 +26,7 @@ import {
 import { getStatusCounts } from "../utils/manga-status-utils";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { useDebug } from "../contexts/DebugContext";
 
 /**
  * Import page component for the Kenmei to AniList sync tool.
@@ -36,6 +37,7 @@ import { motion } from "framer-motion";
  */
 export function ImportPage() {
   const navigate = useNavigate();
+  const { recordEvent } = useDebug();
   const [importData, setImportData] = useState<KenmeiData | null>(null);
   const [error, setError] = useState<AppError | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -54,6 +56,17 @@ export function ImportPage() {
     );
     console.debug(`[Import] 🔍 Previous match count: ${previousMatchCount}`);
 
+    recordEvent({
+      type: "import.file-loaded",
+      message: `File loaded with ${data.manga.length} manga entries`,
+      level: "info",
+      metadata: {
+        entryCount: data.manga.length,
+        hasPreviousMatches: previousMatchCount > 0,
+        previousMatchCount,
+      },
+    });
+
     setImportData(data);
     setError(null);
     setImportSuccess(false);
@@ -68,6 +81,16 @@ export function ImportPage() {
 
   const handleError = (error: AppError, toastId?: string) => {
     console.error(`[Import] ❌ Import error (${error.type}):`, error.message);
+
+    recordEvent({
+      type: "import.error",
+      message: `Import error: ${error.message}`,
+      level: "error",
+      metadata: {
+        errorType: error.type,
+        errorMessage: error.message,
+      },
+    });
 
     setError(error);
     setImportData(null);
@@ -100,6 +123,12 @@ export function ImportPage() {
     console.info(
       `[Import] 🚀 Starting import process for ${importData.manga.length} entries`,
     );
+    recordEvent({
+      type: "import.start",
+      message: `Import started with ${importData.manga.length} entries`,
+      level: "info",
+      metadata: { entryCount: importData.manga.length },
+    });
     setIsLoading(true);
 
     const loadingToastId = toast.loading("Processing your library", {
@@ -152,6 +181,19 @@ export function ImportPage() {
       console.info("[Import] ✅ Import completed successfully");
       console.debug("[Import] 🔍 Redirecting to review page...");
 
+      recordEvent({
+        type: "import.complete",
+        message: `Import completed: ${results.newMangaCount} new, ${results.updatedMangaCount} updated, ${validMergedManga.length} total`,
+        level: "success",
+        metadata: {
+          newMangaCount: results.newMangaCount,
+          updatedMangaCount: results.updatedMangaCount,
+          totalMangaCount: validMergedManga.length,
+          previousMangaCount: previousManga.length,
+          normalizedMangaCount: normalizedManga.length,
+        },
+      });
+
       setImportSuccess(true);
       setProgress(100);
 
@@ -188,6 +230,11 @@ export function ImportPage() {
 
   const resetForm = () => {
     console.info("[Import] 🔄 Resetting import form");
+    recordEvent({
+      type: "import.reset",
+      message: "Import form reset",
+      level: "info",
+    });
     setImportData(null);
     setError(null);
     setImportSuccess(false);

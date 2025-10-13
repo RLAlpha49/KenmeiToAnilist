@@ -32,3 +32,21 @@ export interface IpcLogEntry {
   payload: IpcLogPayload;
   error?: string;
 }
+
+export type DebugEventLevel = "info" | "warn" | "error" | "success" | "debug";
+
+export interface DebugEventRecord {
+  type: string;
+  message: string;
+  level?: DebugEventLevel;
+  source?: string;
+  context?: string;
+  metadata?: Record<string, unknown>;
+  tags?: string[];
+  timestamp?: string;
+}
+
+export interface DebugEventEntry extends DebugEventRecord {
+  id: string;
+  timestamp: string;
+}

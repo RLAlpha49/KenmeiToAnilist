@@ -313,7 +313,7 @@ export function IpcViewer(): React.ReactElement {
 
       <Separator />
 
-      <ScrollArea className="h-full max-h-[40vh] w-full">
+      <ScrollArea type="always" className="h-full max-h-[35vh] w-full">
         <div className="space-y-3 pr-4">
           {filteredEntries.length === 0 ? (
             <div className="border-border/60 bg-muted/20 flex h-40 flex-col items-center justify-center gap-3 rounded-xl border border-dashed text-center">

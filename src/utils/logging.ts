@@ -46,25 +46,25 @@ const generateLogId = (): string => {
  */
 const redactSensitiveData = (text: string): string => {
   // Redact potential tokens (long alphanumeric strings that look like tokens)
-  let redacted = text.replace(/\b[\w-]{40,}\b/g, "[REDACTED_TOKEN]");
+  let redacted = text.replaceAll(/\b[\w-]{40,}\b/g, "[REDACTED_TOKEN]");
 
   // Redact client secrets in query params or JSON
-  redacted = redacted.replace(
+  redacted = redacted.replaceAll(
     /(client_secret|clientSecret)["']?\s*[:=]\s*["']?[^"',}\s&]+/gi,
     "$1=[REDACTED]",
   );
 
   // Redact access tokens in various formats
-  redacted = redacted.replace(
+  redacted = redacted.replaceAll(
     /(access_token|accessToken|token)["']?\s*[:=]\s*["']?[\w-]{20,}["']?/gi,
     "$1=[REDACTED]",
   );
 
   // Redact authorization headers
-  redacted = redacted.replace(/Bearer\s+[\w-]{20,}/gi, "Bearer [REDACTED]");
+  redacted = redacted.replaceAll(/Bearer\s+[\w-]{20,}/gi, "Bearer [REDACTED]");
 
   // Redact auth codes (10+ character alphanumeric strings in auth contexts)
-  redacted = redacted.replace(
+  redacted = redacted.replaceAll(
     /(code|auth_code|authorization_code)["']?\s*[:=]\s*["']?[\w-]{10,}["']?/gi,
     "$1=[REDACTED]",
   );

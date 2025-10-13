@@ -8,6 +8,7 @@ import { useCallback } from "react";
 import { KenmeiManga } from "../api/kenmei/types";
 import { AniListManga, MangaMatchResult } from "../api/anilist/types";
 import { STORAGE_KEYS, storage } from "../utils/storage";
+import { useDebug } from "../contexts/DebugContext";
 
 /**
  * Custom React hook providing handler functions for managing manga match results and user interactions.
@@ -29,6 +30,8 @@ export const useMatchHandlers = (
   setIsSearchOpen: React.Dispatch<React.SetStateAction<boolean>>,
   setBypassCache: React.Dispatch<React.SetStateAction<boolean>>,
 ) => {
+  const { recordEvent } = useDebug();
+
   /**
    * Finds the index of a match in the results array by ID or title.
    *
@@ -101,6 +104,13 @@ export const useMatchHandlers = (
         "[MatchHandlers] handleManualSearch called with manga:",
         manga,
       );
+
+      recordEvent({
+        type: "match.manual-search",
+        message: `Manual search initiated: ${manga.title}`,
+        level: "info",
+        metadata: { kenmeiTitle: manga.title },
+      });
 
       // Find the match
       const index = findMatchIndex(manga);
@@ -175,6 +185,16 @@ export const useMatchHandlers = (
           `[MatchHandlers] Processing batch ${actionName} operation for ${match.matches.length} matches`,
         );
 
+        recordEvent({
+          type: `match.batch-${actionName.toLowerCase()}`,
+          message: `Batch ${actionName.toLowerCase()}: ${match.matches.length} matches`,
+          level: "info",
+          metadata: {
+            matchCount: match.matches.length,
+            action: actionName.toLowerCase(),
+          },
+        });
+
         // For batch operations, we simply replace the entire match results array
         // with the new one that already has the statuses applied
         updateMatchResults(match.matches);
@@ -214,9 +234,21 @@ export const useMatchHandlers = (
         `[MatchHandlers] Updated match status to: ${updatedMatch.status}, title: ${updatedMatch.kenmeiManga.title}`,
       );
 
+      recordEvent({
+        type: `match.${newStatus === "matched" ? "accept" : "skip"}`,
+        message: `${actionName} match: ${singleMatch.kenmeiManga.title}`,
+        level: "info",
+        metadata: {
+          kenmeiTitle: singleMatch.kenmeiManga.title,
+          anilistId: updatedMatch.selectedMatch?.id,
+          anilistTitle: updatedMatch.selectedMatch?.title?.romaji,
+          status: newStatus,
+        },
+      });
+
       updateMatchResults(updatedResults);
     },
-    [findMatchIndex, matchResults, updateMatchResults],
+    [findMatchIndex, matchResults, recordEvent, updateMatchResults],
   );
 
   /**

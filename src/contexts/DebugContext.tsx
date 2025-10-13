@@ -8,8 +8,6 @@
 
 // TODO: API request/response viewer for debugging API issues. Should be able to see request URL, method, headers, body, response status, headers, body, and time taken. Should be able to filter by endpoint and status code.
 
-// TODO: Event logger to track user actions and application events for debugging purposes. Should be able to filter by event type and time range.
-
 // TODO: Rate limiting/debugging for API requests. Show current rate limit status and history of requests made. Allow simulating rate limit exceeded errors for testing.
 
 import React, {
@@ -36,7 +34,11 @@ import {
   saveMatchConfig,
   type MatchConfig,
 } from "../utils/storage";
-import type { IpcLogEntry } from "@/types/debug";
+import type {
+  DebugEventEntry,
+  DebugEventRecord,
+  IpcLogEntry,
+} from "@/types/debug";
 
 /**
  * The shape of the debug context value provided to consumers.
@@ -75,6 +77,13 @@ interface DebugContextType {
   ipcViewerEnabled: boolean;
   setIpcViewerEnabled: (enabled: boolean) => void;
   toggleIpcViewer: () => void;
+  eventLoggerEnabled: boolean;
+  setEventLoggerEnabled: (enabled: boolean) => void;
+  toggleEventLogger: () => void;
+  eventLogEntries: DebugEventEntry[];
+  recordEvent: (entry: DebugEventRecord, options?: RecordEventOptions) => void;
+  clearEventLog: () => void;
+  maxEventLogEntries: number;
   ipcEvents: IpcLogEntry[];
   clearIpcEvents: () => void;
   maxIpcEntries: number;
@@ -88,6 +97,7 @@ const DebugContext = createContext<DebugContextType | undefined>(undefined);
 
 const DEBUG_STORAGE_KEY = "debug-mode-enabled";
 const DEBUG_FEATURE_TOGGLES_KEY = "debug-feature-toggles";
+const MAX_EVENT_LOG_ENTRIES = 500;
 
 type DebugFeatureToggles = {
   storageDebugger: boolean;
@@ -95,6 +105,7 @@ type DebugFeatureToggles = {
   stateInspector: boolean;
   ipcViewer: boolean;
   redactLogs: boolean;
+  eventLogger: boolean;
 };
 
 // Default all features to off for production
@@ -104,7 +115,12 @@ const DEFAULT_FEATURE_TOGGLES: DebugFeatureToggles = {
   stateInspector: false,
   ipcViewer: false,
   redactLogs: true,
+  eventLogger: false,
 };
+
+interface RecordEventOptions {
+  force?: boolean;
+}
 
 export interface StateInspectorRegistration<T> {
   id: string;
@@ -189,6 +205,7 @@ export function DebugProvider({
   );
   const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
   const [ipcEvents, setIpcEvents] = useState<IpcLogEntry[]>([]);
+  const [eventLogEntries, setEventLogEntries] = useState<DebugEventEntry[]>([]);
   const [maxIpcEntries, setMaxIpcEntries] = useState<number>(() => {
     if (globalThis.window !== undefined && globalThis.electronDebug?.ipc) {
       return globalThis.electronDebug.ipc.maxEntries;
@@ -207,6 +224,7 @@ export function DebugProvider({
   const logRedactionEnabled = featureToggles.redactLogs;
   const stateInspectorEnabled = featureToggles.stateInspector;
   const ipcViewerEnabled = featureToggles.ipcViewer;
+  const eventLoggerEnabled = featureToggles.eventLogger;
 
   useEffect(() => {
     // Only install the console interceptor when BOTH debug mode AND the log viewer feature are enabled.
@@ -273,6 +291,18 @@ export function DebugProvider({
     };
   }, [isDebugEnabled, ipcViewerEnabled]);
 
+  useEffect(() => {
+    if (!isDebugEnabled) {
+      setEventLogEntries([]);
+    }
+  }, [isDebugEnabled]);
+
+  useEffect(() => {
+    if (!eventLoggerEnabled) {
+      setEventLogEntries([]);
+    }
+  }, [eventLoggerEnabled]);
+
   // Load debug state from localStorage on initialization
   useEffect(() => {
     try {
@@ -306,15 +336,69 @@ export function DebugProvider({
     }
   }, []);
 
-  // Save debug state to localStorage whenever it changes
-  const setDebugEnabled = useCallback((enabled: boolean) => {
-    setIsDebugEnabled(enabled);
-    try {
-      localStorage.setItem(DEBUG_STORAGE_KEY, JSON.stringify(enabled));
-    } catch (error) {
-      console.error("Failed to save debug state to localStorage:", error);
-    }
+  const recordEvent = useCallback(
+    (entry: DebugEventRecord, options?: RecordEventOptions) => {
+      const shouldRecord =
+        options?.force === true || (isDebugEnabled && eventLoggerEnabled);
+      if (!shouldRecord) {
+        return;
+      }
+
+      const timestamp = entry.timestamp ?? new Date().toISOString();
+      let id = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      const cryptoApi = globalThis.crypto;
+      if (cryptoApi && typeof cryptoApi.randomUUID === "function") {
+        id = cryptoApi.randomUUID();
+      }
+
+      const normalised: DebugEventEntry = {
+        id,
+        timestamp,
+        type: entry.type,
+        message: entry.message,
+        level: entry.level,
+        source: entry.source,
+        context: entry.context,
+        metadata: entry.metadata,
+        tags: entry.tags,
+      };
+
+      setEventLogEntries((previous) => {
+        const next = [...previous, normalised];
+        if (next.length > MAX_EVENT_LOG_ENTRIES) {
+          return next.slice(next.length - MAX_EVENT_LOG_ENTRIES);
+        }
+        return next;
+      });
+    },
+    [eventLoggerEnabled, isDebugEnabled],
+  );
+
+  const clearEventLog = useCallback(() => {
+    setEventLogEntries([]);
   }, []);
+
+  // Save debug state to localStorage whenever it changes
+  const setDebugEnabled = useCallback(
+    (enabled: boolean) => {
+      setIsDebugEnabled(enabled);
+      try {
+        localStorage.setItem(DEBUG_STORAGE_KEY, JSON.stringify(enabled));
+      } catch (error) {
+        console.error("Failed to save debug state to localStorage:", error);
+      }
+      recordEvent(
+        {
+          type: "debug.mode",
+          message: enabled ? "Debug mode enabled" : "Debug mode disabled",
+          level: enabled ? "info" : "warn",
+          metadata: { enabled },
+        },
+        { force: true },
+      );
+    },
+    [recordEvent],
+  );
 
   const toggleDebug = useCallback(() => {
     setDebugEnabled(!isDebugEnabled);
@@ -344,16 +428,21 @@ export function DebugProvider({
         ...prev,
         storageDebugger: enabled,
       }));
+      recordEvent({
+        type: "debug.storage",
+        message: enabled
+          ? "Storage debugger enabled"
+          : "Storage debugger disabled",
+        level: enabled ? "info" : "warn",
+        metadata: { enabled },
+      });
     },
-    [persistFeatureToggles],
+    [persistFeatureToggles, recordEvent],
   );
 
   const toggleStorageDebugger = useCallback(() => {
-    persistFeatureToggles((prev) => ({
-      ...prev,
-      storageDebugger: !prev.storageDebugger,
-    }));
-  }, [persistFeatureToggles]);
+    setStorageDebuggerEnabled(!storageDebuggerEnabled);
+  }, [setStorageDebuggerEnabled, storageDebuggerEnabled]);
 
   const setLogViewerEnabled = useCallback(
     (enabled: boolean) => {
@@ -361,16 +450,19 @@ export function DebugProvider({
         ...prev,
         logViewer: enabled,
       }));
+      recordEvent({
+        type: "debug.log-viewer",
+        message: enabled ? "Log viewer enabled" : "Log viewer disabled",
+        level: enabled ? "info" : "warn",
+        metadata: { enabled },
+      });
     },
-    [persistFeatureToggles],
+    [persistFeatureToggles, recordEvent],
   );
 
   const toggleLogViewer = useCallback(() => {
-    persistFeatureToggles((prev) => ({
-      ...prev,
-      logViewer: !prev.logViewer,
-    }));
-  }, [persistFeatureToggles]);
+    setLogViewerEnabled(!logViewerEnabled);
+  }, [logViewerEnabled, setLogViewerEnabled]);
 
   const setLogRedactionEnabled = useCallback(
     (enabled: boolean) => {
@@ -378,16 +470,19 @@ export function DebugProvider({
         ...prev,
         redactLogs: enabled,
       }));
+      recordEvent({
+        type: "debug.log-viewer",
+        message: enabled ? "Log redaction enabled" : "Log redaction disabled",
+        level: "info",
+        metadata: { enabled },
+      });
     },
-    [persistFeatureToggles],
+    [persistFeatureToggles, recordEvent],
   );
 
   const toggleLogRedaction = useCallback(() => {
-    persistFeatureToggles((prev) => ({
-      ...prev,
-      redactLogs: !prev.redactLogs,
-    }));
-  }, [persistFeatureToggles]);
+    setLogRedactionEnabled(!logRedactionEnabled);
+  }, [logRedactionEnabled, setLogRedactionEnabled]);
 
   const setStateInspectorEnabled = useCallback(
     (enabled: boolean) => {
@@ -395,16 +490,21 @@ export function DebugProvider({
         ...prev,
         stateInspector: enabled,
       }));
+      recordEvent({
+        type: "debug.state-inspector",
+        message: enabled
+          ? "State inspector enabled"
+          : "State inspector disabled",
+        level: enabled ? "info" : "warn",
+        metadata: { enabled },
+      });
     },
-    [persistFeatureToggles],
+    [persistFeatureToggles, recordEvent],
   );
 
   const toggleStateInspector = useCallback(() => {
-    persistFeatureToggles((prev) => ({
-      ...prev,
-      stateInspector: !prev.stateInspector,
-    }));
-  }, [persistFeatureToggles]);
+    setStateInspectorEnabled(!stateInspectorEnabled);
+  }, [setStateInspectorEnabled, stateInspectorEnabled]);
 
   const setIpcViewerEnabled = useCallback(
     (enabled: boolean) => {
@@ -412,16 +512,42 @@ export function DebugProvider({
         ...prev,
         ipcViewer: enabled,
       }));
+      recordEvent({
+        type: "debug.ipc",
+        message: enabled ? "IPC viewer enabled" : "IPC viewer disabled",
+        level: enabled ? "info" : "warn",
+        metadata: { enabled },
+      });
     },
-    [persistFeatureToggles],
+    [persistFeatureToggles, recordEvent],
   );
 
   const toggleIpcViewer = useCallback(() => {
-    persistFeatureToggles((prev) => ({
-      ...prev,
-      ipcViewer: !prev.ipcViewer,
-    }));
-  }, [persistFeatureToggles]);
+    setIpcViewerEnabled(!ipcViewerEnabled);
+  }, [ipcViewerEnabled, setIpcViewerEnabled]);
+
+  const setEventLoggerEnabled = useCallback(
+    (enabled: boolean) => {
+      persistFeatureToggles((prev) => ({
+        ...prev,
+        eventLogger: enabled,
+      }));
+      recordEvent(
+        {
+          type: "debug.event-logger",
+          message: enabled ? "Event logger enabled" : "Event logger disabled",
+          level: enabled ? "info" : "warn",
+          metadata: { enabled },
+        },
+        { force: true },
+      );
+    },
+    [persistFeatureToggles, recordEvent],
+  );
+
+  const toggleEventLogger = useCallback(() => {
+    setEventLoggerEnabled(!eventLoggerEnabled);
+  }, [eventLoggerEnabled, setEventLoggerEnabled]);
 
   const registerStateInspector = useCallback(
     <T,>(config: StateInspectorRegistration<T>): StateInspectorHandle<T> => {
@@ -458,6 +584,12 @@ export function DebugProvider({
       nextSources.set(config.id, internal);
       stateSourcesRef.current = nextSources;
       setStateSourceSnapshots(toStateInspectorSnapshots(nextSources));
+      recordEvent({
+        type: "debug.state-inspector",
+        message: `Registered state inspector '${config.label}'`,
+        level: "debug",
+        metadata: { id: config.id },
+      });
 
       return {
         publish: (value: T) => {
@@ -479,10 +611,16 @@ export function DebugProvider({
           current.delete(config.id);
           stateSourcesRef.current = current;
           setStateSourceSnapshots(toStateInspectorSnapshots(current));
+          recordEvent({
+            type: "debug.state-inspector",
+            message: `Unregistered state inspector '${config.label}'`,
+            level: "debug",
+            metadata: { id: config.id },
+          });
         },
       };
     },
-    [],
+    [recordEvent],
   );
 
   const refreshStateInspectorSource = useCallback((id: string) => {
@@ -532,6 +670,12 @@ export function DebugProvider({
         });
         stateSourcesRef.current = map;
         setStateSourceSnapshots(toStateInspectorSnapshots(map));
+        recordEvent({
+          type: "debug.state-inspector",
+          message: `State inspector '${source.label ?? id}' updated`,
+          level: "debug",
+          metadata: { id },
+        });
       } catch (error) {
         console.error("Failed to apply state inspector update", {
           id,
@@ -540,7 +684,7 @@ export function DebugProvider({
         throw error;
       }
     },
-    [],
+    [recordEvent],
   );
 
   useEffect(() => {
@@ -588,12 +732,22 @@ export function DebugProvider({
 
   const clearLogs = useCallback(() => {
     logCollector.clear();
-  }, []);
+    recordEvent({
+      type: "debug.log-viewer",
+      message: "Console log buffer cleared",
+      level: "warn",
+    });
+  }, [recordEvent]);
 
   const clearIpcEvents = useCallback(() => {
     if (globalThis.window === undefined) return;
     globalThis.electronDebug?.ipc.clear();
-  }, []);
+    recordEvent({
+      type: "debug.ipc",
+      message: "IPC log cleared",
+      level: "warn",
+    });
+  }, [recordEvent]);
 
   const exportLogs = useCallback(() => {
     const entries = logCollector.getEntries();
@@ -626,8 +780,25 @@ export function DebugProvider({
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
+      recordEvent({
+        type: "debug.log-viewer",
+        message: "Console logs exported",
+        level: "info",
+        metadata: { totalEntries: entries.length },
+      });
     } catch (error) {
       console.error("Failed to export debug logs:", error);
+      recordEvent(
+        {
+          type: "debug.log-viewer",
+          message: "Failed to export debug logs",
+          level: "error",
+          metadata: {
+            error: error instanceof Error ? error.message : String(error),
+          },
+        },
+        { force: true },
+      );
     }
   }, []);
 
@@ -651,6 +822,13 @@ export function DebugProvider({
       ipcViewerEnabled,
       setIpcViewerEnabled,
       toggleIpcViewer,
+      eventLoggerEnabled,
+      setEventLoggerEnabled,
+      toggleEventLogger,
+      eventLogEntries,
+      recordEvent,
+      clearEventLog,
+      maxEventLogEntries: MAX_EVENT_LOG_ENTRIES,
       stateInspectorSources: stateSourceSnapshots,
       registerStateInspector,
       applyStateInspectorUpdate,
@@ -682,6 +860,12 @@ export function DebugProvider({
       ipcViewerEnabled,
       setIpcViewerEnabled,
       toggleIpcViewer,
+      eventLoggerEnabled,
+      setEventLoggerEnabled,
+      toggleEventLogger,
+      eventLogEntries,
+      recordEvent,
+      clearEventLog,
       stateSourceSnapshots,
       registerStateInspector,
       applyStateInspectorUpdate,

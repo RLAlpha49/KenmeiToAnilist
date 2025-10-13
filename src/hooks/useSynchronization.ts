@@ -580,7 +580,8 @@ export function useSynchronization(): [
   const pauseRequestedRef = useRef(false);
   const resumeRequestedRef = useRef(false);
   const hasLoadedSnapshotRef = useRef(false);
-  const { registerStateInspector: registerSyncStateInspector } = useDebug();
+  const { registerStateInspector: registerSyncStateInspector, recordEvent } =
+    useDebug();
   const syncInspectorHandleRef =
     useRef<StateInspectorHandle<SyncDebugSnapshot> | null>(null);
   const syncSnapshotRef = useRef<SyncDebugSnapshot | null>(null);
@@ -907,6 +908,13 @@ export function useSynchronization(): [
         `[Synchronization] ${isResume ? "▶️ Resuming" : "🚀 Starting"} sync for ${entries.length} entries`,
       );
 
+      recordEvent({
+        type: isResume ? "sync.resume" : "sync.start",
+        message: `${isResume ? "Resumed" : "Started"} sync for ${entries.length} entries`,
+        level: "info",
+        metadata: { entryCount: entries.length, isResume },
+      });
+
       if (!isResume && resumeSnapshotRef.current) {
         console.debug(
           "[Synchronization] 🔍 Clearing existing resume snapshot for fresh sync",
@@ -1085,6 +1093,19 @@ export function useSynchronization(): [
           clearResumeSnapshot,
           setState,
         );
+
+        const finalReport = mergeReports(existingReportFragment, syncReport);
+        recordEvent({
+          type: "sync.complete",
+          message: `Sync completed: ${finalReport.successfulUpdates} success, ${finalReport.failedUpdates} failed`,
+          level: finalReport.failedUpdates > 0 ? "warn" : "success",
+          metadata: {
+            totalEntries: finalReport.totalEntries,
+            successfulUpdates: finalReport.successfulUpdates,
+            failedUpdates: finalReport.failedUpdates,
+            skippedEntries: finalReport.skippedEntries,
+          },
+        });
       } catch (error) {
         console.error("[Synchronization] Sync operation failed:", error);
         setState((prev) => ({
@@ -1113,6 +1134,14 @@ export function useSynchronization(): [
       console.info(
         "[Synchronization] Cancellation requested - aborting all sync operations",
       );
+      recordEvent({
+        type: "sync.cancel",
+        message: "Sync cancelled by user",
+        level: "warn",
+        metadata: {
+          progress: state.progress,
+        },
+      });
       state.abortController.abort();
       setState((prev) => ({
         ...prev,
@@ -1142,6 +1171,14 @@ export function useSynchronization(): [
       console.info(
         "[Synchronization] ⏸️ Pause requested - stopping current sync after current task",
       );
+      recordEvent({
+        type: "sync.pause",
+        message: "Sync paused by user",
+        level: "info",
+        metadata: {
+          progress: state.progress,
+        },
+      });
       pauseRequestedRef.current = true;
       state.abortController.abort();
       emitSyncSnapshot();

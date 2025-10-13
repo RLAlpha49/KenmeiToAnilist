@@ -12,11 +12,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
-import { Braces, Bug, ScrollText, Radio } from "lucide-react";
+import { Braces, Bug, ScrollText, Radio, ActivitySquare } from "lucide-react";
 import { StorageDebugger } from "./StorageDebugger";
 import { LogViewer } from "./LogViewer";
 import { StateInspector } from "./StateInspector";
 import { IpcViewer } from "./IpcViewer";
+import { EventLogger } from "./EventLogger";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Badge } from "../ui/badge";
 import { useDebug } from "../../contexts/DebugContext";
@@ -43,6 +44,7 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
     logViewerEnabled,
     stateInspectorEnabled,
     ipcViewerEnabled,
+    eventLoggerEnabled,
   } = useDebug();
 
   const panels = useMemo(() => {
@@ -122,9 +124,25 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
       });
     }
 
+    if (eventLoggerEnabled) {
+      entries.push({
+        id: "events",
+        label: "Event Logger",
+        description:
+          "Timeline of captured user actions and application events with advanced filtering.",
+        icon: (
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-500/10 text-emerald-500">
+            <ActivitySquare className="h-5 w-5" />
+          </div>
+        ),
+        element: <EventLogger />,
+      });
+    }
+
     return entries;
   }, [
     ipcViewerEnabled,
+    eventLoggerEnabled,
     logViewerEnabled,
     stateInspectorEnabled,
     storageDebuggerEnabled,
@@ -154,7 +172,7 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
         }
       }}
     >
-      <DialogContent className="border-border/60 bg-background/95 max-h-[80vh] !max-w-5xl grid-rows-[auto,1fr] overflow-hidden border p-0 shadow-2xl backdrop-blur-xl">
+      <DialogContent className="border-border/60 bg-background/95 max-h-[80vh] grid-rows-[auto,1fr] overflow-hidden border p-0 shadow-2xl backdrop-blur-xl md:max-w-[95vw] lg:!max-w-5xl">
         <DialogHeader className="relative overflow-hidden px-8 pt-8 pb-4">
           <div className="from-primary/10 absolute inset-0 h-full w-full bg-gradient-to-br via-purple-500/10 to-transparent" />
           <div className="bg-primary/15 absolute top-8 right-10 h-32 w-32 rounded-full blur-3xl" />
@@ -199,9 +217,9 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
               orientation="vertical"
               className="flex min-h-0 flex-1"
             >
-              <div className="flex min-h-0 flex-col gap-6 lg:flex-row">
-                <div className="border-border/80 bg-muted/10 relative flex w-full flex-col overflow-hidden rounded-2xl border shadow-sm lg:w-64">
-                  <ScrollArea type="always" className="flex h-full w-full">
+              <div className="flex min-h-0 flex-col gap-6 md:max-w-[87.5vw] lg:flex-row">
+                <div className="border-border/80 bg-muted/10 relative flex w-full flex-col overflow-hidden rounded-2xl border pr-1 shadow-sm md:min-h-[10vh] lg:w-64">
+                  <ScrollArea type="always" className="flex h-full w-full pr-2">
                     <div className="p-2">
                       <TabsList
                         className={cn("flex h-auto w-full flex-col gap-2")}
@@ -243,7 +261,7 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
                 </div>
 
                 {/* Content column */}
-                <div className="border-border/80 bg-background/95 relative flex-1 overflow-hidden rounded-2xl border shadow-inner">
+                <div className="border-border/80 bg-background/95 relative flex-1 overflow-hidden rounded-2xl border shadow-inner md:min-h-[40vh]">
                   <div className="from-primary/10 absolute inset-x-12 top-0 h-24 rounded-b-full bg-gradient-to-b to-transparent blur-3xl" />
                   <div className="relative h-full min-h-0 overflow-y-auto p-4">
                     {panels.map((panel) => (
@@ -252,7 +270,7 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
                         value={panel.id}
                         className="h-full"
                       >
-                        <div className="flex h-full min-h-0 flex-col">
+                        <div className="flex h-full min-h-[600px] flex-col">
                           {panel.element}
                         </div>
                       </TabsContent>

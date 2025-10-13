@@ -25,12 +25,14 @@ import {
   Bug,
   Copy,
   Download,
+  Info,
   ScrollText,
   Search,
   Trash2,
 } from "lucide-react";
 
-const LEVELS = ["error", "warn", "log"] as const;
+const LEVELS = ["error", "warn", "info", "log", "debug"] as const;
+const FILTERABLE_LEVELS: VisibleLogLevel[] = ["error", "warn", "info", "debug"];
 type VisibleLogLevel = (typeof LEVELS)[number];
 
 const LEVEL_META: Record<
@@ -47,17 +49,29 @@ const LEVEL_META: Record<
     icon: <AlertTriangle className="h-4 w-4" />,
     tone: "text-amber-500 dark:text-amber-300",
   },
+  info: {
+    label: "Info",
+    icon: <Info className="h-4 w-4" />,
+    tone: "text-sky-500 dark:text-sky-300",
+  },
   log: {
     label: "Log",
     icon: <ScrollText className="h-4 w-4" />,
     tone: "text-slate-500 dark:text-slate-300",
+  },
+  debug: {
+    label: "Debug",
+    icon: <Bug className="h-4 w-4" />,
+    tone: "text-purple-500 dark:text-purple-300",
   },
 };
 
 const DEFAULT_LEVEL_FILTER: Record<VisibleLogLevel, boolean> = {
   error: true,
   warn: true,
+  info: true,
   log: true,
+  debug: true,
 };
 
 function highlight(text: string, query: string): React.ReactNode {
@@ -207,18 +221,8 @@ export function LogViewer(): React.ReactElement {
             </Badge>
           </div>
         </div>
-        <div className="flex flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-          <div className="text-muted-foreground flex items-center gap-2">
-            <Switch
-              id="debug-log-autoscroll"
-              checked={autoScroll}
-              onCheckedChange={(checked) => setAutoScroll(Boolean(checked))}
-            />
-            <label htmlFor="debug-log-autoscroll" className="cursor-pointer">
-              Auto-scroll to newest
-            </label>
-          </div>
-          <div className="relative w-full sm:w-72">
+        <div className="flex w-full flex-col gap-3">
+          <div className="relative w-full">
             <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
             <Input
               value={searchTerm}
@@ -227,29 +231,42 @@ export function LogViewer(): React.ReactElement {
               className="pl-9"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={handleClear}
-              disabled={!totalEntries}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Clear
-            </Button>
-            <Button
-              variant="default"
-              onClick={handleExport}
-              disabled={!totalEntries}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Export JSON
-            </Button>
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="text-muted-foreground flex items-center gap-2">
+              <Switch
+                id="debug-log-autoscroll"
+                checked={autoScroll}
+                onCheckedChange={(checked) => setAutoScroll(Boolean(checked))}
+              />
+              <label htmlFor="debug-log-autoscroll" className="cursor-pointer">
+                Auto-scroll to newest
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={handleClear}
+                disabled={!totalEntries}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Clear
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleExport}
+                disabled={!totalEntries}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export JSON
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {LEVELS.map((level) => {
+        {FILTERABLE_LEVELS.map((level) => {
           const active = levelFilters[level];
           const meta = LEVEL_META[level];
           return (
@@ -274,8 +291,8 @@ export function LogViewer(): React.ReactElement {
 
       <Separator />
 
-      <div ref={scrollRootRef} className="flex h-full min-h-0 flex-1">
-        <ScrollArea className="h-full w-full">
+      <div ref={scrollRootRef} className="flex h-full min-h-0 flex-1 pb-4">
+        <ScrollArea type="always" className="h-full w-full pr-2">
           <div className="space-y-3 pr-2">
             {filteredEntries.length === 0 ? (
               <div className="border-border/60 bg-muted/40 flex h-40 flex-col items-center justify-center gap-3 rounded-xl border border-dashed text-center">
@@ -317,11 +334,6 @@ export function LogViewer(): React.ReactElement {
                           <div className="flex flex-col">
                             <div className="text-foreground flex items-center gap-2 font-medium">
                               <span>{time}</span>
-                              {entry.isDebug && (
-                                <span className="text-purple-500 dark:text-purple-300">
-                                  Debug flagged
-                                </span>
-                              )}
                             </div>
 
                             {entry.source && (
@@ -399,8 +411,8 @@ function TruncatedSource({
     needsTruncate && !expanded ? `${source.slice(0, maxChars)}` : source;
 
   return (
-    <div className="text-muted-foreground mt-1 flex items-center gap-2 text-xs">
-      <div className="max-w-[60ch] truncate break-words">
+    <div className="text-muted-foreground mt-1 flex items-start gap-2 text-xs">
+      <div className="min-w-0 flex-1 break-words whitespace-pre-wrap">
         {highlight(display, query)}
         {needsTruncate && !expanded && (
           <span className="text-muted-foreground">…</span>
@@ -408,12 +420,13 @@ function TruncatedSource({
       </div>
       {needsTruncate && (
         <Button
-          size="sm"
+          size="icon"
           variant="ghost"
           onClick={() => setExpanded((s) => !s)}
-          className="h-6"
+          className="h-6 w-6 flex-shrink-0"
+          title={expanded ? "Collapse source" : "Expand source"}
         >
-          {expanded ? "Collapse" : "Expand"}
+          {expanded ? "−" : "+"}
         </Button>
       )}
     </div>

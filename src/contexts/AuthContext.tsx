@@ -84,7 +84,8 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
   const authAttemptRef = useRef(0);
   // Lock credential source during an active OAuth flow to avoid mismatches
   const lockedCredentialSourceRef = useRef<null | ("default" | "custom")>(null);
-  const { registerStateInspector: registerAuthStateInspector } = useDebug();
+  const { registerStateInspector: registerAuthStateInspector, recordEvent } =
+    useDebug();
   const authInspectorHandleRef =
     useRef<StateInspectorHandle<AuthDebugSnapshot> | null>(null);
   const authSnapshotRef = useRef<AuthDebugSnapshot | null>(null);
@@ -204,6 +205,15 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
             "https://s4.anilist.co/file/anilistcdn/user/avatar/large/default.png",
         }));
         setStatusMessage("Authentication complete!");
+        recordEvent({
+          type: "auth.login",
+          message: "User authenticated successfully",
+          level: "success",
+          metadata: {
+            username: viewer.name,
+            userId: viewer.id,
+          },
+        });
       } else {
         throw new Error("Failed to retrieve user profile");
       }
@@ -327,10 +337,16 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
         lockedCredentialSourceRef.current = null;
       } catch (err: unknown) {
         console.error("[AuthContext] Authentication error:", err);
-        toast.error(
-          err instanceof Error ? err.message : "Authentication failed",
-        );
-        setError(err instanceof Error ? err.message : "Authentication failed");
+        const msg =
+          err instanceof Error ? err.message : "Authentication failed";
+        recordEvent({
+          type: "auth.token-exchange",
+          message: `Token exchange failed: ${msg}`,
+          level: "error",
+          metadata: { error: msg },
+        });
+        toast.error(msg);
+        setError(msg);
         setStatusMessage(null);
         setIsLoading(false);
         setIsBrowserAuthFlow(false);
@@ -433,6 +449,11 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
 
   const refreshToken = async () => {
     try {
+      recordEvent({
+        type: "auth.refresh",
+        message: "User initiated token refresh",
+        level: "info",
+      });
       setIsLoading(true);
       setError(null);
       setStatusMessage("Refreshing authentication...");
@@ -472,6 +493,12 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     } catch (err: unknown) {
       console.error("[AuthContext] Token refresh error:", err);
       const msg = err instanceof Error ? err.message : "Token refresh failed";
+      recordEvent({
+        type: "auth.refresh",
+        message: `Token refresh failed: ${msg}`,
+        level: "error",
+        metadata: { error: msg },
+      });
       toast.error(msg);
       setError(msg);
       setStatusMessage(null);
@@ -483,6 +510,14 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
   // Login function
   const login = async (credentials: APICredentials) => {
     try {
+      recordEvent({
+        type: "auth.login",
+        message: "User initiated login",
+        level: "info",
+        metadata: {
+          credentialSource: credentials.source,
+        },
+      });
       setIsLoading(true);
       setError(null);
       setStatusMessage("Preparing authentication...");
@@ -546,11 +581,27 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
       setStatusMessage(null);
       setIsLoading(false);
       setIsBrowserAuthFlow(false);
+      recordEvent({
+        type: "auth.login",
+        message: "Login failed",
+        level: "error",
+        metadata: {
+          error: msg,
+        },
+      });
     }
   };
 
   // Logout function
   const logout = () => {
+    recordEvent({
+      type: "auth.logout",
+      message: "User logged out",
+      level: "info",
+      metadata: {
+        username: authState.username,
+      },
+    });
     storage.removeItem("authState");
     // Clear the previous state reference when logging out
     prevAuthStateRef.current = "";
@@ -563,6 +614,11 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
   };
 
   const cancelAuth = async () => {
+    recordEvent({
+      type: "auth.cancel",
+      message: "User cancelled authentication",
+      level: "warn",
+    });
     // Increment attempt id to invalidate any in-flight responses
     authAttemptRef.current += 1;
     lockedCredentialSourceRef.current = null;
@@ -598,6 +654,12 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
         );
         return;
       }
+      recordEvent({
+        type: "auth.credential-source-change",
+        message: `Credential source changed to: ${source}`,
+        level: "info",
+        metadata: { source },
+      });
       setAuthState((prevState) => ({
         ...prevState,
         credentialSource: source,
@@ -618,6 +680,16 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
       customCredentials.clientSecret !== clientSecret ||
       customCredentials.redirectUri !== redirectUri
     ) {
+      recordEvent({
+        type: "auth.custom-credentials-update",
+        message: "Custom API credentials updated",
+        level: "info",
+        metadata: {
+          hasClientId: !!clientId,
+          hasClientSecret: !!clientSecret,
+          redirectUri,
+        },
+      });
       setCustomCredentials({
         source: "custom",
         clientId,

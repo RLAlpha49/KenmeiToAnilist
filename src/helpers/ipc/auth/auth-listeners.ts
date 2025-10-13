@@ -135,7 +135,7 @@ async function performTokenExchange(params: {
 
   if (!response.ok) {
     const errorText = await response.text();
-    const redactedError = errorText.replace(
+    const redactedError = errorText.replaceAll(
       /client_secret[^&\s]*/gi,
       "client_secret=[REDACTED]",
     );

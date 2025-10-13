@@ -106,6 +106,9 @@ export function SettingsPage() {
     setStateInspectorEnabled,
     ipcViewerEnabled,
     setIpcViewerEnabled,
+    eventLoggerEnabled,
+    setEventLoggerEnabled,
+    recordEvent,
   } = useDebug();
 
   const prevCredentialSourceRef = useRef<"default" | "custom">(
@@ -157,6 +160,33 @@ export function SettingsPage() {
     isBeta: boolean;
   }>(null);
   const [updateError, setUpdateError] = useState<string | null>(null);
+
+  // Wrapper functions to log events when configs are saved
+  const saveSyncConfigWithEvent = (
+    config: SyncConfig,
+    changedField: string,
+  ) => {
+    recordEvent({
+      type: "settings.sync-config-update",
+      message: `Sync config updated: ${changedField}`,
+      level: "info",
+      metadata: { changedField, config },
+    });
+    saveSyncConfig(config);
+  };
+
+  const saveMatchConfigWithEvent = (
+    config: MatchConfig,
+    changedField: string,
+  ) => {
+    recordEvent({
+      type: "settings.match-config-update",
+      message: `Match config updated: ${changedField}`,
+      level: "info",
+      metadata: { changedField, config },
+    });
+    saveMatchConfig(config);
+  };
 
   // Handler for opening external links in the default browser
   const handleOpenExternal = (url: string) => (e: React.MouseEvent) => {
@@ -1137,7 +1167,7 @@ export function SettingsPage() {
                           ignoreOneShots: checked,
                         };
                         setMatchConfig(newConfig);
-                        saveMatchConfig(newConfig);
+                        saveMatchConfigWithEvent(newConfig, "ignoreOneShots");
                       }}
                     />
                   </div>
@@ -1168,7 +1198,10 @@ export function SettingsPage() {
                           ignoreAdultContent: checked,
                         };
                         setMatchConfig(newConfig);
-                        saveMatchConfig(newConfig);
+                        saveMatchConfigWithEvent(
+                          newConfig,
+                          "ignoreAdultContent",
+                        );
                       }}
                     />
                   </div>
@@ -1199,7 +1232,7 @@ export function SettingsPage() {
                           blurAdultContent: checked,
                         };
                         setMatchConfig(newConfig);
-                        saveMatchConfig(newConfig);
+                        saveMatchConfigWithEvent(newConfig, "blurAdultContent");
                       }}
                     />
                   </div>
@@ -1267,7 +1300,10 @@ export function SettingsPage() {
                           enableMangaDexSearch: checked,
                         };
                         setMatchConfig(newConfig);
-                        saveMatchConfig(newConfig);
+                        saveMatchConfigWithEvent(
+                          newConfig,
+                          "enableMangaDexSearch",
+                        );
                       }}
                     />
                   </div>
@@ -1328,7 +1364,7 @@ export function SettingsPage() {
                           autoPauseInactive: checked,
                         };
                         setSyncConfig(newConfig);
-                        saveSyncConfig(newConfig);
+                        saveSyncConfigWithEvent(newConfig, "autoPauseInactive");
                       }}
                     />
                   </div>
@@ -1360,7 +1396,10 @@ export function SettingsPage() {
                               autoPauseThreshold: Number(value),
                             };
                             setSyncConfig(newConfig);
-                            saveSyncConfig(newConfig);
+                            saveSyncConfigWithEvent(
+                              newConfig,
+                              "autoPauseThreshold",
+                            );
                           }
                         }}
                         disabled={!syncConfig.autoPauseInactive}
@@ -1404,7 +1443,10 @@ export function SettingsPage() {
                                 customAutoPauseThreshold: value,
                               };
                               setSyncConfig(newConfig);
-                              saveSyncConfig(newConfig);
+                              saveSyncConfigWithEvent(
+                                newConfig,
+                                "customAutoPauseThreshold",
+                              );
                             }
                           }}
                           disabled={!syncConfig.autoPauseInactive}
@@ -1448,7 +1490,10 @@ export function SettingsPage() {
                             preserveCompletedStatus: checked,
                           };
                           setSyncConfig(newConfig);
-                          saveSyncConfig(newConfig);
+                          saveSyncConfigWithEvent(
+                            newConfig,
+                            "preserveCompletedStatus",
+                          );
                         }}
                       />
                     </div>
@@ -1468,7 +1513,10 @@ export function SettingsPage() {
                             prioritizeAniListStatus: checked,
                           };
                           setSyncConfig(newConfig);
-                          saveSyncConfig(newConfig);
+                          saveSyncConfigWithEvent(
+                            newConfig,
+                            "prioritizeAniListStatus",
+                          );
                         }}
                       />
                     </div>
@@ -1488,7 +1536,10 @@ export function SettingsPage() {
                             prioritizeAniListProgress: checked,
                           };
                           setSyncConfig(newConfig);
-                          saveSyncConfig(newConfig);
+                          saveSyncConfigWithEvent(
+                            newConfig,
+                            "prioritizeAniListProgress",
+                          );
                         }}
                       />
                     </div>
@@ -1508,7 +1559,10 @@ export function SettingsPage() {
                             prioritizeAniListScore: checked,
                           };
                           setSyncConfig(newConfig);
-                          saveSyncConfig(newConfig);
+                          saveSyncConfigWithEvent(
+                            newConfig,
+                            "prioritizeAniListScore",
+                          );
                         }}
                       />
                     </div>
@@ -1541,7 +1595,7 @@ export function SettingsPage() {
                             setPrivate: checked,
                           };
                           setSyncConfig(newConfig);
-                          saveSyncConfig(newConfig);
+                          saveSyncConfigWithEvent(newConfig, "setPrivate");
                         }}
                       />
                     </div>
@@ -2040,6 +2094,39 @@ export function SettingsPage() {
                           Changes applied through the inspector update in-app
                           state immediately. Export values before experimenting
                           for easy rollback.
+                        </p>
+                      </div>
+                      <div className="border-border/60 bg-background/40 rounded-2xl border border-dashed p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-sm font-semibold">
+                                Event logger
+                              </h4>
+                            </div>
+                            <p className="text-muted-foreground text-xs">
+                              Review captured user actions and system events.
+                              Filter the timeline by event type or time window
+                              to trace workflows.
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground text-xs">
+                              Enable panel
+                            </span>
+                            <Switch
+                              id="event-logger-enabled"
+                              checked={eventLoggerEnabled}
+                              onCheckedChange={(checked) =>
+                                setEventLoggerEnabled(Boolean(checked))
+                              }
+                            />
+                          </div>
+                        </div>
+                        <p className="text-muted-foreground mt-3 text-xs">
+                          Events are recorded while debug mode is active.
+                          Disable the panel to stop tracking and clear the
+                          in-memory history.
                         </p>
                       </div>
                       <div className="border-border/60 bg-background/40 rounded-2xl border border-dashed p-4">
