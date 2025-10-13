@@ -174,24 +174,63 @@ export function RateLimitProvider({
     );
   }, [checkRateLimitStatus]);
 
-  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollIntervalRef = useRef<number>(1000); // Start with 1 second
+
+  // Adaptive polling: faster when rate-limited, slower when not
+  const getNextPollInterval = useCallback(() => {
+    if (rateLimitStateRef.current.isRateLimited) {
+      // Poll every 1 second when rate-limited (need to know when it clears)
+      return 1000;
+    } else {
+      // Gradually increase interval when not rate-limited, max 5 seconds
+      const current = pollIntervalRef.current;
+      return Math.min(current * 1.2, 5000);
+    }
+  }, []);
+
+  const schedulePoll = useCallback(() => {
+    if (pollTimerRef.current) return;
+
+    const interval = getNextPollInterval();
+    pollIntervalRef.current = interval;
+
+    pollTimerRef.current = setTimeout(() => {
+      pollTimerRef.current = null;
+      checkRateLimitStatus()
+        .then(() => {
+          // Schedule next poll
+          schedulePoll();
+        })
+        .catch((err) => {
+          console.error("[RateLimitContext] checkRateLimitStatus error:", err);
+          // Schedule next poll even on error
+          schedulePoll();
+        });
+    }, interval);
+
+    console.debug(`[RateLimitContext] 🔄 Scheduled next poll in ${interval}ms`);
+  }, [checkRateLimitStatus, getNextPollInterval]);
 
   const startPolling = useCallback(() => {
     if (pollTimerRef.current) return;
-    pollTimerRef.current = setInterval(() => {
-      checkRateLimitStatus().catch((err) =>
-        console.error("[RateLimitContext] checkRateLimitStatus error:", err),
-      );
-    }, 3000);
-    checkRateLimitStatus().catch((err) =>
-      console.error("[RateLimitContext] checkRateLimitStatus error:", err),
-    );
-  }, [checkRateLimitStatus]);
+    console.debug("[RateLimitContext] ▶️ Starting adaptive polling");
+    pollIntervalRef.current = 1000; // Reset to fast polling
+    // Immediate check
+    checkRateLimitStatus()
+      .then(() => schedulePoll())
+      .catch((err) => {
+        console.error("[RateLimitContext] Initial check error:", err);
+        schedulePoll();
+      });
+  }, [checkRateLimitStatus, schedulePoll]);
 
   const stopPolling = useCallback(() => {
     if (!pollTimerRef.current) return;
-    clearInterval(pollTimerRef.current);
+    console.debug("[RateLimitContext] ⏹️ Stopping polling");
+    clearTimeout(pollTimerRef.current);
     pollTimerRef.current = null;
+    pollIntervalRef.current = 1000; // Reset interval
   }, []);
 
   const handleMatchingState = useCallback(
