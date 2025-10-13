@@ -78,6 +78,308 @@ function eventMatchesSearch(entry: DebugEventEntry, query: string) {
   return haystacks.some((segment) => segment.toLowerCase().includes(target));
 }
 
+interface EventLoggerHeaderProps {
+  filteredCount: number;
+  totalCount: number;
+  maxEntries: number;
+  availableTypesCount: number;
+  activeTypesCount: number;
+}
+
+function EventLoggerHeader({
+  filteredCount,
+  totalCount,
+  maxEntries,
+  availableTypesCount,
+  activeTypesCount,
+}: Readonly<EventLoggerHeaderProps>) {
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1">
+        <h2 className="text-lg font-semibold">Event timeline</h2>
+        <p className="text-muted-foreground text-sm">
+          Track user actions and application events. Use filters to focus on
+          relevant time windows or event categories.
+        </p>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <Badge variant="outline" className="border-border/60 bg-muted/40">
+            {filteredCount} showing
+          </Badge>
+          <Badge variant="outline" className="border-border/60 bg-muted/40">
+            {totalCount} captured (max {maxEntries})
+          </Badge>
+          <Badge variant="outline" className="border-border/60 bg-muted/40">
+            {availableTypesCount} type
+            {availableTypesCount === 1 ? "" : "s"}
+          </Badge>
+          {activeTypesCount > 0 && (
+            <Badge variant="outline" className="border-border/60 bg-muted/40">
+              {activeTypesCount} type filter
+              {activeTypesCount === 1 ? "" : "s"}
+            </Badge>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface FilterControlsProps {
+  availableTypes: string[];
+  activeTypes: string[];
+  onTypesChange: (types: string[]) => void;
+  searchTerm: string;
+  onSearchChange: (term: string) => void;
+  searchInputId: string;
+  onResetFilters: () => void;
+  onExport: () => void;
+  onClear: () => void;
+}
+
+function FilterControls({
+  availableTypes,
+  activeTypes,
+  onTypesChange,
+  searchTerm,
+  onSearchChange,
+  searchInputId,
+  onResetFilters,
+  onExport,
+  onClear,
+}: Readonly<FilterControlsProps>) {
+  return (
+    <div className="bg-muted/20 rounded-2xl p-4">
+      <div className="grid grid-cols-2 gap-4">
+        <TypeFilter
+          availableTypes={availableTypes}
+          activeTypes={activeTypes}
+          onTypesChange={onTypesChange}
+        />
+        <SearchFilter
+          searchTerm={searchTerm}
+          onSearchChange={onSearchChange}
+          searchInputId={searchInputId}
+        />
+      </div>
+      <ActionButtons
+        onResetFilters={onResetFilters}
+        onExport={onExport}
+        onClear={onClear}
+      />
+    </div>
+  );
+}
+
+interface TypeFilterProps {
+  availableTypes: string[];
+  activeTypes: string[];
+  onTypesChange: (types: string[]) => void;
+}
+
+function TypeFilter({
+  availableTypes,
+  activeTypes,
+  onTypesChange,
+}: Readonly<TypeFilterProps>) {
+  const handleToggleType = (type: string) => {
+    onTypesChange(
+      activeTypes.includes(type)
+        ? activeTypes.filter((value) => value !== type)
+        : [...activeTypes, type],
+    );
+  };
+
+  return (
+    <div className="space-y-2">
+      <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+        Event types
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="rounded-full"
+            >
+              <Filter className="mr-2 h-4 w-4" />
+              {activeTypes.length
+                ? `${activeTypes.length} selected`
+                : "All event types"}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-64">
+            <DropdownMenuItem
+              onSelect={() => onTypesChange([])}
+              className="font-semibold"
+            >
+              Clear selection
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {availableTypes.map((type) => (
+              <DropdownMenuCheckboxItem
+                key={type}
+                checked={activeTypes.includes(type)}
+                onCheckedChange={() => handleToggleType(type)}
+              >
+                {type}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  );
+}
+
+interface SearchFilterProps {
+  searchTerm: string;
+  onSearchChange: (term: string) => void;
+  searchInputId: string;
+}
+
+function SearchFilter({
+  searchTerm,
+  onSearchChange,
+  searchInputId,
+}: Readonly<SearchFilterProps>) {
+  return (
+    <div className="space-y-2">
+      <label
+        className="text-muted-foreground text-xs font-semibold tracking-wide uppercase"
+        htmlFor={searchInputId}
+      >
+        Search
+      </label>
+      <div className="relative">
+        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+        <Input
+          id={searchInputId}
+          value={searchTerm}
+          onChange={(event) => onSearchChange(event.target.value)}
+          placeholder="Filter by message, source, metadata"
+          className="pl-9"
+        />
+      </div>
+    </div>
+  );
+}
+
+interface ActionButtonsProps {
+  onResetFilters: () => void;
+  onExport: () => void;
+  onClear: () => void;
+}
+
+function ActionButtons({
+  onResetFilters,
+  onExport,
+  onClear,
+}: Readonly<ActionButtonsProps>) {
+  return (
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={onResetFilters}
+        >
+          <RefreshCw className="mr-2 h-4 w-4" /> Reset filters
+        </Button>
+        <Button type="button" size="sm" variant="outline" onClick={onExport}>
+          <Download className="mr-2 h-4 w-4" /> Export filtered
+        </Button>
+      </div>
+      <Button
+        type="button"
+        size="sm"
+        variant="destructive"
+        onClick={onClear}
+        className="flex items-center"
+      >
+        <Trash2 className="mr-2 h-4 w-4" /> Clear log
+      </Button>
+    </div>
+  );
+}
+
+interface PaginationControlsProps {
+  visibleCount: number;
+  filteredCount: number;
+  totalVisible: number;
+  totalSorted: number;
+  defaultCount: number;
+  onLoadMore: () => void;
+  onResetWindow: () => void;
+}
+
+function PaginationControls({
+  visibleCount,
+  filteredCount,
+  totalVisible,
+  totalSorted,
+  defaultCount,
+  onLoadMore,
+  onResetWindow,
+}: Readonly<PaginationControlsProps>) {
+  return (
+    <div className="text-muted-foreground flex items-center justify-between text-xs">
+      <span>
+        Showing {visibleCount} of {filteredCount} filtered events
+      </span>
+      <div className="flex items-center gap-2">
+        {totalVisible < totalSorted && (
+          <Button size="sm" variant="outline" onClick={onLoadMore}>
+            Load more
+          </Button>
+        )}
+        {totalVisible !== defaultCount && (
+          <Button size="sm" variant="ghost" onClick={onResetWindow}>
+            Reset window
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface EventListProps {
+  events: DebugEventEntry[];
+}
+
+function EventList({ events }: Readonly<EventListProps>) {
+  if (events.length === 0) {
+    return <EmptyEventState />;
+  }
+
+  return (
+    <ScrollArea type="always" className="h-full max-h-[25vh] w-full">
+      <div className="space-y-3 pr-4">
+        {events.map((entry) => (
+          <EventCard key={entry.id} entry={entry} />
+        ))}
+      </div>
+    </ScrollArea>
+  );
+}
+
+function EmptyEventState() {
+  return (
+    <ScrollArea type="always" className="h-full max-h-[25vh] w-full">
+      <div className="space-y-3 pr-4">
+        <div className="border-border/60 bg-muted/20 flex h-40 flex-col items-center justify-center gap-3 rounded-xl border border-dashed text-center">
+          <p className="font-medium">No events to display</p>
+          <p className="text-muted-foreground text-sm">
+            Adjust filters or wait for new events to be captured.
+          </p>
+        </div>
+      </div>
+    </ScrollArea>
+  );
+}
+
 export function EventLogger(): React.ReactElement {
   const { eventLogEntries, clearEventLog, maxEventLogEntries, recordEvent } =
     useDebug();
@@ -207,171 +509,39 @@ export function EventLogger(): React.ReactElement {
 
   return (
     <div className="flex h-full flex-col gap-4">
-      <div className="space-y-4">
-        <div className="space-y-1">
-          <h2 className="text-lg font-semibold">Event timeline</h2>
-          <p className="text-muted-foreground text-sm">
-            Track user actions and application events. Use filters to focus on
-            relevant time windows or event categories.
-          </p>
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <Badge variant="outline" className="border-border/60 bg-muted/40">
-              {filteredEvents.length} showing
-            </Badge>
-            <Badge variant="outline" className="border-border/60 bg-muted/40">
-              {eventLogEntries.length} captured (max {maxEventLogEntries})
-            </Badge>
-            <Badge variant="outline" className="border-border/60 bg-muted/40">
-              {availableTypes.length} type
-              {availableTypes.length === 1 ? "" : "s"}
-            </Badge>
-            {activeTypes.length ? (
-              <Badge variant="outline" className="border-border/60 bg-muted/40">
-                {activeTypes.length} type filter
-                {activeTypes.length === 1 ? "" : "s"}
-              </Badge>
-            ) : null}
-          </div>
-        </div>
+      <EventLoggerHeader
+        filteredCount={filteredEvents.length}
+        totalCount={eventLogEntries.length}
+        maxEntries={maxEventLogEntries}
+        availableTypesCount={availableTypes.length}
+        activeTypesCount={activeTypes.length}
+      />
 
-        <div className="bg-muted/20 rounded-2xl p-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-                Event types
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="rounded-full"
-                    >
-                      <Filter className="mr-2 h-4 w-4" />
-                      {activeTypes.length
-                        ? `${activeTypes.length} selected`
-                        : "All event types"}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-64">
-                    <DropdownMenuItem
-                      onSelect={() => setActiveTypes([])}
-                      className="font-semibold"
-                    >
-                      Clear selection
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    {availableTypes.map((type) => (
-                      <DropdownMenuCheckboxItem
-                        key={type}
-                        checked={activeTypes.includes(type)}
-                        onCheckedChange={() =>
-                          setActiveTypes((prev) =>
-                            prev.includes(type)
-                              ? prev.filter((value) => value !== type)
-                              : [...prev, type],
-                          )
-                        }
-                      >
-                        {type}
-                      </DropdownMenuCheckboxItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label
-                className="text-muted-foreground text-xs font-semibold tracking-wide uppercase"
-                htmlFor={searchInputId}
-              >
-                Search
-              </label>
-              <div className="relative">
-                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-                <Input
-                  id={searchInputId}
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Filter by message, source, metadata"
-                  className="pl-9"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={resetFilters}
-              >
-                <RefreshCw className="mr-2 h-4 w-4" /> Reset filters
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={handleExport}
-              >
-                <Download className="mr-2 h-4 w-4" /> Export filtered
-              </Button>
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="destructive"
-              onClick={handleClear}
-              className="flex items-center"
-            >
-              <Trash2 className="mr-2 h-4 w-4" /> Clear log
-            </Button>
-          </div>
-        </div>
-      </div>
+      <FilterControls
+        availableTypes={availableTypes}
+        activeTypes={activeTypes}
+        onTypesChange={setActiveTypes}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchInputId={searchInputId}
+        onResetFilters={resetFilters}
+        onExport={handleExport}
+        onClear={handleClear}
+      />
 
       <Separator />
 
-      <div className="text-muted-foreground flex items-center justify-between text-xs">
-        <span>
-          Showing {visibleEvents.length} of {filteredEvents.length} filtered
-          events
-        </span>
-        <div className="flex items-center gap-2">
-          {visibleCount < sortedEvents.length && (
-            <Button size="sm" variant="outline" onClick={loadMore}>
-              Load more
-            </Button>
-          )}
-          {visibleCount !== DEFAULT_VISIBLE_COUNT && (
-            <Button size="sm" variant="ghost" onClick={resetVisibleWindow}>
-              Reset window
-            </Button>
-          )}
-        </div>
-      </div>
+      <PaginationControls
+        visibleCount={visibleEvents.length}
+        filteredCount={filteredEvents.length}
+        totalVisible={visibleCount}
+        totalSorted={sortedEvents.length}
+        defaultCount={DEFAULT_VISIBLE_COUNT}
+        onLoadMore={loadMore}
+        onResetWindow={resetVisibleWindow}
+      />
 
-      <ScrollArea type="always" className="h-full max-h-[25vh] w-full">
-        <div className="space-y-3 pr-4">
-          {visibleEvents.length === 0 ? (
-            <div className="border-border/60 bg-muted/20 flex h-40 flex-col items-center justify-center gap-3 rounded-xl border border-dashed text-center">
-              <p className="font-medium">No events to display</p>
-              <p className="text-muted-foreground text-sm">
-                Adjust filters or wait for new events to be captured.
-              </p>
-            </div>
-          ) : (
-            visibleEvents.map((entry) => (
-              <EventCard key={entry.id} entry={entry} />
-            ))
-          )}
-        </div>
-      </ScrollArea>
+      <EventList events={visibleEvents} />
     </div>
   );
 }
@@ -382,6 +552,7 @@ interface EventCardProps {
 
 function EventCard({ entry }: Readonly<EventCardProps>) {
   const [metadataExpanded, setMetadataExpanded] = useState(false);
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(JSON.stringify(entry, null, 2));
@@ -405,107 +576,185 @@ function EventCard({ entry }: Readonly<EventCardProps>) {
     }
   };
 
-  const metadataString = entry.metadata
-    ? JSON.stringify(entry.metadata, null, 2)
-    : null;
+  return (
+    <div className="border-border/60 bg-background/80 group hover:border-primary/40 rounded-xl border p-4 shadow-sm transition hover:shadow-md">
+      <EventCardHeader entry={entry} onCopy={handleCopy} />
+      <EventCardBody
+        entry={entry}
+        metadataExpanded={metadataExpanded}
+        onToggleMetadata={() => setMetadataExpanded((value) => !value)}
+        onMetadataCopy={handleMetadataCopy}
+      />
+    </div>
+  );
+}
 
+interface EventCardHeaderProps {
+  entry: DebugEventEntry;
+  onCopy: () => void;
+}
+
+function EventCardHeader({ entry, onCopy }: Readonly<EventCardHeaderProps>) {
   const levelMeta = entry.level ? LEVEL_META[entry.level] : null;
 
   return (
-    <div className="border-border/60 bg-background/80 group hover:border-primary/40 rounded-xl border p-4 shadow-sm transition hover:shadow-md">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge
-            variant="outline"
-            className="border-primary/40 bg-primary/10 text-primary"
-          >
-            {entry.type}
-          </Badge>
-          {entry.tags?.length ? (
-            <Badge
-              variant="outline"
-              className="border-slate-400/40 bg-slate-400/10 text-slate-500"
-            >
-              <Tags className="mr-1 h-3 w-3" /> {entry.tags.join(", ")}
-            </Badge>
-          ) : null}
-          {levelMeta ? (
-            <Badge
-              variant="outline"
-              className={cn("flex items-center gap-1", levelMeta.tone)}
-            >
-              {levelMeta.label}
-            </Badge>
-          ) : null}
-        </div>
-        <div className="text-muted-foreground flex items-center gap-2 text-sm">
-          {formatTimestamp(entry.timestamp)}
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={handleCopy}
-            className="h-8 w-8"
-            title="Copy event JSON"
-          >
-            <Copy className="h-4 w-4" />
-          </Button>
-        </div>
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+      <EventBadges entry={entry} levelMeta={levelMeta} />
+      <div className="text-muted-foreground flex items-center gap-2 text-sm">
+        {formatTimestamp(entry.timestamp)}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onCopy}
+          className="h-8 w-8"
+          title="Copy event JSON"
+        >
+          <Copy className="h-4 w-4" />
+        </Button>
       </div>
+    </div>
+  );
+}
 
-      <div className="mt-3 space-y-2 text-sm">
-        <p className="font-medium">{entry.message}</p>
-        <dl className="text-muted-foreground grid gap-2 text-xs sm:grid-cols-2">
-          {entry.source ? (
-            <div>
-              <dt className="text-[0.6rem] tracking-wide uppercase">Source</dt>
-              <dd>{entry.source}</dd>
-            </div>
-          ) : null}
-          {entry.context ? (
-            <div>
-              <dt className="text-[0.6rem] tracking-wide uppercase">Context</dt>
-              <dd>{entry.context}</dd>
-            </div>
-          ) : null}
-        </dl>
-        {entry.metadata ? (
-          <div className="bg-muted/40 rounded-lg p-1">
-            <div className="flex items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={() => setMetadataExpanded((value) => !value)}
-                className="text-left text-xs font-medium tracking-wide uppercase"
-              >
-                <span className="flex items-center gap-2">
-                  <ChevronDown
-                    className={cn(
-                      "h-4 w-4 transition-transform",
-                      metadataExpanded ? "rotate-360" : "rotate-270",
-                    )}
-                  />
-                  Metadata
-                </span>
-              </button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={handleMetadataCopy}
-                className="h-7 w-7"
-                title="Copy metadata JSON"
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-            {metadataExpanded ? (
-              <pre className="text-muted-foreground bg-background/70 mt-3 overflow-x-auto rounded-md p-3 text-xs">
-                {metadataString}
-              </pre>
-            ) : null}
-          </div>
-        ) : null}
+interface EventBadgesProps {
+  entry: DebugEventEntry;
+  levelMeta: { label: string; tone: string } | null;
+}
+
+function EventBadges({ entry, levelMeta }: Readonly<EventBadgesProps>) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Badge
+        variant="outline"
+        className="border-primary/40 bg-primary/10 text-primary"
+      >
+        {entry.type}
+      </Badge>
+      {entry.tags?.length && (
+        <Badge
+          variant="outline"
+          className="border-slate-400/40 bg-slate-400/10 text-slate-500"
+        >
+          <Tags className="mr-1 h-3 w-3" /> {entry.tags.join(", ")}
+        </Badge>
+      )}
+      {levelMeta && (
+        <Badge
+          variant="outline"
+          className={cn("flex items-center gap-1", levelMeta.tone)}
+        >
+          {levelMeta.label}
+        </Badge>
+      )}
+    </div>
+  );
+}
+
+interface EventCardBodyProps {
+  entry: DebugEventEntry;
+  metadataExpanded: boolean;
+  onToggleMetadata: () => void;
+  onMetadataCopy: () => void;
+}
+
+function EventCardBody({
+  entry,
+  metadataExpanded,
+  onToggleMetadata,
+  onMetadataCopy,
+}: Readonly<EventCardBodyProps>) {
+  return (
+    <div className="mt-3 space-y-2 text-sm">
+      <p className="font-medium">{entry.message}</p>
+      <EventDetails entry={entry} />
+      {entry.metadata && (
+        <EventMetadata
+          metadata={entry.metadata}
+          expanded={metadataExpanded}
+          onToggle={onToggleMetadata}
+          onCopy={onMetadataCopy}
+        />
+      )}
+    </div>
+  );
+}
+
+interface EventDetailsProps {
+  entry: DebugEventEntry;
+}
+
+function EventDetails({ entry }: Readonly<EventDetailsProps>) {
+  const hasDetails = entry.source || entry.context;
+  if (!hasDetails) return null;
+
+  return (
+    <dl className="text-muted-foreground grid gap-2 text-xs sm:grid-cols-2">
+      {entry.source && (
+        <div>
+          <dt className="text-[0.6rem] tracking-wide uppercase">Source</dt>
+          <dd>{entry.source}</dd>
+        </div>
+      )}
+      {entry.context && (
+        <div>
+          <dt className="text-[0.6rem] tracking-wide uppercase">Context</dt>
+          <dd>{entry.context}</dd>
+        </div>
+      )}
+    </dl>
+  );
+}
+
+interface EventMetadataProps {
+  metadata: Record<string, unknown>;
+  expanded: boolean;
+  onToggle: () => void;
+  onCopy: () => void;
+}
+
+function EventMetadata({
+  metadata,
+  expanded,
+  onToggle,
+  onCopy,
+}: Readonly<EventMetadataProps>) {
+  const metadataString = JSON.stringify(metadata, null, 2);
+
+  return (
+    <div className="bg-muted/40 rounded-lg p-1">
+      <div className="flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="text-left text-xs font-medium tracking-wide uppercase"
+        >
+          <span className="flex items-center gap-2">
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 transition-transform",
+                expanded ? "rotate-360" : "rotate-270",
+              )}
+            />
+            Metadata
+          </span>
+        </button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onCopy}
+          className="h-7 w-7"
+          title="Copy metadata JSON"
+        >
+          <Copy className="h-4 w-4" />
+        </Button>
       </div>
+      {expanded && (
+        <pre className="text-muted-foreground bg-background/70 mt-3 overflow-x-auto rounded-md p-3 text-xs">
+          {metadataString}
+        </pre>
+      )}
     </div>
   );
 }

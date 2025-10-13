@@ -291,109 +291,218 @@ export function LogViewer(): React.ReactElement {
 
       <Separator />
 
-      <div ref={scrollRootRef} className="flex h-full min-h-0 flex-1 pb-4">
-        <ScrollArea type="always" className="h-full w-full pr-2">
-          <div className="space-y-3 pr-2">
-            {filteredEntries.length === 0 ? (
-              <div className="border-border/60 bg-muted/40 flex h-40 flex-col items-center justify-center gap-3 rounded-xl border border-dashed text-center">
-                <Bug className="text-muted-foreground h-6 w-6" />
-                <div className="space-y-1">
-                  <p className="font-medium">No log entries to display</p>
-                  <p className="text-muted-foreground text-sm">
-                    Adjust your filters or wait for new logs to be captured.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              filteredEntries.map((entry) => {
-                const visibleLevel = toVisibleLevel(entry.level) ?? "log";
-                const meta = LEVEL_META[visibleLevel];
-                const { time } = formatTimestamp(entry.timestamp);
-                const hasDetails = entry.details.length > 0;
+      <LogEntriesContainer
+        scrollRootRef={scrollRootRef}
+        filteredEntries={filteredEntries}
+        searchTerm={searchTerm}
+        onCopyEntry={handleCopyEntry}
+      />
+    </div>
+  );
+}
 
-                return (
-                  <div
-                    key={entry.id}
-                    className="border-border/60 bg-background/90 hover:border-primary/30 min-w-0 rounded-lg border p-3 shadow-sm transition"
-                  >
-                    <div className="flex flex-col gap-3 md:grid md:grid-cols-[auto,1fr,auto] md:items-start md:gap-4">
-                      <div className="text-muted-foreground flex min-w-0 items-start gap-2 text-xs">
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "bg-muted/60 border-transparent font-semibold",
-                            meta.tone,
-                          )}
-                        >
-                          <span className="flex items-center gap-1">
-                            {meta.icon}
-                            {meta.label}
-                          </span>
-                        </Badge>
-                        <div className="flex flex-col gap-1 leading-tight">
-                          <div className="flex flex-col">
-                            <div className="text-foreground flex items-center gap-2 font-medium">
-                              <span>{time}</span>
-                            </div>
+interface LogEntriesContainerProps {
+  scrollRootRef: React.RefObject<HTMLDivElement | null>;
+  filteredEntries: LogEntry[];
+  searchTerm: string;
+  onCopyEntry: (entry: LogEntry) => void;
+}
 
-                            {entry.source && (
-                              <TruncatedSource
-                                source={entry.source}
-                                query={searchTerm}
-                              />
-                            )}
-                          </div>
-                        </div>
-                      </div>
+function LogEntriesContainer({
+  scrollRootRef,
+  filteredEntries,
+  searchTerm,
+  onCopyEntry,
+}: Readonly<LogEntriesContainerProps>) {
+  return (
+    <div ref={scrollRootRef} className="flex h-full min-h-0 flex-1 pb-4">
+      <ScrollArea type="always" className="h-full w-full pr-2">
+        <div className="space-y-3 pr-2">
+          {filteredEntries.length === 0 ? (
+            <EmptyLogState />
+          ) : (
+            filteredEntries.map((entry) => (
+              <LogEntryCard
+                key={entry.id}
+                entry={entry}
+                searchTerm={searchTerm}
+                onCopyEntry={onCopyEntry}
+              />
+            ))
+          )}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
 
-                      <div className="min-w-0 space-y-2 text-sm">
-                        <div className="flex items-center justify-between font-mono text-[13px] leading-relaxed">
-                          <div className="min-w-0 pr-2 break-words whitespace-pre-wrap">
-                            {highlight(
-                              entry.message || "(no message)",
-                              searchTerm,
-                            )}
-                          </div>
-                          <div className="text-muted-foreground flex flex-shrink-0 items-center justify-end gap-2 text-xs">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => handleCopyEntry(entry)}
-                              title="Copy entry JSON"
-                              className="h-6 w-6"
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-
-                        {hasDetails && (
-                          <details className="border-border/60 bg-muted/30 text-muted-foreground rounded-md border border-dashed p-2 text-xs">
-                            <summary className="text-foreground cursor-pointer select-none">
-                              View additional details ({entry.details.length})
-                            </summary>
-                            <div className="mt-2 space-y-2">
-                              {entry.details.map((detail, index) => (
-                                <pre
-                                  key={`${entry.id}-detail-${index}`}
-                                  className="bg-background/80 rounded p-2 text-[11px] break-words whitespace-pre-wrap"
-                                >
-                                  {highlight(detail, searchTerm)}
-                                </pre>
-                              ))}
-                            </div>
-                          </details>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </ScrollArea>
+function EmptyLogState() {
+  return (
+    <div className="border-border/60 bg-muted/40 flex h-40 flex-col items-center justify-center gap-3 rounded-xl border border-dashed text-center">
+      <Bug className="text-muted-foreground h-6 w-6" />
+      <div className="space-y-1">
+        <p className="font-medium">No log entries to display</p>
+        <p className="text-muted-foreground text-sm">
+          Adjust your filters or wait for new logs to be captured.
+        </p>
       </div>
     </div>
+  );
+}
+
+interface LogEntryCardProps {
+  entry: LogEntry;
+  searchTerm: string;
+  onCopyEntry: (entry: LogEntry) => void;
+}
+
+function LogEntryCard({
+  entry,
+  searchTerm,
+  onCopyEntry,
+}: Readonly<LogEntryCardProps>) {
+  const visibleLevel = toVisibleLevel(entry.level) ?? "log";
+  const meta = LEVEL_META[visibleLevel];
+  const { time } = formatTimestamp(entry.timestamp);
+  const hasDetails = entry.details.length > 0;
+
+  return (
+    <div className="border-border/60 bg-background/90 hover:border-primary/30 min-w-0 rounded-lg border p-3 shadow-sm transition">
+      <div className="flex flex-col gap-3 md:grid md:grid-cols-[auto,1fr,auto] md:items-start md:gap-4">
+        <LogEntryHeader
+          meta={meta}
+          time={time}
+          source={entry.source}
+          searchTerm={searchTerm}
+        />
+        <LogEntryContent
+          entry={entry}
+          searchTerm={searchTerm}
+          hasDetails={hasDetails}
+          onCopyEntry={onCopyEntry}
+        />
+      </div>
+    </div>
+  );
+}
+
+interface LogEntryHeaderProps {
+  meta: { label: string; icon: React.ReactNode; tone: string };
+  time: string;
+  source?: string;
+  searchTerm: string;
+}
+
+function LogEntryHeader({
+  meta,
+  time,
+  source,
+  searchTerm,
+}: Readonly<LogEntryHeaderProps>) {
+  return (
+    <div className="text-muted-foreground flex min-w-0 items-start gap-2 text-xs">
+      <Badge
+        variant="outline"
+        className={cn(
+          "bg-muted/60 border-transparent font-semibold",
+          meta.tone,
+        )}
+      >
+        <span className="flex items-center gap-1">
+          {meta.icon}
+          {meta.label}
+        </span>
+      </Badge>
+      <div className="flex flex-col gap-1 leading-tight">
+        <div className="flex flex-col">
+          <div className="text-foreground flex items-center gap-2 font-medium">
+            <span>{time}</span>
+          </div>
+          {source && <TruncatedSource source={source} query={searchTerm} />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface LogEntryContentProps {
+  entry: LogEntry;
+  searchTerm: string;
+  hasDetails: boolean;
+  onCopyEntry: (entry: LogEntry) => void;
+}
+
+function LogEntryContent({
+  entry,
+  searchTerm,
+  hasDetails,
+  onCopyEntry,
+}: Readonly<LogEntryContentProps>) {
+  return (
+    <div className="min-w-0 space-y-2 text-sm">
+      <LogMessage
+        entry={entry}
+        searchTerm={searchTerm}
+        onCopyEntry={onCopyEntry}
+      />
+      {hasDetails && <LogDetails entry={entry} searchTerm={searchTerm} />}
+    </div>
+  );
+}
+
+interface LogMessageProps {
+  entry: LogEntry;
+  searchTerm: string;
+  onCopyEntry: (entry: LogEntry) => void;
+}
+
+function LogMessage({
+  entry,
+  searchTerm,
+  onCopyEntry,
+}: Readonly<LogMessageProps>) {
+  return (
+    <div className="flex items-center justify-between font-mono text-[13px] leading-relaxed">
+      <div className="min-w-0 pr-2 break-words whitespace-pre-wrap">
+        {highlight(entry.message || "(no message)", searchTerm)}
+      </div>
+      <div className="text-muted-foreground flex flex-shrink-0 items-center justify-end gap-2 text-xs">
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => onCopyEntry(entry)}
+          title="Copy entry JSON"
+          className="h-6 w-6"
+        >
+          <Copy className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+interface LogDetailsProps {
+  entry: LogEntry;
+  searchTerm: string;
+}
+
+function LogDetails({ entry, searchTerm }: Readonly<LogDetailsProps>) {
+  return (
+    <details className="border-border/60 bg-muted/30 text-muted-foreground rounded-md border border-dashed p-2 text-xs">
+      <summary className="text-foreground cursor-pointer select-none">
+        View additional details ({entry.details.length})
+      </summary>
+      <div className="mt-2 space-y-2">
+        {entry.details.map((detail, index) => (
+          <pre
+            key={`${entry.id}-detail-${index}`}
+            className="bg-background/80 rounded p-2 text-[11px] break-words whitespace-pre-wrap"
+          >
+            {highlight(detail, searchTerm)}
+          </pre>
+        ))}
+      </div>
+    </details>
   );
 }
 
