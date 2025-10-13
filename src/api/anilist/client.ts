@@ -17,6 +17,7 @@ import {
   GET_USER_MANGA_LIST,
   GET_VIEWER,
 } from "./queries";
+import { debounce } from "@/utils/debounce";
 
 // Error interfaces
 interface HttpError extends Error {
@@ -109,17 +110,36 @@ function initializeSearchCache(): void {
 
 /**
  * Save the search cache to localStorage for persistence
+ * Internal function - not debounced
  */
-function persistSearchCache(): void {
+function persistSearchCacheInternal(): void {
   try {
     const storageKey = "anilist_search_cache";
-    localStorage.setItem(storageKey, JSON.stringify(searchCache));
+    const serialized = JSON.stringify(searchCache);
+    localStorage.setItem(storageKey, serialized);
+    console.debug(
+      `[AniListClient] 💾 Persisted search cache (${serialized.length} bytes)`,
+    );
   } catch (error) {
     console.error(
       "[AniListClient] ❌ Error saving search cache to localStorage:",
       error,
     );
   }
+}
+
+/**
+ * Debounced version of persistSearchCache to batch writes
+ * Waits 2 seconds after last call before writing to localStorage
+ */
+const persistSearchCache = debounce(persistSearchCacheInternal, 2000);
+
+/**
+ * Immediately persist the search cache (bypasses debounce)
+ * Use this for critical saves like clearing cache or app shutdown
+ */
+function persistSearchCacheImmediate(): void {
+  persistSearchCacheInternal();
 }
 
 // Initialize the cache when the module loads
@@ -692,8 +712,8 @@ export function clearSearchCache(searchQuery?: string): void {
     console.info("[AniListClient] 🗑️ Cleared all search cache");
   }
 
-  // Update localStorage with the cleared cache
-  persistSearchCache();
+  // Update localStorage with the cleared cache immediately (critical operation)
+  persistSearchCacheImmediate();
 
   // Also clear the cache in the main process
   globalThis.electronAPI.anilist
@@ -1273,6 +1293,7 @@ function processMediaListCollectionChunk(
 export const __test__ = {
   initializeSearchCache,
   persistSearchCache,
+  persistSearchCacheImmediate,
   generateCacheKey,
   isCacheValid,
   searchCache,
