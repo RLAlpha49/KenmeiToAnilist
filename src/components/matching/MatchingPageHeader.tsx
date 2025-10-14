@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   RotateCcw,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Badge } from "../ui/badge";
 
 interface Props {
@@ -31,6 +32,13 @@ interface Props {
   pendingBacklog: number;
 }
 
+type HighlightStat = {
+  label: string;
+  value: number;
+  icon: LucideIcon;
+  accent: string;
+};
+
 export function MatchingPageHeader({
   headerVariants,
   matchResultsLength,
@@ -42,31 +50,37 @@ export function MatchingPageHeader({
   statusSummary,
   pendingBacklog,
 }: Readonly<Props>) {
-  const highlightStats = [
-    {
-      label: "Matched",
-      value: statusSummary.matched,
-      icon: CheckCircle2,
-      accent:
-        "bg-gradient-to-br from-emerald-500/15 via-emerald-500/10 to-transparent text-emerald-600 dark:text-emerald-300",
-    },
-    {
-      label: "Manual",
-      value: statusSummary.manual,
-      icon: Wand2,
-      accent:
-        "bg-gradient-to-br from-sky-500/15 via-sky-500/10 to-transparent text-sky-600 dark:text-sky-300",
-    },
-    {
-      label: "Pending",
-      value: statusSummary.pending,
-      icon: Clock3,
-      accent:
-        "bg-gradient-to-br from-amber-500/15 via-amber-500/10 to-transparent text-amber-600 dark:text-amber-300",
-    },
-  ];
+  const { matched, manual, pending, reviewed, total, completionPercent } =
+    statusSummary;
 
-  const progressPercent = Math.min(statusSummary.completionPercent, 100);
+  const highlightStats = React.useMemo<HighlightStat[]>(
+    () => [
+      {
+        label: "Matched",
+        value: matched,
+        icon: CheckCircle2,
+        accent:
+          "bg-gradient-to-br from-emerald-500/15 via-emerald-500/10 to-transparent text-emerald-600 dark:text-emerald-300",
+      },
+      {
+        label: "Manual",
+        value: manual,
+        icon: Wand2,
+        accent:
+          "bg-gradient-to-br from-sky-500/15 via-sky-500/10 to-transparent text-sky-600 dark:text-sky-300",
+      },
+      {
+        label: "Pending",
+        value: pending,
+        icon: Clock3,
+        accent:
+          "bg-gradient-to-br from-amber-500/15 via-amber-500/10 to-transparent text-amber-600 dark:text-amber-300",
+      },
+    ],
+    [matched, manual, pending],
+  );
+
+  const progressPercent = Math.min(completionPercent, 100);
 
   return (
     <motion.header className="mb-8" variants={headerVariants}>
@@ -84,9 +98,8 @@ export function MatchingPageHeader({
               Review and Elevate Your Manga Sync
             </h1>
             <p className="text-sm text-slate-600 dark:text-slate-300">
-              You&apos;ve reviewed {statusSummary.reviewed} of{" "}
-              {statusSummary.total} titles. Keep refining matches or launch a
-              fresh search when you&apos;re ready.
+              You&apos;ve reviewed {reviewed} of {total} titles. Keep refining
+              matches or launch a fresh search when you&apos;re ready.
             </p>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -133,7 +146,7 @@ export function MatchingPageHeader({
             <div className="flex items-center justify-between text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400">
               <span>Review progress</span>
               <span>
-                {statusSummary.reviewed} of {statusSummary.total} reviewed
+                {reviewed} of {total} reviewed
               </span>
             </div>
             <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800/80">
@@ -153,7 +166,7 @@ export function MatchingPageHeader({
               className="flex w-full flex-col gap-2 sm:flex-row sm:justify-end"
             >
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:gap-3">
-                {statusSummary.matched > 0 && (
+                {matched > 0 && (
                   <Button
                     variant="outline"
                     onClick={handleSetAllMatchedToPending}
@@ -181,4 +194,7 @@ export function MatchingPageHeader({
   );
 }
 
-export default MatchingPageHeader;
+const MemoizedMatchingPageHeader = React.memo(MatchingPageHeader);
+MemoizedMatchingPageHeader.displayName = "MatchingPageHeader";
+
+export default MemoizedMatchingPageHeader;

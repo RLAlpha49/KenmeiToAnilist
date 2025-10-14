@@ -21,7 +21,7 @@ export interface MatchBulkActionsProps {
   matchedCount?: number;
 }
 
-export function MatchBulkActions({
+function MatchBulkActionsComponent({
   emptyMatchesCount,
   onSkipEmptyMatches,
   isSkippingEmptyMatches,
@@ -200,3 +200,8 @@ export function MatchBulkActions({
     </div>
   );
 }
+
+const MatchBulkActionsMemo = React.memo(MatchBulkActionsComponent);
+MatchBulkActionsMemo.displayName = "MatchBulkActions";
+
+export { MatchBulkActionsMemo as MatchBulkActions };

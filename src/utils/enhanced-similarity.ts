@@ -9,6 +9,69 @@ import * as stringSimilarity from "string-similarity";
 /**
  * Configuration for enhanced similarity calculation
  */
+const NORMALIZE_CACHE_LIMIT = 2000;
+const MEANINGFUL_WORDS_CACHE_LIMIT = 2000;
+const PAIR_SIMILARITY_CACHE_LIMIT = 3000;
+const LEVENSHTEIN_CACHE_LIMIT = 3000;
+const SUBSTRING_CACHE_LIMIT = 3000;
+const WORD_ORDER_CACHE_LIMIT = 3000;
+const SEMANTIC_CACHE_LIMIT = 3000;
+
+const normalizeCache = new Map<string, string>();
+const enhancedSimilarityCache = new Map<string, number>();
+const levenshteinCache = new Map<string, number>();
+const substringCache = new Map<string, number>();
+const meaningfulWordsCache = new Map<string, string[]>();
+const wordOrderCache = new Map<string, number>();
+const semanticSimilarityCache = new Map<string, number>();
+
+const getCacheEntry = <T>(
+  cache: Map<string, T>,
+  key: string,
+): T | undefined => {
+  if (!cache.has(key)) {
+    return undefined;
+  }
+
+  const value = cache.get(key) as T;
+  cache.delete(key);
+  cache.set(key, value);
+  return value;
+};
+
+const setCacheEntry = <T>(
+  cache: Map<string, T>,
+  key: string,
+  value: T,
+  limit: number,
+): void => {
+  if (!cache.has(key) && cache.size >= limit) {
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey !== undefined) {
+      cache.delete(oldestKey);
+    }
+  }
+
+  cache.set(key, value);
+};
+
+const makeOrderedPairKey = (a: string, b: string): string => {
+  return a <= b ? `${a}::${b}` : `${b}::${a}`;
+};
+
+const createConfigKey = (config: SimilarityConfig): string => {
+  return [
+    config.exactMatchWeight,
+    config.substringMatchWeight,
+    config.wordOrderWeight,
+    config.characterSimilarityWeight,
+    config.semanticWeight,
+    config.lengthDifferenceThreshold,
+  ]
+    .map((value) => value.toFixed(6))
+    .join("|");
+};
+
 export interface SimilarityConfig {
   /** Weight for exact match bonus (0-1) */
   exactMatchWeight: number;
@@ -92,6 +155,11 @@ const IGNORABLE_PATTERNS = [
 export function enhancedNormalize(text: string): string {
   if (!text) return "";
 
+  const cached = getCacheEntry(normalizeCache, text);
+  if (cached !== undefined) {
+    return cached;
+  }
+
   let normalized = text.trim();
 
   // Remove common ignorable patterns
@@ -114,21 +182,21 @@ export function enhancedNormalize(text: string): string {
   normalized = normalized
     .replaceAll("'", "'") // Normalize apostrophes
     .replaceAll('" ', '"') // Normalize quotes
-    .replaceAll(/[–—]/g, "-") // Normalize dashes
-    .replaceAll("…", "...") // Normalize ellipsis
-    .replaceAll("×", "x") // Normalize multiplication sign
-    .replaceAll("！", "!") // Japanese exclamation
-    .replaceAll("？", "?") // Japanese question mark
-    .replaceAll("：", ":") // Japanese colon
-    .replaceAll("；", ";") // Japanese semicolon
-    .replaceAll("，", ",") // Japanese comma
-    .replaceAll("。", ".") // Japanese period
-    .replaceAll("（", "(") // Japanese left parenthesis
-    .replaceAll("）", ")") // Japanese right parenthesis
-    .replaceAll("「", '"') // Japanese left quote
-    .replaceAll("」", '"') // Japanese right quote
-    .replaceAll("『", '"') // Japanese left double quote
-    .replaceAll("』", '"'); // Japanese right double quote
+    .replaceAll(/[\u2013\u2014]/g, "-") // Normalize dashes
+    .replaceAll("\u2026", "...") // Normalize ellipsis
+    .replaceAll("\u00d7", "x") // Normalize multiplication sign
+    .replaceAll("\uff01", "!") // Japanese exclamation
+    .replaceAll("\uff1f", "?") // Japanese question mark
+    .replaceAll("\uff1a", ":") // Japanese colon
+    .replaceAll("\uff1b", ";") // Japanese semicolon
+    .replaceAll("\uff0c", ",") // Japanese comma
+    .replaceAll("\u3002", ".") // Japanese period
+    .replaceAll("\uff08", "(") // Japanese left parenthesis
+    .replaceAll("\uff09", ")") // Japanese right parenthesis
+    .replaceAll("\u300c", '"') // Japanese left quote
+    .replaceAll("\u300d", '"') // Japanese right quote
+    .replaceAll("\u300e", '"') // Japanese left double quote
+    .replaceAll("\u300f", '"'); // Japanese right double quote
 
   // Handle common abbreviations
   for (const [abbrev, expansion] of ABBREVIATION_MAP) {
@@ -144,47 +212,54 @@ export function enhancedNormalize(text: string): string {
     .toLowerCase()
     .trim();
 
+  setCacheEntry(normalizeCache, text, normalized, NORMALIZE_CACHE_LIMIT);
+
   return normalized;
 }
 
 /**
  * Extract meaningful words from a title, filtering out common stop words
  */
+const STOP_WORDS = new Set([
+  "the",
+  "a",
+  "an",
+  "and",
+  "or",
+  "but",
+  "in",
+  "on",
+  "at",
+  "to",
+  "for",
+  "of",
+  "with",
+  "by",
+  "wa",
+  "no",
+  "ga",
+  "wo",
+  "ni",
+  "de",
+  "kara",
+  "made",
+  "da",
+  "desu",
+  "desu",
+  "des",
+  "manga",
+  "comic",
+  "doujin",
+  "doujinshi",
+  "anthology",
+  "collection",
+]);
+
 export function extractMeaningfulWords(text: string): string[] {
-  const stopWords = new Set([
-    "the",
-    "a",
-    "an",
-    "and",
-    "or",
-    "but",
-    "in",
-    "on",
-    "at",
-    "to",
-    "for",
-    "of",
-    "with",
-    "by",
-    "wa",
-    "no",
-    "ga",
-    "wo",
-    "ni",
-    "de",
-    "kara",
-    "made",
-    "da",
-    "desu",
-    "desu",
-    "des",
-    "manga",
-    "comic",
-    "doujin",
-    "doujinshi",
-    "anthology",
-    "collection",
-  ]);
+  const cached = getCacheEntry(meaningfulWordsCache, text);
+  if (cached !== undefined) {
+    return cached.slice();
+  }
 
   // Use a lighter normalization for word extraction that preserves spaces
   let normalized = text.trim().toLowerCase();
@@ -200,9 +275,18 @@ export function extractMeaningfulWords(text: string): string[] {
     .replaceAll(/\s+/g, " ") // Normalize multiple spaces to single space
     .trim();
 
-  return normalized
+  const words = normalized
     .split(/\s+/)
-    .filter((word) => word.length > 1 && !stopWords.has(word));
+    .filter((word) => word.length > 1 && !STOP_WORDS.has(word));
+
+  setCacheEntry(
+    meaningfulWordsCache,
+    text,
+    words,
+    MEANINGFUL_WORDS_CACHE_LIMIT,
+  );
+
+  return words.slice();
 }
 
 /**
@@ -233,31 +317,61 @@ function calculateSubstringMatch(str1: string, str2: string): number {
 
   if (norm1.length === 0 || norm2.length === 0) return 0;
 
-  let maxSubstring = 0;
-
-  // Find longest common substring
-  for (let i = 0; i < norm1.length; i++) {
-    for (let j = 0; j < norm2.length; j++) {
-      let length = 0;
-      while (
-        i + length < norm1.length &&
-        j + length < norm2.length &&
-        norm1[i + length] === norm2[j + length]
-      ) {
-        length++;
-      }
-      maxSubstring = Math.max(maxSubstring, length);
-    }
+  const pairKey = makeOrderedPairKey(norm1, norm2);
+  const cached = getCacheEntry(substringCache, pairKey);
+  if (cached !== undefined) {
+    return cached;
   }
 
-  const maxLength = Math.max(norm1.length, norm2.length);
-  return maxSubstring / maxLength;
+  const len1 = norm1.length;
+  const len2 = norm2.length;
+  const minLength = Math.min(len1, len2);
+  const maxLength = Math.max(len1, len2);
+
+  let longest = 0;
+  let previous = new Uint16Array(len2 + 1);
+  let current = new Uint16Array(len2 + 1);
+
+  for (let i = 1; i <= len1; i++) {
+    for (let j = 1; j <= len2; j++) {
+      const length =
+        norm1.charCodeAt(i - 1) === norm2.charCodeAt(j - 1)
+          ? previous[j - 1] + 1
+          : 0;
+      current[j] = length;
+      longest = length > longest ? length : longest;
+    }
+
+    if (longest === minLength) {
+      setCacheEntry(substringCache, pairKey, 1, SUBSTRING_CACHE_LIMIT);
+      return 1;
+    }
+
+    const temp = previous;
+    previous = current;
+    current = temp;
+    current.fill(0);
+  }
+
+  const score = longest / maxLength;
+  setCacheEntry(substringCache, pairKey, score, SUBSTRING_CACHE_LIMIT);
+
+  return score;
 }
 
 /**
  * Calculate word order similarity using bag-of-words approach
  */
 function calculateWordOrderSimilarity(str1: string, str2: string): number {
+  const pairKey = makeOrderedPairKey(
+    enhancedNormalize(str1),
+    enhancedNormalize(str2),
+  );
+  const cached = getCacheEntry(wordOrderCache, pairKey);
+  if (cached !== undefined) {
+    return cached;
+  }
+
   const words1 = extractMeaningfulWords(str1);
   const words2 = extractMeaningfulWords(str2);
 
@@ -274,7 +388,11 @@ function calculateWordOrderSimilarity(str1: string, str2: string): number {
   const union = new Set([...wordSet1, ...wordSet2]);
 
   // Jaccard similarity for word sets
-  return intersection.size / union.size;
+  const score = intersection.size / union.size;
+
+  setCacheEntry(wordOrderCache, pairKey, score, WORD_ORDER_CACHE_LIMIT);
+
+  return score;
 }
 
 /**
@@ -286,9 +404,13 @@ function calculateCharacterSimilarity(str1: string, str2: string): number {
 
   if (norm1.length === 0 && norm2.length === 0) return 1;
   if (norm1.length === 0 || norm2.length === 0) return 0;
+  if (norm1 === norm2) return 1;
 
   // Use Dice coefficient from string-similarity library
   const diceScore = stringSimilarity.compareTwoStrings(norm1, norm2);
+  if (diceScore === 1) {
+    return 1;
+  }
 
   // Also calculate Levenshtein-based similarity for comparison
   const levenshteinScore = calculateLevenshteinSimilarity(norm1, norm2);
@@ -309,37 +431,67 @@ function calculateLevenshteinSimilarity(str1: string, str2: string): number {
   if (len1 === 0) return len2 === 0 ? 1 : 0;
   if (len2 === 0) return 0;
 
-  // Create matrix for dynamic programming
-  const matrix: number[][] = new Array(len1 + 1)
-    .fill(null)
-    .map(() => new Array(len2 + 1).fill(0));
-
-  // Initialize first row and column
-  for (let i = 0; i <= len1; i++) matrix[i][0] = i;
-  for (let j = 0; j <= len2; j++) matrix[0][j] = j;
-
-  // Fill the matrix
-  for (let i = 1; i <= len1; i++) {
-    for (let j = 1; j <= len2; j++) {
-      const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
-      matrix[i][j] = Math.min(
-        matrix[i - 1][j] + 1, // deletion
-        matrix[i][j - 1] + 1, // insertion
-        matrix[i - 1][j - 1] + cost, // substitution
-      );
-    }
+  const pairKey = makeOrderedPairKey(str1, str2);
+  const cached = getCacheEntry(levenshteinCache, pairKey);
+  if (cached !== undefined) {
+    return cached;
   }
 
-  const distance = matrix[len1][len2];
   const maxLength = Math.max(len1, len2);
+  let previous = new Uint16Array(len2 + 1);
+  let current = new Uint16Array(len2 + 1);
 
-  return 1 - distance / maxLength;
+  for (let j = 0; j <= len2; j++) {
+    previous[j] = j;
+  }
+
+  for (let i = 1; i <= len1; i++) {
+    current[0] = i;
+    let rowMin = current[0];
+
+    for (let j = 1; j <= len2; j++) {
+      const cost = str1.charCodeAt(i - 1) === str2.charCodeAt(j - 1) ? 0 : 1;
+      const candidate = Math.min(
+        previous[j] + 1,
+        current[j - 1] + 1,
+        previous[j - 1] + cost,
+      );
+
+      current[j] = candidate;
+      rowMin = Math.min(rowMin, candidate);
+    }
+
+    if (rowMin >= maxLength) {
+      setCacheEntry(levenshteinCache, pairKey, 0, LEVENSHTEIN_CACHE_LIMIT);
+      return 0;
+    }
+
+    const temp = previous;
+    previous = current;
+    current = temp;
+  }
+
+  const distance = previous[len2];
+  const similarity = 1 - distance / maxLength;
+
+  setCacheEntry(levenshteinCache, pairKey, similarity, LEVENSHTEIN_CACHE_LIMIT);
+
+  return similarity;
 }
 
 /**
  * Calculate semantic similarity (basic implementation)
  */
 function calculateSemanticSimilarity(str1: string, str2: string): number {
+  const pairKey = makeOrderedPairKey(
+    enhancedNormalize(str1),
+    enhancedNormalize(str2),
+  );
+  const cached = getCacheEntry(semanticSimilarityCache, pairKey);
+  if (cached !== undefined) {
+    return cached;
+  }
+
   const words1 = extractMeaningfulWords(str1);
   const words2 = extractMeaningfulWords(str2);
 
@@ -373,7 +525,16 @@ function calculateSemanticSimilarity(str1: string, str2: string): number {
     score += bestMatch;
   }
 
-  return maxPossibleScore > 0 ? score / maxPossibleScore : 0;
+  const semanticScore = maxPossibleScore > 0 ? score / maxPossibleScore : 0;
+
+  setCacheEntry(
+    semanticSimilarityCache,
+    pairKey,
+    semanticScore,
+    SEMANTIC_CACHE_LIMIT,
+  );
+
+  return semanticScore;
 }
 
 /**
@@ -395,6 +556,18 @@ export function calculateEnhancedSimilarity(
   if (norm1 === norm2) return 100;
   if (norm1.length === 0 || norm2.length === 0) return 0;
 
+  let cacheKey: string | null = null;
+  if (!finalConfig.debug) {
+    const pairKey = makeOrderedPairKey(norm1, norm2);
+    const configKey = createConfigKey(finalConfig);
+    cacheKey = `${pairKey}::${configKey}`;
+
+    const cached = getCacheEntry(enhancedSimilarityCache, cacheKey);
+    if (cached !== undefined) {
+      return cached;
+    }
+  }
+
   // Check for extreme length differences
   const lengthRatio =
     Math.min(norm1.length, norm2.length) / Math.max(norm1.length, norm2.length);
@@ -405,6 +578,7 @@ export function calculateEnhancedSimilarity(
     // Still calculate basic similarity but apply the penalty
     const basicSimilarity = stringSimilarity.compareTwoStrings(norm1, norm2);
     const penalizedScore = basicSimilarity * lengthPenalty;
+    const roundedPenaltyScore = Math.round(penalizedScore * 100);
 
     if (finalConfig.debug) {
       console.debug(
@@ -412,7 +586,18 @@ export function calculateEnhancedSimilarity(
       );
     }
 
-    return Math.round(penalizedScore * 100);
+    const boundedPenaltyScore = Math.min(100, Math.max(0, roundedPenaltyScore));
+
+    if (cacheKey) {
+      setCacheEntry(
+        enhancedSimilarityCache,
+        cacheKey,
+        boundedPenaltyScore,
+        PAIR_SIMILARITY_CACHE_LIMIT,
+      );
+    }
+
+    return boundedPenaltyScore;
   }
 
   // Calculate different types of similarity
@@ -438,7 +623,8 @@ export function calculateEnhancedSimilarity(
       semanticSim * finalConfig.semanticWeight) /
     totalWeight;
 
-  const finalScore = Math.round(weightedScore * 100);
+  const roundedScore = Math.round(weightedScore * 100);
+  const boundedScore = Math.min(100, Math.max(0, roundedScore));
 
   if (finalConfig.debug) {
     console.debug(
@@ -457,8 +643,17 @@ export function calculateEnhancedSimilarity(
     console.debug(
       `[Similarity]   Semantic: ${(semanticSim * 100).toFixed(1)}%`,
     );
-    console.debug(`[Similarity]   Final: ${finalScore}%`);
+    console.debug(`[Similarity]   Final: ${boundedScore}%`);
   }
 
-  return Math.min(100, Math.max(0, finalScore));
+  if (cacheKey) {
+    setCacheEntry(
+      enhancedSimilarityCache,
+      cacheKey,
+      boundedScore,
+      PAIR_SIMILARITY_CACHE_LIMIT,
+    );
+  }
+
+  return boundedScore;
 }

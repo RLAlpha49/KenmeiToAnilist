@@ -746,7 +746,7 @@ interface AlternativeMatchItemProps {
   listStatusBadgeBaseClasses: string;
 }
 
-const AlternativeMatchItem: React.FC<AlternativeMatchItemProps> = ({
+const AlternativeMatchItemComponent: React.FC<AlternativeMatchItemProps> = ({
   altMatch,
   index,
   match,
@@ -993,6 +993,9 @@ const AlternativeMatchItem: React.FC<AlternativeMatchItemProps> = ({
   );
 };
 
+const AlternativeMatchItem = React.memo(AlternativeMatchItemComponent);
+AlternativeMatchItem.displayName = "AlternativeMatchItem";
+
 const computePrimaryBlurKey = (
   primaryMatchCandidate: AniListManga | undefined | null,
   match: MangaMatchResult,
@@ -1008,7 +1011,7 @@ const computePrimaryBlurKey = (
   return undefined;
 };
 
-export default function MatchCard({
+function MatchCard({
   match,
   uniqueKey,
   borderColorClass,
@@ -1306,3 +1309,8 @@ export default function MatchCard({
     </motion.div>
   );
 }
+
+const MemoizedMatchCard = React.memo(MatchCard);
+MemoizedMatchCard.displayName = "MatchCard";
+
+export default MemoizedMatchCard;

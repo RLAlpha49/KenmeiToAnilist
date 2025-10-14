@@ -34,7 +34,7 @@ export interface MatchFilterControlsProps {
   matchStats: MatchFilterStats;
 }
 
-export function MatchFilterControls({
+function MatchFilterControlsComponent({
   statusFilters,
   setStatusFilters,
   matchStats,
@@ -231,3 +231,8 @@ export function MatchFilterControls({
     </Card>
   );
 }
+
+const MatchFilterControls = React.memo(MatchFilterControlsComponent);
+MatchFilterControls.displayName = "MatchFilterControls";
+
+export { MatchFilterControls };

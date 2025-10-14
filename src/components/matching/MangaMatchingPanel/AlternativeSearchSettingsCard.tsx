@@ -17,7 +17,7 @@ export interface AlternativeSearchSettingsCardProps {
   onMangaDexSearchToggle: (enabled: boolean) => void;
 }
 
-export function AlternativeSearchSettingsCard({
+function AlternativeSearchSettingsCardComponent({
   enableMangaDexSearch,
   onComickSearchToggle,
   onMangaDexSearchToggle,
@@ -108,3 +108,10 @@ export function AlternativeSearchSettingsCard({
     </Card>
   );
 }
+
+const AlternativeSearchSettingsCard = React.memo(
+  AlternativeSearchSettingsCardComponent,
+);
+AlternativeSearchSettingsCard.displayName = "AlternativeSearchSettingsCard";
+
+export { AlternativeSearchSettingsCard };

@@ -17,7 +17,7 @@ interface DuplicateWarningProps {
   onIgnoreDuplicate: (anilistId: number, anilistTitle: string) => void;
 }
 
-export function DuplicateWarning({
+function DuplicateWarningComponent({
   duplicates,
   onDismiss,
   onSearchAnilist,
@@ -138,3 +138,8 @@ export function DuplicateWarning({
     </motion.div>
   );
 }
+
+const MemoizedDuplicateWarning = React.memo(DuplicateWarningComponent);
+MemoizedDuplicateWarning.displayName = "DuplicateWarning";
+
+export { MemoizedDuplicateWarning as DuplicateWarning };

@@ -19,7 +19,7 @@ export interface MatchActionsProps {
   handleKeyDown: (e: React.KeyboardEvent, cb: () => void) => void;
 }
 
-export function MatchActions({
+function MatchActionsComponent({
   match,
   onManualSearch,
   onAcceptMatch,
@@ -139,4 +139,8 @@ export function MatchActions({
   }
 }
 
-export default MatchActions;
+const MatchActionsMemo = React.memo(MatchActionsComponent);
+MatchActionsMemo.displayName = "MatchActions";
+
+export { MatchActionsMemo as MatchActions };
+export default MatchActionsMemo;

@@ -25,7 +25,7 @@ export interface MatchStatisticsCardProps {
   searchInputRef: React.RefObject<HTMLInputElement | null>;
 }
 
-export function MatchStatisticsCard({
+function MatchStatisticsCardComponent({
   matchStats,
   noMatchesCount,
   searchTerm,
@@ -142,3 +142,8 @@ export function MatchStatisticsCard({
     </Card>
   );
 }
+
+const MatchStatisticsCard = React.memo(MatchStatisticsCardComponent);
+MatchStatisticsCard.displayName = "MatchStatisticsCard";
+
+export { MatchStatisticsCard };
