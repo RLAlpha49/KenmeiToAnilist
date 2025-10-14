@@ -81,17 +81,11 @@ export async function searchWithRateLimit(
  * Make an advanced search with rate limiting and retry logic
  *
  * @param query - Search query string
- * @param filters - Search filters for genres, tags, and formats
  * @param options - Additional search options including pagination and caching settings
  * @returns Promise resolving to search results
  */
 export async function advancedSearchWithRateLimit(
   query: string,
-  filters: {
-    genres?: string[];
-    tags?: string[];
-    formats?: string[];
-  } = {},
   options: SearchRateLimitOptions = {},
 ): Promise<SearchResult<AniListManga>> {
   await waitWhileManuallyPaused();
@@ -112,14 +106,7 @@ export async function advancedSearchWithRateLimit(
 
   try {
     // Call the AniList client search function - this will handle caching in the client
-    return await advancedSearchManga(
-      query,
-      filters,
-      page,
-      perPage,
-      token,
-      bypassCache,
-    );
+    return await advancedSearchManga(query, page, perPage, token, bypassCache);
   } catch (error: unknown) {
     // Retry logic for transient errors
     if (retryCount < 3) {
@@ -130,7 +117,7 @@ export async function advancedSearchWithRateLimit(
       await waitWhileManuallyPaused();
 
       // Retry with incremented retry count
-      return advancedSearchWithRateLimit(query, filters, {
+      return advancedSearchWithRateLimit(query, {
         ...options,
         acquireLimit: true,
         retryCount: retryCount + 1,

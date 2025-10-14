@@ -18,7 +18,7 @@ import { syncWithClientCache, generateCacheKey, isCacheValid } from "./cache";
 import {
   categorizeMangaForBatching,
   processKnownMangaIds,
-  processUncachedManga,
+  processBatchedUncachedManga,
   compileMatchResults,
   handleCancellationResults,
 } from "./batching";
@@ -233,9 +233,10 @@ export async function batchMatchManga(
     // Check for cancellation
     checkCancellation();
 
-    // Process uncached manga
+    // Process uncached manga using batched GraphQL queries
+    // This significantly reduces API calls by grouping multiple searches
     try {
-      await processUncachedManga(
+      await processBatchedUncachedManga(
         { uncachedManga, mangaList, reportedIndices },
         { token, searchConfig },
         { abortSignal, checkCancellation },

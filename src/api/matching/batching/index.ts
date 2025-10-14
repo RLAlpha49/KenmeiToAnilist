@@ -33,6 +33,7 @@ export { processKnownMangaIds } from "./known-ids";
 
 // Uncached manga processing
 export { processUncachedManga } from "./uncached";
+export { processBatchedUncachedManga } from "./batch-search";
 
 // Results compilation
 export {

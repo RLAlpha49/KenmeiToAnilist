@@ -643,10 +643,187 @@ export async function searchManga(
 }
 
 /**
- * Advanced search for manga with additional filters.
+ * Batch search for multiple manga titles in a single GraphQL request.
+ *
+ * @param searches - Array of search queries with metadata.
+ * @param options - Optional configuration including auth token, page size, and abort signal.
+ * @returns Promise resolving to map of search results keyed by alias.
+ * @source
+ */
+export async function batchSearchManga(
+  searches: Array<{ alias: string; title: string; index: number }>,
+  options: {
+    token?: string;
+    perPage?: number;
+    abortSignal?: AbortSignal;
+  } = {},
+): Promise<
+  Map<
+    string,
+    {
+      media: AniListManga[];
+      index: number;
+      title: string;
+    }
+  >
+> {
+  if (searches.length === 0) {
+    return new Map();
+  }
+
+  const { token, perPage = 10, abortSignal } = options;
+
+  console.info(
+    `[AniListClient] 🚀 Batch searching ${searches.length} manga titles`,
+  );
+
+  // Build the batched query dynamically
+  const queryParts: string[] = [];
+
+  searches.forEach(({ alias, title }) => {
+    // Sanitize the title for use in GraphQL (escape quotes)
+    const sanitizedTitle = JSON.stringify(title).slice(1, -1);
+
+    queryParts.push(`
+    ${alias}: Page(page: 1, perPage: ${perPage}) {
+      pageInfo {
+        total
+        currentPage
+        lastPage
+        hasNextPage
+        perPage
+      }
+      media(type: MANGA, search: "${sanitizedTitle}") {
+        id
+        title {
+          romaji
+          english
+          native
+        }
+        synonyms
+        format
+        status
+        chapters
+        volumes
+        coverImage {
+          large
+          medium
+        }
+        mediaListEntry {
+          id
+          status
+          progress
+          score
+          private
+        }
+        isAdult
+      }
+    }`);
+  });
+
+  const batchedQuery = `
+query BatchSearchManga {
+${queryParts.join("\n")}
+}
+`;
+
+  type BatchQueryResponse = Record<
+    string,
+    {
+      media?: AniListManga[];
+      pageInfo?: unknown;
+    }
+  >;
+
+  try {
+    // Execute the batched request
+    const response = await request<BatchQueryResponse>(
+      batchedQuery,
+      {}, // No variables needed - all values are in the query
+      token,
+      abortSignal,
+      true, // Bypass cache for batch requests
+    );
+
+    console.debug(`[AniListClient] 🔍 Batch search response:`, response);
+
+    // Validate response structure
+    if (!response?.data) {
+      console.error(
+        `[AniListClient] ❌ Invalid API response for batch search:`,
+        response,
+      );
+      throw new Error(`Invalid API response: missing data property`);
+    }
+
+    // Handle nested data structure and type assertion
+    const responseData = (response.data.data ??
+      response.data) as unknown as BatchQueryResponse;
+
+    // Process results into a map
+    const results = new Map<
+      string,
+      {
+        media: AniListManga[];
+        index: number;
+        title: string;
+      }
+    >();
+
+    let totalResults = 0;
+    searches.forEach(({ alias, index, title }) => {
+      const aliasData = responseData[alias];
+      if (aliasData?.media?.length) {
+        results.set(alias, {
+          media: aliasData.media,
+          index,
+          title,
+        });
+        totalResults += aliasData.media.length;
+      } else {
+        // Return empty array if no results
+        results.set(alias, {
+          media: [],
+          index,
+          title,
+        });
+      }
+    });
+
+    console.info(
+      `[AniListClient] ✅ Batch search complete: ${totalResults} total results for ${searches.length} queries`,
+    );
+
+    return results;
+  } catch (error) {
+    console.error(`[AniListClient] ❌ Error in batch search:`, error);
+
+    // Return empty results for all searches on error
+    const emptyResults = new Map<
+      string,
+      {
+        media: AniListManga[];
+        index: number;
+        title: string;
+      }
+    >();
+
+    searches.forEach(({ alias, index, title }) => {
+      emptyResults.set(alias, {
+        media: [],
+        index,
+        title,
+      });
+    });
+
+    return emptyResults;
+  }
+}
+
+/**
+ * Advanced search for manga using the dedicated AniList endpoint.
  *
  * @param search - Search query.
- * @param filters - Filter options.
  * @param page - Page number.
  * @param perPage - Results per page.
  * @param token - Optional access token.
@@ -656,24 +833,16 @@ export async function searchManga(
  */
 export async function advancedSearchManga(
   search: string,
-  filters: {
-    genres?: string[];
-    tags?: string[];
-    formats?: string[];
-  } = {},
   page: number = 1,
   perPage: number = 50,
   token?: string,
   bypassCache?: boolean,
 ): Promise<SearchResult<AniListManga>> {
-  const cacheKey = generateCacheKey(search, page, perPage, filters);
+  const cacheKey = generateCacheKey(search, page, perPage);
   const variables = {
     search,
     page,
     perPage,
-    genre_in: filters.genres,
-    tag_in: filters.tags,
-    format_in: filters.formats,
   };
 
   return executeSearchQuery({

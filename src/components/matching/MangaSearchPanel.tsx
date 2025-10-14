@@ -832,24 +832,6 @@ export function MangaSearchPanel({
                         </div>
                       );
                     })()}
-
-                    <div className="flex flex-wrap gap-2 pt-2">
-                      {manga.genres
-                        ?.slice(0, 3)
-                        .map((genre: string, i: number) => (
-                          <span
-                            key={`${uniqueKey}-genre-${i}`}
-                            className="inline-flex items-center gap-2 rounded-full bg-slate-100/90 px-3 py-1 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-800/70 dark:text-slate-200"
-                          >
-                            {genre}
-                          </span>
-                        ))}
-                      {manga.genres && manga.genres.length > 3 && (
-                        <span className="inline-flex items-center gap-2 rounded-full bg-slate-100/90 px-3 py-1 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-800/70 dark:text-slate-200">
-                          +{manga.genres.length - 3} more
-                        </span>
-                      )}
-                    </div>
                   </div>
 
                   <div className="relative z-[1] flex flex-col items-end justify-between gap-4 self-stretch lg:gap-5">

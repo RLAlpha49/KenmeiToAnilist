@@ -46,9 +46,6 @@ query ($userId: Int, $chunk: Int, $perChunk: Int) {
             english
             native
           }
-          format
-          status
-          chapters
         }
       }
     }
@@ -79,27 +76,13 @@ query ($search: String, $page: Int, $perPage: Int) {
         native
       }
       synonyms
-      description
       format
       status
       chapters
       volumes
-      countryOfOrigin
-      source
       coverImage {
         large
         medium
-      }
-      genres
-      tags {
-        id
-        name
-        category
-      }
-      startDate {
-        year
-        month
-        day
       }
       mediaListEntry {
         id
@@ -115,12 +98,12 @@ query ($search: String, $page: Int, $perPage: Int) {
 `;
 
 /**
- * Query to perform an advanced manga search with filters.
+ * Query to perform an advanced manga search using the dedicated endpoint.
  *
  * @source
  */
 export const ADVANCED_SEARCH_MANGA = `
-query ($search: String, $page: Int, $perPage: Int, $genre_in: [String], $tag_in: [String], $format_in: [MediaFormat]) {
+query ($search: String, $page: Int, $perPage: Int) {
   Page(page: $page, perPage: $perPage) {
     pageInfo {
       total
@@ -129,13 +112,7 @@ query ($search: String, $page: Int, $perPage: Int, $genre_in: [String], $tag_in:
       hasNextPage
       perPage
     }
-    media(
-      type: MANGA, 
-      search: $search, 
-      genre_in: $genre_in, 
-      tag_in: $tag_in, 
-      format_in: $format_in
-    ) {
+    media(type: MANGA, search: $search) {
       id
       title {
         romaji
@@ -143,21 +120,13 @@ query ($search: String, $page: Int, $perPage: Int, $genre_in: [String], $tag_in:
         native
       }
       synonyms
-      description
       format
       status
       chapters
       volumes
-      countryOfOrigin
       coverImage {
         large
         medium
-      }
-      genres
-      tags {
-        id
-        name
-        category
       }
       mediaListEntry {
         id
@@ -187,7 +156,6 @@ query ($id: Int) {
       native
     }
     synonyms
-    description
     format
     status
     chapters
@@ -195,11 +163,6 @@ query ($id: Int) {
     coverImage {
       large
       medium
-    }
-    genres
-    tags {
-      id
-      name
     }
     mediaListEntry {
       id
@@ -236,27 +199,13 @@ query ($ids: [Int]) {
         native
       }
       synonyms
-      description
       format
       status
       chapters
       volumes
-      countryOfOrigin
-      source
       coverImage {
         large
         medium
-      }
-      genres
-      tags {
-        id
-        name
-        category
-      }
-      startDate {
-        year
-        month
-        day
       }
       mediaListEntry {
         id

@@ -29,18 +29,14 @@ async function executeSingleSearch(
   let searchResult: SearchResult<AniListManga>;
 
   if (searchConfig.useAdvancedSearch) {
-    searchResult = await advancedSearchWithRateLimit(
-      searchQuery,
-      {},
-      {
-        page: currentPage,
-        perPage: searchConfig.searchPerPage,
-        token,
-        acquireLimit: false,
-        retryCount: 0,
-        bypassCache: searchConfig.bypassCache,
-      },
-    );
+    searchResult = await advancedSearchWithRateLimit(searchQuery, {
+      page: currentPage,
+      perPage: searchConfig.searchPerPage,
+      token,
+      acquireLimit: false,
+      retryCount: 0,
+      bypassCache: searchConfig.bypassCache,
+    });
   } else {
     searchResult = await searchWithRateLimit(
       searchQuery,
