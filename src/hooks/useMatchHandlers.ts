@@ -8,7 +8,7 @@ import { useCallback } from "react";
 import { KenmeiManga } from "../api/kenmei/types";
 import { AniListManga, MangaMatchResult } from "../api/anilist/types";
 import { STORAGE_KEYS, storage } from "../utils/storage";
-import { useDebug } from "../contexts/DebugContext";
+import { useDebugActions } from "../contexts/DebugContext";
 
 /**
  * Custom React hook providing handler functions for managing manga match results and user interactions.
@@ -30,7 +30,7 @@ export const useMatchHandlers = (
   setIsSearchOpen: React.Dispatch<React.SetStateAction<boolean>>,
   setBypassCache: React.Dispatch<React.SetStateAction<boolean>>,
 ) => {
-  const { recordEvent } = useDebug();
+  const { recordEvent } = useDebugActions();
 
   /**
    * Finds the index of a match in the results array by ID or title.

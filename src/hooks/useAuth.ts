@@ -4,9 +4,17 @@
  * @description Custom React hook for accessing the authentication context in the Kenmei to AniList sync tool.
  */
 
-import { useContext } from "react";
-import { AuthContext } from "../contexts/AuthContextDefinition";
-import { AuthContextType } from "../types/auth";
+import { useContext, useMemo } from "react";
+import {
+  AuthActionsContext,
+  AuthLegacyContext,
+  AuthStateContext,
+} from "../contexts/AuthContextDefinition";
+import {
+  AuthActionsContextValue,
+  AuthContextType,
+  AuthStateContextValue,
+} from "../types/auth";
 
 /**
  * Custom React hook to access the authentication context.
@@ -17,10 +25,45 @@ import { AuthContextType } from "../types/auth";
  *
  * @source
  */
-export function useAuth(): AuthContextType {
-  const context = useContext(AuthContext);
+export function useAuthState(): AuthStateContextValue {
+  const context = useContext(AuthStateContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error("useAuthState must be used within an AuthProvider");
   }
   return context;
+}
+
+export function useAuthActions(): AuthActionsContextValue {
+  const context = useContext(AuthActionsContext);
+  if (context === undefined) {
+    throw new Error("useAuthActions must be used within an AuthProvider");
+  }
+  return context;
+}
+
+export function useAuth(): AuthContextType {
+  const legacyContext = useContext(AuthLegacyContext);
+  const stateContext = useContext(AuthStateContext);
+  const actionsContext = useContext(AuthActionsContext);
+
+  const mergedContext = useMemo(() => {
+    if (legacyContext !== undefined) {
+      return legacyContext;
+    }
+
+    if (stateContext !== undefined && actionsContext !== undefined) {
+      return {
+        ...stateContext,
+        ...actionsContext,
+      } satisfies AuthContextType;
+    }
+
+    return undefined;
+  }, [actionsContext, legacyContext, stateContext]);
+
+  if (mergedContext === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+
+  return mergedContext;
 }

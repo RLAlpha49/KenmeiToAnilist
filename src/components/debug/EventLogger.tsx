@@ -21,7 +21,7 @@ import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
 import { ScrollArea } from "../ui/scroll-area";
 import { Separator } from "../ui/separator";
-import { useDebug } from "../../contexts/DebugContext";
+import { useDebugActions, useDebugState } from "../../contexts/DebugContext";
 import { cn } from "@/utils/tailwind";
 import type { DebugEventEntry, DebugEventLevel } from "@/types/debug";
 import {
@@ -381,8 +381,8 @@ function EmptyEventState() {
 }
 
 export function EventLogger(): React.ReactElement {
-  const { eventLogEntries, clearEventLog, maxEventLogEntries, recordEvent } =
-    useDebug();
+  const { eventLogEntries, maxEventLogEntries } = useDebugState();
+  const { clearEventLog, recordEvent } = useDebugActions();
   const [activeTypes, setActiveTypes] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [visibleCount, setVisibleCount] = useState(DEFAULT_VISIBLE_COUNT);

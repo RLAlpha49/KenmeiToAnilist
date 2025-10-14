@@ -46,48 +46,62 @@ import type {
  * @property exportLogs - Exports captured log entries to a JSON file.
  * @source
  */
-interface DebugContextType {
+interface DebugStateContextValue {
   isDebugEnabled: boolean;
+  storageDebuggerEnabled: boolean;
+  logViewerEnabled: boolean;
+  logRedactionEnabled: boolean;
+  stateInspectorEnabled: boolean;
+  stateInspectorSources: StateInspectorSourceSnapshot[];
+  ipcViewerEnabled: boolean;
+  eventLoggerEnabled: boolean;
+  eventLogEntries: DebugEventEntry[];
+  maxEventLogEntries: number;
+  ipcEvents: IpcLogEntry[];
+  maxIpcEntries: number;
+  logEntries: LogEntry[];
+  maxLogEntries: number;
+}
+
+interface DebugActionsContextValue {
   toggleDebug: () => void;
   setDebugEnabled: (enabled: boolean) => void;
-  storageDebuggerEnabled: boolean;
   setStorageDebuggerEnabled: (enabled: boolean) => void;
   toggleStorageDebugger: () => void;
-  logViewerEnabled: boolean;
   setLogViewerEnabled: (enabled: boolean) => void;
   toggleLogViewer: () => void;
-  logRedactionEnabled: boolean;
   setLogRedactionEnabled: (enabled: boolean) => void;
   toggleLogRedaction: () => void;
-  stateInspectorEnabled: boolean;
   setStateInspectorEnabled: (enabled: boolean) => void;
   toggleStateInspector: () => void;
-  stateInspectorSources: StateInspectorSourceSnapshot[];
   registerStateInspector: <T>(
     config: StateInspectorRegistration<T>,
   ) => StateInspectorHandle<T>;
   applyStateInspectorUpdate: (id: string, value: unknown) => void;
   refreshStateInspectorSource: (id: string) => void;
-  ipcViewerEnabled: boolean;
   setIpcViewerEnabled: (enabled: boolean) => void;
   toggleIpcViewer: () => void;
-  eventLoggerEnabled: boolean;
   setEventLoggerEnabled: (enabled: boolean) => void;
   toggleEventLogger: () => void;
-  eventLogEntries: DebugEventEntry[];
   recordEvent: (entry: DebugEventRecord, options?: RecordEventOptions) => void;
   clearEventLog: () => void;
-  maxEventLogEntries: number;
-  ipcEvents: IpcLogEntry[];
   clearIpcEvents: () => void;
-  maxIpcEntries: number;
-  logEntries: LogEntry[];
   clearLogs: () => void;
   exportLogs: () => void;
-  maxLogEntries: number;
 }
 
+interface DebugContextType
+  extends DebugStateContextValue,
+    DebugActionsContextValue {}
+
 const DebugContext = createContext<DebugContextType | undefined>(undefined);
+const DebugStateContext = createContext<DebugStateContextValue | undefined>(
+  undefined,
+);
+
+const DebugActionsContext = createContext<DebugActionsContextValue | undefined>(
+  undefined,
+);
 
 const DEBUG_STORAGE_KEY = "debug-mode-enabled";
 const DEBUG_FEATURE_TOGGLES_KEY = "debug-feature-toggles";
@@ -799,99 +813,148 @@ export function DebugProvider({
     }
   }, []);
 
-  const value = React.useMemo<DebugContextType>(
+  const stateContextValue = React.useMemo<DebugStateContextValue>(
     () => ({
       isDebugEnabled,
-      toggleDebug,
-      setDebugEnabled,
       storageDebuggerEnabled,
-      setStorageDebuggerEnabled,
-      toggleStorageDebugger,
       logViewerEnabled,
-      setLogViewerEnabled,
-      toggleLogViewer,
       logRedactionEnabled,
-      setLogRedactionEnabled,
-      toggleLogRedaction,
       stateInspectorEnabled,
-      setStateInspectorEnabled,
-      toggleStateInspector,
-      ipcViewerEnabled,
-      setIpcViewerEnabled,
-      toggleIpcViewer,
-      eventLoggerEnabled,
-      setEventLoggerEnabled,
-      toggleEventLogger,
-      eventLogEntries,
-      recordEvent,
-      clearEventLog,
-      maxEventLogEntries: MAX_EVENT_LOG_ENTRIES,
       stateInspectorSources: stateSourceSnapshots,
-      registerStateInspector,
-      applyStateInspectorUpdate,
-      refreshStateInspectorSource,
+      ipcViewerEnabled,
+      eventLoggerEnabled,
+      eventLogEntries,
+      maxEventLogEntries: MAX_EVENT_LOG_ENTRIES,
       ipcEvents,
-      clearIpcEvents,
       maxIpcEntries,
       logEntries,
-      clearLogs,
-      exportLogs,
       maxLogEntries: MAX_LOG_ENTRIES,
     }),
     [
-      isDebugEnabled,
-      toggleDebug,
-      setDebugEnabled,
-      storageDebuggerEnabled,
-      setStorageDebuggerEnabled,
-      toggleStorageDebugger,
-      logViewerEnabled,
-      setLogViewerEnabled,
-      toggleLogViewer,
-      logRedactionEnabled,
-      setLogRedactionEnabled,
-      toggleLogRedaction,
-      stateInspectorEnabled,
-      setStateInspectorEnabled,
-      toggleStateInspector,
-      ipcViewerEnabled,
-      setIpcViewerEnabled,
-      toggleIpcViewer,
-      eventLoggerEnabled,
-      setEventLoggerEnabled,
-      toggleEventLogger,
       eventLogEntries,
-      recordEvent,
-      clearEventLog,
-      stateSourceSnapshots,
-      registerStateInspector,
-      applyStateInspectorUpdate,
-      refreshStateInspectorSource,
+      eventLoggerEnabled,
       ipcEvents,
-      clearIpcEvents,
-      maxIpcEntries,
+      ipcViewerEnabled,
+      isDebugEnabled,
       logEntries,
-      clearLogs,
-      exportLogs,
+      logRedactionEnabled,
+      logViewerEnabled,
+      maxIpcEntries,
+      stateInspectorEnabled,
+      stateSourceSnapshots,
+      storageDebuggerEnabled,
     ],
   );
 
+  const actionsContextValue = React.useMemo<DebugActionsContextValue>(
+    () => ({
+      toggleDebug,
+      setDebugEnabled,
+      setStorageDebuggerEnabled,
+      toggleStorageDebugger,
+      setLogViewerEnabled,
+      toggleLogViewer,
+      setLogRedactionEnabled,
+      toggleLogRedaction,
+      setStateInspectorEnabled,
+      toggleStateInspector,
+      registerStateInspector,
+      applyStateInspectorUpdate,
+      refreshStateInspectorSource,
+      setIpcViewerEnabled,
+      toggleIpcViewer,
+      setEventLoggerEnabled,
+      toggleEventLogger,
+      recordEvent,
+      clearEventLog,
+      clearIpcEvents,
+      clearLogs,
+      exportLogs,
+    }),
+    [
+      applyStateInspectorUpdate,
+      clearEventLog,
+      clearIpcEvents,
+      clearLogs,
+      exportLogs,
+      recordEvent,
+      refreshStateInspectorSource,
+      registerStateInspector,
+      setDebugEnabled,
+      setEventLoggerEnabled,
+      setIpcViewerEnabled,
+      setLogRedactionEnabled,
+      setLogViewerEnabled,
+      setStateInspectorEnabled,
+      setStorageDebuggerEnabled,
+      toggleDebug,
+      toggleEventLogger,
+      toggleIpcViewer,
+      toggleLogRedaction,
+      toggleLogViewer,
+      toggleStateInspector,
+      toggleStorageDebugger,
+    ],
+  );
+
+  const legacyContextValue = React.useMemo<DebugContextType>(
+    () => ({
+      ...stateContextValue,
+      ...actionsContextValue,
+    }),
+    [actionsContextValue, stateContextValue],
+  );
+
   return (
-    <DebugContext.Provider value={value}>{children}</DebugContext.Provider>
+    <DebugActionsContext.Provider value={actionsContextValue}>
+      <DebugStateContext.Provider value={stateContextValue}>
+        <DebugContext.Provider value={legacyContextValue}>
+          {children}
+        </DebugContext.Provider>
+      </DebugStateContext.Provider>
+    </DebugActionsContext.Provider>
   );
 }
 
-/**
- * Hook to access the debug context.
- *
- * @returns The debug context value.
- * @throws Error if used outside of a DebugProvider.
- * @source
- */
-export function useDebug(): DebugContextType {
-  const context = useContext(DebugContext);
+export function useDebugState(): DebugStateContextValue {
+  const context = useContext(DebugStateContext);
   if (context === undefined) {
-    throw new Error("useDebug must be used within a DebugProvider");
+    throw new Error("useDebugState must be used within a DebugProvider");
   }
   return context;
+}
+
+export function useDebugActions(): DebugActionsContextValue {
+  const context = useContext(DebugActionsContext);
+  if (context === undefined) {
+    throw new Error("useDebugActions must be used within a DebugProvider");
+  }
+  return context;
+}
+
+export function useDebug(): DebugContextType {
+  const legacyContext = useContext(DebugContext);
+  const stateContext = useContext(DebugStateContext);
+  const actionsContext = useContext(DebugActionsContext);
+
+  const mergedContext = React.useMemo(() => {
+    if (legacyContext !== undefined) {
+      return legacyContext;
+    }
+
+    if (stateContext !== undefined && actionsContext !== undefined) {
+      return {
+        ...stateContext,
+        ...actionsContext,
+      } satisfies DebugContextType;
+    }
+
+    return undefined;
+  }, [actionsContext, legacyContext, stateContext]);
+
+  if (mergedContext === undefined) {
+    throw new Error("useDebug must be used within a DebugProvider");
+  }
+
+  return mergedContext;
 }

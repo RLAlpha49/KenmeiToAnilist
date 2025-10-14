@@ -10,7 +10,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { KenmeiManga } from "../api/kenmei/types";
 import { MangaMatchResult } from "../api/anilist/types";
-import { useAuth } from "../hooks/useAuth";
+import { useAuthState } from "../hooks/useAuth";
 import {
   getKenmeiData,
   addIgnoredDuplicate,
@@ -83,7 +83,7 @@ const contentVariants = {
 
 export function MatchingPage() {
   const navigate = useNavigate();
-  const { authState } = useAuth();
+  const { authState } = useAuthState();
   const { rateLimitState } = useRateLimit();
 
   // State for manga data

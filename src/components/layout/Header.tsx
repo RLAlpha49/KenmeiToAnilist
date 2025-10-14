@@ -39,7 +39,7 @@ import {
 } from "../ui/tooltip";
 import { motion } from "framer-motion";
 import appIcon from "../../assets/k2a-icon-512x512.png";
-import { useDebug } from "../../contexts/DebugContext";
+import { useDebugState } from "../../contexts/DebugContext";
 import { DebugMenu } from "../debug/DebugMenu";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/utils/tailwind";
@@ -65,7 +65,7 @@ const NAV_ITEMS: NavItem[] = [
  * @source
  */
 export function Header() {
-  const { isDebugEnabled } = useDebug();
+  const { isDebugEnabled } = useDebugState();
   const [isDebugMenuOpen, setIsDebugMenuOpen] = useState(false);
 
   const location = useLocation();

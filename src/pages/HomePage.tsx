@@ -23,7 +23,7 @@ import {
   CheckCheck,
   ArrowUpRight,
 } from "lucide-react";
-import { useAuth } from "../hooks/useAuth";
+import { useAuthState } from "../hooks/useAuth";
 import { getImportStats, storage, STORAGE_KEYS } from "../utils/storage";
 import { motion } from "framer-motion";
 import {
@@ -366,7 +366,7 @@ const featureCards = [
  */
 export function HomePage() {
   // Get auth state to check authentication status
-  const { authState } = useAuth();
+  const { authState } = useAuthState();
 
   // State for dashboard data
   const [stats, setStats] = useState<StatsState>({

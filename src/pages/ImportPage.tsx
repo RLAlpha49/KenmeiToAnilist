@@ -26,7 +26,7 @@ import {
 import { getStatusCounts } from "../utils/manga-status-utils";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { useDebug } from "../contexts/DebugContext";
+import { useDebugActions } from "../contexts/DebugContext";
 
 /**
  * Import page component for the Kenmei to AniList sync tool.
@@ -37,7 +37,7 @@ import { useDebug } from "../contexts/DebugContext";
  */
 export function ImportPage() {
   const navigate = useNavigate();
-  const { recordEvent } = useDebug();
+  const { recordEvent } = useDebugActions();
   const [importData, setImportData] = useState<KenmeiData | null>(null);
   const [error, setError] = useState<AppError | null>(null);
   const [isLoading, setIsLoading] = useState(false);

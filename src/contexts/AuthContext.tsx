@@ -18,10 +18,16 @@ import {
   APICredentials,
   ViewerResponse,
   AuthContextType,
+  AuthStateContextValue,
+  AuthActionsContextValue,
 } from "../types/auth";
-import { AuthContext } from "./AuthContextDefinition";
+import {
+  AuthActionsContext,
+  AuthLegacyContext,
+  AuthStateContext,
+} from "./AuthContextDefinition";
 import { DEFAULT_ANILIST_CONFIG } from "../config/anilist";
-import { useDebug, StateInspectorHandle } from "./DebugContext";
+import { useDebugActions, StateInspectorHandle } from "./DebugContext";
 
 /**
  * Props for the AuthProvider component.
@@ -85,7 +91,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
   // Lock credential source during an active OAuth flow to avoid mismatches
   const lockedCredentialSourceRef = useRef<null | ("default" | "custom")>(null);
   const { registerStateInspector: registerAuthStateInspector, recordEvent } =
-    useDebug();
+    useDebugActions();
   const authInspectorHandleRef =
     useRef<StateInspectorHandle<AuthDebugSnapshot> | null>(null);
   const authSnapshotRef = useRef<AuthDebugSnapshot | null>(null);
@@ -387,102 +393,111 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     return unsubscribe;
   }, []);
 
-  const storeCredentialsAndBuildUrl = async (
-    incoming: APICredentials,
-  ): Promise<{ oauthUrl: string; redirectUri: string }> => {
-    // Normalize redirect URI
-    let redirectUri = incoming.redirectUri;
-    const creds = { ...incoming };
-    if (
-      !redirectUri.startsWith("http://") &&
-      !redirectUri.startsWith("https://")
-    ) {
-      redirectUri = `http://${redirectUri}`;
-      creds.redirectUri = redirectUri;
-    }
+  const storeCredentialsAndBuildUrl = useCallback(
+    async (
+      incoming: APICredentials,
+    ): Promise<{ oauthUrl: string; redirectUri: string }> => {
+      // Normalize redirect URI
+      let redirectUri = incoming.redirectUri;
+      const creds = { ...incoming };
+      if (
+        !redirectUri.startsWith("http://") &&
+        !redirectUri.startsWith("https://")
+      ) {
+        redirectUri = `http://${redirectUri}`;
+        creds.redirectUri = redirectUri;
+      }
 
-    setStatusMessage("Storing credentials...");
-    const storeResult = await globalThis.electronAuth.storeCredentials(creds);
-    if (!storeResult.success) {
-      toast.error(storeResult.error || "Failed to store credentials");
-      throw new Error(storeResult.error || "Failed to store credentials");
-    }
+      setStatusMessage("Storing credentials...");
+      const storeResult = await globalThis.electronAuth.storeCredentials(creds);
+      if (!storeResult.success) {
+        toast.error(storeResult.error || "Failed to store credentials");
+        throw new Error(storeResult.error || "Failed to store credentials");
+      }
 
-    // Verify credentials were actually stored by reading them back
-    setStatusMessage("Verifying credentials...");
-    const verifyResult = await globalThis.electronAuth.getCredentials(
-      creds.source,
-    );
-    if (!verifyResult.success || !verifyResult.credentials) {
-      const errorMsg = "Credential storage verification failed";
-      console.error("[AuthContext] ❌ Verification failed:", {
-        stored: creds,
-        retrieved: verifyResult,
-      });
-      toast.error(errorMsg);
-      throw new Error(errorMsg);
-    }
-
-    // Validate that stored credentials match what we sent
-    const stored = verifyResult.credentials;
-    if (
-      stored.clientId !== creds.clientId ||
-      stored.clientSecret !== creds.clientSecret ||
-      stored.redirectUri !== creds.redirectUri
-    ) {
-      const errorMsg = "Stored credentials do not match";
-      console.error("[AuthContext] ❌ Credential mismatch:", {
-        expected: creds,
-        actual: stored,
-      });
-      toast.error(errorMsg);
-      throw new Error(errorMsg);
-    }
-
-    console.debug(
-      "[AuthContext] ✅ Credentials stored and verified successfully",
-    );
-
-    const clientId = encodeURIComponent(creds.clientId);
-    const encodedRedirectUri = encodeURIComponent(redirectUri);
-    const oauthUrl = `https://anilist.co/api/v2/oauth/authorize?client_id=${clientId}&redirect_uri=${encodedRedirectUri}&response_type=code`;
-    return { oauthUrl, redirectUri };
-  };
-
-  const openOAuthWindow = async (oauthUrl: string, redirectUri: string) => {
-    const result = await globalThis.electronAuth.openOAuthWindow(
-      oauthUrl,
-      redirectUri,
-    );
-    if (!result.success) {
-      toast.error(result.error || "Failed to open authentication window");
-      throw new Error(result.error || "Failed to open authentication window");
-    }
-  };
-
-  const handleOpenWindowError = (err: unknown, ignoreMessage?: string) => {
-    if (isBrowserAuthFlow) {
-      console.debug(
-        "[AuthContext]",
-        ignoreMessage ||
-          "Browser auth flow in progress - ignoring window.close error...",
+      // Verify credentials were actually stored by reading them back
+      setStatusMessage("Verifying credentials...");
+      const verifyResult = await globalThis.electronAuth.getCredentials(
+        creds.source,
       );
-      return;
-    }
+      if (!verifyResult.success || !verifyResult.credentials) {
+        const errorMsg = "Credential storage verification failed";
+        console.error("[AuthContext] ❌ Verification failed:", {
+          stored: creds,
+          retrieved: verifyResult,
+        });
+        toast.error(errorMsg);
+        throw new Error(errorMsg);
+      }
 
-    console.error("[AuthContext] Login window error:", err);
-    const msg =
-      err instanceof Error
-        ? err.message
-        : "Failed to open authentication window";
-    toast.error(msg);
-    setError(msg);
-    setStatusMessage(null);
-    setIsLoading(false);
-    setIsBrowserAuthFlow(false);
-  };
+      // Validate that stored credentials match what we sent
+      const stored = verifyResult.credentials;
+      if (
+        stored.clientId !== creds.clientId ||
+        stored.clientSecret !== creds.clientSecret ||
+        stored.redirectUri !== creds.redirectUri
+      ) {
+        const errorMsg = "Stored credentials do not match";
+        console.error("[AuthContext] ❌ Credential mismatch:", {
+          expected: creds,
+          actual: stored,
+        });
+        toast.error(errorMsg);
+        throw new Error(errorMsg);
+      }
 
-  const refreshToken = async () => {
+      console.debug(
+        "[AuthContext] ✅ Credentials stored and verified successfully",
+      );
+
+      const clientId = encodeURIComponent(creds.clientId);
+      const encodedRedirectUri = encodeURIComponent(redirectUri);
+      const oauthUrl = `https://anilist.co/api/v2/oauth/authorize?client_id=${clientId}&redirect_uri=${encodedRedirectUri}&response_type=code`;
+      return { oauthUrl, redirectUri };
+    },
+    [],
+  );
+
+  const openOAuthWindow = useCallback(
+    async (oauthUrl: string, redirectUri: string) => {
+      const result = await globalThis.electronAuth.openOAuthWindow(
+        oauthUrl,
+        redirectUri,
+      );
+      if (!result.success) {
+        toast.error(result.error || "Failed to open authentication window");
+        throw new Error(result.error || "Failed to open authentication window");
+      }
+    },
+    [],
+  );
+
+  const handleOpenWindowError = useCallback(
+    (err: unknown, ignoreMessage?: string) => {
+      if (isBrowserAuthFlow) {
+        console.debug(
+          "[AuthContext]",
+          ignoreMessage ||
+            "Browser auth flow in progress - ignoring window.close error...",
+        );
+        return;
+      }
+
+      console.error("[AuthContext] Login window error:", err);
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Failed to open authentication window";
+      toast.error(msg);
+      setError(msg);
+      setStatusMessage(null);
+      setIsLoading(false);
+      setIsBrowserAuthFlow(false);
+    },
+    [isBrowserAuthFlow],
+  );
+
+  const refreshToken = useCallback(async () => {
     try {
       recordEvent({
         type: "auth.refresh",
@@ -540,130 +555,140 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
       setIsLoading(false);
       setIsBrowserAuthFlow(false);
     }
-  };
+  }, [
+    authState.credentialSource,
+    customCredentials,
+    handleOpenWindowError,
+    openOAuthWindow,
+    recordEvent,
+    storeCredentialsAndBuildUrl,
+  ]);
 
   // Login function
-  const login = async (credentials: APICredentials) => {
-    try {
-      recordEvent({
-        type: "auth.login",
-        message: "User initiated login",
-        level: "info",
-        metadata: {
-          credentialSource: credentials.source,
-        },
-      });
-      setIsLoading(true);
-      setError(null);
-      setStatusMessage("Preparing authentication...");
-      setIsBrowserAuthFlow(true);
-      // Increment attempt id and lock credential source for this flow
-      authAttemptRef.current += 1;
-      lockedCredentialSourceRef.current = authState.credentialSource;
-
-      // Make sure the redirectUri is properly formatted with http://
-      let redirectUri = credentials.redirectUri;
-      if (
-        !redirectUri.startsWith("http://") &&
-        !redirectUri.startsWith("https://")
-      ) {
-        redirectUri = `http://${redirectUri}`;
-        credentials = { ...credentials, redirectUri };
-      }
-
-      // Store the credentials securely
-      setStatusMessage("Storing credentials...");
-      const storeResult =
-        await globalThis.electronAuth.storeCredentials(credentials);
-      if (!storeResult.success) {
-        toast.error(storeResult.error || "Failed to store credentials");
-        throw new Error(storeResult.error || "Failed to store credentials");
-      }
-
-      // Verify credentials were actually stored
-      setStatusMessage("Verifying credentials...");
-      const verifyResult = await globalThis.electronAuth.getCredentials(
-        credentials.source,
-      );
-      if (!verifyResult.success || !verifyResult.credentials) {
-        const errorMsg = "Credential storage verification failed";
-        console.error("[AuthContext] ❌ Verification failed:", {
-          stored: credentials,
-          retrieved: verifyResult,
-        });
-        toast.error(errorMsg);
-        throw new Error(errorMsg);
-      }
-
-      // Validate that stored credentials match what we sent
-      const stored = verifyResult.credentials;
-      if (
-        stored.clientId !== credentials.clientId ||
-        stored.clientSecret !== credentials.clientSecret ||
-        stored.redirectUri !== credentials.redirectUri
-      ) {
-        const errorMsg = "Stored credentials do not match";
-        console.error("[AuthContext] ❌ Credential mismatch:", {
-          expected: credentials,
-          actual: stored,
-        });
-        toast.error(errorMsg);
-        throw new Error(errorMsg);
-      }
-
-      console.debug(
-        "[AuthContext] ✅ Credentials stored and verified successfully",
-      );
-
-      // Generate the OAuth URL
-      const clientId = encodeURIComponent(credentials.clientId);
-      const encodedRedirectUri = encodeURIComponent(redirectUri);
-      const oauthUrl = `https://anilist.co/api/v2/oauth/authorize?client_id=${clientId}&redirect_uri=${encodedRedirectUri}&response_type=code`;
-
-      setStatusMessage("Opening authentication globalThis...");
-
-      // Open the OAuth window
+  const login = useCallback(
+    async (credentials: APICredentials) => {
       try {
-        const result = await globalThis.electronAuth.openOAuthWindow(
-          oauthUrl,
-          redirectUri,
+        recordEvent({
+          type: "auth.login",
+          message: "User initiated login",
+          level: "info",
+          metadata: {
+            credentialSource: credentials.source,
+          },
+        });
+        setIsLoading(true);
+        setError(null);
+        setStatusMessage("Preparing authentication...");
+        setIsBrowserAuthFlow(true);
+        // Increment attempt id and lock credential source for this flow
+        authAttemptRef.current += 1;
+        lockedCredentialSourceRef.current = authState.credentialSource;
+
+        // Make sure the redirectUri is properly formatted with http://
+        let redirectUri = credentials.redirectUri;
+        if (
+          !redirectUri.startsWith("http://") &&
+          !redirectUri.startsWith("https://")
+        ) {
+          redirectUri = `http://${redirectUri}`;
+          credentials = { ...credentials, redirectUri };
+        }
+
+        // Store the credentials securely
+        setStatusMessage("Storing credentials...");
+        const storeResult =
+          await globalThis.electronAuth.storeCredentials(credentials);
+        if (!storeResult.success) {
+          toast.error(storeResult.error || "Failed to store credentials");
+          throw new Error(storeResult.error || "Failed to store credentials");
+        }
+
+        // Verify credentials were actually stored
+        setStatusMessage("Verifying credentials...");
+        const verifyResult = await globalThis.electronAuth.getCredentials(
+          credentials.source,
+        );
+        if (!verifyResult.success || !verifyResult.credentials) {
+          const errorMsg = "Credential storage verification failed";
+          console.error("[AuthContext] ❌ Verification failed:", {
+            stored: credentials,
+            retrieved: verifyResult,
+          });
+          toast.error(errorMsg);
+          throw new Error(errorMsg);
+        }
+
+        // Validate that stored credentials match what we sent
+        const stored = verifyResult.credentials;
+        if (
+          stored.clientId !== credentials.clientId ||
+          stored.clientSecret !== credentials.clientSecret ||
+          stored.redirectUri !== credentials.redirectUri
+        ) {
+          const errorMsg = "Stored credentials do not match";
+          console.error("[AuthContext] ❌ Credential mismatch:", {
+            expected: credentials,
+            actual: stored,
+          });
+          toast.error(errorMsg);
+          throw new Error(errorMsg);
+        }
+
+        console.debug(
+          "[AuthContext] ✅ Credentials stored and verified successfully",
         );
 
-        if (!result.success) {
-          toast.error(result.error || "Failed to open authentication window");
-          throw new Error(
-            result.error || "Failed to open authentication window",
+        // Generate the OAuth URL
+        const clientId = encodeURIComponent(credentials.clientId);
+        const encodedRedirectUri = encodeURIComponent(redirectUri);
+        const oauthUrl = `https://anilist.co/api/v2/oauth/authorize?client_id=${clientId}&redirect_uri=${encodedRedirectUri}&response_type=code`;
+
+        setStatusMessage("Opening authentication globalThis...");
+
+        // Open the OAuth window
+        try {
+          const result = await globalThis.electronAuth.openOAuthWindow(
+            oauthUrl,
+            redirectUri,
+          );
+
+          if (!result.success) {
+            toast.error(result.error || "Failed to open authentication window");
+            throw new Error(
+              result.error || "Failed to open authentication window",
+            );
+          }
+        } catch (err) {
+          handleOpenWindowError(
+            err,
+            "Browser auth flow in progress - ignoring globalThis.close error...",
           );
         }
-      } catch (err) {
-        handleOpenWindowError(
-          err,
-          "Browser auth flow in progress - ignoring globalThis.close error...",
-        );
-      }
 
-      // The rest of the authentication process happens in the code received listener
-    } catch (err: unknown) {
-      console.error("[AuthContext] Login error:", err);
-      const msg = err instanceof Error ? err.message : "Login failed";
-      toast.error(msg);
-      setError(msg);
-      setStatusMessage(null);
-      setIsLoading(false);
-      setIsBrowserAuthFlow(false);
-      recordEvent({
-        type: "auth.login",
-        message: "Login failed",
-        level: "error",
-        metadata: {
-          error: msg,
-        },
-      });
-    }
-  };
+        // The rest of the authentication process happens in the code received listener
+      } catch (err: unknown) {
+        console.error("[AuthContext] Login error:", err);
+        const msg = err instanceof Error ? err.message : "Login failed";
+        toast.error(msg);
+        setError(msg);
+        setStatusMessage(null);
+        setIsLoading(false);
+        setIsBrowserAuthFlow(false);
+        recordEvent({
+          type: "auth.login",
+          message: "Login failed",
+          level: "error",
+          metadata: {
+            error: msg,
+          },
+        });
+      }
+    },
+    [authState.credentialSource, handleOpenWindowError, recordEvent],
+  );
 
   // Logout function
-  const logout = () => {
+  const logout = useCallback(() => {
     recordEvent({
       type: "auth.logout",
       message: "User logged out",
@@ -681,9 +706,9 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     });
     setStatusMessage(null);
     lockedCredentialSourceRef.current = null;
-  };
+  }, [authState.credentialSource, authState.username, recordEvent]);
 
-  const cancelAuth = async () => {
+  const cancelAuth = useCallback(async () => {
     recordEvent({
       type: "auth.cancel",
       message: "User cancelled authentication",
@@ -711,63 +736,65 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
       console.error("[AuthContext] Cancel auth error:", err);
       toast.error(message);
     }
-  };
+  }, [recordEvent]);
 
   // Set credential source
-  const setCredentialSource = (source: "default" | "custom") => {
-    // Only update if the source actually changed
-    if (source !== authState.credentialSource) {
-      // Prevent switching source during an active OAuth browser flow
-      if (isBrowserAuthFlow) {
-        console.warn(
-          "[AuthContext] Credential source change ignored during active auth flow",
-        );
-        return;
+  const setCredentialSource = useCallback(
+    (source: "default" | "custom") => {
+      // Only update if the source actually changed
+      if (source !== authState.credentialSource) {
+        // Prevent switching source during an active OAuth browser flow
+        if (isBrowserAuthFlow) {
+          console.warn(
+            "[AuthContext] Credential source change ignored during active auth flow",
+          );
+          return;
+        }
+        recordEvent({
+          type: "auth.credential-source-change",
+          message: `Credential source changed to: ${source}`,
+          level: "info",
+          metadata: { source },
+        });
+        setAuthState((prevState) => ({
+          ...prevState,
+          credentialSource: source,
+        }));
       }
-      recordEvent({
-        type: "auth.credential-source-change",
-        message: `Credential source changed to: ${source}`,
-        level: "info",
-        metadata: { source },
-      });
-      setAuthState((prevState) => ({
-        ...prevState,
-        credentialSource: source,
-      }));
-    }
-  };
+    },
+    [authState.credentialSource, isBrowserAuthFlow, recordEvent],
+  );
 
   // Update custom credentials
-  const updateCustomCredentials = (
-    clientId: string,
-    clientSecret: string,
-    redirectUri: string,
-  ) => {
-    // Only update if values have actually changed
-    if (
-      !customCredentials ||
-      customCredentials.clientId !== clientId ||
-      customCredentials.clientSecret !== clientSecret ||
-      customCredentials.redirectUri !== redirectUri
-    ) {
-      recordEvent({
-        type: "auth.custom-credentials-update",
-        message: "Custom API credentials updated",
-        level: "info",
-        metadata: {
-          hasClientId: !!clientId,
-          hasClientSecret: !!clientSecret,
+  const updateCustomCredentials = useCallback(
+    (clientId: string, clientSecret: string, redirectUri: string) => {
+      // Only update if values have actually changed
+      if (
+        !customCredentials ||
+        customCredentials.clientId !== clientId ||
+        customCredentials.clientSecret !== clientSecret ||
+        customCredentials.redirectUri !== redirectUri
+      ) {
+        recordEvent({
+          type: "auth.custom-credentials-update",
+          message: "Custom API credentials updated",
+          level: "info",
+          metadata: {
+            hasClientId: !!clientId,
+            hasClientSecret: !!clientSecret,
+            redirectUri,
+          },
+        });
+        setCustomCredentials({
+          source: "custom",
+          clientId,
+          clientSecret,
           redirectUri,
-        },
-      });
-      setCustomCredentials({
-        source: "custom",
-        clientId,
-        clientSecret,
-        redirectUri,
-      });
-    }
-  };
+        });
+      }
+    },
+    [customCredentials, recordEvent],
+  );
 
   // Function to fetch user profile from AniList
   const fetchUserProfile = async (
@@ -805,37 +832,52 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     return await response.json();
   };
 
-  // Create the context value, memoized to avoid unnecessary re-renders
-  const contextValue: AuthContextType = React.useMemo(
+  // Memoize split context values to minimise downstream re-renders
+  const stateContextValue = React.useMemo<AuthStateContextValue>(
     () => ({
       authState,
-      login,
-      refreshToken,
-      logout,
-      cancelAuth,
       isLoading,
       error,
       statusMessage,
-      setCredentialSource,
-      updateCustomCredentials,
       customCredentials,
     }),
-    [
-      authState,
+    [authState, isLoading, error, statusMessage, customCredentials],
+  );
+
+  const actionsContextValue = React.useMemo<AuthActionsContextValue>(
+    () => ({
       login,
       refreshToken,
       logout,
       cancelAuth,
-      isLoading,
-      error,
-      statusMessage,
       setCredentialSource,
       updateCustomCredentials,
-      customCredentials,
+    }),
+    [
+      login,
+      refreshToken,
+      logout,
+      cancelAuth,
+      setCredentialSource,
+      updateCustomCredentials,
     ],
   );
 
+  const legacyContextValue = React.useMemo<AuthContextType>(
+    () => ({
+      ...stateContextValue,
+      ...actionsContextValue,
+    }),
+    [stateContextValue, actionsContextValue],
+  );
+
   return (
-    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
+    <AuthActionsContext.Provider value={actionsContextValue}>
+      <AuthStateContext.Provider value={stateContextValue}>
+        <AuthLegacyContext.Provider value={legacyContextValue}>
+          {children}
+        </AuthLegacyContext.Provider>
+      </AuthStateContext.Provider>
+    </AuthActionsContext.Provider>
   );
 }

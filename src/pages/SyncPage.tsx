@@ -6,7 +6,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useAuth } from "../hooks/useAuth";
+import { useAuthState } from "../hooks/useAuth";
 import { useSynchronization } from "../hooks/useSynchronization";
 import { useRateLimit } from "../contexts/RateLimitContext";
 import {
@@ -89,7 +89,7 @@ import { ViewControls } from "../components/sync/ViewControls";
  */
 export function SyncPage() {
   const navigate = useNavigate();
-  const { authState } = useAuth();
+  const { authState } = useAuthState();
   const token = authState.accessToken || "";
   const [state, actions] = useSynchronization();
   const [viewMode, setViewMode] = useState<ViewMode>("preview");

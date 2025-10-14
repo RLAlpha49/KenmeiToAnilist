@@ -24,8 +24,8 @@ import {
   Loader2,
   ShieldCheck,
 } from "lucide-react";
-import { useAuth } from "../hooks/useAuth";
-import { useDebug } from "../contexts/DebugContext";
+import { useAuthActions, useAuthState } from "../hooks/useAuth";
+import { useDebugActions, useDebugState } from "../contexts/DebugContext";
 import { APICredentials } from "../types/auth";
 import { DEFAULT_ANILIST_CONFIG, DEFAULT_AUTH_PORT } from "../config/anilist";
 import {
@@ -81,35 +81,41 @@ const itemVariants = {
 export function SettingsPage() {
   const {
     authState,
+    isLoading,
+    error: authError,
+    statusMessage,
+    customCredentials,
+  } = useAuthState();
+
+  const {
     login,
     refreshToken,
     logout,
     cancelAuth,
-    isLoading,
-    error: authError,
-    statusMessage,
     setCredentialSource,
     updateCustomCredentials,
-    customCredentials,
-  } = useAuth();
+  } = useAuthActions();
 
   const {
     isDebugEnabled,
-    toggleDebug,
     storageDebuggerEnabled,
-    setStorageDebuggerEnabled,
     logViewerEnabled,
-    setLogViewerEnabled,
     logRedactionEnabled,
-    setLogRedactionEnabled,
     stateInspectorEnabled,
-    setStateInspectorEnabled,
     ipcViewerEnabled,
-    setIpcViewerEnabled,
     eventLoggerEnabled,
+  } = useDebugState();
+
+  const {
+    toggleDebug,
+    setStorageDebuggerEnabled,
+    setLogViewerEnabled,
+    setLogRedactionEnabled,
+    setStateInspectorEnabled,
+    setIpcViewerEnabled,
     setEventLoggerEnabled,
     recordEvent,
-  } = useDebug();
+  } = useDebugActions();
 
   const prevCredentialSourceRef = useRef<"default" | "custom">(
     authState.credentialSource,

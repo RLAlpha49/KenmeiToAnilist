@@ -21,7 +21,7 @@ import {
   enableLightMode,
   applySystemTheme,
 } from "@/helpers/theme_helpers";
-import { useDebug, StateInspectorHandle } from "./DebugContext";
+import { useDebugActions, StateInspectorHandle } from "./DebugContext";
 
 /**
  * The shape of the theme context value provided to consumers.
@@ -61,7 +61,8 @@ export function ThemeProvider({
     local: null,
   });
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const { registerStateInspector: registerThemeStateInspector } = useDebug();
+  const { registerStateInspector: registerThemeStateInspector } =
+    useDebugActions();
   const themeInspectorHandleRef =
     useRef<StateInspectorHandle<ThemeDebugSnapshot> | null>(null);
   const themeSnapshotRef = useRef<ThemeDebugSnapshot | null>(null);

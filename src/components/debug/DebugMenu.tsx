@@ -20,7 +20,7 @@ import { IpcViewer } from "./IpcViewer";
 import { EventLogger } from "./EventLogger";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Badge } from "../ui/badge";
-import { useDebug } from "../../contexts/DebugContext";
+import { useDebugState } from "../../contexts/DebugContext";
 import { cn } from "@/utils/tailwind";
 import { Button } from "../ui/button";
 import { ScrollArea } from "../ui/scroll-area";
@@ -45,7 +45,7 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
     stateInspectorEnabled,
     ipcViewerEnabled,
     eventLoggerEnabled,
-  } = useDebug();
+  } = useDebugState();
 
   const panels = useMemo(() => {
     const entries: DebugPanelDefinition[] = [];

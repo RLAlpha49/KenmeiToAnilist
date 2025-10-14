@@ -6,7 +6,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { useDebug } from "../../contexts/DebugContext";
+import { useDebugActions, useDebugState } from "../../contexts/DebugContext";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
@@ -87,11 +87,9 @@ function formatTimestamp(timestamp: number): string {
 }
 
 export function StateInspector(): React.ReactElement {
-  const {
-    stateInspectorSources,
-    applyStateInspectorUpdate,
-    refreshStateInspectorSource,
-  } = useDebug();
+  const { stateInspectorSources } = useDebugState();
+  const { applyStateInspectorUpdate, refreshStateInspectorSource } =
+    useDebugActions();
 
   const [editorState, setEditorState] = useState<Record<string, EditorState>>(
     {},

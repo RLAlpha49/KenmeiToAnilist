@@ -17,7 +17,10 @@ import {
   saveSyncReportToHistory,
 } from "../utils/export-utils";
 import { storage, STORAGE_KEYS } from "../utils/storage";
-import { useDebug, StateInspectorHandle } from "../contexts/DebugContext";
+import {
+  useDebugActions,
+  StateInspectorHandle,
+} from "../contexts/DebugContext";
 
 /**
  * Snapshot of an in-progress synchronization session for pause/resume support.
@@ -581,7 +584,7 @@ export function useSynchronization(): [
   const resumeRequestedRef = useRef(false);
   const hasLoadedSnapshotRef = useRef(false);
   const { registerStateInspector: registerSyncStateInspector, recordEvent } =
-    useDebug();
+    useDebugActions();
   const syncInspectorHandleRef =
     useRef<StateInspectorHandle<SyncDebugSnapshot> | null>(null);
   const syncSnapshotRef = useRef<SyncDebugSnapshot | null>(null);

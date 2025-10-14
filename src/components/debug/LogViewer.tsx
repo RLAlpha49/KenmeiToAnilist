@@ -6,7 +6,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { useDebug } from "../../contexts/DebugContext";
+import { useDebugActions, useDebugState } from "../../contexts/DebugContext";
 import {
   type LogEntry,
   type LogLevel,
@@ -148,7 +148,8 @@ function includesQuery(entry: LogEntry, query: string): boolean {
 }
 
 export function LogViewer(): React.ReactElement {
-  const { logEntries, clearLogs, exportLogs, maxLogEntries } = useDebug();
+  const { logEntries, maxLogEntries } = useDebugState();
+  const { clearLogs, exportLogs } = useDebugActions();
   const [searchTerm, setSearchTerm] = useState("");
   const [levelFilters, setLevelFilters] = useState(DEFAULT_LEVEL_FILTER);
   const [autoScroll, setAutoScroll] = useState(true);

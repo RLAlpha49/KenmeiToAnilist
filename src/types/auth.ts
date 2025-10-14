@@ -99,20 +99,27 @@ export interface ViewerResponse {
  * @property customCredentials - The current custom credentials, if any.
  * @source
  */
-export interface AuthContextType {
+export interface AuthStateContextValue {
   authState: AuthState;
+  isLoading: boolean;
+  error: string | null;
+  statusMessage: string | null;
+  customCredentials: APICredentials | null;
+}
+
+export interface AuthActionsContextValue {
   login: (credentials: APICredentials) => Promise<void>;
   refreshToken: () => Promise<void>;
   logout: () => void;
   cancelAuth: () => Promise<void>;
-  isLoading: boolean;
-  error: string | null;
-  statusMessage: string | null;
   setCredentialSource: (source: "default" | "custom") => void;
   updateCustomCredentials: (
     clientId: string,
     clientSecret: string,
     redirectUri: string,
   ) => void;
-  customCredentials: APICredentials | null;
 }
+
+export interface AuthContextType
+  extends AuthStateContextValue,
+    AuthActionsContextValue {}

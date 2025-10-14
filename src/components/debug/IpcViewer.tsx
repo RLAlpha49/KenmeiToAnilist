@@ -6,7 +6,7 @@
 
 import React, { useMemo, useState, useCallback } from "react";
 import { toast } from "sonner";
-import { useDebug } from "../../contexts/DebugContext";
+import { useDebugActions, useDebugState } from "../../contexts/DebugContext";
 import { ScrollArea } from "../ui/scroll-area";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
@@ -158,7 +158,8 @@ function matchesChannel(entry: IpcLogEntry, channelFilter: string): boolean {
 }
 
 export function IpcViewer(): React.ReactElement {
-  const { ipcEvents, clearIpcEvents, maxIpcEntries } = useDebug();
+  const { ipcEvents, maxIpcEntries } = useDebugState();
+  const { clearIpcEvents } = useDebugActions();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [channelFilter, setChannelFilter] = useState("");

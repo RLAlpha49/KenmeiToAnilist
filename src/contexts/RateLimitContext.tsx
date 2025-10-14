@@ -14,7 +14,7 @@ import React, {
   useCallback,
 } from "react";
 import { toast } from "sonner";
-import { useDebug, StateInspectorHandle } from "./DebugContext";
+import { useDebugActions, StateInspectorHandle } from "./DebugContext";
 
 /**
  * The shape of the rate limit state managed by the context.
@@ -75,7 +75,8 @@ export function RateLimitProvider({
 
   // Use string type only for toast ID to fix TypeScript error
   const [toastId, setToastId] = useState<string | null>(null);
-  const { registerStateInspector: registerRateLimitInspector } = useDebug();
+  const { registerStateInspector: registerRateLimitInspector } =
+    useDebugActions();
   const rateLimitInspectorHandleRef =
     useRef<StateInspectorHandle<RateLimitDebugSnapshot> | null>(null);
   const rateLimitSnapshotRef = useRef<RateLimitDebugSnapshot | null>(null);
