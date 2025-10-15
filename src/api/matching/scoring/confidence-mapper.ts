@@ -4,6 +4,8 @@
  * @description Converts match scores (0-1) to confidence percentages (0-100)
  */
 
+// TODO: Improve confidence calculation algorithm
+
 import { AniListManga } from "../../anilist/types";
 import { calculateMatchScore } from "./match-scorer";
 

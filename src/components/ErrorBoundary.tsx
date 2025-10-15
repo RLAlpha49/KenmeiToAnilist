@@ -78,7 +78,7 @@ export class ErrorBoundary extends Component<Props, State> {
           },
         },
       });
-      window.dispatchEvent(debugEvent);
+      globalThis.dispatchEvent(debugEvent);
     } catch (e) {
       console.error("Failed to log error to debug context:", e);
     }
@@ -93,11 +93,11 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   handleReload = (): void => {
-    window.location.reload();
+    globalThis.location.reload();
   };
 
   handleGoHome = (): void => {
-    window.location.href = "/";
+    globalThis.location.href = "/";
   };
 
   render(): ReactNode {

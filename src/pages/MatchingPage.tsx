@@ -4,12 +4,9 @@
  * @description Matching page component for the Kenmei to AniList sync tool. Handles manga matching, review, rematch, and sync preparation.
  */
 
-// TODO: Fix this being logged a lot "[MatchingPage] Global process complete, syncing final state"
-
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { KenmeiManga } from "../api/kenmei/types";
-import { MangaMatchResult } from "../api/anilist/types";
 import { useAuthState } from "../hooks/useAuth";
 import {
   getKenmeiData,
@@ -17,6 +14,7 @@ import {
   getSavedMatchResults,
 } from "../utils/storage";
 import { StatusFilterOptions } from "../types/matching";
+import { MangaMatchResult } from "../api/anilist/types";
 import { useMatchingProcess } from "../hooks/useMatchingProcess";
 import { usePendingManga } from "../hooks/usePendingManga";
 import { useMatchHandlers } from "../hooks/useMatchHandlers";
@@ -24,12 +22,9 @@ import { clearCacheForTitles } from "../api/matching/search-service";
 import { useRateLimit } from "../contexts/RateLimitContext";
 
 // Components
-// MatchingProgressPanel and ErrorDisplay were moved into LoadingView
 import { RematchOptions } from "../components/matching/RematchOptions";
 import { CacheClearingNotification } from "../components/matching/CacheClearingNotification";
 import { SearchModal } from "../components/matching/SearchModal";
-// Button is used by extracted subcomponents
-// Card and loader components are used by extracted subcomponents
 import InitializationCard from "../components/matching/InitializationCard";
 import AuthRequiredCard from "../components/matching/AuthRequiredCard";
 import { AnimatePresence, motion } from "framer-motion";
@@ -173,6 +168,18 @@ export function MatchingPage() {
 
   // Add a ref to track if we've already done initialization
   const hasInitialized = useRef(false);
+  const lastGlobalSyncSnapshot = useRef<{
+    current: number;
+    total: number;
+    currentTitle: string | null;
+    statusMessage: string | null;
+    detailMessage: string | null;
+  } | null>(null);
+  const matchingProcessRef = useRef(matchingProcess);
+
+  useEffect(() => {
+    matchingProcessRef.current = matchingProcess;
+  }, [matchingProcess]);
 
   // Calculate whether resume is needed and the count of unprocessed manga
   const resumeState = useMemo(() => {
@@ -312,6 +319,31 @@ export function MatchingPage() {
         matchingProcess.setTimeEstimate(
           globalThis.matchingProcessState.timeEstimate,
         );
+      }
+
+      const persistedPauseTransitioning = Boolean(
+        globalThis.matchingProcessState.isPauseTransitioning,
+      );
+      const persistedManualPause = Boolean(
+        globalThis.matchingProcessState.isManuallyPaused,
+      );
+
+      if (
+        matchingProcess.isPauseTransitioning !== persistedPauseTransitioning
+      ) {
+        matchingProcess.setIsPauseTransitioning(persistedPauseTransitioning);
+      }
+
+      if (matchingProcess.isManuallyPaused !== persistedManualPause) {
+        matchingProcess.setIsManuallyPaused(persistedManualPause);
+      }
+
+      if (persistedManualPause) {
+        matchingProcess.setManualMatchingPause(true);
+        matchingProcess.pauseTimeTracking();
+      } else if (!matchingProcess.isRateLimitPaused) {
+        matchingProcess.setManualMatchingPause(false);
+        matchingProcess.resumeTimeTracking();
       }
 
       // Mark as initialized to prevent auto-starting
@@ -625,32 +657,203 @@ export function MatchingPage() {
     // Skip if we're not in the middle of a process
     if (!globalThis.matchingProcessState?.isRunning) return;
 
+    let hasSyncedCompletion = false;
+    let syncInterval: ReturnType<typeof setInterval> | null = null;
+
+    const applyPauseState = (
+      state: NonNullable<typeof globalThis.matchingProcessState>,
+      controls: typeof matchingProcessRef.current,
+    ) => {
+      const persistedManualPause = Boolean(state.isManuallyPaused);
+      if (controls.isManuallyPaused !== persistedManualPause) {
+        controls.setIsManuallyPaused(persistedManualPause);
+      }
+
+      if (persistedManualPause) {
+        controls.setManualMatchingPause(true);
+        controls.pauseTimeTracking();
+      } else if (!controls.isRateLimitPaused) {
+        controls.setManualMatchingPause(false);
+        controls.resumeTimeTracking();
+      }
+
+      const persistedPauseTransitioning = Boolean(state.isPauseTransitioning);
+      if (controls.isPauseTransitioning !== persistedPauseTransitioning) {
+        controls.setIsPauseTransitioning(persistedPauseTransitioning);
+      }
+    };
+
+    const syncRunningState = (
+      state: NonNullable<typeof globalThis.matchingProcessState>,
+      controls: typeof matchingProcessRef.current,
+    ) => {
+      const snapshot = {
+        current: state.progress.current,
+        total: state.progress.total,
+        currentTitle: state.progress.currentTitle ?? null,
+        statusMessage: state.statusMessage ?? null,
+        detailMessage: state.detailMessage ?? null,
+      };
+
+      const hasChanged =
+        !lastGlobalSyncSnapshot.current ||
+        lastGlobalSyncSnapshot.current.current !== snapshot.current ||
+        lastGlobalSyncSnapshot.current.total !== snapshot.total ||
+        lastGlobalSyncSnapshot.current.currentTitle !== snapshot.currentTitle ||
+        lastGlobalSyncSnapshot.current.statusMessage !==
+          snapshot.statusMessage ||
+        lastGlobalSyncSnapshot.current.detailMessage !== snapshot.detailMessage;
+
+      if (hasChanged) {
+        console.debug("[MatchingPage] Syncing UI with global process state:", {
+          current: snapshot.current,
+          total: snapshot.total,
+          statusMessage: snapshot.statusMessage,
+        });
+        lastGlobalSyncSnapshot.current = snapshot;
+      }
+
+      controls.setIsLoading((prev) => prev || true);
+      controls.setProgress((prev) => {
+        if (
+          prev.current === snapshot.current &&
+          prev.total === snapshot.total &&
+          prev.currentTitle === (snapshot.currentTitle || "")
+        ) {
+          return prev;
+        }
+        return {
+          current: snapshot.current,
+          total: snapshot.total,
+          currentTitle: snapshot.currentTitle || "",
+        };
+      });
+      controls.setStatusMessage((prev) => {
+        const next = snapshot.statusMessage || "";
+        return prev === next ? prev : next;
+      });
+      controls.setDetailMessage((prev) => {
+        const next = snapshot.detailMessage ?? null;
+        return prev === next ? prev : next;
+      });
+
+      const timeEstimate = state.timeEstimate;
+      if (
+        timeEstimate &&
+        Number.isFinite(timeEstimate.startTime) &&
+        timeEstimate.startTime > 0
+      ) {
+        controls.setTimeEstimate((prev) => {
+          if (
+            prev.startTime === timeEstimate.startTime &&
+            prev.averageTimePerManga === timeEstimate.averageTimePerManga &&
+            prev.estimatedRemainingSeconds ===
+              timeEstimate.estimatedRemainingSeconds
+          ) {
+            return prev;
+          }
+          return {
+            startTime: timeEstimate.startTime,
+            averageTimePerManga: timeEstimate.averageTimePerManga,
+            estimatedRemainingSeconds: timeEstimate.estimatedRemainingSeconds,
+          };
+        });
+      }
+
+      applyPauseState(state, controls);
+    };
+
+    const syncCompletedState = (
+      state: NonNullable<typeof globalThis.matchingProcessState>,
+      controls: typeof matchingProcessRef.current,
+    ): boolean => {
+      if (!state.progress) {
+        return false;
+      }
+
+      const finalSnapshot = {
+        current: state.progress.current,
+        total: state.progress.total,
+        currentTitle: state.progress.currentTitle ?? null,
+        statusMessage: state.statusMessage ?? null,
+        detailMessage: state.detailMessage ?? null,
+      };
+      lastGlobalSyncSnapshot.current = finalSnapshot;
+
+      controls.setProgress((prev) => {
+        if (
+          prev.current === finalSnapshot.current &&
+          prev.total === finalSnapshot.total &&
+          prev.currentTitle === (finalSnapshot.currentTitle || "")
+        ) {
+          return prev;
+        }
+        return {
+          current: finalSnapshot.current,
+          total: finalSnapshot.total,
+          currentTitle: finalSnapshot.currentTitle || "",
+        };
+      });
+      controls.setStatusMessage((prev) => {
+        const next = finalSnapshot.statusMessage || "";
+        return prev === next ? prev : next;
+      });
+      controls.setDetailMessage((prev) => {
+        const next = finalSnapshot.detailMessage ?? null;
+        return prev === next ? prev : next;
+      });
+
+      const timeEstimate = state.timeEstimate;
+      if (
+        timeEstimate &&
+        Number.isFinite(timeEstimate.startTime) &&
+        timeEstimate.startTime > 0
+      ) {
+        controls.setTimeEstimate((prev) => {
+          if (
+            prev.startTime === timeEstimate.startTime &&
+            prev.averageTimePerManga === timeEstimate.averageTimePerManga &&
+            prev.estimatedRemainingSeconds ===
+              timeEstimate.estimatedRemainingSeconds
+          ) {
+            return prev;
+          }
+          return {
+            startTime: timeEstimate.startTime,
+            averageTimePerManga: timeEstimate.averageTimePerManga,
+            estimatedRemainingSeconds: timeEstimate.estimatedRemainingSeconds,
+          };
+        });
+      }
+
+      applyPauseState(state, controls);
+
+      console.info(
+        "[MatchingPage] Global process complete, syncing final state",
+      );
+      controls.setIsLoading((prev) => (prev ? false : prev));
+
+      if (syncInterval) {
+        clearInterval(syncInterval);
+        syncInterval = null;
+      }
+
+      return true;
+    };
+
     // Create a function to sync the UI with the global state
     const syncUIWithGlobalState = () => {
-      if (globalThis.matchingProcessState?.isRunning) {
-        const currentState = globalThis.matchingProcessState;
+      const processState = globalThis.matchingProcessState;
+      if (!processState) {
+        return;
+      }
 
-        console.debug("[MatchingPage] Syncing UI with global process state:", {
-          current: currentState.progress.current,
-          total: currentState.progress.total,
-          statusMessage: currentState.statusMessage,
-        });
+      const controls = matchingProcessRef.current;
 
-        // Update our local state with the global state
-        matchingProcess.setIsLoading(true);
-        matchingProcess.setProgress({
-          current: currentState.progress.current,
-          total: currentState.progress.total,
-          currentTitle: currentState.progress.currentTitle,
-        });
-        matchingProcess.setStatusMessage(currentState.statusMessage);
-        matchingProcess.setDetailMessage(currentState.detailMessage);
-      } else {
-        // If the process is no longer running, update our loading state
-        console.info(
-          "[MatchingPage] Global process complete, syncing final state",
-        );
-        matchingProcess.setIsLoading(false);
+      if (processState.isRunning) {
+        syncRunningState(processState, controls);
+      } else if (!hasSyncedCompletion) {
+        hasSyncedCompletion = syncCompletedState(processState, controls);
       }
     };
 
@@ -661,6 +864,13 @@ export function MatchingPage() {
           "[MatchingPage] Page became visible, syncing state immediately",
         );
         syncUIWithGlobalState();
+        if (
+          globalThis.matchingProcessState?.isRunning &&
+          !matchingProcessRef.current.isManuallyPaused &&
+          !matchingProcessRef.current.isRateLimitPaused
+        ) {
+          matchingProcessRef.current.resumeTimeTracking();
+        }
       }
     };
 
@@ -668,7 +878,7 @@ export function MatchingPage() {
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     // Create an interval to check for updates to the global state (less frequently since we also have visibility events)
-    const syncInterval = setInterval(() => {
+    syncInterval = setInterval(() => {
       if (document.visibilityState === "visible") {
         syncUIWithGlobalState();
       }
@@ -676,7 +886,9 @@ export function MatchingPage() {
 
     // Clean up the interval and event listener when the component unmounts
     return () => {
-      clearInterval(syncInterval);
+      if (syncInterval) {
+        clearInterval(syncInterval);
+      }
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []); // Only run once when component mounts

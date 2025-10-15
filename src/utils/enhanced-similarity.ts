@@ -335,11 +335,11 @@ function calculateSubstringMatch(str1: string, str2: string): number {
   for (let i = 1; i <= len1; i++) {
     for (let j = 1; j <= len2; j++) {
       const length =
-        norm1.charCodeAt(i - 1) === norm2.charCodeAt(j - 1)
+        norm1.codePointAt(i - 1) === norm2.codePointAt(j - 1)
           ? previous[j - 1] + 1
           : 0;
       current[j] = length;
-      longest = length > longest ? length : longest;
+      longest = Math.max(longest, length);
     }
 
     if (longest === minLength) {
@@ -450,7 +450,7 @@ function calculateLevenshteinSimilarity(str1: string, str2: string): number {
     let rowMin = current[0];
 
     for (let j = 1; j <= len2; j++) {
-      const cost = str1.charCodeAt(i - 1) === str2.charCodeAt(j - 1) ? 0 : 1;
+      const cost = str1.codePointAt(i - 1) === str2.codePointAt(j - 1) ? 0 : 1;
       const candidate = Math.min(
         previous[j] + 1,
         current[j - 1] + 1,

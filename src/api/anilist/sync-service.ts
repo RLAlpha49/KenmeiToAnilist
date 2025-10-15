@@ -1196,6 +1196,15 @@ export async function syncMangaBatch(
 
   // Process each media ID in order
   for (const mediaIdNum of userOrderMediaIds) {
+    const mediaEntries = entriesByMediaId[mediaIdNum];
+
+    if (!mediaEntries || mediaEntries.length === 0) {
+      console.debug(
+        `[AniListSync] ⏭️ Skipping media ${mediaIdNum} — no entries in current batch`,
+      );
+      continue;
+    }
+
     if (abortSignal?.aborted) {
       console.info("[AniListSync] ⏹️ Sync operation aborted by user");
       break;

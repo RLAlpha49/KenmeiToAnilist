@@ -4,9 +4,7 @@
  * @description React component for displaying the progress of the manga matching process, including progress bar, status, and time estimate.
  */
 
-// TODO: Fix elapsed time breaking when unpausing. It gets set to ~488995h 48m.
-
-import React, { ReactNode, useMemo, useState, useEffect } from "react";
+import React, { ReactNode, useMemo, useState, useEffect, useRef } from "react";
 import { MatchingProgress, TimeEstimate } from "../../types/matching";
 import { formatTimeRemaining } from "../../utils/timeUtils";
 import {
@@ -55,6 +53,7 @@ interface PauseResumeButtonProps {
   onPauseProcess?: () => void;
   resumeButtonDisabled: boolean;
   pauseButtonDisabled: boolean;
+  isPausing: boolean;
 }
 
 /**
@@ -71,7 +70,23 @@ const PauseResumeButton: React.FC<PauseResumeButtonProps> = ({
   onPauseProcess,
   resumeButtonDisabled,
   pauseButtonDisabled,
+  isPausing,
 }) => {
+  if (isPausing) {
+    return (
+      <Button
+        size="lg"
+        disabled
+        className="group relative w-full rounded-2xl border border-slate-200/70 bg-white/70 text-base font-semibold text-slate-600 shadow-sm shadow-blue-500/10 dark:border-slate-700/60 dark:bg-slate-900/60 dark:text-slate-200"
+      >
+        <span className="flex items-center justify-center gap-2">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          Pausing...
+        </span>
+      </Button>
+    );
+  }
+
   if (isPaused) {
     const buttonLabel = isManuallyPaused
       ? "Resume Matching"
@@ -300,6 +315,7 @@ export interface MatchingProgressProps {
   isPaused?: boolean;
   isManuallyPaused?: boolean;
   isRateLimitActive?: boolean;
+  isPauseTransitioning?: boolean;
 }
 
 /**
@@ -333,7 +349,9 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
   isPaused = false,
   isManuallyPaused = false,
   isRateLimitActive = false,
+  isPauseTransitioning = false,
 }) => {
+  const previousElapsedRef = useRef<number>(0);
   const progressPercent = progress.total
     ? Math.min(100, Math.round((progress.current / progress.total) * 100))
     : 0;
@@ -346,13 +364,21 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
     : 0;
 
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(() => {
-    if (!timeEstimate.startTime || progress.current <= 0) {
+    const startTimeMs = Number(timeEstimate.startTime);
+    const hasValidStart =
+      Number.isFinite(startTimeMs) && startTimeMs > 0 && progress.current > 0;
+
+    if (!hasValidStart) {
+      previousElapsedRef.current = 0;
       return 0;
     }
-    return Math.max(
+
+    const initialElapsed = Math.max(
       0,
-      Math.round((Date.now() - timeEstimate.startTime) / 1000),
+      Math.round((Date.now() - startTimeMs) / 1000),
     );
+    previousElapsedRef.current = initialElapsed;
+    return initialElapsed;
   });
 
   // Track when the time estimate was last updated to calculate live remaining time
@@ -389,9 +415,17 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
 
   // Update elapsed time and live remaining time every second when matching is active
   useEffect(() => {
-    if (!timeEstimate.startTime || progress.current <= 0) {
-      setElapsedSeconds(0);
-      setLiveRemainingSeconds(0);
+    const startTimeMs = Number(timeEstimate.startTime);
+    const hasValidStartTime = Number.isFinite(startTimeMs) && startTimeMs > 0;
+
+    if (!hasValidStartTime || progress.current <= 0) {
+      const fallbackElapsed =
+        progress.current <= 0 ? 0 : previousElapsedRef.current;
+      previousElapsedRef.current = fallbackElapsed;
+      setElapsedSeconds(fallbackElapsed);
+      setLiveRemainingSeconds(
+        progress.current <= 0 ? 0 : estimateSnapshot.remainingSeconds,
+      );
       return;
     }
 
@@ -402,10 +436,20 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
 
     // Initial update
     const updateTimes = () => {
+      const normalizedStartTime = Number(timeEstimate.startTime);
+      if (!Number.isFinite(normalizedStartTime) || normalizedStartTime <= 0) {
+        setElapsedSeconds(previousElapsedRef.current);
+        setLiveRemainingSeconds(estimateSnapshot.remainingSeconds);
+        return;
+      }
+
       const now = Date.now();
-      setElapsedSeconds(
-        Math.max(0, Math.round((now - timeEstimate.startTime) / 1000)),
+      const elapsed = Math.max(
+        0,
+        Math.round((now - normalizedStartTime) / 1000),
       );
+      previousElapsedRef.current = elapsed;
+      setElapsedSeconds(elapsed);
 
       // Calculate how much time has actually passed since the estimate was captured
       const secondsSinceEstimate = Math.floor(
@@ -463,9 +507,17 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
   );
 
   const pauseButtonDisabled =
-    disableControls || isCancelling || isPaused || isRateLimitActive;
+    disableControls ||
+    isCancelling ||
+    isPaused ||
+    isRateLimitActive ||
+    isPauseTransitioning;
   const resumeButtonDisabled =
-    disableControls || isCancelling || !isManuallyPaused || isRateLimitActive;
+    disableControls ||
+    isCancelling ||
+    !isManuallyPaused ||
+    isRateLimitActive ||
+    isPauseTransitioning;
 
   return (
     <Card className="relative isolate mb-8 overflow-hidden border">
@@ -654,6 +706,7 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
             onPauseProcess={onPauseProcess}
             resumeButtonDisabled={resumeButtonDisabled}
             pauseButtonDisabled={pauseButtonDisabled}
+            isPausing={isPauseTransitioning}
           />
           <Button
             variant={isCancelling ? "outline" : "default"}

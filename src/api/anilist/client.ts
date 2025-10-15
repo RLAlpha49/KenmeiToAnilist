@@ -680,7 +680,7 @@ export async function batchSearchManga(
   // Build the batched query dynamically
   const queryParts: string[] = [];
 
-  searches.forEach(({ alias, title }) => {
+  for (const { alias, title } of searches) {
     // Sanitize the title for use in GraphQL (escape quotes)
     const sanitizedTitle = JSON.stringify(title).slice(1, -1);
 
@@ -719,7 +719,7 @@ export async function batchSearchManga(
         isAdult
       }
     }`);
-  });
+  }
 
   const batchedQuery = `
 query BatchSearchManga {
@@ -771,7 +771,7 @@ ${queryParts.join("\n")}
     >();
 
     let totalResults = 0;
-    searches.forEach(({ alias, index, title }) => {
+    for (const { alias, index, title } of searches) {
       const aliasData = responseData[alias];
       if (aliasData?.media?.length) {
         results.set(alias, {
@@ -788,7 +788,7 @@ ${queryParts.join("\n")}
           title,
         });
       }
-    });
+    }
 
     console.info(
       `[AniListClient] ✅ Batch search complete: ${totalResults} total results for ${searches.length} queries`,
@@ -808,13 +808,13 @@ ${queryParts.join("\n")}
       }
     >();
 
-    searches.forEach(({ alias, index, title }) => {
+    for (const { alias, index, title } of searches) {
       emptyResults.set(alias, {
         media: [],
         index,
         title,
       });
-    });
+    }
 
     return emptyResults;
   }

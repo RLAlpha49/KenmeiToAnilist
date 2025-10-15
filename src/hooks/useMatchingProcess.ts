@@ -51,6 +51,13 @@ export const useMatchingProcess = ({
     total: 0,
     currentTitle: "",
   });
+  const progressRef = useRef<MatchingProgress>({
+    current: 0,
+    total: 0,
+    currentTitle: "",
+  });
+  const lastProgressUpdateRef = useRef<number>(Date.now());
+  const schedulePauseFinalizationRef = useRef<() => void>(() => {});
   const [statusMessage, setStatusMessage] = useState(
     "Preparing to match manga...",
   );
@@ -94,6 +101,33 @@ export const useMatchingProcess = ({
   const [isCacheClearing, setIsCacheClearing] = useState(false);
   const [cacheClearingCount, setCacheClearingCount] = useState(0);
   const [isManuallyPaused, setIsManuallyPaused] = useState(false);
+  const [isPauseTransitioning, setIsPauseTransitioning] = useState(false);
+  const pauseFinalizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
+  useEffect(() => {
+    progressRef.current = progress;
+  }, [progress]);
+
+  const setProgressSafely = useCallback(
+    (
+      value:
+        | MatchingProgress
+        | ((previous: MatchingProgress) => MatchingProgress),
+    ) => {
+      setProgress((prev) => {
+        const nextValue =
+          typeof value === "function"
+            ? (value as (previous: MatchingProgress) => MatchingProgress)(prev)
+            : value;
+        progressRef.current = nextValue;
+        lastProgressUpdateRef.current = Date.now();
+        return nextValue;
+      });
+    },
+    [],
+  );
 
   const notifyMatchingState = useCallback((isRunning: boolean) => {
     if (typeof globalThis.dispatchEvent !== "function") return;
@@ -117,17 +151,55 @@ export const useMatchingProcess = ({
   const createProgressHandler = useCallback(
     (withKnownIdsCount: number) => {
       return (current: number, total: number, currentTitle?: string) => {
+        const manualPauseActive = isManualMatchingPaused();
+
         // Pause/resume time tracking depending on manual pause flag
-        if (isManualMatchingPaused()) {
+        if (manualPauseActive) {
           pauseTimeTracking();
         } else {
           resumeTimeTracking();
         }
 
-        setProgress({ current, total, currentTitle: currentTitle || "" });
+        setProgressSafely(() => ({
+          current,
+          total,
+          currentTitle: currentTitle || "",
+        }));
         updateGlobalState({
           progress: { current, total, currentTitle: currentTitle || "" },
         });
+
+        if (manualPauseActive) {
+          let shouldUpdateStatus = false;
+
+          if (isManuallyPaused) {
+            setIsManuallyPaused(false);
+            shouldUpdateStatus = true;
+          }
+
+          if (!isPauseTransitioning) {
+            setIsPauseTransitioning(true);
+            shouldUpdateStatus = true;
+          }
+
+          if (shouldUpdateStatus) {
+            setStatusMessage("Pausing matching...");
+            setDetailMessage("Finishing the current manga before pausing.");
+          }
+
+          if (shouldUpdateStatus) {
+            updateGlobalState({
+              isManuallyPaused: false,
+              isPauseTransitioning: true,
+              statusMessage: "Pausing matching...",
+              detailMessage: "Finishing the current manga before pausing.",
+            });
+          }
+
+          if (schedulePauseFinalizationRef.current) {
+            schedulePauseFinalizationRef.current();
+          }
+        }
 
         const completionPercent = Math.min(
           100,
@@ -157,9 +229,16 @@ export const useMatchingProcess = ({
       };
     },
     [
+      isManuallyPaused,
+      isPauseTransitioning,
       pauseTimeTracking,
       resumeTimeTracking,
       calculateTimeEstimate,
+      setProgressSafely,
+      setIsManuallyPaused,
+      setIsPauseTransitioning,
+      setStatusMessage,
+      setDetailMessage,
       updateGlobalState,
     ],
   );
@@ -297,6 +376,16 @@ export const useMatchingProcess = ({
         return;
       }
 
+      if (pauseFinalizeTimeoutRef.current) {
+        clearTimeout(pauseFinalizeTimeoutRef.current);
+        pauseFinalizeTimeoutRef.current = null;
+      }
+      setManualMatchingPause(false);
+      setIsManuallyPaused(false);
+      setIsPauseTransitioning(false);
+      resumeTimeTracking();
+      lastProgressUpdateRef.current = Date.now();
+
       // Reset cancellation state
       cancelMatchingRef.current = false;
       setIsCancelling(false);
@@ -313,7 +402,11 @@ export const useMatchingProcess = ({
       setIsLoading(true);
       setError(null);
       setDetailedError(null);
-      setProgress({ current: 0, total: mangaList.length, currentTitle: "" });
+      setProgressSafely(() => ({
+        current: 0,
+        total: mangaList.length,
+        currentTitle: "",
+      }));
       setDetailMessage(null);
 
       const initialEstimate = initializeTimeTracking();
@@ -325,6 +418,8 @@ export const useMatchingProcess = ({
         statusMessage: "Preparing to match manga...",
         detailMessage: null,
         timeEstimate: initialEstimate,
+        isManuallyPaused: false,
+        isPauseTransitioning: false,
         lastUpdated: Date.now(),
       };
       notifyMatchingState(true);
@@ -423,6 +518,8 @@ export const useMatchingProcess = ({
       accessToken,
       initializeTimeTracking,
       setPendingManga,
+      resumeTimeTracking,
+      setProgressSafely,
       notifyMatchingState,
       updateGlobalState,
       createProgressHandler,
@@ -636,13 +733,78 @@ export const useMatchingProcess = ({
     matchingInitialized.current = true;
   }, []);
 
-  const handlePauseMatching = useCallback(() => {
-    setManualMatchingPause(true);
-    pauseTimeTracking();
+  const finalizePauseState = useCallback(() => {
+    setIsPauseTransitioning(false);
     setIsManuallyPaused(true);
     setStatusMessage("Matching paused");
     setDetailMessage("Resume when you're ready to continue");
-  }, [pauseTimeTracking]);
+    updateGlobalState({
+      statusMessage: "Matching paused",
+      detailMessage: "Resume when you're ready to continue",
+      isManuallyPaused: true,
+      isPauseTransitioning: false,
+    });
+    pauseFinalizeTimeoutRef.current = null;
+  }, [updateGlobalState]);
+
+  const schedulePauseFinalization = useCallback(() => {
+    if (pauseFinalizeTimeoutRef.current) {
+      clearTimeout(pauseFinalizeTimeoutRef.current);
+      pauseFinalizeTimeoutRef.current = null;
+    }
+
+    const quietPeriodMs = 750;
+
+    const awaitQuietPeriod = () => {
+      if (!isManualMatchingPaused()) {
+        pauseFinalizeTimeoutRef.current = null;
+        return;
+      }
+
+      const elapsed = Date.now() - lastProgressUpdateRef.current;
+      if (elapsed >= quietPeriodMs) {
+        finalizePauseState();
+        return;
+      }
+
+      pauseFinalizeTimeoutRef.current = setTimeout(
+        awaitQuietPeriod,
+        quietPeriodMs - elapsed + 50,
+      );
+    };
+
+    awaitQuietPeriod();
+  }, [finalizePauseState]);
+
+  useEffect(() => {
+    schedulePauseFinalizationRef.current = schedulePauseFinalization;
+  }, [schedulePauseFinalization]);
+
+  const handlePauseMatching = useCallback(() => {
+    if (isPauseTransitioning || isManuallyPaused) {
+      return;
+    }
+
+    setIsPauseTransitioning(true);
+    setStatusMessage("Pausing matching...");
+    setDetailMessage("Finishing the current manga before pausing.");
+    updateGlobalState({
+      statusMessage: "Pausing matching...",
+      detailMessage: "Finishing the current manga before pausing.",
+      isPauseTransitioning: true,
+      isManuallyPaused: false,
+    });
+
+    setManualMatchingPause(true);
+    pauseTimeTracking();
+    schedulePauseFinalization();
+  }, [
+    isPauseTransitioning,
+    isManuallyPaused,
+    pauseTimeTracking,
+    schedulePauseFinalization,
+    updateGlobalState,
+  ]);
 
   const handleResumeMatchingRequests = useCallback(() => {
     if (rateLimitState?.isRateLimited) {
@@ -653,11 +815,34 @@ export const useMatchingProcess = ({
       return;
     }
 
+    if (pauseFinalizeTimeoutRef.current) {
+      clearTimeout(pauseFinalizeTimeoutRef.current);
+      pauseFinalizeTimeoutRef.current = null;
+    }
+
     setManualMatchingPause(false);
     resumeTimeTracking();
     setIsManuallyPaused(false);
+    setIsPauseTransitioning(false);
     setStatusMessage("Resuming matching...");
-  }, [rateLimitState?.isRateLimited, resumeTimeTracking]);
+    setDetailMessage("Reconnecting to the matching queue.");
+    lastProgressUpdateRef.current = Date.now();
+    updateGlobalState({
+      statusMessage: "Resuming matching...",
+      detailMessage: "Reconnecting to the matching queue.",
+      isManuallyPaused: false,
+      isPauseTransitioning: false,
+    });
+  }, [rateLimitState?.isRateLimited, resumeTimeTracking, updateGlobalState]);
+
+  useEffect(() => {
+    return () => {
+      if (pauseFinalizeTimeoutRef.current) {
+        clearTimeout(pauseFinalizeTimeoutRef.current);
+        pauseFinalizeTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   // Helper to build rate limit detail message
   const buildRateLimitDetail = useCallback(() => {
@@ -756,6 +941,44 @@ export const useMatchingProcess = ({
     handleExitRateLimit,
   ]);
 
+  useEffect(() => {
+    const state = globalThis.matchingProcessState;
+    if (!state) {
+      return;
+    }
+
+    if (state.progress) {
+      const { current, total, currentTitle } = state.progress;
+      progressRef.current = { current, total, currentTitle };
+    }
+
+    const shouldForcePause = Boolean(
+      state.isManuallyPaused || state.isPauseTransitioning,
+    );
+
+    if (typeof state.isManuallyPaused === "boolean") {
+      setIsManuallyPaused(state.isManuallyPaused);
+    }
+
+    if (typeof state.isPauseTransitioning === "boolean") {
+      setIsPauseTransitioning(state.isPauseTransitioning);
+      if (state.isPauseTransitioning) {
+        schedulePauseFinalization();
+      }
+    }
+
+    if (shouldForcePause) {
+      setManualMatchingPause(true);
+      pauseTimeTracking();
+    }
+  }, [pauseTimeTracking, schedulePauseFinalization]);
+
+  useEffect(() => {
+    if (isPauseTransitioning && !isManuallyPaused) {
+      schedulePauseFinalization();
+    }
+  }, [isPauseTransitioning, isManuallyPaused, schedulePauseFinalization]);
+
   return {
     isLoading,
     progress,
@@ -775,7 +998,7 @@ export const useMatchingProcess = ({
     setError,
     setDetailedError,
     setIsLoading,
-    setProgress,
+    setProgress: setProgressSafely,
     setStatusMessage,
     setDetailMessage,
     setBypassCache,
@@ -793,7 +1016,9 @@ export const useMatchingProcess = ({
     completeInitialization,
     setManualMatchingPause,
     isManuallyPaused,
+    isPauseTransitioning,
     setIsManuallyPaused,
+    setIsPauseTransitioning,
     isTimeEstimatePaused,
     pauseTimeTracking,
     resumeTimeTracking,

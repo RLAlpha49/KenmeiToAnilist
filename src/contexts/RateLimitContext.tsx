@@ -209,8 +209,6 @@ export function RateLimitProvider({
           schedulePoll();
         });
     }, interval);
-
-    console.debug(`[RateLimitContext] 🔄 Scheduled next poll in ${interval}ms`);
   }, [checkRateLimitStatus, getNextPollInterval]);
 
   const startPolling = useCallback(() => {

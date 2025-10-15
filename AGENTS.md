@@ -116,7 +116,7 @@ exposeApiContext(); // AniList API calls
 **React Context Providers** (`src/contexts/`):
 
 - `AuthContext` - OAuth flow, credentials, viewer data, custom client IDs
-- `DebugContext` - Debug mode, log viewer, IPC monitor, state inspector (see TODOs in file)
+- `DebugContext` - Debug mode, log viewer, IPC monitor, state inspector
 - `ThemeContext` - Dark/light/system theme with persistence
 - `RateLimitContext` - AniList rate limit tracking (60 requests/minute)
 

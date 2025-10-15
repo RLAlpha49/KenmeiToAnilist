@@ -68,6 +68,8 @@ interface MatchingProcessState {
     averageTimePerManga: number;
     estimatedRemainingSeconds: number;
   };
+  isManuallyPaused?: boolean;
+  isPauseTransitioning?: boolean;
   lastUpdated: number;
 }
 

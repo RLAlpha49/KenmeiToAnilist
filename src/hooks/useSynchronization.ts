@@ -85,6 +85,127 @@ const mergeReports = (
   };
 };
 
+/**
+ * Execute either standard or incremental sync mode and return the resulting report and last progress.
+ */
+async function executeSyncModeImpl(
+  entries: AniListMediaEntry[],
+  token: string,
+  abortController: AbortController,
+  uniqueMediaIds: number[],
+  setState: React.Dispatch<React.SetStateAction<SynchronizationState>>,
+  updateSnapshotFromProgress: (
+    progress: SyncProgress | null,
+    entriesForRun: AniListMediaEntry[],
+  ) => void,
+  initialEntriesRef: { current: AniListMediaEntry[] },
+): Promise<{ syncReport: SyncReport; lastReportedProgress: SyncProgress }> {
+  let lastReportedProgress: SyncProgress = {
+    total: uniqueMediaIds.length,
+    completed: 0,
+    successful: 0,
+    failed: 0,
+    skipped: 0,
+    currentEntry: null,
+    currentStep: null,
+    totalSteps: null,
+    rateLimited: false,
+    retryAfter: null,
+  };
+
+  const needsIncrementalSync = entries.some(
+    (e) => e.syncMetadata?.useIncrementalSync,
+  );
+
+  if (!needsIncrementalSync) {
+    console.info(
+      "[Synchronization] ⚙️ Using standard (non-incremental) sync mode",
+    );
+    console.debug("[Synchronization] 🔍 Starting regular batch processing...");
+    const syncReport = await runRegularBatch(
+      entries,
+      token,
+      abortController.signal,
+      uniqueMediaIds,
+      (progress) => {
+        const normalized: SyncProgress = {
+          ...progress,
+          total: uniqueMediaIds.length,
+        };
+        lastReportedProgress = normalized;
+        setState((prev) => ({ ...prev, progress: normalized }));
+        updateSnapshotFromProgress(normalized, initialEntriesRef.current);
+      },
+    );
+    return { syncReport, lastReportedProgress };
+  }
+
+  // Incremental sync path
+  console.info("[Synchronization] ⚙️ Using sequential incremental sync mode");
+  const incrementalEntries = entries
+    .filter((e) => e.syncMetadata?.useIncrementalSync)
+    .map((entry) => {
+      const previousProgress = entry.previousValues?.progress || 0;
+      const targetProgress = entry.progress;
+      return {
+        ...entry,
+        syncMetadata: {
+          ...entry.syncMetadata!,
+          targetProgress,
+          progress: previousProgress,
+          updatedStatus: entry.status !== entry.previousValues?.status,
+          updatedScore: entry.score !== entry.previousValues?.score,
+          step: undefined,
+        },
+      };
+    });
+
+  const regularEntries = entries.filter(
+    (e) => !e.syncMetadata?.useIncrementalSync,
+  );
+
+  console.info(
+    `[Synchronization] 📚 Processing ${incrementalEntries.length} entries with incremental sync`,
+  );
+  console.info(
+    `[Synchronization] 📚 Processing ${regularEntries.length} entries with regular sync`,
+  );
+
+  console.debug("[Synchronization] 🔍 Starting regular batch processing...");
+
+  // Process regular batch first
+  let syncReport = await runRegularBatch(
+    regularEntries,
+    token,
+    abortController.signal,
+    uniqueMediaIds,
+    (progress) => {
+      lastReportedProgress = progress;
+      setState((prev) => ({ ...prev, progress }));
+      updateSnapshotFromProgress(progress, initialEntriesRef.current);
+    },
+  );
+
+  // Then incremental entries sequentially
+  const incReport = await runIncrementalEntries({
+    incEntries: incrementalEntries,
+    tokenArg: token,
+    abortSignal: abortController.signal,
+    uniqueIds: uniqueMediaIds,
+    initialPartialReport: syncReport,
+    setState,
+    updateSnapshotFromProgress,
+    initialEntriesRef,
+    onProgressUpdate: () => {
+      /* no-op: runIncrementalEntries updates state directly */
+    },
+  });
+
+  syncReport = incReport;
+  console.info("[Synchronization] ✅ Incremental sync completed successfully");
+  return { syncReport, lastReportedProgress };
+}
+
 const saveSnapshotToStorage = (snapshot: SyncResumeSnapshot | null): void => {
   if (!snapshot) {
     console.debug("[Synchronization] 🔍 Removing sync snapshot from storage");
@@ -968,106 +1089,19 @@ export function useSynchronization(): [
 
         updateSnapshotFromProgress(initialProgress, initialEntriesRef.current);
 
-        const lastProgress = initialProgress;
-        let lastReportedProgress = lastProgress;
-        let syncReport: SyncReport;
-
-        const needsIncrementalSync = entries.some(
-          (e) => e.syncMetadata?.useIncrementalSync,
+        // Execute sync mode
+        const executed = await executeSyncModeImpl(
+          entries,
+          token,
+          abortController,
+          uniqueMediaIds,
+          setState,
+          updateSnapshotFromProgress,
+          initialEntriesRef,
         );
 
-        if (needsIncrementalSync) {
-          console.info(
-            "[Synchronization] ⚙️ Using sequential incremental sync mode",
-          );
-          const incrementalEntries = entries
-            .filter((e) => e.syncMetadata?.useIncrementalSync)
-            .map((entry) => {
-              const previousProgress = entry.previousValues?.progress || 0;
-              const targetProgress = entry.progress;
-              return {
-                ...entry,
-                syncMetadata: {
-                  ...entry.syncMetadata!,
-                  targetProgress,
-                  progress: previousProgress,
-                  updatedStatus: entry.status !== entry.previousValues?.status,
-                  updatedScore: entry.score !== entry.previousValues?.score,
-                  step: undefined,
-                },
-              };
-            });
-
-          const regularEntries = entries.filter(
-            (e) => !e.syncMetadata?.useIncrementalSync,
-          );
-
-          console.info(
-            `[Synchronization] 📚 Processing ${incrementalEntries.length} entries with incremental sync`,
-          );
-          console.info(
-            `[Synchronization] 📚 Processing ${regularEntries.length} entries with regular sync`,
-          );
-
-          console.debug(
-            "[Synchronization] 🔍 Starting regular batch processing...",
-          );
-
-          // Process regular batch first
-          syncReport = await runRegularBatch(
-            regularEntries,
-            token,
-            abortController.signal,
-            uniqueMediaIds,
-            (progress) => {
-              lastReportedProgress = progress;
-              setState((prev) => ({ ...prev, progress }));
-              updateSnapshotFromProgress(progress, initialEntriesRef.current);
-            },
-          );
-
-          // Then incremental entries sequentially
-          const incReport = await runIncrementalEntries({
-            incEntries: incrementalEntries,
-            tokenArg: token,
-            abortSignal: abortController.signal,
-            uniqueIds: uniqueMediaIds,
-            initialPartialReport: syncReport,
-            setState,
-            updateSnapshotFromProgress,
-            initialEntriesRef,
-            onProgressUpdate: () => {
-              /* no-op: runIncrementalEntries updates state directly */
-            },
-          });
-
-          syncReport = incReport;
-          console.info(
-            "[Synchronization] ✅ Incremental sync completed successfully",
-          );
-        } else {
-          console.info(
-            "[Synchronization] ⚙️ Using standard (non-incremental) sync mode",
-          );
-          console.debug(
-            "[Synchronization] 🔍 Starting regular batch processing...",
-          );
-          syncReport = await runRegularBatch(
-            entries,
-            token,
-            abortController.signal,
-            uniqueMediaIds,
-            (progress) => {
-              const normalized: SyncProgress = {
-                ...progress,
-                total: uniqueMediaIds.length,
-              };
-              lastReportedProgress = normalized;
-              setState((prev) => ({ ...prev, progress: normalized }));
-              updateSnapshotFromProgress(normalized, initialEntriesRef.current);
-            },
-          );
-        }
+        const syncReport = executed.syncReport;
+        const lastReportedProgress = executed.lastReportedProgress;
 
         // If pause was requested, persist partial report and snapshot
         if (pauseRequestedRef.current) {

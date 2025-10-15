@@ -67,6 +67,7 @@ export function LoadingView({
           disableControls={rateLimitState.isRateLimited}
           isPaused={matchingProcess.isTimeEstimatePaused}
           isManuallyPaused={matchingProcess.isManuallyPaused}
+          isPauseTransitioning={matchingProcess.isPauseTransitioning}
           isRateLimitActive={
             rateLimitState.isRateLimited || matchingProcess.isRateLimitPaused
           }
