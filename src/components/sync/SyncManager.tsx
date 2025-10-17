@@ -170,15 +170,14 @@ const StatusAlerts: React.FC<{
   if (status === "syncing") {
     return (
       <Alert className="mb-4 border-blue-200/70 bg-blue-50/80 backdrop-blur-md dark:border-blue-800/60 dark:bg-blue-900/30">
-        <div className="flex min-w-[35vw] gap-3">
-          <div className="flex h-10 w-20 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow">
+        <div className="flex gap-3">
+          <div className="flex h-10 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow">
             <RefreshCw className="h-5 w-10 animate-spin" />
           </div>
-          <div className="min-w-full flex-1">
+          <div className="min-w-0 flex-1">
             <AlertTitle className="text-blue-800 dark:text-blue-200">
               Synchronization in progress
             </AlertTitle>
-            {/* Fix: Alert Description extends past the box */}
             <AlertDescription className="mt-1 text-sm text-blue-700/80 dark:text-blue-200/80">
               {incrementalSync
                 ? "Applying incremental updates to trigger AniList activity merges. Larger entries may take an extra moment."
@@ -197,11 +196,11 @@ const StatusAlerts: React.FC<{
 
     return (
       <Alert className="mb-4 border-amber-200/70 bg-amber-50/80 backdrop-blur-md dark:border-amber-800/60 dark:bg-amber-900/30">
-        <div className="flex min-w-[35vw] gap-3">
-          <div className="flex h-10 w-20 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow">
+        <div className="flex gap-3">
+          <div className="flex h-10 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow">
             <PauseCircle className="h-5 w-10" />
           </div>
-          <div className="min-w-full flex-1">
+          <div className="min-w-0 flex-1">
             <AlertTitle className="text-amber-800 dark:text-amber-200">
               Synchronization paused
             </AlertTitle>
@@ -223,11 +222,11 @@ const StatusAlerts: React.FC<{
   if (status === "completed") {
     return (
       <Alert className="mb-4 border-emerald-200/70 bg-emerald-50/80 backdrop-blur-md dark:border-emerald-800/50 dark:bg-emerald-900/20">
-        <div className="flex min-w-[35vw] gap-3">
-          <div className="flex h-10 w-20 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow">
+        <div className="flex gap-3">
+          <div className="flex h-10 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow">
             <CheckCircle className="h-5 w-10" />
           </div>
-          <div className="min-w-full flex-1">
+          <div className="min-w-0 flex-1">
             <AlertTitle className="text-emerald-800 dark:text-emerald-200">
               Synchronization complete
             </AlertTitle>
@@ -244,11 +243,11 @@ const StatusAlerts: React.FC<{
   if (status === "failed") {
     return (
       <Alert className="mb-4 border-rose-200/70 bg-rose-50/80 backdrop-blur-md dark:border-rose-900/60 dark:bg-rose-950/30">
-        <div className="flex min-w-[35vw] gap-3">
-          <div className="flex h-10 w-20 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-red-500 text-white shadow">
+        <div className="flex gap-3">
+          <div className="flex h-10 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-red-500 text-white shadow">
             <ShieldAlert className="h-5 w-10" />
           </div>
-          <div className="min-w-full flex-1">
+          <div className="min-w-0 flex-1">
             <AlertTitle className="text-rose-800 dark:text-rose-200">
               Synchronization interrupted
             </AlertTitle>

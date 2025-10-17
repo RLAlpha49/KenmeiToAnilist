@@ -683,37 +683,17 @@ export function MatchingPage() {
       }
     };
 
-    const syncRunningState = (
+    const syncStateUpdates = (
+      snapshot: {
+        current: number;
+        total: number;
+        currentTitle: string | null;
+        statusMessage: string | null;
+        detailMessage: string | null;
+      },
       state: NonNullable<typeof globalThis.matchingProcessState>,
       controls: typeof matchingProcessRef.current,
     ) => {
-      const snapshot = {
-        current: state.progress.current,
-        total: state.progress.total,
-        currentTitle: state.progress.currentTitle ?? null,
-        statusMessage: state.statusMessage ?? null,
-        detailMessage: state.detailMessage ?? null,
-      };
-
-      const hasChanged =
-        !lastGlobalSyncSnapshot.current ||
-        lastGlobalSyncSnapshot.current.current !== snapshot.current ||
-        lastGlobalSyncSnapshot.current.total !== snapshot.total ||
-        lastGlobalSyncSnapshot.current.currentTitle !== snapshot.currentTitle ||
-        lastGlobalSyncSnapshot.current.statusMessage !==
-          snapshot.statusMessage ||
-        lastGlobalSyncSnapshot.current.detailMessage !== snapshot.detailMessage;
-
-      if (hasChanged) {
-        console.debug("[MatchingPage] Syncing UI with global process state:", {
-          current: snapshot.current,
-          total: snapshot.total,
-          statusMessage: snapshot.statusMessage,
-        });
-        lastGlobalSyncSnapshot.current = snapshot;
-      }
-
-      controls.setIsLoading((prev) => prev || true);
       controls.setProgress((prev) => {
         if (
           prev.current === snapshot.current &&
@@ -763,6 +743,40 @@ export function MatchingPage() {
       applyPauseState(state, controls);
     };
 
+    const syncRunningState = (
+      state: NonNullable<typeof globalThis.matchingProcessState>,
+      controls: typeof matchingProcessRef.current,
+    ) => {
+      const snapshot = {
+        current: state.progress.current,
+        total: state.progress.total,
+        currentTitle: state.progress.currentTitle ?? null,
+        statusMessage: state.statusMessage ?? null,
+        detailMessage: state.detailMessage ?? null,
+      };
+
+      const hasChanged =
+        !lastGlobalSyncSnapshot.current ||
+        lastGlobalSyncSnapshot.current.current !== snapshot.current ||
+        lastGlobalSyncSnapshot.current.total !== snapshot.total ||
+        lastGlobalSyncSnapshot.current.currentTitle !== snapshot.currentTitle ||
+        lastGlobalSyncSnapshot.current.statusMessage !==
+          snapshot.statusMessage ||
+        lastGlobalSyncSnapshot.current.detailMessage !== snapshot.detailMessage;
+
+      if (hasChanged) {
+        console.debug("[MatchingPage] Syncing UI with global process state:", {
+          current: snapshot.current,
+          total: snapshot.total,
+          statusMessage: snapshot.statusMessage,
+        });
+        lastGlobalSyncSnapshot.current = snapshot;
+      }
+
+      controls.setIsLoading((prev) => prev || true);
+      syncStateUpdates(snapshot, state, controls);
+    };
+
     const syncCompletedState = (
       state: NonNullable<typeof globalThis.matchingProcessState>,
       controls: typeof matchingProcessRef.current,
@@ -780,53 +794,7 @@ export function MatchingPage() {
       };
       lastGlobalSyncSnapshot.current = finalSnapshot;
 
-      controls.setProgress((prev) => {
-        if (
-          prev.current === finalSnapshot.current &&
-          prev.total === finalSnapshot.total &&
-          prev.currentTitle === (finalSnapshot.currentTitle || "")
-        ) {
-          return prev;
-        }
-        return {
-          current: finalSnapshot.current,
-          total: finalSnapshot.total,
-          currentTitle: finalSnapshot.currentTitle || "",
-        };
-      });
-      controls.setStatusMessage((prev) => {
-        const next = finalSnapshot.statusMessage || "";
-        return prev === next ? prev : next;
-      });
-      controls.setDetailMessage((prev) => {
-        const next = finalSnapshot.detailMessage ?? null;
-        return prev === next ? prev : next;
-      });
-
-      const timeEstimate = state.timeEstimate;
-      if (
-        timeEstimate &&
-        Number.isFinite(timeEstimate.startTime) &&
-        timeEstimate.startTime > 0
-      ) {
-        controls.setTimeEstimate((prev) => {
-          if (
-            prev.startTime === timeEstimate.startTime &&
-            prev.averageTimePerManga === timeEstimate.averageTimePerManga &&
-            prev.estimatedRemainingSeconds ===
-              timeEstimate.estimatedRemainingSeconds
-          ) {
-            return prev;
-          }
-          return {
-            startTime: timeEstimate.startTime,
-            averageTimePerManga: timeEstimate.averageTimePerManga,
-            estimatedRemainingSeconds: timeEstimate.estimatedRemainingSeconds,
-          };
-        });
-      }
-
-      applyPauseState(state, controls);
+      syncStateUpdates(finalSnapshot, state, controls);
 
       console.info(
         "[MatchingPage] Global process complete, syncing final state",

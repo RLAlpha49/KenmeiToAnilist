@@ -43,7 +43,7 @@ import {
   Layers,
   UserPlus,
 } from "lucide-react";
-import { exportSyncErrorLog } from "../utils/export-utils";
+import { exportSyncErrorLog } from "../utils/exportUtils";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   pageVariants,

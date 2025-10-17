@@ -20,6 +20,7 @@ import {
   MAX_LOG_ENTRIES,
   setLogRedactionEnabled as setCollectorLogRedactionEnabled,
 } from "../utils/logging";
+import { exportToJson } from "../utils/exportUtils";
 import {
   getSyncConfig,
   saveSyncConfig,
@@ -777,20 +778,7 @@ export function DebugProvider({
         logs: serialiseLogEntries(entries),
       };
 
-      const json = JSON.stringify(payload, null, 2);
-      const blob = new Blob([json], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      const timestamp = new Date()
-        .toISOString()
-        .replaceAll(":", "-")
-        .replaceAll(".", "-");
-      link.href = url;
-      link.download = `kenmei-debug-logs-${timestamp}.json`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
+      exportToJson(payload, "kenmei-debug-logs");
       recordEvent({
         type: "debug.log-viewer",
         message: "Console logs exported",
@@ -811,7 +799,7 @@ export function DebugProvider({
         { force: true },
       );
     }
-  }, []);
+  }, [recordEvent]);
 
   const stateContextValue = React.useMemo<DebugStateContextValue>(
     () => ({

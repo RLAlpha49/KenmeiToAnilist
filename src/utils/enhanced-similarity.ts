@@ -152,23 +152,22 @@ const porterStem = (word: string): string => {
  * Jaro-Winkler distance implementation (browser-compatible)
  * Returns similarity score between 0 and 1
  */
-const jaroWinklerDistance = (s1: string, s2: string): number => {
-  if (s1 === s2) return 1;
-
+/**
+ * Find character matches for Jaro-Winkler distance calculation
+ * @internal
+ */
+const findCharacterMatches = (
+  s1: string,
+  s2: string,
+  matchDistance: number,
+): { matches: number; matches1: boolean[]; matches2: boolean[] } => {
   const len1 = s1.length;
   const len2 = s2.length;
-
-  if (len1 === 0 || len2 === 0) return 0;
-
-  // Maximum allowed distance
-  const matchDistance = Math.floor(Math.max(len1, len2) / 2) - 1;
   const matches1 = new Array<boolean>(len1).fill(false);
   const matches2 = new Array<boolean>(len2).fill(false);
 
   let matches = 0;
-  let transpositions = 0;
 
-  // Find matches
   for (let i = 0; i < len1; i++) {
     const start = Math.max(0, i - matchDistance);
     const end = Math.min(i + matchDistance + 1, len2);
@@ -182,30 +181,74 @@ const jaroWinklerDistance = (s1: string, s2: string): number => {
     }
   }
 
-  if (matches === 0) return 0;
+  return { matches, matches1, matches2 };
+};
 
-  // Find transpositions
+/**
+ * Calculate transpositions for Jaro-Winkler distance
+ * @internal
+ */
+const calculateTranspositions = (
+  s1: string,
+  s2: string,
+  matches1: boolean[],
+  matches2: boolean[],
+): number => {
+  let transpositions = 0;
   let k = 0;
-  for (let i = 0; i < len1; i++) {
+
+  for (let i = 0; i < s1.length; i++) {
     if (!matches1[i]) continue;
     while (!matches2[k]) k++;
     if (s1[i] !== s2[k]) transpositions++;
     k++;
   }
 
-  // Calculate Jaro similarity
+  return transpositions;
+};
+
+/**
+ * Calculate common prefix length for Jaro-Winkler bonus
+ * @internal
+ */
+const calculateCommonPrefixLength = (s1: string, s2: string): number => {
+  let prefix = 0;
+  const maxPrefixLength = Math.min(s1.length, s2.length, 4);
+
+  for (let i = 0; i < maxPrefixLength; i++) {
+    if (s1[i] === s2[i]) prefix++;
+    else break;
+  }
+
+  return prefix;
+};
+
+const jaroWinklerDistance = (s1: string, s2: string): number => {
+  if (s1 === s2) return 1;
+
+  const len1 = s1.length;
+  const len2 = s2.length;
+
+  if (len1 === 0 || len2 === 0) return 0;
+
+  const matchDistance = Math.floor(Math.max(len1, len2) / 2) - 1;
+  const { matches, matches1, matches2 } = findCharacterMatches(
+    s1,
+    s2,
+    matchDistance,
+  );
+
+  if (matches === 0) return 0;
+
+  const transpositions = calculateTranspositions(s1, s2, matches1, matches2);
+
   const jaro =
     (matches / len1 +
       matches / len2 +
       (matches - transpositions / 2) / matches) /
     3;
 
-  // Calculate Jaro-Winkler (add prefix bonus)
-  let prefix = 0;
-  for (let i = 0; i < Math.min(len1, len2, 4); i++) {
-    if (s1[i] === s2[i]) prefix++;
-    else break;
-  }
+  const prefix = calculateCommonPrefixLength(s1, s2);
 
   return jaro + prefix * 0.1 * (1 - jaro);
 };
@@ -697,6 +740,90 @@ function calculateNgramSimilarity(str1: string, str2: string, n = 3): number {
  * Calculate semantic similarity using improved NLP techniques
  * Uses stemming and better word matching algorithms
  */
+/**
+ * Calculate stemmed words similarity
+ * @internal
+ */
+function calculateStemmedSimilarity(
+  stemmedWords1: string[],
+  stemmedWords2: string[],
+): number {
+  const stemSet1 = new Set(stemmedWords1);
+  const stemSet2 = new Set(stemmedWords2);
+  const stemIntersection = new Set(
+    [...stemSet1].filter((x) => stemSet2.has(x)),
+  );
+  const stemUnion = new Set([...stemSet1, ...stemSet2]);
+  return stemUnion.size > 0 ? stemIntersection.size / stemUnion.size : 0;
+}
+
+/**
+ * Find best word match between word1 and word2 list
+ * @internal
+ */
+function findBestWordMatch(
+  word1: string,
+  stem1: string,
+  words2: string[],
+  stemmedWords2: string[],
+): number {
+  let bestMatch = 0;
+
+  for (let j = 0; j < words2.length; j++) {
+    const word2 = words2[j];
+    const stem2 = stemmedWords2[j];
+
+    if (word1 === word2) {
+      return 1;
+    }
+
+    if (stem1 === stem2) {
+      bestMatch = Math.max(bestMatch, 0.95);
+      continue;
+    }
+
+    const jaroSim = jaroWinklerDistance(
+      word1.toLowerCase(),
+      word2.toLowerCase(),
+    );
+    if (jaroSim > 0.85) {
+      bestMatch = Math.max(bestMatch, jaroSim * 0.9);
+    }
+
+    const diceSim = stringSimilarity.compareTwoStrings(word1, word2);
+    if (diceSim > 0.8) {
+      bestMatch = Math.max(bestMatch, diceSim * 0.85);
+    }
+  }
+
+  return bestMatch;
+}
+
+/**
+ * Calculate word-to-word match score
+ * @internal
+ */
+function calculateWordMatchScore(
+  words1: string[],
+  stemmedWords1: string[],
+  words2: string[],
+  stemmedWords2: string[],
+): number {
+  let score = 0;
+
+  for (let i = 0; i < words1.length; i++) {
+    const bestMatch = findBestWordMatch(
+      words1[i],
+      stemmedWords1[i],
+      words2,
+      stemmedWords2,
+    );
+    score += bestMatch;
+  }
+
+  return words1.length > 0 ? score / words1.length : 0;
+}
+
 function calculateSemanticSimilarity(str1: string, str2: string): number {
   const pairKey = makeOrderedPairKey(
     enhancedNormalize(str1),
@@ -713,69 +840,18 @@ function calculateSemanticSimilarity(str1: string, str2: string): number {
   if (words1.length === 0 && words2.length === 0) return 1;
   if (words1.length === 0 || words2.length === 0) return 0;
 
-  // Use Porter Stemmer for better word matching
   const stemmedWords1 = words1.map((w) => porterStem(w));
   const stemmedWords2 = words2.map((w) => porterStem(w));
 
-  // Calculate overlap of stemmed words (handles variations like "running"/"run")
-  const stemSet1 = new Set(stemmedWords1);
-  const stemSet2 = new Set(stemmedWords2);
-  const stemIntersection = new Set(
-    [...stemSet1].filter((x) => stemSet2.has(x)),
+  const stemJaccard = calculateStemmedSimilarity(stemmedWords1, stemmedWords2);
+
+  const wordMatchScore = calculateWordMatchScore(
+    words1,
+    stemmedWords1,
+    words2,
+    stemmedWords2,
   );
-  const stemUnion = new Set([...stemSet1, ...stemSet2]);
-  const stemJaccard =
-    stemUnion.size > 0 ? stemIntersection.size / stemUnion.size : 0;
 
-  // Enhanced word-to-word similarity with multiple algorithms
-  let score = 0;
-  let maxPossibleScore = 0;
-
-  for (let i = 0; i < words1.length; i++) {
-    const word1 = words1[i];
-    const stem1 = stemmedWords1[i];
-    maxPossibleScore += 1;
-
-    let bestMatch = 0;
-    for (let j = 0; j < words2.length; j++) {
-      const word2 = words2[j];
-      const stem2 = stemmedWords2[j];
-
-      // Exact match (highest priority)
-      if (word1 === word2) {
-        bestMatch = 1;
-        break;
-      }
-
-      // Stemmed match (second priority)
-      if (stem1 === stem2) {
-        bestMatch = Math.max(bestMatch, 0.95);
-        continue;
-      }
-
-      // Use Jaro-Winkler for fuzzy word matching (good for typos)
-      const jaroSim = jaroWinklerDistance(
-        word1.toLowerCase(),
-        word2.toLowerCase(),
-      );
-      if (jaroSim > 0.85) {
-        bestMatch = Math.max(bestMatch, jaroSim * 0.9);
-      }
-
-      // Dice coefficient for character-level similarity
-      const diceSim = stringSimilarity.compareTwoStrings(word1, word2);
-      if (diceSim > 0.8) {
-        bestMatch = Math.max(bestMatch, diceSim * 0.85);
-      }
-    }
-
-    score += bestMatch;
-  }
-
-  const wordMatchScore = maxPossibleScore > 0 ? score / maxPossibleScore : 0;
-
-  // Combine stem-based Jaccard with word-to-word matching
-  // Give more weight to word matching as it's more precise
   const semanticScore = wordMatchScore * 0.7 + stemJaccard * 0.3;
 
   setCacheEntry(

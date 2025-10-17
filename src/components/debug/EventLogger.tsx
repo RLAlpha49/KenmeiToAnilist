@@ -23,6 +23,7 @@ import { ScrollArea } from "../ui/scroll-area";
 import { Separator } from "../ui/separator";
 import { useDebugActions, useDebugState } from "../../contexts/DebugContext";
 import { cn } from "@/utils/tailwind";
+import { exportToJson } from "@/utils/exportUtils";
 import type { DebugEventEntry, DebugEventLevel } from "@/types/debug";
 import {
   DropdownMenu,
@@ -459,20 +460,7 @@ export function EventLogger(): React.ReactElement {
         },
         events: filteredEvents,
       };
-      const json = JSON.stringify(payload, null, 2);
-      const blob = new Blob([json], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      const timestamp = new Date()
-        .toISOString()
-        .replaceAll(":", "-")
-        .replaceAll(".", "-");
-      link.href = url;
-      link.download = `kenmei-event-log-${timestamp}.json`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
+      exportToJson(payload, "kenmei-event-log");
       toast.success("Exported filtered events");
       recordEvent({
         type: "debug.event-logger",

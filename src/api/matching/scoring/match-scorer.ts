@@ -112,8 +112,22 @@ const ROMAN_NUMERAL_VALUES: Record<string, number> = {
   m: 1000,
 };
 
-const ROMAN_NUMERAL_REGEX =
-  /^(?=[mdclxvi])m{0,4}(cm|cd|d?c{0,3})(xc|xl|l?x{0,3})(ix|iv|v?i{0,3})$/i;
+const ROMAN_NUMERAL_PARTS = {
+  thousands: /m{0,4}/,
+  hundreds: /(cm|cd|d?c{0,3})/,
+  tens: /(xc|xl|l?x{0,3})/,
+  ones: /(ix|iv|v?i{0,3})/,
+};
+
+const isValidRomanNumeral = (str: string): boolean => {
+  if (!/^[ivxlcdm]+$/i.test(str)) return false;
+  // Check if string follows Roman numeral pattern
+  const pattern = new RegExp(
+    `^${ROMAN_NUMERAL_PARTS.thousands.source}${ROMAN_NUMERAL_PARTS.hundreds.source}${ROMAN_NUMERAL_PARTS.tens.source}${ROMAN_NUMERAL_PARTS.ones.source}$`,
+    "i",
+  );
+  return pattern.test(str);
+};
 
 type TokenData = {
   normalized: string[];
@@ -180,7 +194,7 @@ const normalizeToken = (raw: string): string => {
     return token.replace(/^0+/, "") || "0";
   }
 
-  if (ROMAN_NUMERAL_REGEX.test(token)) {
+  if (isValidRomanNumeral(token)) {
     const value = romanToDecimal(token);
     if (value !== null) {
       return String(value);
@@ -370,6 +384,119 @@ function checkEnhancedSimilarityScore(
 }
 
 /**
+ * Calculate composite score for meaningful word overlap
+ *
+ * @internal
+ */
+function calculateCompositeWordScore(
+  titleTokenData: TokenData,
+  searchTokenData: TokenData,
+  searchOrderTokens: string[],
+): number {
+  const primaryMatches = searchTokenData.primaryTokens.filter((token) =>
+    titleTokenData.tokenSet.has(token),
+  );
+
+  const intersectionSize = [...titleTokenData.tokenSet].filter((token) =>
+    searchTokenData.tokenSet.has(token),
+  ).length;
+
+  const unionSize = new Set([
+    ...titleTokenData.tokenSet,
+    ...searchTokenData.tokenSet,
+  ]).size;
+
+  const jaccardScore = unionSize === 0 ? 0 : intersectionSize / unionSize;
+
+  const coverageRatio =
+    searchTokenData.primaryTokens.length === 0
+      ? 0
+      : primaryMatches.length / searchTokenData.primaryTokens.length;
+
+  const orderSimilarity = calculateWordOrderSimilarity(
+    titleTokenData.normalized,
+    searchOrderTokens,
+  );
+
+  return coverageRatio * 0.65 + jaccardScore * 0.2 + orderSimilarity * 0.15;
+}
+
+/**
+ * Check if a title should be processed for word overlap
+ * @internal
+ */
+function shouldProcessTitleForOverlap(
+  searchTokenData: TokenData,
+  titleTokenData: TokenData,
+): boolean {
+  const primaryMatches = searchTokenData.primaryTokens.filter((token) =>
+    titleTokenData.tokenSet.has(token),
+  );
+
+  if (searchTokenData.primaryTokens.length === 0) return true;
+  return primaryMatches.length / searchTokenData.primaryTokens.length >= 0.6;
+}
+
+/**
+ * Log meaningful overlap results
+ * @internal
+ */
+function logMeaningfulOverlapResult(
+  original: string,
+  searchTitle: string,
+  source: string,
+  finalScore: number,
+  coverageRatio: number,
+  jaccardScore: number,
+  orderSimilarity: number,
+): void {
+  console.debug(
+    `[MangaSearchService] 🔎 Meaningful overlap detected between "${original}" and "${searchTitle}" (${source}) - score ${finalScore.toFixed(2)} (coverage: ${coverageRatio.toFixed(2)}, jaccard: ${jaccardScore.toFixed(2)}, order: ${orderSimilarity.toFixed(2)})`,
+  );
+}
+
+/**
+ * Calculate debug metrics for meaningful word overlap
+ * @internal
+ */
+function calculateOverlapMetrics(
+  titleTokenData: TokenData,
+  searchTokenData: TokenData,
+  searchOrderTokens: string[],
+): {
+  coverageRatio: number;
+  jaccardScore: number;
+  orderSimilarity: number;
+} {
+  const primaryMatches = searchTokenData.primaryTokens.filter((token) =>
+    titleTokenData.tokenSet.has(token),
+  );
+
+  const coverageRatio =
+    searchTokenData.primaryTokens.length === 0
+      ? 0
+      : primaryMatches.length / searchTokenData.primaryTokens.length;
+
+  const intersectionSize = [...titleTokenData.tokenSet].filter((token) =>
+    searchTokenData.tokenSet.has(token),
+  ).length;
+
+  const unionSize = new Set([
+    ...titleTokenData.tokenSet,
+    ...searchTokenData.tokenSet,
+  ]).size;
+
+  const jaccardScore = unionSize === 0 ? 0 : intersectionSize / unionSize;
+
+  const orderSimilarity = calculateWordOrderSimilarity(
+    titleTokenData.normalized,
+    searchOrderTokens,
+  );
+
+  return { coverageRatio, jaccardScore, orderSimilarity };
+}
+
+/**
  * Check word-based matching between titles
  *
  * @internal
@@ -380,14 +507,10 @@ function checkMeaningfulWordOverlap(
   searchTitle: string,
 ): number {
   const searchMeaningfulWords = extractMeaningfulWords(searchTitle);
-  if (searchMeaningfulWords.length === 0) {
-    return -1;
-  }
+  if (searchMeaningfulWords.length === 0) return -1;
 
   const searchTokenData = createTokenData(searchMeaningfulWords);
-  if (searchTokenData.normalized.length === 0) {
-    return -1;
-  }
+  if (searchTokenData.normalized.length === 0) return -1;
 
   const searchOrderTokens =
     searchTokenData.normalized.length > 0
@@ -403,48 +526,36 @@ function checkMeaningfulWordOverlap(
     const titleTokenData = createTokenData(titleMeaningfulWords);
     if (titleTokenData.normalized.length === 0) continue;
 
-    const primaryMatches = searchTokenData.primaryTokens.filter((token) =>
-      titleTokenData.tokenSet.has(token),
-    );
-
-    if (
-      searchTokenData.primaryTokens.length > 0 &&
-      primaryMatches.length / searchTokenData.primaryTokens.length < 0.6
-    ) {
+    if (!shouldProcessTitleForOverlap(searchTokenData, titleTokenData)) {
       continue;
     }
 
-    const intersectionSize = [...titleTokenData.tokenSet].filter((token) =>
-      searchTokenData.tokenSet.has(token),
-    ).length;
-
-    const unionSize = new Set([
-      ...titleTokenData.tokenSet,
-      ...searchTokenData.tokenSet,
-    ]).size;
-
-    const jaccardScore = unionSize === 0 ? 0 : intersectionSize / unionSize;
-
-    const coverageRatio =
-      searchTokenData.primaryTokens.length === 0
-        ? 0
-        : primaryMatches.length / searchTokenData.primaryTokens.length;
-
-    const orderSimilarity = calculateWordOrderSimilarity(
-      titleTokenData.normalized,
+    const compositeScore = calculateCompositeWordScore(
+      titleTokenData,
+      searchTokenData,
       searchOrderTokens,
     );
 
-    const compositeScore =
-      coverageRatio * 0.65 + jaccardScore * 0.2 + orderSimilarity * 0.15;
+    if (compositeScore < 0.6) continue;
 
-    if (compositeScore >= 0.6) {
-      const finalScore = Math.min(0.98, 0.8 + (compositeScore - 0.6) * 0.5);
-      console.debug(
-        `[MangaSearchService] 🔎 Meaningful overlap detected between "${original}" and "${searchTitle}" (${source}) - score ${finalScore.toFixed(2)} (coverage: ${coverageRatio.toFixed(2)}, jaccard: ${jaccardScore.toFixed(2)}, order: ${orderSimilarity.toFixed(2)})`,
-      );
-      bestScore = Math.max(bestScore, finalScore);
-    }
+    const finalScore = Math.min(0.98, 0.8 + (compositeScore - 0.6) * 0.5);
+    const metrics = calculateOverlapMetrics(
+      titleTokenData,
+      searchTokenData,
+      searchOrderTokens,
+    );
+
+    logMeaningfulOverlapResult(
+      original,
+      searchTitle,
+      source,
+      finalScore,
+      metrics.coverageRatio,
+      metrics.jaccardScore,
+      metrics.orderSimilarity,
+    );
+
+    bestScore = Math.max(bestScore, finalScore);
   }
 
   return bestScore;

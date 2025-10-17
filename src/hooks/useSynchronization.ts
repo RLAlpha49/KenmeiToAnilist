@@ -15,7 +15,7 @@ import {
   exportSyncErrorLog,
   exportSyncReport,
   saveSyncReportToHistory,
-} from "../utils/export-utils";
+} from "../utils/exportUtils";
 import { storage, STORAGE_KEYS } from "../utils/storage";
 import {
   useDebugActions,
