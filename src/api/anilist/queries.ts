@@ -68,7 +68,7 @@ query ($search: String, $page: Int, $perPage: Int) {
       hasNextPage
       perPage
     }
-    media(type: MANGA, search: $search) {
+    media(type: MANGA, search: $search, format_not_in: [NOVEL]) {
       id
       title {
         romaji
@@ -112,7 +112,7 @@ query ($search: String, $page: Int, $perPage: Int) {
       hasNextPage
       perPage
     }
-    media(type: MANGA, search: $search) {
+    media(type: MANGA, search: $search, format_not_in: [NOVEL]) {
       id
       title {
         romaji
@@ -148,7 +148,7 @@ query ($search: String, $page: Int, $perPage: Int) {
  */
 export const GET_MANGA_BY_ID = `
 query ($id: Int) {
-  Media(id: $id, type: MANGA) {
+  Media(id: $id, type: MANGA, format_not_in: [NOVEL]) {
     id
     title {
       romaji
@@ -191,7 +191,7 @@ query ($ids: [Int]) {
       hasNextPage
       perPage
     }
-    media(id_in: $ids, type: MANGA) {
+    media(id_in: $ids, type: MANGA, format_not_in: [NOVEL]) {
       id
       title {
         romaji

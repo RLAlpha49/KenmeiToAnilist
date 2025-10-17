@@ -693,7 +693,7 @@ export async function batchSearchManga(
         hasNextPage
         perPage
       }
-      media(type: MANGA, search: "${sanitizedTitle}") {
+      media(type: MANGA, search: "${sanitizedTitle}", format_not_in: [NOVEL]) {
         id
         title {
           romaji
