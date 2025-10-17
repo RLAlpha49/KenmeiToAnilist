@@ -7,6 +7,7 @@
 /**
  * Calculate similarity in word order between two word arrays
  * Returns a value between 0-1 where 1 means perfect order match
+ * Uses longest common subsequence (LCS) for better order detection
  *
  * @param words1 - First array of words to compare
  * @param words2 - Second array of words to compare
@@ -31,35 +32,66 @@ export function calculateWordOrderSimilarity(
   // If no common words, no order similarity
   if (commonWords1.length === 0) return 0;
 
-  // Calculate the positions of common words in each array
-  const positions1 = commonWords1.map((word) => words1.indexOf(word));
-  const positions2 = commonWords1.map((word) => words2.indexOf(word));
+  // Calculate longest common subsequence (LCS) length
+  // This gives us the longest sequence of words that appear in same order
+  const lcsLength = calculateLCS(words1, words2);
 
-  // Check if order is preserved (all words in same relative order)
-  let orderPreserved = true;
+  // Calculate order preservation score
+  // Higher LCS means better order preservation
+  const maxLength = Math.max(words1.length, words2.length);
+  const lcsScore = lcsLength / maxLength;
 
-  for (let i = 1; i < positions1.length; i++) {
-    const prevDiff1 = positions1[i] - positions1[i - 1];
-    const prevDiff2 = positions2[i] - positions2[i - 1];
+  // Calculate position distance penalty
+  // Words at similar positions get bonus
+  let positionScore = 0;
+  const minLength = Math.min(words1.length, words2.length);
 
-    // If signs differ, order is not preserved
-    if (
-      (prevDiff1 > 0 && prevDiff2 <= 0) ||
-      (prevDiff1 <= 0 && prevDiff2 > 0)
-    ) {
-      orderPreserved = false;
-      break;
+  for (let i = 0; i < minLength; i++) {
+    if (words1[i] === words2[i]) {
+      positionScore += 1;
+    } else if (words2.includes(words1[i])) {
+      // Word exists but in different position, give partial credit
+      const actualPos = words2.indexOf(words1[i]);
+      const distance = Math.abs(i - actualPos);
+      positionScore += Math.max(0, 1 - distance / maxLength);
     }
   }
+  positionScore /= maxLength;
 
-  // Calculate how many words are in the same relative position
-  const commonWordCount = commonWords1.length;
+  // Calculate coverage (what portion of words are common)
+  const coverage = commonWords1.length / maxLength;
 
-  // Return a score based on common words and if order is preserved
-  return (
-    (commonWordCount / Math.max(words1.length, words2.length)) *
-    (orderPreserved ? 1 : 0.7)
-  ); // Penalty if order differs
+  // Combine scores with weights
+  // LCS is most important for order, then position, then coverage
+  return lcsScore * 0.5 + positionScore * 0.3 + coverage * 0.2;
+}
+
+/**
+ * Calculate longest common subsequence length between two word arrays
+ * Helper function for word order similarity
+ */
+function calculateLCS(words1: string[], words2: string[]): number {
+  const m = words1.length;
+  const n = words2.length;
+
+  // Use space-optimized DP (only need previous row)
+  let previous = new Array<number>(n + 1).fill(0);
+  let current = new Array<number>(n + 1).fill(0);
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (words1[i - 1] === words2[j - 1]) {
+        current[j] = previous[j - 1] + 1;
+      } else {
+        current[j] = Math.max(current[j - 1], previous[j]);
+      }
+    }
+    // Swap arrays for next iteration
+    [previous, current] = [current, previous];
+    current.fill(0);
+  }
+
+  return previous[n];
 }
 
 /**

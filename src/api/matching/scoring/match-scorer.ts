@@ -20,7 +20,10 @@ import {
   containsCompleteTitle,
   calculateWordMatchScore,
 } from "./similarity-calculator";
-import { calculateEnhancedSimilarity } from "../../../utils/enhanced-similarity";
+import {
+  calculateEnhancedSimilarity,
+  extractMeaningfulWords,
+} from "../../../utils/enhanced-similarity";
 
 /**
  * Check if words from search term appear in title with consideration for word order and proximity
@@ -31,6 +34,200 @@ import { calculateEnhancedSimilarity } from "../../../utils/enhanced-similarity"
  *
  * @internal
  */
+type NormalizedTitleEntry = {
+  text: string;
+  source: string;
+  original: string;
+};
+
+export interface MatchScoreOptions {
+  /**
+   * When true, skips the enhanced overlap heuristics to mimic legacy behaviour.
+   * Useful for regression testing and before/after comparisons.
+   */
+  disableMeaningfulOverlap?: boolean;
+}
+
+const SECONDARY_WORDS = new Set([
+  "season",
+  "seasons",
+  "seasonal",
+  "part",
+  "parts",
+  "chapter",
+  "chapters",
+  "volume",
+  "vol",
+  "vols",
+  "volumes",
+  "episode",
+  "episodes",
+  "movie",
+  "movies",
+  "film",
+  "films",
+  "edition",
+  "editions",
+  "collection",
+  "collections",
+  "complete",
+  "special",
+  "specials",
+  "ova",
+  "ovas",
+  "and",
+]);
+
+const NUMBER_WORD_MAP = new Map<string, string>([
+  ["zero", "0"],
+  ["one", "1"],
+  ["two", "2"],
+  ["three", "3"],
+  ["four", "4"],
+  ["five", "5"],
+  ["six", "6"],
+  ["seven", "7"],
+  ["eight", "8"],
+  ["nine", "9"],
+  ["ten", "10"],
+  ["eleven", "11"],
+  ["twelve", "12"],
+  ["thirteen", "13"],
+  ["fourteen", "14"],
+  ["fifteen", "15"],
+  ["sixteen", "16"],
+  ["seventeen", "17"],
+  ["eighteen", "18"],
+  ["nineteen", "19"],
+  ["twenty", "20"],
+]);
+
+const ROMAN_NUMERAL_VALUES: Record<string, number> = {
+  i: 1,
+  v: 5,
+  x: 10,
+  l: 50,
+  c: 100,
+  d: 500,
+  m: 1000,
+};
+
+const ROMAN_NUMERAL_REGEX =
+  /^(?=[mdclxvi])m{0,4}(cm|cd|d?c{0,3})(xc|xl|l?x{0,3})(ix|iv|v?i{0,3})$/i;
+
+type TokenData = {
+  normalized: string[];
+  tokenSet: Set<string>;
+  primaryTokens: string[];
+};
+
+const normalizeSeasonShorthand = (token: string): string | null => {
+  const seasonRegex = /^(?:s|season)(\d{1,2})$/;
+  const partRegex = /^(?:p|pt|part)(\d{1,2})$/;
+  const volumeRegex = /^(?:vol|volume)(\d{1,2})$/;
+  const chapterRegex = /^(?:ch|chapter)(\d{1,3})$/;
+  const arcRegex = /^(?:arc)(\d{1,2})$/;
+
+  const seasonMatch = seasonRegex.exec(token);
+  if (seasonMatch) return seasonMatch[1];
+
+  const partMatch = partRegex.exec(token);
+  if (partMatch) return partMatch[1];
+
+  const volumeMatch = volumeRegex.exec(token);
+  if (volumeMatch) return volumeMatch[1];
+
+  const chapterMatch = chapterRegex.exec(token);
+  if (chapterMatch) return chapterMatch[1];
+
+  const arcMatch = arcRegex.exec(token);
+  if (arcMatch) return arcMatch[1];
+
+  return null;
+};
+
+const romanToDecimal = (roman: string): number | null => {
+  let total = 0;
+  let previousValue = 0;
+
+  for (let index = roman.length - 1; index >= 0; index--) {
+    const value = ROMAN_NUMERAL_VALUES[roman[index]];
+    if (!value) return null;
+
+    if (value < previousValue) {
+      total -= value;
+    } else {
+      total += value;
+      previousValue = value;
+    }
+  }
+
+  return total > 0 ? total : null;
+};
+
+const normalizeToken = (raw: string): string => {
+  const token = raw.toLowerCase().trim();
+  if (!token) return token;
+
+  const shorthand = normalizeSeasonShorthand(token);
+  if (shorthand) return shorthand;
+
+  if (NUMBER_WORD_MAP.has(token)) {
+    return NUMBER_WORD_MAP.get(token)!;
+  }
+
+  if (/^\d+$/.test(token)) {
+    return token.replace(/^0+/, "") || "0";
+  }
+
+  if (ROMAN_NUMERAL_REGEX.test(token)) {
+    const value = romanToDecimal(token);
+    if (value !== null) {
+      return String(value);
+    }
+  }
+
+  return token;
+};
+
+const normalizeTokensForMatching = (words: string[]): string[] => {
+  return words.map(normalizeToken).filter((word) => word.length > 0);
+};
+
+const createTokenData = (words: string[]): TokenData => {
+  const normalized = normalizeTokensForMatching(words);
+  const tokenSet = new Set(normalized);
+  const primaryTokens = [
+    ...new Set(
+      normalized.filter(
+        (token) => token.length > 1 && !SECONDARY_WORDS.has(token),
+      ),
+    ),
+  ];
+
+  return { normalized, tokenSet, primaryTokens };
+};
+
+const buildInitialism = (rawWords: string[]): string => {
+  const letters: string[] = [];
+
+  for (const rawWord of rawWords) {
+    const normalized = normalizeToken(rawWord);
+    if (!normalized || SECONDARY_WORDS.has(normalized)) {
+      continue;
+    }
+
+    const source =
+      /^\d+$/.test(normalized) && /^[a-z]/i.test(rawWord)
+        ? rawWord.toLowerCase()
+        : normalized;
+
+    letters.push(source[0]);
+  }
+
+  return letters.join("");
+};
+
 function checkTitleMatch(title: string, searchName: string): boolean {
   // Remove punctuation from the title and the search name
   const cleanTitle = removePunctuation(title);
@@ -88,7 +285,7 @@ function checkTitleMatch(title: string, searchName: string): boolean {
  * @internal
  */
 function checkDirectMatches(
-  normalizedTitles: { text: string; source: string }[],
+  normalizedTitles: NormalizedTitleEntry[],
   normalizedSearchTitle: string,
   searchTitle: string,
   manga: AniListManga,
@@ -177,13 +374,136 @@ function checkEnhancedSimilarityScore(
  *
  * @internal
  */
-function checkWordMatching(
-  normalizedTitles: { text: string; source: string }[],
+function checkMeaningfulWordOverlap(
+  normalizedTitles: NormalizedTitleEntry[],
   normalizedSearchTitle: string,
   searchTitle: string,
 ): number {
+  const searchMeaningfulWords = extractMeaningfulWords(searchTitle);
+  if (searchMeaningfulWords.length === 0) {
+    return -1;
+  }
+
+  const searchTokenData = createTokenData(searchMeaningfulWords);
+  if (searchTokenData.normalized.length === 0) {
+    return -1;
+  }
+
+  const searchOrderTokens =
+    searchTokenData.normalized.length > 0
+      ? searchTokenData.normalized
+      : normalizedSearchTitle.split(/\s+/).filter((word) => word.length > 0);
+
   let bestScore = -1;
-  const searchWords = normalizedSearchTitle.split(/\s+/);
+
+  for (const { original, source } of normalizedTitles) {
+    const titleMeaningfulWords = extractMeaningfulWords(original);
+    if (titleMeaningfulWords.length === 0) continue;
+
+    const titleTokenData = createTokenData(titleMeaningfulWords);
+    if (titleTokenData.normalized.length === 0) continue;
+
+    const primaryMatches = searchTokenData.primaryTokens.filter((token) =>
+      titleTokenData.tokenSet.has(token),
+    );
+
+    if (
+      searchTokenData.primaryTokens.length > 0 &&
+      primaryMatches.length / searchTokenData.primaryTokens.length < 0.6
+    ) {
+      continue;
+    }
+
+    const intersectionSize = [...titleTokenData.tokenSet].filter((token) =>
+      searchTokenData.tokenSet.has(token),
+    ).length;
+
+    const unionSize = new Set([
+      ...titleTokenData.tokenSet,
+      ...searchTokenData.tokenSet,
+    ]).size;
+
+    const jaccardScore = unionSize === 0 ? 0 : intersectionSize / unionSize;
+
+    const coverageRatio =
+      searchTokenData.primaryTokens.length === 0
+        ? 0
+        : primaryMatches.length / searchTokenData.primaryTokens.length;
+
+    const orderSimilarity = calculateWordOrderSimilarity(
+      titleTokenData.normalized,
+      searchOrderTokens,
+    );
+
+    const compositeScore =
+      coverageRatio * 0.65 + jaccardScore * 0.2 + orderSimilarity * 0.15;
+
+    if (compositeScore >= 0.6) {
+      const finalScore = Math.min(0.98, 0.8 + (compositeScore - 0.6) * 0.5);
+      console.debug(
+        `[MangaSearchService] 🔎 Meaningful overlap detected between "${original}" and "${searchTitle}" (${source}) - score ${finalScore.toFixed(2)} (coverage: ${coverageRatio.toFixed(2)}, jaccard: ${jaccardScore.toFixed(2)}, order: ${orderSimilarity.toFixed(2)})`,
+      );
+      bestScore = Math.max(bestScore, finalScore);
+    }
+  }
+
+  return bestScore;
+}
+
+function checkInitialismMatch(
+  normalizedTitles: NormalizedTitleEntry[],
+  searchTitle: string,
+): number {
+  const compactSearch = searchTitle.toLowerCase().replaceAll(/[^a-z0-9]/g, "");
+
+  if (compactSearch.length < 2) {
+    return -1;
+  }
+
+  let bestScore = -1;
+
+  for (const { original, source } of normalizedTitles) {
+    const titleMeaningfulWords = extractMeaningfulWords(original);
+    if (titleMeaningfulWords.length === 0) continue;
+
+    const normalizedTokens = normalizeTokensForMatching(titleMeaningfulWords);
+    if (normalizedTokens.length === 0) continue;
+
+    const initialism = buildInitialism(titleMeaningfulWords);
+    if (initialism.length < 2) continue;
+
+    if (initialism === compactSearch) {
+      console.debug(
+        `[MangaSearchService] 🔤 Initialism match detected: "${searchTitle}" ↔ "${original}" (${source})`,
+      );
+      return 0.92;
+    }
+
+    const similarity =
+      calculateEnhancedSimilarity(initialism, compactSearch) / 100;
+
+    if (similarity >= 0.8) {
+      const score = Math.min(0.9, 0.8 + (similarity - 0.8) * 0.5);
+      console.debug(
+        `[MangaSearchService] 🔤 Initialism similarity (${(similarity * 100).toFixed(1)}%) for "${searchTitle}" against "${original}" (${source})`,
+      );
+      bestScore = Math.max(bestScore, score);
+    }
+  }
+
+  return bestScore;
+}
+
+function checkWordMatching(
+  normalizedTitles: NormalizedTitleEntry[],
+  normalizedSearchTitle: string,
+  searchTitle: string,
+  options?: MatchScoreOptions,
+): number {
+  let bestScore = -1;
+  const searchWords = normalizedSearchTitle
+    .split(/\s+/)
+    .filter((word) => word.length > 0);
 
   for (const { text, source } of normalizedTitles) {
     const titleWords = text.split(/\s+/);
@@ -191,8 +511,9 @@ function checkWordMatching(
     // Calculate word matching score
     const wordMatchScore = calculateWordMatchScore(titleWords, searchWords);
     if (wordMatchScore > 0) {
+      const adjustedDisplay = ((wordMatchScore - 0.75) / 0.6 + 0.75).toFixed(2);
       console.debug(
-        `[MangaSearchService] ✅ High word match ratio (${((wordMatchScore - 0.75) / 0.6 + 0.75).toFixed(2)}) between "${text}" and "${searchTitle}" (${source}) - score: ${wordMatchScore.toFixed(2)}`,
+        `[MangaSearchService] ✅ High word match ratio (${adjustedDisplay}) between "${text}" and "${searchTitle}" (${source}) - score: ${wordMatchScore.toFixed(2)}`,
       );
 
       if (wordMatchScore > 0.9) {
@@ -210,6 +531,22 @@ function checkWordMatching(
     );
     if (similarityScore > 0) {
       bestScore = Math.max(bestScore, similarityScore);
+    }
+  }
+
+  if (!options?.disableMeaningfulOverlap) {
+    const overlapScore = checkMeaningfulWordOverlap(
+      normalizedTitles,
+      normalizedSearchTitle,
+      searchTitle,
+    );
+    if (overlapScore > 0) {
+      bestScore = Math.max(bestScore, overlapScore);
+    }
+
+    const initialismScore = checkInitialismMatch(normalizedTitles, searchTitle);
+    if (initialismScore > 0) {
+      bestScore = Math.max(bestScore, initialismScore);
     }
   }
 
@@ -531,6 +868,7 @@ function checkLegacyMatching(
 export function calculateMatchScore(
   manga: AniListManga,
   searchTitle: string,
+  options: MatchScoreOptions = {},
 ): number {
   // Handle empty search title
   if (!searchTitle || searchTitle.trim() === "") {
@@ -586,6 +924,7 @@ export function calculateMatchScore(
     normalizedTitles,
     normalizedSearchTitle,
     searchTitle,
+    options,
   );
   if (wordMatch > 0) {
     return wordMatch;

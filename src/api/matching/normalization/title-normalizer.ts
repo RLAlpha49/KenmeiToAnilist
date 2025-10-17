@@ -62,38 +62,27 @@ export function processTitle(title: string): string {
  */
 export function createNormalizedTitles(
   manga: AniListManga,
-): { text: string; source: string }[] {
-  const allTitles: { text: string; source: string }[] = [];
+): { text: string; source: string; original: string }[] {
+  const allTitles: { text: string; source: string; original: string }[] = [];
 
-  if (manga.title.english) {
-    const processedTitle = normalizeForMatching(
-      processTitle(manga.title.english),
-    );
-    allTitles.push({ text: processedTitle, source: "english" });
-  }
+  const pushTitle = (title: string | null | undefined, source: string) => {
+    if (!title) return;
 
-  if (manga.title.romaji) {
-    const processedTitle = normalizeForMatching(
-      processTitle(manga.title.romaji),
-    );
-    allTitles.push({ text: processedTitle, source: "romaji" });
-  }
+    const processedTitle = processTitle(title);
+    allTitles.push({
+      text: normalizeForMatching(processedTitle),
+      source,
+      original: processedTitle,
+    });
+  };
 
-  if (manga.title.native) {
-    const processedTitle = normalizeForMatching(
-      processTitle(manga.title.native),
-    );
-    allTitles.push({ text: processedTitle, source: "native" });
-  }
+  pushTitle(manga.title.english, "english");
+  pushTitle(manga.title.romaji, "romaji");
+  pushTitle(manga.title.native, "native");
 
   if (manga.synonyms && Array.isArray(manga.synonyms)) {
     for (const [index, synonym] of manga.synonyms.entries()) {
-      if (synonym) {
-        allTitles.push({
-          text: normalizeForMatching(processTitle(synonym)),
-          source: `synonym_${index}`,
-        });
-      }
+      pushTitle(synonym, `synonym_${index}`);
     }
   }
 

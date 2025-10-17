@@ -381,6 +381,7 @@ export function findBestMatches(
     return {
       kenmeiManga,
       anilistMatches: topMatches.map(({ manga, confidence }) => ({
+        id: manga.id,
         manga,
         confidence,
       })),
@@ -399,6 +400,7 @@ export function findBestMatches(
     return {
       kenmeiManga,
       anilistMatches: topMatches.map(({ manga, confidence }) => ({
+        id: manga.id,
         manga,
         confidence,
       })),
@@ -412,6 +414,7 @@ export function findBestMatches(
   return {
     kenmeiManga,
     anilistMatches: topMatches.map(({ manga, confidence }) => ({
+      id: manga.id,
       manga,
       confidence,
     })),

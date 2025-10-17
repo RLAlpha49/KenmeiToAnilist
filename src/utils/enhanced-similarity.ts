@@ -5,6 +5,7 @@
  */
 
 import * as stringSimilarity from "string-similarity";
+import { distance as levenshteinDistance } from "fastest-levenshtein";
 
 /**
  * Configuration for enhanced similarity calculation
@@ -16,6 +17,8 @@ const LEVENSHTEIN_CACHE_LIMIT = 3000;
 const SUBSTRING_CACHE_LIMIT = 3000;
 const WORD_ORDER_CACHE_LIMIT = 3000;
 const SEMANTIC_CACHE_LIMIT = 3000;
+const JARO_WINKLER_CACHE_LIMIT = 3000;
+const NGRAM_CACHE_LIMIT = 3000;
 
 const normalizeCache = new Map<string, string>();
 const enhancedSimilarityCache = new Map<string, number>();
@@ -24,6 +27,8 @@ const substringCache = new Map<string, number>();
 const meaningfulWordsCache = new Map<string, string[]>();
 const wordOrderCache = new Map<string, number>();
 const semanticSimilarityCache = new Map<string, number>();
+const jaroWinklerCache = new Map<string, number>();
+const ngramCache = new Map<string, number>();
 
 const getCacheEntry = <T>(
   cache: Map<string, T>,
@@ -59,6 +64,152 @@ const makeOrderedPairKey = (a: string, b: string): string => {
   return a <= b ? `${a}::${b}` : `${b}::${a}`;
 };
 
+/**
+ * Simple Porter Stemmer implementation (browser-compatible)
+ * Based on Porter Stemming Algorithm
+ */
+const porterStem = (word: string): string => {
+  if (word.length <= 2) return word;
+
+  let stem = word.toLowerCase();
+
+  // Step 1a: plurals
+  stem = stem.replace(/sses$/i, "ss");
+  stem = stem.replace(/ies$/i, "i");
+  stem = stem.replace(/ss$/i, "ss");
+  stem = stem.replace(/s$/i, "");
+
+  // Step 1b: -ed, -ing
+  if (/(at|bl|iz)ed$/i.test(stem)) {
+    stem = stem.replace(/ed$/i, "e");
+  } else if (/([^aeiou])ed$/i.test(stem)) {
+    stem = stem.replace(/ed$/i, "");
+  }
+
+  if (/ing$/i.test(stem) && /[aeiou]/i.test(stem)) {
+    stem = stem.replace(/ing$/i, "");
+  }
+
+  // Step 1c: -y
+  if (/([^aeiou])y$/i.test(stem)) {
+    stem = stem.replace(/y$/i, "i");
+  }
+
+  // Step 2: double letter endings
+  stem = stem.replace(
+    /(ational|tional|enci|anci|izer|abli|alli|entli|eli|ousli|ization|ation|ator|alism|iveness|fulness|ousness|aliti|iviti|biliti)$/i,
+    (match) => {
+      const replacements: Record<string, string> = {
+        ational: "ate",
+        tional: "tion",
+        enci: "ence",
+        anci: "ance",
+        izer: "ize",
+        abli: "able",
+        alli: "al",
+        entli: "ent",
+        eli: "e",
+        ousli: "ous",
+        ization: "ize",
+        ation: "ate",
+        ator: "ate",
+        alism: "al",
+        iveness: "ive",
+        fulness: "ful",
+        ousness: "ous",
+        aliti: "al",
+        iviti: "ive",
+        biliti: "ble",
+      };
+      return replacements[match.toLowerCase()] || match;
+    },
+  );
+
+  // Step 3: -icate, -ative, -alize, -iciti, -ical, -ful, -ness
+  stem = stem.replace(/(icate|ative|alize|iciti|ical|ful|ness)$/i, (match) => {
+    const replacements: Record<string, string> = {
+      icate: "ic",
+      ative: "",
+      alize: "al",
+      iciti: "ic",
+      ical: "ic",
+      ful: "",
+      ness: "",
+    };
+    return replacements[match.toLowerCase()] || match;
+  });
+
+  // Step 4: remove -ant, -ence, -er, -ism, -able, -ible, -ment, -ent, -ou, -ism, -ate, -iti, -ous, -ive, -ize
+  stem = stem.replace(
+    /(al|ance|ence|er|ic|able|ible|ant|ement|ment|ent|ou|ism|ate|iti|ous|ive|ize)$/i,
+    "",
+  );
+
+  return stem;
+};
+
+/**
+ * Jaro-Winkler distance implementation (browser-compatible)
+ * Returns similarity score between 0 and 1
+ */
+const jaroWinklerDistance = (s1: string, s2: string): number => {
+  if (s1 === s2) return 1;
+
+  const len1 = s1.length;
+  const len2 = s2.length;
+
+  if (len1 === 0 || len2 === 0) return 0;
+
+  // Maximum allowed distance
+  const matchDistance = Math.floor(Math.max(len1, len2) / 2) - 1;
+  const matches1 = new Array<boolean>(len1).fill(false);
+  const matches2 = new Array<boolean>(len2).fill(false);
+
+  let matches = 0;
+  let transpositions = 0;
+
+  // Find matches
+  for (let i = 0; i < len1; i++) {
+    const start = Math.max(0, i - matchDistance);
+    const end = Math.min(i + matchDistance + 1, len2);
+
+    for (let j = start; j < end; j++) {
+      if (matches2[j] || s1[i] !== s2[j]) continue;
+      matches1[i] = true;
+      matches2[j] = true;
+      matches++;
+      break;
+    }
+  }
+
+  if (matches === 0) return 0;
+
+  // Find transpositions
+  let k = 0;
+  for (let i = 0; i < len1; i++) {
+    if (!matches1[i]) continue;
+    while (!matches2[k]) k++;
+    if (s1[i] !== s2[k]) transpositions++;
+    k++;
+  }
+
+  // Calculate Jaro similarity
+  const jaro =
+    (matches / len1 +
+      matches / len2 +
+      (matches - transpositions / 2) / matches) /
+    3;
+
+  // Calculate Jaro-Winkler (add prefix bonus)
+  let prefix = 0;
+  for (let i = 0; i < Math.min(len1, len2, 4); i++) {
+    if (s1[i] === s2[i]) prefix++;
+    else break;
+  }
+
+  return jaro + prefix * 0.1 * (1 - jaro);
+};
+
 const createConfigKey = (config: SimilarityConfig): string => {
   return [
     config.exactMatchWeight,
@@ -83,6 +234,10 @@ export interface SimilarityConfig {
   characterSimilarityWeight: number;
   /** Weight for semantic similarity (0-1) */
   semanticWeight: number;
+  /** Weight for Jaro-Winkler distance (0-1) */
+  jaroWinklerWeight: number;
+  /** Weight for n-gram similarity (0-1) */
+  ngramWeight: number;
   /** Minimum length difference ratio to heavily penalize (0-1) */
   lengthDifferenceThreshold: number;
   /** Whether to enable debug logging */
@@ -91,13 +246,16 @@ export interface SimilarityConfig {
 
 /**
  * Default configuration for similarity calculation
+ * Weights are balanced to prioritize exact matches, then character similarity, then various fuzzy matching techniques
  */
 export const DEFAULT_SIMILARITY_CONFIG: SimilarityConfig = {
-  exactMatchWeight: 0.5,
-  substringMatchWeight: 0.15,
-  wordOrderWeight: 0.1,
-  characterSimilarityWeight: 0.2,
-  semanticWeight: 0.05,
+  exactMatchWeight: 0.35,
+  substringMatchWeight: 0.12,
+  wordOrderWeight: 0.08,
+  characterSimilarityWeight: 0.18,
+  semanticWeight: 0.1,
+  jaroWinklerWeight: 0.1,
+  ngramWeight: 0.07,
   lengthDifferenceThreshold: 0.7,
   debug: false,
 };
@@ -420,7 +578,8 @@ function calculateCharacterSimilarity(str1: string, str2: string): number {
 }
 
 /**
- * Calculate Levenshtein distance-based similarity
+ * Calculate Levenshtein distance-based similarity using fastest-levenshtein library
+ * This is significantly faster than custom implementations
  */
 function calculateLevenshteinSimilarity(str1: string, str2: string): number {
   if (str1 === str2) return 1;
@@ -438,49 +597,105 @@ function calculateLevenshteinSimilarity(str1: string, str2: string): number {
   }
 
   const maxLength = Math.max(len1, len2);
-  let previous = new Uint16Array(len2 + 1);
-  let current = new Uint16Array(len2 + 1);
+  const distance = levenshteinDistance(str1, str2);
 
-  for (let j = 0; j <= len2; j++) {
-    previous[j] = j;
+  // Early exit for very dissimilar strings
+  if (distance >= maxLength) {
+    setCacheEntry(levenshteinCache, pairKey, 0, LEVENSHTEIN_CACHE_LIMIT);
+    return 0;
   }
 
-  for (let i = 1; i <= len1; i++) {
-    current[0] = i;
-    let rowMin = current[0];
-
-    for (let j = 1; j <= len2; j++) {
-      const cost = str1.codePointAt(i - 1) === str2.codePointAt(j - 1) ? 0 : 1;
-      const candidate = Math.min(
-        previous[j] + 1,
-        current[j - 1] + 1,
-        previous[j - 1] + cost,
-      );
-
-      current[j] = candidate;
-      rowMin = Math.min(rowMin, candidate);
-    }
-
-    if (rowMin >= maxLength) {
-      setCacheEntry(levenshteinCache, pairKey, 0, LEVENSHTEIN_CACHE_LIMIT);
-      return 0;
-    }
-
-    const temp = previous;
-    previous = current;
-    current = temp;
-  }
-
-  const distance = previous[len2];
   const similarity = 1 - distance / maxLength;
-
   setCacheEntry(levenshteinCache, pairKey, similarity, LEVENSHTEIN_CACHE_LIMIT);
 
   return similarity;
 }
 
 /**
- * Calculate semantic similarity (basic implementation)
+ * Calculate Jaro-Winkler distance-based similarity
+ * Particularly effective for short strings and typos near the beginning
+ */
+function calculateJaroWinklerSimilarity(str1: string, str2: string): number {
+  if (str1 === str2) return 1;
+
+  const len1 = str1.length;
+  const len2 = str2.length;
+
+  if (len1 === 0 && len2 === 0) return 1;
+  if (len1 === 0 || len2 === 0) return 0;
+
+  const pairKey = makeOrderedPairKey(str1, str2);
+  const cached = getCacheEntry(jaroWinklerCache, pairKey);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  // Use browser-compatible Jaro-Winkler implementation
+  const similarity = jaroWinklerDistance(
+    str1.toLowerCase(),
+    str2.toLowerCase(),
+  );
+
+  setCacheEntry(
+    jaroWinklerCache,
+    pairKey,
+    similarity,
+    JARO_WINKLER_CACHE_LIMIT,
+  );
+  return similarity;
+}
+
+/**
+ * Calculate n-gram similarity (trigram analysis)
+ * Effective for catching character-level similarities and typos
+ */
+function calculateNgramSimilarity(str1: string, str2: string, n = 3): number {
+  if (str1 === str2) return 1;
+
+  const len1 = str1.length;
+  const len2 = str2.length;
+
+  if (len1 === 0 && len2 === 0) return 1;
+  if (len1 === 0 || len2 === 0) return 0;
+
+  const pairKey = makeOrderedPairKey(str1, str2) + `::n${n}`;
+  const cached = getCacheEntry(ngramCache, pairKey);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  // For very short strings, use bigrams instead of trigrams
+  const ngramSize = Math.min(n, Math.min(len1, len2));
+  if (ngramSize < 2) {
+    // Fall back to character comparison for very short strings
+    return str1 === str2 ? 1 : 0;
+  }
+
+  // Generate n-grams
+  const ngrams1 = new Set<string>();
+  const ngrams2 = new Set<string>();
+
+  for (let i = 0; i <= len1 - ngramSize; i++) {
+    ngrams1.add(str1.slice(i, i + ngramSize));
+  }
+
+  for (let i = 0; i <= len2 - ngramSize; i++) {
+    ngrams2.add(str2.slice(i, i + ngramSize));
+  }
+
+  // Calculate Jaccard similarity of n-gram sets
+  const intersection = new Set([...ngrams1].filter((x) => ngrams2.has(x)));
+  const union = new Set([...ngrams1, ...ngrams2]);
+
+  const similarity = union.size > 0 ? intersection.size / union.size : 0;
+
+  setCacheEntry(ngramCache, pairKey, similarity, NGRAM_CACHE_LIMIT);
+  return similarity;
+}
+
+/**
+ * Calculate semantic similarity using improved NLP techniques
+ * Uses stemming and better word matching algorithms
  */
 function calculateSemanticSimilarity(str1: string, str2: string): number {
   const pairKey = makeOrderedPairKey(
@@ -498,34 +713,70 @@ function calculateSemanticSimilarity(str1: string, str2: string): number {
   if (words1.length === 0 && words2.length === 0) return 1;
   if (words1.length === 0 || words2.length === 0) return 0;
 
-  // Simple semantic similarity based on word overlap and positioning
+  // Use Porter Stemmer for better word matching
+  const stemmedWords1 = words1.map((w) => porterStem(w));
+  const stemmedWords2 = words2.map((w) => porterStem(w));
+
+  // Calculate overlap of stemmed words (handles variations like "running"/"run")
+  const stemSet1 = new Set(stemmedWords1);
+  const stemSet2 = new Set(stemmedWords2);
+  const stemIntersection = new Set(
+    [...stemSet1].filter((x) => stemSet2.has(x)),
+  );
+  const stemUnion = new Set([...stemSet1, ...stemSet2]);
+  const stemJaccard =
+    stemUnion.size > 0 ? stemIntersection.size / stemUnion.size : 0;
+
+  // Enhanced word-to-word similarity with multiple algorithms
   let score = 0;
   let maxPossibleScore = 0;
 
-  for (const word1 of words1) {
+  for (let i = 0; i < words1.length; i++) {
+    const word1 = words1[i];
+    const stem1 = stemmedWords1[i];
     maxPossibleScore += 1;
 
-    // Find best match in words2
     let bestMatch = 0;
-    for (const word2 of words2) {
-      // Exact match gets full score
+    for (let j = 0; j < words2.length; j++) {
+      const word2 = words2[j];
+      const stem2 = stemmedWords2[j];
+
+      // Exact match (highest priority)
       if (word1 === word2) {
         bestMatch = 1;
         break;
       }
 
-      // Partial match based on character similarity
-      const charSim = stringSimilarity.compareTwoStrings(word1, word2);
-      if (charSim > 0.8) {
-        // Only consider high similarity as semantic match
-        bestMatch = Math.max(bestMatch, charSim);
+      // Stemmed match (second priority)
+      if (stem1 === stem2) {
+        bestMatch = Math.max(bestMatch, 0.95);
+        continue;
+      }
+
+      // Use Jaro-Winkler for fuzzy word matching (good for typos)
+      const jaroSim = jaroWinklerDistance(
+        word1.toLowerCase(),
+        word2.toLowerCase(),
+      );
+      if (jaroSim > 0.85) {
+        bestMatch = Math.max(bestMatch, jaroSim * 0.9);
+      }
+
+      // Dice coefficient for character-level similarity
+      const diceSim = stringSimilarity.compareTwoStrings(word1, word2);
+      if (diceSim > 0.8) {
+        bestMatch = Math.max(bestMatch, diceSim * 0.85);
       }
     }
 
     score += bestMatch;
   }
 
-  const semanticScore = maxPossibleScore > 0 ? score / maxPossibleScore : 0;
+  const wordMatchScore = maxPossibleScore > 0 ? score / maxPossibleScore : 0;
+
+  // Combine stem-based Jaccard with word-to-word matching
+  // Give more weight to word matching as it's more precise
+  const semanticScore = wordMatchScore * 0.7 + stemJaccard * 0.3;
 
   setCacheEntry(
     semanticSimilarityCache,
@@ -606,21 +857,27 @@ export function calculateEnhancedSimilarity(
   const wordOrderSim = calculateWordOrderSimilarity(str1, str2);
   const characterSim = calculateCharacterSimilarity(str1, str2);
   const semanticSim = calculateSemanticSimilarity(str1, str2);
+  const jaroWinklerSim = calculateJaroWinklerSimilarity(norm1, norm2);
+  const ngramSim = calculateNgramSimilarity(norm1, norm2);
 
-  // Calculate weighted average
+  // Calculate weighted average with all similarity metrics
   const totalWeight =
     finalConfig.exactMatchWeight +
     finalConfig.substringMatchWeight +
     finalConfig.wordOrderWeight +
     finalConfig.characterSimilarityWeight +
-    finalConfig.semanticWeight;
+    finalConfig.semanticWeight +
+    finalConfig.jaroWinklerWeight +
+    finalConfig.ngramWeight;
 
   const weightedScore =
     (exactMatch * finalConfig.exactMatchWeight +
       substringMatch * finalConfig.substringMatchWeight +
       wordOrderSim * finalConfig.wordOrderWeight +
       characterSim * finalConfig.characterSimilarityWeight +
-      semanticSim * finalConfig.semanticWeight) /
+      semanticSim * finalConfig.semanticWeight +
+      jaroWinklerSim * finalConfig.jaroWinklerWeight +
+      ngramSim * finalConfig.ngramWeight) /
     totalWeight;
 
   const roundedScore = Math.round(weightedScore * 100);
@@ -643,6 +900,10 @@ export function calculateEnhancedSimilarity(
     console.debug(
       `[Similarity]   Semantic: ${(semanticSim * 100).toFixed(1)}%`,
     );
+    console.debug(
+      `[Similarity]   Jaro-Winkler: ${(jaroWinklerSim * 100).toFixed(1)}%`,
+    );
+    console.debug(`[Similarity]   N-gram: ${(ngramSim * 100).toFixed(1)}%`);
     console.debug(`[Similarity]   Final: ${boundedScore}%`);
   }
 
