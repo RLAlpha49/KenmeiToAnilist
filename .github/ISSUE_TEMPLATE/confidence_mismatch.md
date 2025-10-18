@@ -2,7 +2,7 @@
 name: Confidence percentage mismatch
 about: Report when a match's confidence score doesn't reflect the actual quality of the match
 title: "Confidence mismatch: [manga title]"
-labels: confidence-mismatch
+labels: invalid
 assignees: "RLAlpha49"
 ---
 
@@ -40,7 +40,7 @@ If applicable, attach a screenshot of the matching panel showing the confidence 
 
 To help debug this issue faster, you can optionally include a test command that reproduces the confidence calculation locally. You should only include the command, you don't need to run it yourself and provide output.
 
-**See [DEBUGGING_CONFIDENCE.md](../../docs/guides/DEBUGGING_CONFIDENCE.md) for:**
+**See [DEBUGGING_CONFIDENCE.md](https://github.com/RLAlpha49/KenmeiToAnilist/blob/master/docs/guides/DEBUGGING_CONFIDENCE.md) for:**
 
 - How to enable the debug feature in Settings
 - How to get the test command from the match card
