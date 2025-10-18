@@ -56,6 +56,7 @@ interface DebugStateContextValue {
   stateInspectorSources: StateInspectorSourceSnapshot[];
   ipcViewerEnabled: boolean;
   eventLoggerEnabled: boolean;
+  confidenceTestExporterEnabled: boolean;
   eventLogEntries: DebugEventEntry[];
   maxEventLogEntries: number;
   ipcEvents: IpcLogEntry[];
@@ -84,6 +85,8 @@ interface DebugActionsContextValue {
   toggleIpcViewer: () => void;
   setEventLoggerEnabled: (enabled: boolean) => void;
   toggleEventLogger: () => void;
+  setConfidenceTestExporterEnabled: (enabled: boolean) => void;
+  toggleConfidenceTestExporter: () => void;
   recordEvent: (entry: DebugEventRecord, options?: RecordEventOptions) => void;
   clearEventLog: () => void;
   clearIpcEvents: () => void;
@@ -115,6 +118,7 @@ type DebugFeatureToggles = {
   ipcViewer: boolean;
   redactLogs: boolean;
   eventLogger: boolean;
+  confidenceTestExporter: boolean;
 };
 
 // Default all features to off for production
@@ -125,6 +129,7 @@ const DEFAULT_FEATURE_TOGGLES: DebugFeatureToggles = {
   ipcViewer: false,
   redactLogs: true,
   eventLogger: false,
+  confidenceTestExporter: false,
 };
 
 interface RecordEventOptions {
@@ -595,6 +600,31 @@ export function DebugProvider({
     setEventLoggerEnabled(!eventLoggerEnabled);
   }, [eventLoggerEnabled, setEventLoggerEnabled]);
 
+  const setConfidenceTestExporterEnabled = useCallback(
+    (enabled: boolean) => {
+      persistFeatureToggles((prev) => ({
+        ...prev,
+        confidenceTestExporter: enabled,
+      }));
+      recordEvent(
+        {
+          type: "debug.confidence-test-exporter",
+          message: enabled
+            ? "Confidence test exporter enabled"
+            : "Confidence test exporter disabled",
+          level: enabled ? "info" : "warn",
+          metadata: { enabled },
+        },
+        { force: true },
+      );
+    },
+    [persistFeatureToggles, recordEvent],
+  );
+
+  const toggleConfidenceTestExporter = useCallback(() => {
+    setConfidenceTestExporterEnabled(!featureToggles.confidenceTestExporter);
+  }, [featureToggles.confidenceTestExporter, setConfidenceTestExporterEnabled]);
+
   const registerStateInspector = useCallback(
     <T,>(config: StateInspectorRegistration<T>): StateInspectorHandle<T> => {
       const serialize = config.serialize
@@ -845,6 +875,7 @@ export function DebugProvider({
       stateInspectorSources: stateSourceSnapshots,
       ipcViewerEnabled,
       eventLoggerEnabled,
+      confidenceTestExporterEnabled: featureToggles.confidenceTestExporter,
       eventLogEntries,
       maxEventLogEntries: MAX_EVENT_LOG_ENTRIES,
       ipcEvents,
@@ -855,6 +886,7 @@ export function DebugProvider({
     [
       eventLogEntries,
       eventLoggerEnabled,
+      featureToggles.confidenceTestExporter,
       ipcEvents,
       ipcViewerEnabled,
       isDebugEnabled,
@@ -887,6 +919,8 @@ export function DebugProvider({
       toggleIpcViewer,
       setEventLoggerEnabled,
       toggleEventLogger,
+      setConfidenceTestExporterEnabled,
+      toggleConfidenceTestExporter,
       recordEvent,
       clearEventLog,
       clearIpcEvents,
@@ -902,6 +936,7 @@ export function DebugProvider({
       recordEvent,
       refreshStateInspectorSource,
       registerStateInspector,
+      setConfidenceTestExporterEnabled,
       setDebugEnabled,
       setEventLoggerEnabled,
       setIpcViewerEnabled,
@@ -909,6 +944,7 @@ export function DebugProvider({
       setLogViewerEnabled,
       setStateInspectorEnabled,
       setStorageDebuggerEnabled,
+      toggleConfidenceTestExporter,
       toggleDebug,
       toggleEventLogger,
       toggleIpcViewer,

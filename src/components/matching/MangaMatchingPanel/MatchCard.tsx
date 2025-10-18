@@ -15,6 +15,8 @@ import { Separator } from "../../ui/separator";
 import { ConfidenceBadge } from "./ConfidenceBadge";
 import { createKenmeiUrl } from "./createKenmeiUrl";
 import MatchActions from "./MatchActions";
+import { useDebug } from "../../../contexts/DebugContext";
+import { ConfidenceTestExporter } from "../../debug/ConfidenceTestExporter";
 import {
   formatMediaListStatus,
   getStatusBadgeColor,
@@ -1029,6 +1031,8 @@ function MatchCard({
   onSelectAlternative,
   onResetToPending,
 }: Readonly<MatchCardProps>) {
+  const { confidenceTestExporterEnabled } = useDebug();
+
   const primaryMatchCandidate =
     match.selectedMatch ?? match.anilistMatches?.[0]?.manga;
 
@@ -1211,6 +1215,9 @@ function MatchCard({
                 <div className="flex w-full flex-col gap-2 sm:min-w-[240px] sm:max-w-[360px] sm:flex-shrink-0 sm:items-end sm:self-start">
                   <div className="flex w-full flex-col items-end gap-2 self-stretch sm:w-auto sm:self-end">
                     {renderConfidenceBadge(match)}
+                    {confidenceTestExporterEnabled && (
+                      <ConfidenceTestExporter match={match} />
+                    )}
                     <div className="flex flex-wrap justify-end gap-2 self-stretch">
                       {renderAniListLink(
                         match,

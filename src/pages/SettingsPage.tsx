@@ -104,6 +104,7 @@ export function SettingsPage() {
     stateInspectorEnabled,
     ipcViewerEnabled,
     eventLoggerEnabled,
+    confidenceTestExporterEnabled,
   } = useDebugState();
 
   const {
@@ -114,6 +115,7 @@ export function SettingsPage() {
     setStateInspectorEnabled,
     setIpcViewerEnabled,
     setEventLoggerEnabled,
+    setConfidenceTestExporterEnabled,
     recordEvent,
   } = useDebugActions();
 
@@ -2207,6 +2209,43 @@ export function SettingsPage() {
                           When disabled, IPC messages are not recorded – enable
                           only while debugging to avoid collecting unnecessary
                           data.
+                        </p>
+                      </div>
+                      <div className="border-border/60 bg-background/40 rounded-2xl border border-dashed p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-sm font-semibold">
+                                Confidence test exporter
+                              </h4>
+                            </div>
+                            <p className="text-muted-foreground text-xs">
+                              Show buttons on match cards to export and copy
+                              test commands for debugging confidence
+                              calculations. Helpful for reporting issues with
+                              specific match scores.
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground text-xs">
+                              Enable
+                            </span>
+                            <Switch
+                              id="confidence-test-exporter-enabled"
+                              checked={confidenceTestExporterEnabled}
+                              onCheckedChange={(checked) =>
+                                setConfidenceTestExporterEnabled(
+                                  Boolean(checked),
+                                )
+                              }
+                            />
+                          </div>
+                        </div>
+                        <p className="text-muted-foreground mt-3 text-xs">
+                          When enabled, debug buttons appear next to confidence
+                          badges on each match card, allowing you to generate
+                          and copy commands for reproducing the confidence
+                          calculation locally or sharing in bug reports.
                         </p>
                       </div>
                     </div>

@@ -908,11 +908,11 @@ export function MangaMatchingPanel({
               Manual review recommended
             </Badge>
             <a
-              href="https://github.com/RLAlpha49/KenmeiToAnilist/issues"
+              href="https://github.com/RLAlpha49/KenmeiToAnilist/issues/new?template=confidence_mismatch.md"
               target="_blank"
               rel="noopener noreferrer"
               onClick={handleOpenExternal(
-                "https://github.com/RLAlpha49/KenmeiToAnilist/issues",
+                "https://github.com/RLAlpha49/KenmeiToAnilist/issues/new?template=confidence_mismatch.md",
               )}
               className="inline-flex items-center gap-2 rounded-full border border-amber-500/40 bg-transparent px-4 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-500/10 hover:text-amber-800 dark:border-amber-500/40 dark:text-amber-200 dark:hover:bg-amber-500/20"
             >
