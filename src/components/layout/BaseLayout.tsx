@@ -23,8 +23,8 @@ export default function BaseLayout({
   return (
     <div className="from-background via-background to-background text-foreground relative flex h-screen flex-col overflow-hidden bg-gradient-to-br">
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute top-10 -left-32 h-72 w-72 rounded-full bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-transparent blur-3xl" />
-        <div className="absolute top-1/2 right-[-60px] h-96 w-96 -translate-y-1/2 rounded-full bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-transparent blur-3xl" />
+        <div className="absolute -left-32 top-10 h-72 w-72 rounded-full bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-transparent blur-3xl" />
+        <div className="absolute right-[-60px] top-1/2 h-96 w-96 -translate-y-1/2 rounded-full bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-transparent blur-3xl" />
         <div className="absolute bottom-[-120px] left-1/2 h-80 w-[36rem] -translate-x-1/2 rounded-full bg-gradient-to-t from-amber-500/15 via-pink-500/10 to-transparent blur-[200px]" />
       </div>
 

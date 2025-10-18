@@ -5,7 +5,14 @@
  */
 
 /**
- * Format seconds into a human-readable time string
+ * Formats seconds into a human-readable time string.
+ *
+ * Converts numeric seconds into a convenient display format (e.g., "2 hours 30 minutes").
+ * Handles singular/plural forms appropriately.
+ *
+ * @param seconds - The number of seconds to format.
+ * @returns A human-readable time string.
+ * @source
  */
 export const formatTimeRemaining = (seconds: number): string => {
   if (seconds < 60) {

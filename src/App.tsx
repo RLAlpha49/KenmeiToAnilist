@@ -16,11 +16,8 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { initializeStorage } from "./utils/storage";
 
 /**
- * The main application component for KenmeiToAnilist.
- *
- * Sets up theme, authentication, rate limit, and notification providers, and renders the router.
- *
- * @returns The root React element for the application.
+ * Main application component that wraps the router with context providers.
+ * @returns The root React element with all providers configured.
  * @source
  */
 export default function App() {
@@ -40,7 +37,7 @@ export default function App() {
   );
 }
 
-// Initialize storage synchronization before mounting the app
+// Initialize storage layer before rendering the app
 initializeStorage()
   .then(() => {
     console.info("[App] ✅ Storage initialized successfully");

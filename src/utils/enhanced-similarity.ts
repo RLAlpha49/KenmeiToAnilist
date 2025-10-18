@@ -7,29 +7,56 @@
 import * as stringSimilarity from "string-similarity";
 import { distance as levenshteinDistance } from "fastest-levenshtein";
 
-/**
- * Configuration for enhanced similarity calculation
- */
+// Cache size limits to balance performance and memory usage
+/** Maximum cache entries for normalized strings. @source */
 const NORMALIZE_CACHE_LIMIT = 2000;
+/** Maximum cache entries for extracted meaningful words. @source */
 const MEANINGFUL_WORDS_CACHE_LIMIT = 2000;
+/** Maximum cache entries for pair similarity scores. @source */
 const PAIR_SIMILARITY_CACHE_LIMIT = 3000;
+/** Maximum cache entries for Levenshtein distance calculations. @source */
 const LEVENSHTEIN_CACHE_LIMIT = 3000;
+/** Maximum cache entries for substring match scores. @source */
 const SUBSTRING_CACHE_LIMIT = 3000;
+/** Maximum cache entries for word order similarity scores. @source */
 const WORD_ORDER_CACHE_LIMIT = 3000;
+/** Maximum cache entries for semantic similarity scores. @source */
 const SEMANTIC_CACHE_LIMIT = 3000;
+/** Maximum cache entries for Jaro-Winkler distance calculations. @source */
 const JARO_WINKLER_CACHE_LIMIT = 3000;
+/** Maximum cache entries for n-gram similarity scores. @source */
 const NGRAM_CACHE_LIMIT = 3000;
 
+// LRU (Least Recently Used) caches for similarity calculations
+/** Cache for normalized text values. @source */
 const normalizeCache = new Map<string, string>();
+/** Cache for complete enhanced similarity calculations. @source */
 const enhancedSimilarityCache = new Map<string, number>();
+/** Cache for Levenshtein distance calculations. @source */
 const levenshteinCache = new Map<string, number>();
+/** Cache for substring match calculations. @source */
 const substringCache = new Map<string, number>();
+/** Cache for extracted meaningful words from text. @source */
 const meaningfulWordsCache = new Map<string, string[]>();
+/** Cache for word order similarity scores. @source */
 const wordOrderCache = new Map<string, number>();
+/** Cache for semantic similarity scores. @source */
 const semanticSimilarityCache = new Map<string, number>();
+/** Cache for Jaro-Winkler distance calculations. @source */
 const jaroWinklerCache = new Map<string, number>();
+/** Cache for n-gram similarity calculations. @source */
 const ngramCache = new Map<string, number>();
 
+/**
+ * Retrieves a cached value using LRU semantics (moves accessed entry to end).
+ *
+ * @template T - The type of value in the cache.
+ * @param cache - The cache map to retrieve from.
+ * @param key - The cache key.
+ * @returns The cached value, or undefined if not found.
+ * @internal
+ * @source
+ */
 const getCacheEntry = <T>(
   cache: Map<string, T>,
   key: string,
@@ -44,12 +71,24 @@ const getCacheEntry = <T>(
   return value;
 };
 
+/**
+ * Stores a value in the cache, evicting oldest entry if at capacity (LRU).
+ *
+ * @template T - The type of value to cache.
+ * @param cache - The cache map to store in.
+ * @param key - The cache key.
+ * @param value - The value to cache.
+ * @param limit - Maximum number of entries before eviction.
+ * @internal
+ * @source
+ */
 const setCacheEntry = <T>(
   cache: Map<string, T>,
   key: string,
   value: T,
   limit: number,
 ): void => {
+  // Evict oldest entry (first one in iteration order) if at capacity
   if (!cache.has(key) && cache.size >= limit) {
     const oldestKey = cache.keys().next().value;
     if (oldestKey !== undefined) {
@@ -60,26 +99,44 @@ const setCacheEntry = <T>(
   cache.set(key, value);
 };
 
+/**
+ * Creates a canonical cache key for a string pair (order-independent).
+ *
+ * Ensures the same pair yields the same key regardless of argument order.
+ *
+ * @param a - First string.
+ * @param b - Second string.
+ * @returns Ordered pair key string.
+ * @internal
+ * @source
+ */
 const makeOrderedPairKey = (a: string, b: string): string => {
   return a <= b ? `${a}::${b}` : `${b}::${a}`;
 };
 
 /**
- * Simple Porter Stemmer implementation (browser-compatible)
- * Based on Porter Stemming Algorithm
+ * Implements Porter Stemming algorithm to reduce words to their root form.
+ *
+ * Browser-compatible implementation using regex-based word form transformations.
+ * Handles common English word modifications (plurals, tenses, etc.).
+ *
+ * @param word - The word to stem.
+ * @returns The stemmed word root.
+ * @internal
+ * @source
  */
 const porterStem = (word: string): string => {
   if (word.length <= 2) return word;
 
   let stem = word.toLowerCase();
 
-  // Step 1a: plurals
+  // Step 1a: normalize plurals to singular forms
   stem = stem.replace(/sses$/i, "ss");
   stem = stem.replace(/ies$/i, "i");
   stem = stem.replace(/ss$/i, "ss");
   stem = stem.replace(/s$/i, "");
 
-  // Step 1b: -ed, -ing
+  // Step 1b: handle past tense and progressive forms
   if (/(at|bl|iz)ed$/i.test(stem)) {
     stem = stem.replace(/ed$/i, "e");
   } else if (/([^aeiou])ed$/i.test(stem)) {
@@ -149,12 +206,16 @@ const porterStem = (word: string): string => {
 };
 
 /**
- * Jaro-Winkler distance implementation (browser-compatible)
- * Returns similarity score between 0 and 1
- */
-/**
- * Find character matches for Jaro-Winkler distance calculation
+ * Finds character matches between two strings for Jaro-Winkler distance calculation.
+ *
+ * Identifies matching characters within a specified distance to support the algorithm.
+ *
+ * @param s1 - First string.
+ * @param s2 - Second string.
+ * @param matchDistance - Maximum distance to search for matches.
+ * @returns Object containing match count and boolean arrays indicating matched positions.
  * @internal
+ * @source
  */
 const findCharacterMatches = (
   s1: string,
@@ -168,6 +229,7 @@ const findCharacterMatches = (
 
   let matches = 0;
 
+  // Find characters in both strings that match within the allowed distance window
   for (let i = 0; i < len1; i++) {
     const start = Math.max(0, i - matchDistance);
     const end = Math.min(i + matchDistance + 1, len2);
@@ -185,8 +247,17 @@ const findCharacterMatches = (
 };
 
 /**
- * Calculate transpositions for Jaro-Winkler distance
+ * Calculates the number of transpositions between matched characters.
+ *
+ * Counts positions where matched characters differ, a key component of Jaro-Winkler distance.
+ *
+ * @param s1 - First string.
+ * @param s2 - Second string.
+ * @param matches1 - Boolean array indicating matches in first string.
+ * @param matches2 - Boolean array indicating matches in second string.
+ * @returns Number of transpositions.
  * @internal
+ * @source
  */
 const calculateTranspositions = (
   s1: string,
@@ -208,8 +279,15 @@ const calculateTranspositions = (
 };
 
 /**
- * Calculate common prefix length for Jaro-Winkler bonus
+ * Calculates the common prefix length for Jaro-Winkler bonus calculation.
+ *
+ * Compares characters from the beginning of each string up to a maximum of 4 characters.
+ *
+ * @param s1 - First string.
+ * @param s2 - Second string.
+ * @returns Length of common prefix, max 4.
  * @internal
+ * @source
  */
 const calculateCommonPrefixLength = (s1: string, s2: string): number => {
   let prefix = 0;
@@ -223,6 +301,17 @@ const calculateCommonPrefixLength = (s1: string, s2: string): number => {
   return prefix;
 };
 
+/**
+ * Jaro-Winkler distance implementation (browser-compatible).
+ *
+ * Computes string similarity on a 0-1 scale using the Jaro-Winkler algorithm,
+ * with bonus for matching prefixes.
+ *
+ * @param s1 - First string.
+ * @param s2 - Second string.
+ * @returns Similarity score between 0 and 1.
+ * @source
+ */
 const jaroWinklerDistance = (s1: string, s2: string): number => {
   if (s1 === s2) return 1;
 
@@ -253,6 +342,16 @@ const jaroWinklerDistance = (s1: string, s2: string): number => {
   return jaro + prefix * 0.1 * (1 - jaro);
 };
 
+/**
+ * Creates a configuration key from similarity config parameters.
+ *
+ * Generates a unique identifier string for caching purposes based on all weight values.
+ *
+ * @param config - The similarity configuration.
+ * @returns A unique configuration key string.
+ * @internal
+ * @source
+ */
 const createConfigKey = (config: SimilarityConfig): string => {
   return [
     config.exactMatchWeight,
@@ -266,6 +365,10 @@ const createConfigKey = (config: SimilarityConfig): string => {
     .join("|");
 };
 
+/**
+ * Configuration options for enhanced similarity calculation with tunable weights.
+ * @source
+ */
 export interface SimilarityConfig {
   /** Weight for exact match bonus (0-1) */
   exactMatchWeight: number;
@@ -288,8 +391,11 @@ export interface SimilarityConfig {
 }
 
 /**
- * Default configuration for similarity calculation
- * Weights are balanced to prioritize exact matches, then character similarity, then various fuzzy matching techniques
+ * Default configuration for similarity calculation with balanced weights.
+ *
+ * Weights are tuned to prioritize exact matches, then character similarity,
+ * then various fuzzy matching techniques for robust manga title matching.
+ * @source
  */
 export const DEFAULT_SIMILARITY_CONFIG: SimilarityConfig = {
   exactMatchWeight: 0.35,
@@ -304,7 +410,9 @@ export const DEFAULT_SIMILARITY_CONFIG: SimilarityConfig = {
 };
 
 /**
- * Common abbreviations and their expansions in manga titles
+ * Abbreviations commonly found in manga titles and their expansions.
+ * Used during normalization to improve matching consistency.
+ * @source
  */
 const ABBREVIATION_MAP = new Map([
   ["vs", "versus"],
@@ -327,7 +435,9 @@ const ABBREVIATION_MAP = new Map([
 ]);
 
 /**
- * Common title prefixes/suffixes that can be ignored or normalized
+ * Regex patterns for removing or normalizing common title decorations and suffixes.
+ * Patterns are applied during normalization to clean up redundant title information.
+ * @source
  */
 const IGNORABLE_PATTERNS = [
   /^\[.*?\]\s*/gi, // [Tag] at start
@@ -351,7 +461,14 @@ const IGNORABLE_PATTERNS = [
 ];
 
 /**
- * Enhanced string normalization for manga titles
+ * Normalizes text for similarity comparison using enhanced Unicode and punctuation handling.
+ *
+ * Removes diacritics, normalizes punctuation and Japanese characters, expands abbreviations,
+ * and removes spaces for consistent matching. Results are cached for performance.
+ *
+ * @param text - The text to normalize.
+ * @returns The normalized text string.
+ * @source
  */
 export function enhancedNormalize(text: string): string {
   if (!text) return "";
@@ -419,7 +536,8 @@ export function enhancedNormalize(text: string): string {
 }
 
 /**
- * Extract meaningful words from a title, filtering out common stop words
+ * Set of common stop words to exclude from meaningful word extraction.
+ * @source
  */
 const STOP_WORDS = new Set([
   "the",
@@ -456,6 +574,16 @@ const STOP_WORDS = new Set([
   "collection",
 ]);
 
+/**
+ * Extracts meaningful words from text after filtering out stop words.
+ *
+ * Normalizes punctuation while preserving word boundaries, then filters out
+ * common stop words. Results are cached for performance.
+ *
+ * @param text - The text to extract words from.
+ * @returns Array of meaningful words.
+ * @source
+ */
 export function extractMeaningfulWords(text: string): string[] {
   const cached = getCacheEntry(meaningfulWordsCache, text);
   if (cached !== undefined) {
@@ -491,7 +619,15 @@ export function extractMeaningfulWords(text: string): string[] {
 }
 
 /**
- * Calculate exact match score
+ * Calculates exact match score between two strings.
+ *
+ * After normalization, returns 1 for exact matches, partial credit for substrings,
+ * and 0 otherwise.
+ *
+ * @param str1 - First string to compare.
+ * @param str2 - Second string to compare.
+ * @returns Similarity score between 0 and 1.
+ * @source
  */
 function calculateExactMatch(str1: string, str2: string): number {
   const norm1 = enhancedNormalize(str1);
@@ -597,7 +733,14 @@ function calculateWordOrderSimilarity(str1: string, str2: string): number {
 }
 
 /**
- * Calculate character-level similarity using multiple algorithms
+ * Calculates character-level similarity using multiple algorithms.
+ *
+ * Combines Dice coefficient and Levenshtein-based similarity for robust character matching.
+ *
+ * @param str1 - First string to compare.
+ * @param str2 - Second string to compare.
+ * @returns Similarity score between 0 and 1.
+ * @source
  */
 function calculateCharacterSimilarity(str1: string, str2: string): number {
   const norm1 = enhancedNormalize(str1);
@@ -621,8 +764,14 @@ function calculateCharacterSimilarity(str1: string, str2: string): number {
 }
 
 /**
- * Calculate Levenshtein distance-based similarity using fastest-levenshtein library
- * This is significantly faster than custom implementations
+ * Calculates Levenshtein distance-based similarity using the fastest-levenshtein library.
+ *
+ * High-performance edit distance calculation optimized for speed while maintaining accuracy.
+ *
+ * @param str1 - First string to compare.
+ * @param str2 - Second string to compare.
+ * @returns Similarity score between 0 and 1.
+ * @source
  */
 function calculateLevenshteinSimilarity(str1: string, str2: string): number {
   if (str1 === str2) return 1;
@@ -655,8 +804,15 @@ function calculateLevenshteinSimilarity(str1: string, str2: string): number {
 }
 
 /**
- * Calculate Jaro-Winkler distance-based similarity
- * Particularly effective for short strings and typos near the beginning
+ * Calculates Jaro-Winkler distance-based similarity.
+ *
+ * Particularly effective for short strings and typos near the beginning.
+ * Uses browser-compatible implementation with caching.
+ *
+ * @param str1 - First string to compare.
+ * @param str2 - Second string to compare.
+ * @returns Similarity score between 0 and 1.
+ * @source
  */
 function calculateJaroWinklerSimilarity(str1: string, str2: string): number {
   if (str1 === str2) return 1;
@@ -825,6 +981,8 @@ function calculateWordMatchScore(
 }
 
 function calculateSemanticSimilarity(str1: string, str2: string): number {
+  // Calculates semantic similarity using stemming and word matching algorithms.
+  // Lemmatizes words and compares stems plus original text for semantic matching.
   const pairKey = makeOrderedPairKey(
     enhancedNormalize(str1),
     enhancedNormalize(str2),
@@ -865,7 +1023,17 @@ function calculateSemanticSimilarity(str1: string, str2: string): number {
 }
 
 /**
- * Enhanced title similarity calculation with multiple algorithms and weighting
+ * Calculates enhanced title similarity using multiple algorithms and weighted combination.
+ *
+ * Combines exact matching, character similarity, semantic matching, and edit distances
+ * to produce a robust 0-100 similarity score. Results are cached for performance.
+ * Supports custom configuration for algorithm weights and threshold tuning.
+ *
+ * @param str1 - First string to compare.
+ * @param str2 - Second string to compare.
+ * @param config - Optional custom similarity configuration (weights, thresholds, debug mode).
+ * @returns Similarity score between 0 and 100.
+ * @source
  */
 export function calculateEnhancedSimilarity(
   str1: string,

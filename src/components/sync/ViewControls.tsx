@@ -18,28 +18,24 @@ import {
 import { DisplayMode, SortOption, FilterOptions } from "./types";
 
 interface ViewControlsProps {
-  /** Current display mode (cards or compact) */
+  /** Current display mode (cards or compact). */
   displayMode: DisplayMode;
-  /** Callback to change display mode */
+  /** Callback to change display mode. */
   setDisplayMode: (mode: DisplayMode) => void;
-  /** Current sort option */
+  /** Current sort option. */
   sortOption: SortOption;
-  /** Callback to update sort option */
+  /** Callback to update sort option. */
   setSortOption: React.Dispatch<React.SetStateAction<SortOption>>;
-  /** Current filter options */
+  /** Current filter options. */
   filters: FilterOptions;
-  /** Callback to update filter options */
+  /** Callback to update filter options. */
   setFilters: React.Dispatch<React.SetStateAction<FilterOptions>>;
 }
 
 /**
- * ViewControls Component
- *
- * Displays controls for:
- * - Display mode toggle (Cards/Compact view)
- * - Sort dropdown (by title, status, progress, score, or changes)
- * - Filter dropdown (by status, changes, or library membership)
- * - Reset button to restore default view settings
+ * Controls for view mode, sorting, and filtering manga entries.
+ * Provides display mode toggle, sort/filter dropdowns, and reset button.
+ * @source
  */
 export const ViewControls: React.FC<ViewControlsProps> = ({
   displayMode,
@@ -60,7 +56,7 @@ export const ViewControls: React.FC<ViewControlsProps> = ({
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/70 bg-white/80 p-3 shadow-sm backdrop-blur-sm lg:flex-row lg:items-center lg:justify-between dark:border-slate-800/60 dark:bg-slate-950/50">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold tracking-[0.2em] text-slate-500 uppercase dark:text-slate-400">
+        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
           View Mode
         </span>
         <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 bg-slate-50/60 p-1 dark:border-slate-800/60 dark:bg-slate-900/40">
@@ -128,7 +124,7 @@ export const ViewControls: React.FC<ViewControlsProps> = ({
               <SortAsc className="mr-1 h-4 w-4" />
               Sort
               {!isDefaultSort && (
-                <span className="ml-1 text-[10px] tracking-wide uppercase">
+                <span className="ml-1 text-[10px] uppercase tracking-wide">
                   {sortOption.field},{" "}
                   {sortOption.direction === "asc" ? "↑" : "↓"}
                 </span>

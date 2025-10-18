@@ -23,7 +23,9 @@ import {
 } from "../contexts/DebugContext";
 
 /**
- * Snapshot of an in-progress synchronization session for pause/resume support.
+ * Snapshot of an in-progress synchronization session for pause/resume recovery.
+ * Stores entries, progress state, and partial reports for restart on app reopen.
+ * @source
  */
 interface SyncResumeSnapshot {
   entries: AniListMediaEntry[];
@@ -44,20 +46,44 @@ type PersistedSyncReport = Omit<SyncReport, "timestamp"> & {
   timestamp: string;
 };
 
+/**
+ * Clones a single AniList media entry with deep copies of nested objects for safe state management.
+ * @param entry - The media entry to clone.
+ * @returns A cloned copy of the media entry.
+ * @source
+ */
 const cloneEntry = (entry: AniListMediaEntry): AniListMediaEntry => ({
   ...entry,
   previousValues: entry.previousValues ? { ...entry.previousValues } : null,
   syncMetadata: entry.syncMetadata ? { ...entry.syncMetadata } : null,
 });
 
+/**
+ * Clones multiple AniList media entries with deep copies of nested objects.
+ * @param entries - Array of media entries to clone.
+ * @returns Array of cloned media entries.
+ * @source
+ */
 const cloneEntries = (entries: AniListMediaEntry[]): AniListMediaEntry[] =>
   entries.map(cloneEntry);
 
+/**
+ * Converts a SyncReport to a JSON-serializable format for storage persistence.
+ * @param report - The sync report to convert.
+ * @returns Report with timestamp as ISO string for storage.
+ * @source
+ */
 const toPersistedReport = (report: SyncReport): PersistedSyncReport => ({
   ...report,
   timestamp: report.timestamp.toISOString(),
 });
 
+/**
+ * Restores a stored sync report to its runtime format with proper Date object.
+ * @param report - The persisted report with ISO timestamp string.
+ * @returns Sync report with timestamp as Date object, or null if input is null.
+ * @source
+ */
 const fromPersistedReport = (
   report: PersistedSyncReport | null,
 ): SyncReport | null => {
@@ -68,6 +94,13 @@ const fromPersistedReport = (
   };
 };
 
+/**
+ * Merges two sync reports, combining statistics and error arrays.
+ * @param baseReport - The initial or partial report.
+ * @param newReport - The new report to merge in.
+ * @returns Merged report with combined statistics using the new report's timestamp.
+ * @source
+ */
 const mergeReports = (
   baseReport: SyncReport | null,
   newReport: SyncReport,
@@ -86,7 +119,17 @@ const mergeReports = (
 };
 
 /**
- * Execute either standard or incremental sync mode and return the resulting report and last progress.
+ * Executes either standard or incremental sync mode based on entry metadata.
+ * Handles both regular batch processing and sequential incremental sync for progress-tracked entries.
+ * @param entries - AniList media entries to synchronize.
+ * @param token - AniList authentication token.
+ * @param abortController - Controller for cancelling sync operations.
+ * @param uniqueMediaIds - Array of unique media IDs for progress tracking.
+ * @param setState - State setter for synchronization state updates.
+ * @param updateSnapshotFromProgress - Callback to update resume snapshot from progress.
+ * @param initialEntriesRef - Ref containing initial entries for recovery.
+ * @returns Promise resolving to sync report and final progress state.
+ * @source
  */
 async function executeSyncModeImpl(
   entries: AniListMediaEntry[],
@@ -206,6 +249,11 @@ async function executeSyncModeImpl(
   return { syncReport, lastReportedProgress };
 }
 
+/**
+ * Saves or clears the sync resume snapshot to persistent storage for recovery on app restart.
+ * @param snapshot - The snapshot to save, or null to clear existing snapshot.
+ * @source
+ */
 const saveSnapshotToStorage = (snapshot: SyncResumeSnapshot | null): void => {
   if (!snapshot) {
     console.debug("[Synchronization] 🔍 Removing sync snapshot from storage");
@@ -230,7 +278,16 @@ const saveSnapshotToStorage = (snapshot: SyncResumeSnapshot | null): void => {
 };
 
 /**
- * Helper function to create and update progress for incremental sync entries.
+ * Creates a progress updater object for incremental sync entry tracking.
+ * Maintains counters and updates state with detailed step-level progress information.
+ * @param uniqueIds - Array of unique media IDs for calculating percentages.
+ * @param initialPartialReport - Starting report for accumulating results.
+ * @param setState - State setter for synchronization state.
+ * @param updateSnapshotFromProgress - Callback to update resume snapshot.
+ * @param initialEntriesRef - Reference to initial entries.
+ * @param onProgressUpdate - Callback for external progress listeners.
+ * @returns Object with methods for updating and querying progress state.
+ * @source
  */
 const createProgressUpdater = (
   uniqueIds: number[],
@@ -315,14 +372,15 @@ const createProgressUpdater = (
 };
 
 /**
- * Represents the state of the synchronization process.
- *
- * @property isActive - Indicates if a synchronization is currently active.
- * @property progress - The current progress of the synchronization, or null if not started.
- * @property report - The final report of the synchronization, or null if not completed.
- * @property error - Any error message encountered during synchronization, or null if none.
- * @property abortController - The AbortController used to cancel the sync, or null if not active.
- *
+ * Represents the state of an active synchronization process.
+ * @property isActive - Whether synchronization is currently running.
+ * @property progress - Current progress details, or null if not started.
+ * @property report - Completed or partial sync report, or null.
+ * @property error - Error message if sync failed, or null.
+ * @property abortController - Controller for cancelling the sync, or null.
+ * @property isPaused - Whether the sync is paused and resumable.
+ * @property resumeAvailable - Whether a paused sync can be resumed.
+ * @property resumeMetadata - Metadata about available resume state.
  * @source
  */
 interface SynchronizationState {
@@ -340,7 +398,15 @@ interface SynchronizationState {
 }
 
 /**
- * Run a regular batch sync operation and return the report.
+ * Executes a standard (non-incremental) batch sync operation.
+ * Processes all entries in the batch and returns the final report.
+ * @param batchEntries - Entries to synchronize in this batch.
+ * @param tokenArg - AniList authentication token.
+ * @param abortSignal - Signal for cancelling the batch operation.
+ * @param uniqueIds - Unique media IDs for progress normalization.
+ * @param onProgressUpdate - Callback for progress updates.
+ * @returns Promise resolving to the batch sync report.
+ * @source
  */
 async function runRegularBatch(
   batchEntries: AniListMediaEntry[],
@@ -375,7 +441,9 @@ async function runRegularBatch(
 }
 
 /**
- * Context object for incremental sync operations to reduce parameter count.
+ * Context object bundling parameters for incremental sync operations.
+ * Reduces parameter count and improves code readability for sequential entry processing.
+ * @source
  */
 interface IncrementalSyncContext {
   incEntries: AniListMediaEntry[];
@@ -393,7 +461,16 @@ interface IncrementalSyncContext {
 }
 
 /**
- * Handle the pause scenario: persist partial report and update state.
+ * Handles transitioning to paused state: persists partial report and snapshot for resume.
+ * Updates state to reflect paused status with resumable metadata.
+ * @param existingReportFragment - Partial report from previous session if resuming.
+ * @param syncReport - Current batch's sync report.
+ * @param lastReportedProgress - Last progress update before pause.
+ * @param resumeSnapshotRef - Reference to resume snapshot object.
+ * @param updateSnapshotFromProgress - Callback to update snapshot.
+ * @param initialEntriesRef - Reference to initial entries.
+ * @param setState - State setter for synchronization state.
+ * @source
  */
 function handlePausedSync(
   existingReportFragment: SyncReport | null,
@@ -438,7 +515,14 @@ function handlePausedSync(
 }
 
 /**
- * Finalize the sync operation: save report and update state.
+ * Finalizes a completed sync operation: saves report history and clears resume state.
+ * Marks synchronization as no longer active.
+ * @param existingReportFragment - Partial report from previous session if resuming.
+ * @param syncReport - Final batch sync report to finalize.
+ * @param pauseRequested - Whether pause was requested instead of full completion.
+ * @param clearResumeSnapshot - Callback to clear resume snapshot.
+ * @param setState - State setter for synchronization state.
+ * @source
  */
 function finalizeSyncOperation(
   existingReportFragment: SyncReport | null,
@@ -466,7 +550,11 @@ function finalizeSyncOperation(
 }
 
 /**
- * Process incremental entries sequentially and merge into report.
+ * Processes incremental entries sequentially, merging results into accumulated report.
+ * Handles step-level progress tracking and error recovery for each entry.
+ * @param context - IncrementalSyncContext containing all required parameters.
+ * @returns Promise resolving to merged sync report with all incremental results.
+ * @source
  */
 async function runIncrementalEntries(
   context: IncrementalSyncContext,
@@ -605,14 +693,14 @@ async function runIncrementalEntries(
 }
 
 /**
- * Represents the set of actions available for synchronization.
- *
- * @property startSync - Starts the synchronization process.
- * @property cancelSync - Cancels the ongoing synchronization.
- * @property exportErrors - Exports the error log from the last sync.
- * @property exportReport - Exports the full sync report.
- * @property reset - Resets the synchronization state.
- *
+ * Set of actions available for controlling synchronization operations.
+ * @property startSync - Begins synchronization of the provided entries.
+ * @property cancelSync - Aborts the active sync and clears state.
+ * @property pauseSync - Pauses sync after current entry, saving state for resume.
+ * @property resumeSync - Resumes a previously paused synchronization.
+ * @property exportErrors - Exports the error log from the last sync report.
+ * @property exportReport - Exports the complete sync report to file.
+ * @property reset - Resets synchronization state to initial values.
  * @source
  */
 interface SynchronizationActions {
@@ -674,14 +762,10 @@ const fromDebugSyncState = (
 });
 
 /**
- * Hook that provides methods and state for managing AniList synchronization.
- *
- * @returns A tuple containing the synchronization state and an object of synchronization actions.
- * @example
- * ```ts
- * const [syncState, syncActions] = useSynchronization();
- * syncActions.startSync(entries, token);
- * ```
+ * Provides state management and control methods for AniList synchronization operations.
+ * Supports batch sync, pause/resume recovery, incremental entry processing, and error tracking.
+ * Persists state to storage for recovery on app restart.
+ * @returns Tuple of [synchronization state, synchronization actions].
  * @source
  */
 export function useSynchronization(): [
@@ -990,14 +1074,12 @@ export function useSynchronization(): [
   }, []);
 
   /**
-   * Starts a synchronization operation for the provided AniList media entries.
-   *
-   * @param entries - The AniList media entries to synchronize.
-   * @param token - The AniList authentication token.
-   * @param _unused - (Unused) Reserved for future use.
-   * @param displayOrderMediaIds - Optional array of media IDs to control display order.
-   * @returns A promise that resolves when synchronization is complete.
-   * @throws If the sync operation fails or is aborted.
+   * Starts a new synchronization for the provided AniList media entries.
+   * @param entries - AniList media entries to synchronize.
+   * @param token - AniList authentication token.
+   * @param _unused - Reserved for future use.
+   * @param displayOrderMediaIds - Optional IDs to control sync order.
+   * @returns Promise resolving when sync completes or fails.
    * @source
    */
   const startSync = useCallback(
@@ -1159,11 +1241,8 @@ export function useSynchronization(): [
   );
 
   /**
-   * Cancels the active synchronization operation, aborting all in-progress requests.
-   *
-   * @remarks
-   * If no synchronization is active, this function does nothing.
-   *
+   * Cancels the active synchronization, aborting all in-progress requests immediately.
+   * Clears pending partial results and disables resume.
    * @source
    */
   const cancelSync = useCallback(() => {
@@ -1226,6 +1305,16 @@ export function useSynchronization(): [
     }
   }, [state.abortController, emitSyncSnapshot]);
 
+  /**
+   * Resumes a previously paused synchronization with remaining entries.
+   * Restores state from pause snapshot and continues processing.
+   * @param entries - AniList media entries (used if snapshot entries unavailable).
+   * @param token - AniList authentication token.
+   * @param _unused - Reserved for future use.
+   * @param displayOrderMediaIds - Optional IDs to override display order during resume.
+   * @returns Promise resolving when resume completes or fails.
+   * @source
+   */
   const resumeSync = useCallback(
     async (
       entries: AniListMediaEntry[],
@@ -1292,11 +1381,8 @@ export function useSynchronization(): [
   );
 
   /**
-   * Exports the error log from the last synchronization report to a file.
-   *
-   * @remarks
+   * Exports the error log from the last synchronization report.
    * If no report is available, this function does nothing.
-   *
    * @source
    */
   const exportErrors = useCallback(() => {
@@ -1310,11 +1396,8 @@ export function useSynchronization(): [
   }, [state.report]);
 
   /**
-   * Exports the full synchronization report to a file.
-   *
-   * @remarks
+   * Exports the complete synchronization report to a file.
    * If no report is available, this function does nothing.
-   *
    * @source
    */
   const exportReport = useCallback(() => {
@@ -1328,8 +1411,7 @@ export function useSynchronization(): [
   }, [state.report]);
 
   /**
-   * Resets the synchronization state to its initial values.
-   *
+   * Resets synchronization state to initial values, clearing all progress and reports.
    * @source
    */
   const reset = useCallback(() => {

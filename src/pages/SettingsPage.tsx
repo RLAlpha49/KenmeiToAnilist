@@ -194,7 +194,13 @@ export function SettingsPage() {
     saveMatchConfig(config);
   };
 
-  // Handler for opening external links in the default browser
+  /**
+   * Opens an external URL in the default browser or system default application.
+   * Prefers Electron API if available, otherwise falls back to standard browser open.
+   * @param url - The URL to open.
+   * @returns A React event handler function.
+   * @source
+   */
   const handleOpenExternal = (url: string) => (e: React.MouseEvent) => {
     e.preventDefault();
     if (globalThis.electronAPI?.shell?.openExternal) {
@@ -407,6 +413,10 @@ export function SettingsPage() {
     };
   }, []);
 
+  /**
+   * Initiates AniList OAuth login flow with either custom or default credentials.
+   * @source
+   */
   const handleLogin = async () => {
     try {
       console.info(
@@ -443,6 +453,10 @@ export function SettingsPage() {
     }
   };
 
+  /**
+   * Cancels an ongoing OAuth authentication process.
+   * @source
+   */
   const handleCancelAuth = async () => {
     try {
       console.info("[Settings] 🚫 Cancelling authentication...");
@@ -461,6 +475,11 @@ export function SettingsPage() {
     }
   };
 
+  /**
+   * Clears selected caches (localStorage, search cache, etc.) and displays result notification.
+   * Iterates through browser storage items and removes those matching selected cache types.
+   * @source
+   */
   const handleClearCache = async () => {
     console.info("[Settings] 🗑️ Starting cache clear operation...");
     setCacheCleared(false);
@@ -666,11 +685,19 @@ export function SettingsPage() {
     }
   };
 
+  /**
+   * Dismisses error messages from display.
+   * @source
+   */
   const dismissError = () => {
     console.debug("[Settings] 🔍 Dismissing error message");
     setError(null);
   };
 
+  /**
+   * Refreshes the page, clearing error states and reloading the view.
+   * @source
+   */
   const handleRefreshPage = () => {
     console.info("[Settings] 🔄 Refreshing page...");
     // Clear error states and status messages
@@ -678,6 +705,11 @@ export function SettingsPage() {
     globalThis.location.reload();
   };
 
+  /**
+   * Calculates remaining time until authentication token expiry.
+   * @returns A formatted string representing hours and days remaining, or "unknown" if unavailable.
+   * @source
+   */
   const calculateExpiryTime = () => {
     if (!authState.expiresAt) return "unknown";
 
@@ -694,6 +726,12 @@ export function SettingsPage() {
     return `${hoursRemaining}h`;
   };
 
+  /**
+   * Retrieves the last sync metadata from localStorage.
+   * Returns formatted timestamp and summary of the last sync operation.
+   * @returns Object containing label, hint, and sync summary information.
+   * @source
+   */
   const readLastSyncMetadata = () => {
     if (globalThis.window === undefined || !globalThis.localStorage) {
       return {
@@ -764,7 +802,11 @@ export function SettingsPage() {
     }
   };
 
-  // Fetch update info from GitHub
+  /**
+   * Fetches and displays available updates from the GitHub releases API.
+   * Compares current version to latest release and updates UI accordingly.
+   * @source
+   */
   const handleCheckForUpdates = async () => {
     console.info("[Settings] 🔍 Checking for updates...");
     setIsCheckingUpdate(true);
@@ -952,14 +994,14 @@ export function SettingsPage() {
           <div className="grid gap-1.5">
             <label
               htmlFor="client-id"
-              className="text-xs font-semibold tracking-wide text-slate-600 uppercase dark:text-slate-200/80"
+              className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-200/80"
             >
               Client ID
             </label>
             <input
               id="client-id"
               type="text"
-              className="w-full rounded-lg border border-slate-200 bg-white/90 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/15 dark:bg-slate-950/60 dark:text-white dark:focus-visible:ring-indigo-400 dark:focus-visible:ring-offset-0"
+              className="w-full rounded-lg border border-slate-200 bg-white/90 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/15 dark:bg-slate-950/60 dark:text-white dark:focus-visible:ring-indigo-400 dark:focus-visible:ring-offset-0"
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
               disabled={authState.isAuthenticated || isLoading}
@@ -969,14 +1011,14 @@ export function SettingsPage() {
           <div className="grid gap-1.5">
             <label
               htmlFor="client-secret"
-              className="text-xs font-semibold tracking-wide text-slate-600 uppercase dark:text-slate-200/80"
+              className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-200/80"
             >
               Client Secret
             </label>
             <input
               id="client-secret"
               type="password"
-              className="w-full rounded-lg border border-slate-200 bg-white/90 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/15 dark:bg-slate-950/60 dark:text-white dark:focus-visible:ring-indigo-400 dark:focus-visible:ring-offset-0"
+              className="w-full rounded-lg border border-slate-200 bg-white/90 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/15 dark:bg-slate-950/60 dark:text-white dark:focus-visible:ring-indigo-400 dark:focus-visible:ring-offset-0"
               value={clientSecret}
               onChange={(e) => setClientSecret(e.target.value)}
               disabled={authState.isAuthenticated || isLoading}
@@ -986,7 +1028,7 @@ export function SettingsPage() {
           <div className="grid gap-1.5 md:col-span-2">
             <label
               htmlFor="redirect-uri"
-              className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-slate-600 uppercase dark:text-slate-200/80"
+              className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-200/80"
             >
               <Link className="h-3.5 w-3.5" />
               Redirect URI
@@ -994,7 +1036,7 @@ export function SettingsPage() {
             <input
               id="redirect-uri"
               type="text"
-              className="w-full rounded-lg border border-slate-200 bg-white/90 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/15 dark:bg-slate-950/60 dark:text-white dark:focus-visible:ring-indigo-400 dark:focus-visible:ring-offset-0"
+              className="w-full rounded-lg border border-slate-200 bg-white/90 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/15 dark:bg-slate-950/60 dark:text-white dark:focus-visible:ring-indigo-400 dark:focus-visible:ring-offset-0"
               value={redirectUri}
               onChange={(e) => setRedirectUri(e.target.value)}
               disabled={authState.isAuthenticated || isLoading}
@@ -1051,7 +1093,7 @@ export function SettingsPage() {
 
   return (
     <motion.div
-      className="relative mx-auto max-w-[1200px] space-y-8 px-4 pt-6 pb-12 md:px-6"
+      className="relative mx-auto max-w-[1200px] space-y-8 px-4 pb-12 pt-6 md:px-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4 }}
@@ -1385,7 +1427,7 @@ export function SettingsPage() {
                       </label>
                       <select
                         id="auto-pause-threshold"
-                        className="border-input bg-background ring-offset-background focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                        className="border-input bg-background ring-offset-background focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         value={
                           useCustomThreshold
                             ? "custom"
@@ -1434,7 +1476,7 @@ export function SettingsPage() {
                           id="custom-auto-pause-threshold"
                           type="number"
                           min="1"
-                          className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                          className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                           placeholder="Enter days"
                           value={
                             syncConfig.customAutoPauseThreshold ||
@@ -2344,7 +2386,7 @@ export function SettingsPage() {
 
         <div className="grid gap-3 md:grid-cols-3">
           <div className="bg-muted/40 rounded-2xl border p-4">
-            <div className="flex items-center gap-2 text-xs font-medium tracking-wide text-slate-900 uppercase dark:text-slate-300">
+            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-900 dark:text-slate-300">
               <Clock className="h-4 w-4" /> Last synced
             </div>
             <p className="mt-2 text-sm text-white">{lastSyncMetadata.label}</p>
@@ -2353,7 +2395,7 @@ export function SettingsPage() {
             </p>
           </div>
           <div className="bg-muted/40 rounded-2xl border p-4">
-            <div className="flex items-center gap-2 text-xs font-medium tracking-wide text-slate-900 uppercase dark:text-slate-300">
+            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-900 dark:text-slate-300">
               <Key className="h-4 w-4" /> Credentials
             </div>
             <p className="mt-2 text-sm text-white">{credentialSourceLabel}</p>
@@ -2364,7 +2406,7 @@ export function SettingsPage() {
             </p>
           </div>
           <div className="bg-muted/40 rounded-2xl border p-4">
-            <div className="flex items-center gap-2 text-xs font-medium tracking-wide text-slate-900 uppercase dark:text-slate-300">
+            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-900 dark:text-slate-300">
               <UserCircle className="h-4 w-4" /> Authentication
             </div>
             <p className="mt-2 text-sm text-white">

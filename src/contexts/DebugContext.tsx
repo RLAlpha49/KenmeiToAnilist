@@ -131,6 +131,11 @@ interface RecordEventOptions {
   force?: boolean;
 }
 
+/**
+ * Configuration for registering a state inspector source.
+ * @template T - The type of state being inspected.
+ * @source
+ */
 export interface StateInspectorRegistration<T> {
   id: string;
   label: string;
@@ -142,6 +147,10 @@ export interface StateInspectorRegistration<T> {
   deserialize?: (value: unknown) => T;
 }
 
+/**
+ * Internal state inspector source tracking raw and display values.
+ * @source
+ */
 interface StateInspectorSourceInternal {
   id: string;
   label: string;
@@ -156,6 +165,10 @@ interface StateInspectorSourceInternal {
   lastUpdated: number;
 }
 
+/**
+ * Serializable snapshot of a state inspector source for display.
+ * @source
+ */
 export interface StateInspectorSourceSnapshot {
   id: string;
   label: string;
@@ -166,16 +179,31 @@ export interface StateInspectorSourceSnapshot {
   canEdit: boolean;
 }
 
+/**
+ * Handle to publish updates and unregister a state inspector.
+ * @template T - The type of state being inspected.
+ * @source
+ */
 export interface StateInspectorHandle<T> {
   publish: (value: T) => void;
   unregister: () => void;
 }
 
+/**
+ * Settings configuration snapshot for debug inspection.
+ * @source
+ */
 interface SettingsDebugSnapshot {
   syncConfig: SyncConfig;
   matchConfig: MatchConfig;
 }
 
+/**
+ * Converts internal state inspector sources to serializable snapshots, sorted by group and label.
+ * @param sources - Map of state inspector sources.
+ * @returns Array of serializable source snapshots.
+ * @source
+ */
 function toStateInspectorSnapshots(
   sources: Map<string, StateInspectorSourceInternal>,
 ): StateInspectorSourceSnapshot[] {
@@ -199,10 +227,10 @@ function toStateInspectorSnapshots(
 }
 
 /**
- * Provides debug context to its children, managing debug state and persistence.
- *
- * @param children - The React children to be wrapped by the provider.
- * @returns The debug context provider with value for consumers.
+ * Provides debug context to its children, managing debug state, feature toggles, and inspection tools.
+ * Manages console log interception, IPC monitoring, state inspection, and event logging for development.
+ * @param children - React children to wrap with debug context.
+ * @returns Provider component with split contexts for state and actions.
  * @source
  */
 export function DebugProvider({
@@ -348,6 +376,12 @@ export function DebugProvider({
     }
   }, []);
 
+  /**
+   * Records a debug event to the event log when debug mode or forcing is enabled.
+   * @param entry - The debug event to record.
+   * @param options - Optional force flag to log even when debug mode is disabled.
+   * @source
+   */
   const recordEvent = useCallback(
     (entry: DebugEventRecord, options?: RecordEventOptions) => {
       const shouldRecord =
@@ -904,6 +938,12 @@ export function DebugProvider({
   );
 }
 
+/**
+ * Hook to access debug state (read-only).
+ * @returns The debug state context value.
+ * @throws If used outside a DebugProvider.
+ * @source
+ */
 export function useDebugState(): DebugStateContextValue {
   const context = useContext(DebugStateContext);
   if (context === undefined) {
@@ -912,6 +952,12 @@ export function useDebugState(): DebugStateContextValue {
   return context;
 }
 
+/**
+ * Hook to access debug actions (mutations).
+ * @returns The debug actions context value.
+ * @throws If used outside a DebugProvider.
+ * @source
+ */
 export function useDebugActions(): DebugActionsContextValue {
   const context = useContext(DebugActionsContext);
   if (context === undefined) {
@@ -920,6 +966,13 @@ export function useDebugActions(): DebugActionsContextValue {
   return context;
 }
 
+/**
+ * Hook to access complete debug context (state and actions combined).
+ * Prefers split contexts but falls back to legacy unified context for compatibility.
+ * @returns The complete debug context value.
+ * @throws If used outside a DebugProvider.
+ * @source
+ */
 export function useDebug(): DebugContextType {
   const legacyContext = useContext(DebugContext);
   const stateContext = useContext(DebugStateContext);

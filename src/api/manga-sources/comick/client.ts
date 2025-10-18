@@ -11,7 +11,9 @@ import { MangaSource } from "../types";
 
 /**
  * Comick-specific manga source client.
- * Extends the base client with Comick-specific parsing and logic.
+ * Extends the base client with Comick-specific API parsing and IPC communication.
+ * Uses IPC to avoid CORS issues when calling Comick API from renderer process.
+ * @source
  */
 export class ComickClient extends BaseMangaSourceClient<
   ComickManga,
@@ -23,6 +25,11 @@ export class ComickClient extends BaseMangaSourceClient<
 
   /**
    * Search for manga on Comick API using IPC to avoid CORS issues.
+   * Results are cached for 30 minutes by default.
+   * @param query - The search query string.
+   * @param limit - Maximum number of results to return (default: 10).
+   * @returns Promise resolving to array of Comick manga entries.
+   * @source
    */
   public async searchManga(
     query: string,
@@ -38,7 +45,7 @@ export class ComickClient extends BaseMangaSourceClient<
     );
 
     try {
-      // Use generic manga source API to call the main process instead of direct fetch to avoid CORS issues
+      // Use generic manga source API to call main process via IPC instead of direct fetch (CORS)
       const data = (await globalThis.electronAPI.mangaSource.search(
         "comick",
         query,
@@ -60,12 +67,15 @@ export class ComickClient extends BaseMangaSourceClient<
 
   /**
    * Get detailed information about a specific Comick manga using IPC.
+   * @param slug - The Comick manga slug.
+   * @returns Promise resolving to manga detail or null if not found.
+   * @source
    */
   public async getMangaDetail(slug: string): Promise<ComickMangaDetail | null> {
     console.debug(`[Comick] 📖 Getting Comick manga details for: ${slug}`);
 
     try {
-      // Use generic manga source API to call the main process instead of direct fetch to avoid CORS issues
+      // Use generic manga source API to call main process via IPC instead of direct fetch (CORS)
       const rawData = await globalThis.electronAPI.mangaSource.getMangaDetail(
         "comick",
         slug,
@@ -82,6 +92,10 @@ export class ComickClient extends BaseMangaSourceClient<
 
   /**
    * Parse raw search response into Comick manga entries.
+   * Maps raw API fields to standardized ComickManga interface.
+   * @param rawResponse - The raw API response array.
+   * @returns Array of parsed manga entries.
+   * @source
    */
   // eslint-disable-next-line
   protected parseSearchResponse(rawResponse: any): ComickManga[] {
@@ -111,6 +125,10 @@ export class ComickClient extends BaseMangaSourceClient<
 
   /**
    * Parse raw detail response into Comick manga detail.
+   * Extracts comic data and transforms external links format.
+   * @param rawResponse - The raw API response object.
+   * @returns Parsed manga detail or null if invalid.
+   * @source
    */
   // eslint-disable-next-line
   protected parseDetailResponse(rawResponse: any): ComickMangaDetail | null {
@@ -137,6 +155,7 @@ export class ComickClient extends BaseMangaSourceClient<
             anilist: comic.links.al,
             myAnimeList: comic.links.mal,
             mangaUpdates: comic.links.mu,
+            // Include other platform links
             ...Object.fromEntries(
               Object.entries(comic.links).filter(
                 ([key]) => !["al", "mal", "mu"].includes(key),
@@ -145,13 +164,17 @@ export class ComickClient extends BaseMangaSourceClient<
           }
         : undefined,
       source: MangaSource.COMICK,
-      comic: rawResponse.comic, // Keep original structure for backward compatibility
+      comic: rawResponse.comic, // Keep original for backward compatibility
       langList: rawResponse.langList,
     };
   }
 
   /**
    * Extract AniList ID from Comick manga detail.
+   * Parses the 'al' field from external links section.
+   * @param detail - The Comick manga detail object.
+   * @returns The AniList ID as a number or null if not found.
+   * @source
    */
   protected extractAniListIdFromDetail(
     detail: ComickMangaDetail,
@@ -167,10 +190,21 @@ export class ComickClient extends BaseMangaSourceClient<
   }
 }
 
-// Create a singleton instance
+/**
+ * Singleton Comick client instance.
+ * Used for all Comick API operations.
+ * @source
+ */
 export const comickClient = new ComickClient();
 
-// Export legacy functions for backward compatibility
+/**
+ * Search for manga on Comick API.
+ * @deprecated Use comickClient.searchManga() instead.
+ * @param query - The search query string.
+ * @param limit - Maximum number of results (default: 10).
+ * @returns Promise resolving to array of Comick manga entries.
+ * @source
+ */
 export async function searchComickManga(
   query: string,
   limit: number = 10,
@@ -178,6 +212,13 @@ export async function searchComickManga(
   return comickClient.searchManga(query, limit);
 }
 
+/**
+ * Get detailed information about a specific Comick manga.
+ * @deprecated Use comickClient.getMangaDetail() instead.
+ * @param slug - The Comick manga slug.
+ * @returns Promise resolving to manga detail or null if not found.
+ * @source
+ */
 export async function getComickMangaDetail(
   slug: string,
 ): Promise<ComickMangaDetail | null> {
@@ -187,9 +228,8 @@ export async function getComickMangaDetail(
 /**
  * Extract AniList ID from a Comick manga's external links.
  * @deprecated Use comickClient.extractAniListId() instead.
- *
- * @param comickManga - The Comick manga to check
- * @returns Promise resolving to AniList ID if found
+ * @param comickManga - The Comick manga entry to extract ID from.
+ * @returns Promise resolving to AniList ID if found or null.
  * @source
  */
 export async function extractAniListIdFromComick(
@@ -201,11 +241,10 @@ export async function extractAniListIdFromComick(
 /**
  * Search for manga on Comick and get their AniList counterparts.
  * @deprecated Use comickClient.searchAndGetAniListManga() instead.
- *
- * @param query - The search query
- * @param accessToken - AniList access token for fetching manga details
- * @param limit - Maximum number of results to return (default: 1)
- * @returns Promise resolving to enhanced AniList manga with Comick source info
+ * @param query - The search query string.
+ * @param accessToken - AniList OAuth access token.
+ * @param limit - Maximum number of results (default: 1).
+ * @returns Promise resolving to enhanced AniList manga with Comick source info.
  * @source
  */
 export async function searchComickAndGetAniListManga(
@@ -219,9 +258,8 @@ export async function searchComickAndGetAniListManga(
 /**
  * Clear Comick cache for specific search queries.
  * @deprecated Use comickClient.clearCache() instead.
- *
- * @param queries - Array of search queries to clear from cache
- * @returns Number of cache entries cleared
+ * @param queries - Array of search queries to clear from cache.
+ * @returns Number of cache entries cleared.
  * @source
  */
 export function clearComickCache(queries: string[]): number {
@@ -231,8 +269,7 @@ export function clearComickCache(queries: string[]): number {
 /**
  * Get Comick cache status for debugging.
  * @deprecated Use comickClient.getCacheStatus() instead.
- *
- * @returns Cache status information
+ * @returns Cache status information with entry counts.
  * @source
  */
 export function getComickCacheStatus() {

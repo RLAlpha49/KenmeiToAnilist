@@ -7,10 +7,22 @@
 import { KenmeiManga } from "../api/kenmei/types";
 import { MangaMatchResult } from "../api/anilist/types";
 
-// Global window interface extension for the matching process state
+// Extend Window interface with matching process state tracking
+/**
+ * Global window extensions for tracking manga matching process state.
+ *
+ * Used to maintain matching progress and state across components without prop drilling.
+ *
+ * @property activeAbortController - Controller to abort the current matching operation.
+ * @property matchingProcessState - Current state of the matching process.
+ * @source
+ */
 declare global {
   interface Window {
     activeAbortController?: AbortController;
+    /**
+     * The current state of the matching process including progress, timing, and status.
+     */
     matchingProcessState?: {
       isRunning: boolean;
       progress: {

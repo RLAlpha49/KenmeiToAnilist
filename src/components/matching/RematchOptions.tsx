@@ -162,12 +162,12 @@ export const RematchOptions: React.FC<RematchOptionsProps> = ({
       exit={{ opacity: 0, y: -10 }}
       transition={{ duration: 0.2 }}
     >
-      <Card className="relative mb-6 flex flex-col overflow-hidden border border-blue-200/70 bg-gradient-to-br from-white/92 via-white/85 to-blue-50/75 py-0 shadow-xl shadow-blue-500/10 supports-[backdrop-filter]:backdrop-blur-md dark:border-blue-900/60 dark:from-slate-950/70 dark:via-slate-950/55 dark:to-blue-950/45">
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-blue-200/18 via-indigo-200/12 to-transparent dark:from-blue-900/25 dark:via-indigo-900/15 dark:to-transparent" />
+      <Card className="from-white/92 relative mb-6 flex flex-col overflow-hidden border border-blue-200/70 bg-gradient-to-br via-white/85 to-blue-50/75 py-0 shadow-xl shadow-blue-500/10 supports-[backdrop-filter]:backdrop-blur-md dark:border-blue-900/60 dark:from-slate-950/70 dark:via-slate-950/55 dark:to-blue-950/45">
+        <div className="from-blue-200/18 via-indigo-200/12 pointer-events-none absolute inset-0 bg-gradient-to-br to-transparent dark:from-blue-900/25 dark:via-indigo-900/15 dark:to-transparent" />
         <CardHeader className="relative border-b border-blue-100/60 bg-gradient-to-r from-blue-50/80 via-indigo-50/70 to-purple-50/65 py-3 dark:border-blue-900/50 dark:from-blue-950/40 dark:via-indigo-950/35 dark:to-purple-950/30">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500/15 text-blue-600 shadow-sm shadow-blue-500/25 dark:bg-blue-500/12 dark:text-blue-200">
+              <span className="dark:bg-blue-500/12 flex h-9 w-9 items-center justify-center rounded-full bg-blue-500/15 text-blue-600 shadow-sm shadow-blue-500/25 dark:text-blue-200">
                 <RefreshCw className="h-4 w-4" />
               </span>
               <div>
@@ -208,14 +208,14 @@ export const RematchOptions: React.FC<RematchOptionsProps> = ({
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
                 Status Filters
               </h3>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={resetToDefault}
-                className="h-8 gap-1 rounded-full border border-blue-100/60 bg-white/70 px-3 text-xs font-semibold tracking-[0.18em] text-blue-600 uppercase shadow-sm hover:border-blue-200 hover:bg-blue-50 dark:border-blue-900/40 dark:bg-slate-950/60 dark:text-blue-200 dark:hover:border-blue-800"
+                className="h-8 gap-1 rounded-full border border-blue-100/60 bg-white/70 px-3 text-xs font-semibold uppercase tracking-[0.18em] text-blue-600 shadow-sm hover:border-blue-200 hover:bg-blue-50 dark:border-blue-900/40 dark:bg-slate-950/60 dark:text-blue-200 dark:hover:border-blue-800"
               >
                 <RotateCcw className="h-3.5 w-3.5" /> Reset
               </Button>
@@ -273,7 +273,7 @@ export const RematchOptions: React.FC<RematchOptionsProps> = ({
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center justify-between text-xs font-medium tracking-[0.18em] text-slate-400 uppercase dark:text-slate-500">
+                          <div className="flex items-center justify-between text-xs font-medium uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
                             <span>{isSelected ? "Included" : "Excluded"}</span>
                             <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
                               <Layers className="h-3.5 w-3.5" /> Queue position
@@ -288,13 +288,13 @@ export const RematchOptions: React.FC<RematchOptionsProps> = ({
             </div>
           </div>
 
-          <div className="relative flex flex-col gap-3 rounded-2xl border border-blue-200/60 bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-cyan-500/10 p-5 shadow-inner sm:flex-row sm:items-center sm:justify-between dark:border-blue-500/25 dark:from-blue-500/12 dark:via-indigo-500/12 dark:to-cyan-500/12">
+          <div className="dark:from-blue-500/12 dark:via-indigo-500/12 dark:to-cyan-500/12 relative flex flex-col gap-3 rounded-2xl border border-blue-200/60 bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-cyan-500/10 p-5 shadow-inner sm:flex-row sm:items-center sm:justify-between dark:border-blue-500/25">
             <div className="flex items-center gap-3 text-sm font-medium text-blue-700 dark:text-blue-200">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/15 text-blue-600 shadow-sm shadow-blue-500/20 dark:bg-blue-500/12 dark:text-blue-200">
+              <span className="dark:bg-blue-500/12 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/15 text-blue-600 shadow-sm shadow-blue-500/20 dark:text-blue-200">
                 <RefreshCw className="h-5 w-5" />
               </span>
               <div>
-                <span className="block text-xs tracking-[0.24em] text-blue-500/80 uppercase dark:text-blue-300/80">
+                <span className="block text-xs uppercase tracking-[0.24em] text-blue-500/80 dark:text-blue-300/80">
                   Queue Summary
                 </span>
                 <span className="text-base font-semibold text-blue-700 dark:text-blue-100">
@@ -306,7 +306,7 @@ export const RematchOptions: React.FC<RematchOptionsProps> = ({
               variant="ghost"
               size="sm"
               onClick={resetToDefault}
-              className="hidden h-9 gap-1 rounded-full border border-blue-200/70 bg-white/70 px-3 text-xs font-semibold tracking-[0.18em] text-blue-600 uppercase shadow-sm hover:border-blue-300 hover:bg-blue-50 sm:flex dark:border-blue-800/60 dark:bg-slate-950/70 dark:text-blue-200 dark:hover:border-blue-700"
+              className="hidden h-9 gap-1 rounded-full border border-blue-200/70 bg-white/70 px-3 text-xs font-semibold uppercase tracking-[0.18em] text-blue-600 shadow-sm hover:border-blue-300 hover:bg-blue-50 sm:flex dark:border-blue-800/60 dark:bg-slate-950/70 dark:text-blue-200 dark:hover:border-blue-700"
             >
               <RotateCcw className="h-3.5 w-3.5" /> Reset filters
             </Button>

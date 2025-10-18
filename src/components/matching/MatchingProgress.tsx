@@ -140,6 +140,7 @@ const getBadgeConfig = ({
   isPaused: boolean;
   isRateLimitActive: boolean;
 }): { colorClass: string; content: ReactNode } => {
+  // Determine badge appearance based on process state
   if (isCancelling) {
     return {
       colorClass:
@@ -191,6 +192,13 @@ const getBadgeConfig = ({
   };
 };
 
+/**
+ * Formats a duration in seconds to a compact human-readable string.
+ *
+ * @param seconds - Duration in seconds.
+ * @returns Formatted string (e.g., "2m 30s", "1h 15m").
+ * @source
+ */
 const formatCompactDuration = (seconds: number): string => {
   if (!Number.isFinite(seconds) || seconds <= 0) {
     return "—";
@@ -217,6 +225,13 @@ const formatCompactDuration = (seconds: number): string => {
   return remainingMinutes ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
 };
 
+/**
+ * Generates array of statistics for progress display.
+ *
+ * @param params - Progress data and calculated values.
+ * @returns Array of stat objects with icon, label, and formatted values.
+ * @source
+ */
 const generateStats = ({
   progress,
   totalProcessed,
@@ -324,16 +339,6 @@ export interface MatchingProgressProps {
  * @param props - The props for the MatchingProgressPanel component.
  * @returns The rendered matching progress panel React element.
  * @source
- * @example
- * ```tsx
- * <MatchingProgressPanel
- *   isCancelling={false}
- *   progress={progress}
- *   statusMessage="Matching..."
- *   timeEstimate={estimate}
- *   onCancelProcess={handleCancel}
- * />
- * ```
  */
 export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
   isCancelling,
@@ -536,7 +541,7 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
               <Badge
                 variant={isCancelling ? "destructive" : "secondary"}
                 className={cn(
-                  "flex items-center gap-2 rounded-full border border-transparent px-3 py-1.5 text-xs font-semibold tracking-[0.2em] uppercase",
+                  "flex items-center gap-2 rounded-full border border-transparent px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em]",
                   badgeConfig.colorClass,
                 )}
               >
@@ -547,7 +552,7 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
           {(bypassCache || freshSearch) && (
             <Badge
               variant="outline"
-              className="flex items-center gap-1.5 rounded-full border-blue-500/30 bg-blue-500/10 px-3 py-1 text-[11px] font-semibold tracking-[0.2em] text-blue-600 uppercase dark:border-blue-500/25 dark:bg-blue-500/12 dark:text-blue-200"
+              className="dark:bg-blue-500/12 flex items-center gap-1.5 rounded-full border-blue-500/30 bg-blue-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-600 dark:border-blue-500/25 dark:text-blue-200"
             >
               <RotateCcw className="h-3 w-3" />
               Fresh AniList search
@@ -596,14 +601,14 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25 }}
-            className="relative overflow-hidden rounded-2xl border border-blue-200/60 bg-gradient-to-r from-blue-500/15 via-indigo-500/10 to-cyan-500/10 p-4 shadow-inner dark:border-blue-500/25 dark:from-blue-500/14 dark:via-indigo-500/12 dark:to-cyan-500/12"
+            className="dark:from-blue-500/14 dark:via-indigo-500/12 dark:to-cyan-500/12 relative overflow-hidden rounded-2xl border border-blue-200/60 bg-gradient-to-r from-blue-500/15 via-indigo-500/10 to-cyan-500/10 p-4 shadow-inner dark:border-blue-500/25"
           >
             <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/20 text-blue-600 dark:bg-blue-500/18 dark:text-blue-200">
+              <div className="dark:bg-blue-500/18 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/20 text-blue-600 dark:text-blue-200">
                 <Timer className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-xs font-semibold tracking-[0.2em] text-blue-600 uppercase dark:text-blue-200">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-600 dark:text-blue-200">
                   Estimated finish
                 </p>
                 <p className="text-xl font-semibold text-slate-900 dark:text-white">
@@ -625,11 +630,11 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
             >
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/70 to-transparent opacity-60 dark:from-slate-900/45" />
               <div className="relative z-10 flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-500 dark:bg-blue-500/16 dark:text-blue-200">
+                <div className="dark:bg-blue-500/16 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-500 dark:text-blue-200">
                   <Icon className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-[11px] font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
                     {label}
                   </p>
                   <p className="text-xl font-semibold text-slate-900 dark:text-slate-50">
@@ -652,7 +657,7 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25 }}
-            className="relative overflow-hidden rounded-2xl border border-purple-200/60 bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-slate-100/40 p-4 dark:border-purple-500/25 dark:from-purple-500/14 dark:via-blue-500/14 dark:to-slate-900/30"
+            className="dark:from-purple-500/14 dark:via-blue-500/14 relative overflow-hidden rounded-2xl border border-purple-200/60 bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-slate-100/40 p-4 dark:border-purple-500/25 dark:to-slate-900/30"
             style={{ minHeight: 80, maxHeight: 120 }}
           >
             <div className="flex items-center justify-between gap-3">
@@ -660,7 +665,7 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
                 <Sparkles className="h-4 w-4 text-purple-500 dark:text-purple-200/90" />
                 Currently matching
               </div>
-              <span className="rounded-full bg-white/70 px-3 py-1 text-[11px] font-semibold tracking-[0.2em] text-purple-600 uppercase shadow-sm dark:bg-white/10 dark:text-purple-200">
+              <span className="rounded-full bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-purple-600 shadow-sm dark:bg-white/10 dark:text-purple-200">
                 Live
               </span>
             </div>
@@ -681,7 +686,7 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
             transition={{ duration: 0.2 }}
             className="flex items-start gap-3 rounded-2xl border border-blue-200/60 bg-blue-50/60 p-4 text-sm text-blue-700 shadow-sm dark:border-blue-500/25 dark:bg-blue-900/15 dark:text-blue-200"
           >
-            <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/20 text-blue-600 dark:bg-blue-500/22 dark:text-blue-200">
+            <div className="dark:bg-blue-500/22 mt-1 flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-200">
               <RotateCcw className="h-4 w-4" />
             </div>
             <div>
@@ -697,7 +702,7 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
         )}
       </CardContent>
 
-      <CardFooter className="relative z-10 pt-0 pb-6">
+      <CardFooter className="relative z-10 pb-6 pt-0">
         <div className="flex w-full flex-col gap-3 sm:flex-row">
           <PauseResumeButton
             isPaused={isPaused}

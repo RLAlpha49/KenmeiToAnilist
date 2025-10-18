@@ -1,11 +1,28 @@
 import React from "react";
 import { cn } from "@/utils/tailwind";
 
+/**
+ * Props for the ConfidenceBadge component.
+ *
+ * @property confidence - Match confidence percentage (0-100), or null/undefined to hide.
+ * @property className - Additional Tailwind classes for styling.
+ * @source
+ */
 export interface ConfidenceBadgeProps {
   confidence?: number | null;
   className?: string;
 }
 
+/**
+ * Displays a color-coded confidence badge for manga matches.
+ *
+ * Shows confidence level (High/Good/Fair/Low) with appropriate styling.
+ * Returns null if confidence is undefined, null, or NaN.
+ *
+ * @param props - The component props.
+ * @returns The rendered confidence badge or null if no valid confidence.
+ * @source
+ */
 export function ConfidenceBadge({
   confidence,
   className,
@@ -66,7 +83,7 @@ export function ConfidenceBadge({
   return (
     <div
       className={cn(
-        "relative flex items-center gap-3 rounded-2xl border px-3 py-2 text-xs font-semibold tracking-[0.18em] uppercase",
+        "relative flex items-center gap-3 rounded-2xl border px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em]",
         containerClass,
         className,
       )}

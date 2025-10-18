@@ -16,8 +16,7 @@ import {
 import { parseKenmeiExport, processKenmeiMangaBatches } from "./parser";
 
 /**
- * Options for processing Kenmei data.
- *
+ * Configuration options for Kenmei data processing, including batch size, parsing rules, and normalization settings.
  * @source
  */
 export interface ProcessOptions {
@@ -29,8 +28,7 @@ export interface ProcessOptions {
 }
 
 /**
- * Default processing options.
- *
+ * Default Kenmei processing configuration with 50-item batches, validation enabled, and score normalization.
  * @source
  */
 export const DEFAULT_PROCESS_OPTIONS: ProcessOptions = {
@@ -45,11 +43,11 @@ export const DEFAULT_PROCESS_OPTIONS: ProcessOptions = {
 };
 
 /**
- * Process a Kenmei export file.
- *
- * @param fileContent - Raw content of the export file.
- * @param options - Processing options.
- * @returns Processing results.
+ * Process a Kenmei export file, parsing and validating all entries.
+ * @param fileContent - Raw export file content.
+ * @param options - Optional processing configuration.
+ * @returns Processed manga entries with validation results.
+ * @throws {Error} If parsing or processing fails.
  * @source
  */
 export function processKenmeiExport(
@@ -78,12 +76,11 @@ export function processKenmeiExport(
 }
 
 /**
- * Prepare Kenmei manga entry for AniList synchronization.
- *
- * @param manga - Kenmei manga entry.
- * @param anilistMatch - Matching AniList manga entry.
- * @param options - Processing options.
- * @returns Prepared entry ready for AniList update.
+ * Prepare a Kenmei manga entry for AniList synchronization, mapping status and scores.
+ * @param manga - Kenmei manga entry to prepare.
+ * @param anilistMatch - Matched AniList manga entry with ID.
+ * @param options - Optional processing configuration.
+ * @returns AniList-formatted entry ready for sync with mediaId, status, progress, and optional score.
  * @source
  */
 export function prepareEntryForSync(
@@ -140,10 +137,9 @@ export function prepareEntryForSync(
 }
 
 /**
- * Extract reading statistics from Kenmei data.
- *
+ * Extract reading statistics from Kenmei manga entries.
  * @param manga - Array of Kenmei manga entries.
- * @returns Reading statistics.
+ * @returns Statistics including chapter/volume totals, completion counts, and status breakdown.
  * @source
  */
 export function extractReadingStats(manga: KenmeiManga[]): {
@@ -183,12 +179,11 @@ export function extractReadingStats(manga: KenmeiManga[]): {
 }
 
 /**
- * Process manga entries in smaller batches to avoid memory issues.
- *
+ * Process manga entries in batches to avoid memory issues and enable progress tracking.
  * @param entries - Array of Kenmei manga entries.
- * @param processFn - Function to process each batch.
- * @param batchSize - Size of each batch.
- * @returns Aggregated results.
+ * @param processFn - Async function to process each batch.
+ * @param batchSize - Batch size (default: 50).
+ * @returns Aggregated results from all batches.
  * @source
  */
 export async function processMangaInBatches<T>(
@@ -210,11 +205,10 @@ export async function processMangaInBatches<T>(
 }
 
 /**
- * Filter manga entries based on criteria.
- *
+ * Filter manga entries by status, progress, and score criteria.
  * @param entries - Array of Kenmei manga entries.
- * @param criteria - Filter criteria.
- * @returns Filtered entries.
+ * @param criteria - Filter options including status, minimum chapters, and score presence.
+ * @returns Filtered manga entries matching all specified criteria.
  * @source
  */
 export function filterMangaEntries(

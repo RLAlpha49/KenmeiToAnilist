@@ -1,22 +1,25 @@
 /**
- * Skip rules for filtering manga during matching
+ * Skip rules for filtering manga during matching.
+ * Handles manga exclusion based on format (light novels) and automatic matching blacklists.
  * @module filtering/skip-rules
  */
 
 import type { AniListManga } from "../../anilist/types";
 
 /**
- * Titles that should be ignored during automatic matching
- * (but may still be included in manual searches)
+ * Titles to ignore during automatic matching operations.
+ * These entries are excluded from automatic matching but may be included in manual searches.
+ * @source
  */
 const IGNORED_AUTOMATIC_MATCH_TITLES = new Set([
   "watashi, isekai de dorei ni sarechaimashita (naki) shikamo goshujinsama wa seikaku no warui elf no joousama (demo chou bijin ← koko daiji) munou sugite nonoshiraremakuru kedo douryou no orc ga iyashi-kei da shi sato no elf wa kawaii shi",
 ]);
 
 /**
- * Check if a manga should be ignored for automatic matching
- * @param manga - The manga to check
- * @returns True if the manga should be ignored for automatic matching
+ * Checks if a manga should be ignored for automatic matching.
+ * @param manga - The manga to check.
+ * @returns True if the manga title is in the automatic matching blacklist.
+ * @source
  */
 export function shouldIgnoreForAutomaticMatching(manga: AniListManga): boolean {
   // Get all titles to check (main titles + synonyms)
@@ -34,10 +37,12 @@ export function shouldIgnoreForAutomaticMatching(manga: AniListManga): boolean {
 }
 
 /**
- * Check if a manga should be skipped during ranking
- * @param manga - The manga to check
- * @param isManualSearch - Whether this is a manual search operation
- * @returns True if the manga should be skipped
+ * Checks if a manga should be skipped during ranking.
+ * Skips light novels (format-based) and automatic matching blacklist entries.
+ * @param manga - The manga to check.
+ * @param isManualSearch - Whether this is a manual search operation.
+ * @returns True if the manga should be skipped.
+ * @source
  */
 export function shouldSkipManga(
   manga: AniListManga,

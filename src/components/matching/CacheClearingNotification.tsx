@@ -53,11 +53,11 @@ export const CacheClearingNotification: React.FC<
         <Card className="relative overflow-hidden rounded-3xl border border-blue-200/80 bg-gradient-to-br from-blue-50/90 via-white/85 to-slate-50/80 shadow-2xl shadow-blue-500/20 supports-[backdrop-filter]:backdrop-blur-xl dark:border-blue-900/60 dark:from-blue-950/70 dark:via-slate-950/50 dark:to-slate-900/60">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.3)_0%,rgba(59,130,246,0)_70%)] opacity-80 dark:bg-[radial-gradient(circle_at_top,_rgba(96,165,250,0.22)_0%,rgba(15,23,42,0)_75%)]" />
           <CardHeader className="relative pb-2 text-center">
-            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/15 text-blue-600 shadow-inner shadow-blue-200/40 dark:bg-blue-500/18 dark:text-blue-300">
+            <div className="dark:bg-blue-500/18 mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/15 text-blue-600 shadow-inner shadow-blue-200/40 dark:text-blue-300">
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
             <div className="mb-3 flex items-center justify-center">
-              <Badge className="rounded-full border border-blue-200/70 bg-blue-100/50 text-[11px] font-semibold tracking-[0.22em] text-blue-700 uppercase dark:border-blue-800/60 dark:bg-blue-900/40 dark:text-blue-200">
+              <Badge className="rounded-full border border-blue-200/70 bg-blue-100/50 text-[11px] font-semibold uppercase tracking-[0.22em] text-blue-700 dark:border-blue-800/60 dark:bg-blue-900/40 dark:text-blue-200">
                 Cache maintenance
               </Badge>
             </div>
@@ -85,7 +85,7 @@ export const CacheClearingNotification: React.FC<
                 }}
               />
             </div>
-            <p className="mt-5 text-xs font-medium tracking-[0.25em] text-blue-500/70 uppercase dark:text-blue-300/70">
+            <p className="mt-5 text-xs font-medium uppercase tracking-[0.25em] text-blue-500/70 dark:text-blue-300/70">
               Optimizing your sync
             </p>
           </CardContent>

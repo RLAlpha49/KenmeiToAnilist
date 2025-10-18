@@ -8,6 +8,7 @@
  * - Result processing (ranking, filtering)
  * - Fallback sources (Comick, MangaDex)
  * - Response building (confidence scores, source info)
+ * @source
  */
 
 // Types

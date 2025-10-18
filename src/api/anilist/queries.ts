@@ -5,8 +5,7 @@
  */
 
 /**
- * Query to fetch the current AniList user (Viewer).
- *
+ * Query to fetch the authenticated AniList user's profile information (Viewer).
  * @source
  */
 export const GET_VIEWER = `
@@ -23,8 +22,8 @@ query {
 `;
 
 /**
- * Query to fetch a user's manga list from AniList.
- *
+ * Query to fetch a paginated subset of a user's manga collection from AniList.
+ * Supports chunking for large collections.
  * @source
  */
 export const GET_USER_MANGA_LIST = `
@@ -54,8 +53,8 @@ query ($userId: Int, $chunk: Int, $perChunk: Int) {
 `;
 
 /**
- * Query to search for manga by title.
- *
+ * Query to search for manga titles and get paginated results from AniList.
+ * Excludes light novels from results.
  * @source
  */
 export const SEARCH_MANGA = `
@@ -98,8 +97,8 @@ query ($search: String, $page: Int, $perPage: Int) {
 `;
 
 /**
- * Query to perform an advanced manga search using the dedicated endpoint.
- *
+ * Query to perform an advanced manga search with filtering and pagination.
+ * Excludes light novels from results.
  * @source
  */
 export const ADVANCED_SEARCH_MANGA = `
@@ -142,8 +141,8 @@ query ($search: String, $page: Int, $perPage: Int) {
 `;
 
 /**
- * Query to fetch a single manga by its AniList ID.
- *
+ * Query to fetch a single manga entry by its AniList media ID.
+ * Excludes light novels from results.
  * @source
  */
 export const GET_MANGA_BY_ID = `
@@ -177,8 +176,8 @@ query ($id: Int) {
 `;
 
 /**
- * Query to fetch multiple manga by their IDs in a single request. Can fetch up to 50 manga at once.
- *
+ * Query to fetch multiple manga entries by their AniList media IDs in a single request.
+ * Can fetch up to 50 manga at once. Excludes light novels from results.
  * @source
  */
 export const GET_MANGA_BY_IDS = `

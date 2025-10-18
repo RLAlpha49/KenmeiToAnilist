@@ -36,15 +36,14 @@ export interface AppError {
 /**
  * Creates a standardized application error object.
  *
+ * Constructs an AppError with type, message, original error reference, and optional error code.
+ * Logs debug information for error tracking.
+ *
  * @param type - The error type.
  * @param message - The error message.
  * @param originalError - The original error object, if any.
- * @param code - An optional error code.
+ * @param code - An optional error code for categorization.
  * @returns The constructed AppError object.
- * @example
- * ```ts
- * const error = createError(ErrorType.NETWORK, 'Network failed');
- * ```
  * @source
  */
 export function createError(
@@ -72,16 +71,11 @@ export function createError(
 /**
  * Handles network errors and converts them to the application error format.
  *
+ * Differentiates between various network failure modes (connection errors, timeouts,
+ * authentication failures, and server errors) and returns appropriately categorized errors.
+ *
  * @param error - The error to handle.
  * @returns The converted AppError object.
- * @example
- * ```ts
- * try {
- *   await fetch(...);
- * } catch (err) {
- *   const appError = handleNetworkError(err);
- * }
- * ```
  * @source
  */
 export function handleNetworkError(error: unknown): AppError {
@@ -162,17 +156,16 @@ export function handleNetworkError(error: unknown): AppError {
 }
 
 /**
- * Performs a network request with a timeout.
+ * Performs a network request with an optional timeout.
+ *
+ * Uses AbortController to enforce a timeout and automatically rejects if the request
+ * takes longer than the specified duration.
  *
  * @param url - The URL to fetch.
- * @param options - Fetch options.
+ * @param options - Fetch options (default: empty object).
  * @param timeout - Timeout in milliseconds (default: 10000).
  * @returns A promise that resolves to the fetch Response.
  * @throws If the request times out or the response is not ok.
- * @example
- * ```ts
- * const response = await fetchWithTimeout('https://api.example.com', {}, 5000);
- * ```
  * @source
  */
 export async function fetchWithTimeout(
@@ -228,13 +221,13 @@ export function showErrorNotification(error: AppError): void {
 /**
  * Safely executes an async operation with error handling.
  *
+ * Wraps an async function and returns a result object containing either successful data
+ * or an error, eliminating the need for try-catch blocks.
+ *
+ * @template T - The type of data returned by the async function.
  * @param asyncFn - The async function to execute.
  * @param onError - Optional callback for handling errors.
  * @returns An object containing either the data or the error.
- * @example
- * ```ts
- * const { data, error } = await safeAsync(() => fetchData());
- * ```
  * @source
  */
 export async function safeAsync<T>(

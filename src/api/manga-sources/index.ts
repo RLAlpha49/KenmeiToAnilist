@@ -1,7 +1,7 @@
 /**
  * @packageDocumentation
  * @module manga-sources
- * @description Main entry point for the manga sources system.
+ * @description Main entry point for the manga sources system with all exports.
  */
 
 // Core types and enums
@@ -40,9 +40,11 @@ export type { MangaDexManga, MangaDexMangaDetail } from "./mangadex/types";
 export { mangaDexClient } from "./mangadex/client";
 
 /**
- * Convenience function to get a manga source client.
- * @param source - The manga source to get the client for
- * @returns Promise resolving to the client or null if not available
+ * Convenience function to get a manga source client by source type.
+ * Initializes the manga source registry on first call.
+ * @param source - The manga source to retrieve the client for.
+ * @returns Promise resolving to the client or null if not available.
+ * @source
  */
 export async function getMangaSourceClient(source: MangaSource) {
   return mangaSourceRegistry.getClient(source);

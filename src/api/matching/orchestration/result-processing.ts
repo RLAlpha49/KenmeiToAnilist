@@ -11,15 +11,13 @@ import { getMatchConfig } from "@/utils/storage";
 import { rankMangaResults } from "./ranking";
 
 /**
- * Process and rank search results, optionally caching them
- *
- * Takes raw search results, ranks them by relevance, and optionally
- * saves to cache for future searches.
+ * Process and rank search results, optionally caching them.
  *
  * @param results - Raw search results from API
  * @param title - Original search title
  * @param searchConfig - Search configuration
  * @returns Ranked manga results
+ * @source
  */
 export function processSearchResults(
   results: AniListManga[],
@@ -65,15 +63,15 @@ export function processSearchResults(
 }
 
 /**
- * Apply content filtering based on match configuration
+ * Filter out novels, one-shots, and adult content based on configuration.
  *
- * Filters out novels, one-shots (if configured), and adult content (if configured).
- * Filtering only applies when not bypassing cache (automatic matching mode).
+ * Filtering only applies during automatic matching (bypassCache false).
  *
  * @param results - Manga results to filter
  * @param title - Original search title (for logging)
  * @param searchConfig - Search configuration
  * @returns Filtered manga results
+ * @source
  */
 export function applyContentFiltering(
   results: AniListManga[],
@@ -116,16 +114,16 @@ export function applyContentFiltering(
 }
 
 /**
- * Handle fallback when no results are found after filtering
+ * Return fallback results when filtering removes all results.
  *
- * If filtering removed all results but original results exist,
- * returns a subset of original results as a fallback. This prevents
- * complete failure when filters are too aggressive.
+ * If all results are filtered but originals exist, returns top 3 original
+ * results as fallback to prevent complete failure.
  *
  * @param filteredResults - Results after filtering
  * @param originalResults - Original unfiltered results
  * @param searchConfig - Search configuration
  * @returns Final results (filtered or fallback)
+ * @source
  */
 export function handleNoResultsFallback(
   filteredResults: AniListManga[],

@@ -27,14 +27,9 @@ interface State {
 }
 
 /**
- * Error Boundary component that catches React errors and displays a fallback UI
- *
- * @example
- * ```tsx
- * <ErrorBoundary>
- *   <App />
- * </ErrorBoundary>
- * ```
+ * Error boundary component that catches React errors and displays an error UI.
+ * Logs errors to console and debug context for troubleshooting.
+ * @source
  */
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
@@ -46,6 +41,12 @@ export class ErrorBoundary extends Component<Props, State> {
     };
   }
 
+  /**
+   * Updates state when an error is caught to trigger fallback UI.
+   * @param error - The error that was thrown.
+   * @returns Partial state update to set hasError flag.
+   * @source
+   */
   static getDerivedStateFromError(error: Error): Partial<State> {
     // Update state so the next render will show the fallback UI
     return {
@@ -54,6 +55,13 @@ export class ErrorBoundary extends Component<Props, State> {
     };
   }
 
+  /**
+   * Logs error details and stores error info when an error is caught.
+   * Attempts to dispatch error to debug context for tracking.
+   * @param error - The error that was thrown.
+   * @param errorInfo - React error info with component stack.
+   * @source
+   */
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     // Log error details to console
     console.error("🚨 [ErrorBoundary] Caught error:", error);
@@ -84,6 +92,10 @@ export class ErrorBoundary extends Component<Props, State> {
     }
   }
 
+  /**
+   * Resets the error boundary state to show children again.
+   * @source
+   */
   handleReset = (): void => {
     this.setState({
       hasError: false,
@@ -92,14 +104,28 @@ export class ErrorBoundary extends Component<Props, State> {
     });
   };
 
+  /**
+   * Reloads the entire application window.
+   * @source
+   */
   handleReload = (): void => {
     globalThis.location.reload();
   };
 
+  /**
+   * Navigates to the home page.
+   * @source
+   */
   handleGoHome = (): void => {
     globalThis.location.href = "/";
   };
 
+  /**
+   * Renders the error boundary UI or children.
+   * Displays custom fallback if provided, otherwise shows default error UI with recovery options.
+   * @returns The error UI or children based on error state.
+   * @source
+   */
   render(): ReactNode {
     if (this.state.hasError) {
       // Use custom fallback if provided

@@ -10,7 +10,13 @@ import { getEffectiveStatus } from "./sync-utils";
 import { FilterOptions, SortOption } from "./types";
 
 /**
- * Apply filters to manga matches
+ * Apply filters to manga matches based on status, changes, and library membership.
+ * @param mangaMatches - Array of manga match results to filter.
+ * @param filters - Filter options to apply.
+ * @param userLibrary - User's existing AniList library.
+ * @param syncConfig - Sync configuration for change detection.
+ * @returns Filtered array of manga matches.
+ * @source
  */
 export function filterMangaMatches(
   mangaMatches: MangaMatchResult[],
@@ -74,7 +80,13 @@ export function filterMangaMatches(
 }
 
 /**
- * Calculate change count for a manga match
+ * Calculate the number of fields that will change for a manga match.
+ * Returns 0 for completed (preserved) entries, 3 for new entries, else count of changed fields.
+ * @param match - The manga match result.
+ * @param userLibrary - User's existing AniList library.
+ * @param syncConfig - Sync configuration for change detection.
+ * @returns Number of fields that will change.
+ * @source
  */
 function getChangeCount(
   match: MangaMatchResult,
@@ -120,7 +132,13 @@ function getChangeCount(
 }
 
 /**
- * Sort filtered manga matches
+ * Sort filtered manga matches by the selected field and direction.
+ * @param filteredMatches - Array of manga matches to sort.
+ * @param sortOption - Sort field and direction.
+ * @param userLibrary - User's existing AniList library for change counting.
+ * @param syncConfig - Sync configuration for change detection.
+ * @returns Sorted array of manga matches.
+ * @source
  */
 export function sortMangaMatches(
   filteredMatches: MangaMatchResult[],

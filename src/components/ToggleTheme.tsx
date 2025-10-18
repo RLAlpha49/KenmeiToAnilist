@@ -16,8 +16,8 @@ import {
 } from "@/components/ui/tooltip";
 
 /**
- * A button for toggling between light and dark themes, with tooltip and accessible controls.
- *
+ * Button for toggling between light and dark themes.
+ * Displays the appropriate icon and provides a tooltip for accessibility.
  * @returns The rendered toggle theme button component.
  * @source
  */

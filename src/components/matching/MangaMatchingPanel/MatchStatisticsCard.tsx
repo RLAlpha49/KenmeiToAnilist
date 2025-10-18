@@ -11,6 +11,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../ui/card";
 import { Input } from "../../ui/input";
 import { cn } from "../../../utils/tailwind";
 
+/**
+ * Props for the MatchStatisticsCard component.
+ *
+ * @property matchStats - Statistics for different match statuses.
+ * @property noMatchesCount - Count of items with no matches found.
+ * @property searchTerm - Current search term value.
+ * @property onSearchTermChange - Callback to update the search term.
+ * @property searchInputRef - Reference to the search input element.
+ * @source
+ */
 export interface MatchStatisticsCardProps {
   matchStats: {
     total: number;
@@ -25,6 +35,15 @@ export interface MatchStatisticsCardProps {
   searchInputRef: React.RefObject<HTMLInputElement | null>;
 }
 
+/**
+ * Displays match statistics and search input for the matching panel.
+ *
+ * Shows reviewed/manual/pending counts with a search bar for filtering results.
+ *
+ * @param props - The component props.
+ * @returns The rendered statistics card.
+ * @source
+ */
 function MatchStatisticsCardComponent({
   matchStats,
   noMatchesCount,
@@ -64,7 +83,7 @@ function MatchStatisticsCardComponent({
 
   return (
     <Card className="relative mb-4 overflow-hidden rounded-3xl border border-white/40 bg-white/75 shadow-xl shadow-slate-900/5 backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/70">
-      <div className="pointer-events-none absolute top-0 -left-10 h-56 w-56 rounded-full bg-sky-400/10 blur-3xl" />
+      <div className="pointer-events-none absolute -left-10 top-0 h-56 w-56 rounded-full bg-sky-400/10 blur-3xl" />
       <div className="pointer-events-none absolute -right-12 bottom-0 h-64 w-64 rounded-full bg-purple-500/10 blur-3xl" />
       <CardHeader className="relative z-10 border-b border-white/40 pb-4 dark:border-slate-800/60">
         <div className="flex items-start justify-between gap-4">
@@ -77,7 +96,7 @@ function MatchStatisticsCardComponent({
               reviewed
             </p>
           </div>
-          <div className="hidden items-center gap-2 rounded-full border border-white/40 bg-white/40 px-3 py-1 text-xs font-semibold tracking-wide text-slate-500 uppercase sm:flex dark:border-slate-700/60 dark:bg-slate-900/60 dark:text-slate-300">
+          <div className="hidden items-center gap-2 rounded-full border border-white/40 bg-white/40 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500 sm:flex dark:border-slate-700/60 dark:bg-slate-900/60 dark:text-slate-300">
             <Layers className="h-3.5 w-3.5" />
             Overview
           </div>
@@ -95,7 +114,7 @@ function MatchStatisticsCardComponent({
             >
               <div className="absolute inset-0 bg-gradient-to-br opacity-40 transition-opacity duration-300 group-hover:opacity-70" />
               <div className="relative flex flex-col gap-3">
-                <div className="flex items-center justify-between text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400">
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   <span>{label}</span>
                   <Icon className="h-4 w-4" />
                 </div>
@@ -115,12 +134,12 @@ function MatchStatisticsCardComponent({
         <div className="grid gap-4 lg:grid-cols-[minmax(0,_2fr)_minmax(0,_1fr)]">
           <div className="relative">
             <Search
-              className={cn("absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2")}
+              className={cn("absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2")}
             />
             <Input
               ref={searchInputRef}
               type="text"
-              className="h-12 rounded-2xl border border-white/40 bg-white/80 pr-4 pl-11 text-sm shadow-inner shadow-slate-900/5 backdrop-blur placeholder:text-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-300 dark:border-slate-800/60 dark:bg-slate-900/70 dark:placeholder:text-slate-500 dark:focus:border-sky-500 dark:focus:ring-sky-500"
+              className="h-12 rounded-2xl border border-white/40 bg-white/80 pl-11 pr-4 text-sm shadow-inner shadow-slate-900/5 backdrop-blur placeholder:text-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-300 dark:border-slate-800/60 dark:bg-slate-900/70 dark:placeholder:text-slate-500 dark:focus:border-sky-500 dark:focus:ring-sky-500"
               placeholder="Search titles instantly… (Ctrl+F)"
               value={searchTerm}
               onChange={(event) => onSearchTermChange(event.target.value)}
@@ -143,6 +162,7 @@ function MatchStatisticsCardComponent({
   );
 }
 
+/** Memoized MatchStatisticsCard component for performance optimization. @source */
 const MatchStatisticsCard = React.memo(MatchStatisticsCardComponent);
 MatchStatisticsCard.displayName = "MatchStatisticsCard";
 

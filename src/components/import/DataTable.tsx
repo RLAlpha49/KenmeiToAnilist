@@ -34,20 +34,10 @@ export interface DataTableProps {
 }
 
 /**
- * DataTable component.
- *
- * Renders a paginated, scrollable table of Kenmei manga items with status badges and load more functionality.
- *
- * Columns are dynamically shown based on available data (title, status, chapters, volumes, score, last read date).
- * Includes "Load More" support and an empty state.
- *
- * @param props - {@link DataTableProps}
- * @returns React.ReactElement
- *
- * @example
- * ```tsx
- * <DataTable data={myMangaList} itemsPerPage={25} />
- * ```
+ * Renders a paginated table of manga items with load-more functionality.
+ * Displays columns based on available data: title, status, chapters, volumes, score, last read.
+ * @param props - Table configuration including data and items per page.
+ * @returns Table component with pagination support.
  * @source
  */
 export function DataTable({
@@ -58,32 +48,32 @@ export function DataTable({
   const [displayCount, setDisplayCount] = useState(itemsPerPage);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Update visible data when display count changes
   useEffect(() => {
     setVisibleData(data.slice(0, displayCount));
   }, [data, displayCount]);
 
-  // Reset when data changes
   useEffect(() => {
     setDisplayCount(itemsPerPage);
     setVisibleData(data.slice(0, itemsPerPage));
   }, [data, itemsPerPage]);
 
-  // Load more items
+  /**
+   * Loads additional manga items with simulated delay for better UX.
+   * @source
+   */
   const handleLoadMore = () => {
     if (displayCount < data.length) {
       setIsLoading(true);
 
-      // Use setTimeout to give a small delay for better UX
+      // Simulate delay for smoother UX
       setTimeout(() => {
-        // Don't exceed the original data length
         setDisplayCount((prev) => Math.min(prev + itemsPerPage, data.length));
         setIsLoading(false);
       }, 300);
     }
   };
 
-  // Determine which columns to show based on data
+  // Determine which optional columns to display based on data presence
   const hasScore = data.some(
     (item) => item.score !== undefined && item.score > 0,
   );
@@ -95,7 +85,12 @@ export function DataTable({
   );
   const hasLastRead = data.some((item) => item.updated_at || item.created_at);
 
-  // Format date to a readable format
+  /**
+   * Formats an ISO date string into a localized date string.
+   * @param dateString - ISO date string to format, or undefined.
+   * @returns Localized date string, or "-" if dateString is invalid/undefined.
+   * @source
+   */
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return "-";
     try {
@@ -106,7 +101,12 @@ export function DataTable({
     }
   };
 
-  // Get status badge styling
+  /**
+   * Returns a styled Badge component for the given manga status.
+   * @param status - The manga status string.
+   * @returns Badge component with appropriate styling and label.
+   * @source
+   */
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "reading":
@@ -233,7 +233,7 @@ export function DataTable({
               </TableRow>
             ))}
 
-            {/* Empty state if no items */}
+            {/* Display empty state when no items are visible */}
             {visibleData.length === 0 && !isLoading && (
               <TableRow>
                 <TableCell

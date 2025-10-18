@@ -8,13 +8,8 @@ import { TimeEstimate } from "../types/matching";
 
 /**
  * Hook for tracking and calculating time estimates during batch processes.
- *
- * @returns An object containing the current time estimate, a function to calculate time estimates, and a function to initialize time tracking.
- * @example
- * ```ts
- * const { timeEstimate, calculateTimeEstimate, initializeTimeTracking } = useTimeEstimate();
- * calculateTimeEstimate(current, total);
- * ```
+ * Maintains a moving average of processing times to predict remaining duration.
+ * @returns Object with time estimate state and tracking control methods.
  * @source
  */
 export const useTimeEstimate = () => {
@@ -36,14 +31,10 @@ export const useTimeEstimate = () => {
   const pauseStartRef = useRef<number | null>(null);
 
   /**
-   * Calculate a more stable time estimate using recent processing times.
-   *
-   * @param current - The current number of items processed.
-   * @param total - The total number of items to process.
-   * @remarks
-   * Uses a moving average of the last 10 processing times to smooth out fluctuations.
-   * Updates the global globalThis.matchingProcessState if available.
-   *
+   * Calculates estimated time remaining using a moving average of processing times.
+   * Skips updates during pause periods and requires progress to have advanced.
+   * @param current - Number of items processed so far.
+   * @param total - Total number of items to process.
    * @source
    */
   const calculateTimeEstimate = useCallback(
@@ -124,9 +115,9 @@ export const useTimeEstimate = () => {
   );
 
   /**
-   * Initialize time tracking for a new process.
-   *
-   * @returns The initial time estimate object.
+   * Initializes time tracking for a new process or restores from existing global state.
+   * Resets refs and state if no active process, otherwise preserves timing data.
+   * @returns Initial time estimate object.
    * @source
    */
   const initializeTimeTracking = useCallback(() => {
@@ -186,6 +177,11 @@ export const useTimeEstimate = () => {
     }
   }, []);
 
+  /**
+   * Pauses time tracking to prevent skewing of average times during idle periods.
+   * Increments a pause counter for nested pause/resume support.
+   * @source
+   */
   const pauseTimeTracking = useCallback(() => {
     if (pauseCountRef.current === 0) {
       pauseStartRef.current = Date.now();
@@ -194,6 +190,11 @@ export const useTimeEstimate = () => {
     pauseCountRef.current += 1;
   }, []);
 
+  /**
+   * Resumes time tracking after pause, adjusting start time by paused duration.
+   * Decrements pause counter, only resuming when count reaches zero.
+   * @source
+   */
   const resumeTimeTracking = useCallback(() => {
     if (pauseCountRef.current === 0) {
       return;

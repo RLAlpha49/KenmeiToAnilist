@@ -3,10 +3,23 @@ import { motion } from "framer-motion";
 import { Card, CardContent } from "../ui/card";
 import { Loader2 } from "lucide-react";
 
+/**
+ * Props for the InitializationCard component.
+ *
+ * @property message - Optional custom message to display during initialization.
+ * @source
+ */
 interface Props {
   message?: string;
 }
 
+/**
+ * Displays a loading card while the app checks for pending manga from previous sessions.
+ *
+ * @param props - The component props.
+ * @returns The rendered initialization card.
+ * @source
+ */
 export default function InitializationCard({ message }: Readonly<Props>) {
   return (
     <motion.div

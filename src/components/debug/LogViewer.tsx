@@ -35,6 +35,10 @@ const LEVELS = ["error", "warn", "info", "log", "debug"] as const;
 const FILTERABLE_LEVELS: VisibleLogLevel[] = ["error", "warn", "info", "debug"];
 type VisibleLogLevel = (typeof LEVELS)[number];
 
+/**
+ * Mapping of log severity levels to display metadata (label, icon, tone).
+ * @source
+ */
 const LEVEL_META: Record<
   VisibleLogLevel,
   { label: string; icon: React.ReactNode; tone: string }
@@ -66,6 +70,10 @@ const LEVEL_META: Record<
   },
 };
 
+/**
+ * Default level filter state (all levels visible).
+ * @source
+ */
 const DEFAULT_LEVEL_FILTER: Record<VisibleLogLevel, boolean> = {
   error: true,
   warn: true,
@@ -74,6 +82,14 @@ const DEFAULT_LEVEL_FILTER: Record<VisibleLogLevel, boolean> = {
   debug: true,
 };
 
+/**
+ * Highlights matching text segments in a string with styled marks.
+ * Case-insensitive search with yellow background highlighting.
+ * @param text - Text to search within
+ * @param query - Search query string
+ * @returns JSX with highlighted segments or original text
+ * @source
+ */
 function highlight(text: string, query: string): React.ReactNode {
   if (!query) return text;
   const parts: React.ReactNode[] = [];
@@ -108,10 +124,24 @@ function highlight(text: string, query: string): React.ReactNode {
   return parts.length ? <>{parts}</> : text;
 }
 
+/**
+ * Extracts substring between start and end indices.
+ * @param value - String to slice
+ * @param start - Start index
+ * @param end - End index
+ * @returns Sliced substring
+ * @source
+ */
 function sliceText(value: string, start: number, end: number) {
   return value.slice(start, end);
 }
 
+/**
+ * Formats a timestamp into separate date and time components.
+ * @param timestamp - ISO 8601 timestamp string
+ * @returns Object with formatted date and time, or time with original string if invalid
+ * @source
+ */
 function formatTimestamp(timestamp: string): { date: string; time: string } {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) {
@@ -123,12 +153,25 @@ function formatTimestamp(timestamp: string): { date: string; time: string } {
   };
 }
 
+/**
+ * Converts a log level to a visible log level if it's supported for filtering.
+ * @param level - Log level to convert
+ * @returns VisibleLogLevel or null if not in FILTERABLE_LEVELS
+ * @source
+ */
 function toVisibleLevel(level: LogLevel): VisibleLogLevel | null {
   return LEVELS.includes(level as VisibleLogLevel)
     ? (level as VisibleLogLevel)
     : null;
 }
 
+/**
+ * Checks if a log entry matches the active level filters.
+ * @param entry - Log entry to check
+ * @param filters - Level filter state
+ * @returns True if entry level is enabled in filters
+ * @source
+ */
 function matchesEntry(
   entry: LogEntry,
   filters: Record<VisibleLogLevel, boolean>,
@@ -137,6 +180,13 @@ function matchesEntry(
   return Boolean(filters[visibleLevel]);
 }
 
+/**
+ * Checks if a log entry matches a search query across message, details, and source.
+ * @param entry - Log entry to search within
+ * @param query - Search query string (case-insensitive)
+ * @returns True if entry matches query in any searchable field
+ * @source
+ */
 function includesQuery(entry: LogEntry, query: string): boolean {
   if (!query) return true;
   const target = query.toLowerCase();
@@ -147,6 +197,12 @@ function includesQuery(entry: LogEntry, query: string): boolean {
   );
 }
 
+/**
+ * Console log viewer with filtering, search, and export functionality.
+ * Displays captured logs with auto-scrolling and level-based filtering.
+ * @returns JSX element rendering the log viewer panel
+ * @source
+ */
 export function LogViewer(): React.ReactElement {
   const { logEntries, maxLogEntries } = useDebugState();
   const { clearLogs, exportLogs } = useDebugActions();
@@ -224,7 +280,7 @@ export function LogViewer(): React.ReactElement {
         </div>
         <div className="flex w-full flex-col gap-3">
           <div className="relative w-full">
-            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+            <Search className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
             <Input
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
@@ -302,6 +358,10 @@ export function LogViewer(): React.ReactElement {
   );
 }
 
+/**
+ * Props for the log entries container component.
+ * @source
+ */
 interface LogEntriesContainerProps {
   scrollRootRef: React.RefObject<HTMLDivElement | null>;
   filteredEntries: LogEntry[];
@@ -309,6 +369,10 @@ interface LogEntriesContainerProps {
   onCopyEntry: (entry: LogEntry) => void;
 }
 
+/**
+ * Scrollable container for log entries with auto-scroll support.
+ * @source
+ */
 function LogEntriesContainer({
   scrollRootRef,
   filteredEntries,
@@ -337,6 +401,11 @@ function LogEntriesContainer({
   );
 }
 
+/**
+ * Empty state displayed when no log entries match the current filters.
+ * @returns JSX element for empty state message
+ * @source
+ */
 function EmptyLogState() {
   return (
     <div className="border-border/60 bg-muted/40 flex h-40 flex-col items-center justify-center gap-3 rounded-xl border border-dashed text-center">
@@ -351,12 +420,20 @@ function EmptyLogState() {
   );
 }
 
+/**
+ * Props for the log entry card component.
+ * @source
+ */
 interface LogEntryCardProps {
   entry: LogEntry;
   searchTerm: string;
   onCopyEntry: (entry: LogEntry) => void;
 }
 
+/**
+ * Card displaying a single log entry with level, timestamp, message, and optional details.
+ * @source
+ */
 function LogEntryCard({
   entry,
   searchTerm,
@@ -387,6 +464,10 @@ function LogEntryCard({
   );
 }
 
+/**
+ * Props for the log entry header component.
+ * @source
+ */
 interface LogEntryHeaderProps {
   meta: { label: string; icon: React.ReactNode; tone: string };
   time: string;
@@ -394,6 +475,10 @@ interface LogEntryHeaderProps {
   searchTerm: string;
 }
 
+/**
+ * Log entry header with severity badge, timestamp, and source information.
+ * @source
+ */
 function LogEntryHeader({
   meta,
   time,
@@ -426,6 +511,10 @@ function LogEntryHeader({
   );
 }
 
+/**
+ * Props for the log entry content component.
+ * @source
+ */
 interface LogEntryContentProps {
   entry: LogEntry;
   searchTerm: string;
@@ -433,6 +522,10 @@ interface LogEntryContentProps {
   onCopyEntry: (entry: LogEntry) => void;
 }
 
+/**
+ * Log entry content with message and optional expandable details.
+ * @source
+ */
 function LogEntryContent({
   entry,
   searchTerm,
@@ -451,12 +544,20 @@ function LogEntryContent({
   );
 }
 
+/**
+ * Props for the log message component.
+ * @source
+ */
 interface LogMessageProps {
   entry: LogEntry;
   searchTerm: string;
   onCopyEntry: (entry: LogEntry) => void;
 }
 
+/**
+ * Displays the main log message with copy functionality and search highlighting.
+ * @source
+ */
 function LogMessage({
   entry,
   searchTerm,
@@ -464,7 +565,7 @@ function LogMessage({
 }: Readonly<LogMessageProps>) {
   return (
     <div className="flex items-center justify-between font-mono text-[13px] leading-relaxed">
-      <div className="min-w-0 pr-2 break-words whitespace-pre-wrap">
+      <div className="min-w-0 whitespace-pre-wrap break-words pr-2">
         {highlight(entry.message || "(no message)", searchTerm)}
       </div>
       <div className="text-muted-foreground flex flex-shrink-0 items-center justify-end gap-2 text-xs">
@@ -482,11 +583,19 @@ function LogMessage({
   );
 }
 
+/**
+ * Props for the log details component.
+ * @source
+ */
 interface LogDetailsProps {
   entry: LogEntry;
   searchTerm: string;
 }
 
+/**
+ * Expandable details section showing additional log information with search highlighting.
+ * @source
+ */
 function LogDetails({ entry, searchTerm }: Readonly<LogDetailsProps>) {
   return (
     <details className="border-border/60 bg-muted/30 text-muted-foreground rounded-md border border-dashed p-2 text-xs">
@@ -497,7 +606,7 @@ function LogDetails({ entry, searchTerm }: Readonly<LogDetailsProps>) {
         {entry.details.map((detail, index) => (
           <pre
             key={`${entry.id}-detail-${index}`}
-            className="bg-background/80 rounded p-2 text-[11px] break-words whitespace-pre-wrap"
+            className="bg-background/80 whitespace-pre-wrap break-words rounded p-2 text-[11px]"
           >
             {highlight(detail, searchTerm)}
           </pre>
@@ -507,6 +616,14 @@ function LogDetails({ entry, searchTerm }: Readonly<LogDetailsProps>) {
   );
 }
 
+/**
+ * Displays a source string with optional truncation and expandable view.
+ * Long sources (>80 chars) are truncated by default with an expand button.
+ * @param source - Source string to display
+ * @param query - Search query for highlighting
+ * @returns JSX element with truncated/expanded source and expand button
+ * @source
+ */
 function TruncatedSource({
   source,
   query,
@@ -522,7 +639,7 @@ function TruncatedSource({
 
   return (
     <div className="text-muted-foreground mt-1 flex items-start gap-2 text-xs">
-      <div className="min-w-0 flex-1 break-words whitespace-pre-wrap">
+      <div className="min-w-0 flex-1 whitespace-pre-wrap break-words">
         {highlight(display, query)}
         {needsTruncate && !expanded && (
           <span className="text-muted-foreground">…</span>

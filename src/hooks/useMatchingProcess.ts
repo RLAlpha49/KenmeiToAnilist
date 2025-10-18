@@ -24,17 +24,10 @@ import { useTimeEstimate } from "./useTimeEstimate";
 import { usePendingManga } from "./usePendingManga";
 
 /**
- * Custom hook to manage the manga matching process, including batch matching, progress tracking, error handling, and resume/cancel operations.
- *
- * @param options - Options containing the AniList access token and optional rate limit state.
- * @returns An object containing state, progress, error, and handler functions for the matching process.
- * @example
- * ```ts
- * const {
- *   isLoading, progress, error, startMatching, handleResumeMatching, handleCancelProcess
- * } = useMatchingProcess({ accessToken });
- * startMatching(mangaList);
- * ```
+ * Manages the manga matching process with batch operations, progress tracking, and pause/resume support.
+ * @param options.accessToken - AniList OAuth access token for API requests.
+ * @param options.rateLimitState - Optional rate limit state from RateLimitContext.
+ * @returns Object containing matching state, handlers, and utility functions.
  * @source
  */
 export const useMatchingProcess = ({
@@ -148,6 +141,13 @@ export const useMatchingProcess = ({
     [],
   );
 
+  /**
+   * Creates a progress callback handler for tracking batch matching progress.
+   * Updates status messages, time estimates, and global state during matching operations.
+   * @param withKnownIdsCount - Number of manga with pre-existing AniList IDs for batch fetching.
+   * @returns A callback function accepting current index, total count, and optional current title.
+   * @source
+   */
   const createProgressHandler = useCallback(
     (withKnownIdsCount: number) => {
       return (current: number, total: number, currentTitle?: string) => {
@@ -243,6 +243,13 @@ export const useMatchingProcess = ({
     ],
   );
 
+  /**
+   * Persists merged match results to state and storage, updates pending manga list.
+   * @param results - Array of match results from the matching service.
+   * @param originalList - Original list of Kenmei manga being matched.
+   * @param setMatchResults - State setter for updating match results.
+   * @source
+   */
   const persistMergedResults = useCallback(
     async (
       results: MatchResult[],
@@ -271,6 +278,12 @@ export const useMatchingProcess = ({
     [calculatePendingManga, savePendingManga, setPendingManga],
   );
 
+  /**
+   * Sets the initial status message based on cache status and pre-matched manga availability.
+   * @param cacheStatus - Object containing in-memory and localStorage cache entry counts.
+   * @param withKnownIds - Number of manga with pre-existing AniList IDs.
+   * @source
+   */
   const setInitialStatusMessage = useCallback(
     (
       cacheStatus: {
@@ -302,9 +315,13 @@ export const useMatchingProcess = ({
     [],
   );
 
+  /**
+   * Handles and formats matching process errors, providing user-friendly error messages.
+   * Distinguishes between network, authentication, rate limit, and server errors.
+   * @param err - The error object caught during matching operations.
+   * @source
+   */
   const handleMatchingError = useCallback((err: unknown) => {
-    console.error("[MatchingProcess] Matching error:", err);
-
     if (cancelMatchingRef.current) {
       setError("Matching process was cancelled");
       return;
@@ -669,7 +686,6 @@ export const useMatchingProcess = ({
 
   /**
    * Cancels the resume mode and clears pending manga.
-   *
    * @source
    */
   const handleCancelResume = useCallback(() => {
@@ -686,7 +702,6 @@ export const useMatchingProcess = ({
 
   /**
    * Cancels the matching process, aborting all in-progress operations.
-   *
    * @source
    */
   const handleCancelProcess = useCallback(() => {
@@ -724,8 +739,8 @@ export const useMatchingProcess = ({
   ]);
 
   /**
-   * Marks the completion of the initialization phase for the matching process.
-   *
+   * Completes the initialization phase of the matching process.
+   * Called after setup and before starting batch matching operations.
    * @source
    */
   const completeInitialization = useCallback(() => {

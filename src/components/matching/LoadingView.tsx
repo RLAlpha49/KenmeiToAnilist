@@ -11,6 +11,19 @@ import { useRateLimit } from "../../contexts/RateLimitContext";
 type MatchingProcessType = ReturnType<typeof useMatchingProcess>;
 type RateLimitType = ReturnType<typeof useRateLimit>;
 
+/**
+ * Props for the LoadingView component.
+ *
+ * @property pageVariants - Framer Motion variants for page animation.
+ * @property contentVariants - Framer Motion variants for content animation.
+ * @property matchingProcess - Current matching process state and methods.
+ * @property rateLimitState - Current rate limit state from context.
+ * @property navigate - Function to navigate to a different route.
+ * @property matchResultsLength - Total number of match results processed.
+ * @property onRetry - Callback to retry the matching process.
+ * @property onDismissError - Callback to dismiss error messages.
+ * @source
+ */
 interface LoadingViewProps {
   pageVariants: Variants;
   contentVariants: Variants;
@@ -22,6 +35,16 @@ interface LoadingViewProps {
   onDismissError: () => void;
 }
 
+/**
+ * Displays the matching process progress with rate limit warnings and controls.
+ *
+ * Shows real-time progress updates, rate limit countdowns, and action buttons for
+ * pause/resume/cancel operations during the manga matching process.
+ *
+ * @param props - The component props.
+ * @returns The rendered loading view with progress tracking.
+ * @source
+ */
 export function LoadingView({
   pageVariants,
   contentVariants,
@@ -99,10 +122,10 @@ export function LoadingView({
               </div>
               {rateLimitCountdown && (
                 <div className="flex flex-col items-start rounded-xl border border-amber-400/40 bg-white/70 px-4 py-2 text-sm font-semibold text-amber-700 shadow-sm dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-100">
-                  <span className="text-xs font-medium tracking-[0.18em] text-amber-600/80 uppercase dark:text-amber-200/80">
+                  <span className="text-xs font-medium uppercase tracking-[0.18em] text-amber-600/80 dark:text-amber-200/80">
                     Retry in
                   </span>
-                  <span className="text-lg leading-tight font-semibold">
+                  <span className="text-lg font-semibold leading-tight">
                     {rateLimitCountdown}
                   </span>
                 </div>
@@ -121,7 +144,7 @@ export function LoadingView({
         >
           {matchingProcess.error.includes("Authentication Required") ? (
             <Card className="mx-auto w-full max-w-xl overflow-hidden border border-amber-300/60 bg-gradient-to-br from-amber-50/70 via-white/80 to-amber-100/70 text-center shadow-lg shadow-amber-100/60 dark:border-amber-500/40 dark:from-amber-900/30 dark:via-slate-950/40 dark:to-amber-900/20">
-              <CardContent className="pt-6 pb-5">
+              <CardContent className="pb-5 pt-6">
                 <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/15 text-amber-600 dark:bg-amber-500/20 dark:text-amber-200">
                   <AlertCircle className="h-6 w-6" />
                 </div>
@@ -142,7 +165,7 @@ export function LoadingView({
             </Card>
           ) : (
             <Card className="mx-auto w-full max-w-xl overflow-hidden border border-rose-300/60 bg-gradient-to-br from-rose-50/70 via-white/80 to-rose-100/70 text-center shadow-lg shadow-rose-100/60 dark:border-rose-500/40 dark:from-rose-900/30 dark:via-slate-950/40 dark:to-rose-900/20">
-              <CardContent className="pt-6 pb-5">
+              <CardContent className="pb-5 pt-6">
                 <h3 className="text-lg font-semibold text-rose-700 dark:text-rose-100">
                   {matchingProcess.error}
                 </h3>

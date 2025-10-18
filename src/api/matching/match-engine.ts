@@ -9,32 +9,32 @@ import { AniListManga, MangaMatchResult } from "../anilist/types";
 import { calculateEnhancedSimilarity } from "../../utils/enhanced-similarity";
 
 /**
- * Interface for match engine configuration.
- *
+ * Configuration options for manga matching behavior.
  * @source
  */
 export interface MatchEngineConfig {
-  // Minimum confidence score (0-100) to consider a match as high confidence
+  /** Minimum confidence score (0-100) to auto-match results. */
   confidenceThreshold: number;
 
-  // Language preferences for title matching
+  /** Boost scores when matching against English titles. */
   preferEnglishTitles: boolean;
+  /** Boost scores when matching against Romaji titles. */
   preferRomajiTitles: boolean;
+  /** Include AniList synonyms and alternative titles in matching. */
   useAlternativeTitles: boolean;
 
-  // String comparison options
+  /** Preserve case during title comparison. */
   caseSensitive: boolean;
 
-  // Minimum length for titles to be considered for fuzzy matching
+  /** Skip titles shorter than this length to reduce false positives. */
   minTitleLength: number;
 
-  // Number of top matches to return
+  /** Maximum number of candidate matches to return. */
   maxMatches: number;
 }
 
 /**
- * Default configuration for the match engine.
- *
+ * Default configuration for manga matching.
  * @source
  */
 export const DEFAULT_MATCH_CONFIG: MatchEngineConfig = {
@@ -48,11 +48,10 @@ export const DEFAULT_MATCH_CONFIG: MatchEngineConfig = {
 };
 
 /**
- * Cleans and normalizes a string for comparison.
- *
+ * Normalizes a string by removing special characters and optionally converting to lowercase.
  * @param text - The string to normalize.
- * @param caseSensitive - Whether to preserve case sensitivity.
- * @returns The normalized string.
+ * @param caseSensitive - Whether to preserve case.
+ * @returns Normalized string with special characters removed and spaces collapsed.
  * @source
  */
 export function normalizeString(text: string, caseSensitive = false): string {
@@ -68,11 +67,9 @@ export function normalizeString(text: string, caseSensitive = false): string {
 }
 
 /**
- * Calculates string similarity using enhanced algorithms for better accuracy.
- * Returns a score between 0-100.
- *
- * @param str1 - The first string to compare.
- * @param str2 - The second string to compare.
+ * Calculates string similarity using enhanced algorithms.
+ * @param str1 - First string to compare.
+ * @param str2 - Second string to compare.
  * @returns Similarity score between 0 and 100.
  * @source
  */
@@ -87,12 +84,12 @@ export function calculateSimilarity(str1: string, str2: string): number {
 }
 
 /**
- * Scores primary titles (english, romaji, native) and returns any exact matches.
- *
+ * Scores primary titles (english, romaji, native) and returns early on exact match.
  * @param kenmeiTitle - Normalized Kenmei title.
- * @param anilistManga - AniList manga with title fields.
- * @param scores - Array to push scores into.
- * @returns Early return object if exact match found, null otherwise.
+ * @param anilistManga - AniList manga entry.
+ * @param scores - Accumulator array for similarity scores.
+ * @returns Match result object if exact match (100%) found, null otherwise.
+ * @source
  */
 function scorePrimaryTitles(
   kenmeiTitle: string,
@@ -120,12 +117,12 @@ function scorePrimaryTitles(
 }
 
 /**
- * Scores AniList synonyms against Kenmei title and returns any exact matches.
- *
+ * Scores AniList synonyms and returns early on exact match.
  * @param kenmeiTitle - Normalized Kenmei title.
- * @param anilistManga - AniList manga with synonyms.
- * @param scores - Array to push scores into.
- * @returns Early return object if exact match found, null otherwise.
+ * @param anilistManga - AniList manga entry.
+ * @param scores - Accumulator array for similarity scores.
+ * @returns Match result object if exact match (100%) found, null otherwise.
+ * @source
  */
 function scoreSynonyms(
   kenmeiTitle: string,
@@ -149,12 +146,12 @@ function scoreSynonyms(
 }
 
 /**
- * Checks a single alternative title against AniList titles.
- *
- * @param normalizedAltTitle - The normalized alternative title.
- * @param anilistManga - AniList manga with title fields.
- * @param scores - Array to push scores into.
- * @returns Early return object if exact match found, null otherwise.
+ * Scores a single alternative title against AniList primary titles.
+ * @param normalizedAltTitle - Normalized alternative title.
+ * @param anilistManga - AniList manga entry.
+ * @param scores - Accumulator array for similarity scores.
+ * @returns Match result object if exact match (100%) found, null otherwise.
+ * @source
  */
 function checkAlternativeTitleMatch(
   normalizedAltTitle: string,
@@ -199,14 +196,14 @@ function checkAlternativeTitleMatch(
 }
 
 /**
- * Scores Kenmei alternative titles against AniList titles and returns any exact matches.
- *
- * @param kenmeiManga - Kenmei manga with alternative titles.
- * @param anilistManga - AniList manga with title fields.
+ * Scores Kenmei alternative titles against AniList titles and returns early on exact match.
+ * @param kenmeiManga - Kenmei manga entry.
+ * @param anilistManga - AniList manga entry.
  * @param caseSensitive - Whether comparison is case sensitive.
- * @param minTitleLength - Minimum length for alternative titles.
- * @param scores - Array to push scores into.
- * @returns Early return object if exact match found, null otherwise.
+ * @param minTitleLength - Minimum length threshold for alternative titles.
+ * @param scores - Accumulator array for similarity scores.
+ * @returns Match result object if exact match (100%) found, null otherwise.
+ * @source
  */
 function scoreAlternativeTitles(
   kenmeiManga: KenmeiManga,
@@ -235,12 +232,12 @@ function scoreAlternativeTitles(
 }
 
 /**
- * Calculates final adjusted score with preference weighting.
- *
- * @param scores - Array of scores with field names.
- * @param preferEnglishTitles - Whether to boost English title scores.
- * @param preferRomajiTitles - Whether to boost Romaji title scores.
- * @returns Object with final confidence, exact match status, and matched field.
+ * Calculates final adjusted score with language preference weighting.
+ * @param scores - Array of scores with field identifiers.
+ * @param preferEnglishTitles - Whether to boost English title scores by 5%.
+ * @param preferRomajiTitles - Whether to boost Romaji title scores by 5%.
+ * @returns Match result with final confidence (0-100), exact match status, and matched field.
+ * @source
  */
 function calculateFinalScore(
   scores: Array<{ field: string; score: number }>,
@@ -277,13 +274,17 @@ function calculateFinalScore(
 }
 
 /**
- * Scores a match between a Kenmei manga and an AniList manga entry.
- * Returns a score between 0-100 and information about the match.
+ * Scores a Kenmei manga against an AniList manga entry using title comparison.
+ * Returns a confidence score (0-100) and match metadata.
  *
- * @param kenmeiManga - The Kenmei manga entry.
- * @param anilistManga - The AniList manga entry.
- * @param config - Optional partial match engine configuration.
- * @returns An object containing confidence, isExactMatch, and matchedField.
+ * Checks primary titles (english, romaji, native), synonyms, and alternative titles
+ * in that order, returning early on 100% match. Final score is determined by the
+ * highest similarity across all checked fields.
+ *
+ * @param kenmeiManga - Kenmei manga to match.
+ * @param anilistManga - AniList manga candidate.
+ * @param config - Partial config to override defaults.
+ * @returns Match result with confidence score, exact match flag, and matched field.
  * @source
  */
 export function scoreMatch(
@@ -334,12 +335,19 @@ export function scoreMatch(
 }
 
 /**
- * Finds the best matches for a Kenmei manga entry from a list of AniList entries.
+ * Finds the best matching AniList entries for a Kenmei manga and returns ranked candidates.
  *
- * @param kenmeiManga - The Kenmei manga entry to match.
- * @param anilistMangaList - The list of AniList manga entries to compare against.
- * @param config - Optional partial match engine configuration.
- * @returns A MangaMatchResult containing the best matches and status.
+ * Scores all candidates and determines match status automatically:
+ * - "matched": Exact match found OR high confidence (>threshold) with >20 point lead
+ * - "pending": Multiple close candidates, low confidence, or ambiguous results
+ *
+ * Results are sorted by confidence descending. Returns up to maxMatches candidates with
+ * confidence > 0. Uses deterministic scoring based on title similarity.
+ *
+ * @param kenmeiManga - Kenmei manga entry to match.
+ * @param anilistMangaList - Candidates to score.
+ * @param config - Partial config to override defaults.
+ * @returns Match result with ranked candidates, status, and selected match.
  * @source
  */
 export function findBestMatches(
@@ -425,12 +433,15 @@ export function findBestMatches(
 }
 
 /**
- * Processes a batch of manga entries for matching.
+ * Processes a batch of Kenmei manga entries, finding best AniList matches for each.
  *
- * @param kenmeiMangaList - The list of Kenmei manga entries to match.
- * @param anilistMangaMap - A map of search keys to AniList manga entry arrays.
- * @param config - Optional partial match engine configuration.
- * @returns A promise resolving to an array of MangaMatchResult objects.
+ * Groups AniList candidates by search key (normalized title prefix) for efficient
+ * lookup. Logs processing progress and completion statistics.
+ *
+ * @param kenmeiMangaList - Kenmei entries to match.
+ * @param anilistMangaMap - Map of search keys to AniList candidates.
+ * @param config - Partial config to override defaults.
+ * @returns Promise resolving to array of match results, one per Kenmei entry.
  * @source
  */
 export async function processBatchMatches(

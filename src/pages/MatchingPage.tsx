@@ -76,6 +76,13 @@ const contentVariants = {
   },
 };
 
+/**
+ * Matching page component for the Kenmei to AniList sync tool.
+ *
+ * Handles manga matching, review, rematch, and sync preparation for the user.
+ *
+ * @source
+ */
 export function MatchingPage() {
   const navigate = useNavigate();
   const { authState } = useAuthState();
@@ -274,8 +281,10 @@ export function MatchingPage() {
   }, [matchResults]);
 
   /**
-   * Check authentication status and set appropriate error messages.
-   * @internal
+   * Checks user authentication status with AniList.
+   * Sets appropriate error messages if not authenticated.
+   * @returns Boolean indicating whether authentication is valid.
+   * @source
    */
   const checkAuthenticationStatus = (): boolean => {
     if (!authState.isAuthenticated || !authState.accessToken) {
@@ -292,8 +301,10 @@ export function MatchingPage() {
   };
 
   /**
-   * Restore running matching process state if it exists.
-   * @internal
+   * Restores the matching process state from global scope if it was interrupted.
+   * Recovers progress, status messages, and pause state from previous session.
+   * @returns Boolean indicating whether process state was successfully restored.
+   * @source
    */
   const restoreRunningProcessState = (): boolean => {
     if (globalThis.matchingProcessState?.isRunning) {
@@ -355,8 +366,10 @@ export function MatchingPage() {
   };
 
   /**
-   * Process saved match results and update state.
-   * @internal
+   * Loads and processes previously saved match results from storage.
+   * Updates component state with saved results and calculates review completion status.
+   * @returns Object indicating whether results were found and the results themselves if available.
+   * @source
    */
   const processSavedMatchResults = (): {
     hasResults: boolean;
@@ -398,8 +411,11 @@ export function MatchingPage() {
   };
 
   /**
-   * Calculate missing manga and handle discrepancies between imported and saved results.
-   * @internal
+   * Calculates missing manga between saved match results and imported manga data.
+   * Saves unprocessed manga to storage or handles discrepancies.
+   * @param savedResults - Previously saved match results.
+   * @param importedManga - Currently imported manga entries.
+   * @source
    */
   const calculateMissingManga = (
     savedResults: MangaMatchResult[],
@@ -430,8 +446,11 @@ export function MatchingPage() {
   };
 
   /**
-   * Handle discrepancy detection between total manga and processed manga.
-   * @internal
+   * Detects and handles discrepancies between total imported manga and processed match results.
+   * Attempts to find and save actual missing manga for processing.
+   * @param savedResults - Previously saved match results.
+   * @param importedManga - Currently imported manga entries.
+   * @source
    */
   const handleDiscrepancyDetection = (
     savedResults: MangaMatchResult[],
@@ -474,8 +493,11 @@ export function MatchingPage() {
   };
 
   /**
-   * Find actual missing manga using comprehensive matching.
-   * @internal
+   * Finds manga entries that have not been processed using comprehensive title and ID matching.
+   * @param savedResults - Previously saved match results for comparison.
+   * @param importedManga - All imported manga entries to search through.
+   * @returns Array of unprocessed manga entries that still need matching.
+   * @source
    */
   const findActualMissingManga = (
     savedResults: MangaMatchResult[],
@@ -521,8 +543,10 @@ export function MatchingPage() {
   };
 
   /**
-   * Handle module preloading and final initialization steps.
-   * @internal
+   * Handles module preloading and final initialization steps for matching process.
+   * Preloads search service, syncs cache, and starts matching if appropriate.
+   * @param importedManga - The imported manga entries to process.
+   * @source
    */
   const handleModulePreloadingAndInitialization = (
     importedManga: KenmeiManga[],
@@ -1009,7 +1033,9 @@ export function MatchingPage() {
   }, [matchingProcess, setMatchResults]);
 
   /**
-   * Handle retry button click
+   * Retries the matching process for all unmatched manga.
+   * Clears pending manga and starts a fresh matching attempt.
+   * @source
    */
   const handleRetry = () => {
     // Clear any pending manga data
@@ -1021,7 +1047,9 @@ export function MatchingPage() {
   };
 
   /**
-   * Format future sync path
+   * Returns the path to navigate to for synchronization.
+   * @returns The sync page route path.
+   * @source
    */
   const getSyncPath = () => {
     // When we have a sync route, return that instead
@@ -1029,7 +1057,9 @@ export function MatchingPage() {
   };
 
   /**
-   * Proceed to synchronization
+   * Validates and proceeds to the synchronization page.
+   * Ensures at least one match has been approved before allowing sync.
+   * @source
    */
   const handleProceedToSync = () => {
     // Count how many matches we have
@@ -1048,7 +1078,9 @@ export function MatchingPage() {
   };
 
   /**
-   * Handle rematch by status
+   * Handles re-matching of manga selected by status filter.
+   * Filters results by selected status and initiates new matching process.
+   * @source
    */
   const handleRematchByStatus = async () => {
     // Reset any previous warnings

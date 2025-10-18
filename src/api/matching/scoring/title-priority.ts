@@ -9,13 +9,12 @@ import { normalizeForMatching } from "../normalization";
 import { calculateEnhancedSimilarity } from "../../../utils/enhanced-similarity";
 
 /**
- * Calculate similarity score between a title and normalized search term
+ * Calculate similarity score between a title and normalized search term.
  *
  * @param title - The title to calculate similarity for (can be null/undefined)
  * @param normalizedSearch - The normalized search term
- * @returns Object containing similarity score and title type
- *
- * @internal
+ * @returns Object with similarity score and title type
+ * @source
  */
 function calculateTitleSimilarity(
   title: string | null | undefined,
@@ -34,21 +33,13 @@ function calculateTitleSimilarity(
 }
 
 /**
- * Calculate title type priority for sorting when confidence scores are equal
- * Returns a priority score where higher numbers indicate higher priority
- * English/Romaji main titles get highest priority, synonyms get lowest priority
+ * Calculate title type priority for sorting matches with equal confidence.
+ * Prioritizes main titles (English, Romaji, Native) over synonyms.
  *
  * @param manga - The manga to calculate priority for
  * @param searchTitle - The search title used for matching
- * @returns Priority score (higher = more important title type)
- *
- * @example
- * ```typescript
- * calculateTitleTypePriority(manga, "One Piece")
- * // Returns: 100 (if matched on English title)
- * // Returns: 90 (if matched on Romaji title)
- * // Returns: 70 (if matched on synonym)
- * ```
+ * @returns Priority score where higher values indicate higher importance
+ * @source
  */
 export function calculateTitleTypePriority(
   manga: AniListManga,

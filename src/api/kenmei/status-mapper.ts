@@ -7,7 +7,10 @@
 import { KenmeiStatus, StatusMappingConfig } from "./types";
 import { MediaListStatus } from "../anilist/types";
 
-// Default status mapping
+/**
+ * Default bidirectional status mapping between Kenmei and AniList media list statuses.
+ * @source
+ */
 const DEFAULT_STATUS_MAPPING: Record<KenmeiStatus, MediaListStatus> = {
   reading: "CURRENT",
   completed: "COMPLETED",
@@ -17,18 +20,17 @@ const DEFAULT_STATUS_MAPPING: Record<KenmeiStatus, MediaListStatus> = {
 };
 
 /**
- * Map a Kenmei status to AniList status.
- *
- * @param status - Kenmei status.
- * @param customMapping - Optional custom mapping configuration.
- * @returns AniList status.
+ * Map a Kenmei status to an AniList media list status.
+ * @param status - Kenmei status value to convert.
+ * @param customMapping - Optional custom status mapping to apply first.
+ * @returns Corresponding AniList media list status.
  * @source
  */
 export function mapKenmeiToAniListStatus(
   status: KenmeiStatus,
   customMapping?: Partial<StatusMappingConfig>,
 ): MediaListStatus {
-  // Prefer custom mapping when provided, otherwise fall back to default.
+  // Apply custom mapping if provided, otherwise use default
   return (
     (customMapping?.[status] as MediaListStatus) ??
     DEFAULT_STATUS_MAPPING[status]
@@ -36,11 +38,10 @@ export function mapKenmeiToAniListStatus(
 }
 
 /**
- * Map an AniList status to Kenmei status.
- *
- * @param status - AniList status.
- * @param customMapping - Optional custom mapping configuration.
- * @returns Kenmei status.
+ * Map an AniList media list status to a Kenmei status.
+ * @param status - AniList media list status to convert.
+ * @param customMapping - Optional custom status mapping to apply first.
+ * @returns Corresponding Kenmei status (defaults to 'reading' if unmapped).
  * @source
  */
 export function mapAniListToKenmeiStatus(
@@ -53,7 +54,7 @@ export function mapAniListToKenmeiStatus(
     reverseMapping.set(v, k as KenmeiStatus);
   }
 
-  // If user provided custom mappings, apply them — set() will overwrite defaults.
+  // Apply custom mappings, overwriting defaults if provided
   if (customMapping) {
     for (const [k, v] of Object.entries(customMapping)) {
       reverseMapping.set(v, k as KenmeiStatus);
@@ -64,10 +65,9 @@ export function mapAniListToKenmeiStatus(
 }
 
 /**
- * Create a custom status mapping from user preferences.
- *
- * @param preferences - User preferences for status mapping.
- * @returns Custom status mapping configuration.
+ * Create a custom Kenmei-to-AniList status mapping from user preferences.
+ * @param preferences - Object mapping Kenmei status strings to desired AniList status strings.
+ * @returns Validated custom status mapping configuration.
  * @source
  */
 export function createCustomStatusMapping(
@@ -75,7 +75,7 @@ export function createCustomStatusMapping(
 ): Partial<StatusMappingConfig> {
   const customMapping: Partial<StatusMappingConfig> = {};
 
-  // Validate and map preferences to status mapping
+  // Validate and map each preference to status enum values
   for (const [key, value] of Object.entries(preferences)) {
     const kenmeiStatus = validateKenmeiStatus(key);
     if (!kenmeiStatus) continue;
@@ -90,9 +90,10 @@ export function createCustomStatusMapping(
 }
 
 /**
- * Validate a Kenmei status string
- * @param status Status string to validate
- * @returns Valid KenmeiStatus or undefined
+ * Validate and normalize a Kenmei status string to a valid enum value.
+ * @param status - Status string to validate.
+ * @returns Valid KenmeiStatus or undefined if the input doesn't match any valid status.
+ * @source
  */
 function validateKenmeiStatus(status: string): KenmeiStatus | undefined {
   if (!status) return undefined;
@@ -107,12 +108,12 @@ function validateKenmeiStatus(status: string): KenmeiStatus | undefined {
 
   const normalized = status.toLowerCase().trim().replaceAll(" ", "_");
 
-  // Exact or normalized match
+  // Check exact or normalized match
   if (validStatuses.has(status as KenmeiStatus)) return status as KenmeiStatus;
   if (validStatuses.has(normalized as KenmeiStatus))
     return normalized as KenmeiStatus;
 
-  // Lookup common variations
+  // Check common variations
   const variations: Record<string, KenmeiStatus> = {
     planning: "plan_to_read",
     plan: "plan_to_read",
@@ -130,9 +131,10 @@ function validateKenmeiStatus(status: string): KenmeiStatus | undefined {
 }
 
 /**
- * Validate an AniList status string
- * @param status Status string to validate
- * @returns Valid MediaListStatus or undefined
+ * Validate and normalize an AniList status string to a valid MediaListStatus enum value.
+ * @param status - Status string to validate.
+ * @returns Valid MediaListStatus or undefined if the input doesn't match any valid status.
+ * @source
  */
 function validateAniListStatus(status: string): MediaListStatus | undefined {
   if (!status) return undefined;
@@ -148,11 +150,13 @@ function validateAniListStatus(status: string): MediaListStatus | undefined {
 
   const normalized = status.toUpperCase().trim().replaceAll(" ", "_");
 
+  // Check exact or normalized match
   if (validStatuses.has(status as MediaListStatus))
     return status as MediaListStatus;
   if (validStatuses.has(normalized as MediaListStatus))
     return normalized as MediaListStatus;
 
+  // Check common variations
   const variations: Record<string, MediaListStatus> = {
     PLAN: "PLANNING",
     PTR: "PLANNING",
@@ -180,9 +184,8 @@ function validateAniListStatus(status: string): MediaListStatus | undefined {
 }
 
 /**
- * Get all possible status mappings between Kenmei and AniList statuses.
- *
- * @returns A record of all possible mappings between Kenmei and AniList statuses.
+ * Get all possible AniList statuses that each Kenmei status can map to.
+ * @returns Record mapping each KenmeiStatus to an array of possible AniList statuses.
  * @source
  */
 export function getAllPossibleStatusMappings(): Record<

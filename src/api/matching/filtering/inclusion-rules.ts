@@ -1,5 +1,5 @@
 /**
- * Inclusion rules for filtering manga by match score
+ * Inclusion rules for filtering manga by match score.
  * @module filtering/inclusion-rules
  */
 
@@ -7,7 +7,10 @@ import type { AniListManga } from "../../anilist/types";
 import { checkExactMatch } from "./exact-match-checker";
 
 /**
- * Result of inclusion check with potential score adjustment
+ * Decision result for manga inclusion with optional score adjustment.
+ * @property include - Whether the manga should be included in results.
+ * @property adjustedScore - The match score, potentially adjusted based on match quality.
+ * @source
  */
 export interface InclusionResult {
   include: boolean;
@@ -15,12 +18,14 @@ export interface InclusionResult {
 }
 
 /**
- * Determine if a manga should be included in exact match results
- * @param manga - The manga to evaluate
- * @param score - The match score (0-1)
- * @param searchTitle - The original search title
- * @param results - Current results array (for context)
- * @returns Inclusion decision with potentially adjusted score
+ * Determines if a manga should be included in exact match results.
+ * Applies stricter thresholds (0.6+) for exact matching mode.
+ * @param manga - The manga to evaluate.
+ * @param score - The match score (0-1).
+ * @param searchTitle - The original search title.
+ * @param results - Current results array for context.
+ * @returns Inclusion decision with potentially adjusted score.
+ * @source
  */
 export function shouldIncludeMangaExact(
   manga: AniListManga,
@@ -55,11 +60,13 @@ export function shouldIncludeMangaExact(
 }
 
 /**
- * Determine if a manga should be included in regular (non-exact) match results
- * @param manga - The manga to evaluate
- * @param score - The match score (0-1)
- * @param results - Current results array (for context)
- * @returns Inclusion decision with potentially adjusted score
+ * Determines if a manga should be included in regular (non-exact) match results.
+ * Applies lenient threshold (0.15+) for general searches.
+ * @param manga - The manga to evaluate.
+ * @param score - The match score (0-1).
+ * @param results - Current results array for context.
+ * @returns Inclusion decision with potentially adjusted score.
+ * @source
  */
 export function shouldIncludeMangaRegular(
   manga: AniListManga,

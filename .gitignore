@@ -6,4 +6,3 @@ dist/
 .vscode/
 documentation/
 .husky/pre-commit.log
-.serena

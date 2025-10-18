@@ -15,11 +15,12 @@ import { calculateConfidence, calculateTitleTypePriority } from "../scoring";
 import { isOneShot } from "../normalization";
 
 /**
- * Process Comick search results and return sorted manga with confidence scores
- * @param comickResults - Enhanced manga results from Comick API
- * @param title - Original search title
- * @param comickSourceMap - Map to populate with Comick source information
- * @returns Sorted array of AniListManga results
+ * Process Comick search results, score by confidence, and sort by relevance.
+ * @param comickResults - Enhanced manga results from Comick API.
+ * @param title - Original search title.
+ * @param comickSourceMap - Map to populate with Comick source information.
+ * @returns Sorted array of AniListManga results.
+ * @source
  */
 export function processComickResults(
   comickResults: EnhancedAniListManga[],
@@ -59,11 +60,12 @@ export function processComickResults(
 }
 
 /**
- * Apply content filtering to Comick results based on match configuration
- * @param comickResults - Manga results from Comick
- * @param title - Original search title
- * @param searchConfig - Search configuration
- * @returns Filtered manga array
+ * Apply content filtering to Comick results based on match configuration.
+ * @param comickResults - Manga results from Comick.
+ * @param title - Original search title.
+ * @param searchConfig - Search configuration.
+ * @returns Filtered manga array.
+ * @source
  */
 export function applyComickFiltering(
   comickResults: AniListManga[],

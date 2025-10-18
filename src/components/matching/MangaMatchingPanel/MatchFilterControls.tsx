@@ -14,6 +14,15 @@ import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import { cn } from "../../../utils/tailwind";
 
+/**
+ * State object for match status filters.
+ *
+ * @property matched - Whether to show matched results.
+ * @property pending - Whether to show pending results.
+ * @property manual - Whether to show manual search results.
+ * @property skipped - Whether to show skipped results.
+ * @source
+ */
 export interface StatusFiltersState {
   matched: boolean;
   pending: boolean;
@@ -21,6 +30,15 @@ export interface StatusFiltersState {
   skipped: boolean;
 }
 
+/**
+ * Statistics for different match statuses.
+ *
+ * @property matched - Count of matched results.
+ * @property pending - Count of pending results.
+ * @property manual - Count of manual search results.
+ * @property skipped - Count of skipped results.
+ * @source
+ */
 export interface MatchFilterStats {
   matched: number;
   pending: number;
@@ -28,12 +46,29 @@ export interface MatchFilterStats {
   skipped: number;
 }
 
+/**
+ * Props for the MatchFilterControls component.
+ *
+ * @property statusFilters - Current filter state.
+ * @property setStatusFilters - Callback to update filter state.
+ * @property matchStats - Statistics for filter display.
+ * @source
+ */
 export interface MatchFilterControlsProps {
   statusFilters: StatusFiltersState;
   setStatusFilters: Dispatch<SetStateAction<StatusFiltersState>>;
   matchStats: MatchFilterStats;
 }
 
+/**
+ * Displays filter control buttons for manga match statuses.
+ *
+ * Allows users to toggle visibility of matched, pending, manual, and skipped items.
+ *
+ * @param props - The component props.
+ * @returns The rendered filter controls.
+ * @source
+ */
 function MatchFilterControlsComponent({
   statusFilters,
   setStatusFilters,
@@ -125,7 +160,7 @@ function MatchFilterControlsComponent({
 
   return (
     <Card className="relative mb-4 overflow-hidden rounded-3xl border border-white/40 bg-white/75 shadow-xl shadow-slate-900/5 backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/70">
-      <div className="pointer-events-none absolute top-0 -left-12 h-48 w-48 rounded-full bg-sky-400/15 blur-3xl" />
+      <div className="pointer-events-none absolute -left-12 top-0 h-48 w-48 rounded-full bg-sky-400/15 blur-3xl" />
       <div className="pointer-events-none absolute -right-16 bottom-0 h-56 w-56 rounded-full bg-purple-500/15 blur-3xl" />
       <CardHeader className="relative z-10 flex flex-col gap-2 border-b border-white/40 pb-4 md:flex-row md:items-center md:justify-between dark:border-slate-800/60">
         <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
@@ -146,7 +181,7 @@ function MatchFilterControlsComponent({
             variant="ghost"
             size="sm"
             onClick={() => setStatuses(true)}
-            className="h-8 gap-2 rounded-full border border-white/40 bg-white/40 px-3 text-xs font-semibold tracking-wide text-slate-500 uppercase hover:bg-white/70 dark:border-slate-700/60 dark:bg-slate-900/60 dark:text-slate-300"
+            className="h-8 gap-2 rounded-full border border-white/40 bg-white/40 px-3 text-xs font-semibold uppercase tracking-wide text-slate-500 hover:bg-white/70 dark:border-slate-700/60 dark:bg-slate-900/60 dark:text-slate-300"
           >
             <Layers className="h-3.5 w-3.5" />
             Select All
@@ -155,7 +190,7 @@ function MatchFilterControlsComponent({
             variant="ghost"
             size="sm"
             onClick={() => setStatuses(false)}
-            className="h-8 gap-2 rounded-full border border-white/40 bg-white/40 px-3 text-xs font-semibold tracking-wide text-slate-500 uppercase hover:bg-white/70 dark:border-slate-700/60 dark:bg-slate-900/60 dark:text-slate-300"
+            className="h-8 gap-2 rounded-full border border-white/40 bg-white/40 px-3 text-xs font-semibold uppercase tracking-wide text-slate-500 hover:bg-white/70 dark:border-slate-700/60 dark:bg-slate-900/60 dark:text-slate-300"
           >
             <Sparkles className="h-3.5 w-3.5" />
             Clear All
@@ -164,7 +199,7 @@ function MatchFilterControlsComponent({
             variant="ghost"
             size="sm"
             onClick={focusPending}
-            className="h-8 gap-2 rounded-full border border-amber-400/30 bg-amber-500/10 px-3 text-xs font-semibold tracking-wide text-amber-600 uppercase hover:bg-amber-500/20 dark:border-amber-500/30 dark:text-amber-200"
+            className="h-8 gap-2 rounded-full border border-amber-400/30 bg-amber-500/10 px-3 text-xs font-semibold uppercase tracking-wide text-amber-600 hover:bg-amber-500/20 dark:border-amber-500/30 dark:text-amber-200"
           >
             <Target className="h-3.5 w-3.5" />
             Focus Pending
@@ -173,7 +208,7 @@ function MatchFilterControlsComponent({
             variant="ghost"
             size="sm"
             onClick={reviewedOnly}
-            className="h-8 gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 text-xs font-semibold tracking-wide text-emerald-600 uppercase hover:bg-emerald-500/20 dark:border-emerald-500/30 dark:text-emerald-200"
+            className="h-8 gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 text-xs font-semibold uppercase tracking-wide text-emerald-600 hover:bg-emerald-500/20 dark:border-emerald-500/30 dark:text-emerald-200"
           >
             <CheckCircle2 className="h-3.5 w-3.5" />
             Reviewed Only
@@ -218,7 +253,7 @@ function MatchFilterControlsComponent({
                         {count}
                       </Badge>
                     </div>
-                    <span className="text-xs font-medium tracking-wide text-slate-500 uppercase dark:text-slate-400">
+                    <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                       {isActive ? "Visible" : "Hidden"}
                     </span>
                   </div>
@@ -232,6 +267,7 @@ function MatchFilterControlsComponent({
   );
 }
 
+/** Memoized MatchFilterControls component for performance optimization. @source */
 const MatchFilterControls = React.memo(MatchFilterControlsComponent);
 MatchFilterControls.displayName = "MatchFilterControls";
 

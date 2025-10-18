@@ -5,19 +5,13 @@
  */
 
 /**
- * Calculate similarity in word order between two word arrays
- * Returns a value between 0-1 where 1 means perfect order match
- * Uses longest common subsequence (LCS) for better order detection
+ * Calculate word order similarity using longest common subsequence.
+ * Combines order preservation, position proximity, and word coverage.
  *
  * @param words1 - First array of words to compare
  * @param words2 - Second array of words to compare
- * @returns Order similarity score between 0-1
- *
- * @example
- * ```typescript
- * calculateWordOrderSimilarity(["one", "piece"], ["piece", "one"])
- * // Returns: ~0.7 (order differs, so penalty applied)
- * ```
+ * @returns Order similarity score between 0 and 1
+ * @source
  */
 export function calculateWordOrderSimilarity(
   words1: string[],
@@ -67,8 +61,12 @@ export function calculateWordOrderSimilarity(
 }
 
 /**
- * Calculate longest common subsequence length between two word arrays
- * Helper function for word order similarity
+ * Calculate longest common subsequence length between two word arrays.
+ *
+ * @param words1 - First array of words
+ * @param words2 - Second array of words
+ * @returns Length of the longest common subsequence
+ * @source
  */
 function calculateLCS(words1: string[], words2: string[]): number {
   const m = words1.length;
@@ -95,18 +93,12 @@ function calculateLCS(words1: string[], words2: string[]): number {
 }
 
 /**
- * Check if a title contains the complete search term as a unit
- * Returns a score from 0-1 based on how significant the contained title is
+ * Check if title contains the complete search term and return significance score.
  *
  * @param normalizedTitle - The normalized manga title
  * @param normalizedSearchTitle - The normalized search title
- * @returns Significance score (0-1) of how much of the title the search represents
- *
- * @example
- * ```typescript
- * containsCompleteTitle("one piece season 2", "one piece")
- * // Returns: 0.5 (search term is half the full title)
- * ```
+ * @returns Significance score between 0 and 1 (search term portion of full title)
+ * @source
  */
 export function containsCompleteTitle(
   normalizedTitle: string,
@@ -121,17 +113,13 @@ export function containsCompleteTitle(
 }
 
 /**
- * Calculate word matching score between title and search words
+ * Calculate word matching score between title and search words.
+ * Returns high score if enough words match, -1 if insufficient match.
  *
  * @param titleWords - Array of words from the manga title
  * @param searchWords - Array of words from the search query
- * @returns Word matching score or -1 if no sufficient match
- *
- * @example
- * ```typescript
- * calculateWordMatchScore(["one", "piece", "manga"], ["one", "piece"])
- * // Returns: 0.9 (high word match ratio)
- * ```
+ * @returns Word match score (0.75+) or -1 if below threshold
+ * @source
  */
 export function calculateWordMatchScore(
   titleWords: string[],

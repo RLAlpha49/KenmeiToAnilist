@@ -44,12 +44,20 @@ import { DebugMenu } from "../debug/DebugMenu";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/utils/tailwind";
 
+/**
+ * Navigation item configuration for header navigation menu.
+ * @property label - Display label for the navigation item.
+ * @property to - Route path for TanStack Router navigation.
+ * @property icon - Lucide icon component for the navigation item.
+ * @source
+ */
 type NavItem = {
   label: string;
   to: string;
   icon: LucideIcon;
 };
 
+/** Navigation menu items array with label, route, and icon for each page. @source */
 const NAV_ITEMS: NavItem[] = [
   { label: "Home", to: "/", icon: Home },
   { label: "Import", to: "/import", icon: Download },
@@ -89,14 +97,14 @@ export function Header() {
                   <img src={appIcon} alt="K2A Logo" className="h-8 w-8" />
                 </motion.div>
                 <div className="overflow-hidden whitespace-nowrap">
-                  <p className="text-muted-foreground text-xs tracking-[0.4em] uppercase">
+                  <p className="text-muted-foreground text-xs uppercase tracking-[0.4em]">
                     Sync Tool
                   </p>
-                  <h1 className="font-mono text-lg leading-tight font-semibold">
-                    <span className="hidden bg-gradient-to-r from-blue-500 via-purple-500 to-fuchsia-500 bg-clip-text text-transparent min-[44rem]:inline">
+                  <h1 className="font-mono text-lg font-semibold leading-tight">
+                    <span className="min-[44rem]:inline hidden bg-gradient-to-r from-blue-500 via-purple-500 to-fuchsia-500 bg-clip-text text-transparent">
                       Kenmei → AniList
                     </span>
-                    <span className="inline bg-gradient-to-r from-blue-500 via-purple-500 to-fuchsia-500 bg-clip-text text-transparent max-[44rem]:inline min-[44rem]:hidden">
+                    <span className="max-[44rem]:inline min-[44rem]:hidden inline bg-gradient-to-r from-blue-500 via-purple-500 to-fuchsia-500 bg-clip-text text-transparent">
                       K2A
                     </span>
                   </h1>
@@ -106,7 +114,7 @@ export function Header() {
               {/* Always visible navigation - icon-only on small screens, icon+text on larger screens */}
               <div className="non-draggable">
                 <NavigationMenu>
-                  <NavigationMenuList className="bg-background/60 flex rounded-full p-1 text-xs font-medium shadow-inner ring-1 shadow-black/5 ring-white/40 backdrop-blur-sm dark:bg-slate-950/60 dark:ring-white/10">
+                  <NavigationMenuList className="bg-background/60 flex rounded-full p-1 text-xs font-medium shadow-inner shadow-black/5 ring-1 ring-white/40 backdrop-blur-sm dark:bg-slate-950/60 dark:ring-white/10">
                     {NAV_ITEMS.map(({ label, to, icon: Icon }) => {
                       const isActive =
                         to === "/" ? pathname === "/" : pathname.startsWith(to);
@@ -117,8 +125,8 @@ export function Header() {
                               <NavigationMenuLink
                                 asChild
                                 className={cn(
-                                  "group text-muted-foreground inline-flex h-9 items-center justify-center rounded-full px-3 text-xs font-medium tracking-wide transition-all",
-                                  "hover:text-foreground focus-visible:ring-primary/40 hover:bg-white/70 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent focus-visible:outline-hidden",
+                                  "text-muted-foreground group inline-flex h-9 items-center justify-center rounded-full px-3 text-xs font-medium tracking-wide transition-all",
+                                  "hover:text-foreground focus-visible:ring-primary/40 focus-visible:outline-hidden hover:bg-white/70 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
                                   "data-[state=open]:text-primary data-[state=open]:bg-white/80 dark:hover:bg-slate-900/70 dark:data-[state=open]:bg-slate-900/80",
                                   isActive &&
                                     "text-primary bg-white/80 dark:bg-slate-900/80",

@@ -5,7 +5,8 @@
  */
 
 /**
- * Page-level animation variants for fade in/out transitions
+ * Page-level animation variants for fade in/out transitions.
+ * @source
  */
 export const pageVariants = {
   hidden: { opacity: 0 },
@@ -14,7 +15,8 @@ export const pageVariants = {
 };
 
 /**
- * Card animation variants with vertical slide and fade
+ * Card animation variants with vertical slide and fade.
+ * @source
  */
 export const cardVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -29,7 +31,8 @@ export const cardVariants = {
 };
 
 /**
- * Container animation variants for staggered children animations
+ * Container animation variants for staggered children animations.
+ * @source
  */
 export const staggerContainerVariants = {
   hidden: { opacity: 0 },
@@ -43,7 +46,8 @@ export const staggerContainerVariants = {
 };
 
 /**
- * Transition configuration for view mode changes
+ * Transition configuration for view mode changes.
+ * @source
  */
 export const viewModeTransition = {
   type: "tween" as const,
@@ -52,7 +56,8 @@ export const viewModeTransition = {
 };
 
 /**
- * Simple fade animation variants without size or position changes
+ * Simple fade animation variants without size or position changes.
+ * @source
  */
 export const fadeVariants = {
   hidden: { opacity: 0 },

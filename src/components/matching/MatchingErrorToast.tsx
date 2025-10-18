@@ -1,11 +1,25 @@
 import React from "react";
 import { motion } from "framer-motion";
 
+/**
+ * Props for the MatchingErrorToast component.
+ *
+ * @property error - Error message to display, or null to hide the toast.
+ * @property onDismiss - Callback when the dismiss button is clicked.
+ * @source
+ */
 interface Props {
   error: string | null;
   onDismiss: () => void;
 }
 
+/**
+ * Displays a dismissible error notification toast in the bottom-right corner.
+ *
+ * @param props - The component props.
+ * @returns The rendered error toast or null if no error.
+ * @source
+ */
 export default function MatchingErrorToast({
   error,
   onDismiss,
@@ -14,7 +28,7 @@ export default function MatchingErrorToast({
 
   return (
     <motion.div
-      className="fixed right-4 bottom-4 max-w-sm rounded-md bg-red-50 p-4 shadow-lg dark:bg-red-900/30"
+      className="fixed bottom-4 right-4 max-w-sm rounded-md bg-red-50 p-4 shadow-lg dark:bg-red-900/30"
       initial={{ opacity: 0, x: 20, y: 20 }}
       animate={{ opacity: 1, x: 0, y: 0 }}
       exit={{ opacity: 0, x: 20 }}

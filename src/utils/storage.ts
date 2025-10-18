@@ -15,7 +15,9 @@ declare global {
 }
 
 /**
- * Represents a manga entry in Kenmei.
+ * Represents a manga entry from the Kenmei import.
+ *
+ * Contains metadata about a manga item including reading status, score, and progress.
  *
  * @source
  */
@@ -33,7 +35,9 @@ export interface KenmeiManga {
 }
 
 /**
- * Represents the Kenmei data structure.
+ * Represents the complete Kenmei data structure.
+ *
+ * Contains the collection of manga items and other import metadata.
  *
  * @source
  */
@@ -43,7 +47,9 @@ export interface KenmeiData {
 }
 
 /**
- * Represents import statistics for Kenmei data.
+ * Statistics tracking the import of Kenmei data.
+ *
+ * Counts total manga imported and breaks down by status category.
  *
  * @source
  */
@@ -54,7 +60,9 @@ export interface ImportStats {
 }
 
 /**
- * Represents an AniList match for a manga entry.
+ * Represents an AniList manga match with metadata.
+ *
+ * Minimal representation of an AniList manga entry returned from search/lookup operations.
  *
  * @source
  */
@@ -75,7 +83,10 @@ export interface AnilistMatch {
 }
 
 /**
- * Represents a match result between Kenmei and AniList.
+ * Represents a match result between a Kenmei manga entry and AniList candidates.
+ *
+ * Tracks the original Kenmei entry, available AniList matches, the user's selection,
+ * and the status of the matching process.
  *
  * @source
  */
@@ -88,22 +99,34 @@ export interface MatchResult {
 }
 
 /**
- * In-memory cache for storage values to avoid redundant operations.
+ * In-memory cache for storage operations to reduce redundant reads.
+ *
+ * Helps minimize repeated access to localStorage and electron-store.
+ * Cleared on application restart; not persisted.
  *
  * @source
  */
 export const storageCache: Record<string, string> = {};
 
 /**
- * Storage utility to abstract storage operations. Replaces direct localStorage usage with electron-store for persistence.
+ * Storage abstraction layer combining in-memory cache, localStorage, and electron-store.
+ *
+ * Provides a unified interface for persistent storage that respects the three-layer hierarchy:
+ * cache → localStorage → electron-store (authoritative source).
+ * All operations are internally consistent across layers.
  *
  * @source
  */
 export const storage = {
   /**
-   * Get an item from storage
-   * @param key The key of the item to get
-   * @returns The stored value or null if not found
+   * Retrieves a value from storage (cache → localStorage).
+   *
+   * Checks in-memory cache first, then falls back to localStorage. For most accurate data
+   * that reflects electron-store state, use async getter functions instead.
+   *
+   * @param key - The storage key.
+   * @returns The stored value, or null if not found.
+   * @source
    */
   getItem: (key: string): string | null => {
     try {
@@ -129,9 +152,14 @@ export const storage = {
   },
 
   /**
-   * Set an item in storage
-   * @param key The key to store the value under
-   * @param value The value to store
+   * Stores a value across all storage layers (cache → localStorage → electron-store).
+   *
+   * Updates cache immediately and syncs to localStorage and electron-store asynchronously.
+   * Skips redundant writes if the value hasn't changed.
+   *
+   * @param key - The storage key.
+   * @param value - The value to store.
+   * @source
    */
   setItem: (key: string, value: string): void => {
     try {
@@ -169,8 +197,12 @@ export const storage = {
   },
 
   /**
-   * Remove an item from storage
-   * @param key The key of the item to remove
+   * Removes a value from all storage layers (cache, localStorage, electron-store).
+   *
+   * Synchronously removes from cache and localStorage, asynchronously from electron-store.
+   *
+   * @param key - The storage key to remove.
+   * @source
    */
   removeItem: (key: string): void => {
     try {
@@ -200,7 +232,11 @@ export const storage = {
   },
 
   /**
-   * Clear all items from storage
+   * Clears all items from all storage layers (cache, localStorage, electron-store).
+   *
+   * Complete reset of all stored data across all persistence layers.
+   *
+   * @source
    */
   clear: (): void => {
     try {
@@ -229,10 +265,14 @@ export const storage = {
   },
 
   /**
-   * Async get an item from storage, always preferring Electron storage if available.
-   * Updates localStorage for compatibility.
-   * @param key The key of the item to get
-   * @returns Promise<string | null>
+   * Asynchronously retrieves a value from storage, preferring electron-store if available.
+   *
+   * Checks electron-store first (authoritative source), falls back to localStorage,
+   * and keeps both layers synchronized.
+   *
+   * @param key - The storage key.
+   * @returns A promise resolving to the stored value or null if not found.
+   * @source
    */
   getItemAsync: async (key: string): Promise<string | null> => {
     if (globalThis.electronStore) {
@@ -268,9 +308,12 @@ export const storage = {
 };
 
 /**
- * Initialize storage by syncing electron-store to localStorage
- * This ensures both storage layers are in sync on app startup
- * Call this once during app initialization
+ * Initializes storage by syncing electron-store to localStorage on app startup.
+ *
+ * Ensures both storage layers are in sync and loads cached values.
+ * Should be called once during app initialization.
+ *
+ * @source
  */
 export async function initializeStorage(): Promise<void> {
   if (!globalThis.electronStore) {
@@ -412,11 +455,9 @@ export const DEFAULT_MATCH_CONFIG: MatchConfig = {
 /**
  * Saves Kenmei manga data to storage and updates import stats and cache version.
  *
+ * Also calculates and saves import statistics for quick dashboard access.
+ *
  * @param data - The Kenmei data to save.
- * @example
- * ```ts
- * saveKenmeiData(data);
- * ```
  * @source
  */
 export function saveKenmeiData(data: KenmeiData): void {
@@ -454,13 +495,9 @@ export function saveKenmeiData(data: KenmeiData): void {
 }
 
 /**
- * Gets Kenmei manga data from storage.
+ * Retrieves Kenmei manga data from storage.
  *
  * @returns The saved Kenmei data or null if not found.
- * @example
- * ```ts
- * const data = getKenmeiData();
- * ```
  * @source
  */
 export function getKenmeiData(): KenmeiData | null {
@@ -486,13 +523,9 @@ export function getKenmeiData(): KenmeiData | null {
 }
 
 /**
- * Gets import statistics from storage.
+ * Retrieves import statistics from storage.
  *
  * @returns The import stats or null if not found.
- * @example
- * ```ts
- * const stats = getImportStats();
- * ```
  * @source
  */
 export function getImportStats(): ImportStats | null {
@@ -518,10 +551,13 @@ export function getImportStats(): ImportStats | null {
 }
 
 /**
+ * Calculates status counts from Kenmei data.
+ *
+ * Aggregates the number of manga entries for each reading status.
+ *
+ * @param data - The Kenmei data to analyze.
+ * @returns An object mapping status strings to entry counts.
  * @internal
- * Calculate status counts from Kenmei data
- * @param data The Kenmei data
- * @returns An object with counts for each status
  * @source
  */
 export function getStatusCountsFromData(
@@ -540,13 +576,11 @@ export function getStatusCountsFromData(
 }
 
 /**
- * Gets saved match results from storage, checking cache version compatibility.
+ * Retrieves saved match results from storage with cache version compatibility check.
+ *
+ * Validates the cache version before returning to ensure data is compatible with current app.
  *
  * @returns The saved match results or null if not found or incompatible.
- * @example
- * ```ts
- * const results = getSavedMatchResults();
- * ```
  * @source
  */
 export function getSavedMatchResults(): MatchResult[] | null {
@@ -585,12 +619,11 @@ export function getSavedMatchResults(): MatchResult[] | null {
 /**
  * Merges new match results with existing ones to preserve user progress.
  *
- * @param newResults - The new matching results.
- * @returns Merged results with preserved user progress.
- * @example
- * ```ts
- * const merged = mergeMatchResults(newResults);
- * ```
+ * Maintains user selections and review status while updating with new match candidates.
+ * Results not present in the new batch are preserved.
+ *
+ * @param newResults - The new matching results to merge.
+ * @returns Merged results with preserved user progress and selections.
  * @source
  */
 export function mergeMatchResults(newResults: MatchResult[]): MatchResult[] {
@@ -728,11 +761,9 @@ export function mergeMatchResults(newResults: MatchResult[]): MatchResult[] {
 /**
  * Saves sync configuration to storage.
  *
+ * Persists user's sync preferences across sessions.
+ *
  * @param config - The sync configuration to save.
- * @example
- * ```ts
- * saveSyncConfig(config);
- * ```
  * @source
  */
 export function saveSyncConfig(config: SyncConfig): void {
@@ -744,13 +775,11 @@ export function saveSyncConfig(config: SyncConfig): void {
 }
 
 /**
- * Gets sync configuration from storage.
+ * Retrieves sync configuration from storage.
  *
- * @returns The saved sync configuration or default config if not found.
- * @example
- * ```ts
- * const config = getSyncConfig();
- * ```
+ * Falls back to default configuration if not found or on error.
+ *
+ * @returns The saved sync configuration or default if not found.
  * @source
  */
 export function getSyncConfig(): SyncConfig {
@@ -766,11 +795,9 @@ export function getSyncConfig(): SyncConfig {
 /**
  * Saves match configuration to storage.
  *
+ * Persists user's match preferences and filters across sessions.
+ *
  * @param config - The match configuration to save.
- * @example
- * ```ts
- * saveMatchConfig(config);
- * ```
  * @source
  */
 export function saveMatchConfig(config: MatchConfig): void {
@@ -782,13 +809,11 @@ export function saveMatchConfig(config: MatchConfig): void {
 }
 
 /**
- * Gets match configuration from storage.
+ * Retrieves match configuration from storage.
  *
- * @returns The saved match configuration or default config if not found.
- * @example
- * ```ts
- * const config = getMatchConfig();
- * ```
+ * Falls back to default configuration if not found or on error.
+ *
+ * @returns The saved match configuration or default if not found.
  * @source
  */
 export function getMatchConfig(): MatchConfig {
@@ -805,7 +830,9 @@ export function getMatchConfig(): MatchConfig {
 }
 
 /**
- * Interface for tracking ignored duplicate AniList entries
+ * Represents an AniList entry that has been marked as a duplicate to ignore.
+ *
+ * @source
  */
 export interface IgnoredDuplicate {
   anilistId: number;
@@ -814,10 +841,12 @@ export interface IgnoredDuplicate {
 }
 
 /**
- * Save an ignored duplicate entry to storage
+ * Marks an AniList entry as ignored duplicate for future operations.
  *
- * @param anilistId - The AniList ID to ignore
- * @param anilistTitle - The AniList title
+ * Prevents this entry from being offered as a match in future sessions.
+ *
+ * @param anilistId - The AniList ID to ignore.
+ * @param anilistTitle - The AniList title for reference.
  * @source
  */
 export function addIgnoredDuplicate(
@@ -846,9 +875,9 @@ export function addIgnoredDuplicate(
 }
 
 /**
- * Get all ignored duplicate entries from storage
+ * Retrieves all ignored duplicate entries from storage.
  *
- * @returns Array of ignored duplicate entries
+ * @returns Array of ignored duplicate entries, or empty array if none exist.
  * @source
  */
 export function getIgnoredDuplicates(): IgnoredDuplicate[] {
@@ -865,9 +894,11 @@ export function getIgnoredDuplicates(): IgnoredDuplicate[] {
 }
 
 /**
- * Remove an ignored duplicate entry from storage
+ * Removes an AniList entry from the ignored duplicates list.
  *
- * @param anilistId - The AniList ID to un-ignore
+ * Allows this entry to be offered as a match again in future operations.
+ *
+ * @param anilistId - The AniList ID to un-ignore.
  * @source
  */
 export function removeIgnoredDuplicate(anilistId: number): void {
@@ -884,7 +915,9 @@ export function removeIgnoredDuplicate(anilistId: number): void {
 }
 
 /**
- * Clear all ignored duplicate entries from storage
+ * Clears all ignored duplicate entries from storage.
+ *
+ * Resets the duplicate ignore list, allowing all previously ignored entries to be offered again.
  *
  * @source
  */
@@ -900,10 +933,10 @@ export function clearIgnoredDuplicates(): void {
 }
 
 /**
- * Check if a specific AniList ID is ignored
+ * Checks whether a specific AniList ID is in the ignored duplicates list.
  *
- * @param anilistId - The AniList ID to check
- * @returns True if the ID is ignored, false otherwise
+ * @param anilistId - The AniList ID to check.
+ * @returns True if the ID is ignored, false otherwise.
  * @source
  */
 export function isAniListIdIgnored(anilistId: number): boolean {

@@ -26,7 +26,6 @@ import { Button } from "../ui/button";
 
 /**
  * Props for the SyncResultsView component.
- *
  * @property report - The synchronization report containing results and errors.
  * @property onClose - Callback to close the results view.
  * @property onExportErrors - Optional callback to export the error log.
@@ -38,6 +37,11 @@ export interface SyncResultsViewProps {
   onExportErrors?: () => void;
 }
 
+/**
+ * Display comprehensive synchronization results including success rate, statistics, and error details.
+ * Shows summary of successful/failed/skipped updates with detailed error log and export capability.
+ * @source
+ */
 const SyncResultsView: React.FC<SyncResultsViewProps> = ({
   report,
   onClose,
@@ -82,7 +86,7 @@ const SyncResultsView: React.FC<SyncResultsViewProps> = ({
       <CardHeader className="relative space-y-4 pb-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold tracking-[0.28em] text-slate-500 uppercase dark:text-slate-400">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500 dark:text-slate-400">
               Sync report
             </p>
             <CardTitle className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-100">
@@ -92,11 +96,11 @@ const SyncResultsView: React.FC<SyncResultsViewProps> = ({
               Completed on {formattedTime}
             </CardDescription>
           </div>
-          <div className="flex h-18 w-18 flex-col items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/30">
-            <span className="text-[10px] tracking-[0.25em] uppercase">
+          <div className="h-18 w-18 flex flex-col items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/30">
+            <span className="text-[10px] uppercase tracking-[0.25em]">
               Success
             </span>
-            <span className="text-2xl leading-tight font-bold">
+            <span className="text-2xl font-bold leading-tight">
               {successRate}%
             </span>
           </div>
@@ -133,7 +137,7 @@ const SyncResultsView: React.FC<SyncResultsViewProps> = ({
                 <CheckCircle className="h-4 w-4 text-emerald-500 dark:text-emerald-300" />
                 Successful updates
               </div>
-              <p className="text-3xl leading-none font-bold text-emerald-600 dark:text-emerald-200">
+              <p className="text-3xl font-bold leading-none text-emerald-600 dark:text-emerald-200">
                 {report.successfulUpdates}
               </p>
               <span className="text-xs text-emerald-600/80 dark:text-emerald-200/70">
@@ -149,7 +153,7 @@ const SyncResultsView: React.FC<SyncResultsViewProps> = ({
                 <XCircle className="h-4 w-4 text-rose-500 dark:text-rose-300" />
                 Failed updates
               </div>
-              <p className="text-3xl leading-none font-bold text-rose-600 dark:text-rose-200">
+              <p className="text-3xl font-bold leading-none text-rose-600 dark:text-rose-200">
                 {report.failedUpdates}
               </p>
               <span className="text-xs text-rose-600/80 dark:text-rose-200/70">
@@ -165,7 +169,7 @@ const SyncResultsView: React.FC<SyncResultsViewProps> = ({
                 <Clock className="h-4 w-4 text-amber-500 dark:text-amber-300" />
                 Skipped entries
               </div>
-              <p className="text-3xl leading-none font-bold text-amber-600 dark:text-amber-200">
+              <p className="text-3xl font-bold leading-none text-amber-600 dark:text-amber-200">
                 {report.skippedEntries}
               </p>
               <span className="text-xs text-amber-600/80 dark:text-amber-200/70">
@@ -183,7 +187,7 @@ const SyncResultsView: React.FC<SyncResultsViewProps> = ({
                 <Gauge className="h-4 w-4 text-indigo-500 dark:text-indigo-300" />
                 Total processed
               </div>
-              <p className="text-3xl leading-none font-bold text-slate-700 dark:text-slate-200">
+              <p className="text-3xl font-bold leading-none text-slate-700 dark:text-slate-200">
                 {report.totalEntries}
               </p>
               <span className="text-xs text-slate-600/80 dark:text-slate-300/70">
@@ -204,7 +208,7 @@ const SyncResultsView: React.FC<SyncResultsViewProps> = ({
               style={{ width: `${successRate}%` }}
             />
           </div>
-          <div className="mt-3 flex justify-between text-[10px] tracking-[0.3em] text-slate-500 uppercase dark:text-slate-400">
+          <div className="mt-3 flex justify-between text-[10px] uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
             <span>0%</span>
             <span>50%</span>
             <span>100%</span>

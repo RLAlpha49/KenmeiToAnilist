@@ -1,22 +1,17 @@
 /**
- * @packageDocumentation
- * @module Matching/Normalization/PatternDetection
- * @description Pattern detection utilities for manga format and season detection
+ * Pattern detection utilities for manga format and season/part detection.
+ * Identifies one-shots and distinguishes season/part variants of series.
+ * @module normalization/pattern-detection
  */
 
 import { AniListManga } from "../../anilist/types";
 
 /**
- * Checks if a manga is a one-shot format
- *
- * @param manga - The manga data to check
- * @returns True if the manga is a one-shot
- *
- * @example
- * ```typescript
- * isOneShot({ format: "ONE_SHOT", chapters: 1 })
- * // Returns: true
- * ```
+ * Checks if a manga is in one-shot format.
+ * One-shots have format "ONE_SHOT", single chapter, or single volume.
+ * @param manga - The manga data to check.
+ * @returns True if the manga is a one-shot.
+ * @source
  */
 export function isOneShot(manga: AniListManga): boolean {
   return (
@@ -27,17 +22,12 @@ export function isOneShot(manga: AniListManga): boolean {
 }
 
 /**
- * Checks if two titles differ only by season/part numbering
- *
- * @param kenmeiTitle - The title from Kenmei
- * @param anilistTitle - The title from AniList
- * @returns Similarity score (0-1) if season pattern detected, or -1 if no pattern
- *
- * @example
- * ```typescript
- * checkSeasonPattern("One Piece Season 2", "One Piece")
- * // Returns: 0.95
- * ```
+ * Detects if two titles differ only by season/part/volume numbering patterns.
+ * Supports Season, Part, Volume, Tome, Arc, and Cour patterns with Arabic and Roman numerals.
+ * @param kenmeiTitle - The title from Kenmei.
+ * @param anilistTitle - The title from AniList.
+ * @returns Similarity score 0.95 if only season patterns differ, -1 if no pattern detected.
+ * @source
  */
 export function checkSeasonPattern(
   kenmeiTitle: string,
@@ -110,11 +100,11 @@ export function checkSeasonPattern(
 }
 
 /**
- * Wrapper for checkSeasonPattern that logs matches
- *
- * @param kenmeiTitle - The title from Kenmei
- * @param anilistTitle - The title from AniList
- * @returns Similarity score (0-1) if season pattern detected, or -1 if no pattern
+ * Wrapper for `checkSeasonPattern` that logs detected season pattern matches.
+ * @param kenmeiTitle - The title from Kenmei.
+ * @param anilistTitle - The title from AniList.
+ * @returns Similarity score 0.95 if only season patterns differ, -1 if no pattern detected.
+ * @source
  */
 export function checkSeasonPatterns(
   kenmeiTitle: string,

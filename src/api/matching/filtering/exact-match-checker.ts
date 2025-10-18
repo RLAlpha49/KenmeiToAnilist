@@ -1,5 +1,5 @@
 /**
- * Exact match validation for filtering
+ * Exact match validation for manga filtering.
  * @module filtering/exact-match-checker
  */
 
@@ -8,10 +8,12 @@ import { normalizeForMatching } from "../normalization";
 import { calculateEnhancedSimilarity } from "../../../utils/enhanced-similarity";
 
 /**
- * Check if a manga's titles match the search title exactly (or very closely)
- * @param manga - The manga to check
- * @param searchTitle - The search title to match against
- * @returns True if there's an exact or near-exact match
+ * Checks if a manga's titles match the search title exactly or near-exactly.
+ * Performs multi-stage verification: normalized comparison, similarity scoring, and word matching.
+ * @param manga - The manga to validate.
+ * @param searchTitle - The search title to match against.
+ * @returns True if an exact or near-exact match is found.
+ * @source
  */
 export function checkExactMatch(
   manga: AniListManga,

@@ -9,7 +9,14 @@ import { STATUS_MAPPING, KenmeiStatus } from "../../api/kenmei/types";
 import { SyncConfig } from "../../utils/storage";
 
 /**
- * Kenmei manga data structure for status calculation
+ * Kenmei manga data structure for status calculation.
+ * @property status - Reading status in Kenmei.
+ * @property updated_at - Last update timestamp.
+ * @property last_read_at - Last read timestamp (optional).
+ * @property title - Manga title.
+ * @property chapters_read - Number of chapters read (optional).
+ * @property score - User rating (optional).
+ * @source
  */
 export interface KenmeiMangaData {
   status: string;
@@ -21,7 +28,12 @@ export interface KenmeiMangaData {
 }
 
 /**
- * User entry data structure from AniList
+ * User entry data structure from AniList.
+ * @property status - Current reading status.
+ * @property progress - Current chapter progress.
+ * @property score - User rating (0-10).
+ * @property private - Privacy setting.
+ * @source
  */
 export interface UserEntryData {
   status: string;
@@ -31,7 +43,14 @@ export interface UserEntryData {
 }
 
 /**
- * Result of sync change calculation
+ * Result of sync change calculation.
+ * @property statusWillChange - Whether status will change.
+ * @property progressWillChange - Whether progress will change.
+ * @property scoreWillChange - Whether score will change.
+ * @property isNewEntry - Whether entry is new to the library.
+ * @property isCompleted - Whether entry is completed and preserved.
+ * @property changeCount - Total number of fields that will change.
+ * @source
  */
 export interface SyncChangesResult {
   statusWillChange: boolean;
@@ -43,7 +62,13 @@ export interface SyncChangesResult {
 }
 
 /**
- * Calculates the effective status for a manga entry, considering auto-pause settings
+ * Calculate the effective status for a manga entry, considering auto-pause settings.
+ * If auto-pause is enabled and inactivity threshold is exceeded, returns PAUSED status.
+ * @param kenmei - Kenmei manga data with status and activity timestamps.
+ * @param syncConfig - Sync configuration with auto-pause settings.
+ * @returns The effective AniList media status (may be auto-paused).
+ * @throws Does not throw; logs warnings for invalid dates or thresholds.
+ * @source
  */
 export function getEffectiveStatus(
   kenmei: KenmeiMangaData,
@@ -109,7 +134,13 @@ export function getEffectiveStatus(
 }
 
 /**
- * Calculates what changes will be made when syncing a manga entry
+ * Calculate what changes will occur when syncing a manga entry.
+ * Determines which fields (status, progress, score, privacy) will change based on config priorities.
+ * @param kenmei - Kenmei manga data.
+ * @param userEntry - Existing AniList entry data (undefined if new).
+ * @param syncConfig - Sync configuration with priority settings.
+ * @returns Object describing all changes and their count.
+ * @source
  */
 export function calculateSyncChanges(
   kenmei: KenmeiMangaData,

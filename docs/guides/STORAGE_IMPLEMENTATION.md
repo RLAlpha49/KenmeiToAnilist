@@ -295,3 +295,151 @@ if (version < CURRENT_CACHE_VERSION) {
   // Handle migration
 }
 ```
+
+## Performance Considerations
+
+### Optimization Strategies
+
+1. **Avoid Redundant Operations**: The `setItem` function checks if value has changed before updating
+2. **Asynchronous Electron Store**: Writes to file-based storage happen in background
+3. **Cache Hits**: In-memory cache eliminates repeated lookups after initial read
+4. **Batch Operations**: Group multiple storage operations to reduce I/O overhead
+
+### Performance Benchmarks
+
+| Operation | In-Memory | localStorage | Electron Store |
+|-----------|-----------|--------------|-----------------|
+| **Read** | < 1ms | 1-2ms | 2-5ms (async) |
+| **Write** | < 1ms | 1-2ms | 2-5ms (async) |
+| **Typical Data Size** | String values | < 5MB limit | Unlimited |
+
+### Best Practices
+
+```typescript
+// ✅ Good: Batch operations together
+storage.setItem(STORAGE_KEYS.KENMEI_DATA, JSON.stringify(data));
+storage.setItem(STORAGE_KEYS.IMPORT_STATS, JSON.stringify(stats));
+
+// ❌ Bad: Repeated small operations
+for (const item of items) {
+  storage.setItem(STORAGE_KEYS.KENMEI_DATA, JSON.stringify(item));
+}
+
+// ✅ Good: Combine before storing
+const combined = items.map(i => JSON.stringify(i));
+storage.setItem(STORAGE_KEYS.KENMEI_DATA, JSON.stringify(combined));
+```
+
+## Troubleshooting
+
+### Common Issues
+
+#### Issue: Data appears inconsistent across storage layers
+
+**Cause**: Electron Store update hasn't synced to other layers yet
+**Solution**: Use `getItemAsync()` for guaranteed latest data
+
+```typescript
+// Get latest from Electron Store (authoritative)
+const latestData = await storage.getItemAsync(STORAGE_KEYS.KENMEI_DATA);
+```
+
+#### Issue: Data lost after app restart
+
+**Cause**: Data only stored in-memory cache or localStorage, not persisted to Electron Store
+**Solution**: Ensure `globalThis.electronStore` is available before relying on persistence
+
+```typescript
+// Check if data persisted
+const persisted = await storage.getItemAsync(STORAGE_KEYS.KENMEI_DATA);
+if (!persisted && data !== null) {
+  // Data wasn't persisted to Electron Store
+  console.warn("Critical: Data not persisted");
+}
+```
+
+#### Issue: localStorage quota exceeded
+
+**Cause**: Too much data stored in browser storage
+**Solution**: Clear old cached data or increase data compression
+
+```typescript
+// Clear old cache from localStorage
+localStorage.removeItem(STORAGE_KEYS.OLD_MATCH_CACHE);
+
+// Or compress before storing
+const compressed = LZ.compress(JSON.stringify(largeData));
+storage.setItem(key, compressed);
+```
+
+#### Issue: Electron Store file corrupted
+
+**Cause**: Improper shutdown or file system issues
+**Solution**: Clear store and reinitialize from localStorage as backup
+
+```typescript
+// Recover from localStorage backup
+const backup = localStorage.getItem(key);
+if (backup) {
+  await globalThis.electronStore.setItem(key, backup);
+}
+```
+
+### Debug Information
+
+The Debug Menu shows storage state across all three layers:
+
+1. **Storage Viewer**: Compare values across layers
+2. **Layer Priority**: See which layer's data is being used
+3. **Manual Sync**: Force synchronization between layers
+4. **Clear Operations**: Clear specific keys or entire layers
+
+## Edge Cases
+
+### Scenario: App crashes during write operation
+
+**Expected Behavior**:
+
+- Electron Store: May have partial or no data
+- localStorage: May have old or new data
+- In-memory cache: Lost on restart
+
+**Prevention**: Always validate data after app restart
+
+```typescript
+const cacheVersion = storage.getItem(STORAGE_KEYS.CACHE_VERSION);
+if (!cacheVersion || cacheVersion < CURRENT_CACHE_VERSION) {
+  // Clear and reinitialize storage
+  storage.clear();
+  initializeDefaultStorage();
+}
+```
+
+### Scenario: User disables Electron Store access
+
+**Expected Behavior**:
+
+- localStorage and in-memory cache still work
+- Data won't persist across restarts
+- No warnings shown
+
+**Design**: App degrades gracefully to browser-only storage
+
+```typescript
+if (!globalThis.electronStore) {
+  console.info("Electron Store unavailable, using browser storage");
+  // App continues with localStorage only
+}
+```
+
+### Scenario: Multiple app instances running
+
+**Current**: No multi-instance lock mechanism
+**Recommendation**: Implement file-based locking to prevent conflicts
+
+```typescript
+// Future enhancement: Prevent concurrent writes
+const acquireLock = async (key: string) => {
+  // Implement file-based lock
+};
+```

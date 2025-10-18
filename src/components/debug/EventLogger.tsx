@@ -34,6 +34,10 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 
+/**
+ * Mapping of event severity levels to display metadata (label and tone).
+ * @source
+ */
 const LEVEL_META: Record<DebugEventLevel, { label: string; tone: string }> = {
   info: { label: "Info", tone: "bg-sky-500/10 text-sky-500" },
   warn: { label: "Warn", tone: "bg-amber-500/10 text-amber-500" },
@@ -42,8 +46,15 @@ const LEVEL_META: Record<DebugEventLevel, { label: string; tone: string }> = {
   debug: { label: "Debug", tone: "bg-slate-500/10 text-slate-500" },
 };
 
+/** Number of events to show initially before "Load more" is needed. @source */
 const DEFAULT_VISIBLE_COUNT = 100;
 
+/**
+ * Formats an ISO timestamp to locale date and time string.
+ * @param timestamp - ISO 8601 timestamp string
+ * @returns Formatted locale date and time, or original string if invalid
+ * @source
+ */
 function formatTimestamp(timestamp: string): string {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) {
@@ -52,11 +63,26 @@ function formatTimestamp(timestamp: string): string {
   return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour12: false })}`;
 }
 
+/**
+ * Checks if an event matches the active type filters.
+ * @param entry - Event log entry
+ * @param filters - Array of active event types to filter by
+ * @returns True if entry matches any active filter or no filters are active
+ * @source
+ */
 function eventMatchesType(entry: DebugEventEntry, filters: string[]) {
   if (!filters.length) return true;
   return filters.includes(entry.type);
 }
 
+/**
+ * Checks if an event matches a search query across multiple fields.
+ * Searches message, type, source, context, tags, and metadata.
+ * @param entry - Event log entry
+ * @param query - Search query string
+ * @returns True if entry matches query in any searchable field
+ * @source
+ */
 function eventMatchesSearch(entry: DebugEventEntry, query: string) {
   if (!query) return true;
   const target = query.toLowerCase();
@@ -79,6 +105,10 @@ function eventMatchesSearch(entry: DebugEventEntry, query: string) {
   return haystacks.some((segment) => segment.toLowerCase().includes(target));
 }
 
+/**
+ * Props for the EventLogger header component.
+ * @source
+ */
 interface EventLoggerHeaderProps {
   filteredCount: number;
   totalCount: number;
@@ -87,6 +117,11 @@ interface EventLoggerHeaderProps {
   activeTypesCount: number;
 }
 
+/**
+ * Displays event log header with statistics and summary information.
+ * Shows counts of displayed, captured, and available event types.
+ * @source
+ */
 function EventLoggerHeader({
   filteredCount,
   totalCount,
@@ -125,6 +160,10 @@ function EventLoggerHeader({
   );
 }
 
+/**
+ * Props for the filter controls component.
+ * @source
+ */
 interface FilterControlsProps {
   availableTypes: string[];
   activeTypes: string[];
@@ -137,6 +176,10 @@ interface FilterControlsProps {
   onClear: () => void;
 }
 
+/**
+ * Filter controls for event logs including type selection, search, and action buttons.
+ * @source
+ */
 function FilterControls({
   availableTypes,
   activeTypes,
@@ -171,12 +214,20 @@ function FilterControls({
   );
 }
 
+/**
+ * Props for the type filter component.
+ * @source
+ */
 interface TypeFilterProps {
   availableTypes: string[];
   activeTypes: string[];
   onTypesChange: (types: string[]) => void;
 }
 
+/**
+ * Type filter dropdown for selecting which event types to display.
+ * @source
+ */
 function TypeFilter({
   availableTypes,
   activeTypes,
@@ -192,7 +243,7 @@ function TypeFilter({
 
   return (
     <div className="space-y-2">
-      <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+      <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
         Event types
       </p>
       <div className="flex flex-wrap gap-2">
@@ -234,12 +285,20 @@ function TypeFilter({
   );
 }
 
+/**
+ * Props for the search filter component.
+ * @source
+ */
 interface SearchFilterProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
   searchInputId: string;
 }
 
+/**
+ * Search input for filtering events by text query.
+ * @source
+ */
 function SearchFilter({
   searchTerm,
   onSearchChange,
@@ -248,13 +307,13 @@ function SearchFilter({
   return (
     <div className="space-y-2">
       <label
-        className="text-muted-foreground text-xs font-semibold tracking-wide uppercase"
+        className="text-muted-foreground text-xs font-semibold uppercase tracking-wide"
         htmlFor={searchInputId}
       >
         Search
       </label>
       <div className="relative">
-        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+        <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
         <Input
           id={searchInputId}
           value={searchTerm}
@@ -267,12 +326,20 @@ function SearchFilter({
   );
 }
 
+/**
+ * Props for the action buttons component.
+ * @source
+ */
 interface ActionButtonsProps {
   onResetFilters: () => void;
   onExport: () => void;
   onClear: () => void;
 }
 
+/**
+ * Action buttons for resetting filters, exporting events, and clearing the log.
+ * @source
+ */
 function ActionButtons({
   onResetFilters,
   onExport,
@@ -306,6 +373,10 @@ function ActionButtons({
   );
 }
 
+/**
+ * Props for the pagination controls component.
+ * @source
+ */
 interface PaginationControlsProps {
   visibleCount: number;
   filteredCount: number;
@@ -316,6 +387,10 @@ interface PaginationControlsProps {
   onResetWindow: () => void;
 }
 
+/**
+ * Pagination controls showing event count and load more functionality.
+ * @source
+ */
 function PaginationControls({
   visibleCount,
   filteredCount,
@@ -346,10 +421,18 @@ function PaginationControls({
   );
 }
 
+/**
+ * Props for the event list component.
+ * @source
+ */
 interface EventListProps {
   events: DebugEventEntry[];
 }
 
+/**
+ * Scrollable list of event cards. Shows empty state if no events provided.
+ * @source
+ */
 function EventList({ events }: Readonly<EventListProps>) {
   if (events.length === 0) {
     return <EmptyEventState />;
@@ -366,6 +449,11 @@ function EventList({ events }: Readonly<EventListProps>) {
   );
 }
 
+/**
+ * Empty state displayed when no events match the current filters.
+ * @returns JSX element for empty state message
+ * @source
+ */
 function EmptyEventState() {
   return (
     <ScrollArea type="always" className="h-full max-h-[25vh] w-full">
@@ -381,6 +469,12 @@ function EmptyEventState() {
   );
 }
 
+/**
+ * Event log viewer with filtering, search, pagination, and export functionality.
+ * Displays application and user action events with severity levels and metadata.
+ * @returns JSX element rendering the event logger panel
+ * @source
+ */
 export function EventLogger(): React.ReactElement {
   const { eventLogEntries, maxEventLogEntries } = useDebugState();
   const { clearEventLog, recordEvent } = useDebugActions();
@@ -534,10 +628,18 @@ export function EventLogger(): React.ReactElement {
   );
 }
 
+/**
+ * Props for the event card component.
+ * @source
+ */
 interface EventCardProps {
   entry: DebugEventEntry;
 }
 
+/**
+ * Card displaying a single event entry with header, body, and optional metadata.
+ * @source
+ */
 function EventCard({ entry }: Readonly<EventCardProps>) {
   const [metadataExpanded, setMetadataExpanded] = useState(false);
 
@@ -565,7 +667,7 @@ function EventCard({ entry }: Readonly<EventCardProps>) {
   };
 
   return (
-    <div className="border-border/60 bg-background/80 group hover:border-primary/40 rounded-xl border p-4 shadow-sm transition hover:shadow-md">
+    <div className="border-border/60 bg-background/80 hover:border-primary/40 group rounded-xl border p-4 shadow-sm transition hover:shadow-md">
       <EventCardHeader entry={entry} onCopy={handleCopy} />
       <EventCardBody
         entry={entry}
@@ -577,11 +679,19 @@ function EventCard({ entry }: Readonly<EventCardProps>) {
   );
 }
 
+/**
+ * Props for the event card header component.
+ * @source
+ */
 interface EventCardHeaderProps {
   entry: DebugEventEntry;
   onCopy: () => void;
 }
 
+/**
+ * Event card header with badges, timestamp, and copy button.
+ * @source
+ */
 function EventCardHeader({ entry, onCopy }: Readonly<EventCardHeaderProps>) {
   const levelMeta = entry.level ? LEVEL_META[entry.level] : null;
 
@@ -605,11 +715,19 @@ function EventCardHeader({ entry, onCopy }: Readonly<EventCardHeaderProps>) {
   );
 }
 
+/**
+ * Props for the event badges component.
+ * @source
+ */
 interface EventBadgesProps {
   entry: DebugEventEntry;
   levelMeta: { label: string; tone: string } | null;
 }
 
+/**
+ * Badges displaying event type, tags, and severity level.
+ * @source
+ */
 function EventBadges({ entry, levelMeta }: Readonly<EventBadgesProps>) {
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -639,6 +757,10 @@ function EventBadges({ entry, levelMeta }: Readonly<EventBadgesProps>) {
   );
 }
 
+/**
+ * Props for the event card body component.
+ * @source
+ */
 interface EventCardBodyProps {
   entry: DebugEventEntry;
   metadataExpanded: boolean;
@@ -646,6 +768,10 @@ interface EventCardBodyProps {
   onMetadataCopy: () => void;
 }
 
+/**
+ * Event card body with message, details, and expandable metadata section.
+ * @source
+ */
 function EventCardBody({
   entry,
   metadataExpanded,
@@ -668,10 +794,18 @@ function EventCardBody({
   );
 }
 
+/**
+ * Props for the event details component.
+ * @source
+ */
 interface EventDetailsProps {
   entry: DebugEventEntry;
 }
 
+/**
+ * Displays source and context information for an event if available.
+ * @source
+ */
 function EventDetails({ entry }: Readonly<EventDetailsProps>) {
   const hasDetails = entry.source || entry.context;
   if (!hasDetails) return null;
@@ -680,13 +814,13 @@ function EventDetails({ entry }: Readonly<EventDetailsProps>) {
     <dl className="text-muted-foreground grid gap-2 text-xs sm:grid-cols-2">
       {entry.source && (
         <div>
-          <dt className="text-[0.6rem] tracking-wide uppercase">Source</dt>
+          <dt className="text-[0.6rem] uppercase tracking-wide">Source</dt>
           <dd>{entry.source}</dd>
         </div>
       )}
       {entry.context && (
         <div>
-          <dt className="text-[0.6rem] tracking-wide uppercase">Context</dt>
+          <dt className="text-[0.6rem] uppercase tracking-wide">Context</dt>
           <dd>{entry.context}</dd>
         </div>
       )}
@@ -694,6 +828,10 @@ function EventDetails({ entry }: Readonly<EventDetailsProps>) {
   );
 }
 
+/**
+ * Props for the event metadata component.
+ * @source
+ */
 interface EventMetadataProps {
   metadata: Record<string, unknown>;
   expanded: boolean;
@@ -701,6 +839,10 @@ interface EventMetadataProps {
   onCopy: () => void;
 }
 
+/**
+ * Expandable metadata section showing event JSON with copy functionality.
+ * @source
+ */
 function EventMetadata({
   metadata,
   expanded,
@@ -715,7 +857,7 @@ function EventMetadata({
         <button
           type="button"
           onClick={onToggle}
-          className="text-left text-xs font-medium tracking-wide uppercase"
+          className="text-left text-xs font-medium uppercase tracking-wide"
         >
           <span className="flex items-center gap-2">
             <ChevronDown

@@ -14,17 +14,17 @@ import type {
 import { generateCacheKey, mangaCache } from "../cache";
 
 /**
- * Process manga with known IDs by fetching them in batches
+ * Fetch manga with known AniList IDs in batches.
  *
- * For manga entries that have anilistId already set, this function
- * fetches them in batches using getBatchedMangaIds, which is much
- * more efficient than individual searches.
+ * For manga entries with anilistId already set, fetches them via batched queries,
+ * which is more efficient than individual searches. Unfound IDs fall back to title search.
  *
- * @param data - Known manga IDs and related data
- * @param config - Search configuration and token
- * @param control - Cancellation signals
- * @param callbacks - Progress update callbacks
- * @param storage - Storage for results and source maps
+ * @param data - Known manga IDs and related data.
+ * @param config - Search configuration and AniList token.
+ * @param control - Abort signal and cancellation checks.
+ * @param callbacks - Progress update callbacks.
+ * @param storage - Storage for results and source maps.
+ * @source
  */
 export async function processKnownMangaIds(
   data: KnownMangaData,

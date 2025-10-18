@@ -9,17 +9,18 @@ import type { BatchCategorizationResult, SearchServiceConfig } from "./types";
 import { generateCacheKey, isCacheValid, mangaCache } from "../cache";
 
 /**
- * Categorizes manga list into cached, known IDs, and uncached entries
+ * Categorize manga into cached, known IDs, and uncached for batch processing.
  *
- * Separates manga into three categories:
- * - Cached: Results already in cache (immediate)
- * - Known IDs: Manga with anilistId (batch fetch)
- * - Uncached: Needs title search (sequential)
+ * Separates manga into three categories for efficient processing:
+ * - Cached: Immediate results from cache
+ * - Known IDs: Batch fetch if anilistId exists
+ * - Uncached: Requires title search
  *
- * @param mangaList - List of Kenmei manga to categorize
- * @param searchConfig - Search configuration (bypassCache flag)
- * @param updateProgress - Callback to update progress for cached entries
- * @returns Categorized manga with cached results and source maps
+ * @param mangaList - Manga to categorize.
+ * @param searchConfig - Search configuration with bypassCache flag.
+ * @param updateProgress - Progress callback for cached entries.
+ * @returns Categorized result with cached entries and uncached/known lists.
+ * @source
  */
 export function categorizeMangaForBatching(
   mangaList: KenmeiManga[],

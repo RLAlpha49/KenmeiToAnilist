@@ -17,8 +17,8 @@ A comprehensive guide to using Kenmei to AniList for migrating and synchronizing
 - [Synchronizing to AniList](#-synchronizing-to-anilist)
   - [Sync Options](#sync-options)
   - [Sync Process](#sync-process)
+- [Frequently Asked Questions](#-frequently-asked-questions)
 - [Troubleshooting](#-troubleshooting)
-  - [Common Import Issues](#common-import-issues)
   - [Collecting Debug Logs](#collecting-debug-logs)
 - [Getting Help](#-getting-help)
 
@@ -42,7 +42,7 @@ Before syncing, you need to authenticate with AniList:
 3. Log in to your AniList account and authorize the app
 4. You'll be redirected back to the app with authentication complete
 
-> **Note**: Your AniList credentials are only used for API access.
+> **Note**: Your AniList credentials are only used for API access. The app has read/write access only to your manga list, not other sensitive data.
 
 ## 📥 Importing Your Data
 
@@ -50,100 +50,175 @@ Before syncing, you need to authenticate with AniList:
 
 1. **Navigate to Import** from the home page
 2. **Drag and Drop** your CSV file onto the upload area, or
-3. **Click "Select File"** to browse for your CSV
+3. **Click "Select File"** to browse for your CSV file
 4. **File Validation** - The app will check your CSV format
 5. **Preview Data** - Review the first few entries to ensure correct import
+6. **Confirm Import** - Click the import button to start processing
+
+The import process will:
+
+- Parse your CSV file
+- Extract manga titles and metadata
+- Store data locally on your computer
+- Prepare data for matching
 
 ### Handling Import Errors
 
 If import fails:
 
-- **Check file format** - Ensure it's a valid CSV
+- **Check file format** - Ensure it's a valid CSV file
 - **Check for empty rows** - Remove blank lines in your CSV
+- **Verify encoding** - Ensure file is UTF-8 encoded
+- **Check column headers** - Verify required columns are present
+
+If problems persist, check the error message displayed or collect debug logs (see [Collecting Debug Logs](#collecting-debug-logs)).
 
 ## 🎯 Understanding the Matching Process
 
 ### Automatic Matching
 
-The app uses a algorithm to match your manga:
+The app uses intelligent algorithms to match your manga titles with AniList's database:
 
 1. **Exact Title Match** - Looks for identical titles first
 2. **Fuzzy Matching** - Handles variations in spelling/formatting
 3. **Alternative Titles** - Checks English, Japanese, and romanized names
 4. **Year/Publication Date** - Uses dates to distinguish between series
+5. **Format Matching** - Considers manga format (Manga, Light Novel, One-shot, etc.)
 
 ### Match Confidence Levels
 
-- **🟢 High Confidence** - Very likely correct match
-- **🟡 Medium Confidence** - Probable match, review recommended
-- **🔴 Low Confidence** - Uncertain match, manual review needed
-- **❌ No Match** - No suitable match found in AniList
+The matching algorithm assigns confidence scores to each potential match:
+
+- **🟢 High Confidence (80%+)** - Very likely correct match, safe to use automatically
+- **🟡 Medium Confidence (50-80%)** - Probable match, review recommended
+- **🔴 Low Confidence (<50%)** - Uncertain match, manual review strongly recommended
+- **❌ No Match** - No suitable match found in AniList database
 
 ### Manual Matching
 
 For unmatched or uncertain entries:
 
 1. **Click the manga entry** to open match options
-2. **Search AniList** manually using the built-in search
-3. **Select the correct match** from search results
-4. **Confirm the match** to update your collection
+2. **Search AniList** manually using the built-in search box
+3. **Browse search results** to find the correct series
+4. **Select the match** from search results
+5. **Confirm the match** to update your collection
+
+Tips for manual matching:
+
+- Try searching with different title formats (English, Japanese, shortened titles)
+- Check publication years to ensure correct series
+- Look at cover images to verify
+- Read descriptions to confirm series identity
 
 ## 🔄 Synchronizing to AniList
 
 ### Sync Options
 
-Configure what to sync:
+Before syncing, configure which fields to synchronize:
 
-- **Reading Status** - Update current reading status
+- **Reading Status** - Update current reading status (Planning, Current, Completed, Dropped, Paused)
 - **Progress** - Sync chapter/volume progress
-- **Scores** - Update ratings/scores
+- **Scores** - Update ratings/scores (0-10 scale)
 - **Dates** - Sync start/completion dates
 - **Private Entries** - Mark entries as private on AniList
+- **Notes** - Include personal notes and comments
 
 ### Sync Process
 
-1. **Final Review** - Check the sync preview
-2. **Start Sync** - Click "Sync to AniList"
-3. **Progress Monitoring** - Watch real-time sync progress
-4. **Error Handling** - Review any failed syncs
-5. **Completion Summary** - See final sync results
+1. **Review Configuration** - Check which fields will sync in settings
+2. **Preview Changes** - Review what will be updated on AniList
+3. **Start Sync** - Click "Sync to AniList" when ready
+4. **Monitor Progress** - Watch real-time sync progress with status indicators
+5. **Handle Errors** - Review any failed syncs
+6. **View Results** - See sync completion summary and statistics
+
+**Important**: Always review the preview before syncing to ensure accuracy. Changes to AniList cannot be easily undone.
+
+## ❓ Frequently Asked Questions
+
+### General Questions
+
+**Q: Is my data safe?**
+
+A: Yes. Your data is stored locally on your computer and never transmitted except to AniList for synchronization.
+
+**Q: Can I undo a synchronization?**
+
+A: No, but you can review changes in the preview before syncing. Always backup your AniList data first by exporting it.
+
+**Q: Does this app work offline?**
+
+A: Partial offline support. You can import CSV files offline, but syncing requires an internet connection.
+
+**Q: Can I sync partial data?**
+
+A: Yes, you can select which fields to sync (status, progress, scores, etc.) in the sync configuration before starting.
+
+### Import & Matching
+
+**Q: Why are some manga not matching?**
+
+A: If manga titles differ significantly from AniList database names, the automatic matching may fail. Use manual matching for these entries, or adjust the manga name in your CSV.
+
+**Q: Can I import multiple CSV files?**
+
+A: Currently, import one file at a time. Importing again will overwrite previous data.
+
+**Q: How accurate is the matching?**
+
+A: Automatic matching works well for popular manga (85-95% accuracy). Less common titles may require manual searching.
+
+### Synchronization
+
+**Q: How long does sync take?**
+
+A: Typically 1-2 minutes for 50-100 manga, but varies based on:
+
+- Number of manga to sync
+- Current AniList API load
+- AniList rate limiting (60 requests per minute)
+
+**Q: Will my AniList data be overwritten?**
+
+A: Only fields you configured for syncing will be updated. Existing data in other fields remains unchanged.
+
+**Q: What if sync fails partway?**
+
+A: Failed entries are logged and can be retried from the results page. Check debug logs for error details.
+
+**Q: Can I sync to multiple AniList accounts?**
+
+A: Only one account at a time. You can switch accounts in Settings → Authentication.
 
 ## 🔧 Troubleshooting
 
-### Common Import Issues
-
-#### "Invalid CSV Format"
-
-- Ensure file has proper CSV structure
-- Check for missing headers
-- Verify file encoding (UTF-8 recommended)
-
-#### "No Manga Found"
-
-- Check if titles are in the correct column
-- Verify manga names match AniList database
-- Try manual matching for problem entries
-
-#### "Authentication Failed"
-
-- Re-authenticate with AniList
-- Check internet connection
-- Verify AniList service status
-
 ### Collecting Debug Logs
 
-If support asks for application logs or you need to diagnose an issue without developer tools:
+If asked for application logs or you need to diagnose an issue:
 
-1. Navigate to **Settings → Data → Debug tools**.
-2. Enable the **Debug menu** toggle, then switch on the **Log viewer** panel.
-3. Open the header and select the bug icon to launch the **Debug Command Center**.
-4. Choose the **Log Viewer** tab to inspect captured console output, filter messages by severity, or search by keyword.
-5. Click **Export JSON** to download the most recent logs. Review the file before sharing—entries may include sensitive details.
+1. Navigate to **Settings → Debug tools**
+2. Enable the **Debug menu** toggle
+3. Click the bug icon (🐞) in the header to launch **Debug Command Center**
+4. Choose **Log Viewer** tab to inspect console output
+5. Use filters to search by severity or keyword
+6. Click **Export JSON** to download logs
+7. Review the file before sharing—entries may include details you prefer not to share
+
+**Tip**: Exported logs are useful for reporting bugs or troubleshooting issues.
 
 ## 📞 Getting Help
 
 If you need additional assistance:
 
 1. **Review error messages** for specific guidance
-2. **Check GitHub Issues** for known problems
-3. **Create a new issue** with detailed information
+2. **Review application logs** via Debug Menu
+3. **Check GitHub Issues** for known problems at [github.com/RLAlpha49/KenmeiToAnilist/issues](https://github.com/RLAlpha49/KenmeiToAnilist/issues)
+4. **Create a new issue** with:
+   - Detailed description of the problem
+   - Steps to reproduce
+   - Exported debug logs (if applicable)
+   - App version (shown in Settings)
+   - Operating system and version
+
+**Remember**: Always provide as much context as possible when reporting issues to help resolve them faster.

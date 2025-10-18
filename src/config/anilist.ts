@@ -4,8 +4,7 @@
  * @description Default configuration and constants for the AniList API, including credentials, endpoints, and rate limiting.
  */
 
-// Try to read values from environment variables, with fallbacks
-// Note: We need to use runtime checks since TypeScript doesn't recognize Vite's import.meta.env
+// Load credentials from environment variables at module initialization
 let clientId = "";
 let clientSecret = "";
 let encryptionKey = "";

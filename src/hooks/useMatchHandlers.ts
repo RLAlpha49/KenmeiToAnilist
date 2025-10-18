@@ -11,14 +11,13 @@ import { STORAGE_KEYS, storage } from "../utils/storage";
 import { useDebugActions } from "../contexts/DebugContext";
 
 /**
- * Custom React hook providing handler functions for managing manga match results and user interactions.
- *
- * @param matchResults - The current array of manga match results.
- * @param setMatchResults - State setter for updating manga match results.
- * @param setSearchTarget - State setter for the current Kenmei manga being searched.
+ * Provides handler functions for managing manga match results and user interactions during the matching workflow.
+ * @param matchResults - Current array of manga match results.
+ * @param setMatchResults - State setter for updating match results.
+ * @param setSearchTarget - State setter for the current manga being searched.
  * @param setIsSearchOpen - State setter for toggling the search panel.
  * @param setBypassCache - State setter for bypassing cache during manual search.
- * @returns An object containing handler functions for match management.
+ * @returns Object with handler functions for accepting/rejecting matches, manual search, alternative selection, and reset operations.
  * @source
  */
 export const useMatchHandlers = (
@@ -292,7 +291,6 @@ export const useMatchHandlers = (
 
   /**
    * Handles selecting an alternative match for a manga, optionally auto-accepting or directly accepting it.
-   *
    * @param match - The match result to update.
    * @param alternativeIndex - The index of the alternative to select.
    * @param autoAccept - Whether to automatically accept the selected alternative (default: false).

@@ -15,11 +15,7 @@ import type { TokenExchangeParams } from "./types/api";
 import type { IpcLogEntry } from "./types/debug";
 
 /**
- * Augment the global ImportMeta interface for Vite environment variables.
- * @source
- */
-/**
- * Represents the theme mode context for controlling the application's theme.
+ * Theme mode control interface.
  * @source
  */
 interface ThemeModeContext {
@@ -31,7 +27,7 @@ interface ThemeModeContext {
 }
 
 /**
- * Represents the Electron window controls available in the renderer process.
+ * Electron window control methods for the renderer process.
  * @source
  */
 interface ElectronWindow {
@@ -40,6 +36,10 @@ interface ElectronWindow {
   close: () => Promise<void>;
 }
 
+/**
+ * IPC debugging bridge for monitoring Electron IPC communication.
+ * @source
+ */
 interface ElectronIpcDebugBridge {
   ipc: {
     maxEntries: number;
@@ -52,7 +52,8 @@ interface ElectronIpcDebugBridge {
 }
 
 /**
- * Custom matching process state interface for global state management.
+ * Manga matching process state for UI synchronization.
+ * @source
  */
 interface MatchingProcessState {
   isRunning: boolean;

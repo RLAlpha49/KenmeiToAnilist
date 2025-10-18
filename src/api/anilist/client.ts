@@ -19,19 +19,29 @@ import {
 } from "./queries";
 import { debounce } from "@/utils/debounce";
 
-// Error interfaces
+/**
+ * HTTP error with status information.
+ * @source
+ */
 interface HttpError extends Error {
   status: number;
   statusText: string;
 }
 
+/**
+ * Rate limit error indicating request quota exceeded.
+ * @source
+ */
 interface RateLimitError extends Error {
   status: number;
   isRateLimited: true;
   retryAfter: number;
 }
 
-// Simple in-memory cache
+/**
+ * In-memory search result cache with timestamp tracking.
+ * @source
+ */
 interface Cache<T> {
   [key: string]: {
     data: T;
@@ -39,17 +49,28 @@ interface Cache<T> {
   };
 }
 
-// Cache expiration time (30 minutes)
+/**
+ * Cache expiration time in milliseconds (30 minutes).
+ * @source
+ */
 const CACHE_EXPIRATION = 30 * 60 * 1000;
 
-// Local cache for the renderer process to minimize IPC calls
+/**
+ * Local search result cache for the renderer process to minimize IPC calls.
+ * @source
+ */
 const searchCache: Cache<SearchResult<AniListManga>> = {};
 
-// Flag to track if cache has been initialized
+/**
+ * Flag indicating whether the search cache has been initialized from storage.
+ * @source
+ */
 let searchCacheInitialized = false;
 
 /**
- * Load the search cache from localStorage if available
+ * Loads the search cache from localStorage if available and not yet initialized.
+ * Merges only non-expired entries into the in-memory cache.
+ * @source
  */
 function initializeSearchCache(): void {
   // Skip if already initialized
@@ -109,8 +130,8 @@ function initializeSearchCache(): void {
 }
 
 /**
- * Save the search cache to localStorage for persistence
- * Internal function - not debounced
+ * Persists the search cache to localStorage internally without debouncing.
+ * @source
  */
 function persistSearchCacheInternal(): void {
   try {
@@ -129,14 +150,16 @@ function persistSearchCacheInternal(): void {
 }
 
 /**
- * Debounced version of persistSearchCache to batch writes
- * Waits 2 seconds after last call before writing to localStorage
+ * Debounced version of persistSearchCache that batches writes to localStorage.
+ * Waits 2 seconds after the last call before persisting.
+ * @source
  */
 const persistSearchCache = debounce(persistSearchCacheInternal, 2000);
 
 /**
- * Immediately persist the search cache (bypasses debounce)
- * Use this for critical saves like clearing cache or app shutdown
+ * Immediately persists the search cache, bypassing debounce.
+ * Use for critical saves like cache clearing or app shutdown.
+ * @source
  */
 function persistSearchCacheImmediate(): void {
   persistSearchCacheInternal();
@@ -146,13 +169,13 @@ function persistSearchCacheImmediate(): void {
 initializeSearchCache();
 
 /**
- * Builds request options with headers and body for GraphQL requests.
- *
- * @param query - The GraphQL query string.
+ * Constructs request options with headers and body for GraphQL requests.
+ * @param query - The GraphQL query or mutation string.
  * @param variables - Optional variables for the query.
- * @param token - Optional authentication token.
- * @param abortSignal - Optional abort signal.
- * @returns RequestInit object for fetch.
+ * @param token - Optional authentication bearer token.
+ * @param abortSignal - Optional signal to abort the request.
+ * @returns Configured RequestInit object for fetch.
+ * @source
  */
 function buildRequestOptions(
   query: string,
@@ -185,15 +208,15 @@ function buildRequestOptions(
 }
 
 /**
- * Handles Electron IPC requests to the main process.
- *
- * @param requestId - Unique request identifier.
- * @param query - The GraphQL query string.
+ * Handles GraphQL requests via Electron IPC to the main process.
+ * @param requestId - Unique identifier for tracking this request in logs.
+ * @param query - The GraphQL query or mutation string.
  * @param variables - Optional variables for the query.
  * @param token - Optional authentication token.
- * @param bypassCache - Optional flag to bypass cache.
- * @param abortSignal - Optional abort signal.
- * @returns Promise resolving to AniListResponse.
+ * @param bypassCache - Optional flag to bypass the main process cache.
+ * @param abortSignal - Optional signal to abort the request.
+ * @returns Promise resolving to the API response.
+ * @source
  */
 async function handleElectronRequest<T>(
   requestId: string,
@@ -238,11 +261,12 @@ async function handleElectronRequest<T>(
 }
 
 /**
- * Processes HTTP error responses and handles rate limiting.
- *
- * @param requestId - Unique request identifier.
+ * Processes HTTP error responses, detecting and handling rate limiting.
+ * Dispatches custom event on rate limit (429) status.
+ * @param requestId - Unique identifier for tracking this error in logs.
  * @param response - The HTTP response object.
- * @returns Promise resolving to parsed error data.
+ * @returns Promise that never resolves (always throws).
+ * @source
  */
 async function processHttpError(
   requestId: string,
@@ -308,11 +332,11 @@ async function processHttpError(
 }
 
 /**
- * Handles browser fetch requests directly to the AniList API.
- *
- * @param requestId - Unique request identifier.
- * @param options - Request options for fetch.
- * @returns Promise resolving to AniListResponse.
+ * Handles browser-based GraphQL requests directly to the AniList API.
+ * @param requestId - Unique identifier for tracking this request in logs.
+ * @param options - Configured request options for fetch.
+ * @returns Promise resolving to the API response.
+ * @source
  */
 async function handleBrowserRequest<T>(
   requestId: string,
@@ -441,7 +465,13 @@ export async function getAccessToken(
 }
 
 /**
- * Generate a cache key from search parameters
+ * Generates a unique cache key from search parameters and options.
+ * @param search - Search query string.
+ * @param page - Page number (default: 1).
+ * @param perPage - Results per page (default: 50).
+ * @param additionalParams - Optional additional parameters for key generation.
+ * @returns Cache key string.
+ * @source
  */
 function generateCacheKey(
   search: string,
@@ -453,7 +483,11 @@ function generateCacheKey(
 }
 
 /**
- * Check if a cache entry is valid
+ * Checks if a cache entry exists and has not expired.
+ * @param cache - The cache object to check.
+ * @param key - Cache key to validate.
+ * @returns true if entry exists and is not expired, false otherwise.
+ * @source
  */
 function isCacheValid<T>(cache: Cache<T>, key: string): boolean {
   const entry = cache[key];
@@ -464,7 +498,8 @@ function isCacheValid<T>(cache: Cache<T>, key: string): boolean {
 }
 
 /**
- * Options for executing a search query.
+ * Options for executing a search query with cache control.
+ * @source
  */
 interface SearchQueryOptions {
   query: string;
@@ -479,10 +514,11 @@ interface SearchQueryOptions {
 }
 
 /**
- * Core search logic shared between basic and advanced search.
- *
- * @param options - Search query options.
- * @returns Promise resolving to search results.
+ * Executes a search query with caching and error handling.
+ * Shared logic for both basic and advanced search operations.
+ * @param options - Search query configuration including query, variables, and cache settings.
+ * @returns Promise resolving to search results with pagination.
+ * @source
  */
 async function executeSearchQuery(
   options: SearchQueryOptions,
@@ -944,12 +980,12 @@ export async function getMangaByIds(
 }
 
 /**
- * Creates a proper Error object for rate limit scenarios.
- *
- * @param message - Error message.
- * @param status - HTTP status code.
- * @param retryAfter - Retry after seconds.
- * @returns Error object with rate limit properties.
+ * Constructs an Error object for rate limit scenarios with retry information.
+ * @param message - Error message describing the rate limit.
+ * @param status - HTTP status code (typically 429).
+ * @param retryAfter - Seconds to wait before retrying.
+ * @returns RateLimitError object with rate limit properties.
+ * @source
  */
 function createRateLimitError(
   message: string,
@@ -964,10 +1000,10 @@ function createRateLimitError(
 }
 
 /**
- * Checks if an error is a rate limit error based on status code or flag.
- *
- * @param errorObj - Error object to check.
- * @returns Rate limit error if detected, null otherwise.
+ * Detects rate limit errors from HTTP status code or flags.
+ * @param errorObj - Error object with status and rate limit information.
+ * @returns RateLimitError if detected, null otherwise.
+ * @source
  */
 function checkDirectRateLimitError(errorObj: {
   status?: number;
@@ -994,10 +1030,11 @@ function checkDirectRateLimitError(errorObj: {
 }
 
 /**
- * Checks if an error message contains rate limit mentions and creates appropriate error.
- *
+ * Detects rate limit errors from message text patterns.
+ * Extracts retry duration if present in the error message.
  * @param errorObj - Error object with message to check.
- * @returns Rate limit error if detected, null otherwise.
+ * @returns RateLimitError if detected, null otherwise.
+ * @source
  */
 function checkRateLimitInMessage(errorObj: { message?: string }): Error | null {
   if (!errorObj.message) {
@@ -1092,7 +1129,12 @@ export async function getUserMangaList(
 }
 
 /**
- * Attempts to get the authenticated user's ID through various methods
+ * Attempts to retrieve the authenticated user's ID from the AniList Viewer query.
+ * Handles multiple response structures and fallback approaches.
+ * @param token - User's access token.
+ * @param abortSignal - Optional signal to abort the request.
+ * @returns Promise resolving to the user's AniList ID or undefined if not found.
+ * @source
  */
 async function getAuthenticatedUserID(
   token: string,
@@ -1171,7 +1213,8 @@ async function getAuthenticatedUserID(
 }
 
 /**
- * Interface for a single media list entry
+ * Single media list entry from the user's AniList collection.
+ * @source
  */
 interface MediaListEntry {
   id: number;
@@ -1184,7 +1227,8 @@ interface MediaListEntry {
 }
 
 /**
- * Interface for media list collection structure
+ * Collection of media lists organized by status categories.
+ * @source
  */
 interface MediaListCollection {
   lists: Array<{
@@ -1194,7 +1238,9 @@ interface MediaListCollection {
 }
 
 /**
- * Interface for MediaListCollection response structure with potential nesting
+ * Response structure from the MediaListCollection API query.
+ * Handles multiple nesting levels from different response formats.
+ * @source
  */
 interface MediaListCollectionResponse {
   MediaListCollection?: MediaListCollection;
@@ -1207,10 +1253,10 @@ interface MediaListCollectionResponse {
 }
 
 /**
- * Extracts MediaListCollection from response, handling nested structures.
- *
- * @param response - The API response containing MediaListCollection.
- * @returns MediaListCollection or null if not found.
+ * Extracts MediaListCollection from API response, handling various nesting levels.
+ * @param response - The API response potentially containing MediaListCollection.
+ * @returns MediaListCollection or null if not found in expected structures.
+ * @source
  */
 function extractMediaListCollection(
   response: MediaListCollectionResponse,
@@ -1228,12 +1274,14 @@ function extractMediaListCollection(
 }
 
 /**
- * Handles chunk-specific errors with rate limit detection.
- *
+ * Handles errors that occur during chunk fetching with rate limit detection.
+ * Returns control if partial data exists, otherwise re-throws.
  * @param error - The error that occurred.
  * @param currentChunk - The chunk number that failed.
- * @param mediaMap - The current media map to check if we have partial data.
- * @returns true if should continue, false if should stop.
+ * @param mediaMap - Current accumulated media map to check for partial data.
+ * @returns false to stop fetching; true to continue (never returned for rate limits).
+ * @throws {Error} If error is rate limit or no partial data available.
+ * @source
  */
 function handleChunkError(
   error: unknown,
@@ -1273,11 +1321,11 @@ function handleChunkError(
 }
 
 /**
- * Determines if more chunks are needed based on current chunk results.
- *
- * @param chunkEntryCount - Number of entries in current chunk.
+ * Determines if additional chunks should be fetched based on current chunk size.
+ * @param chunkEntryCount - Number of entries in the current chunk.
  * @param perChunk - Maximum entries per chunk.
- * @returns true if more chunks needed, false if done.
+ * @returns true if more chunks needed, false if reached the end.
+ * @source
  */
 function shouldFetchNextChunk(
   chunkEntryCount: number,
@@ -1292,15 +1340,16 @@ function shouldFetchNextChunk(
 }
 
 /**
- * Fetches and processes a single chunk of user media list.
- *
- * @param userId - The user ID.
- * @param currentChunk - The chunk number to fetch.
- * @param perChunk - Number of entries per chunk.
- * @param token - Authentication token.
- * @param abortSignal - Optional abort signal.
- * @param mediaMap - The media map to populate.
+ * Fetches and processes a single chunk of the user's media list.
+ * Updates the mediaMap with entries from this chunk.
+ * @param userId - The user's AniList ID.
+ * @param currentChunk - The chunk number to fetch (1-indexed).
+ * @param perChunk - Maximum entries to fetch per chunk.
+ * @param token - User's access token.
+ * @param abortSignal - Optional signal to abort the request.
+ * @param mediaMap - Map to populate with entries from this chunk.
  * @returns Number of entries processed from this chunk.
+ * @source
  */
 async function fetchAndProcessChunk(
   userId: number,
@@ -1345,7 +1394,13 @@ async function fetchAndProcessChunk(
 }
 
 /**
- * Fetches the complete user media list using multiple chunks if needed
+ * Fetches the complete user media list using pagination with multiple chunks if needed.
+ * Returns partial results if errors occur after some data is fetched.
+ * @param userId - The user's AniList ID.
+ * @param token - User's access token.
+ * @param abortSignal - Optional signal to abort the request.
+ * @returns Promise resolving to a map of mediaId to UserMediaEntry.
+ * @source
  */
 async function fetchCompleteUserMediaList(
   userId: number,
@@ -1411,8 +1466,12 @@ async function fetchCompleteUserMediaList(
 }
 
 /**
- * Process a single chunk of MediaListCollection and add to the map
- * Returns the number of entries processed
+ * Processes a single chunk of MediaListCollection and adds entries to the mediaMap.
+ * Entries are keyed by mediaId for quick lookup.
+ * @param mediaListCollection - The media list collection to process.
+ * @param mediaMap - Map to populate with entries from this chunk.
+ * @returns Number of entries processed.
+ * @source
  */
 function processMediaListCollectionChunk(
   mediaListCollection: MediaListCollection,
@@ -1458,7 +1517,10 @@ function processMediaListCollectionChunk(
   return entriesProcessed;
 }
 
-// Export internal helpers for testing
+/**
+ * Test utilities for internal cache and fetch functions.
+ * @source
+ */
 export const __test__ = {
   initializeSearchCache,
   persistSearchCache,

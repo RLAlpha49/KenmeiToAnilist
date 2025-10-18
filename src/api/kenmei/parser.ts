@@ -15,12 +15,11 @@ import {
 } from "./types";
 
 /**
- * Parse a Kenmei export file.
- *
- * @param fileContent - The content of the Kenmei export file as text.
- * @param options - Parsing options.
- * @returns Parsed Kenmei data.
- * @throws Error if the file cannot be parsed.
+ * Parse a Kenmei export file, optionally validating structure and normalizing entries.
+ * @param fileContent - Raw export file content as text.
+ * @param options - Parsing configuration.
+ * @returns Parsed Kenmei export data.
+ * @throws {Error} If JSON is invalid or structure validation fails.
  * @source
  */
 export function parseKenmeiExport(
@@ -60,7 +59,12 @@ export function parseKenmeiExport(
 }
 
 /**
- * Create a default manga entry with fallback values
+ * Create a normalized manga entry with default values for missing fields.
+ * @param manga - Manga entry to normalize.
+ * @param index - Index in the original array for reference.
+ * @param defaultStatus - Default status to apply if missing.
+ * @returns Normalized entry with all required fields populated.
+ * @source
  */
 function createDefaultMangaEntry(
   manga: KenmeiManga,
@@ -81,7 +85,13 @@ function createDefaultMangaEntry(
 }
 
 /**
- * Process a single manga entry with validation
+ * Process a single manga entry with validation and error handling, accumulating errors.
+ * @param manga - The manga entry to process.
+ * @param index - Position in the manga list for error reporting.
+ * @param parseOptions - Parsing configuration controlling strictness.
+ * @param validationErrors - Array to accumulate validation errors.
+ * @param processedEntries - Array to accumulate successfully processed entries.
+ * @source
  */
 function processSingleManga(
   manga: KenmeiManga,
@@ -119,12 +129,11 @@ function processSingleManga(
 }
 
 /**
- * Process Kenmei manga list in batches.
- *
- * @param mangaList - List of manga to process.
- * @param batchSize - Size of each batch.
- * @param options - Processing options.
- * @returns Processing results.
+ * Process Kenmei manga list in batches with validation and normalization.
+ * @param mangaList - List of manga entries to process.
+ * @param batchSize - Size of each batch (default: 50).
+ * @param options - Parsing configuration.
+ * @returns Result containing processed entries, validation errors, and statistics.
  * @source
  */
 export function processKenmeiMangaBatches(
@@ -168,12 +177,13 @@ export function processKenmeiMangaBatches(
 }
 
 /**
- * Validate and normalize a manga entry
- * @param manga The manga entry to validate
- * @param index Index in the original array
- * @param options Parsing options
- * @returns Validated manga entry
- * @throws Error if validation fails
+ * Validate and normalize a manga entry, ensuring all required fields are present and valid.
+ * @param manga - The manga entry to validate.
+ * @param index - Index in the original array for error reporting.
+ * @param options - Parsing configuration controlling validation strictness.
+ * @returns Validated and normalized manga entry.
+ * @throws {Error} If validation fails and allowPartialData is false.
+ * @source
  */
 function validateAndNormalizeManga(
   manga: KenmeiManga,
@@ -206,9 +216,10 @@ function validateAndNormalizeManga(
 }
 
 /**
- * Check if a status value is valid
- * @param status The status to check
- * @returns Whether the status is valid
+ * Check if a status string matches a valid Kenmei status enum value.
+ * @param status - Status string to validate.
+ * @returns True if the status is a valid Kenmei status, false otherwise.
+ * @source
  */
 function isValidStatus(status: string): boolean {
   const valid = new Set([
@@ -222,7 +233,11 @@ function isValidStatus(status: string): boolean {
 }
 
 /**
- * Validate CSV data structure and headers
+ * Validate CSV data structure and extract normalized header names.
+ * @param rows - Parsed CSV rows with headers in first row.
+ * @returns Header names normalized to lowercase.
+ * @throws {Error} If CSV is missing required data or headers.
+ * @source
  */
 function validateCsvStructure(rows: string[][]): string[] {
   if (!rows || rows.length < 2)
@@ -239,7 +254,12 @@ function validateCsvStructure(rows: string[][]): string[] {
 }
 
 /**
- * Check if a row should be skipped due to invalid data
+ * Determine if a CSV row should be skipped due to invalid or missing data.
+ * @param values - Row cell values.
+ * @param headers - CSV column headers.
+ * @param rowIndex - Row index for logging purposes.
+ * @returns True if the row should be skipped, false otherwise.
+ * @source
  */
 function shouldSkipRow(
   values: string[],
@@ -271,7 +291,14 @@ function shouldSkipRow(
 }
 
 /**
- * Create entry mapping from headers and values
+}
+
+/**
+ * Create an object mapping header names to row cell values.
+ * @param headers - CSV column headers.
+ * @param values - Row cell values.
+ * @returns Object mapping header name to value.
+ * @source
  */
 function createEntryMapping(
   headers: string[],
@@ -288,7 +315,10 @@ function createEntryMapping(
 }
 
 /**
- * Parse numeric values safely
+ * Safely parse an integer from a string, removing non-numeric formatting characters.
+ * @param value - String value to parse.
+ * @returns Parsed integer or undefined if parsing fails.
+ * @source
  */
 function parseIntSafe(value: string | undefined): number | undefined {
   if (!value) return undefined;
@@ -301,6 +331,13 @@ function parseIntSafe(value: string | undefined): number | undefined {
 /**
  * Find a value using flexible column mappings
  */
+/**
+ * Find a value from an entry using multiple possible column name mappings.
+ * @param entry - Object mapping field names to cell values.
+ * @param mappings - Array of possible column name variations to check.
+ * @returns First matching value or undefined if none found.
+ * @source
+ */
 function findValue(
   entry: Record<string, string>,
   mappings: string[],
@@ -310,7 +347,10 @@ function findValue(
 }
 
 /**
- * Extract all field values from a CSV entry
+ * Extract field values from a CSV entry using flexible column name mappings.
+ * @param entry - Object mapping field names to cell values.
+ * @returns Extracted values for chapters, volume, status, score, URL, notes, and dates.
+ * @source
  */
 function extractFieldValues(entry: Record<string, string>) {
   const columnMappings = {
@@ -347,7 +387,11 @@ function extractFieldValues(entry: Record<string, string>) {
 }
 
 /**
- * Create a manga entry from parsed CSV values
+ * Construct a KenmeiManga entry from parsed CSV row values.
+ * @param entry - Object mapping CSV field names to cell values.
+ * @param fieldValues - Pre-extracted and mapped field values.
+ * @returns Constructed KenmeiManga entry ready for validation.
+ * @source
  */
 function createMangaEntry(
   entry: Record<string, string>,
@@ -397,7 +441,11 @@ function createMangaEntry(
 }
 
 /**
- * Process validation results and update manga array
+ * Process validation results and update the manga array with normalized entries.
+ * @param manga - Array of manga entries to validate and normalize.
+ * @param parseOptions - Parsing configuration controlling validation behavior.
+ * @throws {Error} If validation fails and allowPartialData is false.
+ * @source
  */
 function processValidationResults(
   manga: KenmeiManga[],
@@ -418,11 +466,11 @@ function processValidationResults(
 }
 
 /**
- * Parse a Kenmei CSV export file.
- *
- * @param csvString - The content of the CSV file.
- * @param options - Parsing options.
- * @returns Parsed Kenmei data.
+ * Parse a Kenmei CSV export file with flexible column name handling.
+ * @param csvString - Raw CSV file content.
+ * @param options - Parsing configuration.
+ * @returns Parsed Kenmei export with manga entries.
+ * @throws {Error} If CSV is invalid or parsing fails.
  * @source
  */
 export const parseKenmeiCsvExport = (
@@ -488,6 +536,12 @@ export const parseKenmeiCsvExport = (
  * @param csvContent The CSV content as a string
  * @returns Array of arrays, where each inner array contains the values for a row
  */
+/**
+ * Parse CSV content into rows and columns, properly handling quoted fields and escaped quotes.
+ * @param csvContent - The CSV content as a string.
+ * @returns Array of arrays where each inner array contains row cell values.
+ * @source
+ */
 function parseCSVRows(csvContent: string): string[][] {
   const rows: string[][] = [];
   let currentRow: string[] = [];
@@ -543,9 +597,10 @@ function parseCSVRows(csvContent: string): string[][] {
 }
 
 /**
- * Map a Kenmei status string to a valid status enum
- * @param status Input status string
- * @returns Normalized KenmeiStatus
+ * Map a Kenmei status string to a normalized KenmeiStatus enum value, handling common variations.
+ * @param status - Input status string.
+ * @returns Normalized KenmeiStatus value (defaults to 'reading' if unrecognized).
+ * @source
  */
 function validateStatus(status: string | undefined): KenmeiStatus {
   // Handle undefined or empty status
@@ -580,11 +635,9 @@ function validateStatus(status: string | undefined): KenmeiStatus {
 }
 
 /**
- * Extract unique metadata from manga entries.
- * Useful for analyzing the dataset and providing statistics.
- *
+ * Extract unique metadata from manga entries for analysis and statistics.
  * @param manga - Array of KenmeiManga entries.
- * @returns Object containing total manga, status counts, volume data, average score, and total chapters read.
+ * @returns Statistics including totals, status distribution, volume data presence, average score, and chapters read.
  * @source
  */
 export function extractMangaMetadata(manga: KenmeiManga[]): {

@@ -1,7 +1,8 @@
 /**
- * @packageDocumentation
- * @module Matching/Normalization
- * @description Barrel exports for manga normalization utilities
+ * Barrel exports for manga title normalization utilities.
+ * Provides functions for title processing, character replacement, and pattern detection.
+ * @module normalization
+ * @source
  */
 
 // Title normalization

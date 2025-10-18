@@ -22,21 +22,18 @@ import {
 } from "../sources";
 
 /**
- * Search for manga by title with rate limiting and caching
+ * Search for manga by title with rate limiting and caching.
  *
- * Main entry point for manga search operations. Coordinates:
- * - Cache checking/bypass
- * - AniList API search with pagination
- * - Result ranking and filtering
- * - Fallback sources (Comick, MangaDex)
- * - Response building with confidence scores
+ * Main entry point coordinating cache checking, AniList API search with pagination,
+ * result ranking/filtering, fallback sources (Comick, MangaDex), and confidence scoring.
  *
- * @param title - The manga title to search for
+ * @param title - Manga title to search for
  * @param token - Optional authentication token
  * @param config - Optional search service configuration
- * @param abortSignal - Optional abort signal to cancel the search
+ * @param abortSignal - Optional abort signal to cancel search
  * @param specificPage - Optional specific page number (disables pagination)
  * @returns Promise resolving to manga search response with matches
+ * @source
  */
 export async function searchMangaByTitle(
   title: string,

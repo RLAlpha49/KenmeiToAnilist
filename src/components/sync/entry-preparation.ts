@@ -14,7 +14,13 @@ import { SyncConfig } from "../../utils/storage";
 import { getEffectiveStatus, KenmeiMangaData } from "./sync-utils";
 
 /**
- * Compute all entries to sync (unfiltered, all with changes)
+ * Prepare all entries to sync from matched manga, applying configuration rules.
+ * Filters to matched/manual entries and respects preserveCompletedStatus setting.
+ * @param mangaMatches - Array of manga match results.
+ * @param userLibrary - User's existing AniList library indexed by media ID.
+ * @param syncConfig - Sync configuration with priority settings.
+ * @returns Array of AniList media entries ready for synchronization.
+ * @source
  */
 export function prepareAllEntriesToSync(
   mangaMatches: MangaMatchResult[],
@@ -107,7 +113,12 @@ export function prepareAllEntriesToSync(
 }
 
 /**
- * Check if an entry has actual changes that need to be synced
+ * Determine if an entry has actual changes to sync based on config priorities.
+ * Respects preserveCompletedStatus, prioritization settings, and threshold tolerance.
+ * @param entry - The media entry to check for changes.
+ * @param syncConfig - Sync configuration with priority settings.
+ * @returns True if the entry has changes that should be synced.
+ * @source
  */
 export function hasChanges(
   entry: AniListMediaEntry,

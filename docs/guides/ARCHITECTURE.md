@@ -28,6 +28,16 @@ Kenmei to AniList is a cross-platform desktop application built with Electron th
 - **User Experience**: Responsive design with smooth animations and error handling
 - **Cross-Platform**: Consistent behavior across Windows, macOS, and Linux
 
+### Quick Reference: Key Concepts
+
+| Concept | What It Is | Where It Matters |
+|---------|-----------|-----------------|
+| **Context Bridge** | Secure IPC layer between main/renderer | `src/helpers/ipc/context-exposer.ts` |
+| **Three-Layer Storage** | In-memory → localStorage → Electron Store | `src/utils/storage.ts` |
+| **React Context** | Global state for auth, theme, rate limits | `src/contexts/` |
+| **GraphQL API** | AniList data operations and authentication | `src/api/anilist/` |
+| **OAuth 2.0** | Secure user authentication flow | `src/contexts/AuthContext.tsx` |
+
 ## 🛠️ Technology Stack
 
 ### Core Framework
@@ -638,64 +648,6 @@ npm run make
 - **Linux**: DEB and AppImage packages
 - **Auto-updater**: Built-in update mechanism (planned)
 - **Intelligent invalidation**: Manual clearing with title-specific targeting
-
-## 🚀 Build & Deployment
-
-### Development Build
-
-```bash
-npm start  # Runs both main and renderer processes in development
-```
-
-Development environment features:
-
-- **Hot Reload**: Vite dev server for fast iteration
-- **DevTools**: React Developer Tools and Electron DevTools
-- **Debug Mode**: Additional logging and development features
-
-### Production Build
-
-```bash
-npm run make  # Builds and packages for current platform
-```
-
-#### Electron Forge Configuration (`forge.config.js`)
-
-- **Packaging**: App bundling and asset optimization
-- **Code Signing**: Security certificates for distribution
-- **Installers**: Platform-specific installer generation
-- **Auto-Update**: Update mechanism configuration
-
-#### Vite Configuration
-
-- **Main Process** (`vite.main.config.ts`): Node.js environment
-- **Preload** (`vite.preload.config.ts`): Preload script bundling
-- **Renderer** (`vite.renderer.config.mts`): React application
-
-```typescript
-// Renderer process config
-export default defineConfig({
-  plugins: [
-    tailwindcss(),
-    react({
-      babel: {
-        plugins: [["babel-plugin-react-compiler"]], // Performance optimization
-      },
-    }),
-  ],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"), // Path aliasing
-    },
-  },
-});
-```
-
-### Platform Support
-
-- **Windows**: `.exe` installer with Squirrel
-- **macOS**: `.dmg` disk image with code signing
-- **Linux**: `.deb` and `.rpm` packages
 
 ## 🔒 Security Considerations
 

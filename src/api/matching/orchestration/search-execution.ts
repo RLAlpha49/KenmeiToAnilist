@@ -12,13 +12,14 @@ import {
 } from "../rate-limiting";
 
 /**
- * Execute a single search request with the appropriate method
+ * Execute a single search request with the appropriate method.
  *
- * @param searchQuery - The search query to execute
+ * @param searchQuery - Search query to execute
  * @param currentPage - Current page number for pagination
- * @param searchConfig - Configuration for the search service
+ * @param searchConfig - Search service configuration
  * @param token - Optional authentication token
  * @returns Promise resolving to search results
+ * @source
  */
 async function executeSingleSearch(
   searchQuery: string,
@@ -53,14 +54,17 @@ async function executeSingleSearch(
 }
 
 /**
- * Check if pagination should continue based on current state
+ * Determine if pagination should continue based on current state.
  *
- * @param pageInfo - Page information from the current search result
+ * Stops pagination in single page mode or when max results reached.
+ *
+ * @param pageInfo - Page information from current search result
  * @param currentPage - Current page number
  * @param resultsLength - Current number of results collected
  * @param maxResults - Maximum number of results allowed
  * @param singlePageMode - Whether operating in single page mode
  * @returns True if pagination should continue
+ * @source
  */
 function shouldContinuePagination(
   pageInfo: PageInfo,
@@ -84,11 +88,12 @@ function shouldContinuePagination(
 }
 
 /**
- * Validate and normalize search result structure
+ * Validate search result structure and normalize if needed.
  *
- * @param searchResult - The search result to validate
- * @param searchQuery - The search query that generated this result
- * @returns True if the search result is valid and properly structured
+ * @param searchResult - Search result to validate
+ * @param searchQuery - Search query that generated this result
+ * @returns True if valid and properly structured
+ * @source
  */
 function validateSearchResult(
   searchResult: SearchResult<AniListManga>,
@@ -122,10 +127,11 @@ function validateSearchResult(
 }
 
 /**
- * Handle search errors with proper logging
+ * Log search errors with appropriate context.
  *
- * @param error - The error that occurred
- * @param searchQuery - The search query that caused the error
+ * @param error - Error that occurred
+ * @param searchQuery - Search query that caused the error
+ * @source
  */
 function handleSearchError(error: unknown, searchQuery: string): void {
   if (error instanceof Error) {
@@ -142,21 +148,18 @@ function handleSearchError(error: unknown, searchQuery: string): void {
 }
 
 /**
- * Execute the main search loop with pagination
+ * Execute paginated search loop collecting results until completion.
  *
- * Performs paginated search requests, collecting results until:
- * - No more pages available
- * - Maximum results reached
- * - Single page mode (specificPage provided)
- * - Error occurs
- * - Operation aborted
+ * Continues pagination while results available, max not reached, and not aborted.
+ * Respects rate limiting between requests.
  *
- * @param searchQuery - The search query string
+ * @param searchQuery - Search query string
  * @param searchConfig - Search configuration
  * @param token - Optional authentication token
- * @param abortSignal - Optional abort signal to cancel the search
+ * @param abortSignal - Optional abort signal to cancel search
  * @param specificPage - Optional specific page number (disables pagination)
  * @returns Promise with collected results and final page info
+ * @source
  */
 export async function executeSearchLoop(
   searchQuery: string,

@@ -16,8 +16,11 @@ import { getMangaByIds } from "../anilist/client";
 import { getAppVersion } from "../../utils/app-version";
 
 /**
- * Abstract base class for manga source API clients.
- * Provides common functionality and defines the interface that all manga sources must implement.
+ * Abstract base class for manga source API clients with common functionality.
+ * Provides caching, URL building, HTTP requests, and AniList integration for all manga sources.
+ * @template TMangaEntry - The manga entry type for this source.
+ * @template TMangaDetail - The manga detail type for this source.
+ * @source
  */
 export abstract class BaseMangaSourceClient<
   TMangaEntry extends BaseMangaEntry = BaseMangaEntry,
@@ -29,11 +32,14 @@ export abstract class BaseMangaSourceClient<
 
   constructor(config: MangaSourceConfig) {
     this.config = config;
-    this.cacheExpiry = (config.cache?.ttlMinutes ?? 30) * 60 * 1000; // Default 30 minutes
+    // Cache TTL in milliseconds; default to 30 minutes if not specified
+    this.cacheExpiry = (config.cache?.ttlMinutes ?? 30) * 60 * 1000;
   }
 
   /**
    * Get the source identifier for this client.
+   * @returns The source enum value (e.g., MangaSource.COMICK).
+   * @source
    */
   public getSource(): MangaSource {
     return this.config.source;
@@ -41,6 +47,8 @@ export abstract class BaseMangaSourceClient<
 
   /**
    * Get the configuration for this source.
+   * @returns The source's configuration object.
+   * @source
    */
   public getConfig(): MangaSourceConfig {
     return this.config;
@@ -48,7 +56,11 @@ export abstract class BaseMangaSourceClient<
 
   /**
    * Search for manga using this source's API.
-   * Must be implemented by each source.
+   * Must be implemented by each subclass with source-specific logic.
+   * @param query - The search query string.
+   * @param limit - Maximum number of results to return.
+   * @returns Promise resolving to an array of manga entries.
+   * @source
    */
   public abstract searchManga(
     query: string,
@@ -57,13 +69,19 @@ export abstract class BaseMangaSourceClient<
 
   /**
    * Get detailed information about a specific manga.
-   * Must be implemented by each source.
+   * Must be implemented by each subclass with source-specific logic.
+   * @param slug - The manga identifier or slug.
+   * @returns Promise resolving to manga detail or null if not found.
+   * @source
    */
   public abstract getMangaDetail(slug: string): Promise<TMangaDetail | null>;
 
   /**
    * Extract AniList ID from a manga's external links.
-   * Must be implemented by each source as the data structure varies.
+   * Must be implemented by each subclass; data structure varies by source.
+   * @param detail - The manga detail object containing external links.
+   * @returns The AniList ID or null if not found.
+   * @source
    */
   protected abstract extractAniListIdFromDetail(
     detail: TMangaDetail,
@@ -71,14 +89,20 @@ export abstract class BaseMangaSourceClient<
 
   /**
    * Parse raw API response into manga entries.
-   * Must be implemented by each source as the response format varies.
+   * Must be implemented by each subclass; response format varies by source.
+   * @param rawResponse - The raw API response object.
+   * @returns Array of parsed manga entries.
+   * @source
    */
   // eslint-disable-next-line
   protected abstract parseSearchResponse(rawResponse: any): TMangaEntry[];
 
   /**
    * Parse raw API response into manga detail.
-   * Must be implemented by each source as the response format varies.
+   * Must be implemented by each subclass; response format varies by source.
+   * @param rawResponse - The raw API response object.
+   * @returns Parsed manga detail or null if invalid.
+   * @source
    */
   // eslint-disable-next-line
   protected abstract parseDetailResponse(rawResponse: any): TMangaDetail | null;
@@ -86,6 +110,10 @@ export abstract class BaseMangaSourceClient<
   /**
    * Build search URL with parameters.
    * Can be overridden by sources that need custom URL building logic.
+   * @param query - The search query string.
+   * @param limit - Maximum number of results.
+   * @returns The formatted search URL.
+   * @source
    */
   protected buildSearchUrl(query: string, limit: number): string {
     const encodedQuery = encodeURIComponent(query);
@@ -98,6 +126,9 @@ export abstract class BaseMangaSourceClient<
   /**
    * Build detail URL for a specific manga.
    * Can be overridden by sources that need custom URL building logic.
+   * @param slug - The manga identifier or slug.
+   * @returns The formatted detail URL.
+   * @source
    */
   protected buildDetailUrl(slug: string): string {
     const baseUrl = this.config.baseUrl + this.config.endpoints.detail;
@@ -105,12 +136,16 @@ export abstract class BaseMangaSourceClient<
   }
 
   /**
-   * Make HTTP request to the manga source API.
-   * Provides common error handling and request configuration.
+   * Make HTTP GET request to the manga source API.
+   * Handles headers, error checking, and JSON parsing.
+   * @param url - The full API URL to request.
+   * @returns Promise resolving to the parsed JSON response.
+   * @throws {Error} If the HTTP response is not ok.
+   * @source
    */
   // eslint-disable-next-line
   protected async makeRequest(url: string): Promise<any> {
-    // Prefer any User-Agent provided in the config, otherwise use app version
+    // Prefer User-Agent from config; fall back to app version
     const defaultUserAgent = `KenmeiToAniList/${getAppVersion()}`;
     const userAgent = this.config.headers?.["User-Agent"] ?? defaultUserAgent;
 
@@ -133,6 +168,9 @@ export abstract class BaseMangaSourceClient<
 
   /**
    * Check if cache is enabled and valid for a given key.
+   * @param key - The cache key to validate.
+   * @returns True if cache is enabled and entry has not expired.
+   * @source
    */
   protected isCacheValid(key: string): boolean {
     if (!this.config.cache?.enabled) return false;
@@ -145,7 +183,11 @@ export abstract class BaseMangaSourceClient<
   }
 
   /**
-   * Get data from cache if valid.
+   * Get data from cache if valid and not expired.
+   * @template T - The type of cached data.
+   * @param key - The cache key.
+   * @returns Cached data or null if not valid.
+   * @source
    */
   protected getCachedData<T>(key: string): T | null {
     if (!this.isCacheValid(key)) return null;
@@ -159,6 +201,10 @@ export abstract class BaseMangaSourceClient<
 
   /**
    * Store data in cache with current timestamp.
+   * @template T - The type of data to cache.
+   * @param key - The cache key.
+   * @param data - The data to cache.
+   * @source
    */
   protected setCachedData<T>(key: string, data: T): void {
     if (!this.config.cache?.enabled) return;
@@ -171,7 +217,10 @@ export abstract class BaseMangaSourceClient<
   }
 
   /**
-   * Extract AniList ID from a manga entry by fetching its details.
+   * Extract AniList ID from a manga entry by fetching its full details.
+   * @param manga - The manga entry to extract AniList ID from.
+   * @returns Promise resolving to AniList ID or null if not found.
+   * @source
    */
   public async extractAniListId(manga: TMangaEntry): Promise<number | null> {
     try {
@@ -209,8 +258,13 @@ export abstract class BaseMangaSourceClient<
   }
 
   /**
-   * Search for manga and get their AniList counterparts.
-   * This provides the main workflow that all sources can use.
+   * Search for manga on this source and enrich results with AniList data.
+   * Fetches source results, extracts AniList IDs, and merges AniList data.
+   * @param query - The search query string.
+   * @param accessToken - AniList OAuth access token for fetching manga details.
+   * @param limit - Maximum number of results to return (default: 1).
+   * @returns Promise resolving to enhanced AniList manga entries with source info.
+   * @source
    */
   public async searchAndGetAniListManga(
     query: string,
@@ -298,13 +352,17 @@ export abstract class BaseMangaSourceClient<
   }
 
   /**
-   * Clear cache for specific search queries.
+   * Clear cache entries for specific search queries.
+   * Removes all cache entries matching the query pattern across different limits.
+   * @param queries - Array of search queries to clear from cache.
+   * @returns Number of cache entries cleared.
+   * @source
    */
   public clearCache(queries: string[]): number {
     let clearedCount = 0;
 
     for (const query of queries) {
-      // Clear cache entries that match the query (different limits might exist)
+      // Clear cache entries matching query (different limits may exist)
       const keysToDelete = Object.keys(this.cache).filter((key) =>
         key.startsWith(`search:${query.toLowerCase()}:`),
       );
@@ -322,7 +380,9 @@ export abstract class BaseMangaSourceClient<
   }
 
   /**
-   * Get cache status for debugging.
+   * Get cache status and statistics for debugging.
+   * @returns Object with total entries, active entries, and expired entries counts.
+   * @source
    */
   public getCacheStatus() {
     const totalEntries = Object.keys(this.cache).length;

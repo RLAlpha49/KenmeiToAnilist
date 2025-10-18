@@ -66,8 +66,10 @@ export async function setTheme(newTheme: ThemeMode) {
 }
 
 /**
- * Enable dark mode: update system, DOM and persist preference.
- * @returns true when dark mode is enabled
+ * Enable dark mode: update system, DOM, and persist preference.
+ *
+ * @returns True when dark mode is enabled.
+ * @source
  */
 export async function enableDarkMode(): Promise<boolean> {
   await globalThis.themeMode.dark();
@@ -78,8 +80,10 @@ export async function enableDarkMode(): Promise<boolean> {
 }
 
 /**
- * Enable light mode: update system, DOM and persist preference.
- * @returns false when dark mode is disabled
+ * Enable light mode: update system, DOM, and persist preference.
+ *
+ * @returns False when dark mode is disabled.
+ * @source
  */
 export async function enableLightMode(): Promise<boolean> {
   await globalThis.themeMode.light();
@@ -90,8 +94,10 @@ export async function enableLightMode(): Promise<boolean> {
 }
 
 /**
- * Apply the system theme: query the system and update DOM and storage.
- * @returns true if the system theme is dark
+ * Apply the system theme: query system, update DOM, and persist preference.
+ *
+ * @returns True if the system theme is dark.
+ * @source
  */
 export async function applySystemTheme(): Promise<boolean> {
   const isDarkMode = await globalThis.themeMode.system();
@@ -144,11 +150,8 @@ export async function syncThemeWithLocal() {
 /**
  * Updates the document's class list to reflect the current theme mode.
  *
- * @param isDarkMode - Whether dark mode should be enabled.
+ * @param mode - The theme mode ("dark" or "light").
  * @source
- */
-/**
- * Update the document's class list to reflect the current theme mode.
  */
 export function updateDocumentTheme(mode: "dark" | "light") {
   if (mode === "dark") {

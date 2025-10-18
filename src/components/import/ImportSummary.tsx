@@ -68,22 +68,8 @@ export interface StatusCount {
  *
  * Displays the total number of manga entries, a breakdown by status, and provides actions to proceed or cancel the import.
  *
- * @remarks
- * - Shows a summary of the provided KenmeiExport data.
- * - Calls {@link ImportSummaryProps.onProceed} when the user chooses to proceed.
- * - Calls {@link ImportSummaryProps.onCancel} when the user cancels the import.
- *
  * @param props - {@link ImportSummaryProps}
- * @returns React.ReactElement
- *
- * @example
- * ```tsx
- * <ImportSummary
- *   data={kenmeiExportData}
- *   onProceed={() => { ... }}
- *   onCancel={() => { ... }}
- * />
- * ```
+ * @returns React.ReactElement with import summary and action buttons.
  * @source
  */
 export function ImportSummary({
@@ -95,7 +81,7 @@ export function ImportSummary({
 
   const totalEntries = manga.length;
 
-  // Group manga by status
+  // Aggregate manga count by status
   const statusCounts: Record<KenmeiStatus, number> = {
     reading: 0,
     completed: 0,
@@ -108,6 +94,7 @@ export function ImportSummary({
     statusCounts[item.status]++;
   }
 
+  // Define display information for each status type
   const statusInfo: StatusCount[] = [
     {
       status: "reading",
@@ -200,6 +187,7 @@ export function ImportSummary({
                 >
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1.5">
+                      {/* Status icon and label */}
                       <span className={status.color}>{status.icon}</span>
                       <p className="text-xs font-medium">{status.label}</p>
                     </div>
@@ -216,7 +204,7 @@ export function ImportSummary({
         </div>
       </CardContent>
 
-      <CardFooter className="flex justify-end gap-3 pt-2 pb-6">
+      <CardFooter className="flex justify-end gap-3 pb-6 pt-2">
         <Button variant="outline" onClick={onCancel}>
           Cancel
         </Button>

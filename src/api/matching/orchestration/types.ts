@@ -1,14 +1,15 @@
 /**
- * @file Orchestration type definitions
+ * Orchestration type definitions
  * @module matching/orchestration/types
+ * @source
  */
 
 import type { AniListManga, PageInfo } from "@/api/anilist/types";
 import type { MatchEngineConfig } from "@/api/matching/match-engine";
 
 /**
- * Configuration for the search service
- * @note This matches the interface in manga-search-service.ts
+ * Configuration for the search service.
+ * @source
  */
 export interface SearchServiceConfig {
   /** Match configuration for filtering */
@@ -36,7 +37,8 @@ export interface SearchServiceConfig {
 }
 
 /**
- * Response from manga search containing matches and pagination
+ * Response from manga search containing matches and pagination.
+ * @source
  */
 export interface MangaSearchResponse {
   /** Array of manga matches with confidence scores */
@@ -46,7 +48,8 @@ export interface MangaSearchResponse {
 }
 
 /**
- * Single manga match with confidence and source information
+ * Single manga match with confidence and source information.
+ * @source
  */
 export interface MangaMatch {
   /** The matched AniList manga */
@@ -78,7 +81,8 @@ export interface MangaMatch {
 }
 
 /**
- * Result of search loop execution
+ * Result of search loop execution.
+ * @source
  */
 export interface SearchLoopResult {
   /** Search results from all pages */
@@ -88,8 +92,8 @@ export interface SearchLoopResult {
 }
 
 /**
- * Default search service configuration
- * @note This matches DEFAULT_SEARCH_CONFIG from manga-search-service.ts
+ * Default search service configuration.
+ * @source
  */
 export const DEFAULT_SEARCH_CONFIG: SearchServiceConfig = {
   matchConfig: {},

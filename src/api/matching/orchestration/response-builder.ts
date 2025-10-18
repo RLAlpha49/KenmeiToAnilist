@@ -9,18 +9,18 @@ import { calculateConfidence, calculateTitleTypePriority } from "../scoring";
 import { getSourceInfo } from "../sources";
 
 /**
- * Build final search response with confidence scores and source information
+ * Build final search response with confidence scores and source information.
  *
- * Takes filtered results, calculates confidence scores and title priorities,
- * sorts by these metrics, and includes source information from Comick/MangaDex
- * if available.
+ * Calculates confidence and priority scores, sorts results, and includes
+ * source information from Comick/MangaDex if available.
  *
  * @param finalResults - Filtered manga results
  * @param title - Original search title
- * @param comickSourceMap - Map of Comick source information by manga ID
- * @param mangaDexSourceMap - Map of MangaDex source information by manga ID
+ * @param comickSourceMap - Comick source information by manga ID
+ * @param mangaDexSourceMap - MangaDex source information by manga ID
  * @param lastPageInfo - Optional pagination info from last search page
  * @returns Complete manga search response
+ * @source
  */
 export function buildFinalResponse(
   finalResults: AniListManga[],

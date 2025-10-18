@@ -9,9 +9,10 @@ import type { AniListManga } from "../../anilist/types";
 import type { EnhancedAniListManga } from "../../manga-sources/types";
 
 /**
- * Convert enhanced manga to AniListManga format
- * @param enhancedManga - Enhanced manga with source information
- * @returns Standard AniListManga object without source info
+ * Convert enhanced manga to AniListManga format, stripping source metadata.
+ * @param enhancedManga - Enhanced manga with source information.
+ * @returns Standard AniListManga object without source metadata.
+ * @source
  */
 export function convertEnhancedMangaToAniList(
   enhancedManga: EnhancedAniListManga,

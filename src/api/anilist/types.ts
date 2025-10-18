@@ -7,8 +7,7 @@
 import { KenmeiManga } from "../kenmei/types";
 
 /**
- * AniList media list status values.
- *
+ * Valid media list status values for AniList collection entries.
  * @source
  */
 export type MediaListStatus =
@@ -20,8 +19,7 @@ export type MediaListStatus =
   | "REPEATING";
 
 /**
- * Represents an AniList manga entry.
- *
+ * Complete AniList manga entry with metadata, staff, and user list information.
  * @source
  */
 export interface AniListManga {
@@ -76,8 +74,7 @@ export interface AniListManga {
 }
 
 /**
- * Represents a user's AniList media entry.
- *
+ * User's AniList media entry with change tracking and incremental sync metadata.
  * @source
  */
 export interface AniListMediaEntry {
@@ -111,8 +108,7 @@ export interface AniListMediaEntry {
 }
 
 /**
- * Represents an AniList user.
- *
+ * AniList user profile information.
  * @source
  */
 export interface AniListUser {
@@ -125,8 +121,7 @@ export interface AniListUser {
 }
 
 /**
- * GraphQL error interface.
- *
+ * GraphQL error object from AniList API response.
  * @source
  */
 export interface GraphQLError {
@@ -137,8 +132,7 @@ export interface GraphQLError {
 }
 
 /**
- * Generic API response format.
- *
+ * Generic GraphQL API response with optional errors.
  * @source
  */
 export interface AniListResponse<T> {
@@ -147,8 +141,7 @@ export interface AniListResponse<T> {
 }
 
 /**
- * Pagination information for AniList API responses.
- *
+ * Pagination metadata for AniList paginated API responses.
  * @source
  */
 export interface PageInfo {
@@ -160,8 +153,7 @@ export interface PageInfo {
 }
 
 /**
- * Search result format for AniList API.
- *
+ * Paginated search result format from AniList API.
  * @source
  */
 export interface SearchResult<T> {
@@ -172,8 +164,7 @@ export interface SearchResult<T> {
 }
 
 /**
- * Represents a manga match result with confidence score.
- *
+ * Manga match result with confidence score and optional alternative source information.
  * @source
  */
 export interface MangaMatch {
@@ -214,8 +205,7 @@ export interface MangaMatch {
 }
 
 /**
- * Search response that includes both matches and pagination info.
- *
+ * Search response containing matched manga results and pagination information.
  * @source
  */
 export interface MangaSearchResponse {
@@ -224,15 +214,13 @@ export interface MangaSearchResponse {
 }
 
 /**
- * Status of a manga match operation.
- *
+ * Status values for manga matching operations in the import workflow.
  * @source
  */
 export type MatchStatus = "pending" | "matched" | "manual" | "skipped";
 
 /**
- * Represents the result of a manga match operation.
- *
+ * Result of a manga matching operation linking Kenmei to AniList entry.
  * @source
  */
 export interface MangaMatchResult {
@@ -244,8 +232,7 @@ export interface MangaMatchResult {
 }
 
 /**
- * A simplified representation of a user's AniList media entry.
- *
+ * Simplified user's AniList media entry with title information for list display.
  * @source
  */
 export interface UserMediaEntry {
@@ -263,8 +250,7 @@ export interface UserMediaEntry {
 }
 
 /**
- * A map of mediaId to media entries for quick lookup.
- *
+ * Mapping of media ID to user's media entry for O(1) lookup by ID.
  * @source
  */
 export type UserMediaList = Record<number, UserMediaEntry>;

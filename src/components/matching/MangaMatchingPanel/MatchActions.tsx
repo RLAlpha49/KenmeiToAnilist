@@ -4,6 +4,18 @@ import { MangaMatchResult } from "../../../api/anilist/types";
 import { KenmeiManga } from "../../../api/kenmei/types";
 import { Button } from "../../ui/button";
 
+/**
+ * Props for the MatchActions component.
+ *
+ * @property match - The manga match result to display actions for.
+ * @property onManualSearch - Callback to trigger manual search for the manga.
+ * @property onAcceptMatch - Callback to accept the match.
+ * @property onRejectMatch - Callback to reject the match.
+ * @property onResetToPending - Callback to reset match to pending status.
+ * @property onSelectAlternative - Callback to select an alternative match.
+ * @property handleKeyDown - Handler for keyboard shortcuts on action buttons.
+ * @source
+ */
 export interface MatchActionsProps {
   match: MangaMatchResult;
   onManualSearch?: (kenmeiManga: KenmeiManga) => void;
@@ -19,6 +31,15 @@ export interface MatchActionsProps {
   handleKeyDown: (e: React.KeyboardEvent, cb: () => void) => void;
 }
 
+/**
+ * Renders action buttons for a manga match based on its current status.
+ *
+ * Shows different button combinations for pending, matched, manual, and skipped statuses.
+ *
+ * @param props - The component props.
+ * @returns The rendered action buttons.
+ * @source
+ */
 function MatchActionsComponent({
   match,
   onManualSearch,

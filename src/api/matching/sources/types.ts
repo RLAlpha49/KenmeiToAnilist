@@ -6,7 +6,8 @@
  */
 
 /**
- * Comick source information for a manga entry
+ * Comick source metadata for a manga entry.
+ * @source
  */
 export interface ComickSourceInfo {
   title: string;
@@ -16,7 +17,8 @@ export interface ComickSourceInfo {
 }
 
 /**
- * MangaDex source information for a manga entry
+ * MangaDex source metadata for a manga entry.
+ * @source
  */
 export interface MangaDexSourceInfo {
   title: string;
@@ -26,17 +28,20 @@ export interface MangaDexSourceInfo {
 }
 
 /**
- * Source map for Comick results indexed by manga ID
+ * Map of Comick source information keyed by manga ID.
+ * @source
  */
 export type ComickSourceMap = Map<number, ComickSourceInfo>;
 
 /**
- * Source map for MangaDex results indexed by manga ID
+ * Map of MangaDex source information keyed by manga ID.
+ * @source
  */
 export type MangaDexSourceMap = Map<number, MangaDexSourceInfo>;
 
 /**
- * Generic source information that can be from either Comick or MangaDex
+ * Unified source information from either Comick or MangaDex.
+ * @source
  */
 export interface GenericSourceInfo {
   title: string;

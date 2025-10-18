@@ -12,11 +12,17 @@ import {
 import { AniListMediaEntry } from "./types";
 import { storage, STORAGE_KEYS } from "../../utils/storage";
 
-// Type alias for GraphQL variables
+/**
+ * Type alias for GraphQL mutation variables mapping.
+ * @source
+ */
 type GraphQLVariables = Record<string, string | number | boolean>;
 
 /**
- * Build variables for existing entries (only changed fields)
+ * Builds GraphQL variables for updating an existing entry, including only changed fields.
+ * @param entry - The entry with previousValues indicating what changed.
+ * @returns GraphQL variables object with mediaId and changed fields.
+ * @source
  */
 function buildVariablesForExistingEntry(
   entry: AniListMediaEntry,
@@ -44,7 +50,10 @@ function buildVariablesForExistingEntry(
 }
 
 /**
- * Build variables for new entries (all defined fields)
+ * Builds GraphQL variables for creating a new entry with all specified fields.
+ * @param entry - The new entry with complete data.
+ * @returns GraphQL variables object with mediaId, status, and optional fields.
+ * @source
  */
 function buildVariablesForNewEntry(entry: AniListMediaEntry): GraphQLVariables {
   const variables: GraphQLVariables = {
@@ -64,7 +73,11 @@ function buildVariablesForNewEntry(entry: AniListMediaEntry): GraphQLVariables {
 }
 
 /**
- * Handle incremental sync step 1: increment progress by 1
+ * Handles incremental sync step 1: increments progress by 1 from current value.
+ * @param entry - The entry being synced.
+ * @param operationId - Unique operation identifier for logging.
+ * @returns GraphQL variables with incremented progress.
+ * @source
  */
 function handleIncrementalStep1(
   entry: AniListMediaEntry,
@@ -84,7 +97,11 @@ function handleIncrementalStep1(
 }
 
 /**
- * Handle incremental sync step 2: set progress to final value
+ * Handles incremental sync step 2: sets progress to final target value.
+ * @param entry - The entry being synced.
+ * @param operationId - Unique operation identifier for logging.
+ * @returns GraphQL variables with target progress value.
+ * @source
  */
 function handleIncrementalStep2(
   entry: AniListMediaEntry,
@@ -103,7 +120,10 @@ function handleIncrementalStep2(
 }
 
 /**
- * Build variables for incremental step 3 - new entries
+ * Builds GraphQL variables for incremental step 3 (new entries): sets status, score, and private flag.
+ * @param entry - The new entry being synced.
+ * @returns GraphQL variables for metadata update.
+ * @source
  */
 function buildStep3VariablesForNewEntry(
   entry: AniListMediaEntry,
@@ -125,7 +145,10 @@ function buildStep3VariablesForNewEntry(
 }
 
 /**
- * Build variables for incremental step 3 - existing entries
+ * Builds GraphQL variables for incremental step 3 (existing entries): includes only changed metadata fields.
+ * @param entry - The existing entry being synced with previousValues set.
+ * @returns GraphQL variables for metadata update.
+ * @source
  */
 function buildStep3VariablesForExistingEntry(
   entry: AniListMediaEntry,
@@ -153,7 +176,11 @@ function buildStep3VariablesForExistingEntry(
 }
 
 /**
- * Handle incremental sync step 3: update status and score
+ * Handles incremental sync step 3: updates status, score, and private flag.
+ * @param entry - The entry being synced.
+ * @param operationId - Unique operation identifier for logging.
+ * @returns GraphQL variables with metadata changes.
+ * @source
  */
 function handleIncrementalStep3(
   entry: AniListMediaEntry,
@@ -181,7 +208,13 @@ function handleIncrementalStep3(
 }
 
 /**
- * Apply incremental sync step modifications to variables
+ * Applies incremental sync step modifications to GraphQL variables.
+ * Modifies variables based on the current step number in syncMetadata.
+ * @param entry - The entry with syncMetadata.step indicating which step to apply.
+ * @param variables - Base GraphQL variables to potentially modify.
+ * @param operationId - Unique operation identifier for logging.
+ * @returns Modified GraphQL variables appropriate for the current step.
+ * @source
  */
 function applyIncrementalSyncStep(
   entry: AniListMediaEntry,
@@ -204,7 +237,10 @@ function applyIncrementalSyncStep(
 }
 
 /**
- * Extract retry-after time from GraphQL error
+ * Extracts the retry-after delay in milliseconds from GraphQL error extensions or error message.
+ * @param errors - Array of GraphQL error objects with optional extensions and message.
+ * @returns Retry delay in milliseconds (default 60000).
+ * @source
  */
 function extractRetryAfterTime(
   errors: { extensions?: { retryAfter?: number }; message: string }[],
@@ -223,7 +259,10 @@ function extractRetryAfterTime(
 }
 
 /**
- * Check if GraphQL errors indicate rate limiting
+ * Checks if GraphQL errors indicate rate limiting based on error message patterns.
+ * @param errors - Array of GraphQL error objects.
+ * @returns true if any error indicates rate limiting.
+ * @source
  */
 function isRateLimitError(errors: { message: string }[]): boolean {
   return errors.some(
@@ -234,7 +273,12 @@ function isRateLimitError(errors: { message: string }[]): boolean {
 }
 
 /**
- * Handle GraphQL errors and return appropriate SyncResult
+ * Processes GraphQL errors and constructs appropriate SyncResult with rate limit detection.
+ * @param errors - Array of GraphQL error objects.
+ * @param mediaId - The media ID that failed.
+ * @param operationId - Unique operation identifier for logging.
+ * @returns SyncResult indicating failure with error details and rate limit info.
+ * @source
  */
 function handleGraphQLErrors(
   errors: { extensions?: { retryAfter?: number }; message: string }[],
@@ -269,7 +313,13 @@ function handleGraphQLErrors(
 }
 
 /**
- * Handle response data extraction and validation
+ * Extracts SaveMediaListEntry response data and constructs appropriate SyncResult.
+ * Handles multiple response nesting levels from different API response formats.
+ * @param response - API response object potentially containing SaveMediaListEntry.
+ * @param mediaId - The media ID that was updated.
+ * @param operationId - Unique operation identifier for logging.
+ * @returns SyncResult indicating success or failure.
+ * @source
  */
 function handleResponseData(
   response: {
@@ -310,7 +360,11 @@ function handleResponseData(
 }
 
 /**
- * Check if error is a 500 server error
+ * Detects if error is a 500 Internal Server Error from various error formats.
+ * @param error - The error object to check.
+ * @param errorMessage - String representation of the error.
+ * @returns true if error is identified as a 500 server error.
+ * @source
  */
 function is500ServerError(error: unknown, errorMessage: string): boolean {
   if (error instanceof Error) {
@@ -346,7 +400,11 @@ function is500ServerError(error: unknown, errorMessage: string): boolean {
 }
 
 /**
- * Log detailed error information
+ * Logs detailed error information including type, message, stack trace, and entry details.
+ * @param error - The error object to log.
+ * @param entry - The entry that was being updated when error occurred.
+ * @param operationId - Unique operation identifier for logging correlation.
+ * @source
  */
 function logErrorDetails(
   error: unknown,
@@ -386,7 +444,13 @@ function logErrorDetails(
 }
 
 /**
- * Handle exception errors during update
+ * Processes exception errors during entry update and returns appropriate SyncResult.
+ * Detects 500 server errors for automatic retry handling.
+ * @param error - The caught exception.
+ * @param entry - The entry that failed to update.
+ * @param operationId - Unique operation identifier for logging.
+ * @returns SyncResult with error details and retry guidance.
+ * @source
  */
 function handleUpdateError(
   error: unknown,
@@ -422,13 +486,20 @@ function handleUpdateError(
   };
 }
 
-// Rate limiting constants
+/**
+ * Rate limiting constant: maximum requests allowed per minute (28 out of AniList's 60).
+ * @source
+ */
 const MAX_REQUESTS_PER_MINUTE = 28;
+/**
+ * Request interval in milliseconds calculated from rate limit constant.
+ * Enforces minimum time between API requests.
+ * @source
+ */
 const REQUEST_INTERVAL = 60000 / MAX_REQUESTS_PER_MINUTE; // Time between requests
 
 /**
- * Result of a single manga sync/update operation.
- *
+ * Result of a single manga sync/update operation with rate limit information.
  * @source
  */
 export interface SyncResult {
@@ -441,8 +512,8 @@ export interface SyncResult {
 }
 
 /**
- * Progress information for a batch sync operation.
- *
+ * Progress tracking information for an ongoing batch sync operation.
+ * Updated periodically for UI progress display and rate limit countdowns.
  * @source
  */
 export interface SyncProgress {
@@ -463,8 +534,8 @@ export interface SyncProgress {
 }
 
 /**
- * Report for a completed sync batch.
- *
+ * Final report summarizing a completed sync batch operation.
+ * Includes success/failure counts, errors, and timestamp for statistics tracking.
  * @source
  */
 export interface SyncReport {
@@ -560,11 +631,10 @@ export async function updateMangaEntry(
 }
 
 /**
- * Delete a manga entry in AniList.
- *
+ * Deletes a manga entry from the user's AniList collection by entry ID.
  * @param entryId - The AniList entry ID to delete.
- * @param token - The user's authentication token.
- * @returns A promise resolving to an object indicating success or error.
+ * @param token - User's access token.
+ * @returns Promise resolving to result with success flag and optional error message.
  * @source
  */
 export async function deleteMangaEntry(
@@ -675,9 +745,10 @@ export async function deleteMangaEntry(
 }
 
 /**
- * Calculate incremental steps for new entries (no previous values)
- * @param entry - The AniList media entry
- * @returns Array of step numbers to execute
+ * Calculates incremental sync steps for new entries without previous values.
+ * @param entry - The new entry to sync.
+ * @returns Array of step numbers (1, 2, and/or 3) to execute in order.
+ * @source
  */
 function calculateNewEntrySteps(entry: AniListMediaEntry): number[] {
   const steps: number[] = [];
@@ -700,9 +771,10 @@ function calculateNewEntrySteps(entry: AniListMediaEntry): number[] {
 }
 
 /**
- * Calculate incremental steps for existing entries with previous values
- * @param entry - The AniList media entry
- * @returns Array of step numbers to execute
+ * Calculates incremental sync steps for existing entries with previous values.
+ * @param entry - The existing entry with previousValues set.
+ * @returns Array of step numbers (1, 2, and/or 3) to execute in order.
+ * @source
  */
 function calculateExistingEntrySteps(entry: AniListMediaEntry): number[] {
   const steps: number[] = [];
@@ -736,9 +808,11 @@ function calculateExistingEntrySteps(entry: AniListMediaEntry): number[] {
 }
 
 /**
- * Helper to add metadata step when both progress and metadata changed
- * @param steps - Current steps array to modify
- * @param progressDelta - Amount progress changed
+ * Helper to add metadata (step 3) when both progress and metadata changed.
+ * Ensures progress steps are included before metadata step.
+ * @param steps - Current steps array to modify in-place.
+ * @param progressDelta - Amount progress changed.
+ * @source
  */
 function addMetadataStepForBothChanged(
   steps: number[],
@@ -756,6 +830,12 @@ function addMetadataStepForBothChanged(
   steps.push(3);
 }
 
+/**
+ * Determines the complete set of incremental steps for an entry, considering resume points.
+ * @param entry - The entry with syncMetadata and optional resumeFromStep.
+ * @returns Array of step numbers to execute, filtered by resumeFromStep if present.
+ * @source
+ */
 function getIncrementalSteps(entry: AniListMediaEntry): number[] {
   const prev = entry.previousValues;
 
@@ -777,12 +857,14 @@ function getIncrementalSteps(entry: AniListMediaEntry): number[] {
 }
 
 /**
- * Helper function to handle rate limiting with retry countdown
- * @param progress - Current sync progress
- * @param result - Sync result with rate limit info
- * @param onProgress - Progress callback function
- * @param abortSignal - Abort signal for cancellation
- * @returns Promise that resolves when retry delay is complete
+ * Handles rate limiting with countdown timer and progress callbacks.
+ * Updates progress every second during the retry delay.
+ * @param progress - Sync progress object to update with countdown.
+ * @param result - SyncResult with retryAfter milliseconds.
+ * @param onProgress - Optional callback for progress updates (called with countdown).
+ * @param abortSignal - Optional signal to abort the retry wait.
+ * @returns Promise that resolves after retry delay completes.
+ * @source
  */
 async function handleRateLimitRetry(
   progress: SyncProgress,
@@ -836,9 +918,11 @@ async function handleRateLimitRetry(
 }
 
 /**
- * Organize entries by media ID for handling incremental sync properly
- * @param entries - Array of AniList media entries to sync
- * @returns Object mapping media IDs to their entry arrays
+ * Organizes entries by media ID, expanding incremental steps into separate entry objects.
+ * Each step becomes a separate entry for proper sequencing.
+ * @param entries - Array of entries to organize.
+ * @returns Object mapping mediaId to array of (potentially expanded) entries.
+ * @source
  */
 function organizeEntriesByMediaId(
   entries: AniListMediaEntry[],
@@ -867,10 +951,11 @@ function organizeEntriesByMediaId(
 }
 
 /**
- * Determine the order of media IDs to process
- * @param displayOrderMediaIds - Optional user-specified order
- * @param entriesByMediaId - Organized entries by media ID
- * @returns Array of media IDs in processing order
+ * Determines the order of media IDs to process, respecting user-specified order if provided.
+ * @param displayOrderMediaIds - Optional user-specified processing order.
+ * @param entriesByMediaId - Organized entries by media ID.
+ * @returns Array of media IDs in processing order.
+ * @source
  */
 function determineProcessingOrder(
   displayOrderMediaIds: number[] | undefined,
@@ -882,10 +967,13 @@ function determineProcessingOrder(
 }
 
 /**
- * Setup progress tracking for a specific media entry
- * @param mediaIdNum - Current media ID being processed
- * @param entriesForMediaId - Entries for this media ID
- * @param progress - Current sync progress object to update
+ * Initializes progress tracking for a specific media entry or batch.
+ * Sets up currentEntry info and step tracking if incremental sync.
+ * @param mediaIdNum - Current media ID being processed.
+ * @param entriesForMediaId - Entries for this media ID.
+ * @param progress - Sync progress object to update.
+ * @returns Object indicating if incremental sync is active.
+ * @source
  */
 function setupProgressForMedia(
   mediaIdNum: number,
@@ -914,7 +1002,8 @@ function setupProgressForMedia(
 }
 
 /**
- * Context object for processing entry steps
+ * Context object for processing entry steps with shared state.
+ * @source
  */
 interface EntryProcessingContext {
   token: string;
@@ -927,12 +1016,14 @@ interface EntryProcessingContext {
 }
 
 /**
- * Process a single entry step with rate limiting and error handling
- * @param entry - Current entry to process
- * @param entryIndex - Index in the entries array
- * @param isIncremental - Whether this is incremental sync
- * @param context - Processing context with shared data
- * @returns Promise resolving to processing result
+ * Processes a single entry step with rate limiting, error handling, and progress tracking.
+ * Handles retries automatically if rate-limited and logs detailed errors.
+ * @param entry - Current entry to process.
+ * @param entryIndex - Index in the entries array.
+ * @param isIncremental - Whether this is incremental sync (affects error handling).
+ * @param context - Processing context with shared state and callbacks.
+ * @returns Promise resolving to result with success flag and retry guidance.
+ * @source
  */
 async function processEntryStep(
   entry: AniListMediaEntry,
@@ -1007,15 +1098,16 @@ async function processEntryStep(
 }
 
 /**
- * Process all entries for a single media ID
- * @param mediaIdNum - Media ID to process
- * @param entriesByMediaId - All organized entries
- * @param token - Authentication token
- * @param apiCallsCompleted - Reference to API calls counter
- * @param progress - Current sync progress
- * @param onProgress - Progress callback function
- * @param abortSignal - Abort signal for cancellation
- * @returns Promise resolving to processing result
+ * Processes all entries for a single media ID, handling incremental sync and retries.
+ * @param mediaIdNum - Media ID to process.
+ * @param entriesByMediaId - All organized entries by media ID.
+ * @param token - User's access token.
+ * @param apiCallsCompleted - Reference object tracking total API calls.
+ * @param progress - Current sync progress to update.
+ * @param onProgress - Optional progress callback.
+ * @param abortSignal - Optional signal to abort processing.
+ * @returns Promise resolving to result with success flag and optional error.
+ * @source
  */
 async function processMediaEntries(
   mediaIdNum: number,
@@ -1100,11 +1192,12 @@ async function processMediaEntries(
 }
 
 /**
- * Generate final sync report and save statistics
- * @param entries - Original entries array
- * @param progress - Final sync progress
- * @param errors - Array of errors that occurred
- * @returns Final sync report
+ * Generates final sync report and persists sync statistics to storage.
+ * @param entries - Original entries array (for statistics).
+ * @param progress - Final sync progress state.
+ * @param errors - Array of errors that occurred during sync.
+ * @returns Completed SyncReport object with summary and error details.
+ * @source
  */
 function generateSyncReport(
   entries: AniListMediaEntry[],

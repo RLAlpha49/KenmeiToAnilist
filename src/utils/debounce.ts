@@ -12,18 +12,7 @@
  * @param func - The function to debounce
  * @param wait - The number of milliseconds to delay
  * @returns The debounced function
- *
- * @example
- * ```typescript
- * const debouncedSave = debounce(() => {
- *   saveToStorage();
- * }, 1000);
- *
- * // Will only call saveToStorage once after 1 second of inactivity
- * debouncedSave();
- * debouncedSave();
- * debouncedSave();
- * ```
+ * @source
  */
 export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
@@ -51,18 +40,7 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
  * @param func - The function to throttle
  * @param wait - The number of milliseconds to throttle invocations to
  * @returns The throttled function
- *
- * @example
- * ```typescript
- * const throttledUpdate = throttle(() => {
- *   updateUI();
- * }, 100);
- *
- * // Will call updateUI at most once every 100ms
- * throttledUpdate();
- * throttledUpdate();
- * throttledUpdate();
- * ```
+ * @source
  */
 export function throttle<T extends (...args: unknown[]) => unknown>(
   func: T,
@@ -95,18 +73,7 @@ export function throttle<T extends (...args: unknown[]) => unknown>(
  * @param func - The function to debounce
  * @param wait - The number of milliseconds to delay
  * @returns The debounced function with immediate first call
- *
- * @example
- * ```typescript
- * const debouncedSave = debounceImmediate(() => {
- *   saveToStorage();
- * }, 1000);
- *
- * // First call executes immediately, subsequent calls are debounced
- * debouncedSave(); // Executes immediately
- * debouncedSave(); // Debounced
- * debouncedSave(); // Debounced
- * ```
+ * @source
  */
 export function debounceImmediate<T extends (...args: unknown[]) => unknown>(
   func: T,

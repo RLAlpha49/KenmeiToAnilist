@@ -7,8 +7,7 @@
 import { MediaListStatus } from "../anilist/types";
 
 /**
- * Kenmei reading status values.
- *
+ * Kenmei media list status enum values.
  * @source
  */
 export type KenmeiStatus =
@@ -19,8 +18,7 @@ export type KenmeiStatus =
   | "plan_to_read";
 
 /**
- * Represents a Kenmei manga entry.
- *
+ * Kenmei manga library entry with reading progress, metadata, and timestamps.
  * @source
  */
 export interface KenmeiManga {
@@ -40,12 +38,11 @@ export interface KenmeiManga {
   updated_at: string;
   author?: string;
   alternative_titles?: string[];
-  anilistId?: number; // Optional AniList ID for direct fetching
+  anilistId?: number; // Optional AniList ID for direct matching
 }
 
 /**
- * Represents a Kenmei export file structure.
- *
+ * Kenmei export file structure containing user info and manga library.
  * @source
  */
 export interface KenmeiExport {
@@ -58,8 +55,7 @@ export interface KenmeiExport {
 }
 
 /**
- * Options for parsing Kenmei data.
- *
+ * Configuration options for parsing Kenmei export data with validation and normalization.
  * @source
  */
 export interface KenmeiParseOptions {
@@ -69,8 +65,7 @@ export interface KenmeiParseOptions {
 }
 
 /**
- * Default options for parsing Kenmei data.
- *
+ * Default parsing options with structure validation enabled and plan_to_read as fallback status.
  * @source
  */
 export const DEFAULT_PARSE_OPTIONS: KenmeiParseOptions = {
@@ -80,8 +75,7 @@ export const DEFAULT_PARSE_OPTIONS: KenmeiParseOptions = {
 };
 
 /**
- * Represents a match between a Kenmei manga and an AniList manga.
- *
+ * Matching result between a Kenmei manga entry and an AniList manga entry.
  * @source
  */
 export interface MangaMatch {
@@ -98,8 +92,7 @@ export interface MangaMatch {
 }
 
 /**
- * Status mapping from Kenmei to AniList.
- *
+ * Bidirectional Kenmei-to-AniList status mapping constant.
  * @source
  */
 export const STATUS_MAPPING: Record<KenmeiStatus, MediaListStatus> = {
@@ -111,8 +104,7 @@ export const STATUS_MAPPING: Record<KenmeiStatus, MediaListStatus> = {
 };
 
 /**
- * Custom status mapping configuration.
- *
+ * Custom status mapping configuration for Kenmei-to-AniList conversion.
  * @source
  */
 export interface StatusMappingConfig {
@@ -124,8 +116,7 @@ export interface StatusMappingConfig {
 }
 
 /**
- * Represents a validation error for Kenmei data processing.
- *
+ * Validation error occurring during Kenmei data processing.
  * @source
  */
 export interface ValidationError {
@@ -136,8 +127,7 @@ export interface ValidationError {
 }
 
 /**
- * Represents the result of processing Kenmei data.
- *
+ * Result of processing a Kenmei export file, including processed entries, validation errors, and statistics.
  * @source
  */
 export interface ProcessingResult {

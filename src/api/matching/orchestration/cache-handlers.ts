@@ -16,13 +16,11 @@ import { calculateConfidence, calculateTitleTypePriority } from "../scoring";
 import { getMatchConfig } from "@/utils/storage";
 
 /**
- * Handle cache bypass by clearing existing cache entry
- *
- * When bypassCache is enabled, this function removes the cache entry
- * to ensure a fresh search is performed.
+ * Clear existing cache entry when bypassing cache.
  *
  * @param title - Manga title to clear from cache
  * @param cacheKey - Cache key for the title
+ * @source
  */
 export function handleCacheBypass(title: string, cacheKey: string): void {
   console.debug(
@@ -43,14 +41,12 @@ export function handleCacheBypass(title: string, cacheKey: string): void {
 }
 
 /**
- * Process cached manga results with filtering and scoring
+ * Process cached results with filtering and confidence recalculation.
  *
- * Retrieves cached results, applies filtering based on match configuration,
- * recalculates confidence scores, and returns formatted response.
- *
- * @param title - The manga title to process cached results for
- * @param cacheKey - The cache key to retrieve results from
- * @returns Manga search response with cached results or null if no valid cache
+ * @param title - Manga title to process cached results for
+ * @param cacheKey - Cache key to retrieve results from
+ * @returns Manga search response with cached results or null if cache invalid
+ * @source
  */
 export function processCachedResults(
   title: string,
@@ -127,14 +123,14 @@ export function processCachedResults(
 }
 
 /**
- * Save search results to cache
+ * Store ranked manga results to cache for future searches.
  *
- * Stores ranked manga results in the cache for future searches.
  * Skips caching if bypassCache is enabled in config.
  *
  * @param title - Manga title to cache results for
  * @param results - Ranked manga results to cache
  * @param searchConfig - Search configuration
+ * @source
  */
 export function cacheSearchResults(
   title: string,

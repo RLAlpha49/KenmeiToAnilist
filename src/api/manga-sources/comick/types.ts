@@ -5,13 +5,12 @@ import { MangaSource } from "../types";
 /**
  * @packageDocumentation
  * @module comick-types
- * @description Comick API type definitions for manga search and AniList link extraction.
+ * @description Comick API response type definitions for manga search and details.
  */
 
 /**
  * Represents a Comick manga entry from the search API.
- * Extends the base manga entry with Comick-specific properties.
- *
+ * Extends the base manga entry with Comick-specific properties and metadata.
  * @source
  */
 export interface ComickManga extends BaseMangaEntry {
@@ -22,21 +21,23 @@ export interface ComickManga extends BaseMangaEntry {
   user_follow_count?: number;
   content_rating?: string;
   demographic?: number;
+  /** Multi-dimensional titles from Comick's data system */
   md_titles?: Array<{
     title: string;
     lang: string;
   }>;
+  /** MangaDex cross-reference data */
   md_comics?: {
     id: string;
     title: string;
     slug: string;
   };
-  highlight?: string; // Search highlight from API
+  /** Search highlight from API results */
+  highlight?: string;
 }
 
 /**
  * Represents the search response from Comick API.
- *
  * @source
  */
 export interface ComickSearchResponse {
@@ -46,9 +47,8 @@ export interface ComickSearchResponse {
 }
 
 /**
- * Represents a Comick manga detail with referrers (external links).
- * Extends the base manga detail with Comick-specific properties.
- *
+ * Represents a Comick manga detail with external referrers and cross-references.
+ * Extends the base manga detail with Comick-specific properties and nested comic data.
  * @source
  */
 export interface ComickMangaDetail extends BaseMangaDetail {
@@ -66,11 +66,13 @@ export interface ComickMangaDetail extends BaseMangaDetail {
     demographic?: number;
     hentai?: boolean;
     content_rating?: string;
+    /** MangaUpdates cross-reference */
     mu_comics?: {
       id: string;
       title: string;
       slug: string;
     };
+    /** MangaDex cross-reference */
     md_comics?: {
       id: string;
       title: string;
@@ -91,10 +93,12 @@ export interface ComickMangaDetail extends BaseMangaDetail {
       name: string;
       slug: string;
     }>;
+    /** Multi-dimensional titles */
     md_titles?: Array<{
       title: string;
       lang: string;
     }>;
+    /** External links to other platforms */
     links?: {
       al?: string; // AniList ID
       ap?: string; // AnimePlanet
@@ -102,16 +106,15 @@ export interface ComickMangaDetail extends BaseMangaDetail {
       mb?: string; // MangaBuddy
       mu?: string; // MangaUpdates
       mal?: string; // MyAnimeList
-      [key: string]: string | undefined; // Allow for other site keys
+      [key: string]: string | undefined;
     };
   };
   langList?: string[];
 }
 
 /**
- * Represents a matched manga from Comick with AniList info.
+ * Represents a matched manga from Comick with AniList information.
  * @deprecated Use MangaMatchResult from manga-sources/types instead.
- *
  * @source
  */
 export interface ComickMatchResult {
@@ -122,9 +125,8 @@ export interface ComickMatchResult {
 }
 
 /**
- * Represents an enhanced AniList manga entry that includes Comick source info.
+ * Represents an enhanced AniList manga entry that includes Comick source information.
  * @deprecated Use EnhancedAniListManga from manga-sources/types instead.
- *
  * @source
  */
 export interface EnhancedAniListManga extends AniListManga {

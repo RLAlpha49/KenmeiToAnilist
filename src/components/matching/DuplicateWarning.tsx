@@ -4,12 +4,29 @@ import { AlertCircle, Search, X } from "lucide-react";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 
+/**
+ * Represents a duplicate entry with one AniList manga mapped to multiple Kenmei titles.
+ *
+ * @property anilistId - The AniList manga ID.
+ * @property anilistTitle - The AniList manga title (romaji or english).
+ * @property kenmeiTitles - Array of Kenmei manga titles that map to this AniList ID.
+ * @source
+ */
 export interface DuplicateEntry {
   anilistId: number;
   anilistTitle: string;
   kenmeiTitles: string[];
 }
 
+/**
+ * Props for the DuplicateWarning component.
+ *
+ * @property duplicates - Array of detected duplicate entries to display.
+ * @property onDismiss - Callback to dismiss the warning.
+ * @property onSearchAnilist - Callback to search for AniList manga by title.
+ * @property onIgnoreDuplicate - Callback to ignore a duplicate entry.
+ * @source
+ */
 interface DuplicateWarningProps {
   duplicates: DuplicateEntry[];
   onDismiss: () => void;
@@ -17,6 +34,15 @@ interface DuplicateWarningProps {
   onIgnoreDuplicate: (anilistId: number, anilistTitle: string) => void;
 }
 
+/**
+ * Displays a warning card for duplicate AniList entries mapped to multiple Kenmei manga.
+ *
+ * Allows user to review conflicts and take action to search or ignore duplicates.
+ *
+ * @param props - The component props.
+ * @returns The rendered duplicate warning component, or null if no duplicates.
+ * @source
+ */
 function DuplicateWarningComponent({
   duplicates,
   onDismiss,
@@ -37,7 +63,7 @@ function DuplicateWarningComponent({
         <div className="relative flex flex-col gap-4 p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex flex-1 items-start gap-3">
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-700 shadow-inner shadow-amber-200/30 dark:bg-amber-500/18 dark:text-amber-200">
+              <span className="dark:bg-amber-500/18 flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-700 shadow-inner shadow-amber-200/30 dark:text-amber-200">
                 <AlertCircle className="h-5 w-5" />
               </span>
               <div className="flex-1">
@@ -45,7 +71,7 @@ function DuplicateWarningComponent({
                   <h3 className="text-lg font-semibold text-amber-900 dark:text-amber-100">
                     Duplicate AniList Entries Detected
                   </h3>
-                  <Badge className="rounded-full border border-amber-300/70 bg-amber-200/40 text-[11px] font-semibold tracking-[0.18em] text-amber-700 uppercase dark:border-amber-800/60 dark:bg-amber-900/40 dark:text-amber-300">
+                  <Badge className="rounded-full border border-amber-300/70 bg-amber-200/40 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700 dark:border-amber-800/60 dark:bg-amber-900/40 dark:text-amber-300">
                     {duplicates.length} issues
                   </Badge>
                 </div>
@@ -72,13 +98,13 @@ function DuplicateWarningComponent({
                 className="relative overflow-hidden rounded-2xl border border-amber-200/70 bg-gradient-to-br from-amber-100/70 via-white/65 to-amber-50/60 p-4 shadow-sm shadow-amber-200/30 transition hover:-translate-y-0.5 hover:shadow-lg dark:border-amber-800/50 dark:from-amber-900/40 dark:via-amber-950/40 dark:to-amber-950/30"
               >
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.25)_0%,rgba(255,255,255,0)_70%)] opacity-70 dark:bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.2)_0%,rgba(17,24,39,0)_75%)]" />
-                <div className="relative flex flex-col gap-4 pt-2 pr-3">
-                  <div className="absolute top-3 right-3 z-20 flex gap-2">
+                <div className="relative flex flex-col gap-4 pr-3 pt-2">
+                  <div className="absolute right-3 top-3 z-20 flex gap-2">
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => onSearchAnilist(duplicate.anilistTitle)}
-                      className="h-8 gap-1 rounded-full border-amber-300/60 bg-white/75 px-3 text-xs font-semibold tracking-[0.18em] text-amber-700 uppercase shadow-sm transition hover:border-amber-400 hover:bg-amber-100 dark:border-amber-800/50 dark:bg-amber-950/60 dark:text-amber-200 dark:hover:border-amber-700"
+                      className="h-8 gap-1 rounded-full border-amber-300/60 bg-white/75 px-3 text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 shadow-sm transition hover:border-amber-400 hover:bg-amber-100 dark:border-amber-800/50 dark:bg-amber-950/60 dark:text-amber-200 dark:hover:border-amber-700"
                       title={`Search for "${duplicate.anilistTitle}" in the match results below`}
                     >
                       <Search className="h-3.5 w-3.5" /> Search
@@ -92,7 +118,7 @@ function DuplicateWarningComponent({
                           duplicate.anilistTitle,
                         )
                       }
-                      className="h-8 gap-1 rounded-full px-3 text-xs font-semibold tracking-[0.18em] text-amber-600 uppercase transition hover:bg-amber-100 hover:text-amber-800 dark:text-amber-300 dark:hover:bg-amber-900/40 dark:hover:text-amber-200"
+                      className="h-8 gap-1 rounded-full px-3 text-xs font-semibold uppercase tracking-[0.18em] text-amber-600 transition hover:bg-amber-100 hover:text-amber-800 dark:text-amber-300 dark:hover:bg-amber-900/40 dark:hover:text-amber-200"
                       title={`Ignore this duplicate warning for "${duplicate.anilistTitle}"`}
                     >
                       <X className="h-3.5 w-3.5" /> Ignore
@@ -102,12 +128,12 @@ function DuplicateWarningComponent({
                     <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
                       AniList · {duplicate.anilistTitle}
                     </p>
-                    <p className="text-xs tracking-[0.18em] text-amber-500/80 uppercase dark:text-amber-300/80">
+                    <p className="text-xs uppercase tracking-[0.18em] text-amber-500/80 dark:text-amber-300/80">
                       {duplicate.kenmeiTitles.length} Kenmei matches flagged
                     </p>
                   </div>
                   <div className="space-y-2 rounded-xl border border-amber-200/60 bg-white/80 p-3 shadow-inner dark:border-amber-800/60 dark:bg-amber-950/40">
-                    <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.2em] text-amber-500 uppercase dark:text-amber-300">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-500 dark:text-amber-300">
                       Matched Kenmei Entries
                     </div>
                     <ul className="space-y-1.5">
@@ -128,10 +154,11 @@ function DuplicateWarningComponent({
           </div>
 
           <p className="relative mt-2 rounded-2xl border border-amber-300/60 bg-amber-100/50 p-4 text-xs text-amber-700 shadow-inner dark:border-amber-800/50 dark:bg-amber-900/25 dark:text-amber-300">
-            💡 <strong className="font-semibold">Tip:</strong> Use the “Search”
-            action to jump straight to the AniList title in your match results.
-            If the duplicate is intentional, tap “Ignore” to permanently dismiss
-            the alert for that AniList entry.
+            💡 <strong className="font-semibold">Tip:</strong> Use the
+            &quot;Search&quot; action to jump straight to the AniList title in
+            your match results. If the duplicate is intentional, tap
+            &quot;Ignore&quot; to permanently dismiss the alert for that AniList
+            entry.
           </p>
         </div>
       </div>
@@ -139,6 +166,7 @@ function DuplicateWarningComponent({
   );
 }
 
+/** Memoized DuplicateWarning component for performance optimization. @source */
 const MemoizedDuplicateWarning = React.memo(DuplicateWarningComponent);
 MemoizedDuplicateWarning.displayName = "DuplicateWarning";
 

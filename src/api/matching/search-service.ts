@@ -27,27 +27,18 @@ import { findBestMatches } from "./match-engine";
 import { getMangaByIds } from "@/api/anilist/client";
 
 /**
- * Search for manga by title with rate limiting and caching
+ * Searches AniList for manga by title with caching and rate limiting.
  *
- * Main entry point for searching manga on AniList. Supports:
- * - Cache-first strategy (unless bypassed)
- * - Rate-limited API calls
- * - Result ranking and filtering
- * - Fallback sources (Comick, MangaDex)
- * - Confidence scoring
+ * Main entry point providing cache-first strategy, rate-limited API calls, result ranking,
+ * fallback sources (Comick, MangaDex), and confidence scoring.
  *
- * @param title - The manga title to search for
- * @param token - Optional authentication token
- * @param config - Optional search service configuration
- * @param abortSignal - Optional abort signal to cancel the search
- * @param specificPage - Optional specific page number (disables pagination)
- * @returns Promise resolving to manga search response with matches
- *
- * @example
- * ```typescript
- * const results = await searchMangaByTitle("One Piece", token);
- * console.log(`Found ${results.matches.length} matches`);
- * ```
+ * @param title - Manga title to search for.
+ * @param token - Optional authentication token.
+ * @param config - Optional search service configuration overrides.
+ * @param abortSignal - Optional abort signal to cancel the search.
+ * @param specificPage - Optional specific page number (disables pagination).
+ * @returns Promise resolving to manga search response with matches.
+ * @source
  */
 export async function searchMangaByTitle(
   title: string,
@@ -60,23 +51,16 @@ export async function searchMangaByTitle(
 }
 
 /**
- * Match a single Kenmei manga with AniList entries
+ * Matches a single Kenmei manga with AniList entries using title similarity.
  *
- * Searches for potential matches and uses the match engine to find
- * the best match based on title similarity and other factors.
+ * Searches for potential matches and applies the match engine to find the best
+ * candidate based on title similarity and configuration.
  *
- * @param kenmeiManga - The Kenmei manga entry to match
- * @param token - Optional authentication token
- * @param config - Optional search service configuration
- * @returns Promise resolving to a MangaMatchResult object
- *
- * @example
- * ```typescript
- * const result = await matchSingleManga(kenmeiManga, token);
- * if (result.selectedMatch) {
- *   console.log(`Matched to: ${result.selectedMatch.title.romaji}`);
- * }
- * ```
+ * @param kenmeiManga - Kenmei manga entry to match.
+ * @param token - Optional authentication token.
+ * @param config - Optional search service configuration overrides.
+ * @returns Promise resolving to MangaMatchResult with best matches and status.
+ * @source
  */
 export async function matchSingleManga(
   kenmeiManga: KenmeiManga,
@@ -125,31 +109,20 @@ export async function matchSingleManga(
 }
 
 /**
- * Process matches for a batch of manga
+ * Matches multiple Kenmei manga entries efficiently using batch operations.
  *
- * Efficiently matches multiple manga entries by:
- * - Using cached results when available
- * - Batch fetching manga with known IDs
- * - Sequential searching for uncached manga
- * - Supporting cancellation with partial results
+ * Uses cached results, batch ID fetching, and sequential searches for uncached entries.
+ * Supports cancellation with partial results return and progress tracking.
  *
- * @param mangaList - List of Kenmei manga to match
- * @param token - Optional authentication token
- * @param config - Optional search service configuration
- * @param progressCallback - Optional callback to track progress
- * @param shouldCancel - Optional function to check if operation should cancel
- * @param abortSignal - Optional abort signal to cancel the operation
- * @returns Promise resolving to array of match results
- *
- * @example
- * ```typescript
- * const results = await batchMatchManga(
- *   mangaList,
- *   token,
- *   {},
- *   (current, total) => console.log(`Progress: ${current}/${total}`)
- * );
- * ```
+ * @param mangaList - Kenmei manga to match.
+ * @param token - Optional authentication token.
+ * @param config - Optional search service configuration overrides.
+ * @param progressCallback - Optional callback for progress updates (current, total, currentTitle).
+ * @param shouldCancel - Optional function to check for cancellation request.
+ * @param abortSignal - Optional abort signal to cancel the operation.
+ * @returns Promise resolving to array of MangaMatchResult objects.
+ * @throws Error if operation is cancelled or aborted.
+ * @source
  */
 export async function batchMatchManga(
   mangaList: KenmeiManga[],
@@ -307,21 +280,16 @@ export async function batchMatchManga(
 }
 
 /**
- * Pre-search for common manga titles to populate cache
+ * Preloads common manga titles into the cache.
  *
- * Useful for warming up the cache with frequently searched titles.
- * Only searches titles that aren't already cached.
+ * Searches and caches frequently accessed titles to reduce API calls.
+ * Skips titles already present in cache.
  *
- * @param titles - Array of manga titles to preload
- * @param token - Optional authentication token
- * @param config - Optional search service configuration
- * @returns Promise that resolves when preloading is complete
- *
- * @example
- * ```typescript
- * await preloadCommonManga(["One Piece", "Naruto", "Bleach"], token);
- * console.log("Cache preloaded!");
- * ```
+ * @param titles - Array of manga titles to preload.
+ * @param token - Optional authentication token.
+ * @param config - Optional search service configuration overrides.
+ * @returns Promise resolving when preloading is complete.
+ * @source
  */
 export async function preloadCommonManga(
   titles: string[],
@@ -357,22 +325,18 @@ export async function preloadCommonManga(
 }
 
 /**
- * Get manga by their AniList IDs in batches
+ * Fetches multiple manga by AniList ID in batches with cancellation support.
  *
- * Efficiently fetches multiple manga by ID, respecting API limits
- * and supporting cancellation between batches.
+ * Processes IDs in groups of 25 (API limit) with checks for cancellation
+ * between batches. Continues processing even if individual batches fail.
  *
- * @param ids - Array of AniList manga IDs to fetch
- * @param token - Optional authentication token
- * @param shouldCancel - Optional function to check if operation should cancel
- * @param abortSignal - Optional abort signal to cancel the operation
- * @returns Promise resolving to array of manga
- *
- * @example
- * ```typescript
- * const manga = await getBatchedMangaIds([1, 2, 3, 4, 5], token);
- * console.log(`Fetched ${manga.length} manga`);
- * ```
+ * @param ids - Array of AniList manga IDs to fetch.
+ * @param token - Optional authentication token.
+ * @param shouldCancel - Optional function to check for cancellation request.
+ * @param abortSignal - Optional abort signal to cancel the operation.
+ * @returns Promise resolving to array of AniListManga objects.
+ * @throws Error if operation is cancelled or aborted.
+ * @source
  */
 export async function getBatchedMangaIds(
   ids: number[],

@@ -1,12 +1,12 @@
 /**
- * Batching module for manga search operations
- * @module batching
+ * Batch processing module for manga search operations.
  *
- * Provides batch processing functionality for manga matching, including:
- * - Categorization: Separates manga into cached/known/uncached
- * - Known IDs: Efficiently fetches manga with known AniList IDs
- * - Uncached: Searches for manga not in cache with concurrency control
- * - Results: Compiles and filters final match results
+ * Exports batch processing functionality for manga matching:
+ * - Categorization: Separate manga into cached/known/uncached
+ * - Known IDs: Efficiently fetch manga with known AniList IDs
+ * - Uncached: Search uncached manga with concurrency control
+ * - Results: Compile and filter final match results
+ * @source
  */
 
 // Types

@@ -36,10 +36,6 @@ export interface SearchModalProps {
  * @param props - The props for the SearchModal component.
  * @returns The rendered search modal React element.
  * @source
- * @example
- * ```tsx
- * <SearchModal isOpen={isOpen} searchTarget={manga} accessToken={token} bypassCache={false} onClose={handleClose} onSelectMatch={handleSelect} />
- * ```
  */
 export const SearchModal: React.FC<SearchModalProps> = ({
   isOpen,

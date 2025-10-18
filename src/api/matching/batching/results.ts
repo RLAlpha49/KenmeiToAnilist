@@ -12,15 +12,16 @@ import { getSourceInfo } from "../sources";
 import { getMatchConfig } from "@/utils/storage";
 
 /**
- * Apply filtering rules to potential matches based on match configuration
+ * Filter matches based on configuration rules (one-shots, adult content).
  *
- * Filters one-shots and adult content based on user configuration.
- * These filters only apply during automatic matching, not manual review.
+ * Applies user-configured filtering during automatic matching.
+ * Filters are not applied during manual review.
  *
- * @param potentialMatches - List of potential manga matches
- * @param mangaTitle - Title of the Kenmei manga being matched
- * @param matchConfig - Configuration for filtering (ignoreOneShots, ignoreAdultContent)
- * @returns Filtered list of manga matches
+ * @param potentialMatches - Potential manga matches.
+ * @param mangaTitle - Title of manga being matched.
+ * @param matchConfig - Configuration with ignoreOneShots, ignoreAdultContent.
+ * @returns Filtered list of manga matches.
+ * @source
  */
 export function applyMatchFiltering(
   potentialMatches: AniListManga[],
@@ -59,16 +60,16 @@ export function applyMatchFiltering(
 }
 
 /**
- * Create MangaMatchResult for a single manga entry
+ * Create MangaMatchResult for single manga with confidence scores and sources.
  *
- * Combines manga data with match confidence scores and source information.
- * Includes Comick and MangaDex source mappings if available.
+ * Combines AniList matches with confidence scores and Comick/MangaDex source info.
  *
- * @param manga - Kenmei manga entry
- * @param potentialMatches - List of AniList matches for this manga
- * @param comickSourceMap - Map of manga ID to Comick source info
- * @param mangaDexSourceMap - Map of manga ID to MangaDex source info
- * @returns Complete match result with confidence scores and source info
+ * @param manga - Kenmei manga entry.
+ * @param potentialMatches - AniList matches for this manga.
+ * @param comickSourceMap - Map of manga ID to Comick source info.
+ * @param mangaDexSourceMap - Map of manga ID to MangaDex source info.
+ * @returns Complete match result with confidence and source info.
+ * @source
  */
 export function createMangaMatchResult(
   manga: KenmeiManga,
@@ -121,18 +122,18 @@ export function createMangaMatchResult(
 }
 
 /**
- * Compile final results from cached data and create MangaMatchResult objects
+ * Compile final match results from cached data with confidence scores.
  *
- * Takes categorized manga and cached results, applies filtering rules,
- * and creates structured match results with confidence scores and source info.
+ * Applies filtering, creates match results with confidence scores, and includes source info.
  *
- * @param mangaList - Full list of Kenmei manga
- * @param cachedResults - Cached/fetched AniList matches by index
- * @param cachedComickSources - Comick source information by index
- * @param cachedMangaDexSources - MangaDex source information by index
- * @param checkCancellation - Function to check if operation was cancelled
- * @param updateProgress - Callback to update progress
- * @returns Array of complete match results
+ * @param mangaList - Full list of Kenmei manga.
+ * @param cachedResults - Cached/fetched AniList matches by index.
+ * @param cachedComickSources - Comick source information by index.
+ * @param cachedMangaDexSources - MangaDex source information by index.
+ * @param checkCancellation - Cancellation check function.
+ * @param updateProgress - Progress update callback.
+ * @returns Array of complete match results.
+ * @source
  */
 export function compileMatchResults(
   mangaList: KenmeiManga[],
@@ -198,15 +199,15 @@ export function compileMatchResults(
 }
 
 /**
- * Handle partial results in case of cancellation during processing
+ * Create partial match results from partially-processed data before cancellation.
  *
- * When batch processing is cancelled, this function creates match results
- * from whatever was successfully fetched before cancellation. Useful for
- * allowing users to review partial progress.
+ * Returns successfully-matched entries when batch processing is cancelled.
+ * Allows users to review partial progress.
  *
- * @param mangaList - Full list of Kenmei manga
- * @param cachedResults - Results fetched before cancellation
- * @returns Array of match results for successfully processed manga
+ * @param mangaList - Full list of Kenmei manga.
+ * @param cachedResults - Results fetched before cancellation.
+ * @returns Array of match results for successfully-processed manga.
+ * @source
  */
 export function handleCancellationResults(
   mangaList: KenmeiManga[],

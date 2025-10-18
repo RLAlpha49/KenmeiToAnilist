@@ -15,11 +15,12 @@ import { calculateConfidence, calculateTitleTypePriority } from "../scoring";
 import { isOneShot } from "../normalization";
 
 /**
- * Process MangaDex results for display
- * @param mangaDexResults - Enhanced manga results from MangaDex API
- * @param title - Original search title
- * @param mangaDexSourceMap - Map to populate with MangaDex source information
- * @returns Sorted array of AniListManga results
+ * Process MangaDex search results, score by confidence, and sort by relevance.
+ * @param mangaDexResults - Enhanced manga results from MangaDex API.
+ * @param title - Original search title.
+ * @param mangaDexSourceMap - Map to populate with MangaDex source information.
+ * @returns Sorted array of AniListManga results.
+ * @source
  */
 export function processMangaDexResults(
   mangaDexResults: EnhancedAniListManga[],
@@ -59,11 +60,12 @@ export function processMangaDexResults(
 }
 
 /**
- * Apply content filtering to MangaDex results based on match configuration
- * @param mangaDexResults - Manga results from MangaDex
- * @param title - Original search title
- * @param searchConfig - Search configuration
- * @returns Filtered manga array
+ * Apply content filtering to MangaDex results based on match configuration.
+ * @param mangaDexResults - Manga results from MangaDex.
+ * @param title - Original search title.
+ * @param searchConfig - Search configuration.
+ * @returns Filtered manga array.
+ * @source
  */
 export function applyMangaDexFiltering(
   mangaDexResults: AniListManga[],

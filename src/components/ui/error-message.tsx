@@ -106,7 +106,7 @@ export function ErrorMessage({
       <div className="flex-1">
         <p className="mb-1 font-medium">
           {showTypeLabel && (
-            <span className="mr-1 inline-block rounded bg-black/5 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase dark:bg-white/10">
+            <span className="mr-1 inline-block rounded bg-black/5 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide dark:bg-white/10">
               {cfg.label}
             </span>
           )}
@@ -117,7 +117,7 @@ export function ErrorMessage({
             {retry && (
               <button
                 onClick={retry}
-                className="rounded bg-white px-2 py-1 text-xs font-medium shadow-sm ring-1 ring-black/10 hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:bg-gray-800 dark:ring-white/10 dark:hover:bg-gray-700"
+                className="rounded bg-white px-2 py-1 text-xs font-medium shadow-sm ring-1 ring-black/10 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:ring-white/10 dark:hover:bg-gray-700"
               >
                 Try Again
               </button>
@@ -125,7 +125,7 @@ export function ErrorMessage({
             {dismiss && (
               <button
                 onClick={dismiss}
-                className="rounded px-2 py-1 text-xs font-medium hover:bg-white/20 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:hover:bg-black/20"
+                className="rounded px-2 py-1 text-xs font-medium hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:hover:bg-black/20"
               >
                 Dismiss
               </button>

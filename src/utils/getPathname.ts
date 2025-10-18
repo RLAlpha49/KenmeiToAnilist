@@ -1,6 +1,11 @@
 /**
- * Extract a pathname string from various location-like objects returned by different
- * router implementations or wrappers.
+ * Extracts a pathname string from various location-like objects returned by different router implementations.
+ *
+ * @param loc - A location object that may contain pathname at various nesting levels.
+ * @returns The extracted pathname string, or "/" if extraction fails.
+ * @remarks
+ * Checks multiple common nesting patterns to accommodate different router wrapper structures.
+ * @source
  */
 export function getPathname(loc: unknown): string {
   if (typeof loc !== "object" || loc === null) return "/";

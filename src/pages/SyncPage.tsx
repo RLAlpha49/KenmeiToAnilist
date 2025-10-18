@@ -154,7 +154,11 @@ export function SyncPage() {
     ![1, 7, 14, 30, 60, 90, 180, 365].includes(syncConfig.autoPauseThreshold),
   );
 
-  // Toggle handler for sync options
+  /**
+   * Toggles a sync configuration option and saves the updated config to storage.
+   * @param option - The sync configuration option to toggle.
+   * @source
+   */
   const handleToggleOption = (option: keyof SyncConfig) => {
     setSyncConfig((prev) => {
       const newConfig = {
@@ -169,7 +173,11 @@ export function SyncPage() {
     });
   };
 
-  // Handler for refreshing user library (shared between Try Again and Refresh buttons)
+  /**
+   * Refreshes the user's AniList library by fetching latest data.
+   * Delegates to utility function with appropriate state handlers.
+   * @source
+   */
   const handleLibraryRefresh = () => {
     handleLibraryRefreshUtil({
       token,
@@ -231,6 +239,14 @@ export function SyncPage() {
     name?: string;
   };
 
+  /**
+   * Handles rate limit errors from the AniList API and schedules a retry.
+   * @param error - The API error containing rate limit information.
+   * @param controller - AbortController to manage request cancellation.
+   * @param fetchLibrary - Callback to retry fetching the library.
+   * @returns Cleanup function or void.
+   * @source
+   */
   const handleRateLimitError = (
     error: ApiError,
     controller: AbortController,
@@ -266,7 +282,15 @@ export function SyncPage() {
     return () => clearTimeout(timer);
   };
 
-  // Handle server errors with retry logic
+  /**
+   * Handles server errors from the AniList API with exponential backoff retry logic.
+   * @param error - The API error to handle.
+   * @param attempt - Current retry attempt number.
+   * @param controller - AbortController to manage request cancellation.
+   * @param fetchLibrary - Callback to retry fetching the library.
+   * @returns Cleanup function if retry is scheduled, false otherwise.
+   * @source
+   */
   const handleServerError = (
     error: ApiError,
     attempt: number,
@@ -301,7 +325,12 @@ export function SyncPage() {
     return () => clearTimeout(timer);
   };
 
-  // Handle fetch library success
+  /**
+   * Handles successful library fetch from AniList API.
+   * Updates state with user's manga entries and clears errors.
+   * @param library - The user's AniList media list.
+   * @source
+   */
   const handleFetchSuccess = (library: UserMediaList) => {
     console.info(
       `[SyncPage] Loaded ${Object.keys(library).length} entries from user's AniList library`,
@@ -312,7 +341,15 @@ export function SyncPage() {
     setRetryCount(0);
   };
 
-  // Handle fetch library error
+  /**
+   * Handles errors from library fetch with appropriate retry logic and error messages.
+   * Delegates to specific error handlers for rate limit and server errors.
+   * @param error - The API error from library fetch.
+   * @param attempt - Current retry attempt number.
+   * @param controller - AbortController to manage request cancellation.
+   * @param fetchLibrary - Callback to retry fetching the library.
+   * @source
+   */
   const handleFetchError = (
     error: ApiError,
     attempt: number,
@@ -473,7 +510,10 @@ export function SyncPage() {
     ],
   );
 
-  // Modify handleStartSync to only change the view, not start synchronization
+  /**
+   * Initiates sync view transition when entries with changes are ready.
+   * @source
+   */
   const handleStartSync = () => {
     if (entriesWithChanges.length === 0) {
       return;
@@ -481,13 +521,22 @@ export function SyncPage() {
     setViewMode("sync");
   };
 
-  // Handle sync completion
+  /**
+   * Handles completion of sync process and transitions to results view.
+   * @source
+   */
   const handleSyncComplete = () => {
     setViewMode("results");
   };
 
   // Handle sync cancellation
   const [wasCancelled, setWasCancelled] = useState(false);
+
+  /**
+   * Handles sync cancellation or navigation back to review.
+   * Cancels active sync if in progress, otherwise returns to review page.
+   * @source
+   */
   const handleCancel = () => {
     if (viewMode === "sync") {
       // If sync has not started, go back to preview
@@ -504,7 +553,10 @@ export function SyncPage() {
     navigate({ to: "/review" });
   };
 
-  // Handle final completion (after viewing results)
+  /**
+   * Navigates home after viewing sync results, resetting sync state.
+   * @source
+   */
   const handleGoHome = () => {
     actions.reset();
     setWasCancelled(false);
@@ -522,6 +574,11 @@ export function SyncPage() {
     });
   };
 
+  /**
+   * Navigates back to the matching review page after sync completion.
+   * Resets sync state and refreshes the user library.
+   * @source
+   */
   const handleBackToReview = () => {
     actions.reset();
     setWasCancelled(false);
@@ -529,6 +586,15 @@ export function SyncPage() {
     setViewMode("preview");
   };
 
+  /**
+   * Renders a badge indicating manga status change from Kenmei to AniList.
+   * @param statusWillChange - Whether the status will be updated.
+   * @param userEntry - Current AniList entry for the manga.
+   * @param kenmei - Kenmei manga data with status.
+   * @param syncConfig - Sync configuration options.
+   * @returns JSX badge element or null if no change.
+   * @source
+   */
   const renderStatusBadge = (
     statusWillChange: boolean,
     userEntry: UserMediaEntry | undefined,
@@ -552,6 +618,15 @@ export function SyncPage() {
     );
   };
 
+  /**
+   * Renders a badge showing progress (chapters) changes from Kenmei to AniList.
+   * @param progressWillChange - Whether progress will be updated.
+   * @param userEntry - Current AniList entry for the manga.
+   * @param kenmei - Kenmei manga data with chapter count.
+   * @param syncConfig - Sync configuration options.
+   * @returns JSX badge element or null if no change.
+   * @source
+   */
   const renderProgressBadge = (
     progressWillChange: boolean,
     userEntry: UserMediaEntry | undefined,
@@ -588,6 +663,14 @@ export function SyncPage() {
     );
   };
 
+  /**
+   * Renders a badge showing score/rating changes from Kenmei to AniList.
+   * @param scoreWillChange - Whether score will be updated.
+   * @param userEntry - Current AniList entry for the manga.
+   * @param kenmei - Kenmei manga data with score.
+   * @returns JSX badge element or null if no change.
+   * @source
+   */
   const renderScoreBadge = (
     scoreWillChange: boolean,
     userEntry: UserMediaEntry | undefined,
@@ -610,6 +693,13 @@ export function SyncPage() {
     );
   };
 
+  /**
+   * Renders a badge indicating privacy setting changes for the manga entry.
+   * @param userEntry - Current AniList entry for the manga.
+   * @param syncConfig - Sync configuration options.
+   * @returns JSX badge element or null if no privacy change.
+   * @source
+   */
   const renderPrivacyBadge = (
     userEntry: UserMediaEntry | undefined,
     syncConfig: SyncConfig,
@@ -630,6 +720,14 @@ export function SyncPage() {
     );
   };
 
+  /**
+   * Renders privacy display text with styling reflecting privacy status and pending changes.
+   * @param userEntry - Current AniList entry for the manga.
+   * @param syncConfig - Sync configuration options.
+   * @param isCurrentAniList - Whether displaying current AniList data.
+   * @returns Formatted privacy display text.
+   * @source
+   */
   const renderPrivacyDisplay = (
     userEntry: UserMediaEntry | undefined,
     syncConfig: SyncConfig,
@@ -659,6 +757,16 @@ export function SyncPage() {
     }
   };
 
+  /**
+   * Renders progress display for after-sync state with current/total chapters.
+   * @param userEntry - Current AniList entry for the manga.
+   * @param kenmei - Kenmei manga data with chapter count.
+   * @param anilist - AniList manga data with total chapters.
+   * @param syncConfig - Sync configuration options.
+   * @param progressWillChange - Whether progress will be updated.
+   * @returns Formatted progress text.
+   * @source
+   */
   const renderAfterSyncProgress = (
     userEntry: UserMediaEntry | undefined,
     kenmei: KenmeiManga,
@@ -692,6 +800,14 @@ export function SyncPage() {
     );
   };
 
+  /**
+   * Renders score display for after-sync state with highlighting for changes.
+   * @param userEntry - Current AniList entry for the manga.
+   * @param kenmei - Kenmei manga data with score.
+   * @param scoreWillChange - Whether score will be updated.
+   * @returns Formatted score text.
+   * @source
+   */
   const renderAfterSyncScore = (
     userEntry: UserMediaEntry | undefined,
     kenmei: KenmeiManga,
@@ -715,7 +831,14 @@ export function SyncPage() {
     );
   };
 
-  // Helper function to render manga cover image
+  /**
+   * Renders manga cover image with status badges for new entries and completed items.
+   * @param anilist - AniList manga data with cover image.
+   * @param isNewEntry - Whether this is a new entry being added.
+   * @param isCompleted - Whether this manga is marked as completed.
+   * @returns JSX element with cover image and status badges.
+   * @source
+   */
   const renderMangaCover = (
     anilist: AniListManga | undefined,
     isNewEntry: boolean,
@@ -743,7 +866,7 @@ export function SyncPage() {
         )}
 
         {/* Status Badges */}
-        <div className="absolute top-2 left-4 flex flex-col gap-1">
+        <div className="absolute left-4 top-2 flex flex-col gap-1">
           {isNewEntry && <Badge className="bg-emerald-500">New</Badge>}
           {isCompleted && (
             <Badge
@@ -758,7 +881,14 @@ export function SyncPage() {
     );
   };
 
-  // Helper function to render change badges
+  /**
+   * Renders change indicator badges for status, progress, and score updates.
+   * @param statusWillChange - Whether status will be updated.
+   * @param progressWillChange - Whether progress will be updated.
+   * @param scoreWillChange - Whether score will be updated.
+   * @returns JSX element with change badges or null if no changes.
+   * @source
+   */
   const renderChangeBadges = (
     statusWillChange: boolean,
     progressWillChange: boolean,
@@ -814,7 +944,18 @@ export function SyncPage() {
     );
   };
 
-  // Helper function to render current AniList data
+  /**
+   * Renders current AniList entry data with status, progress, score, and privacy information.
+   * Displays data with visual indication of pending changes.
+   * @param userEntry - Current AniList entry for the manga.
+   * @param anilist - AniList manga data.
+   * @param statusWillChange - Whether status will be updated.
+   * @param progressWillChange - Whether progress will be updated.
+   * @param scoreWillChange - Whether score will be updated.
+   * @param syncConfig - Sync configuration options.
+   * @returns JSX element displaying formatted AniList entry information.
+   * @source
+   */
   const renderCurrentAniListData = (
     userEntry: UserMediaEntry | undefined,
     anilist: AniListManga | undefined,
@@ -905,8 +1046,8 @@ export function SyncPage() {
             className="relative overflow-hidden rounded-3xl border border-slate-200/60 bg-white/80 p-6 shadow-xl backdrop-blur-xl dark:border-slate-800/70 dark:bg-slate-950/60"
           >
             <div className="pointer-events-none absolute inset-0 opacity-80">
-              <div className="absolute top-[-6rem] left-1/2 h-56 w-96 -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-400/50 to-indigo-400/50 blur-3xl dark:from-blue-500/25 dark:to-indigo-500/25" />
-              <div className="absolute right-[-3rem] bottom-[-4rem] h-40 w-40 rounded-full bg-gradient-to-br from-slate-200/70 to-transparent blur-3xl dark:from-slate-800/40" />
+              <div className="absolute left-1/2 top-[-6rem] h-56 w-96 -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-400/50 to-indigo-400/50 blur-3xl dark:from-blue-500/25 dark:to-indigo-500/25" />
+              <div className="absolute bottom-[-4rem] right-[-3rem] h-40 w-40 rounded-full bg-gradient-to-br from-slate-200/70 to-transparent blur-3xl dark:from-slate-800/40" />
             </div>
             <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
               <div className="max-w-xl space-y-3">
@@ -931,7 +1072,7 @@ export function SyncPage() {
                       />
                       <div className="relative flex flex-col gap-2">
                         <div className="flex items-center justify-between">
-                          <span className="pr-2 text-xs font-medium tracking-wide text-slate-500 uppercase dark:text-slate-400">
+                          <span className="pr-2 text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             {stat.label}
                           </span>
                           <Icon className="h-4 w-4 text-slate-400 dark:text-slate-500" />
@@ -964,7 +1105,7 @@ export function SyncPage() {
                 <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-4 shadow-sm dark:border-slate-800/70 dark:bg-slate-900/40">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <span className="text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                         Sync readiness
                       </span>
                       <div className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">
@@ -1617,12 +1758,12 @@ export function SyncPage() {
   return (
     <div className="relative min-h-0 overflow-hidden">
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute top-[-10%] left-[8%] h-64 w-64 rounded-full bg-blue-200/50 blur-3xl dark:bg-blue-500/20" />
-        <div className="absolute top-1/3 right-[-12%] h-80 w-80 rounded-full bg-indigo-200/40 blur-3xl dark:bg-indigo-500/15" />
+        <div className="absolute left-[8%] top-[-10%] h-64 w-64 rounded-full bg-blue-200/50 blur-3xl dark:bg-blue-500/20" />
+        <div className="absolute right-[-12%] top-1/3 h-80 w-80 rounded-full bg-indigo-200/40 blur-3xl dark:bg-indigo-500/15" />
         <div className="absolute bottom-[-20%] left-1/2 h-[26rem] w-[40rem] -translate-x-1/2 bg-gradient-to-t from-slate-100 via-transparent to-transparent opacity-80 dark:from-slate-900/40" />
       </div>
       <motion.div
-        className="relative z-10 container py-10"
+        className="container relative z-10 py-10"
         initial="hidden"
         animate="visible"
         variants={pageVariants}

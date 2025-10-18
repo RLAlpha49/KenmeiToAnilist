@@ -49,6 +49,10 @@ import {
   Upload,
 } from "lucide-react";
 
+/**
+ * Represents a storage item with key, value, type, and size information.
+ * @source
+ */
 interface StorageItem {
   key: string;
   value: string;
@@ -56,7 +60,12 @@ interface StorageItem {
   size: number;
 }
 
-// Utility: safe JSON parse
+/**
+ * Safely parses JSON string and returns parse result with optional error message.
+ * @param value - JSON string to parse
+ * @returns Object with ok flag, parsed data if successful, or error message if failed
+ * @source
+ */
 const tryParseJSON = (
   value: string,
 ): { ok: boolean; data?: unknown; error?: string } => {
@@ -69,14 +78,25 @@ const tryParseJSON = (
   }
 };
 
-// Utility: size formatter
+/**
+ * Formats byte size into human-readable string (B, KB, MB).
+ * @param bytes - Size in bytes
+ * @returns Formatted size string
+ * @source
+ */
 const formatSize = (bytes: number) => {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-// Utility: compute type/size
+/**
+ * Analyzes a value and returns its inferred storage type and size in bytes.
+ * Detects JSON objects, numbers, and booleans within strings.
+ * @param value - Value to analyze
+ * @returns Object with detected type and size in bytes
+ * @source
+ */
 const getValueInfo = (
   value: unknown,
 ): { type: StorageItem["type"]; size: number } => {
@@ -99,6 +119,12 @@ const getValueInfo = (
   return { type: "string", size };
 };
 
+/**
+ * Badge component for displaying storage item type with appropriate styling.
+ * @param type - Storage item type
+ * @returns Badge element
+ * @source
+ */
 const TypeBadge: React.FC<{ type: StorageItem["type"] }> = ({ type }) => {
   let variant: "default" | "secondary" | "outline" = "secondary";
   if (type === "object") {
@@ -109,7 +135,14 @@ const TypeBadge: React.FC<{ type: StorageItem["type"] }> = ({ type }) => {
   return <Badge variant={variant}>{type}</Badge>;
 };
 
-// Highlight helper
+/**
+ * Highlights the first occurrence of query string in text with yellow mark.
+ * Case-insensitive search.
+ * @param text - Text to search within
+ * @param query - Query string to highlight
+ * @returns JSX with highlighted segment or original text
+ * @source
+ */
 const highlight = (text: string, query: string) => {
   if (!query) return text;
   const idx = text.toLowerCase().indexOf(query.toLowerCase());
@@ -125,7 +158,11 @@ const highlight = (text: string, query: string) => {
   );
 };
 
-// Value viewer for overview: lightweight, no pretty JSON to avoid heavy parsing
+/**
+ * Displays a truncated value preview up to maxChars with ellipsis for overflow.
+ * Lightweight rendering for storage overview.
+ * @source
+ */
 const OverviewValue: React.FC<{ value: string; maxChars: number }> = ({
   value,
   maxChars,
@@ -136,6 +173,12 @@ const OverviewValue: React.FC<{ value: string; maxChars: number }> = ({
   return <span>{sliced}</span>;
 };
 
+/**
+ * Storage debugger for viewing and editing localStorage and Electron Store entries.
+ * Displays storage statistics, allows search, export, import, and item editing.
+ * @returns JSX element rendering the storage debugger panel
+ * @source
+ */
 export function StorageDebugger() {
   const [electronStoreItems, setElectronStoreItems] = useState<StorageItem[]>(
     [],
@@ -440,7 +483,7 @@ export function StorageDebugger() {
     const filtered = filterItems(items);
 
     return (
-      <Card className="border-border/60 bg-background/90 flex h-full max-h-[40vh] flex-col border pt-0 pb-6 shadow-md backdrop-blur-sm">
+      <Card className="border-border/60 bg-background/90 flex h-full max-h-[40vh] flex-col border pb-6 pt-0 shadow-md backdrop-blur-sm">
         <CardHeader className="border-border/60 bg-muted/10 flex-shrink-0 border-b px-5 py-4">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-sm font-semibold">
@@ -505,7 +548,7 @@ export function StorageDebugger() {
                 filtered.map((item) => (
                   <div
                     key={item.key}
-                    className="group border-border/50 bg-muted/10 hover:border-primary/40 hover:bg-primary/5 rounded-xl border transition-all"
+                    className="border-border/50 bg-muted/10 hover:border-primary/40 hover:bg-primary/5 group rounded-xl border transition-all"
                   >
                     <div className="flex items-center justify-between gap-3 p-4">
                       <div className="min-w-0 flex-1">
@@ -518,7 +561,7 @@ export function StorageDebugger() {
                             {formatSize(item.size)}
                           </span>
                         </div>
-                        <div className="text-muted-foreground font-mono text-sm leading-relaxed break-all">
+                        <div className="text-muted-foreground break-all font-mono text-sm leading-relaxed">
                           <OverviewValue value={item.value} maxChars={160} />
                         </div>
                       </div>
@@ -658,16 +701,16 @@ export function StorageDebugger() {
     <>
       <div className="border-border/60 bg-background/95 relative mt-2 overflow-hidden rounded-3xl border shadow-xl backdrop-blur">
         <div className="from-primary/10 pointer-events-none absolute inset-0 bg-gradient-to-br via-blue-500/10 to-transparent" />
-        <div className="bg-primary/20 pointer-events-none absolute top-1/2 -right-24 h-96 w-96 -translate-y-1/2 rounded-full blur-[120px]" />
+        <div className="bg-primary/20 pointer-events-none absolute -right-24 top-1/2 h-96 w-96 -translate-y-1/2 rounded-full blur-[120px]" />
         <div className="relative z-10 flex flex-col gap-6 p-6 md:p-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="relative w-full sm:min-w-[240px]">
-              <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+              <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
               <Input
                 placeholder="Search by key or value…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="border-border/60 bg-background/80 w-full rounded-full pr-4 pl-9 text-sm shadow-inner"
+                className="border-border/60 bg-background/80 w-full rounded-full pl-9 pr-4 text-sm shadow-inner"
               />
             </div>
             <div className="flex items-center justify-end gap-3">
@@ -709,7 +752,7 @@ export function StorageDebugger() {
                   className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${stat.accent}`}
                 />
                 <div className="relative z-10 space-y-2">
-                  <p className="text-muted-foreground text-xs tracking-wide uppercase">
+                  <p className="text-muted-foreground text-xs uppercase tracking-wide">
                     {stat.label}
                   </p>
                   <div className="font-mono text-2xl font-semibold">
@@ -890,7 +933,7 @@ export function StorageDebugger() {
                           value: e.target.value,
                         })
                       }
-                      className="h-64 w-full max-w-xl resize-y overflow-auto font-mono break-words whitespace-pre-wrap"
+                      className="h-64 w-full max-w-xl resize-y overflow-auto whitespace-pre-wrap break-words font-mono"
                       style={{ resize: "none" }}
                       placeholder="Enter value (JSON or string)..."
                     />

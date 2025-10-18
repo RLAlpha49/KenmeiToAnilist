@@ -8,14 +8,16 @@ import { KenmeiMangaItem } from "../types/kenmei";
 import { MatchResult, KenmeiManga } from "./storage";
 
 /**
- * Interface for normalized manga item with guaranteed ID
+ * Represents a normalized manga item with a guaranteed unique identifier.
+ * @source
  */
 export interface NormalizedMangaItem extends KenmeiMangaItem {
   id: string | number;
 }
 
 /**
- * Interface for import results statistics
+ * Statistics about the results of a manga import operation.
+ * @source
  */
 export interface ImportResults {
   newMangaCount: number;
@@ -24,7 +26,13 @@ export interface ImportResults {
 }
 
 /**
- * Normalize manga items with proper ID assignment
+ * Normalizes manga items by ensuring each has a unique ID and all required fields are present.
+ *
+ * Generates synthetic IDs if missing and fills in default values for optional fields.
+ *
+ * @param manga - Array of manga items to normalize.
+ * @returns Array of normalized manga items with guaranteed IDs.
+ * @source
  */
 export function normalizeMangaItems(
   manga: KenmeiMangaItem[],
@@ -51,7 +59,13 @@ export function normalizeMangaItems(
 }
 
 /**
- * Get previous manga data from localStorage
+ * Retrieves previously imported manga data from localStorage.
+ *
+ * Attempts to parse and return stored manga data, returning an empty array
+ * if no previous data exists or if parsing fails.
+ *
+ * @returns Array of previously stored manga items, or empty array if none found.
+ * @source
  */
 export function getPreviousMangaData(): NormalizedMangaItem[] {
   console.debug(
@@ -78,7 +92,15 @@ export function getPreviousMangaData(): NormalizedMangaItem[] {
 }
 
 /**
- * Merge new manga with existing manga data
+ * Merges new manga data with existing manga, tracking changes.
+ *
+ * Matches new items against existing ones by ID or title (case-insensitive).
+ * Updates existing matches and appends new items to the list.
+ *
+ * @param previousManga - Array of previously stored manga items.
+ * @param normalizedManga - Array of newly imported manga items to merge.
+ * @returns Object containing merged manga array and import statistics.
+ * @source
  */
 export function mergeMangaData(
   previousManga: NormalizedMangaItem[],
@@ -145,7 +167,13 @@ export function mergeMangaData(
 }
 
 /**
- * Ensure all manga have proper IDs and required fields
+ * Validates and standardizes manga data for storage.
+ *
+ * Ensures all manga entries have proper IDs, timestamps, and required fields with defaults.
+ *
+ * @param manga - Array of normalized manga items to validate.
+ * @returns Array of validated manga items ready for storage.
+ * @source
  */
 export function validateMangaData(manga: NormalizedMangaItem[]): KenmeiManga[] {
   console.debug(`[MangaImport] Validating ${manga.length} manga items`);
@@ -170,7 +198,14 @@ export function validateMangaData(manga: NormalizedMangaItem[]): KenmeiManga[] {
 }
 
 /**
- * Update existing match results with new manga data
+ * Updates existing match results with new manga data from an import.
+ *
+ * Refreshes match result records with updated manga information by matching
+ * on both ID and title (case-insensitive).
+ *
+ * @param validMergedManga - Array of validated, merged manga items.
+ * @returns True if any match results were updated, false otherwise.
+ * @source
  */
 export function updateMatchResults(validMergedManga: KenmeiManga[]): boolean {
   console.debug("[MangaImport] Attempting to update existing match results");
@@ -244,7 +279,12 @@ export function updateMatchResults(validMergedManga: KenmeiManga[]): boolean {
 }
 
 /**
- * Clear pending manga storage after import
+ * Clears pending manga storage to force recalculation on next sync.
+ *
+ * Removes pending manga data from both electron-store and localStorage
+ * to ensure fresh processing of pending items.
+ *
+ * @source
  */
 export function clearPendingMangaStorage(): void {
   console.debug(

@@ -9,14 +9,9 @@ import { MangaMatchResult } from "../api/anilist/types";
 import { STORAGE_KEYS, storage } from "../utils/storage";
 
 /**
- * Custom hook to manage pending manga that need to be processed.
- *
- * @returns An object containing the pending manga state, setter, and utility functions for managing pending manga.
- * @example
- * ```ts
- * const { pendingManga, savePendingManga, calculatePendingManga, loadPendingManga } = usePendingManga();
- * savePendingManga(mangaList);
- * ```
+ * Manages pending manga that need to be processed in the matching workflow.
+ * Persists and restores pending manga state from electron-store for resume support.
+ * @returns Object with pending manga state, loading state, and management functions.
  * @source
  */
 export const usePendingManga = () => {

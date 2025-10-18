@@ -83,6 +83,11 @@ interface MatchResult {
   [key: string]: unknown;
 }
 
+/**
+ * Returns an empty match status object with default values.
+ * @returns An object representing no matches to review.
+ * @source
+ */
 const getEmptyMatchStatus = (): {
   pendingMatches: number;
   skippedMatches: number;
@@ -95,6 +100,12 @@ const getEmptyMatchStatus = (): {
   status: "none",
 });
 
+/**
+ * Calculates counts of pending and skipped manga matches.
+ * @param entries - Array of match result objects to analyze.
+ * @returns Object with pending and skipped counts.
+ * @source
+ */
 const calculateMatchCounts = (entries: unknown[]) => {
   let pendingCount = 0;
   let skippedCount = 0;
@@ -118,6 +129,15 @@ const calculateMatchCounts = (entries: unknown[]) => {
   return { pendingCount, skippedCount };
 };
 
+/**
+ * Determines the primary action button text and link based on authentication and sync progress.
+ * @param isAuthenticated - Whether the user is authenticated with AniList.
+ * @param totalEntries - Total number of imported manga entries.
+ * @param pendingMatches - Number of matches awaiting review.
+ * @param totalSyncs - Number of completed syncs.
+ * @returns An object with label, href, and gradient tone for the action button.
+ * @source
+ */
 const getHeroAction = (
   isAuthenticated: boolean,
   totalEntries: number,
@@ -163,6 +183,13 @@ const getHeroAction = (
   };
 };
 
+/**
+ * Generates a footnote text describing the review status.
+ * @param pendingMatches - Number of matches awaiting review.
+ * @param status - The current match review status.
+ * @returns A descriptive footnote string for display.
+ * @source
+ */
 const getReviewFootnote = (pendingMatches: number, status: MatchStatusType) => {
   if (pendingMatches > 0) {
     return `${pendingMatches.toLocaleString()} pending`;
@@ -173,6 +200,15 @@ const getReviewFootnote = (pendingMatches: number, status: MatchStatusType) => {
   return "Auto-matched";
 };
 
+/**
+ * Generates the review quick action configuration based on import and auth state.
+ * @param totalEntries - Total number of imported manga entries.
+ * @param isAuthenticated - Whether the user is authenticated with AniList.
+ * @param username - The AniList username or null if not authenticated.
+ * @param footnote - Descriptive text for the action's status.
+ * @returns An object containing action configuration (label, description, icon, etc.).
+ * @source
+ */
 const getReviewAction = (
   totalEntries: number,
   isAuthenticated: boolean,
@@ -212,6 +248,12 @@ const getReviewAction = (
   };
 };
 
+/**
+ * Renders a badge indicating the application version status (stable, beta, or development).
+ * @param versionStatus - The version status object, or null if checking.
+ * @returns A JSX Badge component reflecting the current version status.
+ * @source
+ */
 const renderVersionBadge = (versionStatus: AppVersionStatus | null) => {
   if (versionStatus === null) {
     return (
@@ -256,6 +298,12 @@ const renderVersionBadge = (versionStatus: AppVersionStatus | null) => {
   );
 };
 
+/**
+ * Renders a badge displaying the manga match review status and pending count.
+ * @param matchStatus - An object containing the review status and pending match count.
+ * @returns A JSX Badge component reflecting the current match status.
+ * @source
+ */
 const renderMatchStatusBadge = (matchStatus: {
   status: MatchStatusType;
   pendingMatches: number;
@@ -286,7 +334,10 @@ const renderMatchStatusBadge = (matchStatus: {
   );
 };
 
-// Animation variants for staggered children
+/**
+ * Framer Motion animation configuration for parent container with staggered child animations.
+ * @source
+ */
 const containerVariants = {
   hidden: { opacity: 0 },
   show: {
@@ -298,6 +349,10 @@ const containerVariants = {
   },
 };
 
+/**
+ * Framer Motion animation configuration for child elements with spring physics.
+ * @source
+ */
 const itemVariants = {
   hidden: { y: 20, opacity: 0 },
   show: {
@@ -311,7 +366,11 @@ const itemVariants = {
   },
 };
 
-// Feature cards for the carousel
+/**
+ * Feature cards displayed in the homepage carousel with descriptions of key application features.
+ * Each card includes a title, description, icon, and gradient color scheme.
+ * @source
+ */
 const featureCards = [
   {
     title: "Import From Kenmei",
@@ -499,9 +558,20 @@ export function HomePage() {
     loadSyncStats();
   }, []);
 
+  /**
+   * Formats a number with locale-specific thousand separators.
+   * @param value - The number to format.
+   * @returns Formatted number string with locale separators.
+   * @source
+   */
   const formatNumber = (value: number) => value.toLocaleString();
 
-  // Format date for display
+  /**
+   * Formats a date string into a human-readable local date and time.
+   * @param dateString - ISO date string or null.
+   * @returns Formatted date and time string or "Never" if null.
+   * @source
+   */
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "Never";
 
@@ -671,13 +741,13 @@ export function HomePage() {
   return (
     <div className="relative min-h-screen overflow-hidden">
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute top-[8%] -left-1/3 h-[420px] w-[420px] rounded-full bg-gradient-to-br from-blue-500/25 via-purple-500/20 to-transparent blur-3xl" />
-        <div className="absolute top-[35%] right-[-10%] h-[320px] w-[320px] rounded-full bg-gradient-to-br from-emerald-400/20 via-teal-400/20 to-transparent blur-[140px]" />
+        <div className="absolute -left-1/3 top-[8%] h-[420px] w-[420px] rounded-full bg-gradient-to-br from-blue-500/25 via-purple-500/20 to-transparent blur-3xl" />
+        <div className="absolute right-[-10%] top-[35%] h-[320px] w-[320px] rounded-full bg-gradient-to-br from-emerald-400/20 via-teal-400/20 to-transparent blur-[140px]" />
         <div className="absolute bottom-[-20%] left-1/2 h-[280px] w-[480px] -translate-x-1/2 rounded-full bg-gradient-to-br from-amber-300/20 via-pink-300/20 to-transparent blur-[200px]" />
       </div>
 
       <motion.div
-        className="relative z-[1] container mx-auto px-4 py-10 md:px-6"
+        className="container relative z-[1] mx-auto px-4 py-10 md:px-6"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3 }}
@@ -689,13 +759,13 @@ export function HomePage() {
           animate="show"
         >
           <div className="relative overflow-hidden rounded-3xl border border-white/30 bg-gradient-to-br from-white/85 via-white/60 to-white/30 p-8 shadow-2xl backdrop-blur-lg dark:border-white/10 dark:from-slate-950/70 dark:via-slate-950/60 dark:to-slate-950/40">
-            <div className="pointer-events-none absolute top-[-140px] -left-32 h-64 w-64 rounded-full bg-gradient-to-br from-blue-500/25 via-purple-500/20 to-transparent blur-3xl" />
-            <div className="pointer-events-none absolute right-[-40px] bottom-[-140px] h-64 w-64 rounded-full bg-gradient-to-br from-fuchsia-500/25 via-purple-500/15 to-transparent blur-3xl" />
+            <div className="pointer-events-none absolute -left-32 top-[-140px] h-64 w-64 rounded-full bg-gradient-to-br from-blue-500/25 via-purple-500/20 to-transparent blur-3xl" />
+            <div className="pointer-events-none absolute bottom-[-140px] right-[-40px] h-64 w-64 rounded-full bg-gradient-to-br from-fuchsia-500/25 via-purple-500/15 to-transparent blur-3xl" />
             <div className="relative z-[1] flex flex-col gap-10 lg:flex-row lg:items-center">
               <div className="space-y-6 lg:flex-1">
                 <Badge
                   variant="outline"
-                  className="text-foreground/70 w-fit rounded-full border-white/40 bg-white/80 px-3 py-1 text-xs font-semibold tracking-[0.2em] uppercase shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/10"
+                  className="text-foreground/70 w-fit rounded-full border-white/40 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/10"
                 >
                   Kenmei ✦ AniList
                 </Badge>
@@ -830,7 +900,7 @@ export function HomePage() {
         >
           <motion.div variants={itemVariants}>
             <Card className="relative overflow-hidden border border-blue-500/20 bg-gradient-to-br from-blue-500/15 via-indigo-500/10 to-blue-500/5 p-6 shadow-xl backdrop-blur-sm dark:border-blue-500/20 dark:from-blue-500/20 dark:via-indigo-500/20 dark:to-blue-500/10">
-              <div className="absolute top-[-40px] right-[-40px] h-40 w-40 rounded-full bg-blue-500/20 blur-3xl" />
+              <div className="absolute right-[-40px] top-[-40px] h-40 w-40 rounded-full bg-blue-500/20 blur-3xl" />
               <CardHeader className="flex flex-col gap-2 p-0 pb-4">
                 <CardTitle className="flex items-center gap-2 text-lg font-semibold text-blue-700 dark:text-blue-200">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-blue-600 shadow-sm dark:bg-slate-900/60">
@@ -862,7 +932,7 @@ export function HomePage() {
 
           <motion.div variants={itemVariants}>
             <Card className="relative overflow-hidden border border-emerald-500/20 bg-gradient-to-br from-emerald-500/15 via-green-500/10 to-emerald-500/5 p-6 shadow-xl backdrop-blur-sm dark:border-emerald-500/20 dark:from-emerald-500/20 dark:via-green-500/20 dark:to-emerald-500/10">
-              <div className="absolute top-[60px] left-[-60px] h-40 w-40 rounded-full bg-emerald-500/20 blur-3xl" />
+              <div className="absolute left-[-60px] top-[60px] h-40 w-40 rounded-full bg-emerald-500/20 blur-3xl" />
               <CardHeader className="flex flex-col gap-2 p-0 pb-4">
                 <CardTitle className="flex items-center gap-2 text-lg font-semibold text-emerald-700 dark:text-emerald-200">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-emerald-600 shadow-sm dark:bg-slate-900/60">
@@ -901,7 +971,7 @@ export function HomePage() {
 
           <motion.div variants={itemVariants}>
             <Card className="relative overflow-hidden border border-purple-500/20 bg-gradient-to-br from-purple-500/15 via-fuchsia-500/10 to-purple-500/5 p-6 shadow-xl backdrop-blur-sm dark:border-purple-500/20 dark:from-purple-500/20 dark:via-fuchsia-500/20 dark:to-purple-500/10">
-              <div className="absolute top-[40px] right-[-70px] h-48 w-48 rounded-full bg-purple-500/25 blur-3xl" />
+              <div className="absolute right-[-70px] top-[40px] h-48 w-48 rounded-full bg-purple-500/25 blur-3xl" />
               <CardHeader className="flex flex-col gap-2 p-0 pb-4">
                 <CardTitle className="flex items-center gap-2 text-lg font-semibold text-purple-700 dark:text-purple-200">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-purple-600 shadow-sm dark:bg-slate-900/60">
@@ -941,7 +1011,7 @@ export function HomePage() {
                   <span>{formatNumber(syncStats.totalSyncs)}</span>
                 </div>
                 {syncSuccessRate !== null && (
-                  <div className="flex items-center justify-between rounded-xl bg-white/60 px-3 py-2 text-xs font-semibold tracking-wide text-purple-700 uppercase shadow-sm dark:bg-slate-900/60 dark:text-purple-200">
+                  <div className="flex items-center justify-between rounded-xl bg-white/60 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-purple-700 shadow-sm dark:bg-slate-900/60 dark:text-purple-200">
                     <span>Reliability</span>
                     <span>{syncSuccessRate}% success</span>
                   </div>
@@ -1049,7 +1119,7 @@ export function HomePage() {
                           {action.footnote && (
                             <Badge
                               variant="outline"
-                              className={`rounded-full border-transparent px-2 py-0.5 text-[0.65rem] font-semibold tracking-wide uppercase ${action.badgeClass}`}
+                              className={`rounded-full border-transparent px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide ${action.badgeClass}`}
                             >
                               {action.footnote}
                             </Badge>

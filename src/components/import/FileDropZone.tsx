@@ -29,22 +29,8 @@ export interface FileDropZoneProps {
  *
  * Provides drag-and-drop and file selection UI, validates file type and size, parses the CSV, and reports progress and errors.
  *
- * @remarks
- * - Validates file extension and size before parsing.
- * - Shows progress indicator while loading and parsing.
- * - Calls {@link FileDropZoneProps.onFileLoaded} with parsed KenmeiData on success.
- * - Calls {@link FileDropZoneProps.onError} with an AppError on failure.
- *
  * @param props - {@link FileDropZoneProps}
- * @returns React.ReactElement
- *
- * @example
- * ```tsx
- * <FileDropZone
- *   onFileLoaded={(data) => { ... }}
- *   onError={(err) => { ... }}
- * />
- * ```
+ * @returns React.ReactElement displaying file upload interface.
  * @source
  */
 export function FileDropZone({
@@ -58,16 +44,28 @@ export function FileDropZone({
   const [loadingProgress, setLoadingProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  /**
+   * Handles drag-over event to highlight drop zone.
+   * @source
+   */
   const handleDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
     setIsDragging(true);
   };
 
+  /**
+   * Handles drag-leave event to reset drop zone highlight.
+   * @source
+   */
   const handleDragLeave = (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
     setIsDragging(false);
   };
 
+  /**
+   * Handles file drop event and delegates to processFile.
+   * @source
+   */
   const handleDrop = (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
     setIsDragging(false);
@@ -78,6 +76,10 @@ export function FileDropZone({
     }
   };
 
+  /**
+   * Handles file selection from input element.
+   * @source
+   */
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
@@ -85,16 +87,23 @@ export function FileDropZone({
     }
   };
 
+  /**
+   * Validates and processes a file for CSV parsing.
+   * Validates file type (.csv), size (max 10MB), and then parses the content.
+   * Calls onFileLoaded or onError callback based on result.
+   * @param file - File object to process.
+   * @source
+   */
   const processFile = (file: File) => {
     setFileName(file.name);
     setFileSize(file.size);
     setIsLoading(true);
     setLoadingProgress(10);
 
-    // Simulate progress for better UX
+    // Simulate progress increment for better UX
     const progressInterval = setInterval(() => {
       setLoadingProgress((prev) => {
-        // Cap the progress at 80% before file is actually processed
+        // Cap progress at 80% until file is fully processed
         return prev < 80 ? prev + 10 : 80;
       });
     }, 500);
@@ -186,6 +195,12 @@ export function FileDropZone({
       });
   };
 
+  /**
+   * Formats a file size in bytes to a human-readable string.
+   * @param bytes - File size in bytes.
+   * @returns Formatted string (e.g., "1.5 MB", "256 KB").
+   * @source
+   */
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return bytes + " bytes";
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";

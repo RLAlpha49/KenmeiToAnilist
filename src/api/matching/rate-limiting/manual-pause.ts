@@ -1,28 +1,37 @@
 /**
- * Manual pause functionality for rate limiting
- * @module rate-limiting/manual-pause
+ * Manual pause functionality for rate limiting.
+ *
+ * Provides mechanisms to pause matching operations (e.g., during user adjustments)
+ * and resume them on demand. Maintains a list of waiters to notify when pause is lifted.
+ *
+ * @packageDocumentation
+ * @source
  */
 
 /**
- * Manual pause state for matching requests
+ * Manual pause state for matching requests.
+ * @source
  */
 let _manualPauseActive = false;
 
 /**
- * Array of resolve functions waiting for pause to be lifted
+ * Array of resolve functions waiting for pause to be lifted.
+ * @source
  */
 let _pauseWaiters: Array<() => void> = [];
 
 /**
- * Check if manual pause is active
- * @returns True if manual pause is active
+ * Check if manual pause is active.
+ * @returns True if manual pause is active.
+ * @source
  */
 export function isManualPauseActive(): boolean {
   return _manualPauseActive;
 }
 
 /**
- * Resolve all pause waiters
+ * Resolve all pause waiters and clear the waiting list.
+ * @source
  */
 function resolvePauseWaiters(): void {
   const currentWaiters = _pauseWaiters;
@@ -33,8 +42,9 @@ function resolvePauseWaiters(): void {
 }
 
 /**
- * Wait while manual pause is active
- * @returns Promise that resolves when pause is lifted
+ * Wait while manual pause is active. Returns immediately if pause is not active.
+ * @returns Promise that resolves when pause is lifted.
+ * @source
  */
 export async function waitWhileManuallyPaused(): Promise<void> {
   while (_manualPauseActive) {
@@ -43,8 +53,10 @@ export async function waitWhileManuallyPaused(): Promise<void> {
 }
 
 /**
- * Set manual matching pause state
- * @param paused - Whether to pause or resume matching
+ * Set manual matching pause state and notify all waiters if resuming.
+ * Dispatches a custom event for UI updates.
+ * @param paused - Whether to pause or resume matching.
+ * @source
  */
 export function setManualMatchingPause(paused: boolean): void {
   if (paused) {
@@ -69,8 +81,9 @@ export function setManualMatchingPause(paused: boolean): void {
 }
 
 /**
- * Check if manual matching is paused (alias for isManualPauseActive)
- * @returns True if manual matching is paused
+ * Check if manual matching is paused (alias for isManualPauseActive).
+ * @returns True if manual matching is paused.
+ * @source
  */
 export function isManualMatchingPaused(): boolean {
   return _manualPauseActive;

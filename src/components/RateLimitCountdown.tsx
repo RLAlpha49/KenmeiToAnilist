@@ -7,16 +7,14 @@ import React, { useState, useEffect } from "react";
  */
 
 interface RateLimitCountdownProps {
-  retryAfter: number; // Timestamp when the retry will happen
-  onComplete: () => void; // Callback when countdown reaches zero
+  retryAfter: number;
+  onComplete: () => void;
 }
 
 /**
  * Props for the RateLimitCountdown component.
- *
- * @property retryAfter - Timestamp (in ms) when the retry will happen (usually Date.now() + wait ms)
- * @property onComplete - Callback invoked when countdown reaches zero
- *
+ * @property retryAfter - Timestamp (in milliseconds) when retry is allowed.
+ * @property onComplete - Callback invoked when countdown reaches zero.
  * @source
  */
 export function RateLimitCountdown({
@@ -90,16 +88,10 @@ export function RateLimitCountdown({
 
   /**
    * Displays a countdown timer and progress bar for API rate limit retry.
-   *
-   * Shows the time remaining until the next retry is allowed, and calls the provided callback when the countdown reaches zero.
-   *
-   * @param retryAfter - Timestamp (in ms) when the retry will happen (usually Date.now() + wait ms)
-   * @param onComplete - Callback invoked when countdown reaches zero
-   * @returns A React element displaying the countdown and progress bar
-   * @example
-   * ```tsx
-   * <RateLimitCountdown retryAfter={Date.now() + 30000} onComplete={() => alert('Retry!')} />
-   * ```
+   * Calls the provided callback when the countdown reaches zero.
+   * @param retryAfter - Timestamp (in milliseconds) when retry is allowed.
+   * @param onComplete - Callback invoked when countdown reaches zero.
+   * @returns A React element displaying the countdown and progress bar.
    * @source
    */
   return (

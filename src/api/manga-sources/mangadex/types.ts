@@ -4,18 +4,18 @@ import { MangaSource } from "../types";
 /**
  * @packageDocumentation
  * @module mangadex-types
- * @description MangaDex API type definitions for manga search and AniList link extraction.
+ * @description MangaDex API response type definitions for manga search and details.
  */
 
 /**
  * Represents a MangaDex manga entry from the search API.
- * Extends the base manga entry with MangaDex-specific properties.
- *
+ * Extends the base manga entry with MangaDex-specific properties including tags and cross-references.
  * @source
  */
 export interface MangaDexManga extends BaseMangaEntry {
   source: MangaSource.MANGADEX;
   type: string;
+  /** External platform links including AniList */
   links?: {
     al?: string; // AniList ID
     ap?: string; // AnimePlanet
@@ -29,6 +29,7 @@ export interface MangaDexManga extends BaseMangaEntry {
   lastChapter?: string;
   publicationDemographic?: string;
   contentRating?: string;
+  /** Genre and content tags */
   tags?: Array<{
     id: string;
     type: string;
@@ -48,25 +49,29 @@ export interface MangaDexManga extends BaseMangaEntry {
 }
 
 /**
- * Attributes for MangaDex manga entries.
- *
+ * Attributes object for MangaDex manga entries.
+ * Contains localized metadata, links, and content classification.
  * @source
  */
 export interface MangaDexAttributes {
+  /** Localized titles (en, ja-ro, ja, etc.) */
   title: {
     en?: string;
     "ja-ro"?: string;
     ja?: string;
     [key: string]: string | undefined;
   };
+  /** Alternative titles in various languages */
   altTitles: Array<{
     [key: string]: string;
   }>;
+  /** Localized descriptions */
   description: {
     en?: string;
     [key: string]: string | undefined;
   };
   isLocked: boolean;
+  /** External platform links */
   links?: {
     al?: string;
     ap?: string;
@@ -82,6 +87,7 @@ export interface MangaDexAttributes {
   status: string;
   year?: number;
   contentRating: string;
+  /** Genre and content tags */
   tags: Array<{
     id: string;
     type: string;
@@ -109,7 +115,6 @@ export interface MangaDexAttributes {
 
 /**
  * Represents the search response from MangaDex API.
- *
  * @source
  */
 export interface MangaDexSearchResponse {
@@ -131,9 +136,8 @@ export interface MangaDexSearchResponse {
 }
 
 /**
- * Represents a MangaDex manga detail with relationships (authors, artists, etc.).
- * Extends the base manga detail with MangaDex-specific properties.
- *
+ * Represents a MangaDex manga detail with relationships (authors, artists, cover art).
+ * Extends the base manga detail with MangaDex-specific properties and relationship data.
  * @source
  */
 export interface MangaDexMangaDetail extends BaseMangaDetail {
@@ -142,6 +146,7 @@ export interface MangaDexMangaDetail extends BaseMangaDetail {
     id: string;
     type: string;
     attributes: MangaDexAttributes;
+    /** Related entities like authors, artists, cover art */
     relationships: Array<{
       id: string;
       type: string;
@@ -152,6 +157,7 @@ export interface MangaDexMangaDetail extends BaseMangaDetail {
           en?: string;
           [key: string]: string | undefined;
         };
+        // Social media links
         twitter?: string;
         pixiv?: string;
         melonBook?: string;
@@ -166,6 +172,7 @@ export interface MangaDexMangaDetail extends BaseMangaDetail {
         weibo?: string;
         naver?: string;
         website?: string;
+        // Metadata
         createdAt?: string;
         updatedAt?: string;
         version?: number;

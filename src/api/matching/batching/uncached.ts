@@ -16,22 +16,23 @@ import type {
 import { generateCacheKey, isCacheValid, mangaCache } from "../cache";
 
 /**
- * Maximum number of concurrent manga searches (one at a time for rate limiting)
+ * Maximum concurrent manga searches (1 = sequential for rate limit compliance).
+ * @source
  */
 const MAX_CONCURRENT = 1;
 
 /**
- * Process uncached manga with concurrency control
+ * Search uncached manga sequentially with concurrency control.
  *
- * Searches for manga that weren't found in cache, processing them
- * sequentially to respect rate limits. Uses a queue-based approach
- * with cancellation support.
+ * Processes manga not found in cache using queue-based approach with
+ * cancellation support and rate limit compliance (1 concurrent search).
  *
- * @param data - Uncached manga data and tracking info
- * @param config - Token and search configuration
- * @param control - Abort signal and cancellation check
- * @param callbacks - Progress update callbacks
- * @param storage - Storage for results and source maps
+ * @param data - Uncached manga data and tracking info.
+ * @param config - AniList token and search configuration.
+ * @param control - Abort signal and cancellation check.
+ * @param callbacks - Progress update callbacks.
+ * @param storage - Storage for results and source maps.
+ * @source
  */
 export async function processUncachedManga(
   data: UncachedMangaData,
@@ -78,7 +79,7 @@ export async function processUncachedManga(
   };
 
   /**
-   * Search for manga and store results with alternative source information
+   * Search for manga and store results with alternative source information.
    */
   const searchAndStoreManga = async (
     index: number,
@@ -199,7 +200,8 @@ export async function processUncachedManga(
   };
 
   /**
-   * Handle errors during manga processing
+   * Handle errors during manga processing with cancellation detection.
+   * Returns true if error was cancellation, false for regular errors.
    */
   const handleMangaProcessingError = (
     error: unknown,

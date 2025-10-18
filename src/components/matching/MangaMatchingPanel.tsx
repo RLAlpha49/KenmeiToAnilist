@@ -765,7 +765,7 @@ export function MangaMatchingPanel({
 
       {/* Sort options */}
       <Card className="relative mb-4 overflow-hidden rounded-3xl border border-white/40 bg-white/75 shadow-xl shadow-slate-900/5 backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/70">
-        <div className="pointer-events-none absolute top-0 -left-16 h-48 w-48 rounded-full bg-indigo-400/15 blur-3xl" />
+        <div className="pointer-events-none absolute -left-16 top-0 h-48 w-48 rounded-full bg-indigo-400/15 blur-3xl" />
         <div className="pointer-events-none absolute -right-20 bottom-0 h-56 w-56 rounded-full bg-blue-400/15 blur-3xl" />
         <CardHeader className="relative z-10 flex flex-col gap-2 border-b border-white/40 pb-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800/60">
           <div className="flex items-center gap-3">
@@ -782,7 +782,7 @@ export function MangaMatchingPanel({
               </p>
             </div>
           </div>
-          <Badge className="rounded-full border border-white/40 bg-white/40 px-3 py-1 text-xs font-semibold tracking-wide text-slate-500 uppercase dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300">
+          <Badge className="rounded-full border border-white/40 bg-white/40 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300">
             {sortOption.field.toUpperCase()} ·{" "}
             {sortOption.direction === "asc" ? "Ascending" : "Descending"}
           </Badge>
@@ -862,7 +862,7 @@ export function MangaMatchingPanel({
                       </div>
                       <Badge
                         variant="secondary"
-                        className="flex items-center gap-1 rounded-full border border-white/40 bg-white/60 px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-slate-500 uppercase dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300"
+                        className="flex items-center gap-1 rounded-full border border-white/40 bg-white/60 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300"
                       >
                         {directionLabel}
                         {renderSortIndicator(field)}
@@ -882,7 +882,7 @@ export function MangaMatchingPanel({
       {/* Confidence accuracy notice */}
       <div className="relative mb-4 overflow-hidden rounded-3xl border border-amber-400/40 bg-amber-50/80 p-5 shadow-xl shadow-amber-500/10 backdrop-blur dark:border-amber-500/30 dark:bg-amber-900/25">
         <div className="pointer-events-none absolute -top-20 left-10 h-48 w-48 rounded-full bg-amber-400/25 blur-3xl" />
-        <div className="pointer-events-none absolute right-8 -bottom-16 h-40 w-40 rounded-full bg-red-400/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-16 right-8 h-40 w-40 rounded-full bg-red-400/15 blur-3xl" />
         <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="flex items-start gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-full border border-amber-500/30 bg-amber-100/70 text-amber-600 shadow-inner dark:border-amber-500/30 dark:bg-amber-900/40 dark:text-amber-200">
@@ -904,7 +904,7 @@ export function MangaMatchingPanel({
             </div>
           </div>
           <div className="flex flex-col gap-3 md:items-end">
-            <Badge className="rounded-full border border-amber-500/20 bg-amber-200/70 px-3 py-1 text-xs font-semibold tracking-wide text-amber-700 uppercase dark:border-amber-500/30 dark:bg-amber-900/40 dark:text-amber-100">
+            <Badge className="rounded-full border border-amber-500/20 bg-amber-200/70 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:border-amber-500/30 dark:bg-amber-900/40 dark:text-amber-100">
               Manual review recommended
             </Badge>
             <a

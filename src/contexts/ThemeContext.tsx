@@ -47,10 +47,10 @@ interface ThemeDebugSnapshot {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 /**
- * Provides theme context to its children, managing theme state and updates.
- *
- * @param children - The React children to be wrapped by the provider.
- * @returns The theme context provider with value for consumers.
+ * Provides theme context to its children, managing dark/light/system theme preferences.
+ * Syncs theme state with localStorage and system preferences.
+ * @param children - React children to wrap with theme context.
+ * @returns Provider component with theme context value.
  * @source
  */
 export function ThemeProvider({
@@ -214,10 +214,9 @@ export function ThemeProvider({
 }
 
 /**
- * Custom hook to access the theme context.
- *
+ * Hook to access the theme context.
  * @returns The current theme context value.
- * @throws If used outside of a ThemeProvider.
+ * @throws If used outside a ThemeProvider.
  * @source
  */
 export const useTheme = (): ThemeContextType => {

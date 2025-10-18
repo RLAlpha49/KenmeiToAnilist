@@ -3,6 +3,26 @@ import { ArrowLeft, Check, Info, Loader2, RefreshCw, X } from "lucide-react";
 import { Card } from "../../ui/card";
 import { Button } from "../../ui/button";
 
+/**
+ * Props for the MatchBulkActions component.
+ *
+ * @property emptyMatchesCount - Number of manga with no available matches.
+ * @property onSkipEmptyMatches - Callback to skip all empty matches.
+ * @property isSkippingEmptyMatches - Whether skip operation is in progress.
+ * @property noMatchesCount - Number of items with no matches found.
+ * @property onReSearchNoMatches - Callback to re-search items with no matches.
+ * @property isReSearchingNoMatches - Whether re-search operation is in progress.
+ * @property skippedMangaCount - Number of manually skipped manga.
+ * @property onResetSkippedToPending - Callback to reset skipped items to pending.
+ * @property isResettingSkippedToPending - Whether reset operation is in progress.
+ * @property pendingMatchesCount - Number of pending matches.
+ * @property onAcceptAllPendingMatches - Callback to accept all pending matches.
+ * @property isAcceptingAllMatches - Whether accept operation is in progress.
+ * @property onSetMatchedToPending - Optional callback to reset matched to pending.
+ * @property isResettingMatchedToPending - Whether reset matched operation is in progress.
+ * @property matchedCount - Optional count of matched items.
+ * @source
+ */
 export interface MatchBulkActionsProps {
   emptyMatchesCount: number;
   onSkipEmptyMatches: () => void;
@@ -21,6 +41,16 @@ export interface MatchBulkActionsProps {
   matchedCount?: number;
 }
 
+/**
+ * Displays bulk action buttons for common match operations.
+ *
+ * Provides quick actions to skip empty matches, re-search no-matches, reset skipped,
+ * and accept all pending matches.
+ *
+ * @param props - The component props.
+ * @returns The rendered bulk actions component.
+ * @source
+ */
 function MatchBulkActionsComponent({
   emptyMatchesCount,
   onSkipEmptyMatches,
@@ -201,6 +231,7 @@ function MatchBulkActionsComponent({
   );
 }
 
+/** Memoized MatchBulkActions component for performance optimization. @source */
 const MatchBulkActionsMemo = React.memo(MatchBulkActionsComponent);
 MatchBulkActionsMemo.displayName = "MatchBulkActions";
 

@@ -1,7 +1,8 @@
 /**
  * @packageDocumentation
  * @module Matching/Scoring
- * @description Barrel exports for manga match scoring utilities
+ * @description Barrel exports for manga match scoring utilities.
+ * @source
  */
 
 // Core match scoring

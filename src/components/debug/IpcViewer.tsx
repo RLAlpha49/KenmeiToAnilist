@@ -16,9 +16,16 @@ import { cn } from "@/utils/tailwind";
 import { Copy, Search, Trash2, Filter } from "lucide-react";
 import type { IpcLogEntry } from "@/types/debug";
 
+/** Direction options for IPC message filtering. @source */
 const DIRECTIONS = ["sent", "received"] as const;
+
+/** Direction filter type derived from DIRECTIONS array. @source */
 type DirectionFilter = (typeof DIRECTIONS)[number];
 
+/**
+ * Metadata mapping for IPC message directions with styling.
+ * @source
+ */
 const DIRECTION_META: Record<DirectionFilter, { label: string; tone: string }> =
   {
     // Only include text color (no background) so the button text highlights by color only
@@ -26,6 +33,10 @@ const DIRECTION_META: Record<DirectionFilter, { label: string; tone: string }> =
     received: { label: "Received", tone: "text-emerald-500" },
   };
 
+/**
+ * Metadata mapping for IPC request/response status codes.
+ * @source
+ */
 const STATUS_META: Record<
   NonNullable<IpcLogEntry["status"]>,
   { label: string; tone: string }
@@ -35,6 +46,10 @@ const STATUS_META: Record<
   rejected: { label: "Rejected", tone: "bg-red-500/10 text-red-500" },
 };
 
+/**
+ * Metadata mapping for IPC transport mechanisms (invoke, send, event, etc).
+ * @source
+ */
 const TRANSPORT_META: Record<IpcLogEntry["transport"], { label: string }> = {
   invoke: { label: "Invoke" },
   "invoke-response": { label: "Invoke response" },
@@ -43,14 +58,27 @@ const TRANSPORT_META: Record<IpcLogEntry["transport"], { label: string }> = {
   message: { label: "Message" },
 };
 
+/**
+ * Default direction filter state (both sent and received visible).
+ * @source
+ */
 const DEFAULT_DIRECTION_FILTER: Record<DirectionFilter, boolean> = {
   sent: true,
   received: true,
 };
 
-// Maximum characters to render inline before truncating preview
+/**
+ * Maximum characters to display inline before payload preview is truncated.
+ * @source
+ */
 const PREVIEW_MAX_CHARS = 2000;
 
+/**
+ * Formats an ISO timestamp to locale date and time string.
+ * @param timestamp - ISO 8601 timestamp string
+ * @returns Formatted locale date and time, or original string if invalid
+ * @source
+ */
 function formatTimestamp(timestamp: string): string {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) {
@@ -59,11 +87,25 @@ function formatTimestamp(timestamp: string): string {
   return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour12: false })}`;
 }
 
+/**
+ * Formats duration in milliseconds as a human-readable string.
+ * @param duration - Duration in milliseconds
+ * @returns Formatted duration string with "ms" suffix, or null if invalid
+ * @source
+ */
 function formatDuration(duration?: number): string | null {
   if (typeof duration !== "number") return null;
   return `${duration.toFixed(2)} ms`;
 }
 
+/**
+ * Highlights matching text segments in a string with styled marks.
+ * Case-insensitive search with yellow background highlighting.
+ * @param text - Text to search within
+ * @param query - Search query string
+ * @returns JSX with highlighted segments or original text
+ * @source
+ */
 function highlight(text: string, query: string): React.ReactNode {
   if (!query) return text;
   const lower = text.toLowerCase();
@@ -98,6 +140,13 @@ function highlight(text: string, query: string): React.ReactNode {
   return parts.length ? <>{parts}</> : text;
 }
 
+/**
+ * Formats a payload value as a readable string.
+ * Handles primitives, objects, errors, and unserializable values.
+ * @param value - The payload value to format
+ * @returns Formatted string representation
+ * @source
+ */
 function formatPayload(value: unknown): string {
   if (value === undefined) return "undefined";
   if (value === null) return "null";
@@ -123,6 +172,14 @@ function formatPayload(value: unknown): string {
   }
 }
 
+/**
+ * Checks if an IPC log entry matches a search query across multiple fields.
+ * Searches payload preview, channel, transport, status, error, and correlation ID.
+ * @param entry - IPC log entry
+ * @param query - Search query string (case-insensitive)
+ * @returns True if entry matches query in any searchable field
+ * @source
+ */
 function includesQuery(entry: IpcLogEntry, query: string): boolean {
   if (!query) return true;
   const target = query.toLowerCase();
@@ -145,6 +202,13 @@ function includesQuery(entry: IpcLogEntry, query: string): boolean {
   );
 }
 
+/**
+ * Checks if an IPC log entry matches the active direction filters.
+ * @param entry - IPC log entry
+ * @param filters - Direction filter state (sent/received)
+ * @returns True if entry direction is enabled in filters
+ * @source
+ */
 function matchesDirection(
   entry: IpcLogEntry,
   filters: Record<DirectionFilter, boolean>,
@@ -152,11 +216,24 @@ function matchesDirection(
   return filters[entry.direction as DirectionFilter];
 }
 
+/**
+ * Checks if an IPC log entry matches the channel filter (case-insensitive).
+ * @param entry - IPC log entry
+ * @param channelFilter - Channel name to filter by
+ * @returns True if entry matches channel or no channel filter is active
+ * @source
+ */
 function matchesChannel(entry: IpcLogEntry, channelFilter: string): boolean {
   if (!channelFilter) return true;
   return entry.channel.toLowerCase().includes(channelFilter.toLowerCase());
 }
 
+/**
+ * IPC traffic viewer for monitoring renderer ↔ main process messages.
+ * Displays, filters, and inspects IPC logs with direction, channel, and search filters.
+ * @returns JSX element rendering the IPC viewer panel
+ * @source
+ */
 export function IpcViewer(): React.ReactElement {
   const { ipcEvents, maxIpcEntries } = useDebugState();
   const { clearIpcEvents } = useDebugActions();
@@ -280,9 +357,9 @@ export function IpcViewer(): React.ReactElement {
               <Trash2 className="mr-2 h-4 w-4" />
               Clear
             </Button>
-            <div className="flex max-w-xl min-w-[220px] flex-1 flex-row gap-2">
+            <div className="flex min-w-[220px] max-w-xl flex-1 flex-row gap-2">
               <div className="relative min-w-0 flex-1">
-                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
                 <Input
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
@@ -291,7 +368,7 @@ export function IpcViewer(): React.ReactElement {
                 />
               </div>
               <div className="relative min-w-0 flex-1">
-                <Filter className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                <Filter className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
                 <Input
                   value={channelFilter}
                   onChange={(event) => setChannelFilter(event.target.value)}
@@ -364,12 +441,22 @@ export function IpcViewer(): React.ReactElement {
   );
 }
 
+/**
+ * Props for the IPC entry component.
+ * @source
+ */
 type IpcEntryProps = {
   entry: IpcLogEntry;
   onCopy: (entry: IpcLogEntry) => void;
   searchTerm: string;
 };
 
+/**
+ * IPC log entry card with expandable payload details.
+ * Displays direction, channel, transport, status, and formatted payload.
+ * Handles long payloads with truncation and preview highlighting.
+ * @source
+ */
 const IpcEntry = React.memo(function IpcEntry({
   entry,
   onCopy,
@@ -440,7 +527,7 @@ const IpcEntry = React.memo(function IpcEntry({
           )}
         </div>
         <div className="ml-auto flex flex-row items-center gap-2 text-xs">
-          <code className="bg-muted/60 text-muted-foreground max-w-xs overflow-x-auto rounded px-2 py-1 whitespace-nowrap">
+          <code className="bg-muted/60 text-muted-foreground max-w-xs overflow-x-auto whitespace-nowrap rounded px-2 py-1">
             {entry.channel}
           </code>
           <Button
@@ -456,7 +543,7 @@ const IpcEntry = React.memo(function IpcEntry({
       </div>
 
       <div className="mt-3 space-y-2 text-sm">
-        <div className="bg-muted/10 max-h-48 overflow-auto rounded p-2 font-mono text-[13px] leading-relaxed break-words whitespace-pre-wrap">
+        <div className="bg-muted/10 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded p-2 font-mono text-[13px] leading-relaxed">
           {highlight(previewText, searchTerm)}
         </div>
         {isTooLong && (

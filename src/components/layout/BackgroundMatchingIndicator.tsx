@@ -75,6 +75,12 @@ export function BackgroundMatchingIndicator() {
       ? Math.round((matchingState.current / matchingState.total) * 100)
       : 0;
 
+  /**
+   * Converts seconds to a human-readable time string (s, m s, h m format).
+   * @param seconds - The duration in seconds or undefined.
+   * @returns Formatted time string or "calculating..." if seconds is missing or zero.
+   * @source
+   */
   const formatTime = (seconds: number | undefined): string => {
     if (!seconds || seconds <= 0) return "calculating...";
     if (seconds < 60) return `${Math.round(seconds)}s`;
@@ -91,7 +97,7 @@ export function BackgroundMatchingIndicator() {
   return (
     <AnimatePresence>
       <motion.div
-        className="fixed top-20 right-4 z-50 w-80"
+        className="fixed right-4 top-20 z-50 w-80"
         initial={{ opacity: 0, y: -20, x: 50 }}
         animate={{ opacity: 1, y: 0, x: 0 }}
         exit={{ opacity: 0, y: -20, x: 50 }}

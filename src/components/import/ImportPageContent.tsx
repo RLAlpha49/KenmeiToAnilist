@@ -32,7 +32,7 @@ import {
   type StatusCounts,
 } from "../../utils/manga-status-utils";
 
-// Animation variants
+/** Animation variants for container entrance with staggered children. @source */
 const containerVariants = {
   hidden: { opacity: 0 },
   show: {
@@ -44,6 +44,7 @@ const containerVariants = {
   },
 };
 
+/** Animation variants for individual items with spring physics. @source */
 const itemVariants = {
   hidden: { y: 20, opacity: 0 },
   show: {
@@ -57,11 +58,24 @@ const itemVariants = {
   },
 };
 
+/**
+ * Props for the ImportSuccessContent component.
+ * @property importData - KenmeiData with successfully imported manga entries.
+ * @property progress - Import progress percentage (0-100).
+ * @internal
+ * @source
+ */
 interface ImportSuccessProps {
   importData: KenmeiData;
   progress: number;
 }
 
+/**
+ * Displays success message for completed import with progress indicator.
+ * @param props - {@link ImportSuccessProps}
+ * @returns React.ReactElement with success animation and confirmation.
+ * @source
+ */
 export function ImportSuccessContent({
   importData,
   progress,
@@ -73,7 +87,7 @@ export function ImportSuccessContent({
       transition={{ duration: 0.3 }}
     >
       <div className="relative overflow-hidden rounded-3xl border border-white/30 bg-white/80 p-8 shadow-2xl backdrop-blur-lg dark:border-white/10 dark:bg-slate-950/70">
-        <div className="pointer-events-none absolute top-[-60px] right-[-60px] h-48 w-48 rounded-full bg-gradient-to-br from-emerald-500/25 via-green-500/20 to-transparent blur-3xl" />
+        <div className="pointer-events-none absolute right-[-60px] top-[-60px] h-48 w-48 rounded-full bg-gradient-to-br from-emerald-500/25 via-green-500/20 to-transparent blur-3xl" />
         <div className="pointer-events-none absolute bottom-[-80px] left-[-80px] h-64 w-64 rounded-full bg-gradient-to-br from-blue-400/20 via-indigo-400/15 to-transparent blur-3xl" />
 
         <div className="relative z-[1] mx-auto max-w-md space-y-6 text-center">
@@ -129,11 +143,24 @@ export function ImportSuccessContent({
   );
 }
 
+/**
+ * Props for the FileUploadContent component.
+ * @property onFileLoaded - Callback invoked when CSV file is successfully loaded and parsed.
+ * @property onError - Callback invoked if file loading or parsing fails.
+ * @internal
+ * @source
+ */
 interface FileUploadProps {
   onFileLoaded: (data: KenmeiData) => void;
   onError: (error: AppError) => void;
 }
 
+/**
+ * Displays file upload interface with drag-and-drop and help tabs.
+ * @param props - {@link FileUploadProps}
+ * @returns React.ReactElement with file upload and help content.
+ * @source
+ */
 export function FileUploadContent({
   onFileLoaded,
   onError,
@@ -145,7 +172,7 @@ export function FileUploadContent({
       transition={{ duration: 0.5, delay: 0.2 }}
     >
       <div className="relative overflow-hidden rounded-3xl border border-white/30 bg-white/80 p-6 shadow-2xl backdrop-blur-lg dark:border-white/10 dark:bg-slate-950/70">
-        <div className="pointer-events-none absolute top-[-40px] right-[-40px] h-40 w-40 rounded-full bg-gradient-to-br from-blue-500/25 via-indigo-500/20 to-transparent blur-3xl" />
+        <div className="pointer-events-none absolute right-[-40px] top-[-40px] h-40 w-40 rounded-full bg-gradient-to-br from-blue-500/25 via-indigo-500/20 to-transparent blur-3xl" />
         <div className="pointer-events-none absolute bottom-[-60px] left-[-60px] h-48 w-48 rounded-full bg-gradient-to-br from-emerald-400/20 via-teal-400/15 to-transparent blur-3xl" />
 
         <div className="relative z-[1] space-y-6">
@@ -233,6 +260,17 @@ export function FileUploadContent({
   );
 }
 
+/**
+ * Props for the FileReadyContent component.
+ * @property importData - KenmeiData ready for import processing.
+ * @property statusCounts - Breakdown of manga count by status.
+ * @property previousMatchCount - Number of previously matched entries.
+ * @property isLoading - Whether import process is in progress.
+ * @property onImport - Callback when user initiates import.
+ * @property onReset - Callback to reset import state.
+ * @internal
+ * @source
+ */
 interface FileReadyProps {
   importData: KenmeiData;
   statusCounts: StatusCounts;
@@ -242,6 +280,12 @@ interface FileReadyProps {
   onReset: () => void;
 }
 
+/**
+ * Displays import preview with data summary, manga entries table, and action buttons.
+ * @param props - {@link FileReadyProps}
+ * @returns React.ReactElement with import confirmation interface.
+ * @source
+ */
 export function FileReadyContent({
   importData,
   statusCounts,
@@ -257,7 +301,7 @@ export function FileReadyContent({
       transition={{ duration: 0.5, delay: 0.2 }}
     >
       <div className="relative overflow-hidden rounded-3xl border border-white/30 bg-white/80 p-6 shadow-2xl backdrop-blur-lg dark:border-white/10 dark:bg-slate-950/70">
-        <div className="pointer-events-none absolute top-[-40px] right-[-40px] h-40 w-40 rounded-full bg-gradient-to-br from-emerald-500/25 via-green-500/20 to-transparent blur-3xl" />
+        <div className="pointer-events-none absolute right-[-40px] top-[-40px] h-40 w-40 rounded-full bg-gradient-to-br from-emerald-500/25 via-green-500/20 to-transparent blur-3xl" />
         <div className="pointer-events-none absolute bottom-[-60px] left-[-60px] h-48 w-48 rounded-full bg-gradient-to-br from-blue-400/20 via-indigo-400/15 to-transparent blur-3xl" />
 
         <div className="relative z-[1] space-y-6">
@@ -286,7 +330,7 @@ export function FileReadyContent({
           >
             <motion.div variants={itemVariants}>
               <div className="relative overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-blue-500/15 via-indigo-500/10 to-blue-500/5 p-4 shadow-xl backdrop-blur-sm dark:border-blue-500/20 dark:from-blue-500/20 dark:via-indigo-500/20 dark:to-blue-500/10">
-                <div className="absolute top-[-20px] right-[-20px] h-20 w-20 rounded-full bg-blue-500/20 blur-2xl" />
+                <div className="absolute right-[-20px] top-[-20px] h-20 w-20 rounded-full bg-blue-500/20 blur-2xl" />
                 <div className="relative z-[1] flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-blue-600 shadow-sm dark:bg-slate-900/60">
                     <BarChart className="h-5 w-5" />
@@ -303,10 +347,11 @@ export function FileReadyContent({
               </div>
             </motion.div>
 
+            {/* Show previously matched count if available */}
             {previousMatchCount > 0 && (
               <motion.div variants={itemVariants}>
                 <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-green-500/10 to-emerald-500/5 p-4 shadow-xl backdrop-blur-sm dark:border-emerald-500/25 dark:from-emerald-500/20 dark:via-green-500/15 dark:to-emerald-500/10">
-                  <div className="absolute top-[-20px] right-[-20px] h-20 w-20 rounded-full bg-emerald-500/20 blur-2xl" />
+                  <div className="absolute right-[-20px] top-[-20px] h-20 w-20 rounded-full bg-emerald-500/20 blur-2xl" />
                   <div className="relative z-[1] flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-emerald-600 shadow-sm dark:bg-slate-900/60">
                       <Clock className="h-5 w-5" />
@@ -324,12 +369,13 @@ export function FileReadyContent({
               </motion.div>
             )}
 
+            {/* Render status count cards dynamically */}
             {Object.entries(statusCounts).map(([status, count], index) => (
               <motion.div key={status} variants={itemVariants} custom={index}>
                 <div
                   className={`relative overflow-hidden rounded-2xl border p-4 shadow-xl backdrop-blur-sm ${getStatusColor(status)}`}
                 >
-                  <div className="absolute top-[-20px] right-[-20px] h-20 w-20 rounded-full bg-gradient-to-br from-current/20 to-transparent blur-2xl" />
+                  <div className="from-current/20 absolute right-[-20px] top-[-20px] h-20 w-20 rounded-full bg-gradient-to-br to-transparent blur-2xl" />
                   <div className="relative z-[1] flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 shadow-sm dark:bg-slate-900/60">
                       {getStatusIcon(status)}
@@ -420,6 +466,7 @@ export function FileReadyContent({
               <Alert className="rounded-2xl border border-blue-400/40 bg-blue-500/10 px-4 py-3 text-sm text-blue-100 backdrop-blur-lg">
                 <Info className="h-4 w-4 text-blue-400" />
                 <AlertDescription className="text-blue-200">
+                  {/* Notify user of preserved match progress */}
                   <span className="font-medium">Note:</span> You have{" "}
                   {previousMatchCount} previously matched manga entries. Your
                   matching progress will be preserved when proceeding to the

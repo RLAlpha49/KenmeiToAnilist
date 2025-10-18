@@ -422,7 +422,7 @@ export function MangaSearchPanel({
         <div className="flex items-center gap-3">
           <button
             onClick={onClose}
-            className="rounded-full border border-slate-200/70 bg-white/90 p-2 text-slate-500 transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:outline-none dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:text-white dark:focus-visible:ring-blue-500"
+            className="rounded-full border border-slate-200/70 bg-white/90 p-2 text-slate-500 transition hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:text-white dark:focus-visible:ring-blue-500"
             aria-label="Go back"
           >
             <ArrowLeft size={22} aria-hidden="true" />
@@ -436,7 +436,7 @@ export function MangaSearchPanel({
         </div>
         <button
           onClick={onClose}
-          className="rounded-full border border-slate-200/70 bg-white/90 p-2 text-slate-500 transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:outline-none dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:text-white dark:focus-visible:ring-blue-500"
+          className="rounded-full border border-slate-200/70 bg-white/90 p-2 text-slate-500 transition hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:text-white dark:focus-visible:ring-blue-500"
           aria-label="Close search panel"
         >
           <X size={22} aria-hidden="true" />
@@ -445,7 +445,7 @@ export function MangaSearchPanel({
 
       {kenmeiManga && (
         <div className="mx-6 mt-6 rounded-2xl border border-white/30 bg-gradient-to-br from-blue-50/80 via-white/75 to-purple-50/70 p-6 shadow-[inset_0_0_1px_rgba(59,130,246,0.25)] dark:border-slate-700/60 dark:from-blue-900/40 dark:via-slate-900/60 dark:to-indigo-950/60">
-          <h3 className="text-xs font-semibold tracking-[0.2em] text-blue-800/80 uppercase dark:text-blue-200/80">
+          <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-800/80 dark:text-blue-200/80">
             Matching for
           </h3>
           <p
@@ -503,14 +503,14 @@ export function MangaSearchPanel({
               onKeyDown={handleKeyDown}
             />
             <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-              <span className="hidden text-xs font-semibold tracking-[0.3em] text-slate-400/70 uppercase sm:block">
+              <span className="hidden text-xs font-semibold uppercase tracking-[0.3em] text-slate-400/70 sm:block">
                 Enter ↵
               </span>
             </div>
           </div>
           <button
             type="submit"
-            className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-blue-600/30 transition duration-200 hover:brightness-110 focus-visible:ring-2 focus-visible:ring-purple-300 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:shadow-indigo-500/30"
+            className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-blue-600/30 transition duration-200 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300 disabled:cursor-not-allowed disabled:opacity-60 dark:shadow-indigo-500/30"
             disabled={isSearching || !searchQuery.trim()}
             aria-label={isSearching ? "Searching..." : "Search for manga"}
           >
@@ -654,7 +654,7 @@ export function MangaSearchPanel({
                       )}
                       {/* Adult content warning badge */}
                       {isAdultContent(manga) && (
-                        <div className="absolute top-1 left-1">
+                        <div className="absolute left-1 top-1">
                           <span
                             className="inline-flex items-center rounded-md bg-red-600 px-1 py-0 text-xs font-medium text-white"
                             title="Adult Content"
@@ -768,7 +768,7 @@ export function MangaSearchPanel({
                           href={`https://anilist.co/manga/${manga.id}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 rounded-full border border-blue-100/80 bg-white/80 px-3 py-2 text-xs font-semibold text-blue-700 transition hover:border-blue-400 hover:text-blue-900 focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:outline-none dark:border-blue-500/30 dark:bg-slate-900/70 dark:text-blue-200 dark:hover:border-blue-400/60"
+                          className="inline-flex items-center gap-2 rounded-full border border-blue-100/80 bg-white/80 px-3 py-2 text-xs font-semibold text-blue-700 transition hover:border-blue-400 hover:text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 dark:border-blue-500/30 dark:bg-slate-900/70 dark:text-blue-200 dark:hover:border-blue-400/60"
                           aria-label="View on AniList"
                           onClick={(e) => e.stopPropagation()}
                         >
@@ -836,7 +836,7 @@ export function MangaSearchPanel({
 
                   <div className="relative z-[1] flex flex-col items-end justify-between gap-4 self-stretch lg:gap-5">
                     <button
-                      className={`inline-flex items-center gap-2 rounded-full border border-blue-400/40 px-4 py-2 text-sm font-semibold text-blue-700 transition focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:outline-none dark:border-blue-500/30 dark:text-blue-200 ${
+                      className={`inline-flex items-center gap-2 rounded-full border border-blue-400/40 px-4 py-2 text-sm font-semibold text-blue-700 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 dark:border-blue-500/30 dark:text-blue-200 ${
                         isSelected
                           ? "bg-blue-500/20"
                           : "bg-white/70 hover:bg-blue-50 dark:bg-slate-900/60 dark:hover:bg-slate-800/70"

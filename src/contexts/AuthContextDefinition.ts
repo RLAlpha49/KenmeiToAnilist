@@ -13,22 +13,31 @@ import {
 
 const legacyAuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/**
+ * Legacy unified auth context combining state and actions.
+ * @deprecated Prefer `AuthStateContext` and `AuthActionsContext` for new code.
+ * @source
+ */
 export const AuthLegacyContext = legacyAuthContext;
 
 /**
+ * Legacy unified auth context combining state and actions.
  * @deprecated Prefer `AuthStateContext` and `AuthActionsContext` for new code.
+ * @source
  */
 export const AuthContext = legacyAuthContext;
 
 /**
- * State-only context to minimise re-renders for auth consumers.
+ * Provides authentication state only (read-only), minimizing re-renders for consumers.
+ * @source
  */
 export const AuthStateContext = createContext<
   AuthStateContextValue | undefined
 >(undefined);
 
 /**
- * Actions-only context that exposes auth operations.
+ * Provides authentication actions only, enabling mutations without state subscriptions.
+ * @source
  */
 export const AuthActionsContext = createContext<
   AuthActionsContextValue | undefined

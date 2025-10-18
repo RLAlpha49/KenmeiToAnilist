@@ -5,13 +5,7 @@
  */
 
 /**
- * Represents the theme mode for the application.
- *
- * Possible values:
- * - 'dark': Dark mode
- * - 'light': Light mode
- * - 'system': Follows the system theme
- *
+ * Application theme mode: 'dark' for dark mode, 'light' for light mode, 'system' to follow OS theme.
  * @source
  */
 export type ThemeMode = "dark" | "light" | "system";

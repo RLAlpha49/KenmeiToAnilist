@@ -1,6 +1,12 @@
 /**
- * Rate limit queue processing logic
- * @module rate-limiting/queue-processor
+ * Rate limit queue processing logic.
+ *
+ * Processes queued requests sequentially, enforcing the minimum interval between requests
+ * to stay within AniList's rate limits. Respects manual pause states and coordinates
+ * with the rate limit queue state.
+ *
+ * @packageDocumentation
+ * @source
  */
 
 import {
@@ -15,9 +21,12 @@ import { REQUEST_INTERVAL, SAFETY_DELAY } from "./config";
 import { sleep } from "./utils";
 
 /**
- * Request rate limiting queue handler
- * Ensures we don't exceed AniList's rate limits
- * @returns Promise that resolves when rate limit permits the request
+ * Acquire a rate limit slot. Returns a promise that resolves when safe to make a request.
+ *
+ * Queues the request and starts processing if not already active. Ensures compliance
+ * with AniList's rate limits by enforcing minimum intervals between requests.
+ * @returns Promise that resolves when rate limit permits the request.
+ * @source
  */
 export async function acquireRateLimit(): Promise<void> {
   return new Promise<void>((resolve) => {
@@ -32,8 +41,11 @@ export async function acquireRateLimit(): Promise<void> {
 }
 
 /**
- * Process the rate limit queue
- * Handles timing between requests to stay within rate limits
+ * Process the rate limit queue.
+ *
+ * Sequentially processes all queued requests, waiting for minimum intervals between
+ * requests and respecting manual pause states. Stops when queue is empty.
+ * @source
  */
 async function processRateLimitQueue(): Promise<void> {
   if (isProcessingQueue()) return;
@@ -45,20 +57,20 @@ async function processRateLimitQueue(): Promise<void> {
     const now = Date.now();
     const timeSinceLastRequest = now - getLastRequestTime();
 
-    // If we need to wait for the rate limit, do so
+    // Enforce minimum interval between requests to stay within rate limits
     if (getLastRequestTime() > 0 && timeSinceLastRequest < REQUEST_INTERVAL) {
       const waitTime = REQUEST_INTERVAL - timeSinceLastRequest;
       await sleep(waitTime);
     }
 
-    // Get the next request from the queue and resolve it
+    // Dequeue and resolve the next request
     const nextRequest = requestQueue.shift();
     if (nextRequest) {
       setLastRequestTime(Date.now());
       nextRequest.resolve();
     }
 
-    // Small additional delay to be extra safe
+    // Additional safety delay to prevent rate limit edge cases
     await sleep(SAFETY_DELAY);
   }
 

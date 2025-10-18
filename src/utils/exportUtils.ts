@@ -8,15 +8,13 @@ import { SyncReport } from "../api/anilist/sync-service";
 
 /**
  * Generates a timestamp string suitable for use in filenames.
- * Replaces colons and periods with hyphens for compatibility with file systems.
  *
- * @returns ISO timestamp string formatted for filenames (e.g., `2025-10-17T14-30-45-123Z`)
- * @example
- * ```typescript
- * const timestamp = generateExportTimestamp();
- * console.log(timestamp); // "2025-10-17T14-30-45-123Z"
- * ```
+ * Replaces colons and periods with hyphens to ensure compatibility with file systems.
+ * Ensures safe and readable filenames across platforms.
+ *
+ * @returns ISO timestamp string formatted for filenames (e.g., `2025-10-17T14-30-45-123Z`).
  * @internal
+ * @source
  */
 export function generateExportTimestamp(): string {
   return new Date().toISOString().replaceAll(":", "-").replaceAll(".", "-");
@@ -25,25 +23,15 @@ export function generateExportTimestamp(): string {
 /**
  * Exports a data object as a JSON file and triggers browser download.
  *
- * Handles all the boilerplate of creating a blob, object URL, and anchor element
- * for triggering a file download in the browser.
+ * Handles all the boilerplate of creating a blob, object URL, and anchor element for triggering
+ * a file download. Automatically appends a timestamp to the filename.
  *
- * @param data - The data object to export (will be stringified to pretty-printed JSON)
- * @param baseFilename - The base filename without extension or timestamp
- * @returns The full filename that was used for download (including timestamp and extension)
- *
- * @example
- * ```typescript
- * const data = {
- *   exportedAt: new Date().toISOString(),
- *   items: [1, 2, 3],
- * };
- * const filename = exportToJson(data, "my-data");
- * // Downloads file: my-data-2025-10-17T14-30-45-123Z.json
- * ```
- *
- * @throws Will throw if JSON stringification fails (e.g., circular references)
+ * @param data - The data object to export (will be stringified to pretty-printed JSON).
+ * @param baseFilename - The base filename without extension or timestamp.
+ * @returns The full filename that was used for download (including timestamp and extension).
+ * @throws Will throw if JSON stringification fails (e.g., circular references).
  * @internal
+ * @source
  */
 export function exportToJson(
   data: Record<string, unknown>,
@@ -77,13 +65,10 @@ export function exportToJson(
 /**
  * Exports sync error logs to a JSON file.
  *
+ * Extracts error details from a sync report and downloads them as a JSON file.
+ * Skips export if no errors are present.
+ *
  * @param report - The sync report containing errors to export.
- * @remarks
- * If there are no errors, a warning is logged and no file is exported.
- * @example
- * ```ts
- * exportSyncErrorLog(report);
- * ```
  * @source
  */
 export function exportSyncErrorLog(report: SyncReport): void {
@@ -117,13 +102,10 @@ export function exportSyncErrorLog(report: SyncReport): void {
 /**
  * Exports a full sync report to a JSON file.
  *
+ * Downloads the complete sync report including all entries and outcomes as a JSON file.
+ * Skips export if the report is empty.
+ *
  * @param report - The sync report to export.
- * @remarks
- * If the report is missing, a warning is logged and no file is exported.
- * @example
- * ```ts
- * exportSyncReport(report);
- * ```
  * @source
  */
 export function exportSyncReport(report: SyncReport): void {
@@ -150,13 +132,9 @@ export function exportSyncReport(report: SyncReport): void {
 /**
  * Saves a sync report to localStorage for later reference.
  *
+ * Persists the report to browser storage and maintains a history of up to 10 most recent reports.
+ *
  * @param report - The sync report to save.
- * @remarks
- * Keeps up to 10 most recent reports in history.
- * @example
- * ```ts
- * saveSyncReportToHistory(report);
- * ```
  * @source
  */
 export function saveSyncReportToHistory(report: SyncReport): void {

@@ -1,6 +1,8 @@
 /**
- * Filtering module for manga search results
+ * Barrel exports for manga filtering utilities.
+ * Provides functions for skipping, exact matching, and inclusion decision logic.
  * @module filtering
+ * @source
  */
 
 export {

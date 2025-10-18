@@ -79,6 +79,12 @@ export function ImportPage() {
     });
   };
 
+  /**
+   * Handles import errors by logging, recording debug event, and displaying toast notification.
+   * @param error - The application error object to handle.
+   * @param toastId - Optional ID of an existing toast to replace with error message.
+   * @source
+   */
   const handleError = (error: AppError, toastId?: string) => {
     console.error(`[Import] ❌ Import error (${error.type}):`, error.message);
 
@@ -114,6 +120,11 @@ export function ImportPage() {
     });
   };
 
+  /**
+   * Processes the loaded manga import data and saves it to storage.
+   * Merges with previous data, normalizes IDs, validates, and redirects to review page on success.
+   * @source
+   */
   const handleImport = async () => {
     if (!importData) {
       console.warn("[Import] ⚠️ Cannot import - no data loaded");
@@ -223,11 +234,19 @@ export function ImportPage() {
     }
   };
 
+  /**
+   * Clears the error message from display.
+   * @source
+   */
   const dismissError = () => {
     console.debug("[Import] 🔍 Dismissing error message");
     setError(null);
   };
 
+  /**
+   * Resets the import form to its initial state and notifies the user.
+   * @source
+   */
   const resetForm = () => {
     console.info("[Import] 🔄 Resetting import form");
     recordEvent({

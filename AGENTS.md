@@ -1,58 +1,103 @@
 # Kenmei to AniList - AI Coding Assistant Instructions
 
-## 🚨 CRITICAL: Tool Usage Priority
+> **Note**: This file complements memory documents created specifically for this project. Reference them during development for specific guidance on patterns, troubleshooting, and feature implementation.
 
-**ALWAYS USE THESE TOOLS FIRST** - This is the most important context for working in this codebase:
+## 🚨 CRITICAL: Tool Usage Priority & Workflow
 
-### Serena Tools (Code Navigation & Editing)
-
-Serena provides **semantic coding tools** that understand the codebase structure. Use these tools BEFORE reading entire files:
-
-1. **Code Exploration** (use these first):
-   - `mcp_oraios_serena_get_symbols_overview` - Get high-level overview of a file's symbols/structure
-   - `mcp_oraios_serena_find_symbol` - Find classes, methods, functions by name path (e.g., `ClassName/methodName`)
-   - `mcp_oraios_serena_find_referencing_symbols` - Find all references to a symbol
-   - `mcp_oraios_serena_search_for_pattern` - Search for regex patterns in codebase
-
-2. **Code Editing** (symbol-based precision):
-   - `mcp_oraios_serena_replace_symbol_body` - Replace entire symbol body (method, class, function)
-   - `mcp_oraios_serena_insert_after_symbol` - Insert code after a symbol
-   - `mcp_oraios_serena_insert_before_symbol` - Insert code before a symbol (e.g., imports)
-
-3. **Why Use Serena**:
-   - ✅ Token-efficient: Read only what you need, not entire files
-   - ✅ Precise edits: Modify specific methods/classes without manual line counting
-   - ✅ Context-aware: Understand symbol relationships and references
-   - ❌ **Don't read entire files unless necessary or prompted to** - use symbol tools first!
-
-### SonarQube Tools (Code Quality & Security)
-
-Use SonarQube tools to analyze code quality and catch issues early:
-
-1. **Code Analysis**:
-   - `sonarqube_analyze_file` - Analyze a file for code quality and security issues
-   - `sonarqube_list_potential_security_issues` - Find security hotspots and taint vulnerabilities
-
-2. **When to Use**:
-   - ✅ After making changes to analyze impact
-   - ✅ Before committing to catch issues early
-   - ✅ When debugging to identify code smells
-   - ✅ For security-sensitive code (auth, IPC, storage)
-
-### Tool Usage Workflow
+**ALWAYS USE THIS WORKFLOW** - This is the most important context for working in this codebase:
 
 ```text
-1. Explore with Serena (get_symbols_overview, find_symbol)
-2. Make targeted changes (replace_symbol_body, insert_*)
-3. Verify with SonarQube (analyze_file)
-4. Only read full files if symbolic approach insufficient
+1. Check appropriate memory (type_definitions_and_interfaces, ipc_and_context_bridge_patterns, etc.)
+2. Explore code with Serena tools (get_symbols_overview, find_symbol)
+3. Make precise edits
+4. Verify with SonarQube (analyze_file, list_potential_security_issues)
 ```
+
+## Tools & Project Setup
+
+### ⚡ Project Activation (MUST DO FIRST)
+
+**Always activate the project before using Serena tools**:
+
+```bash
+mcp_oraios_serena_activate_project "KenmeiToAnilist"
+```
+
+### Available Serena Tools
+
+Serena provides **semantic code exploration tools** (symbol-based, token-efficient). The project has access to these tools:
+
+**Code Exploration & Navigation**:
+
+- `activate_project` - Activate a project by name
+- `get_symbols_overview` - Get overview of top-level symbols in a file
+- `find_symbol` - Search for symbols (functions, classes, etc.) by name
+- `find_referencing_symbols` - Find all references to a symbol
+- `find_referencing_code_snippets` - Find code snippets where symbol is referenced
+- `search_for_pattern` - Regex pattern search across the project
+- `list_dir` - List files and directories (optionally recursive)
+
+**Memory Management**:
+
+- `check_onboarding_performed` - Check if onboarding was completed
+- `list_memories` - List all project memories
+- `read_memory` - Read a specific memory document
+- `write_memory` - Create or update a memory document
+- `delete_memory` - Delete a memory file
+- `get_current_config` - View current project configuration
+
+**File Operations**:
+
+- `read_file` - Read file contents within project
+- `create_text_file` - Create/overwrite a file in project directory
+- `restart_language_server` - Restart language server if needed
+
+**Other Utilities**:
+
+- `onboarding` - Perform project onboarding
+- `execute_shell_command` - Execute shell commands
+- `summarize_changes` - Summarize changes made to codebase
+- `prepare_for_new_conversation` - Prepare for new conversation
+- `initial_instructions` - Get initial project instructions
+- `remove_project` - Remove project from Serena configuration
+- `switch_modes` - Activate modes by name
+- `think_about_collected_information` - Thinking tool for analysis
+- `think_about_task_adherence` - Thinking tool for task tracking
+- `think_about_whether_you_are_done` - Thinking tool for completion
+
+**Disabled Tools** (currently unavailable in `.serena/project.yml`):
+
+- `insert_after_symbol` - Insert code after symbol
+- `insert_at_line` - Insert code at specific line
+- `insert_before_symbol` - Insert code before symbol
+- `replace_symbol_body` - Replace entire symbol definition
+- `replace_lines` - Replace range of lines
+- `delete_lines` - Delete range of lines
+
+### SonarQube Tools
+
+Use for code quality analysis:
+
+- **`sonarqube_analyze_file`** - Analyze file for issues
+- **`sonarqube_list_potential_security_issues`** - Find security hotspots
 
 ## Project Overview
 
 Electron desktop app (React 19 + TypeScript) for migrating manga libraries from Kenmei to AniList. Built with secure main/renderer process architecture, three-layer storage system, GraphQL API integration, and React Compiler optimization.
 
 **Key Technologies**: Electron 38, React 19, TanStack Router, TailwindCSS 4.1, shadcn/ui (Radix UI), Vite 7, Electron Forge
+
+## Quick Start by Task
+
+**Need to...**
+
+- **Add a new UI page?** → Start with `feature_development_checklist` memory
+- **Debug IPC communication?** → Check `ipc_and_context_bridge_patterns` + `common_gotchas_and_solutions`
+- **Understand data flow?** → See `type_definitions_and_interfaces` and `architecture_and_decisions`
+- **Implement custom hook?** → Reference `react_hooks_and_patterns`
+- **Reduce code complexity?** → Use `sonarqube_complexity_patterns`
+- **Fix cache/storage issue?** → Check `common_gotchas_and_solutions` first
+- **Add new API integration?** → See `critical_patterns_and_anti_patterns` and `architecture_and_decisions`
 
 ## Essential Reference Documents
 
@@ -61,195 +106,51 @@ Electron desktop app (React 19 + TypeScript) for migrating manga libraries from 
 - `docs/guides/API_REFERENCE.md` - AniList GraphQL API integration
 - `documentation/` - Generated TypeDoc API documentation
 
-## Architecture Patterns
+## Architecture Patterns (See Memories for Details)
 
-### Process Communication (Electron IPC)
+- **`architecture_and_decisions`** - Complete system design, storage layers, contexts, routing
+- **`ipc_and_context_bridge_patterns`** - IPC architecture and exposed contexts
+- **`type_definitions_and_interfaces`** - TypeScript types and interfaces across the codebase
 
-**Critical Security Pattern**: All IPC communication uses context bridge pattern via `src/helpers/ipc/context-exposer.ts`
+Key files to reference:
 
-```typescript
-// Context exposer combines 5 domain contexts
-exposeWindowContext(); // Window management
-exposeThemeContext(); // Theme persistence
-exposeAuthContext(); // OAuth & credentials
-exposeStoreContext(); // electron-store access
-exposeApiContext(); // AniList API calls
-```
-
-**IPC Organization**: Handlers organized by domain in `src/helpers/ipc/{api,auth,store,theme,window}/`
-
-- Never use `ipcRenderer` directly in renderer process
-- All main process handlers registered via `src/helpers/ipc/listeners-register.ts`
-- Access via `globalThis.electronStore`, `globalThis.electronAuth`, etc.
-
-### Three-Layer Storage Architecture
-
-**CRITICAL HIERARCHY** (`src/utils/storage.ts`): Storage operations MUST respect this precedence:
-
-1. **In-memory cache** (`storageCache`) - Fastest, volatile, cleared on restart
-2. **localStorage** - Browser storage, synchronous, renderer-only
-3. **Electron Store** - **AUTHORITATIVE SOURCE**, file-based, encrypted, async IPC
-
-**Read Flow**: Check cache → localStorage → electron-store (async)
-**Write Flow**: Update all three layers, electron-store is source of truth
-**Conflict Resolution**: Electron Store always wins
-
-**Storage Keys** (from `STORAGE_KEYS` constant):
-
-```typescript
-(KENMEI_DATA,
-  IMPORT_STATS,
-  MATCH_RESULTS,
-  PENDING_MANGA,
-  CACHE_VERSION,
-  SYNC_CONFIG,
-  SYNC_STATS,
-  MATCH_CONFIG,
-  IGNORED_DUPLICATES,
-  ACTIVE_SYNC_SNAPSHOT);
-```
-
-**Cache Versioning**: `CURRENT_CACHE_VERSION = 1` - increment for breaking changes to invalidate old data
-
-### State Management
-
-**React Context Providers** (`src/contexts/`):
-
-- `AuthContext` - OAuth flow, credentials, viewer data, custom client IDs
-- `DebugContext` - Debug mode, log viewer, IPC monitor, state inspector
-- `ThemeContext` - Dark/light/system theme with persistence
-- `RateLimitContext` - AniList rate limit tracking (60 requests/minute)
-
-**Context Pattern**: All contexts use TypeScript interfaces, provide default values, and expose via custom hooks (`useAuth`, `useDebug`, etc.)
-
-### API Integration (AniList GraphQL)
-
-**Client**: `src/api/anilist/client.ts` (1295 lines)
-
-- **Search Cache**: 30-minute expiration (`CACHE_EXPIRATION = 30 * 60 * 1000`)
-- **localStorage Persistence**: Cache survives restarts via `anilist_search_cache` key
-- **Cache Initialization**: One-time load via `initializeSearchCache()`, check `searchCacheInitialized` flag
-- **Rate Limiting**: Built-in retry logic for 429 responses with `retryAfter` handling
-
-**GraphQL Queries**: `src/api/anilist/queries.ts` exports `SEARCH_MANGA`, `ADVANCED_SEARCH_MANGA`, `GET_MANGA_BY_IDS`, `GET_USER_MANGA_LIST`, `GET_VIEWER`
-
-**Error Types** (`src/utils/errorHandling.ts`):
-
-```typescript
-enum ErrorType {
-  UNKNOWN,
-  VALIDATION,
-  NETWORK,
-  AUTH,
-  SERVER,
-  CLIENT,
-  STORAGE,
-  AUTHENTICATION,
-  SYSTEM,
-}
-```
+- `docs/guides/ARCHITECTURE.md` - Complete architecture overview
+- `docs/guides/STORAGE_IMPLEMENTATION.md` - Storage system details
+- `src/helpers/ipc/context-exposer.ts` - Context bridge implementation
 
 ## Development Workflow
 
-### Build & Run Commands
+### Commands
 
 ```bash
-npm start              # Dev with hot reload (Vite + Electron)
-npm run make           # Production build for all platforms
-npm run build          # Alias for electron-forge make
-npm run lint           # ESLint 9 with React Compiler plugin
-npm run format:write   # Prettier (auto-format all files)
-npm run docs           # Generate TypeDoc to documentation/
-npm run precommit      # Format + lint (Husky pre-commit)
-npm run update         # Update dependencies (ncu -u)
+npm start              # Dev with hot reload
+npm run build          # Production build
+npm run lint           # ESLint with React Compiler
+npm run format:write   # Prettier formatting
+npm run docs           # Generate TypeDoc documentation
 ```
 
-### Project Structure
+### Key Structure
 
-```text
-src/
-├── api/              # AniList, Kenmei, matching algorithms
-├── components/       # Feature-specific + ui/ (shadcn/ui)
-│   ├── debug/       # Debug panels (log viewer, state inspector)
-│   ├── import/      # CSV import flow
-│   ├── layout/      # BaseLayout, navigation
-│   ├── matching/    # Match review, confidence display
-│   ├── settings/    # Sync config, credentials
-│   ├── sync/        # Batch sync, progress tracking
-│   └── ui/          # shadcn/ui components (button, dialog, etc.)
-├── contexts/         # AuthContext, DebugContext, ThemeContext, RateLimitContext
-├── helpers/ipc/      # Main process IPC handlers (organized by domain)
-├── hooks/            # useAuth, useSyncProgress, useRateLimit, etc.
-├── pages/            # Route components (HomePage, ImportPage, etc.)
-├── routes/           # TanStack Router config (__root.tsx, routes.tsx, router.tsx)
-├── types/            # TypeScript interfaces (auth, debug, sync, etc.)
-└── utils/            # storage.ts, errorHandling.ts, logging.ts, similarity.ts
-```
+Main code lives in `src/` with organized by feature: components, contexts, hooks, pages, routes, types, utils. API calls in `src/api/`, IPC handlers in `src/helpers/ipc/`.
 
-### Routing Pattern (TanStack Router)
+**Styling**: TailwindCSS 4.1 with `@tailwindcss/vite` + shadcn/ui components (Radix UI)
 
-- **Memory History**: `createMemoryHistory()` for Electron (no URLs)
-- **Root Layout**: `__root.tsx` wraps all routes with `BaseLayout`
-- **Type Safety**: Module augmentation for router type inference
+**Routing**: TanStack Router with memory history (no URLs in Electron)
 
-### Component & Styling Patterns
-
-**shadcn/ui**: All UI components in `src/components/ui/` use Radix UI + CVA (class-variance-authority)
-
-- Import pattern: `from "@/components/ui/button"`
-- Variants defined with `cva()` for type-safe prop-based styling
-
-**TailwindCSS 4.1**: Uses `@tailwindcss/vite` plugin (NOT PostCSS)
-
-- Path alias: `@/*` maps to `./src/*` (tsconfig.json + vite config)
-- Prettier plugin: `prettier-plugin-tailwindcss` for auto-sorting classes
-
-**Animations**:
-
-- Page transitions: Framer Motion
-- Micro-interactions: tailwindcss-animate
-- Performance: React Compiler auto-optimization (babel-plugin-react-compiler)
-
-### Build Configuration
-
-**Electron Forge** (`config/forge.config.js`):
-
-- **Makers**: Squirrel (Windows), DMG (macOS), Deb/Zip (Linux)
-- **Icon**: `src/assets/k2a-icon-512x512.{ico,png,icns}`
-- **Fuses**: Security hardening (@electron/fuses)
-- **ASAR**: Enabled for code protection
-
-**Vite**: Three separate configs for main/preload/renderer processes
-
-- `config/vite.main.config.ts` - Main process (Node.js)
-- `config/vite.preload.config.ts` - Preload script (context bridge)
-- `config/vite.renderer.config.mts` - React renderer (@vitejs/plugin-react)
+**Build**: Electron Forge with Vite for main/preload/renderer processes
 
 ## Critical Patterns to Follow
 
-### 0. Tool Usage (MOST IMPORTANT)
+### 0. Workflow (MUST FOLLOW)
 
-**Before making ANY changes**, follow this workflow:
+**Activate project** → **Explore with Serena** → **Make edits** → **Verify with SonarQube**
 
-1. **Explore Code with Serena Tools**:
-   - Use `mcp_oraios_serena_get_symbols_overview` to understand file structure
-   - Use `mcp_oraios_serena_find_symbol` to locate specific functions/classes
-   - Use `mcp_oraios_serena_find_referencing_symbols` to understand dependencies
-   - ❌ DON'T read entire files without exploring symbols first or prompted to
-
-2. **Make Precise Edits**:
-   - Use `mcp_oraios_serena_replace_symbol_body` for method/class changes
-   - Use `mcp_oraios_serena_insert_after_symbol` / `insert_before_symbol` for additions
-   - ❌ DON'T use line-based editing unless symbolic approach fails
-
-3. **Verify Quality**:
-   - Use `sonarqube_analyze_file` after changes
-   - Check for security issues in code
-   - Fix any code smells or vulnerabilities before committing
+Use Serena tools (`get_symbols_overview`, `find_symbol`, `search_for_pattern`) BEFORE reading entire files.
 
 ### 1. Storage Operations
 
-**NEVER** access localStorage or electron-store directly. Always use `src/utils/storage.ts` abstraction:
+**NEVER** access localStorage or electron-store directly. Use `src/utils/storage.ts` abstraction:
 
 ```typescript
 import { storage, STORAGE_KEYS } from "@/utils/storage";
@@ -279,30 +180,47 @@ import { createError, ErrorType } from "@/utils/errorHandling";
 throw createError(ErrorType.NETWORK, "Failed to fetch", error, "NETWORK_UNAVAILABLE");
 ```
 
-### 4. Type Safety
+## Memory-Driven Development
 
-- **Strict mode enabled**: `noImplicitAny: true`, `strict: true`
-- API responses: Define interfaces in `src/types/` or inline with GraphQL queries
-- React Compiler enforces rules of hooks (eslint-plugin-react-compiler)
+Each memory document is designed for specific development tasks:
 
-### 5. Performance Considerations
+### When Implementing Features
 
-- **React Compiler**: Automatic memoization, avoid manual `useMemo`/`useCallback` unless profiling shows benefit
-- **Search Cache**: Respect 30-minute expiration, don't bypass cache logic
-- **Rate Limiting**: Check `RateLimitContext` before bulk API operations
+Use the **`feature_development_checklist`** memory for step-by-step guidance:
 
-## Testing & Debugging
+- Adding new UI pages
+- Creating custom hooks
+- Adding IPC handlers
+- Managing storage keys
+- Creating API queries
 
-**Debug Mode** (`DebugContext`):
+### When Debugging
 
-- Enable via settings menu
-- Log viewer with console interception (`src/utils/logging.ts`)
-- State inspector for Auth/Debug/Theme contexts
-- IPC monitor (TODO: see DebugContext.tsx line 10)
+Check **`common_gotchas_and_solutions`** for:
 
-**No formal test suite currently** - manual testing workflow
+- IPC communication errors ("reply was never sent")
+- React Compiler hook violations
+- Cache staling issues
+- Rate limit hits
+- Authentication timeouts
 
-**TypeDoc**: Auto-generated from JSDoc comments (`@packageDocumentation`, `@source`, `@internal`)
+### When Understanding Code
+
+Reference appropriate memory:
+
+- **Types & interfaces** → `type_definitions_and_interfaces`
+- **Architecture systems** → `architecture_and_decisions`
+- **IPC patterns** → `ipc_and_context_bridge_patterns`
+- **React patterns** → `react_hooks_and_patterns`
+
+### When Improving Code Quality
+
+Use **`sonarqube_complexity_patterns`** for:
+
+- Refactoring high complexity functions
+- Reducing cognitive complexity
+- Breaking down nested loops and conditionals
+- Simplifying complex regex patterns
 
 ## Common Pitfalls
 
@@ -319,3 +237,30 @@ throw createError(ErrorType.NETWORK, "Failed to fetch", error, "NETWORK_UNAVAILA
 3. **New UI Components**: Use shadcn/ui pattern, place in `src/components/ui/`, import via `@/components/ui/*`
 4. **New API Queries**: Define in `src/api/anilist/queries.ts`, add types to `src/api/anilist/types.ts`
 5. **New Routes**: Create in `src/routes/`, export from `routes.tsx`, add to route tree
+
+## Summary: Optimal Development Workflow
+
+**The best way to work efficiently on this codebase:**
+
+1. **Activate project first**: `mcp_oraios_serena_activate_project "KenmeiToAnilist"`
+2. **Check appropriate memory**: Use task-based quick start above
+3. **Explore with Serena**: Use `get_symbols_overview` and `find_symbol` before reading files
+4. **Make targeted edits**: Use file editing tools for precision
+5. **Verify with SonarQube**: Check for issues after changes
+6. **Follow patterns**: Reference this file and docs/guides/
+
+**Key Resources:**
+
+- **Memories**: Specialized documents for specific tasks (listed in Quick Start)
+- **AGENTS.md**: This file - tool usage, patterns, workflow
+- **docs/guides/**: ARCHITECTURE.md, STORAGE_IMPLEMENTATION.md, API_REFERENCE.md
+- **TypeDoc**: Generated API documentation in `documentation/`
+
+**Critical Success Factors:**
+
+- ✅ Always activate project before using Serena tools
+- ✅ Always use storage abstraction (never direct localStorage)
+- ✅ Never use ipcRenderer directly (use exposed contexts)
+- ✅ Check rate limits before bulk API operations
+- ✅ Follow rules of hooks (React Compiler enforces)
+- ✅ Use Serena tools for exploration before reading files

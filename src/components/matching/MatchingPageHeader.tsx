@@ -12,6 +12,36 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { Badge } from "../ui/badge";
 
+/**
+ * Highlight stat configuration for display in the header.
+ *
+ * @property label - Display name for the statistic.
+ * @property value - Numeric value to show.
+ * @property icon - Icon component to display.
+ * @property accent - Tailwind classes for styling.
+ * @source
+ */
+type HighlightStat = {
+  label: string;
+  value: number;
+  icon: LucideIcon;
+  accent: string;
+};
+
+/**
+ * Props for the MatchingPageHeader component.
+ *
+ * @property headerVariants - Framer Motion animation variants.
+ * @property matchResultsLength - Total number of matches to process.
+ * @property showRematchOptions - Whether to display rematch options panel.
+ * @property setShowRematchOptions - Callback to toggle rematch options visibility.
+ * @property handleSetAllMatchedToPending - Callback to reset all matched items to pending.
+ * @property matchingProcessIsLoading - Whether the matching process is running.
+ * @property rateLimitIsRateLimited - Whether AniList rate limit is active.
+ * @property statusSummary - Statistics summary with match counts and completion percent.
+ * @property pendingBacklog - Number of pending items in the queue.
+ * @source
+ */
 interface Props {
   headerVariants: Variants;
   matchResultsLength: number;
@@ -32,13 +62,15 @@ interface Props {
   pendingBacklog: number;
 }
 
-type HighlightStat = {
-  label: string;
-  value: number;
-  icon: LucideIcon;
-  accent: string;
-};
-
+/**
+ * Displays the matching dashboard header with progress stats and action buttons.
+ *
+ * Shows completion percentage, match/manual/pending counts, and rematch controls.
+ *
+ * @param props - The component props.
+ * @returns The rendered matching page header.
+ * @source
+ */
 export function MatchingPageHeader({
   headerVariants,
   matchResultsLength,
@@ -86,15 +118,15 @@ export function MatchingPageHeader({
     <motion.header className="mb-8" variants={headerVariants}>
       <div className="relative overflow-hidden rounded-3xl border border-white/30 bg-white/80 px-6 py-7 shadow-xl shadow-slate-900/5 backdrop-blur dark:border-slate-800/70 dark:bg-slate-900/70">
         <div className="pointer-events-none absolute -top-20 left-12 h-52 w-52 rounded-full bg-sky-400/20 blur-3xl" />
-        <div className="pointer-events-none absolute right-10 -bottom-16 h-56 w-56 rounded-full bg-violet-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-16 right-10 h-56 w-56 rounded-full bg-violet-500/10 blur-3xl" />
 
         <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-2xl space-y-3">
-            <div className="flex items-center gap-2 text-sm font-medium tracking-wide text-sky-600 uppercase dark:text-sky-300">
+            <div className="flex items-center gap-2 text-sm font-medium uppercase tracking-wide text-sky-600 dark:text-sky-300">
               <Sparkles className="h-4 w-4" />
               Matching Dashboard
             </div>
-            <h1 className="text-3xl leading-tight font-semibold text-slate-900 lg:text-4xl dark:text-white">
+            <h1 className="text-3xl font-semibold leading-tight text-slate-900 lg:text-4xl dark:text-white">
               Review and Elevate Your Manga Sync
             </h1>
             <p className="text-sm text-slate-600 dark:text-slate-300">
@@ -127,7 +159,7 @@ export function MatchingPageHeader({
                 <div className="absolute inset-0 bg-gradient-to-br opacity-40 transition-opacity duration-300 group-hover:opacity-70" />
                 <div className="relative flex flex-col gap-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium tracking-wide text-slate-500 uppercase dark:text-slate-400">
+                    <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                       {label}
                     </span>
                     <Icon className="h-4 w-4" />
@@ -143,7 +175,7 @@ export function MatchingPageHeader({
 
         <div className="relative z-10 mt-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="w-full lg:max-w-2xl">
-            <div className="flex items-center justify-between text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400">
+            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               <span>Review progress</span>
               <span>
                 {reviewed} of {total} reviewed

@@ -10,18 +10,38 @@ import {
 } from "../ui/card";
 import { cn } from "../../utils/tailwind";
 
+/**
+ * Props for the SettingsSectionShell component.
+ * @source
+ */
 interface SettingsSectionShellProps {
+  /** Lucide icon component to display in the header. */
   icon: LucideIcon;
+  /** Section title. */
   title: string;
+  /** Section description or subtitle. */
   description: React.ReactNode;
+  /** Tailwind gradient class for the header accent color. */
   accent: string;
+  /** Section content. */
   children: React.ReactNode;
+  /** Optional badge element to display in the header. */
   badge?: React.ReactNode;
+  /** Optional CSS class for the card container. */
   className?: string;
+  /** Optional CSS class for the card content area. */
   contentClassName?: string;
+  /** Animation delay in seconds. */
   delay?: number;
 }
 
+/**
+ * Shell component for settings sections with consistent styling and animation.
+ * Wraps section content with a card, icon, title, and optional badge.
+ * @param props - Component props.
+ * @returns The rendered settings section shell.
+ * @source
+ */
 export function SettingsSectionShell({
   icon: Icon,
   title,
@@ -47,7 +67,7 @@ export function SettingsSectionShell({
       >
         <CardHeader
           className={cn(
-            "relative overflow-hidden border-b border-slate-200 px-6 !py-4 dark:border-white/10",
+            "relative overflow-hidden border-b border-slate-200 !py-4 px-6 dark:border-white/10",
             "bg-gradient-to-r",
             accent,
           )}

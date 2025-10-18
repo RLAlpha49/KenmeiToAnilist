@@ -10,15 +10,20 @@ import {
   shouldIncludeMangaRegular,
 } from "../filtering/inclusion-rules";
 
-// Titles to ignore during automatic matching (but allow in manual searches)
+/**
+ * Titles to ignore during automatic matching (manual searches allowed).
+ * @source
+ */
 const IGNORED_AUTOMATIC_MATCH_TITLES = new Set([
   "watashi, isekai de dorei ni sarechaimashita (naki) shikamo goshujinsama wa seikaku no warui elf no joousama (demo chou bijin ← koko daiji) munou sugite nonoshiraremakuru kedo douryou no orc ga iyashi-kei da shi sato no elf wa kawaii shi",
 ]);
 
 /**
- * Check if a manga should be ignored during automatic matching
- * @param manga - The manga to check
- * @returns True if the manga should be ignored during automatic matching
+ * Check if manga should be ignored during automatic matching.
+ *
+ * @param manga - Manga to check
+ * @returns True if the manga should be ignored
+ * @source
  */
 function shouldIgnoreForAutomaticMatching(manga: AniListManga): boolean {
   // Get all titles to check (main titles + synonyms)
@@ -36,10 +41,14 @@ function shouldIgnoreForAutomaticMatching(manga: AniListManga): boolean {
 }
 
 /**
- * Check if a manga should be skipped during ranking
- * @param manga - The manga to check
+ * Determine if manga should be skipped during ranking.
+ *
+ * Skips light novels and (for automatic matches) ignored titles.
+ *
+ * @param manga - Manga to check
  * @param isManualSearch - Whether this is a manual search operation
  * @returns True if the manga should be skipped
+ * @source
  */
 function shouldSkipManga(
   manga: AniListManga,
@@ -65,7 +74,17 @@ function shouldSkipManga(
 }
 
 /**
- * Core ranking logic shared between exact and regular ranking
+ * Core ranking logic applied with custom inclusion predicate.
+ *
+ * Scores results, filters by inclusion predicate, and sorts by confidence.
+ * Always includes at least one result even with low score.
+ *
+ * @param results - Manga results to rank
+ * @param searchTitle - Original search title
+ * @param isManualSearch - Whether this is a manual search operation
+ * @param includeMangaFn - Predicate function determining inclusion
+ * @returns Ranked manga results
+ * @source
  */
 function rankMangaCore(
   results: AniListManga[],
@@ -119,13 +138,14 @@ function rankMangaCore(
 }
 
 /**
- * Filter and rank manga results by match quality
+ * Filter and rank manga results by match quality.
  *
- * @param results - Array of manga results to rank
+ * @param results - Manga results to rank
  * @param searchTitle - Original search title
- * @param exactMatchingOnly - Whether to use exact matching mode
- * @param isManualSearch - Whether this is a manual search (affects filtering)
- * @returns Ranked array of manga results
+ * @param exactMatchingOnly - Use exact matching mode
+ * @param isManualSearch - Whether this is a manual search operation
+ * @returns Ranked manga results
+ * @source
  */
 export function rankMangaResults(
   results: AniListManga[],

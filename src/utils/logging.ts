@@ -27,10 +27,20 @@ export interface LogEntry {
 }
 
 const LOG_LEVELS: LogLevel[] = ["error", "warn", "info", "log", "debug"];
+/**
+ * Maximum number of log entries to retain in memory before discarding oldest.
+ * @source
+ */
 export const MAX_LOG_ENTRIES = 1000;
 
 /**
- * Generates a reasonably unique identifier for log entries.
+ * Generates a unique identifier for a log entry.
+ *
+ * Uses native `crypto.randomUUID()` if available, otherwise generates a fallback ID
+ * from timestamp and random data.
+ *
+ * @returns A unique identifier string.
+ * @source
  */
 const generateLogId = (): string => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -40,9 +50,14 @@ const generateLogId = (): string => {
 };
 
 /**
- * Redacts sensitive information from strings.
- * @param text - The text to redact
- * @returns The redacted text
+ * Redacts sensitive information from log entries to prevent exposing tokens and credentials.
+ *
+ * Removes or replaces long tokens, access tokens, client secrets, authorization headers,
+ * and auth codes with placeholder text.
+ *
+ * @param text - The text to redact.
+ * @returns The redacted text with sensitive values replaced.
+ * @source
  */
 const redactSensitiveData = (text: string): string => {
   // Redact potential tokens (long alphanumeric strings that look like tokens)
@@ -93,7 +108,14 @@ const maybeRedact = (text: string): string =>
   logRedactionEnabled ? redactSensitiveData(text) : text;
 
 /**
- * Attempts to convert a console argument into a serialisable string.
+ * Converts a console argument into a serializable string representation.
+ *
+ * Handles errors, objects, primitives, functions, and circular references gracefully.
+ * Applies sensitive data redaction if enabled.
+ *
+ * @param value - The value to serialize.
+ * @returns A string representation of the value.
+ * @source
  */
 const serialiseArgument = (value: unknown): string => {
   if (value instanceof Error) {
@@ -144,6 +166,8 @@ const serialiseArgument = (value: unknown): string => {
 };
 
 const applyFormat = (format: string, args: unknown[]): string => {
+  // Applies console format specifiers (%s, %d, %f, %o, %O, %c) to arguments
+  // Similar to console.log formatting behavior
   let i = 0;
   const tokens = ["%%", "%s", "%d", "%i", "%f", "%o", "%O", "%c"];
 
@@ -199,7 +223,15 @@ const applyFormat = (format: string, args: unknown[]): string => {
   return result;
 };
 
-/** Count how many format placeholders in `format` will consume an argument. */
+/**
+ * Counts the number of format placeholders in a format string that will consume arguments.
+ *
+ * Matches placeholders like %s, %d, %f, %o, %O, %i but excludes %% and %c.
+ *
+ * @param format - The format string to analyze.
+ * @returns The count of placeholders that consume arguments.
+ * @source
+ */
 const countPlaceholders = (format: string): number => {
   const matches = Array.from(format.matchAll(/%[sdifoOc%]/g));
   let count = 0;
@@ -212,7 +244,13 @@ const countPlaceholders = (format: string): number => {
 };
 
 /**
- * Attempts to extract a meaningful source line from a stack trace.
+ * Extracts meaningful source line information from a stack trace.
+ *
+ * Filters out logging internals and returns the first relevant caller stack frames.
+ *
+ * @param stack - The stack trace string to extract from.
+ * @returns A cleaned source line string, or undefined if extraction fails.
+ * @source
  */
 const extractSourceFromStack = (stack?: string): string | undefined => {
   if (!stack) return undefined;
@@ -228,7 +266,13 @@ const extractSourceFromStack = (stack?: string): string | undefined => {
 };
 
 /**
- * Determines whether a log entry should be treated as a debug-focused message.
+ * Determines whether a log entry is debug-focused based on its log level.
+ *
+ * Debug and log levels are considered debug messages; info, warn, and error are not.
+ *
+ * @param level - The log level to evaluate.
+ * @returns True if the level represents a debug message, false otherwise.
+ * @source
  */
 const inferIsDebug = (level: LogLevel): boolean => {
   if (level === "debug") return true;
@@ -240,6 +284,14 @@ const inferIsDebug = (level: LogLevel): boolean => {
   return false;
 };
 
+/**
+ * Captures console output in production builds for debugging and error reporting.
+ *
+ * Maintains an in-memory buffer of log entries with subscriptions for real-time updates.
+ * Supports format string processing and sensitive data redaction.
+ *
+ * @source
+ */
 class LogCollector {
   #entries: LogEntry[] = [];
   readonly #listeners = new Set<(entries: LogEntry[]) => void>();
@@ -316,12 +368,21 @@ const originalConsoleMethods = new Map<
   (...args: unknown[]) => void
 >();
 
+/**
+ * Console object with assignable log level methods for interception.
+ * @source
+ */
 type ConsoleMethod = (...args: unknown[]) => void;
 const assignableConsole = console as Console & Record<LogLevel, ConsoleMethod>;
 
 /**
- * Installs console interceptors so that log entries can be captured.
- * Returns a cleanup function that restores original console methods.
+ * Installs console interceptors to capture all log output.
+ *
+ * Wraps console methods (log, info, warn, error, debug) to forward entries to the LogCollector
+ * while preserving normal console output. Returns a cleanup function to uninstall interceptors.
+ *
+ * @returns A cleanup function that restores original console methods.
+ * @source
  */
 export function installConsoleInterceptor(): () => void {
   if (interceptorInstalled) {
@@ -362,6 +423,10 @@ export function installConsoleInterceptor(): () => void {
   };
 }
 
+/**
+ * Represents a log entry in serializable form suitable for export or storage.
+ * @source
+ */
 export interface SerializableLogEntry {
   id: string;
   level: LogLevel;
@@ -373,7 +438,13 @@ export interface SerializableLogEntry {
 }
 
 /**
- * Prepares log entries for exporting to a JSON file.
+ * Transforms internal LogEntry objects into a serializable format for export.
+ *
+ * Strips internal state and returns only properties needed for persistence or transmission.
+ *
+ * @param entries - Array of internal log entries to serialize.
+ * @returns Array of serializable log entries.
+ * @source
  */
 export function serialiseLogEntries(
   entries: LogEntry[],

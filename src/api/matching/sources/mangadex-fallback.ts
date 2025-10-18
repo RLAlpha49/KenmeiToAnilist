@@ -16,12 +16,13 @@ import {
 import type { MangaDexSourceMap } from "./types";
 
 /**
- * Execute MangaDex fallback search when no AniList results found
- * @param title - Manga title to search for
- * @param token - Optional authentication token
- * @param finalResults - Current results (fallback if search fails)
- * @param searchConfig - Search configuration
- * @returns Results and MangaDex source map
+ * Execute MangaDex fallback search when no AniList results found.
+ * @param title - Manga title to search for.
+ * @param token - Optional authentication token.
+ * @param finalResults - Current results (fallback if search fails).
+ * @param searchConfig - Search configuration.
+ * @returns Results and MangaDex source map.
+ * @source
  */
 export async function executeMangaDexFallback(
   title: string,

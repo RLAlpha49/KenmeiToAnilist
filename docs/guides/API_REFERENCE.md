@@ -156,7 +156,6 @@ query SearchManga($search: String, $page: Int, $perPage: Int) {
     }
   }
 }
-}
 ```
 
 ### Advanced Search with Filters
@@ -223,7 +222,6 @@ query AdvancedSearchManga(
       isAdult
     }
   }
-}
 }
 ```
 
@@ -567,6 +565,304 @@ async function request<T>(
   }
 
   return result;
+}
+```
+
+## ⚡ Caching Strategy
+
+### Cache Architecture
+
+The application implements an intelligent caching system for API responses:
+
+```text
+┌──────────────┐
+│   In-Memory  │  Cache TTL: 30 minutes
+│   Cache      │  Size: Unlimited
+└──────────────┘
+       ↓
+┌──────────────┐
+│ localStorage │  Fallback cache
+│              │  Persists between sessions
+└──────────────┘
+       ↓
+┌──────────────┐
+│   AniList    │  Live API data
+│   GraphQL    │
+└──────────────┘
+```
+
+### Cache Keys
+
+```typescript
+interface CacheKey {
+  operation: string;        // "searchManga", "getUserList", etc.
+  variables: Record<string, any>;  // Query parameters
+  userId?: string;          // For user-specific queries
+}
+
+// Cache key generation
+function generateCacheKey(operation: string, variables: any): string {
+  return `cache:${operation}:${JSON.stringify(variables)}`;
+}
+```
+
+### Cache Invalidation Strategies
+
+```typescript
+// Strategy 1: Time-based (automatic expiration)
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+
+// Strategy 2: Manual invalidation
+clearSearchCache();  // Clear all search results
+clearUserListCache(userId);  // Clear specific user data
+
+// Strategy 3: Event-based invalidation
+// When user syncs data, invalidate related caches
+onSyncComplete(() => {
+  clearUserListCache(currentUserId);
+  clearSearchCache();
+});
+```
+
+### Best Practices for Caching
+
+```typescript
+// ✅ Good: Cache search results with reasonable TTL
+const cached = getFromCache(CACHE_KEYS.SEARCH);
+if (cached && !isCacheExpired(cached)) {
+  return cached.data;
+}
+
+// ✅ Good: Force refresh when user explicitly requests
+const fresh = await searchManga(query, { bypassCache: true });
+
+// ❌ Bad: Caching user list without expiration
+const userList = await getUserMangaList();  // Stale after changes
+
+// ✅ Good: Invalidate user list after sync operations
+await syncMangaBatch(updates);
+invalidateUserListCache();
+```
+
+## 🎯 Query Optimization
+
+### Batching Operations
+
+Combine multiple operations into single requests to reduce API calls:
+
+```typescript
+// ❌ Bad: 50 separate requests
+for (const id of mangaIds) {
+  const manga = await searchMangaById(id);
+}
+
+// ✅ Good: Single batched request
+const allManga = await getMangaByIds(mangaIds);  // Single GraphQL query
+```
+
+### Query Complexity
+
+AniList limits query complexity. Monitor query depth:
+
+```typescript
+// ❌ High complexity query (may exceed limits)
+query GetUserMangaWithDetails($userId: Int) {
+  User(id: $userId) {
+    mediaListCollection(type: MANGA) {
+      lists {
+        entries {
+          media {
+            id
+            title
+            coverImage
+            characters { edges { nodes { id name } } }
+            staff { edges { nodes { id name } } }
+            studios { edges { nodes { id name } } }
+          }
+        }
+      }
+    }
+  }
+}
+
+// ✅ Optimized: Only request needed fields
+query GetUserMangaList($userId: Int) {
+  User(id: $userId) {
+    mediaListCollection(type: MANGA) {
+      lists {
+        entries {
+          id
+          mediaId
+          status
+          progress
+          score
+        }
+      }
+    }
+  }
+}
+```
+
+### Pagination
+
+Always implement proper pagination for large datasets:
+
+```typescript
+// Pagination parameters
+interface PaginationParams {
+  page: number;      // Current page (1-based)
+  perPage: number;   // Items per page (1-50)
+}
+
+// ✅ Good: Paginate large user lists
+const response = await getUserMangaList({
+  chunk: 1,
+  perChunk: 50,  // AniList recommends 50 per chunk
+});
+
+// Handle next page
+if (response.pageInfo.hasNextPage) {
+  const nextPage = await getUserMangaList({
+    chunk: response.pageInfo.currentPage + 1,
+    perChunk: 50,
+  });
+}
+```
+
+## 💪 Rate Limiting Best Practices
+
+### Understanding Rate Limits
+
+AniList enforces rate limiting: **60 requests per minute** per API authentication.
+
+```typescript
+interface RateLimitStatus {
+  limit: number;        // Total requests allowed (60)
+  remaining: number;    // Requests remaining this minute
+  resetAt: number;      // Unix timestamp when limit resets
+  retryAfter?: number;  // Seconds to wait before retry
+}
+```
+
+### Handling Rate Limits Gracefully
+
+```typescript
+// Option 1: Automatic backoff
+async function requestWithBackoff<T>(
+  query: string,
+  variables: any,
+  maxRetries = 3,
+): Promise<T> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await request<T>(query, variables);
+    } catch (error) {
+      if (error.status === 429 && attempt < maxRetries) {
+        const delay = Math.pow(2, attempt) * 1000;  // Exponential backoff
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        throw error;
+      }
+    }
+  }
+}
+
+// Option 2: Queue requests
+class RequestQueue {
+  private queue: Array<() => Promise<any>> = [];
+  private isProcessing = false;
+  private minDelay = 1000;  // 1 second between requests
+
+  async enqueue<T>(fn: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      this.queue.push(async () => {
+        try {
+          const result = await fn();
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      });
+
+      if (!this.isProcessing) this.process();
+    });
+  }
+
+  private async process() {
+    this.isProcessing = true;
+
+    while (this.queue.length > 0) {
+      const fn = this.queue.shift();
+      if (fn) {
+        await fn();
+        await new Promise(resolve => setTimeout(resolve, this.minDelay));
+      }
+    }
+
+    this.isProcessing = false;
+  }
+}
+```
+
+### Monitoring Rate Limits
+
+```typescript
+// Track rate limit status in context
+interface RateLimitContext {
+  remaining: number;
+  resetAt: Date;
+  isNearLimit: boolean;  // true if remaining < 10
+}
+
+// Provider implementation
+export function RateLimitProvider({ children }: { children: React.ReactNode }) {
+  const [rateLimitStatus, setRateLimitStatus] = useState<RateLimitContext>({
+    remaining: 60,
+    resetAt: new Date(),
+    isNearLimit: false,
+  });
+
+  // Update on each API call
+  const updateRateLimit = (headers: Headers) => {
+    const remaining = Number.parseInt(
+      headers.get("x-ratelimit-remaining") || "60",
+      10,
+    );
+    const reset = Number.parseInt(
+      headers.get("x-ratelimit-reset") || String(Date.now() / 1000),
+      10,
+    );
+
+    setRateLimitStatus({
+      remaining,
+      resetAt: new Date(reset * 1000),
+      isNearLimit: remaining < 10,
+    });
+  };
+
+  return (
+    <RateLimitContext.Provider value={rateLimitStatus}>
+      {children}
+    </RateLimitContext.Provider>
+  );
+}
+```
+
+### Request Batching for Rate Limit Compliance
+
+```typescript
+// Batch manga lookups to respect rate limits
+async function batchSyncManga(mangaList: MangaEntry[]): Promise<void> {
+  const batchSize = 50;
+  const batches = chunk(mangaList, batchSize);
+
+  for (const batch of batches) {
+    // Single mutation for entire batch
+    await updateMangaEntryMutation(batch);
+
+    // Wait between batches to avoid rate limit
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
 }
 ```
 

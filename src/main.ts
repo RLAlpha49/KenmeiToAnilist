@@ -35,11 +35,9 @@ if (process.platform === "win32") {
   const squirrelCommand = process.argv[1];
 
   /**
-   * Handles Windows Squirrel installer events (install, update, uninstall, obsolete).
-   *
-   * @returns True if a Squirrel event was handled and the app should quit, false otherwise.
-   * @remarks
-   * This function is only relevant on Windows platforms when using Squirrel for installation.
+   * Handles Windows Squirrel installer events and creates/removes shortcuts.
+   * @returns True if a Squirrel event was handled and the app should quit.
+   * @source
    */
   const handleSquirrelEvent = () => {
     if (process.argv.length === 1) {
@@ -110,10 +108,9 @@ const getAssetsPath = () =>
     : path.join(process.resourcesPath, "assets");
 
 /**
- * Creates a splash screen window that displays while the main app loads.
- *
- * @remarks
- * The splash screen is frameless, always on top, and shows a loading animation.
+ * Creates a splash screen window displayed during app startup.
+ * @remarks Frameless, always-on-top window with loading animation.
+ * @source
  */
 function createSplashScreen() {
   console.info("[Main] 🎨 Creating splash screen...");
@@ -150,6 +147,7 @@ function createSplashScreen() {
 
 /**
  * Closes the splash screen window.
+ * @source
  */
 function closeSplashScreen() {
   if (splashWindow && !splashWindow.isDestroyed()) {
@@ -161,10 +159,8 @@ function closeSplashScreen() {
 
 /**
  * Creates the main application window and registers IPC listeners.
- *
- * @remarks
- * Sets up the preload script, window options, and loads the appropriate URL or file depending on environment.
- * The window is initially hidden and shown after content loads to prevent visual flashing.
+ * @remarks Loads preload script, initializes window, and handles content loading.
+ * @source
  */
 function createWindow() {
   console.info("[Main] 🪟 Creating main application window...");
@@ -255,11 +251,10 @@ function createWindow() {
 }
 
 /**
- * Installs development extensions (e.g., React Developer Tools) in development mode.
- *
- * @returns A promise that resolves when extensions are installed.
- * @remarks
- * Only runs in development mode. Logs errors to the console if installation fails.
+ * Installs development extensions (e.g., React Developer Tools).
+ * @returns Promise that resolves when extensions are installed.
+ * @remarks Only runs in development mode.
+ * @source
  */
 async function installExtensions() {
   try {

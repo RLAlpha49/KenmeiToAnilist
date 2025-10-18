@@ -20,6 +20,15 @@ import {
 } from "lucide-react";
 import { SyncConfig, saveSyncConfig } from "../../utils/storage";
 
+/**
+ * Props for the SyncConfigurationPanel component.
+ * @property syncConfig - Current sync configuration settings.
+ * @property setSyncConfig - Callback to update sync configuration.
+ * @property useCustomThreshold - Whether using custom auto-pause threshold.
+ * @property setUseCustomThreshold - Callback to toggle custom threshold mode.
+ * @property handleToggleOption - Callback to toggle a sync option.
+ * @source
+ */
 interface SyncConfigurationPanelProps {
   syncConfig: SyncConfig;
   setSyncConfig: React.Dispatch<React.SetStateAction<SyncConfig>>;
@@ -28,6 +37,11 @@ interface SyncConfigurationPanelProps {
   handleToggleOption: (option: keyof SyncConfig) => void;
 }
 
+/**
+ * Collapsible panel for configuring sync priority settings.
+ * Provides toggles for preserving completed entries, prioritizing AniList values, and auto-pause settings.
+ * @source
+ */
 export function SyncConfigurationPanel({
   syncConfig,
   setSyncConfig,
@@ -169,7 +183,7 @@ export function SyncConfigurationPanel({
             <div className="mt-4 space-y-3 rounded-2xl border border-amber-200/70 bg-white/80 p-4 shadow-sm dark:border-amber-800/40 dark:bg-slate-950/60">
               <Label
                 htmlFor="autoPauseThreshold"
-                className="text-xs font-semibold tracking-wide text-amber-700 uppercase dark:text-amber-300/80"
+                className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300/80"
               >
                 Pause after
               </Label>
@@ -194,7 +208,7 @@ export function SyncConfigurationPanel({
                         });
                       }
                     }}
-                    className="h-9 w-full rounded-lg border border-amber-200/70 bg-white/90 px-3 text-sm text-slate-700 shadow-sm transition outline-none focus:border-amber-300 focus:ring-2 focus:ring-amber-200 dark:border-amber-800/40 dark:bg-slate-950/70 dark:text-slate-100 dark:focus:border-amber-700 dark:focus:ring-amber-900/40"
+                    className="h-9 w-full rounded-lg border border-amber-200/70 bg-white/90 px-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-amber-300 focus:ring-2 focus:ring-amber-200 dark:border-amber-800/40 dark:bg-slate-950/70 dark:text-slate-100 dark:focus:border-amber-700 dark:focus:ring-amber-900/40"
                   />
                   <Button
                     variant="outline"
@@ -223,7 +237,7 @@ export function SyncConfigurationPanel({
                       });
                     }
                   }}
-                  className="h-9 w-full rounded-lg border border-amber-200/70 bg-white/90 px-3 text-sm text-slate-700 shadow-sm transition outline-none focus:border-amber-300 focus:ring-2 focus:ring-amber-200 dark:border-amber-800/40 dark:bg-slate-950/70 dark:text-slate-100 dark:focus:border-amber-700 dark:focus:ring-amber-900/40"
+                  className="h-9 w-full rounded-lg border border-amber-200/70 bg-white/90 px-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-amber-300 focus:ring-2 focus:ring-amber-200 dark:border-amber-800/40 dark:bg-slate-950/70 dark:text-slate-100 dark:focus:border-amber-700 dark:focus:ring-amber-900/40"
                 >
                   <option value="1">1 day</option>
                   <option value="7">7 days</option>

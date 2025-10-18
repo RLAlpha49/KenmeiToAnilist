@@ -17,12 +17,9 @@ import {
 } from "../types/auth";
 
 /**
- * Custom React hook to access the authentication context.
- *
- * Throws an error if used outside of an AuthProvider.
- *
- * @returns The current authentication context value.
- *
+ * Accesses the authentication state context.
+ * @returns The current authentication state.
+ * @throws {Error} If used outside an AuthProvider.
  * @source
  */
 export function useAuthState(): AuthStateContextValue {
@@ -33,6 +30,12 @@ export function useAuthState(): AuthStateContextValue {
   return context;
 }
 
+/**
+ * Accesses the authentication actions context.
+ * @returns The current authentication actions.
+ * @throws {Error} If used outside an AuthProvider.
+ * @source
+ */
 export function useAuthActions(): AuthActionsContextValue {
   const context = useContext(AuthActionsContext);
   if (context === undefined) {
@@ -41,6 +44,13 @@ export function useAuthActions(): AuthActionsContextValue {
   return context;
 }
 
+/**
+ * Accesses the complete authentication context, merging state and actions.
+ * Attempts to use the legacy context first, then falls back to split state/actions.
+ * @returns The merged authentication context.
+ * @throws {Error} If used outside an AuthProvider.
+ * @source
+ */
 export function useAuth(): AuthContextType {
   const legacyContext = useContext(AuthLegacyContext);
   const stateContext = useContext(AuthStateContext);

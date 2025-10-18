@@ -8,7 +8,14 @@ import { getUserMangaList } from "../../api/anilist/client";
 import { UserMediaList } from "../../api/anilist/types";
 
 /**
- * Parameters for library refresh handlers
+ * Parameters for library refresh handlers.
+ * @property token - AniList access token.
+ * @property setLibraryLoading - Callback to set loading state.
+ * @property setLibraryError - Callback to set error message.
+ * @property setRetryCount - Callback to update retry count.
+ * @property setRateLimit - Callback to update rate limit status.
+ * @property setUserLibrary - Callback to update user library.
+ * @source
  */
 export interface LibraryRefreshParams {
   token: string;
@@ -24,7 +31,10 @@ export interface LibraryRefreshParams {
 }
 
 /**
- * Handler for refreshing user library (shared between Try Again and Refresh buttons)
+ * Refresh user library from AniList, handling loading, errors, and rate limiting.
+ * Used by both "Try Again" and "Refresh" buttons for shared refresh logic.
+ * @param params - Library refresh parameters with callbacks.
+ * @source
  */
 export function handleLibraryRefresh(params: LibraryRefreshParams): void {
   const {

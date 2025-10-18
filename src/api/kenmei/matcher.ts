@@ -9,25 +9,25 @@ import { AniListManga } from "../anilist/types";
 import { calculateEnhancedSimilarity } from "../../utils/enhanced-similarity";
 
 /**
- * Calculate string similarity using enhanced algorithms
- *
- * @param str1 - First string.
- * @param str2 - Second string.
- * @returns Similarity score between 0 and 1
+ * Calculate string similarity score normalized to 0-1 scale using enhanced algorithms.
+ * @param str1 - First string to compare.
+ * @param str2 - Second string to compare.
+ * @returns Similarity score between 0 (no match) and 1 (perfect match).
+ * @source
  */
 export function calculateSimilarity(str1: string, str2: string): number {
   if (!str1 || !str2) return 0;
 
-  // Use the enhanced similarity calculation and convert to 0-1 scale
+  // Use enhanced similarity calculation normalized to 0-1 scale
   return calculateEnhancedSimilarity(str1, str2) / 100;
 }
 
 /**
- * Score a potential match between Kenmei manga and AniList entry
- *
- * @param kenmeiManga - The Kenmei manga entry.
- * @param anilistManga - The AniList manga entry.
- * @returns Match confidence score between 0 and 1
+ * Score a match between Kenmei and AniList manga by comparing available titles.
+ * @param kenmeiManga - The Kenmei manga entry to score.
+ * @param anilistManga - The AniList manga entry to compare against.
+ * @returns Match confidence score between 0 and 1, where 1 is a perfect match.
+ * @source
  */
 export function scoreMatch(
   kenmeiManga: KenmeiManga,
@@ -37,7 +37,7 @@ export function scoreMatch(
 
   if (!title) return 0;
 
-  // Collect available AniList titles and compute similarity scores in a compact way
+  // Compare against all available AniList titles and return highest score
   const candidateTitles = [
     anilistManga.title?.romaji,
     anilistManga.title?.english,
@@ -50,7 +50,7 @@ export function scoreMatch(
     if (!candidate) continue;
     const score = calculateSimilarity(title, candidate);
     if (score > best) best = score;
-    // short-circuit if perfect match
+    // Short-circuit on perfect match
     if (best >= 1) return 1;
   }
 
@@ -58,12 +58,12 @@ export function scoreMatch(
 }
 
 /**
- * Find the best match for a Kenmei manga in the AniList entries
- *
+ * Find the best matching AniList manga for a Kenmei entry based on title similarity.
  * @param kenmeiManga - The Kenmei manga to match.
- * @param anilistManga - Array of potential AniList matches.
- * @param threshold - Minimum similarity threshold (0-1).
- * @returns The best matching AniList entry and its score, or null if no good match
+ * @param anilistManga - Array of potential AniList matches to evaluate.
+ * @param threshold - Minimum similarity threshold (0-1, default: 0.7).
+ * @returns Best match above threshold with confidence score, or null if no match qualifies.
+ * @source
  */
 export function findBestMatch(
   kenmeiManga: KenmeiManga,
@@ -72,7 +72,7 @@ export function findBestMatch(
 ): { manga: AniListManga; score: number } | null {
   if (!anilistManga?.length) return null;
 
-  // Compute scores and keep only ones that meet threshold early
+  // Score all entries and filter above threshold early
   const scored = [] as { manga: AniListManga; score: number }[];
 
   for (const manga of anilistManga) {
@@ -83,7 +83,7 @@ export function findBestMatch(
 
   if (!scored.length) return null;
 
-  // Find the highest scored match without allocating extra arrays via sort
+  // Find highest scored match without allocating extra arrays
   let best = scored[0];
   for (let i = 1; i < scored.length; i++) {
     if (scored[i].score > best.score) best = scored[i];

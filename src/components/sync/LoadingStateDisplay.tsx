@@ -2,6 +2,14 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "../ui/card";
 
+/**
+ * Props for the LoadingStateDisplay component.
+ * @property type - Type of loading state (manga data or library).
+ * @property isRateLimited - Whether currently rate limited (optional, default false).
+ * @property retryCount - Current retry attempt number (optional, default 0).
+ * @property maxRetries - Maximum retry attempts allowed (optional, default 3).
+ * @source
+ */
 interface LoadingStateDisplayProps {
   type: "manga" | "library";
   isRateLimited?: boolean;
@@ -9,6 +17,11 @@ interface LoadingStateDisplayProps {
   maxRetries?: number;
 }
 
+/**
+ * Display loading state with context-specific messaging and animations.
+ * Handles different loading scenarios: manga data, library fetch, rate limiting, and retries.
+ * @source
+ */
 export function LoadingStateDisplay({
   type,
   isRateLimited = false,
@@ -72,7 +85,7 @@ export function LoadingStateDisplay({
         transition={{ duration: 0.4 }}
       >
         <Card className="mx-auto w-full max-w-md overflow-hidden border border-slate-200/70 bg-white/80 text-center shadow-xl backdrop-blur-xl dark:border-slate-800/60 dark:bg-slate-950/60">
-          <CardContent className="pt-10 pb-8">
+          <CardContent className="pb-8 pt-10">
             <div
               className={`mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br ${accent.icon} text-white shadow-lg`}
             >

@@ -13,13 +13,14 @@ import type {
 } from "./types";
 
 /**
- * Merge results from original search, Comick, and MangaDex while handling duplicates
- * @param originalResults - Results from direct AniList search
- * @param comickResults - Results from Comick fallback
- * @param mangaDexResults - Results from MangaDex fallback
- * @param comickSourceMap - Comick source information map
- * @param mangaDexSourceMap - MangaDex source information map
- * @returns Merged results and updated source maps
+ * Merge results from original search, Comick, and MangaDex while handling duplicates.
+ * @param originalResults - Results from direct AniList search.
+ * @param comickResults - Results from Comick fallback.
+ * @param mangaDexResults - Results from MangaDex fallback.
+ * @param comickSourceMap - Comick source information map.
+ * @param mangaDexSourceMap - MangaDex source information map.
+ * @returns Merged results and updated source maps.
+ * @source
  */
 export function mergeSourceResults(
   originalResults: AniListManga[],
@@ -83,11 +84,12 @@ export function mergeSourceResults(
 }
 
 /**
- * Get source info for a manga from either Comick or MangaDex source maps
- * @param mangaId - The manga ID to look up
- * @param comickSourceMap - Comick source information map
- * @param mangaDexSourceMap - MangaDex source information map
- * @returns Generic source info or undefined if not found
+ * Get source information for a manga from either Comick or MangaDex source maps.
+ * @param mangaId - The manga ID to look up.
+ * @param comickSourceMap - Comick source information map.
+ * @param mangaDexSourceMap - MangaDex source information map.
+ * @returns Generic source info or undefined if not found.
+ * @source
  */
 export function getSourceInfo(
   mangaId: number,

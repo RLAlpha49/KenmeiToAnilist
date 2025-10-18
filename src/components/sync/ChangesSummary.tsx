@@ -21,33 +21,28 @@ import { SyncConfig } from "../../utils/storage";
 import { getEffectiveStatus } from "./sync-utils";
 
 interface ChangesSummaryProps {
-  /** Number of entries that have changes to sync */
+  /** Number of entries that have changes to sync. */
   entriesWithChanges: number;
-  /** Whether the library is currently loading */
+  /** Whether the library is currently loading. */
   libraryLoading: boolean;
-  /** Error message from library loading */
+  /** Error message from library loading. */
   libraryError: string | null;
-  /** Whether the user is currently rate limited */
+  /** Whether the user is currently rate limited. */
   isRateLimited: boolean;
-  /** Callback to refresh the AniList library */
+  /** Callback to refresh the AniList library. */
   onLibraryRefresh: () => void;
-  /** User's AniList library indexed by manga ID */
+  /** User's AniList library indexed by manga ID. */
   userLibrary: UserMediaList;
-  /** All manga matches from Kenmei */
+  /** All manga matches from Kenmei. */
   mangaMatches: MangaMatchResult[];
-  /** Current sync configuration */
+  /** Current sync configuration. */
   syncConfig: SyncConfig;
 }
 
 /**
- * ChangesSummary Component
- *
- * Displays a summary box with:
- * - Total number of entries to sync
- * - Library loading status and errors
- * - Library statistics (total entries, new entries, updates)
- * - Refresh button for the AniList library
- * - Important notes about hidden entries
+ * Summary display showing sync statistics and library refresh controls.
+ * Displays: total entries to sync, library status, new/updated entry counts, and error states.
+ * @source
  */
 export const ChangesSummary: React.FC<ChangesSummaryProps> = ({
   entriesWithChanges,
@@ -278,7 +273,7 @@ export const ChangesSummary: React.FC<ChangesSummaryProps> = ({
               />
               <div className="relative flex items-start justify-between gap-3">
                 <div>
-                  <span className="text-xs font-medium tracking-wide text-slate-500 uppercase dark:text-slate-400">
+                  <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     {metric.label}
                   </span>
                   <div className="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">

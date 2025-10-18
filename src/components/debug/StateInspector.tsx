@@ -24,12 +24,23 @@ import {
   ShieldAlert,
 } from "lucide-react";
 
+/**
+ * Represents the state of a JSON editor with value, dirty flag, and error info.
+ * @source
+ */
 interface EditorState {
   value: string;
   isDirty: boolean;
   error?: string | null;
 }
 
+/**
+ * Safely converts a value to a JSON string, handling special types like Map, Set, BigInt, and Function.
+ * Falls back to descriptive string if serialization fails.
+ * @param value - The value to stringify
+ * @returns JSON string representation or error message
+ * @source
+ */
 function safeStringify(value: unknown): string {
   if (value === undefined) {
     return "undefined";
@@ -73,6 +84,12 @@ function safeStringify(value: unknown): string {
   }
 }
 
+/**
+ * Formats a timestamp (milliseconds since epoch) to a readable locale string.
+ * @param timestamp - Milliseconds since epoch
+ * @returns Formatted locale date and time, or "Unknown" if invalid
+ * @source
+ */
 function formatTimestamp(timestamp: number): string {
   if (!Number.isFinite(timestamp)) {
     return "Unknown";
@@ -86,6 +103,13 @@ function formatTimestamp(timestamp: number): string {
   }
 }
 
+/**
+ * State inspector for viewing and mutating registered application state snapshots.
+ * Displays state sources grouped by category with JSON editors and apply functionality.
+ * Read-only sources are displayed without edit capabilities.
+ * @returns JSX element rendering the state inspector panel
+ * @source
+ */
 export function StateInspector(): React.ReactElement {
   const { stateInspectorSources } = useDebugState();
   const { applyStateInspectorUpdate, refreshStateInspectorSource } =
@@ -328,7 +352,7 @@ export function StateInspector(): React.ReactElement {
                           }
                           spellCheck={false}
                           className={cn(
-                            "min-h-[220px] w-full resize-y font-mono text-xs leading-relaxed whitespace-pre-wrap",
+                            "min-h-[220px] w-full resize-y whitespace-pre-wrap font-mono text-xs leading-relaxed",
                             readOnly && "opacity-70",
                             editor.error &&
                               "border-red-400 focus-visible:ring-red-400",

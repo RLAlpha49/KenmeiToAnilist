@@ -16,17 +16,35 @@ import { generateCacheKey, isCacheValid, mangaCache } from "../cache";
 import { batchSearchManga } from "@/api/anilist/client";
 
 /**
- * Default batch size for parallel manga searches (AniList rate limit: 60 req/min).
+ * Batch size for parallel manga searches (15 = AniList 60 req/min limit).
+ * @source
  */
 const BATCH_SIZE = 15;
 
-/** Delay (in ms) between batches to respect AniList rate limiting. */
+/**
+ * Delay in milliseconds between batches to respect AniList rate limiting.
+ * @source
+ */
 const BATCH_DELAY_MS = 1000;
 
+/** Batch item type from uncached manga array. @source */
 type BatchItem = UncachedMangaData["uncachedManga"][number];
 
+/**
+ * Generate GraphQL alias for manga index in batch query.
+ * @param index - Manga position in batch.
+ * @returns Alias string formatted as `manga_{index}`.
+ * @source
+ */
 const toAlias = (index: number) => `manga_${index}`;
 
+/**
+ * Validates operation is not aborted or cancelled, throws if it is.
+ * @param abortSignal - Optional abort signal.
+ * @param checkCancellation - Cancellation check function.
+ * @throws {Error} If aborted or user cancelled operation.
+ * @source
+ */
 function ensureNotCancelled(
   abortSignal: AbortSignal | undefined,
   checkCancellation: () => void,
@@ -38,6 +56,12 @@ function ensureNotCancelled(
   checkCancellation();
 }
 
+/**
+ * Initialize empty source maps for Comick and MangaDex at manga index.
+ * @param index - Manga index.
+ * @param storage - Storage object with source maps.
+ * @source
+ */
 function initializeSourceMaps(
   index: number,
   storage: Pick<
@@ -49,6 +73,13 @@ function initializeSourceMaps(
   storage.cachedMangaDexSources[index] = new Map();
 }
 
+/**
+ * Store AniList results and initialize source maps for manga index.
+ * @param index - Manga index.
+ * @param media - Array of AniList manga results.
+ * @param storage - Storage object to update.
+ * @source
+ */
 function storeAniListResults(
   index: number,
   media: AniListManga[],
@@ -58,6 +89,12 @@ function storeAniListResults(
   initializeSourceMaps(index, storage);
 }
 
+/**
+ * Extract Comick and MangaDex source mappings from search matches.
+ * @param matches - Array of manga matches.
+ * @returns Object with Comick and MangaDex source maps by manga ID.
+ * @source
+ */
 function collectAlternativeSources(matches: MangaMatch[]): {
   comick: Map<
     number,
@@ -132,6 +169,14 @@ function collectAlternativeSources(matches: MangaMatch[]): {
   return { comick, mangaDex };
 }
 
+/**
+ * Execute fallback searches on alternative sources (Comick/MangaDex) for items not found.
+ * @param items - Batch items requiring fallback searches.
+ * @param options - Configuration, control, callbacks, and storage.
+ * @returns Promise resolving when all fallback searches complete.
+ * @throws May throw if cancellation signalled.
+ * @source
+ */
 async function performFallbackSearches(
   items: BatchItem[],
   options: {
@@ -185,6 +230,10 @@ async function performFallbackSearches(
   }
 }
 
+/**
+ * Context object for batch processing operations.
+ * @source
+ */
 type BatchProcessingContext = {
   token?: string;
   searchConfig: UncachedMangaConfig["searchConfig"];
@@ -197,6 +246,14 @@ type BatchProcessingContext = {
   hasMoreBatches: boolean;
 };
 
+/**
+ * Process single batch via batched GraphQL queries with fallback support.
+ * @param batch - Items with manga and indices.
+ * @param context - Processing context with config, callbacks, storage.
+ * @returns Promise resolving when batch processing completes.
+ * @throws May throw if cancellation signalled or API requests fail.
+ * @source
+ */
 async function processBatch(
   batch: BatchItem[],
   context: BatchProcessingContext,
@@ -296,6 +353,18 @@ async function processBatch(
 
 /**
  * Process uncached manga using batched GraphQL queries with fallback searches.
+ *
+ * Divides uncached manga into batches (15 per batch) respecting AniList's 60 req/min limit.
+ * Performs batched GraphQL queries and fallback searches on Comick/MangaDex for misses.
+ * Supports early termination, abort signals, and cancellation checks.
+ *
+ * @param data - Uncached manga items with indices.
+ * @param config - AniList token and search config.
+ * @param control - Abort signal and cancellation check.
+ * @param callbacks - Progress update callbacks.
+ * @param storage - Results, source maps, and cache storage.
+ * @throws May throw on API failures or cancellation.
+ * @source
  */
 export async function processBatchedUncachedManga(
   data: UncachedMangaData,

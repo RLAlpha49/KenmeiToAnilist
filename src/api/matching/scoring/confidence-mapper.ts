@@ -8,19 +8,12 @@ import { AniListManga } from "../../anilist/types";
 import { calculateMatchScore } from "./match-scorer";
 
 /**
- * Calculate confidence percentage from match score
- * Converts the 0-1 match score to a 0-100 confidence percentage
- * Uses a more conservative algorithm to avoid inflated confidence scores
+ * Convert match score to confidence percentage using conservative scaling.
  *
  * @param searchTitle - The search title used for matching
  * @param manga - The manga to calculate confidence for
- * @returns Confidence percentage (0-100)
- *
- * @example
- * ```typescript
- * const confidence = calculateConfidence("One Piece", manga);
- * // Returns: 95 (for near-perfect match)
- * ```
+ * @returns Confidence percentage between 0-100
+ * @source
  */
 export function calculateConfidence(
   searchTitle: string,

@@ -11,7 +11,9 @@ import { MangaSource } from "../types";
 
 /**
  * MangaDex-specific manga source client.
- * Extends the base client with MangaDex-specific parsing and logic.
+ * Extends the base client with MangaDex-specific API parsing and URL building.
+ * Makes direct HTTP requests (CORS-enabled by MangaDex API).
+ * @source
  */
 export class MangaDexClient extends BaseMangaSourceClient<
   MangaDexManga,
@@ -23,6 +25,11 @@ export class MangaDexClient extends BaseMangaSourceClient<
 
   /**
    * Search for manga on MangaDex API.
+   * Results are cached for 30 minutes by default.
+   * @param query - The search query string.
+   * @param limit - Maximum number of results to return (default: 10).
+   * @returns Promise resolving to array of MangaDex manga entries.
+   * @source
    */
   public async searchManga(
     query: string,
@@ -62,6 +69,9 @@ export class MangaDexClient extends BaseMangaSourceClient<
 
   /**
    * Get detailed information about a specific MangaDex manga.
+   * @param id - The MangaDex manga ID.
+   * @returns Promise resolving to manga detail or null if not found.
+   * @source
    */
   public async getMangaDetail(id: string): Promise<MangaDexMangaDetail | null> {
     try {
@@ -82,7 +92,10 @@ export class MangaDexClient extends BaseMangaSourceClient<
 
   /**
    * Extract primary title from MangaDex title object.
-   * Prefers English, then romanized Japanese, then Japanese, then any available.
+   * Prefers: English > Romanized Japanese > Japanese > first available.
+   * @param title - Title object with language-keyed values.
+   * @returns The selected primary title or "Unknown Title".
+   * @source
    */
   private extractPrimaryTitle(title: Record<string, string>): string {
     return (
@@ -96,6 +109,12 @@ export class MangaDexClient extends BaseMangaSourceClient<
 
   /**
    * Parse alternative titles from MangaDex title and altTitles objects.
+   * Excludes the primary title from alternatives to avoid duplication.
+   * @param title - Main title object with language-keyed values.
+   * @param altTitles - Array of alternative title objects.
+   * @param primaryTitle - The primary title to exclude.
+   * @returns Array of alternative titles with language codes.
+   * @source
    */
   private parseAlternativeTitles(
     title: Record<string, string>,
@@ -125,6 +144,10 @@ export class MangaDexClient extends BaseMangaSourceClient<
 
   /**
    * Parse raw search response into MangaDex manga entries.
+   * Extracts primary and alternative titles, status mapping, and platform links.
+   * @param rawResponse - The raw API response object.
+   * @returns Array of parsed manga entries.
+   * @source
    */
   // eslint-disable-next-line
   protected parseSearchResponse(rawResponse: any): MangaDexManga[] {
@@ -168,6 +191,10 @@ export class MangaDexClient extends BaseMangaSourceClient<
 
   /**
    * Parse raw detail response into MangaDex manga detail.
+   * Extracts metadata, authors, artists, genres, and external links from relationships.
+   * @param rawResponse - The raw API response object.
+   * @returns Parsed manga detail or null if invalid.
+   * @source
    */
   // eslint-disable-next-line
   protected parseDetailResponse(rawResponse: any): MangaDexMangaDetail | null {
@@ -243,6 +270,10 @@ export class MangaDexClient extends BaseMangaSourceClient<
 
   /**
    * Extract AniList ID from MangaDex manga detail.
+   * Parses the 'al' field from external links section.
+   * @param detail - The MangaDex manga detail object.
+   * @returns The AniList ID as a number or null if not found.
+   * @source
    */
   protected extractAniListIdFromDetail(
     detail: MangaDexMangaDetail,
@@ -294,7 +325,10 @@ export class MangaDexClient extends BaseMangaSourceClient<
   }
 
   /**
-   * Map MangaDex status to numeric status.
+   * Map MangaDex status string to numeric status code.
+   * @param status - The MangaDex status string (ongoing, completed, hiatus, cancelled).
+   * @returns Numeric status: 1=ongoing, 2=completed, 3=hiatus, 4=cancelled, 0=unknown.
+   * @source
    */
   private mapMangaDexStatus(status: string): number {
     switch (status?.toLowerCase()) {
@@ -313,28 +347,44 @@ export class MangaDexClient extends BaseMangaSourceClient<
 
   /**
    * Build search URL with parameters for MangaDex API.
+   * Includes content rating filters and relevance ordering.
+   * @param query - The search query string.
+   * @param limit - Maximum number of results.
+   * @returns The formatted search URL.
+   * @source
    */
   protected buildSearchUrl(query: string, limit: number): string {
     const encodedQuery = encodeURIComponent(query);
-    // MangaDex uses offset-based pagination, we'll start at offset 0
+    // MangaDex uses offset-based pagination, starting at offset 0
     return `${this.config.baseUrl}/manga?title=${encodedQuery}&limit=${limit}&offset=0&contentRating[]=safe&contentRating[]=suggestive&contentRating[]=erotica&order[relevance]=desc`;
   }
 
   /**
    * Build detail URL for a specific manga.
+   * Includes author, artist, and cover art includes.
+   * @param id - The MangaDex manga ID.
+   * @returns The formatted detail URL.
+   * @source
    */
   protected buildDetailUrl(id: string): string {
     return `${this.config.baseUrl}/manga/${id}?includes[]=author&includes[]=artist&includes[]=cover_art`;
   }
 }
 
-// Create and export the singleton client
+/**
+ * Singleton MangaDex client instance.
+ * Used for all MangaDex API operations.
+ * @source
+ */
 export const mangaDexClient = new MangaDexClient();
 
-// Legacy function exports for backward compatibility
 /**
  * Search for manga on MangaDex API.
  * @deprecated Use mangaDexClient.searchManga() instead.
+ * @param query - The search query string.
+ * @param limit - Maximum number of results (default: 10).
+ * @returns Promise resolving to array of MangaDex manga entries.
+ * @source
  */
 export async function searchMangaDexManga(
   query: string,
@@ -346,6 +396,9 @@ export async function searchMangaDexManga(
 /**
  * Get detailed information about a specific MangaDex manga.
  * @deprecated Use mangaDexClient.getMangaDetail() instead.
+ * @param id - The MangaDex manga ID.
+ * @returns Promise resolving to manga detail or null if not found.
+ * @source
  */
 export async function getMangaDexMangaDetail(
   id: string,
@@ -356,6 +409,9 @@ export async function getMangaDexMangaDetail(
 /**
  * Extract AniList ID from a MangaDex manga's external links.
  * @deprecated Use mangaDexClient.extractAniListId() instead.
+ * @param mangaDexManga - The MangaDex manga entry to extract ID from.
+ * @returns Promise resolving to AniList ID if found or null.
+ * @source
  */
 export async function extractAniListIdFromMangaDex(
   mangaDexManga: MangaDexManga,
@@ -366,6 +422,11 @@ export async function extractAniListIdFromMangaDex(
 /**
  * Search for manga on MangaDex and get their AniList counterparts.
  * @deprecated Use mangaDexClient.searchAndGetAniListManga() instead.
+ * @param query - The search query string.
+ * @param accessToken - AniList OAuth access token.
+ * @param limit - Maximum number of results (default: 1).
+ * @returns Promise resolving to enhanced AniList manga with MangaDex source info.
+ * @source
  */
 export async function searchMangaDexAndGetAniListManga(
   query: string,
@@ -378,6 +439,9 @@ export async function searchMangaDexAndGetAniListManga(
 /**
  * Clear MangaDex cache for specific search queries.
  * @deprecated Use mangaDexClient.clearCache() instead.
+ * @param queries - Array of search queries to clear from cache.
+ * @returns Number of cache entries cleared.
+ * @source
  */
 export function clearMangaDexCache(queries: string[]): number {
   return mangaDexClient.clearCache(queries);
@@ -386,6 +450,8 @@ export function clearMangaDexCache(queries: string[]): number {
 /**
  * Get MangaDex cache status for debugging.
  * @deprecated Use mangaDexClient.getCacheStatus() instead.
+ * @returns Cache status information with entry counts.
+ * @source
  */
 export function getMangaDexCacheStatus() {
   return mangaDexClient.getCacheStatus();

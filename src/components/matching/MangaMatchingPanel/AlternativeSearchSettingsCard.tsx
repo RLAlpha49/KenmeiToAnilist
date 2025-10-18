@@ -11,12 +11,30 @@ import { Switch } from "../../ui/switch";
 import { Label } from "../../ui/label";
 import { Badge } from "../../ui/badge";
 
+/**
+ * Props for the AlternativeSearchSettingsCard component.
+ *
+ * @property enableMangaDexSearch - Whether MangaDex search fallback is enabled.
+ * @property onComickSearchToggle - Callback to toggle Comick search fallback.
+ * @property onMangaDexSearchToggle - Callback to toggle MangaDex search fallback.
+ * @source
+ */
 export interface AlternativeSearchSettingsCardProps {
   enableMangaDexSearch: boolean;
   onComickSearchToggle: (enabled: boolean) => void;
   onMangaDexSearchToggle: (enabled: boolean) => void;
 }
 
+/**
+ * Displays controls for enabling/disabling alternative manga search sources.
+ *
+ * Allows users to configure fallback searches to Comick and MangaDex when AniList
+ * results are inconclusive.
+ *
+ * @param props - The component props.
+ * @returns The rendered settings card.
+ * @source
+ */
 function AlternativeSearchSettingsCardComponent({
   enableMangaDexSearch,
   onComickSearchToggle,
@@ -24,7 +42,7 @@ function AlternativeSearchSettingsCardComponent({
 }: Readonly<AlternativeSearchSettingsCardProps>) {
   return (
     <Card className="relative mb-4 overflow-hidden rounded-3xl border border-white/40 bg-white/75 shadow-xl shadow-slate-900/5 backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/70">
-      <div className="pointer-events-none absolute top-0 -left-20 h-48 w-48 rounded-full bg-violet-400/15 blur-3xl" />
+      <div className="pointer-events-none absolute -left-20 top-0 h-48 w-48 rounded-full bg-violet-400/15 blur-3xl" />
       <div className="pointer-events-none absolute -right-16 bottom-0 h-56 w-56 rounded-full bg-sky-400/15 blur-3xl" />
       <CardHeader className="relative z-10 flex flex-col gap-3 border-b border-white/40 pb-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800/60">
         <div>
@@ -60,7 +78,7 @@ function AlternativeSearchSettingsCardComponent({
                 </div>
                 <Badge
                   variant="secondary"
-                  className="flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-200/60 px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-amber-800 uppercase dark:border-amber-500/30 dark:bg-amber-900/30 dark:text-amber-200"
+                  className="flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-200/60 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-800 dark:border-amber-500/30 dark:bg-amber-900/30 dark:text-amber-200"
                 >
                   <Ban className="h-3 w-3" />
                   Disabled
@@ -92,7 +110,7 @@ function AlternativeSearchSettingsCardComponent({
                 </div>
                 <Badge
                   variant="secondary"
-                  className="flex items-center gap-1 rounded-full border border-sky-500/20 bg-sky-100/70 px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-sky-700 uppercase dark:border-sky-500/30 dark:bg-sky-900/40 dark:text-sky-200"
+                  className="flex items-center gap-1 rounded-full border border-sky-500/20 bg-sky-100/70 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:border-sky-500/30 dark:bg-sky-900/40 dark:text-sky-200"
                 >
                   {enableMangaDexSearch ? "Active" : "Disabled"}
                 </Badge>
@@ -109,6 +127,7 @@ function AlternativeSearchSettingsCardComponent({
   );
 }
 
+/** Memoized AlternativeSearchSettingsCard for performance optimization. @source */
 const AlternativeSearchSettingsCard = React.memo(
   AlternativeSearchSettingsCardComponent,
 );

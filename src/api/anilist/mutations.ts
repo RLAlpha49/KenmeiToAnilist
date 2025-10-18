@@ -5,10 +5,11 @@
  */
 
 /**
- * Generate a dynamic UPDATE_MANGA_ENTRY mutation with only the required variables.
- *
- * @param variables - Object containing the variables to include in the mutation.
- * @returns The GraphQL mutation string for updating a manga entry.
+ * Generates a dynamic UPDATE_MANGA_ENTRY mutation with only required variables.
+ * Only includes variable declarations for fields present in the variables object.
+ * Always includes mediaId as it's a required field.
+ * @param variables - Object indicating which optional fields to include (status, progress, score, private).
+ * @returns GraphQL mutation string for updating a manga entry.
  * @source
  */
 export function generateUpdateMangaEntryMutation(
@@ -54,8 +55,7 @@ mutation (${variableDefinitions.join(", ")}) {
 }
 
 /**
- * GraphQL mutation to delete a manga entry by its AniList ID.
- *
+ * GraphQL mutation to delete a manga entry from AniList by its entry ID.
  * @source
  */
 export const DELETE_MANGA_ENTRY = `

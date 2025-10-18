@@ -31,14 +31,17 @@ import { useDebugActions, StateInspectorHandle } from "./DebugContext";
 
 /**
  * Props for the AuthProvider component.
- *
- * @property children - The React children to be wrapped by the provider.
+ * @property children - React children to wrap with authentication context.
  * @source
  */
 interface AuthProviderProps {
   children: ReactNode;
 }
 
+/**
+ * Debug snapshot of the authentication context state.
+ * @source
+ */
 interface AuthDebugSnapshot {
   authState: AuthState;
   isLoading: boolean;
@@ -49,10 +52,10 @@ interface AuthDebugSnapshot {
 }
 
 /**
- * Provides authentication context to its children, managing authentication state and actions.
- *
- * @param children - The React children to be wrapped by the provider.
- * @returns The authentication context provider with value for consumers.
+ * Provides authentication context including state and actions (login, logout, token refresh).
+ * Manages OAuth flow, credential storage, and user profile data.
+ * @param children - React children to wrap with authentication context.
+ * @returns Provider component with split contexts for state and actions.
  * @source
  */
 export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
@@ -180,7 +183,13 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     }
   }, [authState]);
 
-  // Helper function to validate credentials
+  /**
+   * Validates API credentials have required fields.
+   * @param credentials - The credentials object to validate.
+   * @returns Validated credentials object.
+   * @throws If any required field is missing.
+   * @source
+   */
   const validateCredentials = (credentials: APICredentials) => {
     const { clientId, clientSecret, redirectUri } = credentials;
     if (!clientId || !clientSecret || !redirectUri) {
@@ -194,7 +203,11 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     return { clientId, clientSecret, redirectUri };
   };
 
-  // Helper function to handle user profile fetching
+  /**
+   * Fetches and updates user profile data from AniList using access token.
+   * @param accessToken - The OAuth access token.
+   * @source
+   */
   const handleUserProfile = async (accessToken: string) => {
     try {
       const userProfile = await fetchUserProfile(accessToken);
@@ -397,7 +410,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     async (
       incoming: APICredentials,
     ): Promise<{ oauthUrl: string; redirectUri: string }> => {
-      // Normalize redirect URI
+      // Normalize redirect URI to include protocol
       let redirectUri = incoming.redirectUri;
       const creds = { ...incoming };
       if (
@@ -687,7 +700,10 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     [authState.credentialSource, handleOpenWindowError, recordEvent],
   );
 
-  // Logout function
+  /**
+   * Clears authentication state and removes stored credentials.
+   * @source
+   */
   const logout = useCallback(() => {
     recordEvent({
       type: "auth.logout",
@@ -708,6 +724,10 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     lockedCredentialSourceRef.current = null;
   }, [authState.credentialSource, authState.username, recordEvent]);
 
+  /**
+   * Cancels an in-progress OAuth authentication flow.
+   * @source
+   */
   const cancelAuth = useCallback(async () => {
     recordEvent({
       type: "auth.cancel",
@@ -738,7 +758,12 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     }
   }, [recordEvent]);
 
-  // Set credential source
+  /**
+   * Updates the credential source (default or custom) used for OAuth flow.
+   * Prevents switching during active authentication.
+   * @param source - The credential source to use.
+   * @source
+   */
   const setCredentialSource = useCallback(
     (source: "default" | "custom") => {
       // Only update if the source actually changed
@@ -765,7 +790,13 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     [authState.credentialSource, isBrowserAuthFlow, recordEvent],
   );
 
-  // Update custom credentials
+  /**
+   * Updates the custom API credentials (clientId, clientSecret, redirectUri).
+   * @param clientId - The OAuth client ID.
+   * @param clientSecret - The OAuth client secret.
+   * @param redirectUri - The OAuth redirect URI.
+   * @source
+   */
   const updateCustomCredentials = useCallback(
     (clientId: string, clientSecret: string, redirectUri: string) => {
       // Only update if values have actually changed
@@ -796,7 +827,13 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     [customCredentials, recordEvent],
   );
 
-  // Function to fetch user profile from AniList
+  /**
+   * Fetches viewer profile data from AniList GraphQL API.
+   * @param accessToken - The OAuth access token.
+   * @returns The viewer profile response.
+   * @throws If the API request fails.
+   * @source
+   */
   const fetchUserProfile = async (
     accessToken: string,
   ): Promise<ViewerResponse> => {

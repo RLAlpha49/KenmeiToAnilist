@@ -57,7 +57,7 @@ const renderAltCover = (
 ) => {
   if (!altCoverImage) {
     return (
-      <div className="flex h-44 w-32 items-center justify-center rounded-[1.35rem] border border-white/40 bg-slate-100/80 text-xs font-semibold tracking-wider text-slate-500 uppercase shadow-inner dark:border-slate-800 dark:bg-slate-800/70 dark:text-slate-300">
+      <div className="flex h-44 w-32 items-center justify-center rounded-[1.35rem] border border-white/40 bg-slate-100/80 text-xs font-semibold uppercase tracking-wider text-slate-500 shadow-inner dark:border-slate-800 dark:bg-slate-800/70 dark:text-slate-300">
         No Image
       </div>
     );
@@ -107,7 +107,7 @@ const renderAltCover = (
         )}
 
         {altIsAdult && (
-          <div className="absolute top-1 left-1">
+          <div className="absolute left-1 top-1">
             <Badge
               variant="destructive"
               className={`${sourceBadgeBaseClasses} border-rose-300/70 bg-gradient-to-r from-rose-500/95 via-rose-500/90 to-rose-600/95 text-white shadow-[0_14px_30px_-18px_rgba(190,18,60,0.6)]`}
@@ -122,7 +122,7 @@ const renderAltCover = (
           <div className="absolute inset-0 flex items-center justify-center">
             <Badge
               variant="secondary"
-              className="cursor-pointer rounded-full border border-white/30 bg-black/45 px-2 py-0.5 text-[11px] font-semibold text-white uppercase shadow-[0_10px_26px_-14px_rgba(15,23,42,0.6)] backdrop-blur"
+              className="cursor-pointer rounded-full border border-white/30 bg-black/45 px-2 py-0.5 text-[11px] font-semibold uppercase text-white shadow-[0_10px_26px_-14px_rgba(15,23,42,0.6)] backdrop-blur"
               onClick={(e) => {
                 e.stopPropagation();
                 toggleImageBlur(altBlurKey);
@@ -146,7 +146,7 @@ const renderAniListDetails = (
 ) => {
   if (!altManga) {
     return (
-      <p className="mt-3 text-sm text-gray-500 italic dark:text-gray-400">
+      <p className="mt-3 text-sm italic text-gray-500 dark:text-gray-400">
         No AniList details available for this match yet.
       </p>
     );
@@ -155,7 +155,7 @@ const renderAniListDetails = (
   return (
     <dl className="mt-3 grid gap-3 text-sm text-gray-700 sm:grid-cols-2 dark:text-gray-200">
       <div className="flex flex-col gap-0.5">
-        <dt className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+        <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
           Format
         </dt>
         <dd className="font-medium text-gray-900 dark:text-gray-100">
@@ -163,7 +163,7 @@ const renderAniListDetails = (
         </dd>
       </div>
       <div className="flex flex-col gap-0.5">
-        <dt className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+        <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
           Status
         </dt>
         <dd className="font-medium text-gray-900 dark:text-gray-100">
@@ -172,7 +172,7 @@ const renderAniListDetails = (
       </div>
       {altChapters > 0 && (
         <div className="flex flex-col gap-0.5">
-          <dt className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
             Chapters
           </dt>
           <dd className="font-medium text-gray-900 dark:text-gray-100">
@@ -182,7 +182,7 @@ const renderAniListDetails = (
       )}
       {altVolumes && Number(altVolumes) > 0 && (
         <div className="flex flex-col gap-0.5">
-          <dt className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
             Volumes
           </dt>
           <dd className="font-medium text-gray-900 dark:text-gray-100">
@@ -205,7 +205,7 @@ const renderUserListStatus = (
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-blue-200/50 bg-blue-50/60 px-3 py-2 text-sm text-blue-800 shadow-inner shadow-blue-500/5 dark:border-blue-500/25 dark:bg-blue-900/15 dark:text-blue-200">
-      <span className="inline-flex items-center gap-1 text-xs font-semibold tracking-wide text-blue-600 uppercase dark:text-blue-200">
+      <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-200">
         <Check className="h-3 w-3" aria-hidden="true" />
         On Your AniList
       </span>
@@ -271,7 +271,7 @@ const renderPrimarySourceBadges = (
   }
 
   return (
-    <div className="pointer-events-none absolute -top-3 -left-3 flex gap-1">
+    <div className="pointer-events-none absolute -left-3 -top-3 flex gap-1">
       {hasComick && (
         <Badge
           className={`${sourceBadgeBaseClasses} border-orange-300/70 bg-gradient-to-r from-orange-500/95 via-orange-400/85 to-orange-500/90 text-white shadow-[0_14px_34px_-18px_rgba(249,115,22,0.55)]`}
@@ -326,7 +326,7 @@ const renderKenmeiLink = (
           className="h-3 w-3 text-indigo-500 dark:text-indigo-400"
           aria-hidden="true"
         />
-        <div className="absolute right-0 bottom-full mb-2 hidden w-48 rounded-md border border-indigo-300 bg-indigo-50 px-2 py-1.5 text-xs text-indigo-900 shadow-md group-hover/kenmei:block dark:border-indigo-700 dark:bg-indigo-900 dark:text-indigo-100">
+        <div className="absolute bottom-full right-0 mb-2 hidden w-48 rounded-md border border-indigo-300 bg-indigo-50 px-2 py-1.5 text-xs text-indigo-900 shadow-md group-hover/kenmei:block dark:border-indigo-700 dark:bg-indigo-900 dark:text-indigo-100">
           This link is dynamically generated and may not work correctly.
         </div>
       </div>
@@ -376,7 +376,7 @@ const renderPrimaryAniListDetails = (
 ) => {
   if (!hasAniListMetadata || !primaryAniListMatch) {
     return (
-      <p className="mt-3 text-sm text-gray-500 italic dark:text-gray-400">
+      <p className="mt-3 text-sm italic text-gray-500 dark:text-gray-400">
         No AniList details available for this match yet.
       </p>
     );
@@ -385,7 +385,7 @@ const renderPrimaryAniListDetails = (
   return (
     <dl className="mt-3 grid gap-3 text-sm text-gray-700 sm:grid-cols-2 dark:text-gray-200">
       <div className="flex flex-col gap-0.5">
-        <dt className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+        <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
           Format
         </dt>
         <dd className="font-medium text-gray-900 dark:text-gray-100">
@@ -393,7 +393,7 @@ const renderPrimaryAniListDetails = (
         </dd>
       </div>
       <div className="flex flex-col gap-0.5">
-        <dt className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+        <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
           Status
         </dt>
         <dd className="font-medium text-gray-900 dark:text-gray-100">
@@ -402,7 +402,7 @@ const renderPrimaryAniListDetails = (
       </div>
       {primaryChapterCount > 0 && (
         <div className="flex flex-col gap-0.5">
-          <dt className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
             Chapters
           </dt>
           <dd className="font-medium text-gray-900 dark:text-gray-100">
@@ -413,7 +413,7 @@ const renderPrimaryAniListDetails = (
       {primaryAniListMatch?.volumes &&
         Number(primaryAniListMatch.volumes) > 0 && (
           <div className="flex flex-col gap-0.5">
-            <dt className="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
               Volumes
             </dt>
             <dd className="font-medium text-gray-900 dark:text-gray-100">
@@ -449,7 +449,7 @@ const renderKenmeiDetails = (
   return (
     <dl className="mt-3 grid gap-3 text-sm text-indigo-900 dark:text-indigo-50">
       <div className="flex flex-col gap-0.5">
-        <dt className="text-xs font-semibold tracking-wide text-indigo-500 uppercase dark:text-indigo-200">
+        <dt className="text-xs font-semibold uppercase tracking-wide text-indigo-500 dark:text-indigo-200">
           Status
         </dt>
         <dd className="font-medium">
@@ -457,14 +457,14 @@ const renderKenmeiDetails = (
         </dd>
       </div>
       <div className="flex flex-col gap-0.5">
-        <dt className="text-xs font-semibold tracking-wide text-indigo-500 uppercase dark:text-indigo-200">
+        <dt className="text-xs font-semibold uppercase tracking-wide text-indigo-500 dark:text-indigo-200">
           Chapters Read
         </dt>
         <dd className="font-medium">{match.kenmeiManga.chapters_read}</dd>
       </div>
       {match.kenmeiManga.score > 0 && (
         <div className="flex flex-col gap-0.5">
-          <dt className="text-xs font-semibold tracking-wide text-indigo-500 uppercase dark:text-indigo-200">
+          <dt className="text-xs font-semibold uppercase tracking-wide text-indigo-500 dark:text-indigo-200">
             Score
           </dt>
           <dd className="font-medium">{match.kenmeiManga.score}/10</dd>
@@ -568,7 +568,7 @@ const renderTitleEntries = (
       {titleEntries.map((entry, idx) => (
         <li
           key={`${entry.label}-${idx}`}
-          className="leading-snug break-words [word-break:break-word]"
+          className="break-words leading-snug [word-break:break-word]"
         >
           <span className="font-semibold text-gray-600 dark:text-gray-300">
             {entry.label}:
@@ -600,7 +600,7 @@ const renderPrimaryListStatus = (
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-blue-200/50 bg-blue-50/60 px-3 py-2 text-sm text-blue-800 shadow-inner shadow-blue-500/5 dark:border-blue-500/25 dark:bg-blue-900/15 dark:text-blue-200">
-      <span className="inline-flex items-center gap-1 text-xs font-semibold tracking-wide text-blue-600 uppercase dark:text-blue-200">
+      <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-200">
         <Check className="h-3 w-3" aria-hidden="true" />
         On Your AniList
       </span>
@@ -645,7 +645,7 @@ const renderPrimaryCover = (
 ) => {
   if (!primaryCoverImage) {
     return (
-      <div className="flex h-44 w-32 items-center justify-center rounded-[1.35rem] border border-white/40 bg-slate-100/80 text-xs font-semibold tracking-wider text-slate-500 uppercase shadow-inner dark:border-slate-800 dark:bg-slate-800/70 dark:text-slate-300">
+      <div className="flex h-44 w-32 items-center justify-center rounded-[1.35rem] border border-white/40 bg-slate-100/80 text-xs font-semibold uppercase tracking-wider text-slate-500 shadow-inner dark:border-slate-800 dark:bg-slate-800/70 dark:text-slate-300">
         No Image
       </div>
     );
@@ -697,7 +697,7 @@ const renderPrimaryCover = (
         )}
 
         {primaryIsAdult && (
-          <div className="absolute top-1 left-1">
+          <div className="absolute left-1 top-1">
             <Badge
               variant="destructive"
               className={`${sourceBadgeBaseClasses} border-rose-300/70 bg-gradient-to-r from-rose-500/95 via-rose-500/90 to-rose-600/95 text-white shadow-[0_14px_30px_-18px_rgba(190,18,60,0.6)]`}
@@ -712,7 +712,7 @@ const renderPrimaryCover = (
           <div className="absolute inset-0 flex items-center justify-center">
             <Badge
               variant="secondary"
-              className="cursor-pointer rounded-full border border-white/30 bg-black/45 px-2 py-0.5 text-[11px] font-semibold text-white uppercase shadow-[0_10px_26px_-14px_rgba(15,23,42,0.6)] backdrop-blur"
+              className="cursor-pointer rounded-full border border-white/30 bg-black/45 px-2 py-0.5 text-[11px] font-semibold uppercase text-white shadow-[0_10px_26px_-14px_rgba(15,23,42,0.6)] backdrop-blur"
               onClick={() => toggleImageBlur(primaryBlurKey)}
             >
               Reveal
@@ -825,7 +825,7 @@ const AlternativeMatchItemComponent: React.FC<AlternativeMatchItemProps> = ({
               {coverContent}
 
               {(hasComick || hasMangaDex) && (
-                <div className="pointer-events-none absolute -top-3 -left-3 flex gap-1">
+                <div className="pointer-events-none absolute -left-3 -top-3 flex gap-1">
                   {hasComick && (
                     <Badge
                       className={`${sourceBadgeBaseClasses} border-orange-300/70 bg-gradient-to-r from-orange-500/95 via-orange-400/85 to-orange-500/90 text-white shadow-[0_14px_34px_-18px_rgba(249,115,22,0.55)]`}
@@ -856,7 +856,7 @@ const AlternativeMatchItemComponent: React.FC<AlternativeMatchItemProps> = ({
                   {altTitleEntries.map((entry, altIdx) => (
                     <li
                       key={`${entry.label}-${altIdx}`}
-                      className="leading-snug break-words [word-break:break-word]"
+                      className="break-words leading-snug [word-break:break-word]"
                     >
                       <span className="font-semibold text-gray-600 dark:text-gray-300">
                         {entry.label}:
@@ -868,7 +868,7 @@ const AlternativeMatchItemComponent: React.FC<AlternativeMatchItemProps> = ({
               )}
             </div>
           </div>
-          <div className="flex w-full flex-col gap-2 sm:max-w-[360px] sm:min-w-[240px] sm:flex-shrink-0 sm:items-end sm:self-start">
+          <div className="flex w-full flex-col gap-2 sm:min-w-[240px] sm:max-w-[360px] sm:flex-shrink-0 sm:items-end sm:self-start">
             <div className="flex w-full flex-col items-end gap-2 self-stretch sm:w-auto sm:self-end">
               {altMatch.confidence !== undefined && (
                 <ConfidenceBadge
@@ -917,7 +917,7 @@ const AlternativeMatchItemComponent: React.FC<AlternativeMatchItemProps> = ({
         <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <div className="flex flex-col gap-4">
             <div className="rounded-2xl border border-white/40 bg-white/60 p-4 shadow-sm dark:border-slate-800/50 dark:bg-slate-900/50">
-              <span className="text-xs font-semibold tracking-[0.18em] text-gray-500 uppercase dark:text-gray-400">
+              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
                 AniList details
               </span>
               {renderAniListDetails(
@@ -937,12 +937,12 @@ const AlternativeMatchItemComponent: React.FC<AlternativeMatchItemProps> = ({
           </div>
 
           <div className="rounded-2xl border border-indigo-200/50 bg-indigo-50/60 p-4 shadow-sm dark:border-indigo-500/20 dark:bg-indigo-900/15">
-            <span className="text-xs font-semibold tracking-[0.18em] text-indigo-500 uppercase dark:text-indigo-200">
+            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-500 dark:text-indigo-200">
               Kenmei details
             </span>
             <dl className="mt-3 grid gap-3 text-sm text-indigo-900 dark:text-indigo-50">
               <div className="flex flex-col gap-0.5">
-                <dt className="text-xs font-semibold tracking-wide text-indigo-500 uppercase dark:text-indigo-200">
+                <dt className="text-xs font-semibold uppercase tracking-wide text-indigo-500 dark:text-indigo-200">
                   Status
                 </dt>
                 <dd className="font-medium">
@@ -950,7 +950,7 @@ const AlternativeMatchItemComponent: React.FC<AlternativeMatchItemProps> = ({
                 </dd>
               </div>
               <div className="flex flex-col gap-0.5">
-                <dt className="text-xs font-semibold tracking-wide text-indigo-500 uppercase dark:text-indigo-200">
+                <dt className="text-xs font-semibold uppercase tracking-wide text-indigo-500 dark:text-indigo-200">
                   Chapters Read
                 </dt>
                 <dd className="font-medium">
@@ -959,7 +959,7 @@ const AlternativeMatchItemComponent: React.FC<AlternativeMatchItemProps> = ({
               </div>
               {match.kenmeiManga.score > 0 && (
                 <div className="flex flex-col gap-0.5">
-                  <dt className="text-xs font-semibold tracking-wide text-indigo-500 uppercase dark:text-indigo-200">
+                  <dt className="text-xs font-semibold uppercase tracking-wide text-indigo-500 dark:text-indigo-200">
                     Score
                   </dt>
                   <dd className="font-medium">{match.kenmeiManga.score}/10</dd>
@@ -972,7 +972,7 @@ const AlternativeMatchItemComponent: React.FC<AlternativeMatchItemProps> = ({
         <div className="flex flex-wrap items-center justify-start gap-3">
           <Button
             type="button"
-            className="relative overflow-hidden rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-400 to-lime-400 px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_32px_-15px_rgba(16,185,129,0.6)] transition-all hover:shadow-[0_20px_45px_-18px_rgba(101,163,13,0.55)] focus-visible:ring-2 focus-visible:ring-emerald-400/80 focus-visible:ring-offset-2 focus-visible:outline-none dark:from-emerald-500 dark:via-emerald-400 dark:to-lime-500"
+            className="relative overflow-hidden rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-400 to-lime-400 px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_32px_-15px_rgba(16,185,129,0.6)] transition-all hover:shadow-[0_20px_45px_-18px_rgba(101,163,13,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/80 focus-visible:ring-offset-2 dark:from-emerald-500 dark:via-emerald-400 dark:to-lime-500"
             onClick={() => onSelectAlternative?.(match, index + 1, false, true)}
             aria-label={
               "Accept " +
@@ -1208,7 +1208,7 @@ function MatchCard({
                     {renderTitleEntries(titleEntries)}
                   </div>
                 </div>
-                <div className="flex w-full flex-col gap-2 sm:max-w-[360px] sm:min-w-[240px] sm:flex-shrink-0 sm:items-end sm:self-start">
+                <div className="flex w-full flex-col gap-2 sm:min-w-[240px] sm:max-w-[360px] sm:flex-shrink-0 sm:items-end sm:self-start">
                   <div className="flex w-full flex-col items-end gap-2 self-stretch sm:w-auto sm:self-end">
                     {renderConfidenceBadge(match)}
                     <div className="flex flex-wrap justify-end gap-2 self-stretch">
@@ -1230,7 +1230,7 @@ function MatchCard({
               <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
                 <div className="flex flex-col gap-4">
                   <div className="rounded-2xl border border-white/40 bg-white/60 p-4 shadow-sm dark:border-slate-800/50 dark:bg-slate-900/50">
-                    <span className="text-xs font-semibold tracking-[0.18em] text-gray-500 uppercase dark:text-gray-400">
+                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
                       AniList details
                     </span>
                     {renderPrimaryAniListDetails(
@@ -1252,7 +1252,7 @@ function MatchCard({
 
                 {/* Kenmei status info */}
                 <div className="rounded-2xl border border-indigo-200/50 bg-indigo-50/60 p-4 shadow-sm dark:border-indigo-500/20 dark:bg-indigo-900/15">
-                  <span className="text-xs font-semibold tracking-[0.18em] text-indigo-500 uppercase dark:text-indigo-200">
+                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-500 dark:text-indigo-200">
                     Kenmei details
                   </span>
                   {renderKenmeiDetails(match, formatStatusText)}
@@ -1277,7 +1277,7 @@ function MatchCard({
         {/* Alternative matches - only show for non-matched entries */}
         {shouldShowAlternativeMatches(match) && (
           <div className="rounded-2xl border border-white/30 bg-gradient-to-br from-white/80 via-white/60 to-white/40 px-5 py-5 shadow-lg shadow-slate-900/10 backdrop-blur-sm dark:border-slate-800/60 dark:from-slate-900/80 dark:via-slate-900/65 dark:to-slate-950/55">
-            <h4 className="mb-4 flex items-center text-xs font-semibold tracking-[0.2em] text-gray-500 uppercase dark:text-gray-300">
+            <h4 className="mb-4 flex items-center text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-300">
               <ChevronRight className="mr-1 h-4 w-4" aria-hidden="true" />
               Alternative Matches
             </h4>

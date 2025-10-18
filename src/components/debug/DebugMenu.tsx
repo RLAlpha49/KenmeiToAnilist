@@ -25,6 +25,10 @@ import { cn } from "@/utils/tailwind";
 import { Button } from "../ui/button";
 import { ScrollArea } from "../ui/scroll-area";
 
+/**
+ * Defines a debug panel configuration with metadata and content.
+ * @source
+ */
 interface DebugPanelDefinition {
   id: string;
   label: string;
@@ -33,11 +37,23 @@ interface DebugPanelDefinition {
   element: React.ReactNode;
 }
 
+/**
+ * Props for the DebugMenu component.
+ * @source
+ */
 interface DebugMenuProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+/**
+ * Debug command center for accessing development utilities.
+ * Displays enabled debug panels (Storage Explorer, Log Viewer, State Inspector, IPC Traffic, Event Logger).
+ * Panels are toggled from Settings → Data → Debug Tools.
+ * @param props - Component props
+ * @returns JSX element rendering the debug menu dialog
+ * @source
+ */
 export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
   const {
     storageDebuggerEnabled,
@@ -173,16 +189,16 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
       }}
     >
       <DialogContent className="border-border/60 bg-background/95 max-h-[80vh] grid-rows-[auto,1fr] overflow-hidden border p-0 shadow-2xl backdrop-blur-xl md:max-w-[95vw] lg:!max-w-5xl">
-        <DialogHeader className="relative overflow-hidden px-8 pt-8 pb-4">
+        <DialogHeader className="relative overflow-hidden px-8 pb-4 pt-8">
           <div className="from-primary/10 absolute inset-0 h-full w-full bg-gradient-to-br via-purple-500/10 to-transparent" />
-          <div className="bg-primary/15 absolute top-8 right-10 h-32 w-32 rounded-full blur-3xl" />
+          <div className="bg-primary/15 absolute right-10 top-8 h-32 w-32 rounded-full blur-3xl" />
           <div className="relative z-10 flex flex-col gap-3">
             <DialogTitle className="flex items-center gap-3 text-2xl font-semibold">
               <span className="bg-muted/60 text-primary border-primary/20 hidden h-11 w-11 items-center justify-center rounded-xl border shadow-inner sm:flex">
                 <Bug className="h-5 w-5" />
               </span>
               <div>
-                <p className="text-muted-foreground text-xs tracking-[0.3em] uppercase">
+                <p className="text-muted-foreground text-xs uppercase tracking-[0.3em]">
                   Internal Tools
                 </p>
                 <span>Debug Command Center</span>
@@ -209,7 +225,7 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
             )}
           </div>
         </DialogHeader>
-        <div className="flex h-full max-h-[60vh] min-h-0 flex-1 flex-col gap-6 px-8 pt-6 pb-8">
+        <div className="flex h-full max-h-[60vh] min-h-0 flex-1 flex-col gap-6 px-8 pb-8 pt-6">
           {hasPanels ? (
             <Tabs
               value={activePanel}
@@ -238,14 +254,14 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
                               "data-[state=active]:!bg-background/30 data-[state=active]:!border-primary/40 data-[state=active]:!text-primary data-[state=active]:!shadow-md",
                               "hover:!border-primary/30 hover:!bg-primary/5",
                               // Ensure text can wrap instead of overflowing
-                              "min-w-0 break-words whitespace-normal",
+                              "min-w-0 whitespace-normal break-words",
                             )}
                             style={{ position: "relative" }}
                           >
                             <div className="flex items-start gap-3">
                               <div className="flex-shrink-0">{panel.icon}</div>
                               <div className="min-w-0 flex-1 space-y-1">
-                                <div className="leading-tight font-semibold">
+                                <div className="font-semibold leading-tight">
                                   {panel.label}
                                 </div>
                                 <p className="text-muted-foreground text-xs">

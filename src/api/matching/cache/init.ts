@@ -16,11 +16,13 @@ import { generateCacheKey } from "./utils";
 import { saveCache } from "./persistence";
 
 /**
- * Initialize the manga search service
- * This will only run once regardless of how many times it's imported
+ * Initializes the manga search service with cache synchronization and event listeners.
+ * Sets up listeners for cache updates and syncs with client cache. Runs only once.
+ * @returns void
+ * @source
  */
 export function initializeMangaService(): void {
-  // Skip if already initialized
+  // Skip if already initialized to prevent duplicate setup
   if (getServiceInitialized()) {
     console.debug(
       "[MangaSearchService] Manga search service already initialized, skipping duplicate initialization",
@@ -34,10 +36,11 @@ export function initializeMangaService(): void {
   // Sync with client cache on initialization
   syncWithClientCache();
 
-  // Set up event listeners
+  // Set up event listeners only once
   if (globalThis.window !== undefined && !getListenersRegistered()) {
     setListenersRegistered(true);
 
+    // Listen for search cache initialization and sync when ready
     globalThis.addEventListener("anilist:search-cache-initialized", () => {
       console.debug(
         "[MangaSearchService] Received search cache initialization event, syncing caches...",
@@ -62,6 +65,7 @@ export function initializeMangaService(): void {
 
         const ts = timestamp ?? Date.now();
 
+        // Cache manga by both romaji and English titles for better search coverage
         const cacheByTitle = (
           title: string | null | undefined,
           manga: AniListManga,

@@ -84,18 +84,12 @@ export interface ViewerResponse {
 }
 
 /**
- * Represents the authentication context type for React context providers.
+ * Represents the state values exposed through authentication context.
  *
  * @property authState - The current authentication state.
- * @property login - Function to log in with credentials.
- * @property refreshToken - Function to refresh the authentication token.
- * @property logout - Function to log out the user.
- * @property cancelAuth - Function to cancel an in-progress authentication flow.
  * @property isLoading - Whether an authentication operation is in progress.
  * @property error - The current authentication error message, if any.
  * @property statusMessage - The current status message, if any.
- * @property setCredentialSource - Function to set the credential source.
- * @property updateCustomCredentials - Function to update custom credentials.
  * @property customCredentials - The current custom credentials, if any.
  * @source
  */
@@ -107,6 +101,17 @@ export interface AuthStateContextValue {
   customCredentials: APICredentials | null;
 }
 
+/**
+ * Represents the action functions exposed through authentication context.
+ *
+ * @property login - Function to log in with credentials.
+ * @property refreshToken - Function to refresh the authentication token.
+ * @property logout - Function to log out the user.
+ * @property cancelAuth - Function to cancel an in-progress authentication flow.
+ * @property setCredentialSource - Function to set the credential source.
+ * @property updateCustomCredentials - Function to update custom credentials.
+ * @source
+ */
 export interface AuthActionsContextValue {
   login: (credentials: APICredentials) => Promise<void>;
   refreshToken: () => Promise<void>;
@@ -120,6 +125,11 @@ export interface AuthActionsContextValue {
   ) => void;
 }
 
+/**
+ * Complete authentication context type combining state and actions.
+ *
+ * @source
+ */
 export interface AuthContextType
   extends AuthStateContextValue,
     AuthActionsContextValue {}

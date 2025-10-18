@@ -6,48 +6,56 @@
 import type { MangaCache } from "./types";
 
 /**
- * In-memory cache for manga search results
- * This is the authoritative cache used by the service
+ * In-memory cache for manga search results. Authoritative cache used by the service.
+ * @source
  */
 export const mangaCache: MangaCache = {};
 
 /**
- * Flag to track if cache event listeners have been registered
+ * Flag to track if cache event listeners have been registered.
+ * @source
  */
 let _listenersRegistered = false;
 
 /**
- * Get the listeners registered flag
- * @returns Current value of the flag
+ * Retrieves the listeners registration status flag.
+ * @returns True if event listeners have been registered; false otherwise.
+ * @source
  */
 export function getListenersRegistered(): boolean {
   return _listenersRegistered;
 }
 
 /**
- * Set the listeners registered flag
- * @param value - New value for the flag
+ * Sets the listeners registration status flag.
+ * @param value - New flag value.
+ * @returns void
+ * @source
  */
 export function setListenersRegistered(value: boolean): void {
   _listenersRegistered = value;
 }
 
 /**
- * Flag to track if the service has been initialized
+ * Flag to track if the manga search service has been initialized.
+ * @source
  */
 let _serviceInitialized = false;
 
 /**
- * Get the service initialized flag
- * @returns Current value of the flag
+ * Retrieves the service initialization status flag.
+ * @returns True if the manga search service has been initialized; false otherwise.
+ * @source
  */
 export function getServiceInitialized(): boolean {
   return _serviceInitialized;
 }
 
 /**
- * Set the service initialized flag
- * @param value - New value for the flag
+ * Sets the service initialization status flag.
+ * @param value - New flag value.
+ * @returns void
+ * @source
  */
 export function setServiceInitialized(value: boolean): void {
   _serviceInitialized = value;

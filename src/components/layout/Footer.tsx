@@ -7,7 +7,10 @@ import React from "react";
 import { Heart, GitBranch } from "lucide-react";
 
 /**
- * GitHub SVG icon (from simpleicons.org)
+ * GitHub SVG icon component (source: simpleicons.org).
+ * @param props - Standard SVG element properties.
+ * @returns The rendered GitHub icon SVG element.
+ * @source
  */
 const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -40,6 +43,12 @@ import appIcon from "../../assets/k2a-icon-512x512.png";
  * @source
  */
 export function Footer() {
+  /**
+   * Opens an external URL using the shell API if available (Electron), otherwise uses browser window.open.
+   * @param url - The URL to open.
+   * @returns A React event handler function.
+   * @source
+   */
   const handleOpenExternal = (url: string) => (e: React.MouseEvent) => {
     e.preventDefault();
     if (globalThis.electronAPI?.shell?.openExternal) {
@@ -54,7 +63,7 @@ export function Footer() {
     <TooltipProvider>
       <footer className="border-border bg-background/80 relative border-t px-4 py-6 text-xs backdrop-blur-xl">
         <div className="pointer-events-none absolute inset-x-0 top-[-120px] h-60 w-full bg-gradient-to-b from-blue-500/10 via-purple-500/10 to-transparent blur-3xl" />
-        <div className="relative z-[1] container mx-auto flex flex-col items-center justify-between gap-6 md:flex-row">
+        <div className="container relative z-[1] mx-auto flex flex-col items-center justify-between gap-6 md:flex-row">
           <div className="flex items-center gap-3">
             <motion.div
               className="h-8 w-8"
@@ -63,7 +72,7 @@ export function Footer() {
               <img src={appIcon} alt="K2A Logo" className="h-8 w-8" />
             </motion.div>
             <div className="flex flex-col gap-1">
-              <span className="text-muted-foreground text-xs tracking-[0.4em] uppercase">
+              <span className="text-muted-foreground text-xs uppercase tracking-[0.4em]">
                 Sync tool
               </span>
               <div className="flex items-center gap-2 text-sm font-semibold">
@@ -90,7 +99,7 @@ export function Footer() {
                     "https://github.com/RLAlpha49/KenmeiToAnilist",
                   )}
                 >
-                  <span className="flex items-center gap-2 text-[0.65rem] font-semibold tracking-[0.3em] uppercase">
+                  <span className="flex items-center gap-2 text-[0.65rem] font-semibold uppercase tracking-[0.3em]">
                     <GithubIcon className="h-4 w-4" />
                     <GitBranch className="h-3 w-3" />
                     Open source

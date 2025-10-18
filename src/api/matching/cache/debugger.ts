@@ -8,11 +8,15 @@ import { generateCacheKey, clearMangaCache } from "./utils";
 import { syncWithClientCache } from "./sync";
 
 /**
- * Cache debugger utility object for inspecting and managing cache state
+ * Debugging utilities for cache inspection and management.
+ * Provides methods to check cache status, inspect entries, reset caches, and force synchronization.
+ * @source
  */
 export const cacheDebugger = {
   /**
-   * Get a summary of the current cache status
+   * Retrieves a summary of cache status across in-memory and localStorage layers.
+   * @returns Summary of cache counts in memory and localStorage.
+   * @source
    */
   getCacheStatus(): {
     inMemoryCache: number;
@@ -21,10 +25,10 @@ export const cacheDebugger = {
       searchCache: number;
     };
   } {
-    // Check in-memory cache
+    // Check in-memory cache for entry count
     const inMemoryCount = Object.keys(mangaCache).length;
 
-    // Check localStorage
+    // Check localStorage for cached manga and search data
     let storedMangaCount = 0;
     let storedSearchCount = 0;
 
@@ -59,7 +63,10 @@ export const cacheDebugger = {
   },
 
   /**
-   * Check if a specific manga title is in cache
+   * Checks if a manga title is cached and retrieves cache metadata.
+   * @param title - Manga title to look up in cache.
+   * @returns Cache lookup result with key, presence flag, and entry metadata (manga count, timestamp, age).
+   * @source
    */
   checkMangaInCache(title: string): {
     found: boolean;
@@ -77,7 +84,7 @@ export const cacheDebugger = {
       return { found: false, cacheKey };
     }
 
-    // Calculate age
+    // Calculate cache entry age in human-readable format
     const ageMs = Date.now() - entry.timestamp;
     const ageMinutes = Math.floor(ageMs / 60000);
 
@@ -102,7 +109,9 @@ export const cacheDebugger = {
   },
 
   /**
-   * Force a sync of the caches
+   * Forces cache synchronization and logs current cache status.
+   * @returns void
+   * @source
    */
   forceSyncCaches(): void {
     syncWithClientCache();
@@ -111,7 +120,9 @@ export const cacheDebugger = {
   },
 
   /**
-   * Reset all caches (both in-memory and localStorage)
+   * Clears all in-memory and localStorage caches.
+   * @returns void
+   * @source
    */
   resetAllCaches(): void {
     // Clear in-memory cache
@@ -135,7 +146,10 @@ export const cacheDebugger = {
   },
 
   /**
-   * Clear cache entry for a specific manga title
+   * Clears cache entry for a specific manga title.
+   * @param title - Manga title to clear from cache.
+   * @returns True if entry was found and cleared; false if not found.
+   * @source
    */
   clearMangaCacheEntry(title: string): boolean {
     const cacheKey = generateCacheKey(title);
@@ -153,7 +167,9 @@ export const cacheDebugger = {
   },
 
   /**
-   * Get detailed information about all cache entries
+   * Retrieves detailed information about all cached manga entries.
+   * @returns Array of cache entries with key, manga count, timestamp, and age.
+   * @source
    */
   getAllCacheEntries(): Array<{
     cacheKey: string;
@@ -164,6 +180,7 @@ export const cacheDebugger = {
     const entries = [];
 
     for (const [cacheKey, entry] of Object.entries(mangaCache)) {
+      // Format age from milliseconds to human-readable string
       const ageMs = Date.now() - entry.timestamp;
       const ageMinutes = Math.floor(ageMs / 60000);
 

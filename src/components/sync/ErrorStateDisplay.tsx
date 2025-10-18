@@ -5,12 +5,24 @@ import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
 import { AlertCircle } from "lucide-react";
 
+/**
+ * Props for the ErrorStateDisplay component.
+ * @property authError - Whether authentication is required.
+ * @property matchDataError - Whether matched data is missing.
+ * @property validMatchesError - Whether no approved matches exist.
+ * @source
+ */
 interface ErrorStateDisplayProps {
   authError: boolean;
   matchDataError: boolean;
   validMatchesError: boolean;
 }
 
+/**
+ * Display contextual error states with navigation guidance.
+ * Shows different error messages and action buttons based on the error type.
+ * @source
+ */
 export function ErrorStateDisplay({
   authError,
   matchDataError,

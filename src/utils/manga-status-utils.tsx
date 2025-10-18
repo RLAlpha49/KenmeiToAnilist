@@ -16,12 +16,17 @@ import {
 } from "lucide-react";
 
 /**
- * Status count mapping
+ * Mapping of status to counts of manga entries.
+ * @source
  */
 export type StatusCounts = Record<string, number>;
 
 /**
- * Get counts for each status from manga data
+ * Aggregates manga items by status and returns count for each status.
+ *
+ * @param manga - Array of manga items to count.
+ * @returns Object mapping status strings to counts.
+ * @source
  */
 export function getStatusCounts(manga: KenmeiMangaItem[]): StatusCounts {
   return manga.reduce((acc: StatusCounts, mangaItem: KenmeiMangaItem) => {
@@ -32,7 +37,14 @@ export function getStatusCounts(manga: KenmeiMangaItem[]): StatusCounts {
 }
 
 /**
- * Get CSS classes for status styling
+ * Returns Tailwind CSS classes for styling a manga status badge.
+ *
+ * Applies appropriate colors for each status (reading, completed, dropped, plan_to_read, on_hold)
+ * with light and dark mode support.
+ *
+ * @param status - The manga reading status.
+ * @returns Tailwind CSS class string for styling.
+ * @source
  */
 export function getStatusColor(status: string): string {
   switch (status) {
@@ -52,7 +64,14 @@ export function getStatusColor(status: string): string {
 }
 
 /**
- * Get React icon element for status
+ * Returns a React icon element with styling for a manga status.
+ *
+ * Creates a small badge containing an icon (Clock, CheckCircle2, X, etc.) that visually
+ * represents the current status, with colors matching the status.
+ *
+ * @param status - The manga reading status.
+ * @returns A React element containing the icon and styling.
+ * @source
  */
 export function getStatusIcon(status: string): React.ReactElement {
   switch (status) {
@@ -96,7 +115,14 @@ export function getStatusIcon(status: string): React.ReactElement {
 }
 
 /**
- * Format status label for display
+ * Formats a status string into a human-readable label.
+ *
+ * Handles special cases like "plan_to_read" → "Plan to Read" and "on_hold" → "On Hold",
+ * and capitalizes other status strings appropriately.
+ *
+ * @param status - The status string to format.
+ * @returns A formatted, human-readable status label.
+ * @source
  */
 export function formatStatusLabel(status: string): string {
   if (status === "plan_to_read") {

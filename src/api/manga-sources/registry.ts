@@ -1,7 +1,7 @@
 /**
  * @packageDocumentation
  * @module manga-source-registry
- * @description Registry for managing manga source clients.
+ * @description Registry for managing and accessing manga source client instances.
  */
 
 import type { BaseMangaSourceClient } from "./base-client";
@@ -10,6 +10,9 @@ import { MangaSource } from "./types";
 
 /**
  * Registry for manga source clients.
+ * Manages lazy initialization and lifecycle of all available manga source clients.
+ * Uses dynamic imports to load clients on demand and handle initialization failures gracefully.
+ * @source
  */
 class MangaSourceRegistry {
   private readonly clients = new Map<MangaSource, BaseMangaSourceClient>();
@@ -17,6 +20,8 @@ class MangaSourceRegistry {
 
   /**
    * Initialize the registry with available clients.
+   * Loads clients dynamically in parallel, catching and logging individual failures.
+   * @source
    */
   private async initialize(): Promise<void> {
     if (this.initialized) return;
@@ -44,6 +49,7 @@ class MangaSourceRegistry {
       error?: unknown;
     };
 
+    // Type guard to verify a value is a valid client instance
     const isClient = (obj: unknown): obj is BaseMangaSourceClient => {
       return (
         typeof obj === "object" &&
@@ -54,8 +60,7 @@ class MangaSourceRegistry {
 
     const promises = loaders.map(async (l): Promise<LoadResult> => {
       try {
-        // use the per-loader import function (literal import) so Vite can
-        // statically analyze the dependency graph and avoid dynamic-import warnings
+        // Use per-loader import function so Vite can statically analyze and avoid dynamic-import warnings
         const mod = await l.importFn();
         const candidate = (mod as Record<string, unknown>)[l.exportName];
         if (isClient(candidate)) {
@@ -90,6 +95,9 @@ class MangaSourceRegistry {
 
   /**
    * Register a manga source client.
+   * @param source - The manga source identifier.
+   * @param client - The client instance to register.
+   * @source
    */
   public registerClient(
     source: MangaSource,
@@ -100,6 +108,10 @@ class MangaSourceRegistry {
 
   /**
    * Get a manga source client by source type.
+   * Initializes the registry on first call.
+   * @param source - The manga source to retrieve.
+   * @returns Promise resolving to the client or null if not available.
+   * @source
    */
   public async getClient(
     source: MangaSource,
@@ -110,7 +122,11 @@ class MangaSourceRegistry {
 
   /**
    * Internal helper to get a client or throw a clear error.
-   * This reduces duplication across public methods that require a client.
+   * Reduces duplication across public methods that require a client.
+   * @param source - The manga source to retrieve.
+   * @returns Promise resolving to the client.
+   * @throws {Error} If the source is not available.
+   * @source
    */
   private async getClientOrThrow(
     source: MangaSource,
@@ -124,6 +140,8 @@ class MangaSourceRegistry {
 
   /**
    * Get all registered manga sources.
+   * @returns Array of all registered source identifiers.
+   * @source
    */
   public getAvailableSources(): MangaSource[] {
     return Array.from(this.clients.keys());
@@ -131,6 +149,9 @@ class MangaSourceRegistry {
 
   /**
    * Check if a manga source is available.
+   * @param source - The manga source to check.
+   * @returns True if the source is registered.
+   * @source
    */
   public isSourceAvailable(source: MangaSource): boolean {
     return this.clients.has(source);
@@ -138,6 +159,13 @@ class MangaSourceRegistry {
 
   /**
    * Search manga across a specific source.
+   * @template T - The manga entry type.
+   * @param source - The manga source to search.
+   * @param query - The search query string.
+   * @param limit - Maximum number of results (optional).
+   * @returns Promise resolving to array of manga entries.
+   * @throws {Error} If the source is not available.
+   * @source
    */
   public async searchManga<T extends BaseMangaEntry>(
     source: MangaSource,
@@ -150,6 +178,12 @@ class MangaSourceRegistry {
 
   /**
    * Get manga detail from a specific source.
+   * @template T - The manga detail type.
+   * @param source - The manga source to query.
+   * @param slug - The manga identifier or slug.
+   * @returns Promise resolving to manga detail or null if not found.
+   * @throws {Error} If the source is not available.
+   * @source
    */
   public async getMangaDetail<T extends BaseMangaDetail>(
     source: MangaSource,
@@ -161,6 +195,14 @@ class MangaSourceRegistry {
 
   /**
    * Search and get AniList manga from a specific source.
+   * Searches the source and enriches results with AniList data.
+   * @param source - The manga source to search.
+   * @param query - The search query string.
+   * @param accessToken - AniList OAuth access token.
+   * @param limit - Maximum number of results (optional).
+   * @returns Promise resolving to enhanced AniList manga entries.
+   * @throws {Error} If the source is not available.
+   * @source
    */
   public async searchAndGetAniListManga(
     source: MangaSource,
@@ -174,6 +216,10 @@ class MangaSourceRegistry {
 
   /**
    * Clear cache for a specific source.
+   * @param source - The manga source whose cache to clear.
+   * @param queries - Array of search queries to clear from cache.
+   * @returns Promise resolving to the number of cache entries cleared.
+   * @source
    */
   public async clearCache(
     source: MangaSource,
@@ -186,6 +232,9 @@ class MangaSourceRegistry {
 
   /**
    * Get cache status for a specific source.
+   * @param source - The manga source to query.
+   * @returns Promise resolving to cache status info or null if source unavailable.
+   * @source
    */
   public async getCacheStatus(source: MangaSource) {
     const client = await this.getClient(source);
@@ -194,8 +243,15 @@ class MangaSourceRegistry {
   }
 }
 
-// Create and export the singleton registry
+/**
+ * Singleton registry instance for manga source clients.
+ * Provides centralized access to all manga source clients.
+ * @source
+ */
 export const mangaSourceRegistry = new MangaSourceRegistry();
 
-// Export the class for testing or custom registries
+/**
+ * MangaSourceRegistry class export for testing or custom registry instances.
+ * @source
+ */
 export { MangaSourceRegistry };

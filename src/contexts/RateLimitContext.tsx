@@ -58,10 +58,10 @@ const RateLimitContext = createContext<RateLimitContextType | undefined>(
 );
 
 /**
- * Provides rate limit context to its children, managing rate limit state and notifications.
- *
- * @param children - The React children to be wrapped by the provider.
- * @returns The rate limit context provider with value for consumers.
+ * Provides rate limit context to its children, managing API rate limit state and monitoring.
+ * Polls rate limit status and displays toast notifications when rate limited.
+ * @param children - React children to wrap with rate limit context.
+ * @returns Provider component with rate limit context value.
  * @source
  */
 export function RateLimitProvider({
@@ -316,7 +316,6 @@ export function RateLimitProvider({
         },
       );
 
-      // Force cast to string to fix TypeScript error
       setToastId(id as unknown as string);
     } else if (toastId) {
       // Dismiss the toast when no longer rate limited
@@ -367,10 +366,9 @@ export function RateLimitProvider({
 }
 
 /**
- * Custom hook to access the rate limit context.
- *
+ * Hook to access the rate limit context.
  * @returns The current rate limit context value.
- * @throws If used outside of a RateLimitProvider.
+ * @throws If used outside a RateLimitProvider.
  * @source
  */
 export function useRateLimit() {
@@ -382,12 +380,11 @@ export function useRateLimit() {
 }
 
 /**
- * Toast component to display rate limit countdown and message.
- *
- * @param message - The message to display to the user.
+ * Toast component displaying rate limit countdown and status message.
+ * Shows a progress bar that depletes as the rate limit period expires.
+ * @param message - The message to display.
  * @param retryAfter - The timestamp (ms) when requests can be retried.
- * @param onComplete - Callback when the countdown completes.
- * @returns The rendered toast component.
+ * @param onComplete - Callback when countdown reaches zero.
  * @source
  */
 function RateLimitToast({
