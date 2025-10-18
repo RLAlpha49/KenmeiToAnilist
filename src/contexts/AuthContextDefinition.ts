@@ -11,21 +11,14 @@ import {
   AuthStateContextValue,
 } from "../types/auth";
 
-const legacyAuthContext = createContext<AuthContextType | undefined>(undefined);
-
 /**
  * Legacy unified auth context combining state and actions.
  * @deprecated Prefer `AuthStateContext` and `AuthActionsContext` for new code.
  * @source
  */
-export const AuthLegacyContext = legacyAuthContext;
-
-/**
- * Legacy unified auth context combining state and actions.
- * @deprecated Prefer `AuthStateContext` and `AuthActionsContext` for new code.
- * @source
- */
-export const AuthContext = legacyAuthContext;
+export const AuthContext = createContext<AuthContextType | undefined>(
+  undefined,
+);
 
 /**
  * Provides authentication state only (read-only), minimizing re-renders for consumers.

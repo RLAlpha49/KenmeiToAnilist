@@ -7,7 +7,6 @@
 import { useContext, useMemo } from "react";
 import {
   AuthActionsContext,
-  AuthLegacyContext,
   AuthStateContext,
 } from "../contexts/AuthContextDefinition";
 import {
@@ -46,21 +45,15 @@ export function useAuthActions(): AuthActionsContextValue {
 
 /**
  * Accesses the complete authentication context, merging state and actions.
- * Attempts to use the legacy context first, then falls back to split state/actions.
  * @returns The merged authentication context.
  * @throws {Error} If used outside an AuthProvider.
  * @source
  */
 export function useAuth(): AuthContextType {
-  const legacyContext = useContext(AuthLegacyContext);
   const stateContext = useContext(AuthStateContext);
   const actionsContext = useContext(AuthActionsContext);
 
   const mergedContext = useMemo(() => {
-    if (legacyContext !== undefined) {
-      return legacyContext;
-    }
-
     if (stateContext !== undefined && actionsContext !== undefined) {
       return {
         ...stateContext,
@@ -69,7 +62,7 @@ export function useAuth(): AuthContextType {
     }
 
     return undefined;
-  }, [actionsContext, legacyContext, stateContext]);
+  }, [actionsContext, stateContext]);
 
   if (mergedContext === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");

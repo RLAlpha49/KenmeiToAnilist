@@ -17,15 +17,10 @@ import {
   AuthState,
   APICredentials,
   ViewerResponse,
-  AuthContextType,
   AuthStateContextValue,
   AuthActionsContextValue,
 } from "../types/auth";
-import {
-  AuthActionsContext,
-  AuthLegacyContext,
-  AuthStateContext,
-} from "./AuthContextDefinition";
+import { AuthActionsContext, AuthStateContext } from "./AuthContextDefinition";
 import { DEFAULT_ANILIST_CONFIG } from "../config/anilist";
 import { useDebugActions, StateInspectorHandle } from "./DebugContext";
 
@@ -900,20 +895,10 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     ],
   );
 
-  const legacyContextValue = React.useMemo<AuthContextType>(
-    () => ({
-      ...stateContextValue,
-      ...actionsContextValue,
-    }),
-    [stateContextValue, actionsContextValue],
-  );
-
   return (
     <AuthActionsContext.Provider value={actionsContextValue}>
       <AuthStateContext.Provider value={stateContextValue}>
-        <AuthLegacyContext.Provider value={legacyContextValue}>
-          {children}
-        </AuthLegacyContext.Provider>
+        {children}
       </AuthStateContext.Provider>
     </AuthActionsContext.Provider>
   );
