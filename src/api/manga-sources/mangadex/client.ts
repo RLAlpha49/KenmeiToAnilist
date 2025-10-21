@@ -8,6 +8,7 @@ import { MangaDexManga, MangaDexMangaDetail } from "./types";
 import { BaseMangaSourceClient } from "../base-client";
 import { MANGADEX_CONFIG } from "../config";
 import { MangaSource } from "../types";
+import { withGroupAsync } from "@/utils/logging";
 
 /**
  * MangaDex-specific manga source client.
@@ -35,36 +36,39 @@ export class MangaDexClient extends BaseMangaSourceClient<
     query: string,
     limit: number = 10,
   ): Promise<MangaDexManga[]> {
-    // Check cache first
-    const cacheKey = `search:${query.toLowerCase()}:${limit}`;
-    const cached = this.getCachedData<MangaDexManga[]>(cacheKey);
+    return withGroupAsync(`[MangaDex] Search: "${query}"`, async () => {
+      // Check cache first
+      const cacheKey = `search:${query.toLowerCase()}:${limit}`;
+      const cached = this.getCachedData<MangaDexManga[]>(cacheKey);
 
-    if (cached) {
-      return cached;
-    }
-    console.info(
-      `[MangaDex] 🔍 Searching MangaDex for: "${query}" (limit: ${limit})`,
-    );
-
-    try {
-      // Make direct HTTP request using the base client's functionality
-      const url = this.buildSearchUrl(query, limit);
-      const data = await this.makeRequest(url);
-
-      const results = this.parseSearchResponse(data);
-      this.setCachedData(cacheKey, results);
-
+      if (cached) {
+        console.debug(`[MangaDex] 📦 Using cached results for "${query}"`);
+        return cached;
+      }
       console.info(
-        `[MangaDex] 📦 MangaDex search found ${results?.length || 0} results for "${query}"`,
+        `[MangaDex] 🔍 Searching MangaDex for: "${query}" (limit: ${limit})`,
       );
-      return results;
-    } catch (error) {
-      console.error(
-        `[MangaDex] ❌ MangaDex search failed for "${query}":`,
-        error,
-      );
-      return [];
-    }
+
+      try {
+        // Make direct HTTP request using the base client's functionality
+        const url = this.buildSearchUrl(query, limit);
+        const data = await this.makeRequest(url);
+
+        const results = this.parseSearchResponse(data);
+        this.setCachedData(cacheKey, results);
+
+        console.info(
+          `[MangaDex] ✅ MangaDex search found ${results?.length || 0} results for "${query}"`,
+        );
+        return results;
+      } catch (error) {
+        console.error(
+          `[MangaDex] ❌ MangaDex search failed for "${query}":`,
+          error,
+        );
+        return [];
+      }
+    });
   }
 
   /**
@@ -74,20 +78,28 @@ export class MangaDexClient extends BaseMangaSourceClient<
    * @source
    */
   public async getMangaDetail(id: string): Promise<MangaDexMangaDetail | null> {
-    try {
-      console.debug(`[MangaDex] 📖 Getting MangaDex manga details for: ${id}`);
+    return withGroupAsync(`[MangaDex] Detail: "${id}"`, async () => {
+      try {
+        console.debug(
+          `[MangaDex] 📖 Getting MangaDex manga details for: ${id}`,
+        );
 
-      // Make direct HTTP request using the base client's functionality
-      const url = this.buildDetailUrl(id);
-      const rawData = await this.makeRequest(url);
-      return this.parseDetailResponse(rawData);
-    } catch (error) {
-      console.error(
-        `[MangaDex] ❌ Failed to get MangaDex manga details for ${id}:`,
-        error,
-      );
-      return null;
-    }
+        // Make direct HTTP request using the base client's functionality
+        const url = this.buildDetailUrl(id);
+        const rawData = await this.makeRequest(url);
+        const detail = this.parseDetailResponse(rawData);
+        if (detail) {
+          console.info(`[MangaDex] ✅ Retrieved details for manga ${id}`);
+        }
+        return detail;
+      } catch (error) {
+        console.error(
+          `[MangaDex] ❌ Failed to get MangaDex manga details for ${id}:`,
+          error,
+        );
+        return null;
+      }
+    });
   }
 
   /**

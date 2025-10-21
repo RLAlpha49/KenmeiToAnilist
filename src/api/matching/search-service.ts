@@ -25,6 +25,8 @@ import {
 import { calculateMatchScore } from "./scoring";
 import { findBestMatches } from "./match-engine";
 import { getMangaByIds } from "@/api/anilist/client";
+import { withGroupAsync } from "@/utils/logging";
+import { CancelledError } from "@/utils/errorHandling";
 
 /**
  * Searches AniList for manga by title with caching and rate limiting.
@@ -136,147 +138,147 @@ export async function batchMatchManga(
   shouldCancel?: () => boolean,
   abortSignal?: AbortSignal,
 ): Promise<MangaMatchResult[]> {
-  // Ensure we have the latest cache data
-  syncWithClientCache();
+  return withGroupAsync(
+    `[MangaSearchService] Batch Match (${mangaList.length} manga)`,
+    async () => {
+      // Ensure we have the latest cache data
+      syncWithClientCache();
 
-  const searchConfig = { ...DEFAULT_SEARCH_CONFIG, ...config };
+      const searchConfig = { ...DEFAULT_SEARCH_CONFIG, ...config };
 
-  // Create a set to track which manga have been reported in the progress
-  const reportedIndices = new Set<number>();
+      // Create a set to track which manga have been reported in the progress
+      const reportedIndices = new Set<number>();
 
-  // Function to check if the operation should be cancelled
-  const checkCancellation = () => {
-    // Check the abort signal first
-    if (abortSignal?.aborted) {
-      console.info(
-        "[MangaSearchService] Batch matching process aborted by abort signal",
-      );
-      throw new Error("Operation aborted by abort signal");
-    }
+      // Function to check if the operation should be cancelled
+      const checkCancellation = () => {
+        // Check the abort signal first
+        if (abortSignal?.aborted) {
+          console.info(
+            "[MangaSearchService] Batch matching process aborted by abort signal",
+          );
+          throw new CancelledError("Operation aborted by abort signal");
+        }
 
-    // Then check the cancellation function
-    if (shouldCancel?.()) {
-      console.info(
-        "[MangaSearchService] Batch matching process cancelled by user",
-      );
-      throw new Error("Operation cancelled by user");
-    }
+        // Then check the cancellation function
+        if (shouldCancel?.()) {
+          console.info(
+            "[MangaSearchService] Batch matching process cancelled by user",
+          );
+          throw new CancelledError("Operation cancelled by user");
+        }
 
-    return false;
-  };
+        return false;
+      };
 
-  // Update progress with deduplication
-  const updateProgress = (index: number, title?: string) => {
-    if (progressCallback && !reportedIndices.has(index)) {
-      reportedIndices.add(index);
-      progressCallback(reportedIndices.size, mangaList.length, title);
-    }
-  };
+      // Update progress with deduplication
+      const updateProgress = (index: number, title?: string) => {
+        if (progressCallback && !reportedIndices.has(index)) {
+          reportedIndices.add(index);
+          progressCallback(reportedIndices.size, mangaList.length, title);
+        }
+      };
 
-  try {
-    console.info(
-      `[MangaSearchService] 🚀 Starting batch matching for ${mangaList.length} manga entries`,
-    );
-
-    // Categorize manga based on cache status
-    const {
-      cachedResults,
-      cachedComickSources,
-      cachedMangaDexSources,
-      uncachedManga,
-      knownMangaIds,
-    } = categorizeMangaForBatching(mangaList, searchConfig, updateProgress);
-
-    console.debug(
-      `[MangaSearchService] 🔍 Categorization: ${Object.keys(cachedResults).length} cached, ${uncachedManga.length} uncached, ${knownMangaIds.length} known IDs`,
-    );
-
-    // Check for cancellation
-    checkCancellation();
-
-    // Process manga with known IDs first
-    await processKnownMangaIds(
-      { knownMangaIds, mangaList, uncachedManga },
-      { searchConfig, token },
-      { shouldCancel, abortSignal },
-      { updateProgress },
-      { cachedResults, cachedComickSources, cachedMangaDexSources },
-    );
-
-    // Check for cancellation
-    checkCancellation();
-
-    // Process uncached manga using batched GraphQL queries
-    // This significantly reduces API calls by grouping multiple searches
-    try {
-      await processBatchedUncachedManga(
-        { uncachedManga, mangaList, reportedIndices },
-        { token, searchConfig },
-        { abortSignal, checkCancellation },
-        { updateProgress },
-        { cachedResults, cachedComickSources, cachedMangaDexSources },
-      );
-    } catch (error) {
-      console.warn("[MangaSearchService] Processing cancelled:", error);
-
-      // If we got here due to cancellation, return the partial results we've managed to gather
-      if (
-        error instanceof Error &&
-        (error.message.includes("cancelled") ||
-          error.message.includes("aborted"))
-      ) {
+      try {
         console.info(
-          `[MangaSearchService] Cancellation completed, returning partial results`,
+          `[MangaSearchService] 🚀 Starting batch matching for ${mangaList.length} manga entries`,
         );
 
-        return handleCancellationResults(mangaList, cachedResults);
+        // Categorize manga based on cache status
+        const {
+          cachedResults,
+          cachedComickSources,
+          cachedMangaDexSources,
+          uncachedManga,
+          knownMangaIds,
+        } = categorizeMangaForBatching(mangaList, searchConfig, updateProgress);
+
+        console.debug(
+          `[MangaSearchService] 🔍 Categorization: ${Object.keys(cachedResults).length} cached, ${uncachedManga.length} uncached, ${knownMangaIds.length} known IDs`,
+        );
+
+        // Check for cancellation
+        checkCancellation();
+
+        // Process manga with known IDs first
+        await processKnownMangaIds(
+          { knownMangaIds, mangaList, uncachedManga },
+          { searchConfig, token },
+          { shouldCancel, abortSignal },
+          { updateProgress },
+          { cachedResults, cachedComickSources, cachedMangaDexSources },
+        );
+
+        // Check for cancellation
+        checkCancellation();
+
+        // Process uncached manga using batched GraphQL queries
+        // This significantly reduces API calls by grouping multiple searches
+        try {
+          await processBatchedUncachedManga(
+            { uncachedManga, mangaList, reportedIndices },
+            { token, searchConfig },
+            { abortSignal, checkCancellation },
+            { updateProgress },
+            { cachedResults, cachedComickSources, cachedMangaDexSources },
+          );
+        } catch (error) {
+          console.warn("[MangaSearchService] Processing cancelled:", error);
+
+          // If we got here due to cancellation, return the partial results we've managed to gather
+          if (error instanceof CancelledError) {
+            console.info(
+              `[MangaSearchService] Cancellation completed, returning partial results`,
+            );
+
+            return handleCancellationResults(mangaList, cachedResults);
+          }
+
+          // If it's a different kind of error, rethrow it
+          throw error;
+        }
+
+        // Check for cancellation after the batch completes
+        checkCancellation();
+
+        console.debug(
+          "[MangaSearchService] 🔍 Compiling final match results...",
+        );
+
+        // Compile final results
+        const finalResults = compileMatchResults(
+          mangaList,
+          cachedResults,
+          cachedComickSources,
+          cachedMangaDexSources,
+          checkCancellation,
+          updateProgress,
+        );
+
+        console.info(
+          `[MangaSearchService] ✅ Batch matching complete: ${finalResults.length} results`,
+        );
+
+        return finalResults;
+      } catch (error) {
+        console.error(
+          "[MangaSearchService] ❌ Error in batch matching process:",
+          error,
+        );
+
+        // If we got here due to cancellation, return whatever partial results we have
+        if (error instanceof CancelledError) {
+          console.info(
+            `[MangaSearchService] Cancellation detected, returning partial results`,
+          );
+          // We don't have access to the variables in this scope, so return empty array
+          return [];
+        }
+
+        // Otherwise rethrow the error
+        throw error;
       }
-
-      // If it's a different kind of error, rethrow it
-      throw error;
-    }
-
-    // Check for cancellation after the batch completes
-    checkCancellation();
-
-    console.debug("[MangaSearchService] 🔍 Compiling final match results...");
-
-    // Compile final results
-    const finalResults = compileMatchResults(
-      mangaList,
-      cachedResults,
-      cachedComickSources,
-      cachedMangaDexSources,
-      checkCancellation,
-      updateProgress,
-    );
-
-    console.info(
-      `[MangaSearchService] ✅ Batch matching complete: ${finalResults.length} results`,
-    );
-
-    return finalResults;
-  } catch (error) {
-    console.error(
-      "[MangaSearchService] ❌ Error in batch matching process:",
-      error,
-    );
-
-    // If we got here due to cancellation, return whatever partial results we have
-    if (
-      error instanceof Error &&
-      (error.message.includes("cancelled") || error.message.includes("aborted"))
-    ) {
-      console.info(
-        `[MangaSearchService] Cancellation detected, returning partial results`,
-      );
-      // We don't have access to the variables in this scope, so return empty array
-      return [];
-    }
-
-    // Otherwise rethrow the error
-    throw error;
-  }
+    },
+  );
 }
 
 /**
@@ -335,7 +337,7 @@ export async function preloadCommonManga(
  * @param shouldCancel - Optional function to check for cancellation request.
  * @param abortSignal - Optional abort signal to cancel the operation.
  * @returns Promise resolving to array of AniListManga objects.
- * @throws Error if operation is cancelled or aborted.
+ * @throws {CancelledError} If operation is cancelled or aborted.
  * @source
  */
 export async function getBatchedMangaIds(
@@ -344,47 +346,56 @@ export async function getBatchedMangaIds(
   shouldCancel?: () => boolean,
   abortSignal?: AbortSignal,
 ): Promise<AniListManga[]> {
-  if (!ids.length) return [];
+  return withGroupAsync(
+    `[MangaSearchService] Fetch Batched IDs (${ids.length} IDs)`,
+    async () => {
+      if (!ids.length) return [];
 
-  // Check for cancellation
-  if (shouldCancel?.()) {
-    throw new Error("Operation cancelled by user");
-  }
+      // Check for cancellation
+      if (shouldCancel?.()) {
+        throw new CancelledError("Operation cancelled by user");
+      }
 
-  // Abort if signal is aborted
-  if (abortSignal?.aborted) {
-    throw new Error("Operation aborted by abort signal");
-  }
+      // Abort if signal is aborted
+      if (abortSignal?.aborted) {
+        throw new CancelledError("Operation aborted by abort signal");
+      }
 
-  const results: AniListManga[] = [];
-  const batchSize = 25; // AniList allows 25 ids per request
+      const results: AniListManga[] = [];
+      const batchSize = 25; // AniList allows 25 ids per request
 
-  // Process in batches to avoid overloading the API
-  for (let i = 0; i < ids.length; i += batchSize) {
-    // Check for cancellation between batches
-    if (shouldCancel?.()) {
-      throw new Error("Operation cancelled by user");
-    }
+      // Process in batches to avoid overloading the API
+      for (let i = 0; i < ids.length; i += batchSize) {
+        // Check for cancellation between batches
+        if (shouldCancel?.()) {
+          throw new CancelledError("Operation cancelled by user");
+        }
 
-    // Abort if signal is aborted
-    if (abortSignal?.aborted) {
-      throw new Error("Operation aborted by abort signal");
-    }
+        // Abort if signal is aborted
+        if (abortSignal?.aborted) {
+          throw new CancelledError("Operation aborted by abort signal");
+        }
 
-    const batchIds = ids.slice(i, i + batchSize);
-    try {
-      const batchResults = await getMangaByIds(batchIds, token, abortSignal);
-      results.push(...batchResults);
-    } catch (error) {
-      console.error(
-        `[MangaSearchService] Error fetching manga batch ${i} to ${i + batchSize}:`,
-        error,
-      );
-      // Continue with next batch even if one fails
-    }
-  }
+        const batchIds = ids.slice(i, i + batchSize);
+        try {
+          const batchResults = await getMangaByIds(
+            batchIds,
+            token,
+            abortSignal,
+          );
+          results.push(...batchResults);
+        } catch (error) {
+          console.error(
+            `[MangaSearchService] ❌ Error fetching manga batch ${i} to ${i + batchSize}:`,
+            error,
+          );
+          // Continue with next batch even if one fails
+        }
+      }
 
-  return results;
+      return results;
+    },
+  );
 }
 
 // Re-export types and utilities for convenience

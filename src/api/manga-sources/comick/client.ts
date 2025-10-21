@@ -8,6 +8,7 @@ import { ComickManga, ComickMangaDetail } from "./types";
 import { BaseMangaSourceClient } from "../base-client";
 import { COMICK_CONFIG } from "../config";
 import { MangaSource } from "../types";
+import { withGroupAsync } from "@/utils/logging";
 
 /**
  * Comick-specific manga source client.
@@ -24,7 +25,7 @@ export class ComickClient extends BaseMangaSourceClient<
   }
 
   /**
-   * Search for manga on Comick API using IPC to avoid CORS issues.
+   * Search for manga on Comick API via IPC (to avoid CORS issues).
    * Results are cached for 30 minutes by default.
    * @param query - The search query string.
    * @param limit - Maximum number of results to return (default: 10).
@@ -35,59 +36,71 @@ export class ComickClient extends BaseMangaSourceClient<
     query: string,
     limit: number = 10,
   ): Promise<ComickManga[]> {
-    // Check cache first
-    const cacheKey = `search:${query.toLowerCase()}:${limit}`;
-    const cached = this.getCachedData<ComickManga[]>(cacheKey);
-    if (cached) return cached;
-
-    console.info(
-      `[Comick] 🔍 Searching Comick for: "${query}" (limit: ${limit})`,
-    );
-
-    try {
-      // Use generic manga source API to call main process via IPC instead of direct fetch (CORS)
-      const data = (await globalThis.electronAPI.mangaSource.search(
-        "comick",
-        query,
-        limit,
-      )) as ComickManga[];
-
-      const results = this.parseSearchResponse(data);
-      this.setCachedData(cacheKey, results);
+    return withGroupAsync(`[Comick] Search: "${query}"`, async () => {
+      // Check cache first
+      const cacheKey = `search:${query.toLowerCase()}:${limit}`;
+      const cached = this.getCachedData<ComickManga[]>(cacheKey);
+      if (cached) {
+        console.debug(`[Comick] 📦 Using cached results for "${query}"`);
+        return cached;
+      }
 
       console.info(
-        `[Comick] 📦 Comick search found ${results?.length || 0} results for "${query}"`,
+        `[Comick] 🔍 Searching Comick for: "${query}" (limit: ${limit})`,
       );
-      return results;
-    } catch (error) {
-      console.error(`[Comick] ❌ Comick search failed for "${query}":`, error);
-      return [];
-    }
-  }
 
-  /**
+      try {
+        // Use generic manga source API to call main process via IPC instead of direct fetch (CORS)
+        const data = (await globalThis.electronAPI.mangaSource.search(
+          "comick",
+          query,
+          limit,
+        )) as ComickManga[];
+
+        const results = this.parseSearchResponse(data);
+        this.setCachedData(cacheKey, results);
+
+        console.info(
+          `[Comick] ✅ Comick search found ${results?.length || 0} results for "${query}"`,
+        );
+        return results;
+      } catch (error) {
+        console.error(
+          `[Comick] ❌ Comick search failed for "${query}":`,
+          error,
+        );
+        return [];
+      }
+    });
+  } /**
    * Get detailed information about a specific Comick manga using IPC.
    * @param slug - The Comick manga slug.
    * @returns Promise resolving to manga detail or null if not found.
    * @source
    */
   public async getMangaDetail(slug: string): Promise<ComickMangaDetail | null> {
-    console.debug(`[Comick] 📖 Getting Comick manga details for: ${slug}`);
+    return withGroupAsync(`[Comick] Detail: "${slug}"`, async () => {
+      console.debug(`[Comick] 📖 Getting Comick manga details for: ${slug}`);
 
-    try {
-      // Use generic manga source API to call main process via IPC instead of direct fetch (CORS)
-      const rawData = await globalThis.electronAPI.mangaSource.getMangaDetail(
-        "comick",
-        slug,
-      );
-      return this.parseDetailResponse(rawData);
-    } catch (error) {
-      console.error(
-        `[Comick] ❌ Failed to get Comick manga details for ${slug}:`,
-        error,
-      );
-      return null;
-    }
+      try {
+        // Use generic manga source API to call main process via IPC instead of direct fetch (CORS)
+        const rawData = await globalThis.electronAPI.mangaSource.getMangaDetail(
+          "comick",
+          slug,
+        );
+        const detail = this.parseDetailResponse(rawData);
+        if (detail) {
+          console.info(`[Comick] ✅ Retrieved details for manga ${slug}`);
+        }
+        return detail;
+      } catch (error) {
+        console.error(
+          `[Comick] ❌ Failed to get Comick manga details for ${slug}:`,
+          error,
+        );
+        return null;
+      }
+    });
   }
 
   /**

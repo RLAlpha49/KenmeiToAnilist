@@ -18,6 +18,7 @@ import {
   GET_VIEWER,
 } from "./queries";
 import { debounce } from "@/utils/debounce";
+import { withGroupAsync } from "@/utils/logging";
 
 /**
  * HTTP error with status information.
@@ -703,24 +704,27 @@ export async function batchSearchManga(
     }
   >
 > {
-  if (searches.length === 0) {
-    return new Map();
-  }
+  return withGroupAsync(
+    `[AniListClient] Batch Search (${searches.length} queries)`,
+    async () => {
+      if (searches.length === 0) {
+        return new Map();
+      }
 
-  const { token, perPage = 10, abortSignal } = options;
+      const { token, perPage = 10, abortSignal } = options;
 
-  console.info(
-    `[AniListClient] 🚀 Batch searching ${searches.length} manga titles`,
-  );
+      console.info(
+        `[AniListClient] 🚀 Batch searching ${searches.length} manga titles`,
+      );
 
-  // Build the batched query dynamically
-  const queryParts: string[] = [];
+      // Build the batched query dynamically
+      const queryParts: string[] = [];
 
-  for (const { alias, title } of searches) {
-    // Sanitize the title for use in GraphQL (escape quotes)
-    const sanitizedTitle = JSON.stringify(title).slice(1, -1);
+      for (const { alias, title } of searches) {
+        // Sanitize the title for use in GraphQL (escape quotes)
+        const sanitizedTitle = JSON.stringify(title).slice(1, -1);
 
-    queryParts.push(`
+        queryParts.push(`
     ${alias}: Page(page: 1, perPage: ${perPage}) {
       pageInfo {
         total
@@ -755,105 +759,107 @@ export async function batchSearchManga(
         isAdult
       }
     }`);
-  }
+      }
 
-  const batchedQuery = `
+      const batchedQuery = `
 query BatchSearchManga {
 ${queryParts.join("\n")}
 }
 `;
 
-  type BatchQueryResponse = Record<
-    string,
-    {
-      media?: AniListManga[];
-      pageInfo?: unknown;
-    }
-  >;
+      type BatchQueryResponse = Record<
+        string,
+        {
+          media?: AniListManga[];
+          pageInfo?: unknown;
+        }
+      >;
 
-  try {
-    // Execute the batched request
-    const response = await request<BatchQueryResponse>(
-      batchedQuery,
-      {}, // No variables needed - all values are in the query
-      token,
-      abortSignal,
-      true, // Bypass cache for batch requests
-    );
+      try {
+        // Execute the batched request
+        const response = await request<BatchQueryResponse>(
+          batchedQuery,
+          {}, // No variables needed - all values are in the query
+          token,
+          abortSignal,
+          true, // Bypass cache for batch requests
+        );
 
-    console.debug(`[AniListClient] 🔍 Batch search response:`, response);
+        console.debug(`[AniListClient] 🔍 Batch search response:`, response);
 
-    // Validate response structure
-    if (!response?.data) {
-      console.error(
-        `[AniListClient] ❌ Invalid API response for batch search:`,
-        response,
-      );
-      throw new Error(`Invalid API response: missing data property`);
-    }
+        // Validate response structure
+        if (!response?.data) {
+          console.error(
+            `[AniListClient] ❌ Invalid API response for batch search:`,
+            response,
+          );
+          throw new Error(`Invalid API response: missing data property`);
+        }
 
-    // Handle nested data structure and type assertion
-    const responseData = (response.data.data ??
-      response.data) as unknown as BatchQueryResponse;
+        // Handle nested data structure and type assertion
+        const responseData = (response.data.data ??
+          response.data) as unknown as BatchQueryResponse;
 
-    // Process results into a map
-    const results = new Map<
-      string,
-      {
-        media: AniListManga[];
-        index: number;
-        title: string;
+        // Process results into a map
+        const results = new Map<
+          string,
+          {
+            media: AniListManga[];
+            index: number;
+            title: string;
+          }
+        >();
+
+        let totalResults = 0;
+        for (const { alias, index, title } of searches) {
+          const aliasData = responseData[alias];
+          if (aliasData?.media?.length) {
+            results.set(alias, {
+              media: aliasData.media,
+              index,
+              title,
+            });
+            totalResults += aliasData.media.length;
+          } else {
+            // Return empty array if no results
+            results.set(alias, {
+              media: [],
+              index,
+              title,
+            });
+          }
+        }
+
+        console.info(
+          `[AniListClient] ✅ Batch search complete: ${totalResults} total results for ${searches.length} queries`,
+        );
+
+        return results;
+      } catch (error) {
+        console.error(`[AniListClient] ❌ Error in batch search:`, error);
+
+        // Return empty results for all searches on error
+        const emptyResults = new Map<
+          string,
+          {
+            media: AniListManga[];
+            index: number;
+            title: string;
+          }
+        >();
+
+        for (const { alias, index, title } of searches) {
+          emptyResults.set(alias, {
+            media: [],
+            index,
+            title,
+          });
+        }
+
+        return emptyResults;
       }
-    >();
-
-    let totalResults = 0;
-    for (const { alias, index, title } of searches) {
-      const aliasData = responseData[alias];
-      if (aliasData?.media?.length) {
-        results.set(alias, {
-          media: aliasData.media,
-          index,
-          title,
-        });
-        totalResults += aliasData.media.length;
-      } else {
-        // Return empty array if no results
-        results.set(alias, {
-          media: [],
-          index,
-          title,
-        });
-      }
-    }
-
-    console.info(
-      `[AniListClient] ✅ Batch search complete: ${totalResults} total results for ${searches.length} queries`,
-    );
-
-    return results;
-  } catch (error) {
-    console.error(`[AniListClient] ❌ Error in batch search:`, error);
-
-    // Return empty results for all searches on error
-    const emptyResults = new Map<
-      string,
-      {
-        media: AniListManga[];
-        index: number;
-        title: string;
-      }
-    >();
-
-    for (const { alias, index, title } of searches) {
-      emptyResults.set(alias, {
-        media: [],
-        index,
-        title,
-      });
-    }
-
-    return emptyResults;
-  }
+    },
+  );
 }
 
 /**
@@ -945,38 +951,43 @@ export async function getMangaByIds(
   token?: string,
   abortSignal?: AbortSignal,
 ): Promise<AniListManga[]> {
-  if (!ids.length) {
-    return [];
-  }
+  return withGroupAsync(
+    `[AniListClient] Get Manga (${ids.length} IDs)`,
+    async () => {
+      if (!ids.length) {
+        return [];
+      }
 
-  try {
-    // Updated type parameter to handle potential nested data structure
-    const response = await request<{
-      data?: { Page: { media: AniListManga[] } };
-      Page?: { media: AniListManga[] };
-    }>(GET_MANGA_BY_IDS, { ids }, token, abortSignal);
+      try {
+        // Updated type parameter to handle potential nested data structure
+        const response = await request<{
+          data?: { Page: { media: AniListManga[] } };
+          Page?: { media: AniListManga[] };
+        }>(GET_MANGA_BY_IDS, { ids }, token, abortSignal);
 
-    // Validate response structure
-    if (!response?.data) {
-      console.error(
-        `Invalid API response when fetching manga by IDs:`,
-        response,
-      );
-      return [];
-    }
+        // Validate response structure
+        if (!response?.data) {
+          console.error(
+            `[AniListClient] ❌ Invalid API response when fetching manga by IDs:`,
+            response,
+          );
+          return [];
+        }
 
-    // Check for nested data structure
-    const responseData = response.data.data ?? response.data;
+        // Check for nested data structure
+        const responseData = response.data.data ?? response.data;
 
-    // Safely access media array or return empty array if not found
-    return responseData.Page?.media || [];
-  } catch (error) {
-    console.error(
-      `[AniListClient] ❌ Error fetching manga by IDs [${ids.join(", ")}]:`,
-      error,
-    );
-    throw error;
-  }
+        // Safely access media array or return empty array if not found
+        return responseData.Page?.media || [];
+      } catch (error) {
+        console.error(
+          `[AniListClient] ❌ Error fetching manga by IDs [${ids.join(", ")}]:`,
+          error,
+        );
+        throw error;
+      }
+    },
+  );
 }
 
 /**
@@ -1079,53 +1090,58 @@ export async function getUserMangaList(
   token: string,
   abortSignal?: AbortSignal,
 ): Promise<UserMediaList> {
-  if (!token) {
-    throw new Error("Access token required to fetch user manga list");
-  }
-
-  try {
-    // Get the user's ID first
-    const viewerId = await getAuthenticatedUserID(token, abortSignal);
-    console.debug(
-      "[AniListClient] ✅ Successfully retrieved user ID:",
-      viewerId,
-    );
-
-    if (!viewerId) {
-      throw new Error("Failed to get your AniList user ID");
+  return withGroupAsync(`[AniListClient] Get User Manga List`, async () => {
+    if (!token) {
+      throw new Error("Access token required to fetch user manga list");
     }
 
-    // Fetch all manga lists using multiple chunks if needed
-    return await fetchCompleteUserMediaList(viewerId, token, abortSignal);
-  } catch (error: unknown) {
-    console.error("[AniListClient] ❌ Error fetching user manga list:", error);
+    try {
+      // Get the user's ID first
+      const viewerId = await getAuthenticatedUserID(token, abortSignal);
+      console.debug(
+        "[AniListClient] ✅ Successfully retrieved user ID:",
+        viewerId,
+      );
 
-    // Early return if error is not an object
-    if (!error || typeof error !== "object") {
+      if (!viewerId) {
+        throw new Error("Failed to get your AniList user ID");
+      }
+
+      // Fetch all manga lists using multiple chunks if needed
+      return await fetchCompleteUserMediaList(viewerId, token, abortSignal);
+    } catch (error: unknown) {
+      console.error(
+        "[AniListClient] ❌ Error fetching user manga list:",
+        error,
+      );
+
+      // Early return if error is not an object
+      if (!error || typeof error !== "object") {
+        throw error;
+      }
+
+      const errorObj = error as {
+        status?: number;
+        isRateLimited?: boolean;
+        retryAfter?: number;
+        message?: string;
+      };
+
+      // Check for direct rate limit errors
+      const directRateLimitError = checkDirectRateLimitError(errorObj);
+      if (directRateLimitError) {
+        throw directRateLimitError;
+      }
+
+      // Check for rate limit mentions in error messages
+      const messageBasisRateLimitError = checkRateLimitInMessage(errorObj);
+      if (messageBasisRateLimitError) {
+        throw messageBasisRateLimitError;
+      }
+
       throw error;
     }
-
-    const errorObj = error as {
-      status?: number;
-      isRateLimited?: boolean;
-      retryAfter?: number;
-      message?: string;
-    };
-
-    // Check for direct rate limit errors
-    const directRateLimitError = checkDirectRateLimitError(errorObj);
-    if (directRateLimitError) {
-      throw directRateLimitError;
-    }
-
-    // Check for rate limit mentions in error messages
-    const messageBasisRateLimitError = checkRateLimitInMessage(errorObj);
-    if (messageBasisRateLimitError) {
-      throw messageBasisRateLimitError;
-    }
-
-    throw error;
-  }
+  });
 }
 
 /**
@@ -1407,62 +1423,71 @@ async function fetchCompleteUserMediaList(
   token: string,
   abortSignal?: AbortSignal,
 ): Promise<UserMediaList> {
-  const mediaMap: UserMediaList = {};
-  let hasNextChunk = true;
-  let currentChunk = 1;
-  const perChunk = 500;
-  let totalEntriesProcessed = 0;
+  return withGroupAsync(
+    `[AniListClient] Fetch Complete User Media List`,
+    async () => {
+      const mediaMap: UserMediaList = {};
+      let hasNextChunk = true;
+      let currentChunk = 1;
+      const perChunk = 500;
+      let totalEntriesProcessed = 0;
 
-  try {
-    // Keep fetching chunks until we've got everything
-    while (hasNextChunk && !abortSignal?.aborted) {
       try {
-        const chunkEntryCount = await fetchAndProcessChunk(
-          userId,
-          currentChunk,
-          perChunk,
-          token,
-          abortSignal,
-          mediaMap,
+        // Keep fetching chunks until we've got everything
+        while (hasNextChunk && !abortSignal?.aborted) {
+          try {
+            const chunkEntryCount = await fetchAndProcessChunk(
+              userId,
+              currentChunk,
+              perChunk,
+              token,
+              abortSignal,
+              mediaMap,
+            );
+
+            totalEntriesProcessed += chunkEntryCount;
+
+            // Check if we need to fetch more chunks
+            if (!shouldFetchNextChunk(chunkEntryCount, perChunk)) {
+              break;
+            }
+
+            currentChunk++;
+          } catch (error: unknown) {
+            // Handle chunk error and determine if we should continue
+            const shouldContinue = handleChunkError(
+              error,
+              currentChunk,
+              mediaMap,
+            );
+            if (!shouldContinue) {
+              hasNextChunk = false;
+            }
+          }
+        }
+
+        console.info(
+          `[AniListClient] 📚 Successfully mapped ${Object.keys(mediaMap).length} manga entries (processed ${totalEntriesProcessed} total entries)`,
+        );
+        return mediaMap;
+      } catch (error) {
+        console.error(
+          `[AniListClient] ❌ Error fetching manga list in chunks:`,
+          error,
         );
 
-        totalEntriesProcessed += chunkEntryCount;
-
-        // Check if we need to fetch more chunks
-        if (!shouldFetchNextChunk(chunkEntryCount, perChunk)) {
-          break;
+        // If we got any entries, return what we have
+        if (Object.keys(mediaMap).length > 0) {
+          console.warn(
+            `[AniListClient] ⚠️ Returning partial manga list with ${Object.keys(mediaMap).length} entries`,
+          );
+          return mediaMap;
         }
 
-        currentChunk++;
-      } catch (error: unknown) {
-        // Handle chunk error and determine if we should continue
-        const shouldContinue = handleChunkError(error, currentChunk, mediaMap);
-        if (!shouldContinue) {
-          hasNextChunk = false;
-        }
+        throw error;
       }
-    }
-
-    console.info(
-      `[AniListClient] 📚 Successfully mapped ${Object.keys(mediaMap).length} manga entries (processed ${totalEntriesProcessed} total entries)`,
-    );
-    return mediaMap;
-  } catch (error) {
-    console.error(
-      `[AniListClient] ❌ Error fetching manga list in chunks:`,
-      error,
-    );
-
-    // If we got any entries, return what we have
-    if (Object.keys(mediaMap).length > 0) {
-      console.warn(
-        `[AniListClient] ⚠️ Returning partial manga list with ${Object.keys(mediaMap).length} entries`,
-      );
-      return mediaMap;
-    }
-
-    throw error;
-  }
+    },
+  );
 }
 
 /**

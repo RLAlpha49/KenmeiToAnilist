@@ -14,6 +14,7 @@ import {
   StatusMappingConfig,
 } from "./types";
 import { parseKenmeiExport, processKenmeiMangaBatches } from "./parser";
+import { withGroup, withGroupAsync } from "@/utils/logging";
 
 /**
  * Configuration options for Kenmei data processing, including batch size, parsing rules, and normalization settings.
@@ -54,25 +55,27 @@ export function processKenmeiExport(
   fileContent: string,
   options: Partial<ProcessOptions> = {},
 ): ProcessingResult {
-  const processOptions = { ...DEFAULT_PROCESS_OPTIONS, ...options };
+  return withGroup(`[KenmeiProcessor] Process Export`, () => {
+    const processOptions = { ...DEFAULT_PROCESS_OPTIONS, ...options };
 
-  try {
-    // Parse the export data
-    const exportData = parseKenmeiExport(
-      fileContent,
-      processOptions.parseOptions,
-    );
+    try {
+      // Parse the export data
+      const exportData = parseKenmeiExport(
+        fileContent,
+        processOptions.parseOptions,
+      );
 
-    // Process the manga entries in batches
-    return processKenmeiMangaBatches(
-      exportData.manga,
-      processOptions.batchSize,
-      processOptions.parseOptions,
-    );
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : "Unknown error";
-    throw new Error(`Failed to process Kenmei data: ${msg}`);
-  }
+      // Process the manga entries in batches
+      return processKenmeiMangaBatches(
+        exportData.manga,
+        processOptions.batchSize,
+        processOptions.parseOptions,
+      );
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "Unknown error";
+      throw new Error(`Failed to process Kenmei data: ${msg}`);
+    }
+  });
 }
 
 /**
@@ -191,17 +194,23 @@ export async function processMangaInBatches<T>(
   processFn: (batch: KenmeiManga[]) => Promise<T[]>,
   batchSize = 50,
 ): Promise<T[]> {
-  const results: T[] = [];
+  return withGroupAsync(
+    `[KenmeiProcessor] Process Batches (${entries.length} entries)`,
+    async () => {
+      const results: T[] = [];
 
-  // Process in batches
-  for (let i = 0; i < entries.length; i += batchSize) {
-    const batch = entries.slice(i, i + batchSize);
-    if (batch.length === 0) continue;
-    const batchResults = await processFn(batch);
-    if (batchResults && batchResults.length > 0) results.push(...batchResults);
-  }
+      // Process in batches
+      for (let i = 0; i < entries.length; i += batchSize) {
+        const batch = entries.slice(i, i + batchSize);
+        if (batch.length === 0) continue;
+        const batchResults = await processFn(batch);
+        if (batchResults && batchResults.length > 0)
+          results.push(...batchResults);
+      }
 
-  return results;
+      return results;
+    },
+  );
 }
 
 /**

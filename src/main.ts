@@ -17,8 +17,15 @@ import {
 } from "electron-devtools-installer";
 import * as Sentry from "@sentry/electron/main";
 import "dotenv/config";
+import {
+  withGroup,
+  withGroupAsync,
+  startGroup,
+  endGroup,
+} from "./utils/logging";
 
 // --- Sentry Initialization ---
+startGroup(`[Main] App Initialization v${app.getVersion()}`);
 console.info(
   `[Main] 🚀 Initializing app v${app.getVersion()} in ${process.env.NODE_ENV || "production"} mode`,
 );
@@ -28,6 +35,7 @@ Sentry.init({
   release: app.getVersion(),
 });
 console.debug("[Main] 🔍 Sentry initialized");
+endGroup();
 // --- End Sentry Initialization ---
 
 // Handle Windows Squirrel events
@@ -39,47 +47,51 @@ if (process.platform === "win32") {
    * @returns True if a Squirrel event was handled and the app should quit.
    * @source
    */
-  const handleSquirrelEvent = () => {
-    if (process.argv.length === 1) {
+  const handleSquirrelEvent = (): boolean => {
+    return withGroup(`[Main] Squirrel Event: ${squirrelCommand}`, () => {
+      if (process.argv.length === 1) {
+        return false;
+      }
+
+      const appFolder = path.resolve(process.execPath, "..");
+      const rootAtomFolder = path.resolve(appFolder, "..");
+      const updateDotExe = path.resolve(
+        path.join(rootAtomFolder, "Update.exe"),
+      );
+      const exeName = path.basename(process.execPath);
+
+      switch (squirrelCommand) {
+        case "--squirrel-install":
+        case "--squirrel-updated":
+          console.info(
+            `[Main] 📦 Handling Squirrel ${squirrelCommand === "--squirrel-install" ? "install" : "update"} event`,
+          );
+          // Always create desktop and start menu shortcuts
+          app.setAppUserModelId("com.rlapps.kenmeitoanilist");
+
+          // We run this synchronously to ensure everything is properly created before quitting
+          spawnSync(updateDotExe, [
+            "--createShortcut",
+            exeName,
+            "--shortcut-locations",
+            "Desktop,StartMenu",
+          ]);
+
+          console.info("[Main] ✅ Shortcuts created successfully");
+          return true;
+        case "--squirrel-uninstall":
+          console.info("[Main] 🗑️ Handling Squirrel uninstall event");
+          // Remove shortcuts
+          spawnSync(updateDotExe, ["--removeShortcut", exeName]);
+
+          console.info("[Main] ✅ Shortcuts removed successfully");
+          return true;
+        case "--squirrel-obsolete":
+          console.debug("[Main] 🔍 Handling Squirrel obsolete event");
+          return true;
+      }
       return false;
-    }
-
-    const appFolder = path.resolve(process.execPath, "..");
-    const rootAtomFolder = path.resolve(appFolder, "..");
-    const updateDotExe = path.resolve(path.join(rootAtomFolder, "Update.exe"));
-    const exeName = path.basename(process.execPath);
-
-    switch (squirrelCommand) {
-      case "--squirrel-install":
-      case "--squirrel-updated":
-        console.info(
-          `[Main] 📦 Handling Squirrel ${squirrelCommand === "--squirrel-install" ? "install" : "update"} event`,
-        );
-        // Always create desktop and start menu shortcuts
-        app.setAppUserModelId("com.rlapps.kenmeitoanilist");
-
-        // We run this synchronously to ensure everything is properly created before quitting
-        spawnSync(updateDotExe, [
-          "--createShortcut",
-          exeName,
-          "--shortcut-locations",
-          "Desktop,StartMenu",
-        ]);
-
-        console.info("[Main] ✅ Shortcuts created successfully");
-        return true;
-      case "--squirrel-uninstall":
-        console.info("[Main] 🗑️ Handling Squirrel uninstall event");
-        // Remove shortcuts
-        spawnSync(updateDotExe, ["--removeShortcut", exeName]);
-
-        console.info("[Main] ✅ Shortcuts removed successfully");
-        return true;
-      case "--squirrel-obsolete":
-        console.debug("[Main] 🔍 Handling Squirrel obsolete event");
-        return true;
-    }
-    return false;
+    });
   };
 
   // If we handled a squirrel event, quit this instance and let the installer handle it
@@ -113,36 +125,38 @@ const getAssetsPath = () =>
  * @source
  */
 function createSplashScreen() {
-  console.info("[Main] 🎨 Creating splash screen...");
-  splashWindow = new BrowserWindow({
-    width: 500,
-    height: 400,
-    transparent: true,
-    frame: false,
-    alwaysOnTop: true,
-    resizable: false,
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
+  return withGroup(`[Main] Create Splash Screen`, () => {
+    console.info("[Main] 🎨 Creating splash screen...");
+    splashWindow = new BrowserWindow({
+      width: 500,
+      height: 400,
+      transparent: true,
+      frame: false,
+      alwaysOnTop: true,
+      resizable: false,
+      webPreferences: {
+        contextIsolation: true,
+        nodeIntegration: false,
+      },
+    });
+
+    const splashPath = path.join(getAssetsPath(), "splash.html");
+
+    console.debug(`[Main] 🔍 Loading splash from: ${splashPath}`);
+    splashWindow.loadFile(splashPath);
+    splashWindow.center();
+
+    splashWindow.webContents.on(
+      "did-fail-load",
+      (_event, errorCode, errorDesc) => {
+        console.error(
+          `[Main] ❌ Failed to load splash screen (${errorCode}): ${errorDesc}`,
+        );
+      },
+    );
+
+    console.info("[Main] ✅ Splash screen created");
   });
-
-  const splashPath = path.join(getAssetsPath(), "splash.html");
-
-  console.debug(`[Main] 🔍 Loading splash from: ${splashPath}`);
-  splashWindow.loadFile(splashPath);
-  splashWindow.center();
-
-  splashWindow.webContents.on(
-    "did-fail-load",
-    (_event, errorCode, errorDesc) => {
-      console.error(
-        `[Main] ❌ Failed to load splash screen (${errorCode}): ${errorDesc}`,
-      );
-    },
-  );
-
-  console.info("[Main] ✅ Splash screen created");
 }
 
 /**
@@ -163,91 +177,97 @@ function closeSplashScreen() {
  * @source
  */
 function createWindow() {
-  console.info("[Main] 🪟 Creating main application window...");
-  const preload = path.join(__dirname, "preload.js");
-  const mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    show: false, // Don't show until ready
-    webPreferences: {
-      devTools: inDevelopment || enableDevTools,
-      contextIsolation: true,
-      nodeIntegration: true,
-      nodeIntegrationInSubFrames: false,
-      preload: preload,
-    },
-    titleBarStyle: "hidden",
-  });
-
-  console.debug("[Main] 🔍 Registering IPC listeners...");
-  registerListeners(mainWindow);
-
-  // Track if content loaded successfully
-  let contentLoaded = false;
-
-  // Handle successful load
-  mainWindow.webContents.on("did-finish-load", () => {
-    console.info("[Main] ✅ Main window content loaded successfully");
-    contentLoaded = true;
-  });
-
-  // Handle load failures
-  mainWindow.webContents.on(
-    "did-fail-load",
-    (_event, errorCode, errorDescription, validatedURL) => {
-      console.error(
-        `[Main] ❌ Main window failed to load (${errorCode}): ${errorDescription}`,
-      );
-      console.error(`[Main] ❌ Failed URL: ${validatedURL}`);
-      contentLoaded = false;
-    },
-  );
-
-  if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-    console.debug(
-      `[Main] 🔍 Loading dev server: ${MAIN_WINDOW_VITE_DEV_SERVER_URL}`,
-    );
-    mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
-  } else {
-    const filePath = path.join(
-      __dirname,
-      `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`,
-    );
-    console.debug(`[Main] 🔍 Loading file: ${filePath}`);
-    console.debug(`[Main] 🔍 __dirname: ${__dirname}`);
-    console.debug(`[Main] 🔍 MAIN_WINDOW_VITE_NAME: ${MAIN_WINDOW_VITE_NAME}`);
-    console.debug(`[Main] 🔍 app.isPackaged: ${app.isPackaged}`);
-    console.debug(`[Main] 🔍 process.resourcesPath: ${process.resourcesPath}`);
-    mainWindow.loadFile(filePath).catch((err) => {
-      console.error(`[Main] ❌ Failed to load main window file:`, err);
+  return withGroup(`[Main] Create Main Window`, () => {
+    console.info("[Main] 🪟 Creating main application window...");
+    const preload = path.join(__dirname, "preload.js");
+    const mainWindow = new BrowserWindow({
+      width: 1200,
+      height: 800,
+      show: false, // Don't show until ready
+      webPreferences: {
+        devTools: inDevelopment || enableDevTools,
+        contextIsolation: true,
+        nodeIntegration: false,
+        nodeIntegrationInSubFrames: false,
+        preload: preload,
+      },
+      titleBarStyle: "hidden",
     });
-  }
 
-  // Auto-open DevTools if explicitly enabled via env var
-  if (enableDevTools) {
-    console.info("[Main] 🔧 DevTools enabled via ENABLE_DEVTOOLS env var");
-    mainWindow.webContents.openDevTools({ mode: "right" });
-  }
+    console.debug("[Main] 🔍 Registering IPC listeners...");
+    registerListeners(mainWindow);
 
-  // Show main window and close splash when ready
-  mainWindow.once("ready-to-show", () => {
-    console.info("[Main] ✅ Main window ready-to-show event fired");
+    // Track if content loaded successfully
+    let contentLoaded = false;
 
-    // Add a small delay to ensure smooth transition
-    setTimeout(() => {
-      if (contentLoaded) {
-        closeSplashScreen();
-        mainWindow.show();
-        console.info("[Main] ✅ Main window displayed");
-      } else {
+    // Handle successful load
+    mainWindow.webContents.on("did-finish-load", () => {
+      console.info("[Main] ✅ Main window content loaded successfully");
+      contentLoaded = true;
+    });
+
+    // Handle load failures
+    mainWindow.webContents.on(
+      "did-fail-load",
+      (_event, errorCode, errorDescription, validatedURL) => {
         console.error(
-          "[Main] ❌ Main window content not loaded, keeping splash visible",
+          `[Main] ❌ Main window failed to load (${errorCode}): ${errorDescription}`,
         );
-      }
-    }, 1500);
-  });
+        console.error(`[Main] ❌ Failed URL: ${validatedURL}`);
+        contentLoaded = false;
+      },
+    );
 
-  console.info("[Main] ✅ Main window created successfully");
+    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+      console.debug(
+        `[Main] 🔍 Loading dev server: ${MAIN_WINDOW_VITE_DEV_SERVER_URL}`,
+      );
+      mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
+    } else {
+      const filePath = path.join(
+        __dirname,
+        `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`,
+      );
+      console.debug(`[Main] 🔍 Loading file: ${filePath}`);
+      console.debug(`[Main] 🔍 __dirname: ${__dirname}`);
+      console.debug(
+        `[Main] 🔍 MAIN_WINDOW_VITE_NAME: ${MAIN_WINDOW_VITE_NAME}`,
+      );
+      console.debug(`[Main] 🔍 app.isPackaged: ${app.isPackaged}`);
+      console.debug(
+        `[Main] 🔍 process.resourcesPath: ${process.resourcesPath}`,
+      );
+      mainWindow.loadFile(filePath).catch((err) => {
+        console.error(`[Main] ❌ Failed to load main window file:`, err);
+      });
+    }
+
+    // Auto-open DevTools if explicitly enabled via env var
+    if (enableDevTools) {
+      console.info("[Main] 🔧 DevTools enabled via ENABLE_DEVTOOLS env var");
+      mainWindow.webContents.openDevTools({ mode: "right" });
+    }
+
+    // Show main window and close splash when ready
+    mainWindow.once("ready-to-show", () => {
+      console.info("[Main] ✅ Main window ready-to-show event fired");
+
+      // Add a small delay to ensure smooth transition
+      setTimeout(() => {
+        if (contentLoaded) {
+          closeSplashScreen();
+          mainWindow.show();
+          console.info("[Main] ✅ Main window displayed");
+        } else {
+          console.error(
+            "[Main] ❌ Main window content not loaded, keeping splash visible",
+          );
+        }
+      }, 1500);
+    });
+
+    console.info("[Main] ✅ Main window created successfully");
+  });
 }
 
 /**
@@ -257,20 +277,26 @@ function createWindow() {
  * @source
  */
 async function installExtensions() {
-  try {
-    const result = await installExtension(REACT_DEVELOPER_TOOLS);
-    console.info(`[Main] Extensions installed successfully: ${result.name}`);
-  } catch (error) {
-    console.error("[Main] Failed to install extensions:", error);
-  }
+  return withGroupAsync(`[Main] Install Extensions`, async () => {
+    try {
+      const result = await installExtension(REACT_DEVELOPER_TOOLS);
+      console.info(
+        `[Main] ✅ Extensions installed successfully: ${result.name}`,
+      );
+    } catch (error) {
+      console.error("[Main] ❌ Failed to install extensions:", error);
+    }
+  });
 }
 
 app
   .whenReady()
   .then(() => {
-    console.info("[Main] ✅ App ready event received");
-    createSplashScreen();
-    return createWindow();
+    return withGroupAsync(`[Main] App Startup Sequence`, async () => {
+      console.info("[Main] ✅ App ready event received");
+      createSplashScreen();
+      return createWindow();
+    });
   })
   .then(installExtensions);
 

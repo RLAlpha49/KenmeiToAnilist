@@ -4,10 +4,146 @@
  * @description Lightweight log collector for capturing console output in production builds.
  */
 
+/**
+ * Console group entry with deduplication metadata.
+ * @source
+ */
+type GroupEntry = {
+  /** Label used for deduplication logic and display */
+  label: string;
+  count: number;
+  opened: boolean; // whether console.group was actually called for this entry
+};
+
+const groupStack: GroupEntry[] = [];
+
+/**
+ * Starts a new console group that will contain related log messages.
+ *
+ * Groups with the same label are automatically deduplicated (incremented) rather than
+ * creating nested groups. The group state is tracked by `LogCollector` so group hierarchy
+ * is preserved when logs are captured.
+ *
+ * @param label - The label for the group. Used for both deduplication and display.
+ * @param collapsed - If true, creates a collapsed group (user must click to expand). Default: true.
+ * @source
+ */
+export function startGroup(label: string, collapsed = true): void {
+  // If the current top group has the same label, increment its ref count and
+  // don't call console.group again to avoid nested identical groups.
+  const top = groupStack.at(-1);
+  if (top && top.label === label) {
+    top.count++;
+    return;
+  }
+
+  const entry: GroupEntry = {
+    label,
+    count: 1,
+    opened: false,
+  };
+  try {
+    if (collapsed) {
+      console.groupCollapsed(label);
+    } else {
+      console.group(label);
+    }
+    entry.opened = true;
+  } catch {
+    // ignore if console grouping isn't supported
+    entry.opened = false;
+  }
+
+  groupStack.push(entry);
+}
+
+/**
+ * Ends the most recent console group started with `startGroup()`.
+ *
+ * Handles reference counting for deduplicated groups - only closes the console group
+ * when the last reference is ended. Safe to call when no group is active (no-op).
+ *
+ * @source
+ */
+export function endGroup(): void {
+  if (groupStack.length === 0) return;
+
+  const top = groupStack.at(-1);
+  if (!top) return;
+
+  if (top.count > 1) {
+    top.count--;
+    return;
+  }
+
+  // This is the last reference for this group; close it if we opened it.
+  if (top.opened) {
+    try {
+      console.groupEnd();
+    } catch {
+      // ignore
+    }
+  }
+
+  groupStack.pop();
+}
+
+/**
+ * Wraps a synchronous operation with automatic group management.
+ *
+ * Automatically calls `startGroup()` before the operation and `endGroup()` after,
+ * ensuring cleanup even if the operation throws an error.
+ *
+ * @param label - The group label for this operation.
+ * @param fn - The synchronous function to wrap.
+ * @param collapsed - If true, creates a collapsed group. Default: true.
+ * @returns The return value of the wrapped function.
+ * @throws Rethrows any error thrown by the wrapped function.
+ * @source
+ */
+export function withGroup<T>(label: string, fn: () => T, collapsed = true): T {
+  startGroup(label, collapsed);
+  try {
+    return fn();
+  } finally {
+    endGroup();
+  }
+}
+
+/**
+ * Wraps an asynchronous operation with automatic group management.
+ *
+ * Automatically calls `startGroup()` before the operation and `endGroup()` after,
+ * ensuring cleanup even if the operation rejects. All console output from the async
+ * function will be contained in the group in browser DevTools and tracked with group
+ * hierarchy in log collection.
+ *
+ * @param label - The group label for this operation.
+ * @param fn - The async function to wrap.
+ * @param collapsed - If true, creates a collapsed group. Default: true.
+ * @returns Promise that resolves to the return value of the wrapped function.
+ * @throws Rethrows any error thrown or rejected by the wrapped function.
+ * @source
+ */
+export async function withGroupAsync<T>(
+  label: string,
+  fn: () => Promise<T>,
+  collapsed = true,
+): Promise<T> {
+  startGroup(label, collapsed);
+  try {
+    return await fn();
+  } finally {
+    endGroup();
+  }
+}
+
+/** Log level severity classification. @source */
 export type LogLevel = "log" | "info" | "warn" | "error" | "debug";
 
 /**
  * Individual captured log entry.
+ * @source
  */
 export interface LogEntry {
   /** Unique identifier for the log entry. */
@@ -24,6 +160,10 @@ export interface LogEntry {
   source?: string;
   /** Whether the entry is considered a debug-only message. */
   isDebug?: boolean;
+  /** Hierarchical path of console groups this log belongs to. Empty array if not in a group. */
+  groupPath?: string[];
+  /** Nesting depth of the log within groups (0 = top-level, 1 = nested once, etc.). */
+  groupDepth?: number;
 }
 
 const LOG_LEVELS: LogLevel[] = ["error", "warn", "info", "log", "debug"];
@@ -60,18 +200,38 @@ const generateLogId = (): string => {
  * @source
  */
 const redactSensitiveData = (text: string): string => {
+  // List of auth fields that should be redacted
+  const sensitiveFields = [
+    "access_token",
+    "accessToken",
+    "id_token",
+    "idToken",
+    "refresh_token",
+    "refreshToken",
+    "authorization",
+    "bearer",
+    "client_secret",
+    "clientSecret",
+  ];
+
+  // Try JSON-safe redaction first
+  try {
+    const parsed = JSON.parse(text);
+    const redacted = redactJsonRecursively(parsed, sensitiveFields);
+    return JSON.stringify(redacted);
+  } catch {
+    // Not valid JSON, fall through to regex-based redaction
+  }
+
+  // Regex-based fallback for non-JSON strings
+  let redacted = text;
+
   // Redact potential tokens (long alphanumeric strings that look like tokens)
-  let redacted = text.replaceAll(/\b[\w-]{40,}\b/g, "[REDACTED_TOKEN]");
+  redacted = redacted.replaceAll(/\b[\w-]{40,}\b/g, "[REDACTED_TOKEN]");
 
-  // Redact client secrets in query params or JSON
+  // Redact known auth field values
   redacted = redacted.replaceAll(
-    /(client_secret|clientSecret)["']?\s*[:=]\s*["']?[^"',}\s&]+/gi,
-    "$1=[REDACTED]",
-  );
-
-  // Redact access tokens in various formats
-  redacted = redacted.replaceAll(
-    /(access_token|accessToken|token)["']?\s*[:=]\s*["']?[\w-]{20,}["']?/gi,
+    /(access_token|accessToken|id_token|idToken|refresh_token|refreshToken|client_secret|clientSecret)["']?\s*[:=]\s*["']?[^"',}\s&]+/gi,
     "$1=[REDACTED]",
   );
 
@@ -87,11 +247,52 @@ const redactSensitiveData = (text: string): string => {
   return redacted;
 };
 
+/**
+ * Recursively walk JSON object and redact sensitive fields.
+ * @param obj - Object to redact (can be any JSON-serializable value).
+ * @param sensitiveFields - List of field names to redact.
+ * @returns New object with sensitive fields redacted.
+ * @source
+ */
+const redactJsonRecursively = (
+  obj: unknown,
+  sensitiveFields: string[],
+): unknown => {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map((item) => redactJsonRecursively(item, sensitiveFields));
+  }
+
+  if (typeof obj === "object" && obj.constructor === Object) {
+    const redacted: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      // Check if key matches any sensitive field (case-insensitive)
+      const isSensitive = sensitiveFields.some(
+        (field) => field.toLowerCase() === key.toLowerCase(),
+      );
+
+      if (isSensitive && typeof value === "string" && value.length > 0) {
+        redacted[key] = "[REDACTED]";
+      } else {
+        redacted[key] = redactJsonRecursively(value, sensitiveFields);
+      }
+    }
+    return redacted;
+  }
+
+  // Return primitives as-is
+  return obj;
+};
+
 let logRedactionEnabled = true;
 
 /**
  * Enables or disables sensitive data redaction for captured logs.
  * @param enabled - Whether redaction should be applied to log output.
+ * @source
  */
 export function setLogRedactionEnabled(enabled: boolean): void {
   logRedactionEnabled = enabled;
@@ -99,11 +300,18 @@ export function setLogRedactionEnabled(enabled: boolean): void {
 
 /**
  * Returns whether sensitive data redaction is currently enabled for captured logs.
+ * @source
  */
 export function isLogRedactionEnabled(): boolean {
   return logRedactionEnabled;
 }
 
+/**
+ * Applies redaction to log output if enabled.
+ * @param text - The text to potentially redact.
+ * @returns Redacted text if redaction is enabled, otherwise the original text.
+ * @source
+ */
 const maybeRedact = (text: string): string =>
   logRedactionEnabled ? redactSensitiveData(text) : text;
 
@@ -165,6 +373,13 @@ const serialiseArgument = (value: unknown): string => {
   }
 };
 
+/**
+ * Applies console format specifiers (%s, %d, %f, %o, %O, %c) to arguments.
+ * @param format - The format string to process.
+ * @param args - The arguments to apply to format placeholders.
+ * @returns The formatted string with specifiers replaced.
+ * @source
+ */
 const applyFormat = (format: string, args: unknown[]): string => {
   // Applies console format specifiers (%s, %d, %f, %o, %O, %c) to arguments
   // Similar to console.log formatting behavior
@@ -289,17 +504,30 @@ const inferIsDebug = (level: LogLevel): boolean => {
  *
  * Maintains an in-memory buffer of log entries with subscriptions for real-time updates.
  * Supports format string processing and sensitive data redaction.
+ * Tracks console group hierarchy to preserve structural information about grouped logs.
  *
  * @source
  */
 class LogCollector {
   #entries: LogEntry[] = [];
   readonly #listeners = new Set<(entries: LogEntry[]) => void>();
+  readonly #groupStack: string[] = [];
 
+  /**
+   * Retrieves all captured log entries.
+   * @returns Array of log entries.
+   * @source
+   */
   getEntries(): LogEntry[] {
     return this.#entries;
   }
 
+  /**
+   * Subscribes to log entry changes with a callback.
+   * @param listener - Function called with current entries and updates.
+   * @returns Unsubscribe function to remove the listener.
+   * @source
+   */
   subscribe(listener: (entries: LogEntry[]) => void): () => void {
     this.#listeners.add(listener);
     listener(this.#entries);
@@ -308,6 +536,31 @@ class LogCollector {
     };
   }
 
+  /**
+   * Called when console.group() or console.groupCollapsed() is invoked.
+   * Tracks the group label in the hierarchy stack.
+   * @param label - The group label.
+   * @source
+   */
+  enterGroup(label: string): void {
+    this.#groupStack.push(label);
+  }
+
+  /**
+   * Called when console.groupEnd() is invoked.
+   * Removes the most recent group from the hierarchy stack.
+   * @source
+   */
+  exitGroup(): void {
+    this.#groupStack.pop();
+  }
+
+  /**
+   * Adds a new log entry to the collection.
+   * @param level - The log severity level.
+   * @param args - Arguments passed to the console method.
+   * @source
+   */
   addEntry(level: LogLevel, args: unknown[]): void {
     const timestamp = new Date().toISOString();
     const [primary, ...rest] = args;
@@ -341,17 +594,29 @@ class LogCollector {
       timestamp,
       source: extractSourceFromStack(new Error(message).stack),
       isDebug: inferIsDebug(level),
+      groupPath:
+        this.#groupStack.length > 0 ? [...this.#groupStack] : undefined,
+      groupDepth:
+        this.#groupStack.length > 0 ? this.#groupStack.length : undefined,
     };
 
     this.#entries = [...this.#entries, entry].slice(-MAX_LOG_ENTRIES);
     this.#notify();
   }
 
+  /**
+   * Clears all captured log entries.
+   * @source
+   */
   clear(): void {
     this.#entries = [];
     this.#notify();
   }
 
+  /**
+   * Notifies all subscribers of log entry changes.
+   * @source
+   */
   #notify() {
     const snapshot = this.#entries;
     for (const listener of this.#listeners) {
@@ -362,6 +627,7 @@ class LogCollector {
 
 export const logCollector = new LogCollector();
 
+/** Tracks whether console interceptors are currently installed. */
 let interceptorInstalled = false;
 const originalConsoleMethods = new Map<
   LogLevel,
@@ -379,7 +645,10 @@ const assignableConsole = console as Console & Record<LogLevel, ConsoleMethod>;
  * Installs console interceptors to capture all log output.
  *
  * Wraps console methods (log, info, warn, error, debug) to forward entries to the LogCollector
- * while preserving normal console output. Returns a cleanup function to uninstall interceptors.
+ * while preserving normal console output. Also wraps group methods (group, groupCollapsed, groupEnd)
+ * to track the hierarchical group structure for better log organization.
+ *
+ * Returns a cleanup function to uninstall interceptors.
  *
  * @returns A cleanup function that restores original console methods.
  * @source
@@ -408,6 +677,30 @@ export function installConsoleInterceptor(): () => void {
     };
   }
 
+  // Wrap console group methods to track hierarchy
+  const originalGroupCollapsed = console.groupCollapsed.bind(console);
+  const originalGroup = console.group.bind(console);
+  const originalGroupEnd = console.groupEnd.bind(console);
+
+  console.groupCollapsed = (...args: unknown[]) => {
+    // Extract label from first argument
+    const label = args.length > 0 ? String(args[0]) : "Group";
+    logCollector.enterGroup(label);
+    originalGroupCollapsed(...args);
+  };
+
+  console.group = (...args: unknown[]) => {
+    // Extract label from first argument
+    const label = args.length > 0 ? String(args[0]) : "Group";
+    logCollector.enterGroup(label);
+    originalGroup(...args);
+  };
+
+  console.groupEnd = () => {
+    logCollector.exitGroup();
+    originalGroupEnd();
+  };
+
   interceptorInstalled = true;
 
   return () => {
@@ -418,6 +711,12 @@ export function installConsoleInterceptor(): () => void {
         assignableConsole[level] = original;
       }
     }
+
+    // Restore group methods
+    console.groupCollapsed = originalGroupCollapsed;
+    console.group = originalGroup;
+    console.groupEnd = originalGroupEnd;
+
     interceptorInstalled = false;
     originalConsoleMethods.clear();
   };
@@ -435,12 +734,15 @@ export interface SerializableLogEntry {
   timestamp: string;
   source?: string;
   isDebug?: boolean;
+  groupPath?: string[];
+  groupDepth?: number;
 }
 
 /**
  * Transforms internal LogEntry objects into a serializable format for export.
  *
  * Strips internal state and returns only properties needed for persistence or transmission.
+ * Includes group hierarchy information to preserve structural context.
  *
  * @param entries - Array of internal log entries to serialize.
  * @returns Array of serializable log entries.
@@ -450,7 +752,7 @@ export function serialiseLogEntries(
   entries: LogEntry[],
 ): SerializableLogEntry[] {
   return entries.map(
-    ({ id, level, message, details, timestamp, source, isDebug }) => ({
+    ({
       id,
       level,
       message,
@@ -458,6 +760,18 @@ export function serialiseLogEntries(
       timestamp,
       source,
       isDebug,
+      groupPath,
+      groupDepth,
+    }) => ({
+      id,
+      level,
+      message,
+      details,
+      timestamp,
+      source,
+      isDebug,
+      groupPath,
+      groupDepth,
     }),
   );
 }

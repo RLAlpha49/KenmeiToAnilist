@@ -5,6 +5,20 @@
  */
 
 /**
+ * Custom error class for batch operation cancellations.
+ * Used to distinguish intentional cancellations from other errors.
+ *
+ * @source
+ */
+export class CancelledError extends Error {
+  constructor(message: string = "Operation cancelled") {
+    super(message);
+    this.name = "CancelledError";
+    Object.setPrototypeOf(this, CancelledError.prototype);
+  }
+}
+
+/**
  * Enumerates the different error types used throughout the application.
  *
  * @source

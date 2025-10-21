@@ -11,6 +11,7 @@ import {
 } from "./mutations";
 import { AniListMediaEntry } from "./types";
 import { storage, STORAGE_KEYS } from "../../utils/storage";
+import { withGroupAsync } from "../../utils/logging";
 
 /**
  * Type alias for GraphQL mutation variables mapping.
@@ -565,69 +566,78 @@ export async function updateMangaEntry(
   // Generate an operation ID for tracking in logs early
   const operationId = `${entry.mediaId}-${Date.now().toString(36).substring(4, 10)}`;
 
-  if (!token) {
-    console.error(
-      `[AniListSync] ❌ [${operationId}] No authentication token provided`,
-    );
-    return {
-      success: false,
-      mediaId: entry.mediaId,
-      error: "No authentication token provided",
-      rateLimited: false,
-      retryAfter: null,
-    };
-  }
-
-  try {
-    // Build variables based on entry type (existing vs new)
-    let variables = entry.previousValues
-      ? buildVariablesForExistingEntry(entry)
-      : buildVariablesForNewEntry(entry);
-
-    // Apply incremental sync modifications if needed
-    variables = applyIncrementalSyncStep(entry, variables, operationId);
-
-    // Generate a dynamic mutation with only the needed variables
-    const mutation = generateUpdateMangaEntryMutation(variables);
-
-    // Define the expected response structure to handle both direct and nested formats
-    interface SaveMediaListEntryData {
-      SaveMediaListEntry?: {
-        id: number;
-        status: string;
-        progress: number;
-        private: boolean;
-        score: number;
-      };
-      data?: {
-        SaveMediaListEntry?: {
-          id: number;
-          status: string;
-          progress: number;
-          private: boolean;
-          score: number;
+  return withGroupAsync(
+    `[AniListSync] Update Entry [${operationId}] - Media ${entry.mediaId}`,
+    async () => {
+      if (!token) {
+        console.error(
+          `[AniListSync] ❌ [${operationId}] No authentication token provided`,
+        );
+        return {
+          success: false,
+          mediaId: entry.mediaId,
+          error: "No authentication token provided",
+          rateLimited: false,
+          retryAfter: null,
         };
-      };
-    }
+      }
 
-    // Make the API request with optimized variables and mutation
-    const response = await request<SaveMediaListEntryData>(
-      mutation,
-      variables,
-      token,
-    );
+      try {
+        // Build variables based on entry type (existing vs new)
+        let variables = entry.previousValues
+          ? buildVariablesForExistingEntry(entry)
+          : buildVariablesForNewEntry(entry);
 
-    // Check for GraphQL errors
-    if (response.errors && response.errors.length > 0) {
-      return handleGraphQLErrors(response.errors, entry.mediaId, operationId);
-    }
+        // Apply incremental sync modifications if needed
+        variables = applyIncrementalSyncStep(entry, variables, operationId);
 
-    // Handle response data
-    return handleResponseData(response, entry.mediaId, operationId);
-  } catch (error) {
-    // Handle exception errors
-    return handleUpdateError(error, entry, operationId);
-  }
+        // Generate a dynamic mutation with only the needed variables
+        const mutation = generateUpdateMangaEntryMutation(variables);
+
+        // Define the expected response structure to handle both direct and nested formats
+        interface SaveMediaListEntryData {
+          SaveMediaListEntry?: {
+            id: number;
+            status: string;
+            progress: number;
+            private: boolean;
+            score: number;
+          };
+          data?: {
+            SaveMediaListEntry?: {
+              id: number;
+              status: string;
+              progress: number;
+              private: boolean;
+              score: number;
+            };
+          };
+        }
+
+        // Make the API request with optimized variables and mutation
+        const response = await request<SaveMediaListEntryData>(
+          mutation,
+          variables,
+          token,
+        );
+
+        // Check for GraphQL errors
+        if (response.errors && response.errors.length > 0) {
+          return handleGraphQLErrors(
+            response.errors,
+            entry.mediaId,
+            operationId,
+          );
+        }
+
+        // Handle response data
+        return handleResponseData(response, entry.mediaId, operationId);
+      } catch (error) {
+        // Handle exception errors
+        return handleUpdateError(error, entry, operationId);
+      }
+    },
+  );
 }
 
 /**
@@ -644,104 +654,110 @@ export async function deleteMangaEntry(
   // Generate an operation ID for tracking in logs
   const operationId = `del-${entryId}-${Date.now().toString(36).substring(4, 10)}`;
 
-  console.info(
-    `[AniListSync] 🗑️ [${operationId}] Starting delete operation for entry ID ${entryId}`,
-  );
-
-  if (!token) {
-    console.error(
-      `[AniListSync] ❌ [${operationId}] No authentication token provided`,
-    );
-    return {
-      success: false,
-      error: "No authentication token provided",
-    };
-  }
-
-  try {
-    const variables = {
-      id: entryId,
-    };
-
-    // Define the expected response structure
-    interface DeleteMediaListEntryData {
-      DeleteMediaListEntry?: {
-        deleted: boolean;
-      };
-      data?: {
-        DeleteMediaListEntry?: {
-          deleted: boolean;
-        };
-      };
-    }
-
-    const response = await request<DeleteMediaListEntryData>(
-      DELETE_MANGA_ENTRY,
-      variables,
-      token,
-    );
-
-    // Check for GraphQL errors
-    if (response.errors && response.errors.length > 0) {
-      const errorMessages = response.errors
-        .map((err) => err.message)
-        .join(", ");
-      console.error(
-        `❌ [${operationId}] GraphQL errors for delete operation:`,
-        response.errors,
-      );
-      return {
-        success: false,
-        error: `GraphQL error: ${errorMessages}`,
-      };
-    }
-
-    // Handle nested response structure
-    const responseData = response.data?.data ?? response.data;
-
-    if (responseData?.DeleteMediaListEntry?.deleted) {
+  return withGroupAsync(
+    `[AniListSync] Delete Entry [${operationId}]`,
+    async () => {
       console.info(
-        `[AniListSync] ✅ [${operationId}] Successfully deleted entry with ID ${entryId}`,
+        `[AniListSync] 🗑️ [${operationId}] Starting delete operation for entry ID ${entryId}`,
       );
-      return {
-        success: true,
-      };
-    }
 
-    console.error(
-      `[AniListSync] ❌ [${operationId}] Missing DeleteMediaListEntry in response:`,
-      JSON.stringify(response, null, 2),
-    );
-    return {
-      success: false,
-      error: "Delete failed: Entry was not deleted",
-    };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(
-      `❌ [${operationId}] Error deleting manga entry ${entryId}:`,
-      error,
-    );
+      if (!token) {
+        console.error(
+          `[AniListSync] ❌ [${operationId}] No authentication token provided`,
+        );
+        return {
+          success: false,
+          error: "No authentication token provided",
+        };
+      }
 
-    // Try to get more detailed information from the error object
-    if (error instanceof Error) {
-      console.error(
-        `[AniListSync]    [${operationId}] Error type: ${error.name}`,
-      );
-      console.error(
-        `[AniListSync]    [${operationId}] Error message: ${error.message}`,
-      );
-      console.error(
-        `[AniListSync]    [${operationId}] Stack trace:`,
-        error.stack || "No stack trace available",
-      );
-    }
+      try {
+        const variables = {
+          id: entryId,
+        };
 
-    return {
-      success: false,
-      error: errorMessage,
-    };
-  }
+        // Define the expected response structure
+        interface DeleteMediaListEntryData {
+          DeleteMediaListEntry?: {
+            deleted: boolean;
+          };
+          data?: {
+            DeleteMediaListEntry?: {
+              deleted: boolean;
+            };
+          };
+        }
+
+        const response = await request<DeleteMediaListEntryData>(
+          DELETE_MANGA_ENTRY,
+          variables,
+          token,
+        );
+
+        // Check for GraphQL errors
+        if (response.errors && response.errors.length > 0) {
+          const errorMessages = response.errors
+            .map((err) => err.message)
+            .join(", ");
+          console.error(
+            `❌ [${operationId}] GraphQL errors for delete operation:`,
+            response.errors,
+          );
+          return {
+            success: false,
+            error: `GraphQL error: ${errorMessages}`,
+          };
+        }
+
+        // Handle nested response structure
+        const responseData = response.data?.data ?? response.data;
+
+        if (responseData?.DeleteMediaListEntry?.deleted) {
+          console.info(
+            `[AniListSync] ✅ [${operationId}] Successfully deleted entry with ID ${entryId}`,
+          );
+          return {
+            success: true,
+          };
+        }
+
+        console.error(
+          `[AniListSync] ❌ [${operationId}] Missing DeleteMediaListEntry in response:`,
+          JSON.stringify(response, null, 2),
+        );
+        return {
+          success: false,
+          error: "Delete failed: Entry was not deleted",
+        };
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        console.error(
+          `❌ [${operationId}] Error deleting manga entry ${entryId}:`,
+          error,
+        );
+
+        // Try to get more detailed information from the error object
+        if (error instanceof Error) {
+          console.error(
+            `[AniListSync]    [${operationId}] Error type: ${error.name}`,
+          );
+          console.error(
+            `[AniListSync]    [${operationId}] Error message: ${error.message}`,
+          );
+          console.error(
+            `[AniListSync]    [${operationId}] Stack trace:`,
+            error.stack || "No stack trace available",
+          );
+        }
+
+        return {
+          success: false,
+          error: errorMessage,
+        };
+      }
+    },
+  );
 }
 
 /**
@@ -874,47 +890,54 @@ async function handleRateLimitRetry(
 ): Promise<void> {
   const retryAfterMs = result.retryAfter!;
 
-  progress.rateLimited = true;
-  progress.retryAfter = retryAfterMs;
+  return withGroupAsync(
+    `[AniListSync] Rate Limit Wait (${Math.round(retryAfterMs / 1000)}s)`,
+    async () => {
+      progress.rateLimited = true;
+      progress.retryAfter = retryAfterMs;
 
-  if (onProgress) {
-    console.warn(`[AniListSync] ⏳ Rate limited: retryAfter=${retryAfterMs}ms`);
-    onProgress({ ...progress });
-  }
+      if (onProgress) {
+        console.warn(
+          `[AniListSync] ⏳ Rate limited: retryAfter=${retryAfterMs}ms`,
+        );
+        onProgress({ ...progress });
+      }
 
-  const startTime = Date.now();
-  const endTime = startTime + retryAfterMs;
+      const startTime = Date.now();
+      const endTime = startTime + retryAfterMs;
 
-  const countdownInterval = setInterval(() => {
-    const currentTime = Date.now();
-    const remainingMs = Math.max(0, endTime - currentTime);
-    progress.retryAfter = remainingMs;
+      const countdownInterval = setInterval(() => {
+        const currentTime = Date.now();
+        const remainingMs = Math.max(0, endTime - currentTime);
+        progress.retryAfter = remainingMs;
 
-    if (onProgress) onProgress({ ...progress });
+        if (onProgress) onProgress({ ...progress });
 
-    if (remainingMs <= 0 || abortSignal?.aborted)
-      clearInterval(countdownInterval);
-  }, 1000);
+        if (remainingMs <= 0 || abortSignal?.aborted)
+          clearInterval(countdownInterval);
+      }, 1000);
 
-  await new Promise<void>((resolve) => {
-    const timeoutId = setTimeout(() => {
-      clearInterval(countdownInterval);
-      progress.rateLimited = false;
-      progress.retryAfter = null;
+      await new Promise<void>((resolve) => {
+        const timeoutId = setTimeout(() => {
+          clearInterval(countdownInterval);
+          progress.rateLimited = false;
+          progress.retryAfter = null;
 
-      if (onProgress) onProgress({ ...progress });
+          if (onProgress) onProgress({ ...progress });
 
-      resolve();
-    }, retryAfterMs);
+          resolve();
+        }, retryAfterMs);
 
-    if (abortSignal) {
-      abortSignal.addEventListener("abort", () => {
-        clearTimeout(timeoutId);
-        clearInterval(countdownInterval);
-        resolve();
+        if (abortSignal) {
+          abortSignal.addEventListener("abort", () => {
+            clearTimeout(timeoutId);
+            clearInterval(countdownInterval);
+            resolve();
+          });
+        }
       });
-    }
-  });
+    },
+  );
 }
 
 /**
@@ -1118,77 +1141,82 @@ async function processMediaEntries(
   onProgress: ((progress: SyncProgress) => void) | undefined,
   abortSignal: AbortSignal | undefined,
 ): Promise<{ success: boolean; error?: string }> {
-  const entriesForMediaId = entriesByMediaId[mediaIdNum];
-  const mediaIdStr = String(mediaIdNum);
+  return withGroupAsync(
+    `[AniListSync] Process Media ${mediaIdNum} (${progress.completed + 1}/${progress.total})`,
+    async () => {
+      const entriesForMediaId = entriesByMediaId[mediaIdNum];
+      const mediaIdStr = String(mediaIdNum);
 
-  if (!entriesForMediaId) return { success: true }; // Skip if not present
+      if (!entriesForMediaId) return { success: true }; // Skip if not present
 
-  console.debug(
-    `[AniListSync] 📚 Starting sync for manga ${mediaIdNum} (${progress.completed + 1}/${progress.total})`,
+      console.debug(
+        `[AniListSync] 📚 Starting sync for manga ${mediaIdNum} (${progress.completed + 1}/${progress.total})`,
+      );
+
+      if (abortSignal?.aborted) {
+        console.info("[AniListSync] ⏹️ Sync operation aborted by user");
+        return { success: false, error: "Aborted by user" };
+      }
+
+      // Sort entries by step for proper incremental sync order
+      entriesForMediaId.sort((a: AniListMediaEntry, b: AniListMediaEntry) => {
+        const stepA = a.syncMetadata?.step || 0;
+        const stepB = b.syncMetadata?.step || 0;
+        return stepA - stepB;
+      });
+
+      const { isIncremental } = setupProgressForMedia(
+        mediaIdNum,
+        entriesForMediaId,
+        progress,
+      );
+
+      let entrySuccess = true;
+      let entryError: string | undefined;
+
+      // Process all entries for this media ID
+      let entryIndex = 0;
+      while (entryIndex < entriesForMediaId.length) {
+        if (abortSignal?.aborted) {
+          console.info("[AniListSync] ⏹️ Sync operation aborted by user");
+          break;
+        }
+
+        const entry = entriesForMediaId[entryIndex];
+        const context: EntryProcessingContext = {
+          token,
+          apiCallsCompleted,
+          progress,
+          onProgress,
+          abortSignal,
+          mediaIdStr,
+          entriesForMediaId,
+        };
+
+        const result = await processEntryStep(
+          entry,
+          entryIndex,
+          isIncremental,
+          context,
+        );
+
+        if (result.shouldRetry) {
+          // Don't increment entryIndex - retry the same entry
+          continue;
+        }
+
+        if (!result.success) {
+          entrySuccess = false;
+          entryError = result.error;
+          if (isIncremental) break; // Stop processing this media on error in incremental mode
+        }
+
+        entryIndex++;
+      }
+
+      return { success: entrySuccess, error: entryError };
+    },
   );
-
-  if (abortSignal?.aborted) {
-    console.info("[AniListSync] ⏹️ Sync operation aborted by user");
-    return { success: false, error: "Aborted by user" };
-  }
-
-  // Sort entries by step for proper incremental sync order
-  entriesForMediaId.sort((a: AniListMediaEntry, b: AniListMediaEntry) => {
-    const stepA = a.syncMetadata?.step || 0;
-    const stepB = b.syncMetadata?.step || 0;
-    return stepA - stepB;
-  });
-
-  const { isIncremental } = setupProgressForMedia(
-    mediaIdNum,
-    entriesForMediaId,
-    progress,
-  );
-
-  let entrySuccess = true;
-  let entryError: string | undefined;
-
-  // Process all entries for this media ID
-  let entryIndex = 0;
-  while (entryIndex < entriesForMediaId.length) {
-    if (abortSignal?.aborted) {
-      console.info("[AniListSync] ⏹️ Sync operation aborted by user");
-      break;
-    }
-
-    const entry = entriesForMediaId[entryIndex];
-    const context: EntryProcessingContext = {
-      token,
-      apiCallsCompleted,
-      progress,
-      onProgress,
-      abortSignal,
-      mediaIdStr,
-      entriesForMediaId,
-    };
-
-    const result = await processEntryStep(
-      entry,
-      entryIndex,
-      isIncremental,
-      context,
-    );
-
-    if (result.shouldRetry) {
-      // Don't increment entryIndex - retry the same entry
-      continue;
-    }
-
-    if (!result.success) {
-      entrySuccess = false;
-      entryError = result.error;
-      if (isIncremental) break; // Stop processing this media on error in incremental mode
-    }
-
-    entryIndex++;
-  }
-
-  return { success: entrySuccess, error: entryError };
 }
 
 /**
@@ -1257,84 +1285,89 @@ export async function syncMangaBatch(
   abortSignal?: AbortSignal,
   displayOrderMediaIds?: number[],
 ): Promise<SyncReport> {
-  const errors: { mediaId: number; error: string }[] = [];
+  return withGroupAsync(
+    `[AniListSync] Batch Sync (${entries.length} entries)`,
+    async () => {
+      const errors: { mediaId: number; error: string }[] = [];
 
-  // Organize entries by media ID for handling incremental sync properly
-  const entriesByMediaId = organizeEntriesByMediaId(entries);
+      // Organize entries by media ID for handling incremental sync properly
+      const entriesByMediaId = organizeEntriesByMediaId(entries);
 
-  // Determine processing order and unique entry count
-  const userOrderMediaIds = determineProcessingOrder(
-    displayOrderMediaIds,
-    entriesByMediaId,
-  );
-  const uniqueEntryCount = userOrderMediaIds.length;
-
-  // Track progress against unique media IDs rather than incremental steps
-  const progress: SyncProgress = {
-    total: uniqueEntryCount,
-    completed: 0,
-    successful: 0,
-    failed: 0,
-    skipped: 0,
-    currentEntry: null,
-    currentStep: null,
-    totalSteps: null,
-    rateLimited: false,
-    retryAfter: null,
-  };
-
-  if (onProgress) onProgress({ ...progress });
-
-  const apiCallsCompleted = { count: 0 };
-
-  // Process each media ID in order
-  for (const mediaIdNum of userOrderMediaIds) {
-    const mediaEntries = entriesByMediaId[mediaIdNum];
-
-    if (!mediaEntries || mediaEntries.length === 0) {
-      console.debug(
-        `[AniListSync] ⏭️ Skipping media ${mediaIdNum} — no entries in current batch`,
+      // Determine processing order and unique entry count
+      const userOrderMediaIds = determineProcessingOrder(
+        displayOrderMediaIds,
+        entriesByMediaId,
       );
-      continue;
-    }
+      const uniqueEntryCount = userOrderMediaIds.length;
 
-    if (abortSignal?.aborted) {
-      console.info("[AniListSync] ⏹️ Sync operation aborted by user");
-      break;
-    }
+      // Track progress against unique media IDs rather than incremental steps
+      const progress: SyncProgress = {
+        total: uniqueEntryCount,
+        completed: 0,
+        successful: 0,
+        failed: 0,
+        skipped: 0,
+        currentEntry: null,
+        currentStep: null,
+        totalSteps: null,
+        rateLimited: false,
+        retryAfter: null,
+      };
 
-    const result = await processMediaEntries(
-      mediaIdNum,
-      entriesByMediaId,
-      token,
-      apiCallsCompleted,
-      progress,
-      onProgress,
-      abortSignal,
-    );
+      if (onProgress) onProgress({ ...progress });
 
-    // Update progress counters
-    progress.completed++;
+      const apiCallsCompleted = { count: 0 };
 
-    if (result.success) {
-      progress.successful++;
-    } else {
-      progress.failed++;
-      if (result.error)
-        errors.push({
-          mediaId: mediaIdNum,
-          error: result.error,
-        });
-    }
+      // Process each media ID in order
+      for (const mediaIdNum of userOrderMediaIds) {
+        const mediaEntries = entriesByMediaId[mediaIdNum];
 
-    // Clear current entry info
-    progress.currentEntry = null;
-    progress.currentStep = null;
+        if (!mediaEntries || mediaEntries.length === 0) {
+          console.debug(
+            `[AniListSync] ⏭️ Skipping media ${mediaIdNum} — no entries in current batch`,
+          );
+          continue;
+        }
 
-    if (onProgress) onProgress({ ...progress });
-  }
+        if (abortSignal?.aborted) {
+          console.info("[AniListSync] ⏹️ Sync operation aborted by user");
+          break;
+        }
 
-  return generateSyncReport(entries, progress, errors);
+        const result = await processMediaEntries(
+          mediaIdNum,
+          entriesByMediaId,
+          token,
+          apiCallsCompleted,
+          progress,
+          onProgress,
+          abortSignal,
+        );
+
+        // Update progress counters
+        progress.completed++;
+
+        if (result.success) {
+          progress.successful++;
+        } else {
+          progress.failed++;
+          if (result.error)
+            errors.push({
+              mediaId: mediaIdNum,
+              error: result.error,
+            });
+        }
+
+        // Clear current entry info
+        progress.currentEntry = null;
+        progress.currentStep = null;
+
+        if (onProgress) onProgress({ ...progress });
+      }
+
+      return generateSyncReport(entries, progress, errors);
+    },
+  );
 }
 
 /**
