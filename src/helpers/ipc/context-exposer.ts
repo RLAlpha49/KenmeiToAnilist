@@ -16,9 +16,38 @@ import { exposeApiContext } from "./api/api-context";
  * @source
  */
 export default function exposeContexts() {
-  exposeWindowContext();
-  exposeThemeContext();
-  exposeAuthContext();
-  exposeStoreContext();
-  exposeApiContext();
+  try {
+    exposeWindowContext();
+    console.log("[Context] ✅ Window context exposed");
+  } catch (error) {
+    console.error("[Context] ❌ Failed to expose window context:", error);
+  }
+
+  try {
+    exposeThemeContext();
+    console.log("[Context] ✅ Theme context exposed");
+  } catch (error) {
+    console.error("[Context] ❌ Failed to expose theme context:", error);
+  }
+
+  try {
+    exposeAuthContext();
+    console.log("[Context] ✅ Auth context exposed");
+  } catch (error) {
+    console.error("[Context] ❌ Failed to expose auth context:", error);
+  }
+
+  try {
+    exposeStoreContext();
+    console.log("[Context] ✅ Store context exposed");
+  } catch (error) {
+    console.error("[Context] ❌ Failed to expose store context:", error);
+  }
+
+  try {
+    exposeApiContext();
+    console.log("[Context] ✅ API context exposed");
+  } catch (error) {
+    console.error("[Context] ❌ Failed to expose API context:", error);
+  }
 }

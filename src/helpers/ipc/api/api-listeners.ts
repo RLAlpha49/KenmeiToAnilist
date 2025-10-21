@@ -7,6 +7,7 @@
 import { ipcMain, shell } from "electron";
 import fetch, { Response } from "node-fetch";
 import { getAppVersionElectron } from "../../../utils/app-version";
+import { withGroupAsync } from "../../../utils/logging";
 
 /**
  * Extended Error interface for GraphQL API errors.
@@ -28,10 +29,144 @@ const API_RATE_LIMIT = 28; // 30 requests per minute is the AniList limit, use 2
 const REQUEST_INTERVAL = (60 * 1000) / API_RATE_LIMIT; // milliseconds between requests
 const MAX_RETRY_ATTEMPTS = 5; // Maximum number of retry attempts for rate limited requests
 
-// Rate limiting state
-let lastRequestTime = 0;
+/**
+ * Simple promise-based mutex for serializing state updates.
+ * Ensures only one request can acquire the lock at a time.
+ * @internal
+ */
+class Mutex {
+  private locked = false;
+  private readonly waiters: (() => void)[] = [];
+
+  async lock(): Promise<void> {
+    if (!this.locked) {
+      this.locked = true;
+      return;
+    }
+
+    return new Promise((resolve) => {
+      this.waiters.push(() => {
+        this.locked = true;
+        resolve();
+      });
+    });
+  }
+
+  unlock(): void {
+    const waiter = this.waiters.shift();
+    if (waiter) {
+      waiter();
+    } else {
+      this.locked = false;
+    }
+  }
+}
+
+/**
+ * Request queue item for batching and scheduling.
+ * @internal
+ */
+interface QueuedRequest {
+  execute: () => Promise<Record<string, unknown>>;
+  resolve: (value: Record<string, unknown>) => void;
+  reject: (error: unknown) => void;
+}
+
+/**
+ * Rate-limited request queue with proper concurrency control and spacing.
+ * Ensures REQUEST_INTERVAL between dequeues and propagates retry-after signals.
+ * @internal
+ */
+class RequestQueue {
+  private readonly queue: QueuedRequest[] = [];
+  private processing = false;
+  private lastDequeueTime = 0;
+  private rateLimitResetTime = 0;
+  private readonly mutex = new Mutex();
+
+  /**
+   * Enqueue a request for execution with rate limiting.
+   */
+  enqueue(
+    execute: () => Promise<Record<string, unknown>>,
+  ): Promise<Record<string, unknown>> {
+    return new Promise((resolve, reject) => {
+      this.queue.push({ execute, resolve, reject });
+      this.processQueue().catch(reject);
+    });
+  }
+
+  /**
+   * Update rate limit reset time (called when 429 response received).
+   */
+  updateRetryAfter(resetTime: number): void {
+    this.rateLimitResetTime = Math.max(this.rateLimitResetTime, resetTime);
+  }
+
+  /**
+   * Get current rate limit reset time.
+   */
+  getRateLimitResetTime(): number {
+    return this.rateLimitResetTime;
+  }
+
+  /**
+   * Process the queue with proper rate limiting and spacing.
+   */
+  private async processQueue(): Promise<void> {
+    if (this.processing || this.queue.length === 0) {
+      return;
+    }
+
+    await this.mutex.lock();
+    try {
+      this.processing = true;
+
+      while (this.queue.length > 0) {
+        // Check if rate limited and wait if needed
+        const now = Date.now();
+        if (now < this.rateLimitResetTime) {
+          const waitTime = this.rateLimitResetTime - now;
+          console.warn(
+            `[ApiIPC] Rate limited, waiting ${Math.round(waitTime / 1000)}s before processing queue`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, waitTime));
+        }
+
+        // Enforce REQUEST_INTERVAL spacing between dequeues
+        const timeSinceLastDequeue = Date.now() - this.lastDequeueTime;
+        if (
+          this.lastDequeueTime > 0 &&
+          timeSinceLastDequeue < REQUEST_INTERVAL
+        ) {
+          const waitTime = REQUEST_INTERVAL - timeSinceLastDequeue;
+          await new Promise((resolve) => setTimeout(resolve, waitTime));
+        }
+
+        const item = this.queue.shift();
+        if (!item) break;
+
+        this.lastDequeueTime = Date.now();
+
+        try {
+          const result = await item.execute();
+          item.resolve(result);
+        } catch (error) {
+          item.reject(error);
+        }
+      }
+    } finally {
+      this.processing = false;
+      this.mutex.unlock();
+    }
+  }
+}
+
+// Global request queue instance
+const requestQueue = new RequestQueue();
+
+// Rate limiting state (only used by rate limit response handling)
 let isRateLimited = false;
-let rateLimitResetTime = 0;
 
 /**
  * Simple in-memory cache for API responses.
@@ -69,30 +204,14 @@ async function handleRateLimit(): Promise<void> {
   if (!isRateLimited) return;
 
   const now = Date.now();
-  if (now < rateLimitResetTime) {
-    const waitTime = rateLimitResetTime - now;
+  if (now < requestQueue["rateLimitResetTime"]) {
+    const waitTime = requestQueue["rateLimitResetTime"] - now;
     console.warn(
       `[ApiIPC] Rate limited, waiting ${Math.round(waitTime / 1000)}s before retrying`,
     );
     await sleep(waitTime);
   }
   isRateLimited = false;
-}
-
-/**
- * Handle request timing and rate limiting.
- * @internal
- */
-async function handleRequestTiming(): Promise<void> {
-  const now = Date.now();
-  const timeSinceLastRequest = now - lastRequestTime;
-
-  if (lastRequestTime > 0 && timeSinceLastRequest < REQUEST_INTERVAL) {
-    const waitTime = REQUEST_INTERVAL - timeSinceLastRequest;
-    await sleep(waitTime);
-  }
-
-  lastRequestTime = Date.now();
 }
 
 /**
@@ -164,7 +283,10 @@ async function handleRateLimitResponse(
     );
   }
 
-  rateLimitResetTime = Date.now() + waitTime;
+  // Propagate retry-after to the request queue scheduler
+  const resetTime = Date.now() + waitTime;
+  requestQueue.updateRetryAfter(resetTime);
+
   const searchTerm = getSearchTermFromVariables(variables);
   console.warn(
     `[ApiIPC] Rate limited for "${searchTerm}", waiting ${Math.round(waitTime / 1000)}s before retry #${retryCount + 1}`,
@@ -233,6 +355,9 @@ async function handleNetworkError(
 /**
  * Make a GraphQL request to the AniList API.
  *
+ * Requests are automatically queued and rate-limited with REQUEST_INTERVAL spacing.
+ * The queue handles 429 rate limit responses and propagates retry-after signals.
+ *
  * @param query - GraphQL query or mutation.
  * @param variables - Variables for the query.
  * @param token - Optional access token for authenticated requests.
@@ -247,65 +372,84 @@ async function requestAniList(
   token?: string,
   retryCount: number = 0,
 ): Promise<Record<string, unknown>> {
-  await handleRateLimit();
-  await handleRequestTiming();
+  return requestQueue.enqueue(async () =>
+    withGroupAsync(
+      `[ApiIPC] Request Execution (attempt ${retryCount + 1})`,
+      async () => {
+        // Rate limiting and request timing handled by queue
+        await handleRateLimit();
 
-  const appVersion = await getAppVersionElectron();
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-    "User-Agent": `KenmeiToAniList/${appVersion}`,
-  };
+        const appVersion = await getAppVersionElectron();
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "User-Agent": `KenmeiToAniList/${appVersion}`,
+        };
 
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
+        if (token) {
+          headers.Authorization = `Bearer ${token}`;
+        }
 
-  try {
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        query,
-        variables,
-      }),
-    });
+        try {
+          const response = await fetch(API_URL, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              query,
+              variables,
+            }),
+          });
 
-    if (response.status === 429) {
-      return handleRateLimitResponse(
-        response,
-        variables,
-        retryCount,
-        query,
-        token,
-      );
-    }
+          if (response.status === 429) {
+            return handleRateLimitResponse(
+              response,
+              variables,
+              retryCount,
+              query,
+              token,
+            );
+          }
 
-    if (response.status >= 500 && response.status < 600) {
-      return handleServerError(response, variables, retryCount, query, token);
-    }
+          if (response.status >= 500 && response.status < 600) {
+            return handleServerError(
+              response,
+              variables,
+              retryCount,
+              query,
+              token,
+            );
+          }
 
-    if (!response.ok) {
-      const errorData = (await response.json()) as { errors?: unknown[] };
-      const firstError = errorData.errors?.[0] as
-        | { message?: string }
-        | undefined;
-      const error = new Error(
-        firstError?.message || response.statusText,
-      ) as GraphQLError;
-      error.status = response.status;
-      error.statusText = response.statusText;
-      error.errors = errorData.errors;
-      throw error;
-    }
+          if (!response.ok) {
+            const errorData = (await response.json()) as { errors?: unknown[] };
+            const firstError = errorData.errors?.[0] as
+              | { message?: string }
+              | undefined;
+            const error = new Error(
+              firstError?.message || response.statusText,
+            ) as GraphQLError;
+            error.status = response.status;
+            error.statusText = response.statusText;
+            error.errors = errorData.errors;
+            throw error;
+          }
 
-    return (await response.json()) as Record<string, unknown>;
-  } catch (error) {
-    if (error instanceof Error) {
-      return handleNetworkError(error, retryCount, query, variables, token);
-    }
-    throw error;
-  }
+          return (await response.json()) as Record<string, unknown>;
+        } catch (error) {
+          if (error instanceof Error) {
+            return handleNetworkError(
+              error,
+              retryCount,
+              query,
+              variables,
+              token,
+            );
+          }
+          throw error;
+        }
+      },
+    ),
+  );
 }
 
 /**
@@ -349,108 +493,71 @@ function isCacheValid<T>(cache: Cache<T>, key: string): boolean {
 export function setupAniListAPI() {
   // Handle graphQL requests
   ipcMain.handle("anilist:request", async (_, query, variables, token) => {
-    try {
-      console.debug("[ApiIPC] Handling AniList API request in main process");
-
-      // Extract and remove bypassCache from variables to avoid sending it to the API
-      const bypassCache = variables?.bypassCache;
-      if (variables && "bypassCache" in variables) {
-        // Create a copy without the bypassCache property
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { bypassCache: removed, ...cleanVariables } = variables;
-        variables = cleanVariables;
-      }
-
-      // Check if it's a search request and if we should use cache
-      const isSearchQuery = query.includes("Page(") && variables?.search;
-
-      if (isSearchQuery && !bypassCache) {
-        const cacheKey = generateCacheKey(query, variables);
-
-        if (isCacheValid(searchCache, cacheKey)) {
+    const searchTerm = variables?.search || "query";
+    return withGroupAsync(
+      `[ApiIPC] AniList Request: ${searchTerm}`,
+      async () => {
+        try {
           console.debug(
-            `[ApiIPC] Using cached search results for: ${variables.search}`,
+            "[ApiIPC] Handling AniList API request in main process",
           );
+
+          // Extract and remove bypassCache from variables to avoid sending it to the API
+          const bypassCache = variables?.bypassCache;
+          if (variables && "bypassCache" in variables) {
+            // Create a copy without the bypassCache property
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { bypassCache: removed, ...cleanVariables } = variables;
+            variables = cleanVariables;
+          }
+
+          // Check if it's a search request and if we should use cache
+          const isSearchQuery = query.includes("Page(") && variables?.search;
+
+          if (isSearchQuery && !bypassCache) {
+            const cacheKey = generateCacheKey(query, variables);
+
+            if (isCacheValid(searchCache, cacheKey)) {
+              console.debug(
+                `[ApiIPC] Using cached search results for: ${variables.search}`,
+              );
+              return {
+                success: true,
+                data: searchCache[cacheKey].data,
+              };
+            }
+          }
+
+          if (isSearchQuery && bypassCache) {
+            console.debug(
+              `[ApiIPC] Bypassing cache for search: ${variables.search}`,
+            );
+          }
+
+          const response = await requestAniList(query, variables, token);
+
+          // Cache search results only if not bypassing cache
+          if (isSearchQuery && response.data && !bypassCache) {
+            const cacheKey = generateCacheKey(query, variables);
+            searchCache[cacheKey] = {
+              data: response,
+              timestamp: Date.now(),
+            };
+          }
+
           return {
             success: true,
-            data: searchCache[cacheKey].data,
+            data: response,
+          };
+        } catch (error) {
+          console.error("[ApiIPC] Error in anilist:request:", error);
+          return {
+            success: false,
+            error,
           };
         }
-      }
-
-      if (isSearchQuery && bypassCache) {
-        console.debug(
-          `[ApiIPC] Bypassing cache for search: ${variables.search}`,
-        );
-      }
-
-      const response = await requestAniList(query, variables, token);
-
-      // Cache search results only if not bypassing cache
-      if (isSearchQuery && response.data && !bypassCache) {
-        const cacheKey = generateCacheKey(query, variables);
-        searchCache[cacheKey] = {
-          data: response,
-          timestamp: Date.now(),
-        };
-      }
-
-      return {
-        success: true,
-        data: response,
-      };
-    } catch (error) {
-      console.error("[ApiIPC] Error in anilist:request:", error);
-      return {
-        success: false,
-        error,
-      };
-    }
-  });
-
-  // Handle token exchange
-  ipcMain.handle("anilist:exchangeToken", async (_, params) => {
-    try {
-      const { clientId, clientSecret, redirectUri, code } = params;
-
-      // Format the request body
-      const tokenRequestBody = {
-        grant_type: "authorization_code",
-        client_id: clientId,
-        client_secret: clientSecret,
-        redirect_uri: redirectUri,
-        code: code,
-      };
-
-      const appVersion = await getAppVersionElectron();
-      const response = await fetch("https://anilist.co/api/v2/oauth/token", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          "User-Agent": `KenmeiToAniList/${appVersion}`,
-        },
-        body: JSON.stringify(tokenRequestBody),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`API error: ${response.status} ${errorData}`);
-      }
-
-      const data = await response.json();
-
-      return {
-        success: true,
-        token: data,
-      };
-    } catch (error) {
-      console.error("[ApiIPC] Error in anilist:exchangeToken:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      };
-    }
+      },
+    );
   });
 
   // Handle opening external links in the default browser
@@ -490,10 +597,11 @@ export function setupAniListAPI() {
   // Get rate limit status from main process
   ipcMain.handle("anilist:getRateLimitStatus", () => {
     const now = Date.now();
+    const resetTime = requestQueue.getRateLimitResetTime();
     return {
       isRateLimited,
-      retryAfter: isRateLimited ? rateLimitResetTime : null,
-      timeRemaining: isRateLimited ? Math.max(0, rateLimitResetTime - now) : 0,
+      retryAfter: isRateLimited ? resetTime : null,
+      timeRemaining: isRateLimited ? Math.max(0, resetTime - now) : 0,
     };
   });
 
@@ -501,84 +609,97 @@ export function setupAniListAPI() {
   ipcMain.handle(
     "mangaSource:search",
     async (_, source: string, query: string, limit: number = 10) => {
-      try {
-        const { mangaSourceRegistry } = await import(
-          "../../../api/manga-sources/registry"
-        );
-        const { MangaSource } = await import(
-          "../../../api/manga-sources/types"
-        );
+      return withGroupAsync(
+        `[ApiIPC] ${source} Search: "${query}"`,
+        async () => {
+          try {
+            const { mangaSourceRegistry } = await import(
+              "../../../api/manga-sources/registry"
+            );
+            const { MangaSource } = await import(
+              "../../../api/manga-sources/types"
+            );
 
-        console.info(
-          `[ApiIPC] 🔍 ${source} API: Searching for "${query}" with limit ${limit}`,
-        );
+            console.info(
+              `[ApiIPC] 🔍 ${source} API: Searching for "${query}" with limit ${limit}`,
+            );
 
-        const sourceEnum = Object.values(MangaSource).find(
-          (val) => val === source,
-        );
-        if (!sourceEnum) {
-          throw new Error(`Unsupported manga source: ${source}`);
-        }
+            const sourceEnum = Object.values(MangaSource).find(
+              (val) => val === source,
+            );
+            if (!sourceEnum) {
+              throw new Error(`Unsupported manga source: ${source}`);
+            }
 
-        const data = await mangaSourceRegistry.searchManga(
-          sourceEnum,
-          query,
-          limit,
-        );
+            const data = await mangaSourceRegistry.searchManga(
+              sourceEnum,
+              query,
+              limit,
+            );
 
-        console.info(
-          `[ApiIPC] 📦 ${source} API: Found ${Array.isArray(data) ? data.length : 0} results for "${query}"`,
-        );
+            console.info(
+              `[ApiIPC] 📦 ${source} API: Found ${Array.isArray(data) ? data.length : 0} results for "${query}"`,
+            );
 
-        return data || [];
-      } catch (error) {
-        console.error(
-          `[ApiIPC] ❌ ${source} search failed for "${query}":`,
-          error,
-        );
-        throw error;
-      }
+            return data || [];
+          } catch (error) {
+            console.error(
+              `[ApiIPC] ❌ ${source} search failed for "${query}":`,
+              error,
+            );
+            throw error;
+          }
+        },
+      );
     },
   );
 
   ipcMain.handle(
     "mangaSource:getMangaDetail",
     async (_, source: string, slug: string) => {
-      try {
-        const { mangaSourceRegistry } = await import(
-          "../../../api/manga-sources/registry"
-        );
-        const { MangaSource } = await import(
-          "../../../api/manga-sources/types"
-        );
+      return withGroupAsync(
+        `[ApiIPC] ${source} Detail: "${slug}"`,
+        async () => {
+          try {
+            const { mangaSourceRegistry } = await import(
+              "../../../api/manga-sources/registry"
+            );
+            const { MangaSource } = await import(
+              "../../../api/manga-sources/types"
+            );
 
-        console.info(
-          `[ApiIPC] 📖 ${source} API: Getting manga details for "${slug}"`,
-        );
+            console.info(
+              `[ApiIPC] 📖 ${source} API: Getting manga details for "${slug}"`,
+            );
 
-        // Convert string value to enum (e.g., "mangadex" -> MangaSource.MANGADX)
-        // Find the enum value that matches the string value
-        const sourceEnum = Object.values(MangaSource).find(
-          (val) => val === source,
-        );
-        if (!sourceEnum) {
-          throw new Error(`Unsupported manga source: ${source}`);
-        }
+            // Convert string value to enum (e.g., "mangadex" -> MangaSource.MANGADX)
+            // Find the enum value that matches the string value
+            const sourceEnum = Object.values(MangaSource).find(
+              (val) => val === source,
+            );
+            if (!sourceEnum) {
+              throw new Error(`Unsupported manga source: ${source}`);
+            }
 
-        const data = await mangaSourceRegistry.getMangaDetail(sourceEnum, slug);
+            const data = await mangaSourceRegistry.getMangaDetail(
+              sourceEnum,
+              slug,
+            );
 
-        console.info(
-          `[ApiIPC] 📖 ${source} API: Retrieved details for "${slug}"`,
-        );
+            console.info(
+              `[ApiIPC] 📖 ${source} API: Retrieved details for "${slug}"`,
+            );
 
-        return data || null;
-      } catch (error) {
-        console.error(
-          `[ApiIPC] ❌ ${source} manga detail failed for "${slug}":`,
-          error,
-        );
-        throw error;
-      }
+            return data || null;
+          } catch (error) {
+            console.error(
+              `[ApiIPC] ❌ ${source} manga detail failed for "${slug}":`,
+              error,
+            );
+            throw error;
+          }
+        },
+      );
     },
   );
 }

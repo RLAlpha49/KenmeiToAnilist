@@ -7,6 +7,7 @@
 import { BrowserWindow, ipcMain, shell } from "electron";
 import { URL } from "node:url";
 import * as http from "node:http";
+import { withGroupAsync, startGroup, endGroup } from "../../../utils/logging";
 
 let authCancelled = false;
 let loadTimeout: NodeJS.Timeout | null = null;
@@ -114,57 +115,62 @@ async function performTokenExchange(params: {
   redirectUri: string;
   code: string;
 }): Promise<{ success: boolean; token?: unknown; error?: string }> {
-  const { clientId, clientSecret, redirectUri, code } = params;
+  return withGroupAsync(`[AuthIPC] Exchange Attempt`, async () => {
+    const { clientId, clientSecret, redirectUri, code } = params;
 
-  const response = await fetch("https://anilist.co/api/v2/oauth/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({
-      grant_type: "authorization_code",
-      client_id: clientId,
-      client_secret: clientSecret,
-      redirect_uri: redirectUri,
-      code,
-    }),
-  });
+    const response = await fetch("https://anilist.co/api/v2/oauth/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        grant_type: "authorization_code",
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        code,
+      }),
+    });
 
-  console.info("[AuthIPC] Token exchange response status:", response.status);
+    console.info("[AuthIPC] Token exchange response status:", response.status);
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    const redactedError = errorText.replaceAll(
-      /client_secret[^&\s]*/gi,
-      "client_secret=[REDACTED]",
-    );
-    console.error("[AuthIPC] Token exchange error (redacted):", redactedError);
-    if (errorText.includes("invalid_client")) {
-      console.error(
-        "[AuthIPC] Detected invalid_client from AniList. Diagnostics:",
-        {
-          clientIdLen: clientId.length,
-          clientSecretLen: clientSecret.length,
-          redirectUri,
-          codeLen: code.length,
-        },
+    if (!response.ok) {
+      const errorText = await response.text();
+      const redactedError = errorText.replaceAll(
+        /client_secret[^&\s]*/gi,
+        "client_secret=[REDACTED]",
       );
+      console.error(
+        "[AuthIPC] Token exchange error (redacted):",
+        redactedError,
+      );
+      if (errorText.includes("invalid_client")) {
+        console.error(
+          "[AuthIPC] Detected invalid_client from AniList. Diagnostics:",
+          {
+            clientIdLen: clientId.length,
+            clientSecretLen: clientSecret.length,
+            redirectUri,
+            codeLen: code.length,
+          },
+        );
+      }
+      return {
+        success: false,
+        error: `API error: ${response.status} ${redactedError}`,
+      };
     }
-    return {
-      success: false,
-      error: `API error: ${response.status} ${redactedError}`,
-    };
-  }
 
-  const data = await response.json();
-  console.info("[AuthIPC] Token exchange successful:", {
-    token_type: data.token_type,
-    expires_in: data.expires_in,
-    token_length: data.access_token?.length || 0,
+    const data = await response.json();
+    console.info("[AuthIPC] Token exchange successful:", {
+      token_type: data.token_type,
+      expires_in: data.expires_in,
+      token_length: data.access_token?.length || 0,
+    });
+
+    return { success: true, token: data };
   });
-
-  return { success: true, token: data };
 }
 
 /**
@@ -214,131 +220,140 @@ export function addAuthEventListeners(mainWindow: BrowserWindow) {
   ipcMain.handle(
     "auth:openOAuthWindow",
     async (_, oauthUrl: string, redirectUri: string) => {
-      try {
-        // Reset cancellation flag
-        authCancelled = false;
+      return withGroupAsync(
+        `[AuthIPC] OAuth Flow: ${redirectUri}`,
+        async () => {
+          try {
+            // Reset cancellation flag
+            authCancelled = false;
 
-        // Extract redirect URI parts
-        const redirectUrl = new URL(redirectUri);
-        // Use a non-privileged port by default
-        const port = redirectUrl.port || DEFAULT_PORT.toString();
+            // Extract redirect URI parts
+            const redirectUrl = new URL(redirectUri);
+            // Use a non-privileged port by default
+            const port = redirectUrl.port || DEFAULT_PORT.toString();
 
-        // Update the redirectUri with our port if none was specified
-        if (!redirectUrl.port) {
-          redirectUrl.port = port;
-          const updatedRedirectUri = redirectUrl.toString();
+            // Update the redirectUri with our port if none was specified
+            if (!redirectUrl.port) {
+              redirectUrl.port = port;
+              const updatedRedirectUri = redirectUrl.toString();
 
-          // If the redirect URI in the oauth URL doesn't match the updated one,
-          // we need to update the oauth URL too
-          if (redirectUri !== updatedRedirectUri) {
-            const oauthUrlObj = new URL(oauthUrl);
-            const redirectParam = oauthUrlObj.searchParams.get("redirect_uri");
-            if (redirectParam) {
-              oauthUrlObj.searchParams.set("redirect_uri", updatedRedirectUri);
-              oauthUrl = oauthUrlObj.toString();
-            }
-          }
-
-          // Update the redirect URI to include the port
-          redirectUri = updatedRedirectUri;
-        }
-
-        // Start the temporary HTTP server first
-        try {
-          await startAuthServer(port, redirectUrl.pathname, mainWindow);
-
-          // Send status update
-          mainWindow.webContents.send(
-            "auth:status",
-            `Server started on port ${port}, opening browser for authentication...`,
-          );
-
-          // IMPORTANT: Set up the auth code promise AFTER server is started
-          const authCodePromise = new Promise<string>((resolve, reject) => {
-            authResolve = resolve;
-            authReject = reject;
-
-            // Set timeout for the entire auth process
-            setTimeout(() => {
-              if (authResolve) {
-                authReject?.(
-                  new Error("Authentication timed out after 2 minutes"),
-                );
-                cleanupAuthServer();
+              // If the redirect URI in the oauth URL doesn't match the updated one,
+              // we need to update the oauth URL too
+              if (redirectUri !== updatedRedirectUri) {
+                const oauthUrlObj = new URL(oauthUrl);
+                const redirectParam =
+                  oauthUrlObj.searchParams.get("redirect_uri");
+                if (redirectParam) {
+                  oauthUrlObj.searchParams.set(
+                    "redirect_uri",
+                    updatedRedirectUri,
+                  );
+                  oauthUrl = oauthUrlObj.toString();
+                }
               }
-            }, 120000); // 2 minute timeout
-          });
 
-          // Open the authorization URL in the default browser
-          await shell.openExternal(oauthUrl);
+              // Update the redirect URI to include the port
+              redirectUri = updatedRedirectUri;
+            }
 
-          // Notify the user about the browser
-          mainWindow.webContents.send(
-            "auth:status",
-            "Browser opened for authentication. Please complete the process in your browser.",
-          );
+            // Start the temporary HTTP server first
+            try {
+              await startAuthServer(port, redirectUrl.pathname, mainWindow);
 
-          // Set up the background handling of the auth code
-          // This needs to be done after we return the response
-          // to avoid the "reply was never sent" error
-          setTimeout(() => {
-            authCodePromise
-              .then((code) => {
-                console.info(
-                  "[AuthIPC] Auth code received, sending to renderer...",
-                  {
-                    codeLength: code.length,
-                    codeStart: code.substring(0, 10) + "...",
-                    redirectUri,
-                  },
-                );
+              // Send status update
+              mainWindow.webContents.send(
+                "auth:status",
+                `Server started on port ${port}, opening browser for authentication...`,
+              );
 
-                // Make sure this code isn't truncated
-                if (code.length > 500) {
-                  console.warn(
-                    "[AuthIPC] Auth code is very long, it may be truncated or malformed",
-                  );
-                }
+              // IMPORTANT: Set up the auth code promise AFTER server is started
+              const authCodePromise = new Promise<string>((resolve, reject) => {
+                authResolve = resolve;
+                authReject = reject;
 
-                mainWindow.webContents.send("auth:codeReceived", { code });
-              })
-              .catch((error) => {
-                if (!authCancelled) {
-                  console.debug(
-                    "[AuthIPC] Auth promise rejected but not cancelled, sending cancelled event...",
-                  );
-                  mainWindow.webContents.send("auth:cancelled");
-                }
-                const errorMessage =
-                  error instanceof Error
-                    ? error.message
-                    : "Authentication failed";
-                console.error("[AuthIPC] Auth error:", errorMessage);
+                // Set timeout for the entire auth process
+                setTimeout(() => {
+                  if (authResolve) {
+                    authReject?.(
+                      new Error("Authentication timed out after 2 minutes"),
+                    );
+                    cleanupAuthServer();
+                  }
+                }, 120000); // 2 minute timeout
               });
-          }, 100);
 
-          // IMPORTANT: Return success immediately so the IPC call resolves
-          // The actual code handling will happen via the auth:codeReceived event
-          return { success: true };
-        } catch (serverError) {
-          const errorMessage =
-            serverError instanceof Error
-              ? serverError.message
-              : "Failed to start authentication server";
-          console.error("[AuthIPC] Server error:", serverError);
-          mainWindow.webContents.send(
-            "auth:status",
-            `Authentication error: ${errorMessage}`,
-          );
-          return { success: false, error: errorMessage };
-        }
-      } catch (error: unknown) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Unknown error";
-        console.error("[AuthIPC] Failed to open OAuth window:", error);
-        cleanupAuthServer();
-        return { success: false, error: errorMessage };
-      }
+              // Open the authorization URL in the default browser
+              await shell.openExternal(oauthUrl);
+
+              // Notify the user about the browser
+              mainWindow.webContents.send(
+                "auth:status",
+                "Browser opened for authentication. Please complete the process in your browser.",
+              );
+
+              // Set up the background handling of the auth code
+              // This needs to be done after we return the response
+              // to avoid the "reply was never sent" error
+              setTimeout(() => {
+                authCodePromise
+                  .then((code) => {
+                    console.info(
+                      "[AuthIPC] Auth code received, sending to renderer...",
+                      {
+                        codeLength: code.length,
+                        codeStart: code.substring(0, 10) + "...",
+                        redirectUri,
+                      },
+                    );
+
+                    // Make sure this code isn't truncated
+                    if (code.length > 500) {
+                      console.warn(
+                        "[AuthIPC] Auth code is very long, it may be truncated or malformed",
+                      );
+                    }
+
+                    mainWindow.webContents.send("auth:codeReceived", { code });
+                  })
+                  .catch((error) => {
+                    if (!authCancelled) {
+                      console.debug(
+                        "[AuthIPC] Auth promise rejected but not cancelled, sending cancelled event...",
+                      );
+                      mainWindow.webContents.send("auth:cancelled");
+                    }
+                    const errorMessage =
+                      error instanceof Error
+                        ? error.message
+                        : "Authentication failed";
+                    console.error("[AuthIPC] Auth error:", errorMessage);
+                  });
+              }, 100);
+
+              // IMPORTANT: Return success immediately so the IPC call resolves
+              // The actual code handling will happen via the auth:codeReceived event
+              return { success: true };
+            } catch (serverError) {
+              const errorMessage =
+                serverError instanceof Error
+                  ? serverError.message
+                  : "Failed to start authentication server";
+              console.error("[AuthIPC] Server error:", serverError);
+              mainWindow.webContents.send(
+                "auth:status",
+                `Authentication error: ${errorMessage}`,
+              );
+              return { success: false, error: errorMessage };
+            }
+          } catch (error: unknown) {
+            const errorMessage =
+              error instanceof Error ? error.message : "Unknown error";
+            console.error("[AuthIPC] Failed to open OAuth window:", error);
+            cleanupAuthServer();
+            return { success: false, error: errorMessage };
+          }
+        },
+      );
     },
   );
 
@@ -398,83 +413,94 @@ export function addAuthEventListeners(mainWindow: BrowserWindow) {
   // Add a handler to exchange auth code for token in the main process
   // This avoids network issues that can happen in the renderer process
   ipcMain.handle("auth:exchangeToken", async (_, params) => {
-    try {
-      const { clientId, clientSecret, redirectUri, code } = params;
-
-      // Validate parameters
-      const validation = validateTokenExchangeParams({
-        clientId,
-        clientSecret,
-        redirectUri,
-        code,
-      });
-      if (!validation.isValid) {
-        return { success: false, error: validation.error };
-      }
-
-      console.info("[AuthIPC] Exchanging token in main process:", {
-        clientIdLength: clientId.length,
-        redirectUri,
-        codeLength: code.length,
-      });
-
-      // Maximum number of retry attempts
-      const MAX_RETRIES = 3;
-      let retries = 0;
-      let lastError = null;
-
-      while (retries < MAX_RETRIES) {
+    return withGroupAsync(
+      `[AuthIPC] Token Exchange (${params.clientId.substring(0, 8)}...)`,
+      async () => {
         try {
-          console.debug(
-            `[AuthIPC] Token exchange attempt ${retries + 1}/${MAX_RETRIES}`,
-          );
+          const { clientId, clientSecret, redirectUri, code } = params;
 
-          // Add delay between retries
-          if (retries > 0) {
-            const delay = retries * 1000; // 1s, 2s, 3s
-            console.debug(`[AuthIPC] Waiting ${delay}ms before retry...`);
-            await new Promise((resolve) => setTimeout(resolve, delay));
-          }
-
-          const result = await performTokenExchange({
+          // Validate parameters
+          const validation = validateTokenExchangeParams({
             clientId,
             clientSecret,
             redirectUri,
             code,
           });
-          if (result.success) {
-            return { success: true, token: result.token };
+          if (!validation.isValid) {
+            return { success: false, error: validation.error };
           }
 
-          throw new Error(result.error);
-        } catch (error) {
-          lastError = error;
+          console.info("[AuthIPC] Exchanging token in main process:", {
+            clientIdLength: clientId.length,
+            redirectUri,
+            codeLength: code.length,
+          });
+
+          // Maximum number of retry attempts
+          const MAX_RETRIES = 3;
+          let retries = 0;
+          let lastError = null;
+
+          while (retries < MAX_RETRIES) {
+            try {
+              console.debug(
+                `[AuthIPC] Token exchange attempt ${retries + 1}/${MAX_RETRIES}`,
+              );
+
+              // Add delay between retries
+              if (retries > 0) {
+                const delay = retries * 1000; // 1s, 2s, 3s
+                console.debug(`[AuthIPC] Waiting ${delay}ms before retry...`);
+                await new Promise((resolve) => setTimeout(resolve, delay));
+              }
+
+              const result = await performTokenExchange({
+                clientId,
+                clientSecret,
+                redirectUri,
+                code,
+              });
+              if (result.success) {
+                return { success: true, token: result.token };
+              }
+
+              throw new Error(result.error);
+            } catch (error) {
+              lastError = error;
+              console.error(
+                `[AuthIPC] Token exchange attempt ${retries + 1} failed:`,
+                error,
+              );
+
+              if (!isNetworkError(error)) {
+                // Don't retry for non-network errors
+                break;
+              }
+
+              retries++;
+            }
+          }
+
+          // If we reach here, all retries failed
           console.error(
-            `[AuthIPC] Token exchange attempt ${retries + 1} failed:`,
-            error,
+            "[AuthIPC] All token exchange attempts failed:",
+            lastError,
           );
-
-          if (!isNetworkError(error)) {
-            // Don't retry for non-network errors
-            break;
-          }
-
-          retries++;
+          return {
+            success: false,
+            error: formatTokenExchangeError(lastError),
+          };
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          console.error(
+            "[AuthIPC] Token exchange handler error:",
+            errorMessage,
+          );
+          return { success: false, error: errorMessage };
         }
-      }
-
-      // If we reach here, all retries failed
-      console.error("[AuthIPC] All token exchange attempts failed:", lastError);
-      return {
-        success: false,
-        error: formatTokenExchangeError(lastError),
-      };
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      console.error("[AuthIPC] Token exchange handler error:", errorMessage);
-      return { success: false, error: errorMessage };
-    }
+      },
+    );
   });
 }
 
@@ -542,7 +568,7 @@ function processAuthCallback(
     sendResponse(
       res,
       200,
-      "Authentication already processed. You can close this globalThis.",
+      "Authentication already processed. You can close this window.",
     );
     return { shouldContinue: false, processed: true };
   }
@@ -606,7 +632,7 @@ function handleSuccessfulAuth(
   sendResponse(
     res,
     200,
-    "Authentication successful! You can close this globalThis.",
+    "Authentication successful! You can close this window.",
   );
 }
 
@@ -625,168 +651,194 @@ async function startAuthServer(
   callbackPath: string,
   mainWindow: BrowserWindow,
 ): Promise<void> {
-  // Cleanup any existing server
-  cleanupAuthServer();
+  return withGroupAsync(`[AuthIPC] Auth Server (port ${port})`, async () => {
+    // Cleanup any existing server
+    cleanupAuthServer();
 
-  // Normalize the callback path
-  const normalizedCallbackPath = callbackPath.startsWith("/")
-    ? callbackPath
-    : `/${callbackPath}`;
+    // Normalize the callback path
+    const normalizedCallbackPath = callbackPath.startsWith("/")
+      ? callbackPath
+      : `/${callbackPath}`;
 
-  console.info(
-    `[AuthIPC] Starting auth server on port ${port}, watching for path: ${normalizedCallbackPath}`,
-  );
+    console.info(
+      `[AuthIPC] Starting auth server on port ${port}, watching for path: ${normalizedCallbackPath}`,
+    );
 
-  // Flag to track if we've already processed a code
-  let codeProcessed = false;
+    // Flag to track if we've already processed a code
+    let codeProcessed = false;
 
-  // Helper function to send a response
-  function sendResponse(
-    res: http.ServerResponse,
-    statusCode: number,
-    message: string,
-  ): void {
-    const htmlResponse = `
-      <html>
-        <head>
-          <title>AniList Authentication</title>
-          <style>
-            body {
-              font-family: sans-serif;
-              text-align: center;
-              padding: 50px;
-              max-width: 600px;
-              margin: 0 auto;
-              line-height: 1.6;
-            }
-            .container {
-              border: 1px solid #eee;
-              border-radius: 10px;
-              padding: 20px;
-              box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            }
-            h1 {
-              color: ${statusCode === 200 ? "#4CAF50" : "#F44336"};
-            }
-            .close-button {
-              margin-top: 20px;
-              padding: 10px 20px;
-              background-color: #4CAF50;
-              color: white;
-              border: none;
-              border-radius: 5px;
-              cursor: pointer;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <h1>${statusCode === 200 ? "Authentication Successful" : "Authentication Error"}</h1>
-            <p>${message}</p>
-            <button class="close-button" onclick="globalThis.close()">Close Window</button>
-            <script>
-              // Auto close after 5 seconds
-              setTimeout(() => globalThis.close(), 5000);
-            </script>
-          </div>
-        </body>
-      </html>
-    `;
-
-    res.writeHead(statusCode, { "Content-Type": "text/html" });
-    res.end(htmlResponse);
-
-    // Send status update to the main window
-    mainWindow.webContents.send("auth:status", message);
-  }
-
-  // Create and start the server
-  return new Promise<void>((resolve, reject) => {
-    try {
-      authServer = http.createServer((req, res) => {
-        try {
-          console.debug(`[AuthIPC] Received request: ${req.url}`);
-
-          const urlResult = validateAndParseUrl(req.url, port);
-          if (
-            !urlResult.isValid ||
-            !urlResult.parsedUrl ||
-            !urlResult.parsedPath
-          ) {
-            return sendResponse(res, 400, "Bad Request: No URL provided");
-          }
-
-          const { parsedUrl, parsedPath } = urlResult;
-
-          console.debug(
-            `[AuthIPC] Parsed path: ${parsedPath}, comparing to: ${normalizedCallbackPath} or ${callbackPath}`,
-          );
-
-          if (
-            isCallbackPath(parsedPath, normalizedCallbackPath, callbackPath)
-          ) {
-            // This is our callback
-            const params = parsedUrl.searchParams;
-
-            const authResult = processAuthCallback(
-              params,
-              codeProcessed,
-              res,
-              sendResponse,
-            );
-            if (!authResult.shouldContinue) {
-              if (authResult.processed) {
-                codeProcessed = true;
+    // Helper function to send a response
+    function sendResponse(
+      res: http.ServerResponse,
+      statusCode: number,
+      message: string,
+    ): void {
+      const htmlResponse = `
+        <html>
+          <head>
+            <title>AniList Authentication</title>
+            <style>
+              body {
+                font-family: sans-serif;
+                text-align: center;
+                padding: 50px;
+                max-width: 600px;
+                margin: 0 auto;
+                line-height: 1.6;
               }
-              return;
+              .container {
+                border: 1px solid #eee;
+                border-radius: 10px;
+                padding: 20px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+              }
+              h1 {
+                color: ${statusCode === 200 ? "#4CAF50" : "#F44336"};
+              }
+              .close-button {
+                margin-top: 20px;
+                padding: 10px 20px;
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>${statusCode === 200 ? "Authentication Successful" : "Authentication Error"}</h1>
+              <p>${message}</p>
+              <button class="close-button" onclick="window.close()">Close Window</button>
+              <script>
+                // Auto close after 5 seconds
+                setTimeout(() => window.close(), 5000);
+              </script>
+            </div>
+          </body>
+        </html>
+      `;
+
+      res.writeHead(statusCode, { "Content-Type": "text/html" });
+      res.end(htmlResponse);
+
+      // Send status update to the main window
+      mainWindow.webContents.send("auth:status", message);
+    }
+
+    // Create and start the server
+    return new Promise<void>((resolve, reject) => {
+      try {
+        authServer = http.createServer((req, res) => {
+          startGroup(`[AuthIPC] Callback Request: ${req.url}`);
+          try {
+            console.debug(`[AuthIPC] Received request: ${req.url}`);
+
+            const urlResult = validateAndParseUrl(req.url, port);
+            if (
+              !urlResult.isValid ||
+              !urlResult.parsedUrl ||
+              !urlResult.parsedPath
+            ) {
+              endGroup();
+              return sendResponse(res, 400, "Bad Request: No URL provided");
             }
 
-            // Mark as processed to prevent duplicate handling
-            codeProcessed = true;
+            const { parsedUrl, parsedPath } = urlResult;
 
-            // Handle successful authentication
-            if (authResult.code) {
-              return handleSuccessfulAuth(authResult.code, res, sendResponse);
+            console.debug(
+              `[AuthIPC] Parsed path: ${parsedPath}, comparing to: ${normalizedCallbackPath} or ${callbackPath}`,
+            );
+
+            if (
+              isCallbackPath(parsedPath, normalizedCallbackPath, callbackPath)
+            ) {
+              // This is our callback
+              const params = parsedUrl.searchParams;
+
+              const authResult = processAuthCallback(
+                params,
+                codeProcessed,
+                res,
+                sendResponse,
+              );
+              if (!authResult.shouldContinue) {
+                if (authResult.processed) {
+                  codeProcessed = true;
+                }
+                endGroup();
+                return;
+              }
+
+              // Mark as processed to prevent duplicate handling
+              codeProcessed = true;
+
+              // Handle successful authentication
+              if (authResult.code) {
+                endGroup();
+                return handleSuccessfulAuth(authResult.code, res, sendResponse);
+              }
+            } else {
+              // Not our callback path
+              endGroup();
+              return sendResponse(res, 404, "Not Found");
             }
-          } else {
-            // Not our callback path
-            return sendResponse(res, 404, "Not Found");
+          } catch (err) {
+            console.error("[AuthIPC] Error handling request:", err);
+            endGroup();
+            sendResponse(res, 500, "Internal Server Error");
           }
-        } catch (err) {
-          console.error("[AuthIPC] Error handling request:", err);
-          sendResponse(res, 500, "Internal Server Error");
-        }
-      });
+        });
 
-      // Start the server
-      authServer.listen(Number.parseInt(port), "localhost", () => {
-        console.info(
-          `[AuthIPC] Auth server started on port ${port}, waiting for callback at ${normalizedCallbackPath}`,
-        );
+        // Start the server
+        authServer.listen(Number.parseInt(port), "127.0.0.1", () => {
+          console.info(
+            `[AuthIPC] Auth server started on 127.0.0.1:${port}, waiting for callback at ${normalizedCallbackPath}`,
+          );
+          mainWindow.webContents.send(
+            "auth:status",
+            `Server started on port ${port}, waiting for authentication...`,
+          );
+          resolve();
+        });
+
+        // Handle server errors
+        authServer.on("error", (err: NodeJS.ErrnoException) => {
+          // Handle port already in use - try the next port
+          if (err.code === "EADDRINUSE") {
+            const nextPort = Number.parseInt(port) + 1;
+            console.warn(
+              `[AuthIPC] Port ${port} already in use, attempting port ${nextPort}`,
+            );
+            mainWindow.webContents.send(
+              "auth:status",
+              `Port ${port} busy, trying ${nextPort}...`,
+            );
+
+            // Retry with the next port
+            authServer?.close();
+            startAuthServer(nextPort.toString(), callbackPath, mainWindow)
+              .then(resolve)
+              .catch(reject);
+          } else {
+            console.error("[AuthIPC] Auth server error:", err);
+            mainWindow.webContents.send(
+              "auth:status",
+              `Auth server error: ${err instanceof Error ? err.message : "Unknown error"}`,
+            );
+            reject(err instanceof Error ? err : new Error(String(err)));
+          }
+        });
+      } catch (err) {
+        console.error("[AuthIPC] Failed to create auth server:", err);
         mainWindow.webContents.send(
           "auth:status",
-          `Server started on port ${port}, waiting for authentication...`,
-        );
-        resolve();
-      });
-
-      // Handle server errors
-      authServer.on("error", (err) => {
-        console.error("[AuthIPC] Auth server error:", err);
-        mainWindow.webContents.send(
-          "auth:status",
-          `Auth server error: ${err instanceof Error ? err.message : "Unknown error"}`,
+          `Failed to create auth server: ${err instanceof Error ? err.message : "Unknown error"}`,
         );
         reject(err instanceof Error ? err : new Error(String(err)));
-      });
-    } catch (err) {
-      console.error("[AuthIPC] Failed to create auth server:", err);
-      mainWindow.webContents.send(
-        "auth:status",
-        `Failed to create auth server: ${err instanceof Error ? err.message : "Unknown error"}`,
-      );
-      reject(err instanceof Error ? err : new Error(String(err)));
-    }
+      }
+    });
   });
 }
 
