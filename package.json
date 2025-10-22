@@ -35,9 +35,9 @@
     "@electron/fuses": "^2.0.0",
     "@eslint/compat": "^1.4.0",
     "@eslint/js": "^9.38.0",
-    "@tailwindcss/vite": "^4.1.14",
+    "@tailwindcss/vite": "^4.1.15",
     "@types/electron-squirrel-startup": "^1.0.2",
-    "@types/node": "^24.8.1",
+    "@types/node": "^24.9.1",
     "@types/node-fetch": "^3.0.2",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
@@ -60,7 +60,7 @@
     "typedoc-plugin-rename-defaults": "^0.7.3",
     "typedoc-theme-hierarchy": "^5.0.5",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.1",
+    "typescript-eslint": "^8.46.2",
     "vite": "^7.1.11",
     "vite-plugin-static-copy": "^3.1.4"
   },
@@ -81,7 +81,7 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@sentry/electron": "^7.2.0",
-    "@tanstack/react-router": "^1.133.15",
+    "@tanstack/react-router": "^1.133.22",
     "@types/string-similarity": "^4.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -101,7 +101,7 @@
     "sonner": "^2.0.7",
     "string-similarity": "^4.0.4",
     "tailwind-merge": "^3.3.1",
-    "tailwindcss": "^4.1.14",
+    "tailwindcss": "^4.1.15",
     "tailwindcss-animate": "^1.0.7"
   }
 }
