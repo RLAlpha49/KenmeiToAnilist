@@ -113,6 +113,94 @@ function processSingleManga(
 }
 
 /**
+ * Log progress for a batch at intervals or at the final batch.
+ * @internal
+ */
+function logBatchProgress(
+  batchIndex: number,
+  totalBatches: number,
+  processedCount: number,
+  errorCount: number,
+): void {
+  if (batchIndex % 10 === 0 || batchIndex === totalBatches) {
+    console.info(
+      `[KenmeiParser] Progress: batch ${batchIndex}/${totalBatches} processed — processedEntries=${processedCount}, validationErrors=${errorCount}`,
+    );
+  }
+}
+
+/**
+ * Log validation errors with sampling for large error lists.
+ * @internal
+ */
+function logValidationErrors(validationErrors: ValidationError[]): void {
+  if (validationErrors.length > 0) {
+    // Log a small sample of errors for diagnostics without flooding logs
+    const sample = validationErrors.slice(0, 5);
+    try {
+      console.warn(
+        `[KenmeiParser] Validation error sample (showing up to 5): ${JSON.stringify(
+          sample,
+        )}`,
+      );
+    } catch {
+      console.warn(
+        `[KenmeiParser] Validation error sample (non-serializable) — count=${validationErrors.length}`,
+      );
+    }
+  }
+}
+
+/**
+ * Process a batch of manga entries and accumulate results.
+ * @internal
+ */
+function processBatchIteration(
+  mangaList: KenmeiManga[],
+  batchSize: number,
+  parseOptions: KenmeiParseOptions,
+  validationErrors: ValidationError[],
+  processedEntries: KenmeiManga[],
+): void {
+  const totalBatches = Math.ceil(mangaList.length / batchSize);
+  for (let i = 0; i < mangaList.length; i += batchSize) {
+    const batchIndex = Math.floor(i / batchSize) + 1;
+    const batch = mangaList.slice(i, i + batchSize);
+
+    console.debug(
+      `[KenmeiParser] Processing batch ${batchIndex}/${totalBatches} — entries=${batch.length}, startIndex=${i}`,
+    );
+
+    for (const [j, manga] of batch.entries()) {
+      const index = i + j;
+      try {
+        processSingleManga(
+          manga,
+          index,
+          parseOptions,
+          validationErrors,
+          processedEntries,
+        );
+      } catch (error_) {
+        // processSingleManga should capture validation errors, but guard against unexpected exceptions
+        if (error_ instanceof Error) {
+          console.error(
+            `[KenmeiParser] Unexpected error processing manga at index ${index}: ${error_.message}`,
+          );
+        } else {
+          console.error(
+            `[KenmeiParser] Unknown error processing manga at index ${index}`,
+          );
+        }
+      }
+    }
+
+    // per-batch progress logging (kept concise for large imports)
+    logBatchProgress(batchIndex, totalBatches, processedEntries.length, validationErrors.length);
+  }
+}
+
+/**
  * Process Kenmei manga list in batches with validation and normalization.
  * @param mangaList - List of manga entries to process.
  * @param batchSize - Size of each batch (default: 50).
@@ -153,67 +241,14 @@ export function processKenmeiMangaBatches(
           };
         }
 
-        const totalBatches = Math.ceil(mangaList.length / batchSize);
-        for (let i = 0; i < mangaList.length; i += batchSize) {
-          const batchIndex = Math.floor(i / batchSize) + 1;
-          const batch = mangaList.slice(i, i + batchSize);
-
-          console.debug(
-            `[KenmeiParser] Processing batch ${batchIndex}/${totalBatches} — entries=${batch.length}, startIndex=${i}`,
-          );
-
-          for (const [j, manga] of batch.entries()) {
-            const index = i + j;
-            try {
-              processSingleManga(
-                manga,
-                index,
-                parseOptions,
-                validationErrors,
-                processedEntries,
-              );
-            } catch (error_) {
-              // processSingleManga should capture validation errors, but guard against unexpected exceptions
-              if (error_ instanceof Error) {
-                console.error(
-                  `[KenmeiParser] Unexpected error processing manga at index ${index}: ${error_.message}`,
-                );
-              } else {
-                console.error(
-                  `[KenmeiParser] Unknown error processing manga at index ${index}`,
-                );
-              }
-            }
-          }
-
-          // per-batch progress logging (kept concise for large imports)
-          if (batchIndex % 10 === 0 || batchIndex === totalBatches) {
-            console.info(
-              `[KenmeiParser] Progress: batch ${batchIndex}/${totalBatches} processed — processedEntries=${processedEntries.length}, validationErrors=${validationErrors.length}`,
-            );
-          }
-        }
+        processBatchIteration(mangaList, batchSize, parseOptions, validationErrors, processedEntries);
 
         const durationMs = Math.round(now() - startTime);
         console.info(
           `[KenmeiParser] Batch processing completed — processed=${processedEntries.length}, errors=${validationErrors.length}, duration=${durationMs}ms`,
         );
 
-        if (validationErrors.length > 0) {
-          // Log a small sample of errors for diagnostics without flooding logs
-          const sample = validationErrors.slice(0, 5);
-          try {
-            console.warn(
-              `[KenmeiParser] Validation error sample (showing up to 5): ${JSON.stringify(
-                sample,
-              )}`,
-            );
-          } catch {
-            console.warn(
-              `[KenmeiParser] Validation error sample (non-serializable) — count=${validationErrors.length}`,
-            );
-          }
-        }
+        logValidationErrors(validationErrors);
 
         return {
           processedEntries,
@@ -311,9 +346,6 @@ function shouldSkipRow(
   }
 
   return false;
-}
-
-/**
 }
 
 /**
@@ -566,6 +598,111 @@ export const parseKenmeiCsvExport = (
 };
 
 /**
+ * Process a quote character in CSV parsing, handling escaped quotes.
+ * @internal
+ */
+function processQuoteCharacter(
+  csvContent: string,
+  currentIndex: number,
+  currentValue: string,
+  inQuotes: boolean,
+): {
+  newIndex: number;
+  newValue: string;
+  newInQuotes: boolean;
+  escapedQuoteDetected: boolean;
+} {
+  const nextChar = currentIndex < csvContent.length - 1 ? csvContent[currentIndex + 1] : "";
+
+  // If this is an escaped quote (i.e., "")
+  if (nextChar === '"') {
+    return {
+      newIndex: currentIndex + 2,
+      newValue: currentValue + '"',
+      newInQuotes: inQuotes,
+      escapedQuoteDetected: true,
+    };
+  } else {
+    // Toggle in-quotes state
+    return {
+      newIndex: currentIndex + 1,
+      newValue: currentValue,
+      newInQuotes: !inQuotes,
+      escapedQuoteDetected: false,
+    };
+  }
+}
+
+/**
+ * Process a delimiter or newline character in CSV parsing.
+ * @internal
+ */
+/**
+ * Finalize the last row in CSV parsing if needed.
+ * @internal
+ */
+function finalizeLastRow(
+  currentValue: string,
+  currentRow: string[],
+  rows: string[][],
+): void {
+  if (currentValue !== "" || currentRow.length > 0) {
+    currentRow.push(currentValue);
+    rows.push(currentRow);
+  }
+}
+
+/**
+ * Process a single character in CSV content, updating mutable state.
+ * @internal
+ */
+function handleCSVCharacter(
+  csvContent: string,
+  index: number,
+  state: {
+    currentRow: string[];
+    currentValue: string;
+    inQuotes: boolean;
+    escapedQuoteCount: number;
+    rows: string[][];
+    rowCountAtCheckpoint: number;
+  },
+): number {
+  const char = csvContent[index];
+
+  if (char === '"') {
+    const quoteResult = processQuoteCharacter(csvContent, index, state.currentValue, state.inQuotes);
+    state.currentValue = quoteResult.newValue;
+    state.inQuotes = quoteResult.newInQuotes;
+    if (quoteResult.escapedQuoteDetected) {
+      state.escapedQuoteCount++;
+    }
+    return quoteResult.newIndex;
+  }
+
+  if (char === "," && !state.inQuotes) {
+    state.currentRow.push(state.currentValue);
+    state.currentValue = "";
+    return index + 1;
+  }
+
+  if (char === "\n" && !state.inQuotes) {
+    state.currentRow.push(state.currentValue);
+    state.rows.push(state.currentRow);
+    state.currentRow = [];
+    state.currentValue = "";
+    state.rowCountAtCheckpoint++;
+    if (state.rowCountAtCheckpoint % 1000 === 0) {
+      console.debug(`[KenmeiParser] Parsed ${state.rowCountAtCheckpoint} rows so far...`);
+    }
+    return index + 1;
+  }
+
+  state.currentValue += char;
+  return index + 1;
+}
+
+/**
  * Parse CSV content into rows and columns, properly handling quoted fields and escaped quotes.
  * @param csvContent - The CSV content as a string.
  * @returns Array of arrays where each inner array contains row cell values.
@@ -573,97 +710,42 @@ export const parseKenmeiCsvExport = (
  */
 function parseCSVRows(csvContent: string): string[][] {
   return withGroup(`[KenmeiParser] Parse CSV Rows`, () => {
-    const rows: string[][] = [];
-    let currentRow: string[] = [];
-    let currentValue = "";
-    let inQuotes = false;
+    // Initialize state object directly
+    const state = {
+      rows: [] as string[][],
+      currentRow: [] as string[],
+      currentValue: "",
+      inQuotes: false,
+      escapedQuoteCount: 0,
+      rowCountAtCheckpoint: 0,
+    };
 
     // Diagnostics
     let charsProcessed = 0;
-    let escapedQuoteCount = 0;
-    let rowCountAtCheckpoint = 0;
 
     try {
-      console.info(
-        `[KenmeiParser] Starting CSV parse (length=${csvContent.length})`,
-      );
+      console.info(`[KenmeiParser] Starting CSV parse (length=${csvContent.length})`);
 
-      // Process each character in the CSV
       let i = 0;
       while (i < csvContent.length) {
-        const char = csvContent[i];
-        const nextChar = i < csvContent.length - 1 ? csvContent[i + 1] : "";
-
-        // Handle quotes
-        if (char === '"') {
-          // If this is an escaped quote (i.e., "")
-          if (nextChar === '"') {
-            currentValue += '"';
-            escapedQuoteCount++;
-            i += 2; // Skip both quotes
-          } else {
-            // Toggle in-quotes state
-            inQuotes = !inQuotes;
-            i++;
-          }
-        }
-        // Handle commas
-        else if (char === "," && !inQuotes) {
-          currentRow.push(currentValue);
-          currentValue = "";
-          i++;
-        }
-        // Handle newlines
-        else if (char === "\n" && !inQuotes) {
-          currentRow.push(currentValue);
-          rows.push(currentRow);
-          currentRow = [];
-          currentValue = "";
-          i++;
-          // occasional progress logging for very large files
-          if (++rowCountAtCheckpoint % 1000 === 0) {
-            console.debug(
-              `[KenmeiParser] Parsed ${rowCountAtCheckpoint} rows so far...`,
-            );
-          }
-        }
-        // Handle all other characters
-        else {
-          currentValue += char;
-          i++;
-        }
-
+        i = handleCSVCharacter(csvContent, i, state);
         charsProcessed++;
       }
 
-      // Add the last value and row if there is one
-      if (currentValue !== "" || currentRow.length > 0) {
-        currentRow.push(currentValue);
-        rows.push(currentRow);
+      finalizeLastRow(state.currentValue, state.currentRow, state.rows);
+
+      if (state.inQuotes) {
+        console.warn(`[KenmeiParser] CSV parsing finished with unbalanced quotes; some fields may be truncated.`);
       }
 
-      if (inQuotes) {
-        // Unbalanced quotes detected — log a warning but still return parsed rows.
-        console.warn(
-          `[KenmeiParser] CSV parsing finished with unbalanced quotes; some fields may be truncated.`,
-        );
-      }
+      console.info(`[KenmeiParser] Completed CSV parse: rows=${state.rows.length}, charsProcessed=${charsProcessed}, escapedQuotes=${state.escapedQuoteCount}`);
 
-      console.info(
-        `[KenmeiParser] Completed CSV parse: rows=${rows.length}, charsProcessed=${charsProcessed}, escapedQuotes=${escapedQuoteCount}`,
-      );
-
-      return rows;
+      return state.rows;
     } catch (err) {
-      // Use non-console.log logging methods
       if (err instanceof Error) {
-        console.error(
-          `[KenmeiParser] Error while parsing CSV after ${charsProcessed} chars: ${err.message}`,
-        );
+        console.error(`[KenmeiParser] Error while parsing CSV after ${charsProcessed} chars: ${err.message}`);
       } else {
-        console.error(
-          `[KenmeiParser] Unknown error while parsing CSV after ${charsProcessed} chars`,
-        );
+        console.error(`[KenmeiParser] Unknown error while parsing CSV after ${charsProcessed} chars`);
       }
       throw err;
     }

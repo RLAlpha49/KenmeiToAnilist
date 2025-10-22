@@ -9,6 +9,7 @@ import { URL } from "node:url";
 import * as http from "node:http";
 import fetch from "node-fetch";
 import { withGroupAsync, startGroup, endGroup } from "../../../utils/logging";
+import type { TokenExchangeResponse } from "../../../types/auth";
 
 let authCancelled = false;
 let loadTimeout: NodeJS.Timeout | null = null;
@@ -115,7 +116,10 @@ async function performTokenExchange(params: {
   clientSecret: string;
   redirectUri: string;
   code: string;
-}): Promise<{ success: boolean; token?: unknown; error?: string }> {
+}): Promise<
+  | { success: true; token: TokenExchangeResponse["token"] }
+  | { success: false; error: string }
+> {
   return withGroupAsync(`[AuthIPC] Exchange Attempt`, async () => {
     const { clientId, clientSecret, redirectUri, code } = params;
 
@@ -163,7 +167,15 @@ async function performTokenExchange(params: {
       };
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as TokenExchangeResponse["token"];
+    
+    if (!data?.access_token) {
+      return {
+        success: false,
+        error: "Token exchange returned invalid response structure",
+      };
+    }
+
     console.info("[AuthIPC] Token exchange successful:", {
       token_type: data.token_type,
       expires_in: data.expires_in,
@@ -273,14 +285,7 @@ export function addAuthEventListeners(mainWindow: BrowserWindow) {
                 authReject = reject;
 
                 // Set timeout for the entire auth process and store handle for cleanup
-                loadTimeout = setTimeout(() => {
-                  if (authResolve) {
-                    authReject?.(
-                      new Error("Authentication timed out after 2 minutes"),
-                    );
-                    cleanupAuthServer();
-                  }
-                }, 120000); // 2 minute timeout
+                loadTimeout = createAuthTimeout();
               });
 
               // Open the authorization URL in the default browser
@@ -296,39 +301,7 @@ export function addAuthEventListeners(mainWindow: BrowserWindow) {
               // This needs to be done after we return the response
               // to avoid the "reply was never sent" error
               setTimeout(() => {
-                authCodePromise
-                  .then((code) => {
-                    console.info(
-                      "[AuthIPC] Auth code received, sending to renderer...",
-                      {
-                        codeLength: code.length,
-                        codeStart: code.substring(0, 10) + "...",
-                        redirectUri,
-                      },
-                    );
-
-                    // Make sure this code isn't truncated
-                    if (code.length > 500) {
-                      console.warn(
-                        "[AuthIPC] Auth code is very long, it may be truncated or malformed",
-                      );
-                    }
-
-                    mainWindow.webContents.send("auth:codeReceived", { code });
-                  })
-                  .catch((error) => {
-                    if (!authCancelled) {
-                      console.debug(
-                        "[AuthIPC] Auth promise rejected but not cancelled, sending cancelled event...",
-                      );
-                      mainWindow.webContents.send("auth:cancelled");
-                    }
-                    const errorMessage =
-                      error instanceof Error
-                        ? error.message
-                        : "Authentication failed";
-                    console.error("[AuthIPC] Auth error:", errorMessage);
-                  });
+                handleAuthCodePromise(authCodePromise, mainWindow, redirectUri);
               }, 100);
 
               // IMPORTANT: Return success immediately so the IPC call resolves
@@ -506,6 +479,70 @@ export function addAuthEventListeners(mainWindow: BrowserWindow) {
 }
 
 /**
+ * Send an HTTP response with HTML content for OAuth callback.
+ * @internal
+ */
+function sendResponse(
+  res: http.ServerResponse,
+  statusCode: number,
+  message: string,
+  mainWindow: BrowserWindow,
+): void {
+  const htmlResponse = `
+    <html>
+      <head>
+        <title>AniList Authentication</title>
+        <style>
+          body {
+            font-family: sans-serif;
+            text-align: center;
+            padding: 50px;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+          }
+          .container {
+            border: 1px solid #eee;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+          }
+          h1 {
+            color: ${statusCode === 200 ? "#4CAF50" : "#F44336"};
+          }
+          .close-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1>${statusCode === 200 ? "Authentication Successful" : "Authentication Error"}</h1>
+          <p>${message}</p>
+          <button class="close-button" onclick="window.close()">Close Window</button>
+          <script>
+            // Auto close after 5 seconds
+            setTimeout(() => window.close(), 5000);
+          </script>
+        </div>
+      </body>
+    </html>
+  `;
+
+  res.writeHead(statusCode, { "Content-Type": "text/html" });
+  res.end(htmlResponse);
+
+  // Send status update to the main window
+  mainWindow.webContents.send("auth:status", message);
+}
+
+/**
  * Validate and parse an incoming HTTP request URL.
  * @internal
  */
@@ -548,11 +585,7 @@ function processAuthCallback(
   params: URLSearchParams,
   codeProcessed: boolean,
   res: http.ServerResponse,
-  sendResponse: (
-    res: http.ServerResponse,
-    statusCode: number,
-    message: string,
-  ) => void,
+  mainWindow: BrowserWindow,
 ): { shouldContinue: boolean; code?: string; processed: boolean } {
   const hasCode = params.has("code");
   const hasError = params.has("error");
@@ -570,6 +603,7 @@ function processAuthCallback(
       res,
       200,
       "Authentication already processed. You can close this window.",
+      mainWindow,
     );
     return { shouldContinue: false, processed: true };
   }
@@ -581,21 +615,21 @@ function processAuthCallback(
     console.error("[AuthIPC]", errorMessage);
 
     authReject?.(new Error(errorMessage));
-    sendResponse(res, 400, `Authentication failed: ${errorDescription}`);
+    sendResponse(res, 400, `Authentication failed: ${errorDescription}`, mainWindow);
     return { shouldContinue: false, processed: true };
   }
 
   if (hasCode) {
     const code = params.get("code");
     if (!code) {
-      sendResponse(res, 400, "Invalid code parameter");
+      sendResponse(res, 400, "Invalid code parameter", mainWindow);
       return { shouldContinue: false, processed: true };
     }
     return { shouldContinue: true, code, processed: true };
   }
 
   // Neither code nor error
-  sendResponse(res, 400, "Invalid callback: missing code or error parameter");
+  sendResponse(res, 400, "Invalid callback: missing code or error parameter", mainWindow);
   return { shouldContinue: false, processed: true };
 }
 
@@ -606,11 +640,7 @@ function processAuthCallback(
 function handleSuccessfulAuth(
   code: string,
   res: http.ServerResponse,
-  sendResponse: (
-    res: http.ServerResponse,
-    statusCode: number,
-    message: string,
-  ) => void,
+  mainWindow: BrowserWindow,
 ): void {
   console.info("[AuthIPC] Authentication successful, resolving with code");
 
@@ -634,7 +664,67 @@ function handleSuccessfulAuth(
     res,
     200,
     "Authentication successful! You can close this window.",
+    mainWindow,
   );
+}
+
+/**
+ * Set up a timeout for the authentication process.
+ * @internal
+ */
+function createAuthTimeout(): NodeJS.Timeout {
+  return setTimeout(() => {
+    if (authResolve) {
+      authReject?.(
+        new Error("Authentication timed out after 2 minutes"),
+      );
+      cleanupAuthServer();
+    }
+  }, 120000); // 2 minute timeout
+}
+
+/**
+ * Handle the authentication code promise after the server is running.
+ * @internal
+ */
+function handleAuthCodePromise(
+  authCodePromise: Promise<string>,
+  mainWindow: BrowserWindow,
+  redirectUri: string,
+): void {
+  authCodePromise
+    .then((code) => {
+      console.info(
+        "[AuthIPC] Auth code received, sending to renderer...",
+        {
+          codeLength: code.length,
+          codeStart: code.substring(0, 10) + "...",
+          redirectUri,
+        },
+      );
+
+      // Make sure this code isn't truncated
+      if (code.length > 500) {
+        console.warn(
+          "[AuthIPC] Auth code is very long, it may be truncated or malformed",
+        );
+      }
+
+      mainWindow.webContents.send("auth:codeReceived", { code });
+    })
+    .catch((error) => {
+      if (!authCancelled) {
+        console.debug(
+          "[AuthIPC] Auth promise rejected but not cancelled, sending cancelled event...",
+        );
+        mainWindow.webContents.send("auth:cancelled");
+      }
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Authentication failed";
+      console.error("[AuthIPC] Auth error:", errorMessage);
+    });
 }
 
 /**
@@ -668,66 +758,6 @@ async function startAuthServer(
     // Flag to track if we've already processed a code
     let codeProcessed = false;
 
-    // Helper function to send a response
-    function sendResponse(
-      res: http.ServerResponse,
-      statusCode: number,
-      message: string,
-    ): void {
-      const htmlResponse = `
-        <html>
-          <head>
-            <title>AniList Authentication</title>
-            <style>
-              body {
-                font-family: sans-serif;
-                text-align: center;
-                padding: 50px;
-                max-width: 600px;
-                margin: 0 auto;
-                line-height: 1.6;
-              }
-              .container {
-                border: 1px solid #eee;
-                border-radius: 10px;
-                padding: 20px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-              }
-              h1 {
-                color: ${statusCode === 200 ? "#4CAF50" : "#F44336"};
-              }
-              .close-button {
-                margin-top: 20px;
-                padding: 10px 20px;
-                background-color: #4CAF50;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                cursor: pointer;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1>${statusCode === 200 ? "Authentication Successful" : "Authentication Error"}</h1>
-              <p>${message}</p>
-              <button class="close-button" onclick="window.close()">Close Window</button>
-              <script>
-                // Auto close after 5 seconds
-                setTimeout(() => window.close(), 5000);
-              </script>
-            </div>
-          </body>
-        </html>
-      `;
-
-      res.writeHead(statusCode, { "Content-Type": "text/html" });
-      res.end(htmlResponse);
-
-      // Send status update to the main window
-      mainWindow.webContents.send("auth:status", message);
-    }
-
     // Create and start the server
     return new Promise<void>((resolve, reject) => {
       try {
@@ -743,7 +773,7 @@ async function startAuthServer(
               !urlResult.parsedPath
             ) {
               endGroup();
-              return sendResponse(res, 400, "Bad Request: No URL provided");
+              return sendResponse(res, 400, "Bad Request: No URL provided", mainWindow);
             }
 
             const { parsedUrl, parsedPath } = urlResult;
@@ -762,7 +792,7 @@ async function startAuthServer(
                 params,
                 codeProcessed,
                 res,
-                sendResponse,
+                mainWindow,
               );
               if (!authResult.shouldContinue) {
                 if (authResult.processed) {
@@ -778,17 +808,17 @@ async function startAuthServer(
               // Handle successful authentication
               if (authResult.code) {
                 endGroup();
-                return handleSuccessfulAuth(authResult.code, res, sendResponse);
+                return handleSuccessfulAuth(authResult.code, res, mainWindow);
               }
             } else {
               // Not our callback path
               endGroup();
-              return sendResponse(res, 404, "Not Found");
+              return sendResponse(res, 404, "Not Found", mainWindow);
             }
           } catch (err) {
             console.error("[AuthIPC] Error handling request:", err);
             endGroup();
-            sendResponse(res, 500, "Internal Server Error");
+            sendResponse(res, 500, "Internal Server Error", mainWindow);
           }
         });
 
