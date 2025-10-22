@@ -5,6 +5,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import * as Sentry from "@sentry/electron/renderer";
 import {
   syncMangaBatch,
   SyncReport,
@@ -17,6 +18,7 @@ import {
   saveSyncReportToHistory,
 } from "../utils/exportUtils";
 import { storage, STORAGE_KEYS } from "../utils/storage";
+import { captureError, ErrorType } from "../utils/errorHandling";
 import {
   useDebugActions,
   StateInspectorHandle,
@@ -655,6 +657,17 @@ async function runIncrementalEntries(
         `[Synchronization] Error processing incremental sync for entry ${entry.mediaId}:`,
         err,
       );
+      captureError(
+        ErrorType.UNKNOWN,
+        `Incremental sync failed for manga: ${entry.title || entry.mediaId}`,
+        err,
+        {
+          mediaTitle: entry.title,
+          mediaId: entry.mediaId,
+          aniListId: entry.mediaId,
+          stage: "incremental_entry_processing",
+        },
+      );
 
       const counters = progressUpdater.getCounters();
       const failedUpdates = counters.failedUpdates + 1;
@@ -1114,6 +1127,17 @@ export function useSynchronization(): [
         `[Synchronization] ${isResume ? "▶️ Resuming" : "🚀 Starting"} sync for ${entries.length} entries`,
       );
 
+      // Add breadcrumb for sync start
+      Sentry.addBreadcrumb({
+        category: "sync",
+        message: `Sync ${isResume ? "resumed" : "started"}`,
+        level: "info",
+        data: {
+          entryCount: entries.length,
+          isResume,
+        },
+      });
+
       recordEvent({
         type: isResume ? "sync.resume" : "sync.start",
         message: `${isResume ? "Resumed" : "Started"} sync for ${entries.length} entries`,
@@ -1190,6 +1214,15 @@ export function useSynchronization(): [
           console.info(
             "[Synchronization] ⏸️ Pausing sync and saving state for resume...",
           );
+          // Add breadcrumb for sync pause
+          Sentry.addBreadcrumb({
+            category: "sync",
+            message: "Sync paused by user",
+            level: "info",
+            data: {
+              progress: lastReportedProgress,
+            },
+          });
           handlePausedSync(
             existingReportFragment,
             syncReport,
@@ -1214,6 +1247,25 @@ export function useSynchronization(): [
         );
 
         const finalReport = mergeReports(existingReportFragment, syncReport);
+        // Add breadcrumb for sync completion
+        Sentry.addBreadcrumb({
+          category: "sync",
+          message: "Sync completed",
+          level: finalReport.failedUpdates > 0 ? "warning" : "info",
+          data: {
+            successfulUpdates: finalReport.successfulUpdates,
+            failedUpdates: finalReport.failedUpdates,
+            skippedEntries: finalReport.skippedEntries,
+            totalEntries: finalReport.totalEntries,
+          },
+        });
+        // Add sync context to Sentry
+        Sentry.setContext("sync", {
+          totalEntries: finalReport.totalEntries,
+          successfulUpdates: finalReport.successfulUpdates,
+          failedUpdates: finalReport.failedUpdates,
+          skippedEntries: finalReport.skippedEntries,
+        });
         recordEvent({
           type: "sync.complete",
           message: `Sync completed: ${finalReport.successfulUpdates} success, ${finalReport.failedUpdates} failed`,
@@ -1227,6 +1279,17 @@ export function useSynchronization(): [
         });
       } catch (error) {
         console.error("[Synchronization] Sync operation failed:", error);
+        captureError(
+          ErrorType.UNKNOWN,
+          "Synchronization operation failed",
+          error,
+          {
+            entryCount: entries.length,
+            isResume,
+            progress: state.progress,
+            stage: "sync_execution",
+          },
+        );
         setState((prev) => ({
           ...prev,
           isActive: false,

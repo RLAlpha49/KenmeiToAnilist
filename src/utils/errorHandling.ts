@@ -259,3 +259,56 @@ export async function safeAsync<T>(
     return { data: null, error: appError };
   }
 }
+
+/**
+ * Captures an error to Sentry for monitoring and analysis.
+ *
+ * Wraps error creation with Sentry integration, sending errors to the monitoring
+ * service when configured in production or with SENTRY_DSN set.
+ *
+ * @param type - The error type.
+ * @param message - The error message.
+ * @param originalError - The original error object.
+ * @param context - Optional metadata to include with the error (user info, breadcrumbs, etc.).
+ * @param code - Optional error code for categorization.
+ * @returns The constructed AppError object.
+ * @source
+ */
+export function captureError(
+  type: ErrorType,
+  message: string,
+  originalError: unknown,
+  context?: Record<string, unknown>,
+  code?: string,
+): AppError {
+  const appError = createError(type, message, originalError, code);
+
+  // Only capture to Sentry in production or when SENTRY_DSN is configured
+  if (
+    globalThis.window !== undefined &&
+    (process.env.NODE_ENV === "production" ||
+      process.env.VITE_SENTRY_DSN ||
+      import.meta.env.VITE_SENTRY_DSN)
+  ) {
+    // Dynamic import to avoid hard dependency on Sentry
+    import("@sentry/electron/renderer")
+      .then((Sentry) => {
+        Sentry.captureException(originalError, {
+          tags: {
+            errorType: type,
+            errorCode: code || "UNKNOWN",
+          },
+          contexts: context
+            ? {
+                app: context,
+              }
+            : undefined,
+        });
+      })
+      .catch((err) => {
+        console.debug("[ErrorHandling] Failed to capture error to Sentry:", err);
+      });
+  }
+
+  return appError;
+}

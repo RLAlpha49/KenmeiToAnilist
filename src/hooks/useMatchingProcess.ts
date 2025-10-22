@@ -4,6 +4,7 @@
  * @description Custom React hook for managing the manga matching process, including batch matching, progress tracking, error handling, and resume/cancel operations in the Kenmei to AniList sync tool.
  */
 import { useState, useRef, useCallback, useEffect } from "react";
+import * as Sentry from "@sentry/electron/renderer";
 import { KenmeiManga } from "../api/kenmei/types";
 import { MangaMatchResult } from "../api/anilist/types";
 import {
@@ -20,6 +21,7 @@ import {
   MatchResult,
 } from "../utils/storage";
 import { ApiError, MatchingProgress } from "../types/matching";
+import { captureError, ErrorType } from "../utils/errorHandling";
 import { useTimeEstimate } from "./useTimeEstimate";
 import { usePendingManga } from "./usePendingManga";
 
@@ -273,6 +275,15 @@ export const useMatchingProcess = ({
         }
       } catch (e) {
         console.error("[MatchingProcess] Failed to persist match results:", e);
+        captureError(
+          ErrorType.STORAGE,
+          "Failed to persist matching results to storage",
+          e,
+          {
+            resultCount: results.length,
+            stage: "persist_results",
+          },
+        );
       }
     },
     [calculatePendingManga, savePendingManga, setPendingManga],
@@ -352,9 +363,20 @@ export const useMatchingProcess = ({
       }
     }
 
+    captureError(
+      ErrorType.UNKNOWN,
+      "Matching process error",
+      err,
+      {
+        mangaCount: progressRef.current.total,
+        currentProgress: progressRef.current.current,
+        bypassCache,
+      },
+    );
+
     setError(errorMessage);
     setDetailedError(apiError);
-  }, []);
+  }, [bypassCache]);
 
   /**
    * Starts the batch matching process for the provided manga list.
@@ -453,6 +475,17 @@ export const useMatchingProcess = ({
       };
 
       try {
+        // Add breadcrumb for matching start
+        Sentry.addBreadcrumb({
+          category: "matching",
+          message: "Matching process started",
+          level: "info",
+          data: {
+            mangaCount: mangaList.length,
+            forceSearch,
+          },
+        });
+
         const cacheStatus = cacheDebugger.getCacheStatus();
         cacheDebugger.forceSyncCaches();
 
@@ -481,6 +514,19 @@ export const useMatchingProcess = ({
           (current, total, currentTitle) => {
             checkCancellation();
             onProgress(current, total, currentTitle);
+            // Add breadcrumb for progress milestones (every 10%)
+            const progressPercent = (current / total) * 100;
+            if (progressPercent % 10 < 1) {
+              Sentry.addBreadcrumb({
+                category: "matching",
+                message: `Matching progress: ${Math.floor(progressPercent)}%`,
+                level: "info",
+                data: {
+                  current,
+                  total,
+                },
+              });
+            }
           },
           () => {
             if (cancelMatchingRef.current) {
@@ -493,6 +539,14 @@ export const useMatchingProcess = ({
 
         // If the run was cancelled, preserve partial results and inform user
         if (cancelMatchingRef.current) {
+          Sentry.addBreadcrumb({
+            category: "matching",
+            message: "Matching process cancelled by user",
+            level: "info",
+            data: {
+              resultsProcessed: results.length,
+            },
+          });
           if (results.length > 0) {
             await persistMergedResults(
               results as MatchResult[],
@@ -511,6 +565,24 @@ export const useMatchingProcess = ({
           "[MatchingProcess] Cache status after matching:",
           finalCacheStatus,
         );
+
+        // Add breadcrumb for matching completion
+        Sentry.addBreadcrumb({
+          category: "matching",
+          message: "Matching process completed",
+          level: "info",
+          data: {
+            resultsMatched: results.length,
+            totalManga: mangaList.length,
+          },
+        });
+
+        // Add matching context to Sentry
+        Sentry.setContext("matching", {
+          totalManga: mangaList.length,
+          resultsMatched: results.length,
+          confidenceThreshold: 75,
+        });
 
         // Normal completion: merge, persist, and clear pending
         await persistMergedResults(

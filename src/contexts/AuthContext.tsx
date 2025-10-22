@@ -12,7 +12,9 @@ import React, {
   useCallback,
 } from "react";
 import { toast } from "sonner";
+import * as Sentry from "@sentry/electron/renderer";
 import { storage } from "../utils/storage";
+import { captureError, ErrorType } from "../utils/errorHandling";
 import {
   AuthState,
   APICredentials,
@@ -218,6 +220,21 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
             viewer.avatar?.medium ||
             "https://s4.anilist.co/file/anilistcdn/user/avatar/large/default.png",
         }));
+        // Set user context in Sentry after successful authentication
+        Sentry.setUser({
+          id: viewer.id.toString(),
+          username: viewer.name,
+        });
+        // Add breadcrumb for successful authentication
+        Sentry.addBreadcrumb({
+          category: "auth",
+          message: "User profile fetched",
+          level: "info",
+          data: {
+            userId: viewer.id,
+            username: viewer.name,
+          },
+        });
         setStatusMessage("Authentication complete!");
         recordEvent({
           type: "auth.login",
@@ -233,6 +250,15 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
       }
     } catch (profileError) {
       console.error("[AuthContext] Profile fetch error:", profileError);
+      captureError(
+        ErrorType.AUTH,
+        "Failed to fetch user profile from AniList",
+        profileError,
+        {
+          context: "handleUserProfile",
+          stage: "profile_fetch",
+        },
+      );
       // Still authenticated but with limited info - use defaults
       setAuthState((prevState) => ({
         ...prevState,
@@ -353,6 +379,16 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
         console.error("[AuthContext] Authentication error:", err);
         const msg =
           err instanceof Error ? err.message : "Authentication failed";
+        captureError(
+          ErrorType.AUTH,
+          "Token exchange failed during authentication",
+          err,
+          {
+            credentialSource: authState.credentialSource,
+            attemptId: authAttemptRef.current,
+            stage: "token_exchange",
+          },
+        );
         recordEvent({
           type: "auth.token-exchange",
           message: `Token exchange failed: ${msg}`,
@@ -507,6 +543,12 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
 
   const refreshToken = useCallback(async () => {
     try {
+      // Add breadcrumb for token refresh
+      Sentry.addBreadcrumb({
+        category: "auth",
+        message: "Token refresh initiated",
+        level: "info",
+      });
       recordEvent({
         type: "auth.refresh",
         message: "User initiated token refresh",
@@ -551,6 +593,14 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     } catch (err: unknown) {
       console.error("[AuthContext] Token refresh error:", err);
       const msg = err instanceof Error ? err.message : "Token refresh failed";
+      captureError(
+        ErrorType.AUTH,
+        "Token refresh failed",
+        err,
+        {
+          stage: "token_refresh",
+        },
+      );
       recordEvent({
         type: "auth.refresh",
         message: `Token refresh failed: ${msg}`,
@@ -576,6 +626,15 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
   const login = useCallback(
     async (credentials: APICredentials) => {
       try {
+        // Add breadcrumb for login initiation
+        Sentry.addBreadcrumb({
+          category: "auth",
+          message: "Login initiated",
+          level: "info",
+          data: {
+            credentialSource: credentials.source,
+          },
+        });
         recordEvent({
           type: "auth.login",
           message: "User initiated login",
@@ -610,6 +669,13 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
           toast.error(storeResult.error || "Failed to store credentials");
           throw new Error(storeResult.error || "Failed to store credentials");
         }
+
+        // Add breadcrumb for token exchange
+        Sentry.addBreadcrumb({
+          category: "auth",
+          message: "Token exchange started",
+          level: "info",
+        });
 
         // Verify credentials were actually stored
         setStatusMessage("Verifying credentials...");
@@ -677,6 +743,15 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
       } catch (err: unknown) {
         console.error("[AuthContext] Login error:", err);
         const msg = err instanceof Error ? err.message : "Login failed";
+        captureError(
+          ErrorType.AUTH,
+          "Login failed",
+          err,
+          {
+            credentialSource: credentials.source,
+            stage: "login",
+          },
+        );
         toast.error(msg);
         setError(msg);
         setStatusMessage(null);
@@ -700,6 +775,17 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
    * @source
    */
   const logout = useCallback(() => {
+    // Add breadcrumb for logout
+    Sentry.addBreadcrumb({
+      category: "auth",
+      message: "User logged out",
+      level: "info",
+      data: {
+        username: authState.username,
+      },
+    });
+    // Clear user context in Sentry on logout
+    Sentry.setUser(null);
     recordEvent({
       type: "auth.logout",
       message: "User logged out",

@@ -26,7 +26,7 @@ import { calculateMatchScore } from "./scoring";
 import { findBestMatches } from "./match-engine";
 import { getMangaByIds } from "@/api/anilist/client";
 import { withGroupAsync } from "@/utils/logging";
-import { CancelledError } from "@/utils/errorHandling";
+import { CancelledError, captureError, ErrorType } from "@/utils/errorHandling";
 
 /**
  * Searches AniList for manga by title with caching and rate limiting.
@@ -270,9 +270,31 @@ export async function batchMatchManga(
           console.info(
             `[MangaSearchService] Cancellation detected, returning partial results`,
           );
+          // Log cancellation as info message, not an exception
+          import("@sentry/electron/renderer")
+            .then((Sentry) => {
+              Sentry.captureMessage("Batch matching cancelled by user", "info");
+            })
+            .catch(() => {
+              // Silently ignore Sentry import errors
+            });
           // We don't have access to the variables in this scope, so return empty array
           return [];
         }
+
+        // For non-cancellation errors, capture to Sentry
+        captureError(
+          ErrorType.UNKNOWN,
+          "Batch manga matching failed",
+          error,
+          {
+            mangaListLength: mangaList.length,
+            searchConfig: {
+              confidenceThreshold: config.matchConfig?.confidenceThreshold,
+            },
+            stage: "batch_match",
+          },
+        );
 
         // Otherwise rethrow the error
         throw error;
@@ -388,6 +410,17 @@ export async function getBatchedMangaIds(
           console.error(
             `[MangaSearchService] ❌ Error fetching manga batch ${i} to ${i + batchSize}:`,
             error,
+          );
+          captureError(
+            ErrorType.UNKNOWN,
+            `Failed to fetch manga batch`,
+            error,
+            {
+              batchNumber: Math.floor(i / batchSize),
+              batchSize: batchIds.length,
+              totalIds: ids.length,
+              stage: "batch_fetch",
+            },
           );
           // Continue with next batch even if one fails
         }
