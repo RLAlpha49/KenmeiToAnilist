@@ -1,9 +1,13 @@
-name: Publish on Tag
+name: Beta Release (Auto)
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - master
+    paths-ignore:
+      - ".github/**"
+      - "docs/**"
+      - "*.md"
 
 permissions:
   contents: write
@@ -104,11 +108,10 @@ jobs:
             out/make/deb/x64/*.deb
           if-no-files-found: warn
 
-  publish:
-    name: Publish Release (aggregate)
+  publish-beta:
+    name: Publish Beta Release
     needs: [build-windows, build-macos, build-linux]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       NODE_ENV: production
@@ -138,15 +141,42 @@ jobs:
           name: linux-installers
           path: out/make/deb/x64
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
+      - name: Get version from package.json
+        id: version
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+        shell: pwsh
 
-      - name: Install dependencies
+      - name: Create or update beta release tag
+        run: |
+          $beta_tag = "v${{ steps.version.outputs.VERSION }}-beta"
+          git tag -d "$beta_tag" 2>$null; $null
+          git tag "$beta_tag"
+          git push origin "$beta_tag" --force
+        shell: pwsh
+
+      - name: Create or update GitHub release
         env:
-          NPM_CONFIG_PRODUCTION: false
-        run: npm ci --force
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $beta_tag = "v${{ steps.version.outputs.VERSION }}-beta"
 
-      - name: Publish to GitHub Releases
-        run: npm run publish -- --publish=always
+          # Check if release exists
+          $release = gh release view "$beta_tag" 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            # Delete existing release to create new one with updated artifacts
+            gh release delete "$beta_tag" --yes
+          }
+
+          # Create new prerelease with all artifacts
+          gh release create "$beta_tag" `
+            --prerelease `
+            --title "Beta Release v${{ steps.version.outputs.VERSION }}" `
+            --notes "Automatic beta release" `
+            out/make/squirrel.windows/x64/*.exe `
+            out/make/squirrel.windows/x64/*.msi `
+            out/make/*.dmg `
+            out/make/zip/darwin/arm64/*.zip `
+            out/make/deb/x64/*.deb
+        shell: pwsh

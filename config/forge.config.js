@@ -115,7 +115,7 @@ const config = {
           name: "KenmeiToAnilist",
         },
         draft: false,
-        prerelease: false,
+        prerelease: process.env.PRERELEASE === "true",
       },
     },
   ],
