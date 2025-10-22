@@ -8,9 +8,17 @@ import {
   Wand2,
   AlertTriangle,
   RotateCcw,
+  Undo2,
+  Redo2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Badge } from "../ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
 
 /**
  * Highlight stat configuration for display in the header.
@@ -40,6 +48,10 @@ type HighlightStat = {
  * @property rateLimitIsRateLimited - Whether AniList rate limit is active.
  * @property statusSummary - Statistics summary with match counts and completion percent.
  * @property pendingBacklog - Number of pending items in the queue.
+ * @property handleUndo - Callback for undo action.
+ * @property handleRedo - Callback for redo action.
+ * @property canUndo - Whether undo is available.
+ * @property canRedo - Whether redo is available.
  * @source
  */
 interface Props {
@@ -60,12 +72,17 @@ interface Props {
     completionPercent: number;
   };
   pendingBacklog: number;
+  handleUndo?: () => void;
+  handleRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
 }
 
 /**
  * Displays the matching dashboard header with progress stats and action buttons.
  *
  * Shows completion percentage, match/manual/pending counts, and rematch controls.
+ * Includes undo/redo functionality for match operations.
  *
  * @param props - The component props.
  * @returns The rendered matching page header.
@@ -81,6 +98,10 @@ export function MatchingPageHeader({
   rateLimitIsRateLimited,
   statusSummary,
   pendingBacklog,
+  handleUndo,
+  handleRedo,
+  canUndo = false,
+  canRedo = false,
 }: Readonly<Props>) {
   const { matched, manual, pending, reviewed, total, completionPercent } =
     statusSummary;
@@ -156,7 +177,7 @@ export function MatchingPageHeader({
                 key={label}
                 className={`group relative overflow-hidden rounded-2xl border border-white/40 bg-white/70 p-4 shadow-md transition-colors hover:border-white/60 hover:bg-white/90 dark:border-slate-700/60 dark:bg-slate-900/70 dark:hover:border-slate-600 dark:hover:bg-slate-900 ${accent}`}
               >
-                <div className="absolute inset-0 bg-gradient-to-br opacity-40 transition-opacity duration-300 group-hover:opacity-70" />
+                <div className="bg-linear-to-br absolute inset-0 opacity-40 transition-opacity duration-300 group-hover:opacity-70" />
                 <div className="relative flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -183,7 +204,7 @@ export function MatchingPageHeader({
             </div>
             <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800/80">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 transition-all duration-500"
+                className="bg-linear-to-r h-full rounded-full from-blue-500 via-indigo-500 to-purple-500 transition-all duration-500"
                 style={{ width: `${progressPercent}%` }}
                 aria-hidden="true"
               />
@@ -198,6 +219,46 @@ export function MatchingPageHeader({
               className="flex w-full flex-col gap-2 sm:flex-row sm:justify-end"
             >
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:gap-3">
+                {/* Undo/Redo buttons */}
+                {(canUndo || canRedo) && (
+                  <TooltipProvider>
+                    <div className="flex items-center gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            disabled={!canUndo}
+                            onClick={handleUndo}
+                            aria-label="Undo last action (Ctrl+Z)"
+                            className="rounded-xl border border-slate-300/70 bg-white/70 text-slate-700 hover:border-slate-400/80 hover:bg-white/90 disabled:pointer-events-none disabled:opacity-50 dark:border-slate-700/70 dark:bg-slate-900/60 dark:text-slate-200 dark:hover:border-slate-600/70 dark:hover:bg-slate-900"
+                          >
+                            <Undo2 className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Undo (Ctrl+Z)</TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            disabled={!canRedo}
+                            onClick={handleRedo}
+                            aria-label="Redo last action (Ctrl+Shift+Z)"
+                            className="rounded-xl border border-slate-300/70 bg-white/70 text-slate-700 hover:border-slate-400/80 hover:bg-white/90 disabled:pointer-events-none disabled:opacity-50 dark:border-slate-700/70 dark:bg-slate-900/60 dark:text-slate-200 dark:hover:border-slate-600/70 dark:hover:bg-slate-900"
+                          >
+                            <Redo2 className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Redo (Ctrl+Shift+Z)</TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <div className="h-8 w-px bg-slate-300/50 dark:bg-slate-600/50" />
+                  </TooltipProvider>
+                )}
+
                 {matched > 0 && (
                   <Button
                     variant="outline"
@@ -211,7 +272,7 @@ export function MatchingPageHeader({
                 <Button
                   onClick={() => setShowRematchOptions(!showRematchOptions)}
                   variant="default"
-                  className="grow rounded-2xl bg-gradient-to-r from-indigo-500 via-sky-500 to-blue-500 text-sm font-semibold shadow-lg hover:from-indigo-600 hover:via-sky-600 hover:to-blue-600 sm:grow-0"
+                  className="bg-linear-to-r grow rounded-2xl from-indigo-500 via-sky-500 to-blue-500 text-sm font-semibold shadow-lg hover:from-indigo-600 hover:via-sky-600 hover:to-blue-600 sm:grow-0"
                 >
                   {showRematchOptions
                     ? "Hide Rematch Options"

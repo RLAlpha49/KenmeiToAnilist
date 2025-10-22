@@ -9,6 +9,15 @@ import { KenmeiManga } from "../api/kenmei/types";
 import { AniListManga, MangaMatchResult } from "../api/anilist/types";
 import { STORAGE_KEYS, storage } from "../utils/storage";
 import { useDebugActions } from "../contexts/DebugContext";
+import type { UndoRedoManager } from "../utils/undoRedo";
+import {
+  AcceptMatchCommand,
+  RejectMatchCommand,
+  SelectAlternativeCommand,
+  ResetToPendingCommand,
+  SelectSearchMatchCommand,
+  BatchCommand,
+} from "../utils/undoRedo";
 
 /**
  * Provides handler functions for managing manga match results and user interactions during the matching workflow.
@@ -17,6 +26,7 @@ import { useDebugActions } from "../contexts/DebugContext";
  * @param setSearchTarget - State setter for the current manga being searched.
  * @param setIsSearchOpen - State setter for toggling the search panel.
  * @param setBypassCache - State setter for bypassing cache during manual search.
+ * @param undoRedoManager - Optional undo/redo manager for recording commands.
  * @returns Object with handler functions for accepting/rejecting matches, manual search, alternative selection, and reset operations.
  * @source
  */
@@ -28,6 +38,7 @@ export const useMatchHandlers = (
   >,
   setIsSearchOpen: React.Dispatch<React.SetStateAction<boolean>>,
   setBypassCache: React.Dispatch<React.SetStateAction<boolean>>,
+  undoRedoManager?: UndoRedoManager,
 ) => {
   const { recordEvent } = useDebugActions();
 
@@ -92,11 +103,55 @@ export const useMatchHandlers = (
   );
 
   /**
-   * Handles a manual search request for a manga, opening the search panel and bypassing cache.
+   * Helper function to apply a command patch against the latest state.
+   * Uses functional state update to apply changes and persists to storage.
    *
-   * @param manga - The Kenmei manga to search for.
+   * @param state - The updated match state to apply.
    * @source
    */
+  const applyCommandPatch = useCallback((state: MangaMatchResult) => {
+    setMatchResults((prev) => {
+      // Find the match by ID using the helper logic
+      let idx = prev.findIndex(
+        (m) => m.kenmeiManga.id === state.kenmeiManga.id,
+      );
+
+      // Fallback to title matching if ID not found
+      if (idx === -1) {
+        idx = prev.findIndex(
+          (m) => m.kenmeiManga.title === state.kenmeiManga.title,
+        );
+      }
+
+      // If still not found, try case-insensitive match
+      if (idx === -1) {
+        idx = prev.findIndex(
+          (m) =>
+            m.kenmeiManga.title.toLowerCase() ===
+            state.kenmeiManga.title.toLowerCase(),
+        );
+      }
+
+      // If match found, apply the patch
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = state;
+        // Persist to storage
+        try {
+          storage.setItem(STORAGE_KEYS.MATCH_RESULTS, JSON.stringify(next));
+        } catch (storageError) {
+          console.error(
+            "[MatchHandlers] Failed to persist match results to storage:",
+            storageError,
+          );
+        }
+        return next;
+      }
+
+      // If not found, return unchanged
+      return prev;
+    });
+  }, []);
   const handleManualSearch = useCallback(
     (manga: KenmeiManga) => {
       console.debug(
@@ -162,11 +217,13 @@ export const useMatchHandlers = (
 
   /**
    * Handles updating a match or batch of matches with a new status.
+   * Integrates with undo/redo manager if provided.
    *
    * @param match - The match result or batch operation object to update.
    * @param newStatus - The new status to set.
    * @param actionName - The name of the action for logging purposes.
    * @param getSelectedMatch - Function to determine the selected match based on the operation.
+   * @param commandType - The type of command for undo/redo tracking.
    * @source
    */
   const handleMatchStatusUpdate = useCallback(
@@ -177,6 +234,7 @@ export const useMatchHandlers = (
       newStatus: "matched" | "skipped",
       actionName: string,
       getSelectedMatch: (match: MangaMatchResult) => AniListManga | undefined,
+      commandType?: typeof AcceptMatchCommand | typeof RejectMatchCommand,
     ) => {
       // Check if this is a batch operation
       if ("isBatchOperation" in match && match.isBatchOperation) {
@@ -194,9 +252,30 @@ export const useMatchHandlers = (
           },
         });
 
-        // For batch operations, we simply replace the entire match results array
-        // with the new one that already has the statuses applied
-        updateMatchResults(match.matches);
+        // For batch operations, create individual commands wrapped in a BatchCommand
+        if (undoRedoManager && commandType) {
+          const commands = match.matches.map((m) => {
+            // Find the current state of this match in matchResults
+            const currentIdx = matchResults.findIndex(
+              (mr) => mr.kenmeiManga.id === m.kenmeiManga.id,
+            );
+            const currentMatch = currentIdx >= 0 ? matchResults[currentIdx] : m;
+
+            return new commandType(
+              Math.max(currentIdx, 0),
+              structuredClone(currentMatch),
+              m,
+              applyCommandPatch,
+            );
+          });
+          const batchCommand = new BatchCommand(
+            commands,
+            `Batch ${actionName.toLowerCase()}`,
+          );
+          undoRedoManager.executeCommand(batchCommand);
+        } else {
+          updateMatchResults(match.matches);
+        }
         return;
       }
 
@@ -245,13 +324,32 @@ export const useMatchHandlers = (
         },
       });
 
-      updateMatchResults(updatedResults);
+      // Handle undo/redo if manager is available
+      if (undoRedoManager && commandType) {
+        const command = new commandType(
+          index,
+          structuredClone(singleMatch),
+          updatedMatch,
+          applyCommandPatch,
+        );
+        undoRedoManager.executeCommand(command);
+      } else {
+        updateMatchResults(updatedResults);
+      }
     },
-    [findMatchIndex, matchResults, recordEvent, updateMatchResults],
+    [
+      findMatchIndex,
+      matchResults,
+      recordEvent,
+      updateMatchResults,
+      undoRedoManager,
+      applyCommandPatch,
+    ],
   );
 
   /**
    * Handles accepting a match or batch of matches, updating their status to "matched".
+   * Creates an AcceptMatchCommand for undo/redo tracking if manager is available.
    *
    * @param match - The match result or batch operation object to accept.
    * @source
@@ -267,6 +365,7 @@ export const useMatchHandlers = (
         "matched",
         "Accept",
         (singleMatch) => singleMatch.anilistMatches?.[0]?.manga,
+        AcceptMatchCommand,
       );
     },
     [handleMatchStatusUpdate],
@@ -274,6 +373,7 @@ export const useMatchHandlers = (
 
   /**
    * Handles rejecting/skipping a match or batch of matches, updating their status to "skipped".
+   * Creates a RejectMatchCommand for undo/redo tracking if manager is available.
    *
    * @param match - The match result or batch operation object to reject.
    * @source
@@ -284,13 +384,21 @@ export const useMatchHandlers = (
         | MangaMatchResult
         | { isBatchOperation: boolean; matches: MangaMatchResult[] },
     ) => {
-      handleMatchStatusUpdate(match, "skipped", "Reject", () => undefined);
+      handleMatchStatusUpdate(
+        match,
+        "skipped",
+        "Reject",
+        () => undefined,
+        RejectMatchCommand,
+      );
     },
     [handleMatchStatusUpdate],
   );
 
   /**
    * Handles selecting an alternative match for a manga, optionally auto-accepting or directly accepting it.
+   * Creates a SelectAlternativeCommand for undo/redo tracking if manager is available.
+   *
    * @param match - The match result to update.
    * @param alternativeIndex - The index of the alternative to select.
    * @param autoAccept - Whether to automatically accept the selected alternative (default: false).
@@ -417,13 +525,31 @@ export const useMatchHandlers = (
         swapHandler();
       }
 
-      updateMatchResults(updatedResults);
+      // Handle undo/redo if manager is available
+      if (undoRedoManager) {
+        const command = new SelectAlternativeCommand(
+          index,
+          structuredClone(currentMatch),
+          updatedResults[index],
+          applyCommandPatch,
+        );
+        undoRedoManager.executeCommand(command);
+      } else {
+        updateMatchResults(updatedResults);
+      }
     },
-    [findMatchIndex, matchResults, updateMatchResults],
+    [
+      findMatchIndex,
+      matchResults,
+      updateMatchResults,
+      undoRedoManager,
+      applyCommandPatch,
+    ],
   );
 
   /**
    * Handles resetting a match or batch of matches back to the "pending" status.
+   * Creates a ResetToPendingCommand for undo/redo tracking if manager is available.
    *
    * @param match - The match result or batch operation object to reset.
    * @source
@@ -445,8 +571,7 @@ export const useMatchHandlers = (
           `[MatchHandlers] Processing batch reset operation for ${match.matches.length} matches`,
         );
 
-        // For batch operations, we simply replace the entire match results array
-        // with the new one that already has the pending statuses applied
+        // For batch operations, simply update the results
         updateMatchResults(match.matches);
         return;
       }
@@ -492,13 +617,31 @@ export const useMatchHandlers = (
         `[MatchHandlers] Updated match status from ${(match as MangaMatchResult).status} to pending for: ${updatedMatch.kenmeiManga.title}`,
       );
 
-      updateMatchResults(updatedResults);
+      // Handle undo/redo if manager is available
+      if (undoRedoManager) {
+        const command = new ResetToPendingCommand(
+          index,
+          structuredClone(currentMatch),
+          updatedMatch,
+          applyCommandPatch,
+        );
+        undoRedoManager.executeCommand(command);
+      } else {
+        updateMatchResults(updatedResults);
+      }
     },
-    [findMatchIndex, matchResults, updateMatchResults],
+    [
+      findMatchIndex,
+      matchResults,
+      updateMatchResults,
+      undoRedoManager,
+      applyCommandPatch,
+    ],
   );
 
   /**
    * Handles selecting a manga from the search panel and updating the match result accordingly.
+   * Creates a SelectSearchMatchCommand for undo/redo tracking if manager is available.
    *
    * @param manga - The AniList manga selected from the search panel.
    * @source
@@ -546,30 +689,43 @@ export const useMatchHandlers = (
         );
       }
 
+      let updatedMatch;
       if (alternativeIndex >= 0 && existingMatch.anilistMatches) {
         // The selected manga is already in the alternatives, so just switch to it
         console.debug(
           `[MatchHandlers] Selected manga is alternative #${alternativeIndex}, switching instead of creating manual match`,
         );
 
-        updatedResults[matchIndex] = {
+        updatedMatch = {
           ...existingMatch,
-          status: "matched", // Use "matched" status instead of "manual" since it's an existing alternative
+          status: "matched" as const, // Use "matched" status instead of "manual" since it's an existing alternative
           selectedMatch: existingMatch.anilistMatches[alternativeIndex].manga,
           matchDate: new Date(),
         };
       } else {
         // It's a new match not in the alternatives, create a manual match
-        updatedResults[matchIndex] = {
+        updatedMatch = {
           ...existingMatch, // Keep all existing properties
-          status: "manual", // Change status to manual
+          status: "manual" as const, // Change status to manual
           selectedMatch: manga, // Update with the new selected match
           matchDate: new Date(),
         };
       }
 
-      // Set the results first before clearing the search state
-      updateMatchResults(updatedResults);
+      updatedResults[matchIndex] = updatedMatch;
+
+      // Handle undo/redo if manager is available
+      if (undoRedoManager) {
+        const command = new SelectSearchMatchCommand(
+          matchIndex,
+          structuredClone(existingMatch),
+          updatedMatch,
+          applyCommandPatch,
+        );
+        undoRedoManager.executeCommand(command);
+      } else {
+        updateMatchResults(updatedResults);
+      }
 
       // Then close the search panel
       setIsSearchOpen(false);
@@ -581,6 +737,8 @@ export const useMatchHandlers = (
       updateMatchResults,
       setIsSearchOpen,
       setSearchTarget,
+      undoRedoManager,
+      applyCommandPatch,
     ],
   );
 

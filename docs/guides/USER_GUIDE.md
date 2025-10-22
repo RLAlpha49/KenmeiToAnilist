@@ -129,6 +129,34 @@ Tips for manual matching:
 - Look at cover images to verify
 - Read descriptions to confirm series identity
 
+### Undo and Redo Actions
+
+The matching interface includes built-in undo/redo functionality to help you experiment with different match selections without fear of losing your progress:
+
+**Supported Actions:**
+
+- Accepting matches
+- Rejecting/skipping matches
+- Selecting alternative matches
+- Resetting matches to pending status
+- Manual search selections
+
+**Using Undo/Redo:**
+
+- **Undo**: Press `Ctrl+Z` (Windows/Linux) or `Cmd+Z` (Mac) to undo the last action
+- **Redo**: Press `Ctrl+Shift+Z` or `Ctrl+Y` (Windows/Linux) or `Cmd+Shift+Z` (Mac) to redo
+- Click the **Undo** (↶) and **Redo** (↷) buttons in the header for mouse navigation
+- Buttons are disabled when there are no actions to undo/redo
+
+**Important Notes:**
+
+- Undo history stores the last 50 actions only
+- Undo/redo is disabled during active matching to prevent conflicts
+- Using "Fresh Search (Clear Cache)" will clear the undo history
+- Rematch operations will reset the undo history to prevent inconsistent state
+
+**Tip**: Use undo/redo to safely try different match selections. If you're not sure about a choice, you can always undo and try something else!
+
 ## 🔄 Synchronizing to AniList
 
 ### Sync Options

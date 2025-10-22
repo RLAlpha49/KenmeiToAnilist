@@ -12,6 +12,8 @@ import {
   getKenmeiData,
   addIgnoredDuplicate,
   getSavedMatchResults,
+  storage,
+  STORAGE_KEYS,
 } from "../utils/storage";
 import { StatusFilterOptions } from "../types/matching";
 import { MangaMatchResult } from "../api/anilist/types";
@@ -20,6 +22,9 @@ import { usePendingManga } from "../hooks/usePendingManga";
 import { useMatchHandlers } from "../hooks/useMatchHandlers";
 import { clearCacheForTitles } from "../api/matching/search-service";
 import { useRateLimit } from "../contexts/RateLimitContext";
+import { UndoRedoManager } from "../utils/undoRedo";
+import { useDebugActions } from "../contexts/DebugContext";
+import { toast } from "sonner";
 
 // Components
 import { RematchOptions } from "../components/matching/RematchOptions";
@@ -87,10 +92,16 @@ export function MatchingPage() {
   const navigate = useNavigate();
   const { authState } = useAuthState();
   const { rateLimitState } = useRateLimit();
+  const { recordEvent } = useDebugActions();
 
   // State for manga data
   const [manga, setManga] = useState<KenmeiManga[]>([]);
   const [matchResults, setMatchResults] = useState<MangaMatchResult[]>([]);
+
+  // Undo/Redo state
+  const [undoRedoManager] = useState(() => new UndoRedoManager(50));
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
 
   // State for manual search
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -155,9 +166,60 @@ export function MatchingPage() {
         : m,
     );
     setMatchResults(updated);
+    // Persist to storage
+    try {
+      storage.setItem(STORAGE_KEYS.MATCH_RESULTS, JSON.stringify(updated));
+    } catch (storageError) {
+      console.error(
+        "[MatchingPage] Failed to persist match results to storage:",
+        storageError,
+      );
+    }
+    // Clear undo history for this bulk reset operation
+    undoRedoManager.clear();
   };
 
-  // Get matching process hooks
+  /**
+   * Undo the last action
+   */
+  const handleUndo = () => {
+    const metadata = undoRedoManager.undo();
+    if (metadata) {
+      toast(`Undone: ${metadata.description}`, {
+        description: `${metadata.affectedTitles.join(", ")}`,
+      });
+      recordEvent({
+        type: "match.undo",
+        message: `Undone: ${metadata.description}`,
+        level: "info",
+        metadata: { description: metadata.description, count: 1 },
+      });
+      // Update button states
+      setCanUndo(undoRedoManager.canUndo());
+      setCanRedo(undoRedoManager.canRedo());
+    }
+  };
+
+  /**
+   * Redo the last undone action
+   */
+  const handleRedo = () => {
+    const metadata = undoRedoManager.redo();
+    if (metadata) {
+      toast(`Redone: ${metadata.description}`, {
+        description: `${metadata.affectedTitles.join(", ")}`,
+      });
+      recordEvent({
+        type: "match.redo",
+        message: `Redone: ${metadata.description}`,
+        level: "info",
+        metadata: { description: metadata.description, count: 1 },
+      });
+      // Update button states
+      setCanUndo(undoRedoManager.canUndo());
+      setCanRedo(undoRedoManager.canRedo());
+    }
+  };
   const matchingProcess = useMatchingProcess({
     accessToken: authState.accessToken || null,
     rateLimitState,
@@ -171,6 +233,7 @@ export function MatchingPage() {
     setSearchTarget,
     setIsSearchOpen,
     matchingProcess.setBypassCache,
+    undoRedoManager,
   );
 
   // Add a ref to track if we've already done initialization
@@ -227,6 +290,55 @@ export function MatchingPage() {
       unprocessedManga: unprocessedFromAll,
     };
   }, [matchResults, pendingMangaState.pendingManga, manga]);
+
+  // Update undo/redo button states
+  useEffect(() => {
+    setCanUndo(undoRedoManager.canUndo());
+    setCanRedo(undoRedoManager.canRedo());
+  }, [matchResults, undoRedoManager]);
+
+  // Add keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip if target is input or textarea
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+
+      // Skip if matching is loading
+      if (matchingProcess.isLoading) {
+        return;
+      }
+
+      const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+      const modifier = isMac ? e.metaKey : e.ctrlKey;
+
+      // Ctrl/Cmd+Z for undo
+      if (modifier && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        if (undoRedoManager.canUndo()) {
+          handleUndo();
+        }
+      }
+
+      // Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y for redo
+      if (
+        modifier &&
+        ((e.key === "z" && e.shiftKey) || (!isMac && e.key === "y"))
+      ) {
+        e.preventDefault();
+        if (undoRedoManager.canRedo()) {
+          handleRedo();
+        }
+      }
+    };
+
+    globalThis.addEventListener("keydown", handleKeyDown);
+    return () => globalThis.removeEventListener("keydown", handleKeyDown);
+  }, [undoRedoManager, matchingProcess.isLoading, handleUndo, handleRedo]);
 
   // Clear pending manga if all are processed (prevents infinite loops)
   useEffect(() => {
@@ -1226,6 +1338,9 @@ export function MatchingPage() {
         `[MatchingPage] Preserved ${existingResults.length} existing match results that aren't being rematched`,
       );
 
+      // Clear undo/redo history before rematch
+      undoRedoManager.clear();
+
       // Start fresh search
       matchingProcess.startMatching(
         pendingMangaToProcess,
@@ -1288,6 +1403,10 @@ export function MatchingPage() {
               rateLimitIsRateLimited={rateLimitState.isRateLimited}
               statusSummary={matchStatusSummary}
               pendingBacklog={pendingMangaState.pendingManga.length}
+              handleUndo={handleUndo}
+              handleRedo={handleRedo}
+              canUndo={canUndo}
+              canRedo={canRedo}
             />
 
             {/* Rematch by status options */}
