@@ -13,6 +13,8 @@ declare const MAIN_WINDOW_VITE_NAME: string;
 import type { APICredentials, TokenExchangeResponse } from "./types/auth";
 import type { TokenExchangeParams } from "./types/api";
 import type { IpcLogEntry } from "./types/debug";
+import type { AniListRequest } from "./helpers/ipc/api/api-context";
+import type { MangaSource } from "./api/manga-sources/types";
 
 /**
  * Theme mode control interface.
@@ -103,11 +105,7 @@ declare global {
         getTheme: () => Promise<string>;
       };
       anilist: {
-        request: (
-          query: string,
-          variables?: Record<string, unknown>,
-          token?: string,
-        ) => Promise<{
+        request: (payload: AniListRequest) => Promise<{
           success: boolean;
           data?: Record<string, unknown>;
           error?: {
@@ -134,11 +132,11 @@ declare global {
       };
       mangaSource: {
         search: (
-          source: string,
+          source: MangaSource,
           query: string,
           limit?: number,
         ) => Promise<unknown>;
-        getMangaDetail: (source: string, slug: string) => Promise<unknown>;
+        getMangaDetail: (source: MangaSource, slug: string) => Promise<unknown>;
       };
       comick: {
         search: (query: string, limit?: number) => Promise<unknown>;

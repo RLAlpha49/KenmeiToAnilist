@@ -52,7 +52,7 @@ export class ComickClient extends BaseMangaSourceClient<
       try {
         // Use generic manga source API to call main process via IPC instead of direct fetch (CORS)
         const data = (await globalThis.electronAPI.mangaSource.search(
-          "comick",
+          MangaSource.COMICK,
           query,
           limit,
         )) as ComickManga[];
@@ -85,7 +85,7 @@ export class ComickClient extends BaseMangaSourceClient<
       try {
         // Use generic manga source API to call main process via IPC instead of direct fetch (CORS)
         const rawData = await globalThis.electronAPI.mangaSource.getMangaDetail(
-          "comick",
+          MangaSource.COMICK,
           slug,
         );
         const detail = this.parseDetailResponse(rawData);
@@ -105,81 +105,324 @@ export class ComickClient extends BaseMangaSourceClient<
 
   /**
    * Parse raw search response into Comick manga entries.
-   * Maps raw API fields to standardized ComickManga interface.
+   * Maps raw API fields to standardized ComickManga interface with validation.
    * @param rawResponse - The raw API response array.
-   * @returns Array of parsed manga entries.
+   * @returns Array of parsed manga entries, skipping any invalid items.
    * @source
    */
-  // eslint-disable-next-line
-  protected parseSearchResponse(rawResponse: any): ComickManga[] {
+  protected parseSearchResponse(rawResponse: unknown): ComickManga[] {
     if (!Array.isArray(rawResponse)) return [];
 
-    // eslint-disable-next-line
-    return rawResponse.map((item: any) => ({
-      id: item.id,
-      title: item.title,
-      slug: item.slug,
-      year: item.year,
-      status: item.status,
-      country: item.country,
-      rating: item.rating,
-      rating_count: item.rating_count,
-      follow_count: item.follow_count,
-      user_follow_count: item.user_follow_count,
-      content_rating: item.content_rating,
-      demographic: item.demographic,
-      alternativeTitles: item.md_titles || [],
-      md_titles: item.md_titles,
-      md_comics: item.md_comics,
-      highlight: item.highlight,
-      source: MangaSource.COMICK,
-    }));
+    return rawResponse
+      .map((item: unknown): ComickManga | null => {
+        // Validate required fields exist
+        if (
+          !item ||
+          typeof item !== "object" ||
+          !("id" in item) ||
+          !("title" in item) ||
+          !("slug" in item)
+        ) {
+          console.warn("[Comick] Skipping invalid search result item", item);
+          return null;
+        }
+
+        const obj = item as Record<string, unknown>;
+        return {
+          id: String(obj.id),
+          title: String(obj.title),
+          slug: String(obj.slug),
+          year: typeof obj.year === "number" ? obj.year : undefined,
+          status: typeof obj.status === "number" ? obj.status : undefined,
+          country: typeof obj.country === "string" ? obj.country : undefined,
+          rating: typeof obj.rating === "string" ? obj.rating : undefined,
+          rating_count:
+            typeof obj.rating_count === "number" ? obj.rating_count : undefined,
+          follow_count:
+            typeof obj.follow_count === "number" ? obj.follow_count : undefined,
+          user_follow_count:
+            typeof obj.user_follow_count === "number"
+              ? obj.user_follow_count
+              : undefined,
+          content_rating:
+            typeof obj.content_rating === "string"
+              ? obj.content_rating
+              : undefined,
+          demographic:
+            typeof obj.demographic === "number" ? obj.demographic : undefined,
+          alternativeTitles: Array.isArray(obj.md_titles)
+            ? (obj.md_titles as Array<{ title: string; lang: string }>)
+            : [],
+          md_titles: Array.isArray(obj.md_titles)
+            ? (obj.md_titles as Array<{ title: string; lang: string }>)
+            : undefined,
+          md_comics:
+            obj.md_comics && typeof obj.md_comics === "object"
+              ? (obj.md_comics as { id: string; title: string; slug: string })
+              : undefined,
+          highlight:
+            typeof obj.highlight === "string" ? obj.highlight : undefined,
+          source: MangaSource.COMICK,
+        };
+      })
+      .filter((item): item is ComickManga => item !== null);
   }
 
   /**
-   * Parse raw detail response into Comick manga detail.
-   * Extracts comic data and transforms external links format.
+   * Parse raw detail response into Comick manga detail with validation.
+   * Extracts comic data and transforms external links format safely.
    * @param rawResponse - The raw API response object.
    * @returns Parsed manga detail or null if invalid.
    * @source
    */
-  // eslint-disable-next-line
-  protected parseDetailResponse(rawResponse: any): ComickMangaDetail | null {
-    if (!rawResponse?.comic) return null;
+  /**
+   * Extract typed string field from object or return undefined.
+   * @param obj - The object to extract from.
+   * @param key - The field key.
+   * @returns String value or undefined.
+   * @source
+   */
+  private getStringField(
+    obj: Record<string, unknown>,
+    key: string,
+  ): string | undefined {
+    const value = obj[key];
+    return typeof value === "string" ? value : undefined;
+  }
 
-    const comic = rawResponse.comic;
+  /**
+   * Extract typed number field from object or return undefined.
+   * @param obj - The object to extract from.
+   * @param key - The field key.
+   * @returns Number value or undefined.
+   * @source
+   */
+  private getNumberField(
+    obj: Record<string, unknown>,
+    key: string,
+  ): number | undefined {
+    const value = obj[key];
+    return typeof value === "number" ? value : undefined;
+  }
+
+  /**
+   * Extract typed boolean field from object or return undefined.
+   * @param obj - The object to extract from.
+   * @param key - The field key.
+   * @returns Boolean value or undefined.
+   * @source
+   */
+  private getBooleanField(
+    obj: Record<string, unknown>,
+    key: string,
+  ): boolean | undefined {
+    const value = obj[key];
+    return typeof value === "boolean" ? value : undefined;
+  }
+
+  /**
+   * Extract and validate array field from object or return empty array.
+   * @param obj - The object to extract from.
+   * @param key - The field key.
+   * @returns Typed array or empty array.
+   * @source
+   */
+  private getArrayField<T>(obj: Record<string, unknown>, key: string): T[] {
+    const value = obj[key];
+    return Array.isArray(value) ? (value as T[]) : [];
+  }
+
+  /**
+   * Extract and validate object field from object or return undefined.
+   * @param obj - The object to extract from.
+   * @param key - The field key.
+   * @returns Typed object or undefined.
+   * @source
+   */
+  private getObjectField<T extends Record<string, unknown>>(
+    obj: Record<string, unknown>,
+    key: string,
+  ): T | undefined {
+    const value = obj[key];
+    return value && typeof value === "object" ? (value as T) : undefined;
+  }
+
+  /**
+   * Build comic nested object from Comick data with type validation.
+   * @param comicObj - The comic object from API response.
+   * @returns Parsed comic object.
+   * @source
+   */
+  private buildComickComicObject(comicObj: Record<string, unknown>) {
+    return {
+      id: String(comicObj.id),
+      title: String(comicObj.title),
+      slug: String(comicObj.slug),
+      desc: this.getStringField(comicObj, "desc"),
+      status: this.getNumberField(comicObj, "status"),
+      year: this.getNumberField(comicObj, "year"),
+      country: this.getStringField(comicObj, "country"),
+      created_at: this.getStringField(comicObj, "created_at"),
+      updated_at: this.getStringField(comicObj, "updated_at"),
+      demographic: this.getNumberField(comicObj, "demographic"),
+      hentai: this.getBooleanField(comicObj, "hentai"),
+      content_rating: this.getStringField(comicObj, "content_rating"),
+      mu_comics: this.getObjectField<{
+        id: string;
+        title: string;
+        slug: string;
+      }>(comicObj, "mu_comics"),
+      md_comics: this.getObjectField<{
+        id: string;
+        title: string;
+        slug: string;
+      }>(comicObj, "md_comics"),
+      authors: this.getArrayField<{
+        id: string;
+        name: string;
+        slug: string;
+      }>(comicObj, "authors"),
+      artists: this.getArrayField<{
+        id: string;
+        name: string;
+        slug: string;
+      }>(comicObj, "artists"),
+      genres: this.getArrayField<{
+        id: string;
+        name: string;
+        slug: string;
+      }>(comicObj, "genres"),
+      md_titles: this.getArrayField<{
+        title: string;
+        lang: string;
+      }>(comicObj, "md_titles"),
+      links: this.parseLinksObject(
+        comicObj.links as Record<string, unknown> | undefined,
+      ),
+    };
+  }
+
+  /**
+   * Parse raw detail response into Comick manga detail with validation.
+   * Extracts comic data and transforms external links format safely.
+   * @param rawResponse - The raw API response object.
+   * @returns Parsed manga detail or null if invalid.
+   * @source
+   */
+  protected parseDetailResponse(
+    rawResponse: unknown,
+  ): ComickMangaDetail | null {
+    if (
+      !rawResponse ||
+      typeof rawResponse !== "object" ||
+      !("comic" in rawResponse)
+    ) {
+      return null;
+    }
+
+    const response = rawResponse as Record<string, unknown>;
+    const comic = response.comic;
+
+    if (
+      !comic ||
+      typeof comic !== "object" ||
+      !("id" in comic) ||
+      !("title" in comic) ||
+      !("slug" in comic)
+    ) {
+      console.warn("[Comick] Invalid comic detail structure", comic);
+      return null;
+    }
+
+    const comicObj = comic as Record<string, unknown>;
 
     return {
-      id: comic.id,
-      title: comic.title,
-      slug: comic.slug,
-      description: comic.desc,
-      status: comic.status,
-      year: comic.year,
-      country: comic.country,
-      createdAt: comic.created_at,
-      updatedAt: comic.updated_at,
-      authors: comic.authors || [],
-      artists: comic.artists || [],
-      genres: comic.genres || [],
-      alternativeTitles: comic.md_titles || [],
-      externalLinks: comic.links
-        ? {
-            anilist: comic.links.al,
-            myAnimeList: comic.links.mal,
-            mangaUpdates: comic.links.mu,
-            // Include other platform links
-            ...Object.fromEntries(
-              Object.entries(comic.links).filter(
-                ([key]) => !["al", "mal", "mu"].includes(key),
-              ),
-            ),
-          }
-        : undefined,
+      id: String(comicObj.id),
+      title: String(comicObj.title),
+      slug: String(comicObj.slug),
+      description:
+        typeof comicObj.desc === "string" ? comicObj.desc : undefined,
+      status: typeof comicObj.status === "number" ? comicObj.status : undefined,
+      year: typeof comicObj.year === "number" ? comicObj.year : undefined,
+      country:
+        typeof comicObj.country === "string" ? comicObj.country : undefined,
+      createdAt:
+        typeof comicObj.created_at === "string"
+          ? comicObj.created_at
+          : undefined,
+      updatedAt:
+        typeof comicObj.updated_at === "string"
+          ? comicObj.updated_at
+          : undefined,
+      authors: Array.isArray(comicObj.authors)
+        ? (comicObj.authors as Array<{
+            id: string;
+            name: string;
+            slug: string;
+          }>)
+        : [],
+      artists: Array.isArray(comicObj.artists)
+        ? (comicObj.artists as Array<{
+            id: string;
+            name: string;
+            slug: string;
+          }>)
+        : [],
+      genres: Array.isArray(comicObj.genres)
+        ? (comicObj.genres as Array<{ id: string; name: string; slug: string }>)
+        : [],
+      alternativeTitles: Array.isArray(comicObj.md_titles)
+        ? (comicObj.md_titles as Array<{ title: string; lang: string }>)
+        : [],
+      externalLinks:
+        comicObj.links && typeof comicObj.links === "object"
+          ? this.parseExternalLinks(comicObj.links as Record<string, unknown>)
+          : {},
       source: MangaSource.COMICK,
-      comic: rawResponse.comic, // Keep original for backward compatibility
-      langList: rawResponse.langList,
+      comic: this.buildComickComicObject(comicObj),
+      langList: Array.isArray(response.langList)
+        ? (response.langList as string[])
+        : undefined,
     };
+  }
+
+  /**
+   * Parse external links object into typed structure.
+   * @param links - Raw links object.
+   * @returns Parsed external links with platform identifiers.
+   * @source
+   */
+  private parseExternalLinks(
+    links: Record<string, unknown>,
+  ): Record<string, string> {
+    const result: Record<string, string> = {};
+    if (typeof links.al === "string") result.anilist = links.al;
+    if (typeof links.mal === "string") result.myAnimeList = links.mal;
+    if (typeof links.mu === "string") result.mangaUpdates = links.mu;
+    // Include other platform links
+    for (const [key, value] of Object.entries(links)) {
+      if (!["al", "mal", "mu"].includes(key) && typeof value === "string") {
+        result[key] = value;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Parse raw links object into typed structure.
+   * @param links - Raw links object or undefined.
+   * @returns Parsed links with platform abbreviations.
+   * @source
+   */
+  private parseLinksObject(
+    links: Record<string, unknown> | undefined,
+  ): Record<string, string | undefined> {
+    if (!links) return {};
+    const result: Record<string, string | undefined> = {};
+    for (const [key, value] of Object.entries(links)) {
+      result[key] = typeof value === "string" ? value : undefined;
+    }
+    return result;
   }
 
   /**

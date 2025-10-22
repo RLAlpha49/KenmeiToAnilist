@@ -107,14 +107,22 @@ export function prepareEntryForSync(
 
   // Determine progress (chapters vs volumes)
   // Use guard clauses and prefer explicit undefined over nullish values
-  const progress = manga.chapters_read ?? 0;
   const hasVolumeData =
     manga.volumes_read !== undefined && manga.volumes_read !== null;
-  // If preferVolumes and volume data exists, expose progressVolumes else undefined
-  const progressVolumes =
-    processOptions.preferVolumes && hasVolumeData
-      ? manga.volumes_read
-      : (manga.volumes_read ?? undefined);
+
+  // If preferVolumes and volume data exists, use volumes only; otherwise use chapters
+  let progress: number;
+  let progressVolumes: number | undefined;
+
+  if (processOptions.preferVolumes && hasVolumeData) {
+    // When preferring volumes, set progress to 0 and expose only progressVolumes
+    progress = 0;
+    progressVolumes = manga.volumes_read;
+  } else {
+    // Default: use chapters for progress, optionally expose volumes
+    progress = manga.chapters_read ?? 0;
+    progressVolumes = hasVolumeData ? manga.volumes_read : undefined;
+  }
 
   // Normalize score if needed (Kenmei uses 1-10, AniList uses 1-100 or 1-10 depending on settings)
   let rawScore = manga.score ?? undefined;

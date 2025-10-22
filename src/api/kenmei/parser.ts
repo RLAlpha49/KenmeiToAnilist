@@ -413,6 +413,7 @@ function extractFieldValues(entry: Record<string, string>) {
  * Construct a KenmeiManga entry from parsed CSV row values.
  * @param entry - Object mapping CSV field names to cell values.
  * @param fieldValues - Pre-extracted and mapped field values.
+ * @param defaultStatus - Optional default status for unrecognized values (defaults to "plan_to_read").
  * @returns Constructed KenmeiManga entry ready for validation.
  * @source
  */
@@ -428,6 +429,7 @@ function createMangaEntry(
     dateValue: string | undefined;
     lastReadAt: string | undefined;
   },
+  defaultStatus: KenmeiStatus = "plan_to_read",
 ): KenmeiManga {
   // Parse chapter and volume numbers
   const chaptersRead = parseIntSafe(fieldValues.chapterValue) ?? 0;
@@ -440,7 +442,7 @@ function createMangaEntry(
   const parsedEntry: Partial<KenmeiManga> = {
     id: entry.id ? Number.parseInt(entry.id) : undefined,
     title: entry.title,
-    status: validateStatus(fieldValues.statusValue),
+    status: validateStatus(fieldValues.statusValue, defaultStatus),
     score,
     url: fieldValues.urlValue ?? "",
     cover_url: entry.cover_url,
@@ -464,7 +466,7 @@ function createMangaEntry(
 
   // Use shared normalizer to ensure consistent field handling and defaults
   return normalizeKenmeiManga(parsedEntry, {
-    defaultStatus: "plan_to_read",
+    defaultStatus,
   });
 }
 
@@ -530,7 +532,9 @@ export const parseKenmeiCsvExport = (
 
         const entry = createEntryMapping(headers, values);
         const fieldValues = extractFieldValues(entry);
-        manga.push(createMangaEntry(entry, fieldValues));
+        manga.push(
+          createMangaEntry(entry, fieldValues, parseOptions.defaultStatus),
+        );
       }
 
       // Process validation if enabled
@@ -669,12 +673,16 @@ function parseCSVRows(csvContent: string): string[][] {
 /**
  * Map a Kenmei status string to a normalized KenmeiStatus enum value, handling common variations.
  * @param status - Input status string.
- * @returns Normalized KenmeiStatus value (defaults to 'reading' if unrecognized).
+ * @param defaultStatus - Optional default status to use if unrecognized (defaults to 'reading' if not provided).
+ * @returns Normalized KenmeiStatus value (defaults to provided defaultStatus or 'reading' if unrecognized).
  * @source
  */
-function validateStatus(status: string | undefined): KenmeiStatus {
+function validateStatus(
+  status: string | undefined,
+  defaultStatus: KenmeiStatus = "reading",
+): KenmeiStatus {
   // Handle undefined or empty status
-  if (!status) return "reading";
+  if (!status) return defaultStatus;
 
   const normalized = status.trim().toLowerCase().replaceAll(" ", "_");
   const valid = new Set<KenmeiStatus>([
@@ -700,7 +708,7 @@ function validateStatus(status: string | undefined): KenmeiStatus {
     case "current":
       return "reading";
     default:
-      return "reading";
+      return defaultStatus;
   }
 }
 

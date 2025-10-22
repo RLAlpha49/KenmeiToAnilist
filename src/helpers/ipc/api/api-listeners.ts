@@ -8,6 +8,9 @@ import { ipcMain, shell } from "electron";
 import fetch, { Response } from "node-fetch";
 import { getAppVersionElectron } from "../../../utils/app-version";
 import { withGroupAsync } from "../../../utils/logging";
+import { AniListRequest } from "./api-context";
+import { SAFE_REQUESTS_PER_MINUTE } from "../../../config/anilist";
+import type { MangaSource } from "../../../api/manga-sources/types";
 
 /**
  * Extended Error interface for GraphQL API errors.
@@ -24,8 +27,8 @@ const API_URL = "https://graphql.anilist.co";
 // Cache settings
 const CACHE_EXPIRATION = 30 * 60 * 1000; // 30 minutes
 
-// API request rate limiting
-const API_RATE_LIMIT = 28; // 30 requests per minute is the AniList limit, use 28 to be safe
+// API request rate limiting (using safe rate from config)
+const API_RATE_LIMIT = SAFE_REQUESTS_PER_MINUTE; // Safe headroom below AniList's 60 req/min
 const REQUEST_INTERVAL = (60 * 1000) / API_RATE_LIMIT; // milliseconds between requests
 const MAX_RETRY_ATTEMPTS = 5; // Maximum number of retry attempts for rate limited requests
 
@@ -492,7 +495,9 @@ function isCacheValid<T>(cache: Cache<T>, key: string): boolean {
  */
 export function setupAniListAPI() {
   // Handle graphQL requests
-  ipcMain.handle("anilist:request", async (_, query, variables, token) => {
+  ipcMain.handle("anilist:request", async (_, payload: AniListRequest) => {
+    const { query, variables, token, cacheControl } = payload;
+    const bypassCache = cacheControl?.bypassCache ?? false;
     const searchTerm = variables?.search || "query";
     return withGroupAsync(
       `[ApiIPC] AniList Request: ${searchTerm}`,
@@ -501,15 +506,6 @@ export function setupAniListAPI() {
           console.debug(
             "[ApiIPC] Handling AniList API request in main process",
           );
-
-          // Extract and remove bypassCache from variables to avoid sending it to the API
-          const bypassCache = variables?.bypassCache;
-          if (variables && "bypassCache" in variables) {
-            // Create a copy without the bypassCache property
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { bypassCache: removed, ...cleanVariables } = variables;
-            variables = cleanVariables;
-          }
 
           // Check if it's a search request and if we should use cache
           const isSearchQuery = query.includes("Page(") && variables?.search;
@@ -564,6 +560,33 @@ export function setupAniListAPI() {
   ipcMain.handle("shell:openExternal", async (_, url) => {
     try {
       console.debug(`[ApiIPC] Opening external URL in default browser: ${url}`);
+
+      // Validate URL using WHATWG URL parser
+      let parsedUrl: URL;
+      try {
+        parsedUrl = new URL(url);
+      } catch {
+        console.warn(`[ApiIPC] Invalid URL format: ${url}`);
+        return {
+          success: false,
+          error: "Invalid URL format",
+        };
+      }
+
+      // Enforce http: or https: schemes only
+      if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+        console.warn(
+          `[ApiIPC] Rejected URL with non-HTTP(S) scheme: ${parsedUrl.protocol}//${parsedUrl.hostname}`,
+        );
+        return {
+          success: false,
+          error: "Invalid URL scheme. Only http: and https: are allowed",
+        };
+      }
+
+      console.debug(
+        `[ApiIPC] URL validated successfully: ${parsedUrl.hostname}`,
+      );
       await shell.openExternal(url);
       return { success: true };
     } catch (error) {
@@ -608,7 +631,7 @@ export function setupAniListAPI() {
   // Manga source API handlers (generic)
   ipcMain.handle(
     "mangaSource:search",
-    async (_, source: string, query: string, limit: number = 10) => {
+    async (_, source: MangaSource, query: string, limit: number = 10) => {
       return withGroupAsync(
         `[ApiIPC] ${source} Search: "${query}"`,
         async () => {
@@ -616,23 +639,13 @@ export function setupAniListAPI() {
             const { mangaSourceRegistry } = await import(
               "../../../api/manga-sources/registry"
             );
-            const { MangaSource } = await import(
-              "../../../api/manga-sources/types"
-            );
 
             console.info(
               `[ApiIPC] 🔍 ${source} API: Searching for "${query}" with limit ${limit}`,
             );
 
-            const sourceEnum = Object.values(MangaSource).find(
-              (val) => val === source,
-            );
-            if (!sourceEnum) {
-              throw new Error(`Unsupported manga source: ${source}`);
-            }
-
             const data = await mangaSourceRegistry.searchManga(
-              sourceEnum,
+              source,
               query,
               limit,
             );
@@ -656,7 +669,7 @@ export function setupAniListAPI() {
 
   ipcMain.handle(
     "mangaSource:getMangaDetail",
-    async (_, source: string, slug: string) => {
+    async (_, source: MangaSource, slug: string) => {
       return withGroupAsync(
         `[ApiIPC] ${source} Detail: "${slug}"`,
         async () => {
@@ -664,27 +677,12 @@ export function setupAniListAPI() {
             const { mangaSourceRegistry } = await import(
               "../../../api/manga-sources/registry"
             );
-            const { MangaSource } = await import(
-              "../../../api/manga-sources/types"
-            );
 
             console.info(
               `[ApiIPC] 📖 ${source} API: Getting manga details for "${slug}"`,
             );
 
-            // Convert string value to enum (e.g., "mangadex" -> MangaSource.MANGADX)
-            // Find the enum value that matches the string value
-            const sourceEnum = Object.values(MangaSource).find(
-              (val) => val === source,
-            );
-            if (!sourceEnum) {
-              throw new Error(`Unsupported manga source: ${source}`);
-            }
-
-            const data = await mangaSourceRegistry.getMangaDetail(
-              sourceEnum,
-              slug,
-            );
+            const data = await mangaSourceRegistry.getMangaDetail(source, slug);
 
             console.info(
               `[ApiIPC] 📖 ${source} API: Retrieved details for "${slug}"`,

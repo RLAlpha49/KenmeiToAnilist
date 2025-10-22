@@ -377,6 +377,7 @@ export const STORAGE_KEYS = {
   MATCH_CONFIG: "match_config",
   IGNORED_DUPLICATES: "ignored_duplicates",
   ACTIVE_SYNC_SNAPSHOT: "active_sync_snapshot",
+  ANILIST_SEARCH_CACHE: "anilist_search_cache",
 };
 
 /**

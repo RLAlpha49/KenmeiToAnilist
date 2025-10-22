@@ -19,6 +19,7 @@ import {
 } from "./queries";
 import { debounce } from "@/utils/debounce";
 import { withGroupAsync } from "@/utils/logging";
+import { storage, STORAGE_KEYS } from "@/utils/storage";
 
 /**
  * HTTP error with status information.
@@ -69,7 +70,7 @@ const searchCache: Cache<SearchResult<AniListManga>> = {};
 let searchCacheInitialized = false;
 
 /**
- * Loads the search cache from localStorage if available and not yet initialized.
+ * Loads the search cache from storage if available and not yet initialized.
  * Merges only non-expired entries into the in-memory cache.
  * @source
  */
@@ -86,8 +87,7 @@ function initializeSearchCache(): void {
   searchCacheInitialized = true;
 
   try {
-    const storageKey = "anilist_search_cache";
-    const cachedData = localStorage.getItem(storageKey);
+    const cachedData = storage.getItem(STORAGE_KEYS.ANILIST_SEARCH_CACHE);
 
     if (!cachedData) {
       console.debug("[AniListClient] 💾 No cached search data found");
@@ -110,7 +110,7 @@ function initializeSearchCache(): void {
     }
 
     console.debug(
-      `[AniListClient] 💾 Loaded ${loadedCount} cached search results from localStorage`,
+      `[AniListClient] 💾 Loaded ${loadedCount} cached search results from storage`,
     );
 
     try {
@@ -124,34 +124,33 @@ function initializeSearchCache(): void {
     }
   } catch (error) {
     console.error(
-      "[AniListClient] ❌ Error loading search cache from localStorage:",
+      "[AniListClient] ❌ Error loading search cache from storage:",
       error,
     );
   }
 }
 
 /**
- * Persists the search cache to localStorage internally without debouncing.
+ * Persists the search cache to storage internally without debouncing.
  * @source
  */
 function persistSearchCacheInternal(): void {
   try {
-    const storageKey = "anilist_search_cache";
     const serialized = JSON.stringify(searchCache);
-    localStorage.setItem(storageKey, serialized);
+    storage.setItem(STORAGE_KEYS.ANILIST_SEARCH_CACHE, serialized);
     console.debug(
       `[AniListClient] 💾 Persisted search cache (${serialized.length} bytes)`,
     );
   } catch (error) {
     console.error(
-      "[AniListClient] ❌ Error saving search cache to localStorage:",
+      "[AniListClient] ❌ Error saving search cache to storage:",
       error,
     );
   }
 }
 
 /**
- * Debounced version of persistSearchCache that batches writes to localStorage.
+ * Debounced version of persistSearchCache that batches writes to storage.
  * Waits 2 seconds after the last call before persisting.
  * @source
  */
@@ -229,13 +228,13 @@ async function handleElectronRequest<T>(
 ): Promise<AniListResponse<T>> {
   let succeeded = false;
   try {
-    // Use the correct call format for the main process
-    const response = await globalThis.electronAPI.anilist.request(
+    // Use the correct call format for the main process with typed AniListRequest payload
+    const response = await globalThis.electronAPI.anilist.request({
       query,
-      { ...variables, bypassCache }, // Pass bypassCache flag to main process
+      variables,
       token,
-      // We can't pass AbortSignal through IPC, but we'll check it after
-    );
+      cacheControl: { bypassCache },
+    });
 
     // Check for abort before returning the response
     if (abortSignal?.aborted) {
@@ -923,7 +922,7 @@ export function clearSearchCache(searchQuery?: string): void {
     console.info("[AniListClient] 🗑️ Cleared all search cache");
   }
 
-  // Update localStorage with the cleared cache immediately (critical operation)
+  // Update storage with the cleared cache immediately (critical operation)
   persistSearchCacheImmediate();
 
   // Also clear the cache in the main process

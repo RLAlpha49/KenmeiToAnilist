@@ -7,6 +7,7 @@
 import { BrowserWindow, ipcMain, shell } from "electron";
 import { URL } from "node:url";
 import * as http from "node:http";
+import fetch from "node-fetch";
 import { withGroupAsync, startGroup, endGroup } from "../../../utils/logging";
 
 let authCancelled = false;
@@ -271,8 +272,8 @@ export function addAuthEventListeners(mainWindow: BrowserWindow) {
                 authResolve = resolve;
                 authReject = reject;
 
-                // Set timeout for the entire auth process
-                setTimeout(() => {
+                // Set timeout for the entire auth process and store handle for cleanup
+                loadTimeout = setTimeout(() => {
                   if (authResolve) {
                     authReject?.(
                       new Error("Authentication timed out after 2 minutes"),
@@ -816,8 +817,8 @@ async function startAuthServer(
               `Port ${port} busy, trying ${nextPort}...`,
             );
 
-            // Retry with the next port
-            authServer?.close();
+            // Clean up current server state before retry
+            cleanupAuthServer();
             startAuthServer(nextPort.toString(), callbackPath, mainWindow)
               .then(resolve)
               .catch(reject);

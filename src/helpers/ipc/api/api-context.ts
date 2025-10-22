@@ -5,6 +5,26 @@
  */
 
 import { contextBridge, ipcRenderer } from "electron";
+import type { MangaSource } from "../../../api/manga-sources/types";
+
+/**
+ * Cache control options for AniList requests.
+ * @source
+ */
+export interface CacheControl {
+  bypassCache?: boolean;
+}
+
+/**
+ * Typed request payload for AniList GraphQL requests.
+ * @source
+ */
+export interface AniListRequest {
+  query: string;
+  variables?: Record<string, unknown>;
+  token?: string;
+  cacheControl?: CacheControl;
+}
 
 /**
  * Exposes the Electron API context bridge to the renderer process.
@@ -21,20 +41,17 @@ export function exposeApiContext() {
 
     contextBridge.exposeInMainWorld("electronAPI", {
       anilist: {
-        request: (
-          query: string,
-          variables?: Record<string, unknown>,
-          token?: string,
-        ) => ipcRenderer.invoke("anilist:request", query, variables, token),
+        request: (payload: AniListRequest) =>
+          ipcRenderer.invoke("anilist:request", payload),
         clearCache: (searchQuery?: string) =>
           ipcRenderer.invoke("anilist:clearCache", searchQuery),
         getRateLimitStatus: () =>
           ipcRenderer.invoke("anilist:getRateLimitStatus"),
       },
       mangaSource: {
-        search: (source: string, query: string, limit?: number) =>
+        search: (source: MangaSource, query: string, limit?: number) =>
           ipcRenderer.invoke("mangaSource:search", source, query, limit),
-        getMangaDetail: (source: string, slug: string) =>
+        getMangaDetail: (source: MangaSource, slug: string) =>
           ipcRenderer.invoke("mangaSource:getMangaDetail", source, slug),
       },
       shell: {

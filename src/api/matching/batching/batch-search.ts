@@ -16,6 +16,7 @@ import { generateCacheKey, isCacheValid, mangaCache } from "../cache";
 import { batchSearchManga } from "@/api/anilist/client";
 import { withGroupAsync } from "@/utils/logging";
 import { CancelledError } from "@/utils/errorHandling";
+import { ANILIST_RATE_LIMIT_PER_MINUTE } from "@/config/anilist";
 
 /**
  * Batch size for parallel manga searches (15 = AniList 60 req/min limit).
@@ -24,11 +25,11 @@ import { CancelledError } from "@/utils/errorHandling";
 const BATCH_SIZE = 15;
 
 /**
- * AniList API rate limit: 60 requests per minute.
+ * AniList API rate limit: 60 requests per minute (from centralized config).
  * Used to calculate adaptive inter-batch delays.
  * @source
  */
-const API_RATE_LIMIT = 60;
+const API_RATE_LIMIT = ANILIST_RATE_LIMIT_PER_MINUTE;
 
 /**
  * Time window for rate limit budget (milliseconds in one minute).
@@ -54,8 +55,13 @@ const MAX_BATCH_DELAY_MS = 5000;
  * Determines optimal delay between batches to respect API rate limits while
  * maximizing throughput. Formula: delay = (requests × 60000) / API_RATE_LIMIT
  *
+ * When `budgetRemaining` feedback is available from getRateLimitStatus:
+ * - High budget (>30 requests): Use calculated delay (fast batching)
+ * - Medium budget (10-30 requests): Apply moderate throttling
+ * - Low budget (<10 requests): Increase delay significantly to allow rate limit window to reset
+ *
  * @param requestCount - Number of API requests in this batch (1 for main query + fallback count).
- * @param budgetRemaining - Optional remaining API requests available in current minute window.
+ * @param budgetRemaining - Optional remaining API requests available in current minute window from getRateLimitStatus.
  * @returns Delay in milliseconds, clamped between MIN_BATCH_DELAY_MS and MAX_BATCH_DELAY_MS.
  * @source
  */
@@ -63,22 +69,29 @@ function calculateAdaptiveBatchDelay(
   requestCount: number,
   budgetRemaining?: number,
 ): number {
-  // If we have budget feedback and are running low, increase delay to throttle
-  if (budgetRemaining !== undefined && budgetRemaining < 10) {
-    console.warn(
-      `[MangaSearchService] ⚠️ Rate limit budget low (${budgetRemaining} requests remaining), throttling batch delay`,
-    );
+  // Start with base calculated delay
+  let delayMs = (requestCount * RATE_LIMIT_WINDOW_MS) / API_RATE_LIMIT;
+
+  // If we have rate limit budget feedback, adjust delay based on current budget
+  if (budgetRemaining !== undefined) {
+    if (budgetRemaining < 10) {
+      // Running very low on budget - significantly increase delay to wait for reset
+      delayMs *= 3;
+      console.warn(
+        `[MangaSearchService] ⚠️ Rate limit budget critically low (${budgetRemaining} requests remaining), increasing delay to ${Math.round(delayMs)}ms to allow reset`,
+      );
+    } else if (budgetRemaining < 20) {
+      // Moderate budget - apply moderate increase
+      delayMs *= 1.5;
+      console.debug(
+        `[MangaSearchService] ⚠️ Rate limit budget moderate (${budgetRemaining} requests), increasing delay to ${Math.round(delayMs)}ms`,
+      );
+    }
+    // If budgetRemaining >= 20, use calculated delay as-is (high budget available)
   }
 
-  // Calculate delay based on request count: (requests × 60s) / rate_limit
-  const calculatedDelay =
-    (requestCount * RATE_LIMIT_WINDOW_MS) / API_RATE_LIMIT;
-
-  // Clamp to reasonable bounds
-  const delayMs = Math.max(
-    MIN_BATCH_DELAY_MS,
-    Math.min(calculatedDelay, MAX_BATCH_DELAY_MS),
-  );
+  // Clamp to reasonable bounds to avoid excessive delays or premature throttling
+  delayMs = Math.max(MIN_BATCH_DELAY_MS, Math.min(delayMs, MAX_BATCH_DELAY_MS));
 
   console.debug(
     `[MangaSearchService] ⏱️ Adaptive batch delay: ${Math.round(delayMs)}ms (requests: ${requestCount}, budget: ${budgetRemaining ?? "unknown"})`,
@@ -270,29 +283,43 @@ async function performFallbackSearches(
         await withGroupAsync(
           `[MangaSearchService] Fallback: "${manga.title}"`,
           async () => {
-            ensureNotCancelled(abortSignal, checkCancellation);
+            try {
+              ensureNotCancelled(abortSignal, checkCancellation);
 
-            const response = await searchMangaByTitle(
-              manga.title,
-              token,
-              searchConfig,
-              abortSignal,
-            );
+              const response = await searchMangaByTitle(
+                manga.title,
+                token,
+                searchConfig,
+                abortSignal,
+              );
 
-            ensureNotCancelled(abortSignal, checkCancellation);
+              ensureNotCancelled(abortSignal, checkCancellation);
 
-            const matches = response.matches ?? [];
-            storage.cachedResults[index] = matches.map((match) => match.manga);
+              const matches = response.matches ?? [];
+              storage.cachedResults[index] = matches.map(
+                (match) => match.manga,
+              );
 
-            const { comick, mangaDex } = collectAlternativeSources(matches);
-            storage.cachedComickSources[index] = comick;
-            storage.cachedMangaDexSources[index] = mangaDex;
+              const { comick, mangaDex } = collectAlternativeSources(matches);
+              storage.cachedComickSources[index] = comick;
+              storage.cachedMangaDexSources[index] = mangaDex;
 
-            updateProgress(index, manga.title);
-
-            console.debug(
-              `[MangaSearchService] 🔁 Alternative search produced ${matches.length} matches for "${manga.title}"`,
-            );
+              console.debug(
+                `[MangaSearchService] 🔁 Alternative search produced ${matches.length} matches for "${manga.title}"`,
+              );
+            } catch (error) {
+              console.error(
+                `[MangaSearchService] ❌ Error in fallback search for "${manga.title}":`,
+                error,
+              );
+              // Store empty result on error to maintain consistent state
+              storage.cachedResults[index] = [];
+              storage.cachedComickSources[index] = new Map();
+              storage.cachedMangaDexSources[index] = new Map();
+            } finally {
+              // Always report progress, even on error
+              updateProgress(index, manga.title);
+            }
           },
         );
       }
@@ -425,9 +452,11 @@ async function processBatch(
           throw error;
         }
 
-        for (const { index } of batch) {
+        // Report progress for all items in failed batch
+        for (const { manga, index } of batch) {
           storage.cachedResults[index] = [];
           initializeSourceMaps(index, storage);
+          updateProgress(index, manga.title);
         }
 
         console.warn(

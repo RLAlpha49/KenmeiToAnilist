@@ -155,50 +155,230 @@ export class MangaDexClient extends BaseMangaSourceClient<
   }
 
   /**
+   * Extract and parse tags from MangaDex attributes with type validation.
+   * @param tagsArray - Raw tags array from API response.
+   * @returns Parsed tags array with validated structure.
+   * @source
+   */
+  private parseMangaDexTags(tagsArray: unknown):
+    | Array<{
+        id: string;
+        type: string;
+        attributes: {
+          name: { en: string; [key: string]: string };
+          description: { en: string; [key: string]: string };
+          group: string;
+          version: number;
+        };
+      }>
+    | undefined {
+    if (!Array.isArray(tagsArray)) return undefined;
+
+    return tagsArray
+      .map((tag: unknown) => {
+        if (
+          !tag ||
+          typeof tag !== "object" ||
+          !("id" in tag) ||
+          !("type" in tag) ||
+          !("attributes" in tag)
+        ) {
+          return null;
+        }
+
+        const tagObj = tag as Record<string, unknown>;
+        const attrs = tagObj.attributes;
+
+        if (!attrs || typeof attrs !== "object") return null;
+
+        const attrObj = attrs as Record<string, unknown>;
+        const name = attrObj.name;
+        const description = attrObj.description;
+
+        // Ensure name and description have required structure
+        if (
+          !name ||
+          typeof name !== "object" ||
+          !("en" in name) ||
+          !description ||
+          typeof description !== "object" ||
+          !("en" in description)
+        ) {
+          return null;
+        }
+
+        return {
+          id: String(tagObj.id),
+          type: String(tagObj.type),
+          attributes: {
+            name: name as { en: string; [key: string]: string },
+            description: description as {
+              en: string;
+              [key: string]: string;
+            },
+            group: String(attrObj.group),
+            version: typeof attrObj.version === "number" ? attrObj.version : 0,
+          },
+        };
+      })
+      .filter(
+        (
+          tag,
+        ): tag is {
+          id: string;
+          type: string;
+          attributes: {
+            name: { en: string; [key: string]: string };
+            description: { en: string; [key: string]: string };
+            group: string;
+            version: number;
+          };
+        } => tag !== null,
+      ) as Array<{
+      id: string;
+      type: string;
+      attributes: {
+        name: { en: string; [key: string]: string };
+        description: { en: string; [key: string]: string };
+        group: string;
+        version: number;
+      };
+    }>;
+  }
+
+  /**
+   * Extract attributes from a MangaDex item with type validation.
+   * @param item - The raw item object.
+   * @returns Attributes object or null if invalid.
+   * @source
+   */
+  private extractMangaDexAttributes(
+    item: Record<string, unknown>,
+  ): Record<string, unknown> | null {
+    const attributes = item.attributes;
+    return attributes && typeof attributes === "object"
+      ? (attributes as Record<string, unknown>)
+      : {};
+  }
+
+  /**
+   * Validate and extract MangaDex item ID and type.
+   * @param item - The raw item object.
+   * @returns { id, type } or null if invalid.
+   * @source
+   */
+  private extractMangaDexItemIdAndType(
+    item: Record<string, unknown>,
+  ): { id: unknown; type: unknown } | null {
+    if (!item.id || !item.type) {
+      console.warn("[MangaDex] Skipping item missing id or type", item);
+      return null;
+    }
+    return { id: item.id, type: item.type };
+  }
+
+  /**
+   * Build a MangaDex manga entry from an item object with type validation.
+   * @param item - Raw item from API response.
+   * @returns Parsed manga entry or null if invalid.
+   * @source
+   */
+  private buildMangaDexMangaFromItem(item: unknown): MangaDexManga | null {
+    // Validate required fields
+    if (!item || typeof item !== "object") {
+      console.warn("[MangaDex] Skipping invalid search result item", item);
+      return null;
+    }
+
+    const obj = item as Record<string, unknown>;
+    const ids = this.extractMangaDexItemIdAndType(obj);
+    if (!ids) return null;
+
+    const attributes = this.extractMangaDexAttributes(obj) || {};
+
+    const titleObj =
+      attributes.title && typeof attributes.title === "object"
+        ? (attributes.title as Record<string, string>)
+        : {};
+
+    const altTitles = Array.isArray(attributes.altTitles)
+      ? (attributes.altTitles as Record<string, string>[])
+      : [];
+
+    const primaryTitle = this.extractPrimaryTitle(titleObj);
+    const alternativeTitles = this.parseAlternativeTitles(
+      titleObj,
+      altTitles,
+      primaryTitle,
+    );
+
+    return {
+      id: String(ids.id),
+      title: primaryTitle,
+      slug: String(ids.id),
+      year: typeof attributes.year === "number" ? attributes.year : undefined,
+      status:
+        typeof attributes.status === "string"
+          ? this.mapMangaDexStatus(attributes.status)
+          : 0,
+      country:
+        typeof attributes.originalLanguage === "string"
+          ? attributes.originalLanguage
+          : undefined,
+      alternativeTitles,
+      source: MangaSource.MANGADEX,
+      type: String(ids.type),
+      links:
+        attributes.links && typeof attributes.links === "object"
+          ? (attributes.links as Record<string, string>)
+          : undefined,
+      originalLanguage:
+        typeof attributes.originalLanguage === "string"
+          ? attributes.originalLanguage
+          : undefined,
+      lastVolume:
+        typeof attributes.lastVolume === "string"
+          ? attributes.lastVolume
+          : undefined,
+      lastChapter:
+        typeof attributes.lastChapter === "string"
+          ? attributes.lastChapter
+          : undefined,
+      publicationDemographic:
+        typeof attributes.publicationDemographic === "string"
+          ? attributes.publicationDemographic
+          : undefined,
+      contentRating:
+        typeof attributes.contentRating === "string"
+          ? attributes.contentRating
+          : undefined,
+      tags: this.parseMangaDexTags(attributes.tags),
+    };
+  }
+
+  /**
    * Parse raw search response into MangaDex manga entries.
    * Extracts primary and alternative titles, status mapping, and platform links.
    * @param rawResponse - The raw API response object.
    * @returns Array of parsed manga entries.
    * @source
    */
-  // eslint-disable-next-line
-  protected parseSearchResponse(rawResponse: any): MangaDexManga[] {
-    if (!Array.isArray(rawResponse?.data)) {
+  protected parseSearchResponse(rawResponse: unknown): MangaDexManga[] {
+    if (
+      !rawResponse ||
+      typeof rawResponse !== "object" ||
+      !Array.isArray((rawResponse as Record<string, unknown>).data)
+    ) {
       console.warn("[MangaDex] 🔍 Invalid search response format");
       return [];
     }
-    // eslint-disable-next-line
-    return rawResponse.data.map((item: any) => {
-      const attributes = item.attributes ?? {};
-      const titleObj = attributes.title ?? {};
-      const altTitles = attributes.altTitles ?? [];
 
-      const primaryTitle = this.extractPrimaryTitle(titleObj);
-      const alternativeTitles = this.parseAlternativeTitles(
-        titleObj,
-        altTitles,
-        primaryTitle,
-      );
+    const response = rawResponse as Record<string, unknown>;
+    const data = response.data as unknown[];
 
-      return {
-        id: item.id,
-        title: primaryTitle,
-        slug: item.id, // MangaDex uses ID as the identifier
-        year: attributes.year,
-        status: this.mapMangaDexStatus(attributes.status),
-        country: attributes.originalLanguage,
-        alternativeTitles,
-        source: MangaSource.MANGADEX,
-        type: item.type,
-        links: attributes.links,
-        originalLanguage: attributes.originalLanguage,
-        lastVolume: attributes.lastVolume,
-        lastChapter: attributes.lastChapter,
-        publicationDemographic: attributes.publicationDemographic,
-        contentRating: attributes.contentRating,
-        tags: attributes.tags,
-      } as MangaDexManga;
-    });
+    return data
+      .map((item: unknown) => this.buildMangaDexMangaFromItem(item))
+      .filter((item): item is MangaDexManga => item !== null);
   }
 
   /**

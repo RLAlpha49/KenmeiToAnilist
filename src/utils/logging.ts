@@ -662,7 +662,8 @@ export function installConsoleInterceptor(): () => void {
 
   if (globalThis.window === undefined) {
     return () => {
-      // no console interception in non-browser environments
+      // no console interception in non-browser environments (Main process, Node.js)
+      // This is intentional and safe - logging in Main process goes directly to DevTools
     };
   }
 
