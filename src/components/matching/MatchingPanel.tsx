@@ -100,7 +100,7 @@ export function MatchingPanel({
           Back to Import
         </Button>
         <Button
-          className="bg-gradient-to-r from-indigo-500 via-sky-500 to-blue-500 shadow-lg hover:from-indigo-600 hover:via-sky-600 hover:to-blue-600"
+          className="bg-linear-to-r from-indigo-500 via-sky-500 to-blue-500 shadow-lg hover:from-indigo-600 hover:via-sky-600 hover:to-blue-600"
           onClick={onProceedToSync}
         >
           Proceed to Sync

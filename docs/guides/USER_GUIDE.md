@@ -26,18 +26,36 @@ A comprehensive guide to using Kenmei to AniList for migrating and synchronizing
 
 ### First Launch
 
-When you first open Kenmei to AniList, you'll see the **Home Page** with several options:
+When you first open Kenmei to AniList for the first time, an **interactive onboarding wizard** will appear automatically. This wizard will guide you through the setup process step-by-step.
 
-1. **Import Kenmei Data** - Start by importing your Kenmei CSV export
-2. **AniList Authentication** - Connect your AniList account
-3. **Settings** - Configure synchronization preferences
-4. **Help & Documentation** - Access guides and support
+If you prefer to skip the wizard, you can close it at any time. The wizard can be restarted later from the home page using the **"Restart Onboarding"** button.
+
+### Onboarding Wizard
+
+The onboarding wizard provides a guided introduction to the app with 5 key steps:
+
+**Step 1: Welcome** - Introduction to the app and overview of the workflow. Learn what you'll accomplish in the following steps.
+
+**Step 2: Import CSV** - Learn how to export your manga library from Kenmei and import it into the app. Includes information about file formats and data privacy.
+
+**Step 3: Authentication** - Guide through connecting your AniList account securely using OAuth. Understand the permissions the app requests and why.
+
+**Step 4: Matching** - Understand how the automatic matching algorithm works, learn about confidence scores, and discover how to manually search for titles.
+
+**Step 5: Sync Configuration** - Overview of sync options, priority settings, safety features, and incremental sync capabilities.
+
+**Tips:**
+
+- Hover over highlighted terms to see additional explanations and tips
+- You can navigate back and forth through the steps at any time
+- The wizard can be restarted later from the home page
+- Completing or skipping the wizard marks it as seen and won't show again unless manually restarted
 
 ### AniList Authentication
 
 Before syncing, you need to authenticate with AniList:
 
-1. Click **"Connect AniList Account"** on the home page
+1. Click **"Connect AniList Account"** on the home page (or follow the authentication step in the onboarding wizard)
 2. You'll be redirected to AniList's authorization page
 3. Log in to your AniList account and authorize the app
 4. You'll be redirected back to the app with authentication complete

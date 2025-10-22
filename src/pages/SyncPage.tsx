@@ -845,7 +845,7 @@ export function SyncPage() {
     isCompleted: boolean,
   ) => {
     return (
-      <div className="relative flex h-[200px] flex-shrink-0 items-center justify-center pl-3">
+      <div className="relative flex h-[200px] shrink-0 items-center justify-center pl-3">
         {anilist?.coverImage?.large || anilist?.coverImage?.medium ? (
           <motion.div
             layout="position"
@@ -1046,8 +1046,8 @@ export function SyncPage() {
             className="relative overflow-hidden rounded-3xl border border-slate-200/60 bg-white/80 p-6 shadow-xl backdrop-blur-xl dark:border-slate-800/70 dark:bg-slate-950/60"
           >
             <div className="pointer-events-none absolute inset-0 opacity-80">
-              <div className="absolute left-1/2 top-[-6rem] h-56 w-96 -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-400/50 to-indigo-400/50 blur-3xl dark:from-blue-500/25 dark:to-indigo-500/25" />
-              <div className="absolute bottom-[-4rem] right-[-3rem] h-40 w-40 rounded-full bg-gradient-to-br from-slate-200/70 to-transparent blur-3xl dark:from-slate-800/40" />
+              <div className="bg-linear-to-r absolute -top-24 left-1/2 h-56 w-96 -translate-x-1/2 rounded-full from-blue-400/50 to-indigo-400/50 blur-3xl dark:from-blue-500/25 dark:to-indigo-500/25" />
+              <div className="bg-linear-to-br absolute -bottom-16 -right-12 h-40 w-40 rounded-full from-slate-200/70 to-transparent blur-3xl dark:from-slate-800/40" />
             </div>
             <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
               <div className="max-w-xl space-y-3">
@@ -1068,7 +1068,7 @@ export function SyncPage() {
                       className="relative overflow-hidden rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm backdrop-blur-lg dark:border-slate-800/70 dark:bg-slate-950/70"
                     >
                       <div
-                        className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${stat.accent} opacity-80`}
+                        className={`bg-linear-to-br pointer-events-none absolute inset-0 ${stat.accent} opacity-80`}
                       />
                       <div className="relative flex flex-col gap-2">
                         <div className="flex items-center justify-between">
@@ -1093,7 +1093,7 @@ export function SyncPage() {
 
           <Card className="border border-slate-200/70 bg-white/80 shadow-2xl backdrop-blur-xl dark:border-slate-800/70 dark:bg-slate-950/60">
             <CardHeader className="space-y-2">
-              <CardTitle className="bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900 bg-clip-text text-2xl font-semibold text-transparent dark:from-slate-100 dark:via-slate-300 dark:to-slate-100">
+              <CardTitle className="bg-linear-to-r from-slate-900 via-slate-700 to-slate-900 bg-clip-text text-2xl font-semibold text-transparent dark:from-slate-100 dark:via-slate-300 dark:to-slate-100">
                 Sync Preview
               </CardTitle>
               <CardDescription className="text-sm text-slate-600 dark:text-slate-400">
@@ -1124,7 +1124,7 @@ export function SyncPage() {
                       <div className="min-w-[140px] flex-1">
                         <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800/60">
                           <div
-                            className="h-full rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 transition-all duration-300"
+                            className="bg-linear-to-r h-full rounded-full from-blue-500 via-indigo-500 to-purple-500 transition-all duration-300"
                             style={{
                               width: `${Math.min(queuedPercentage, 100)}%`,
                             }}
@@ -1236,7 +1236,7 @@ export function SyncPage() {
                 <Button
                   onClick={handleStartSync}
                   disabled={entriesWithChanges.length === 0 || libraryLoading}
-                  className="group relative w-full overflow-hidden rounded-md bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 px-6 py-2 font-semibold text-white shadow-lg transition hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+                  className="bg-linear-to-r group relative w-full overflow-hidden rounded-md from-blue-500 via-indigo-500 to-purple-500 px-6 py-2 font-semibold text-white shadow-lg transition hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
                 >
                   <span className="absolute inset-0 bg-white/20 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                   <span className="relative flex items-center justify-center gap-2">
@@ -1465,7 +1465,7 @@ export function SyncPage() {
         <div
           className={`${baseRowClasses} ${backgroundClass} hover:bg-blue-50/70 dark:hover:bg-slate-900/60`}
         >
-          <div className="mr-3 flex flex-shrink-0 items-center pl-2">
+          <div className="mr-3 flex shrink-0 items-center pl-2">
             {anilist.coverImage?.large || anilist.coverImage?.medium ? (
               <motion.div
                 layout="position"
@@ -1507,7 +1507,7 @@ export function SyncPage() {
               )}
             </div>
           </div>
-          <div className="flex flex-shrink-0 items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1">
             {!isNewEntry && !isCompleted && (
               <>
                 {renderStatusBadge(
@@ -1760,7 +1760,7 @@ export function SyncPage() {
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute left-[8%] top-[-10%] h-64 w-64 rounded-full bg-blue-200/50 blur-3xl dark:bg-blue-500/20" />
         <div className="absolute right-[-12%] top-1/3 h-80 w-80 rounded-full bg-indigo-200/40 blur-3xl dark:bg-indigo-500/15" />
-        <div className="absolute bottom-[-20%] left-1/2 h-[26rem] w-[40rem] -translate-x-1/2 bg-gradient-to-t from-slate-100 via-transparent to-transparent opacity-80 dark:from-slate-900/40" />
+        <div className="h-104 w-160 bg-linear-to-t absolute bottom-[-20%] left-1/2 -translate-x-1/2 from-slate-100 via-transparent to-transparent opacity-80 dark:from-slate-900/40" />
       </div>
       <motion.div
         className="container relative z-10 py-10"

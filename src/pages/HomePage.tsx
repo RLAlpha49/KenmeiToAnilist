@@ -22,10 +22,18 @@ import {
   Settings,
   CheckCheck,
   ArrowUpRight,
+  HelpCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useAuthState } from "../hooks/useAuth";
-import { getImportStats, storage, STORAGE_KEYS } from "../utils/storage";
-import { motion } from "framer-motion";
+import {
+  getImportStats,
+  storage,
+  STORAGE_KEYS,
+  resetOnboarding,
+} from "../utils/storage";
+import { motion, AnimatePresence } from "framer-motion";
+import { OnboardingWizard } from "../components/onboarding/OnboardingWizard";
 import {
   Card,
   CardContent,
@@ -460,6 +468,7 @@ export function HomePage() {
     failedSyncs: 0,
     totalSyncs: 0,
   });
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -557,6 +566,44 @@ export function HomePage() {
     parseMatchResults();
     loadSyncStats();
   }, []);
+
+  // Check onboarding status on mount using async storage read
+  useEffect(() => {
+    const checkOnboardingStatus = async () => {
+      try {
+        const value = await storage.getItemAsync(
+          STORAGE_KEYS.ONBOARDING_COMPLETED,
+        );
+        setShowOnboarding(value !== "true");
+      } catch (error) {
+        console.error("[HomePage] Error checking onboarding status:", error);
+        setShowOnboarding(true);
+      }
+    };
+
+    checkOnboardingStatus();
+  }, []);
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+    toast.success("🎉 Onboarding completed! Welcome aboard!", {
+      description: "Your app is now ready to use.",
+      duration: 4000,
+    });
+  };
+
+  const handleOnboardingSkip = () => {
+    setShowOnboarding(false);
+    toast.info("ℹ️ Onboarding skipped", {
+      description: "You can restart it anytime from the home page.",
+      duration: 3000,
+    });
+  };
+
+  const handleRestartOnboarding = () => {
+    resetOnboarding();
+    setShowOnboarding(true);
+  };
 
   /**
    * Formats a number with locale-specific thousand separators.
@@ -739,427 +786,453 @@ export function HomePage() {
   ];
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-1/3 top-[8%] h-[420px] w-[420px] rounded-full bg-gradient-to-br from-blue-500/25 via-purple-500/20 to-transparent blur-3xl" />
-        <div className="absolute right-[-10%] top-[35%] h-[320px] w-[320px] rounded-full bg-gradient-to-br from-emerald-400/20 via-teal-400/20 to-transparent blur-[140px]" />
-        <div className="absolute bottom-[-20%] left-1/2 h-[280px] w-[480px] -translate-x-1/2 rounded-full bg-gradient-to-br from-amber-300/20 via-pink-300/20 to-transparent blur-[200px]" />
-      </div>
+    <>
+      <AnimatePresence mode="wait">
+        {showOnboarding && (
+          <OnboardingWizard
+            onComplete={handleOnboardingComplete}
+            onSkip={handleOnboardingSkip}
+          />
+        )}
+      </AnimatePresence>
+      <div className="relative min-h-screen overflow-hidden">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="bg-linear-to-br absolute -left-1/3 top-[8%] h-[420px] w-[420px] rounded-full from-blue-500/25 via-purple-500/20 to-transparent blur-3xl" />
+          <div className="bg-linear-to-br absolute right-[-10%] top-[35%] h-[320px] w-[320px] rounded-full from-emerald-400/20 via-teal-400/20 to-transparent blur-[140px]" />
+          <div className="bg-linear-to-br absolute bottom-[-20%] left-1/2 h-[280px] w-[480px] -translate-x-1/2 rounded-full from-amber-300/20 via-pink-300/20 to-transparent blur-[200px]" />
+        </div>
 
-      <motion.div
-        className="container relative z-[1] mx-auto px-4 py-10 md:px-6"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-      >
-        <motion.section
-          className="mb-12"
-          variants={itemVariants}
-          initial="hidden"
-          animate="show"
+        <motion.div
+          className="z-1 container relative mx-auto px-4 py-10 md:px-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
         >
-          <div className="relative overflow-hidden rounded-3xl border border-white/30 bg-gradient-to-br from-white/85 via-white/60 to-white/30 p-8 shadow-2xl backdrop-blur-lg dark:border-white/10 dark:from-slate-950/70 dark:via-slate-950/60 dark:to-slate-950/40">
-            <div className="pointer-events-none absolute -left-32 top-[-140px] h-64 w-64 rounded-full bg-gradient-to-br from-blue-500/25 via-purple-500/20 to-transparent blur-3xl" />
-            <div className="pointer-events-none absolute bottom-[-140px] right-[-40px] h-64 w-64 rounded-full bg-gradient-to-br from-fuchsia-500/25 via-purple-500/15 to-transparent blur-3xl" />
-            <div className="relative z-[1] flex flex-col gap-10 lg:flex-row lg:items-center">
-              <div className="space-y-6 lg:flex-1">
-                <Badge
-                  variant="outline"
-                  className="text-foreground/70 w-fit rounded-full border-white/40 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/10"
-                >
-                  Kenmei ✦ AniList
-                </Badge>
-                <div className="space-y-4">
-                  <h1 className="text-foreground text-4xl font-semibold tracking-tight md:text-5xl lg:text-6xl">
-                    Move your Kenmei library to AniList with confidence
-                  </h1>
-                  <p className="text-muted-foreground text-lg md:max-w-2xl">
-                    A simple, safe tool to import, match, and synchronize your
-                    manga collection from Kenmei to AniList — with smart
-                    matching and flexible sync options.
-                  </p>
-                </div>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <Button
-                    asChild
-                    size="lg"
-                    className={`group h-auto rounded-full bg-gradient-to-r ${heroAction.tone} px-6 py-3 text-base font-semibold text-white shadow-lg transition hover:shadow-xl focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950`}
-                  >
-                    <Link
-                      to={heroAction.href}
-                      className="flex items-center gap-2"
-                    >
-                      <span>{heroAction.label}</span>
-                      <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                    </Link>
-                  </Button>
-                  <Button
-                    asChild
+          <motion.section
+            className="mb-12"
+            variants={itemVariants}
+            initial="hidden"
+            animate="show"
+          >
+            <div className="bg-linear-to-br relative overflow-hidden rounded-3xl border border-white/30 from-white/85 via-white/60 to-white/30 p-8 shadow-2xl backdrop-blur-lg dark:border-white/10 dark:from-slate-950/70 dark:via-slate-950/60 dark:to-slate-950/40">
+              <div className="bg-linear-to-br pointer-events-none absolute -left-32 top-[-140px] h-64 w-64 rounded-full from-blue-500/25 via-purple-500/20 to-transparent blur-3xl" />
+              <div className="bg-linear-to-br pointer-events-none absolute bottom-[-140px] right-[-40px] h-64 w-64 rounded-full from-fuchsia-500/25 via-purple-500/15 to-transparent blur-3xl" />
+              <div className="z-1 relative flex flex-col gap-10 lg:flex-row lg:items-center">
+                <div className="space-y-6 lg:flex-1">
+                  <Badge
                     variant="outline"
-                    size="lg"
-                    className="text-foreground hover:border-primary/50 hover:text-primary focus-visible:ring-primary/30 dark:hover:border-primary/50 dark:hover:text-primary h-auto rounded-full border-white/60 bg-white/75 px-6 py-3 text-base font-semibold shadow-sm transition focus-visible:ring-2 focus-visible:ring-offset-2 dark:border-white/20 dark:bg-slate-950/60 dark:focus-visible:ring-offset-slate-950"
+                    className="text-foreground/70 w-fit rounded-full border-white/40 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/10"
                   >
-                    <a
-                      href="https://github.com/RLAlpha49/KenmeiToAnilist/blob/master/docs/guides/USER_GUIDE.md"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-2"
+                    Kenmei ✦ AniList
+                  </Badge>
+                  <div className="space-y-4">
+                    <h1 className="text-foreground text-4xl font-semibold tracking-tight md:text-5xl lg:text-6xl">
+                      Move your Kenmei library to AniList with confidence
+                    </h1>
+                    <p className="text-muted-foreground text-lg md:max-w-2xl">
+                      A simple, safe tool to import, match, and synchronize your
+                      manga collection from Kenmei to AniList — with smart
+                      matching and flexible sync options.
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <Button
+                      asChild
+                      size="lg"
+                      className={`bg-linear-to-r group h-auto rounded-full ${heroAction.tone} px-6 py-3 text-base font-semibold text-white shadow-lg transition hover:shadow-xl focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950`}
                     >
-                      Quickstart guide
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
-                  </Button>
+                      <Link
+                        to={heroAction.href}
+                        className="flex items-center gap-2"
+                      >
+                        <span>{heroAction.label}</span>
+                        <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="lg"
+                      className="text-foreground hover:border-primary/50 hover:text-primary focus-visible:ring-primary/30 dark:hover:border-primary/50 dark:hover:text-primary h-auto rounded-full border-white/60 bg-white/75 px-6 py-3 text-base font-semibold shadow-sm transition focus-visible:ring-2 focus-visible:ring-offset-2 dark:border-white/20 dark:bg-slate-950/60 dark:focus-visible:ring-offset-slate-950"
+                    >
+                      <a
+                        href="https://github.com/RLAlpha49/KenmeiToAnilist/blob/master/docs/guides/USER_GUIDE.md"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2"
+                      >
+                        Quickstart guide
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </Button>
+                    <Button
+                      onClick={handleRestartOnboarding}
+                      variant="ghost"
+                      size="lg"
+                      className="h-auto rounded-full px-6 py-3 text-base font-semibold"
+                    >
+                      <HelpCircle className="mr-2 h-4 w-4" />
+                      Restart Onboarding
+                    </Button>
+                  </div>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-3 lg:w-80 lg:grid-cols-1">
+                  {heroHighlights.map((metric) => {
+                    const Icon = metric.icon;
+                    return (
+                      <div
+                        key={metric.label}
+                        className="group rounded-2xl border border-white/40 bg-white/80 p-4 shadow-sm backdrop-blur-sm transition hover:-translate-y-1 hover:shadow-xl dark:border-white/10 dark:bg-slate-950/70"
+                      >
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/70 shadow-sm dark:bg-slate-900/80">
+                          <Icon className={`h-5 w-5 ${metric.accent}`} />
+                        </div>
+                        <p className="mt-3 text-2xl font-semibold">
+                          {formatNumber(metric.value)}
+                        </p>
+                        <p className="text-muted-foreground text-sm">
+                          {metric.label}
+                        </p>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-              <div className="grid gap-4 sm:grid-cols-3 lg:w-80 lg:grid-cols-1">
-                {heroHighlights.map((metric) => {
-                  const Icon = metric.icon;
+            </div>
+          </motion.section>
+
+          <motion.section
+            className="mb-12 space-y-6"
+            variants={itemVariants}
+            initial="hidden"
+            animate="show"
+          >
+            <Carousel
+              opts={{
+                align: "start",
+                loop: true,
+              }}
+              plugins={[
+                Autoplay({
+                  delay: 4000,
+                  stopOnInteraction: false,
+                  stopOnMouseEnter: true,
+                }),
+              ]}
+              className="w-full"
+            >
+              <CarouselContent className="-ml-4">
+                {featureCards.map((feature) => (
+                  <CarouselItem
+                    key={feature.title}
+                    className="pl-4 md:basis-1/2 lg:basis-1/3"
+                  >
+                    <div className="p-1">
+                      <Card className="relative h-full overflow-hidden border border-white/20 bg-white/70 shadow-lg backdrop-blur dark:border-white/10 dark:bg-slate-950/70">
+                        <div
+                          className={`bg-linear-to-r absolute inset-x-0 top-0 h-1.5 ${feature.color}`}
+                        />
+                        <CardContent className="flex h-full flex-col justify-between p-6">
+                          <div>
+                            <div className="bg-linear-to-br mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full from-blue-100 to-indigo-100 text-blue-700 shadow-sm dark:from-blue-900/20 dark:to-indigo-900/20 dark:text-blue-300">
+                              {feature.icon}
+                            </div>
+                            <h3 className="text-foreground mb-2 text-xl font-semibold">
+                              {feature.title}
+                            </h3>
+                            <p className="text-muted-foreground text-sm">
+                              {feature.description}
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <div className="mt-4 flex justify-end gap-2">
+                <CarouselPrevious className="static translate-y-0" />
+                <CarouselNext className="static translate-y-0" />
+              </div>
+            </Carousel>
+          </motion.section>
+
+          <motion.section
+            className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3"
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+          >
+            <motion.div variants={itemVariants}>
+              <Card className="bg-linear-to-br relative overflow-hidden border border-blue-500/20 from-blue-500/15 via-indigo-500/10 to-blue-500/5 p-6 shadow-xl backdrop-blur-sm dark:border-blue-500/20 dark:from-blue-500/20 dark:via-indigo-500/20 dark:to-blue-500/10">
+                <div className="absolute right-[-40px] top-[-40px] h-40 w-40 rounded-full bg-blue-500/20 blur-3xl" />
+                <CardHeader className="flex flex-col gap-2 p-0 pb-4">
+                  <CardTitle className="flex items-center gap-2 text-lg font-semibold text-blue-700 dark:text-blue-200">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-blue-600 shadow-sm dark:bg-slate-900/60">
+                      <Library className="h-5 w-5" />
+                    </div>
+                    Imported Library
+                  </CardTitle>
+                  <CardDescription className="text-sm text-blue-900/70 dark:text-blue-100/70">
+                    {stats.total > 0
+                      ? "Current snapshot from your Kenmei export."
+                      : "Import your Kenmei CSV to populate the dashboard."}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 p-0">
+                  <p className="text-4xl font-bold text-blue-700 dark:text-blue-200">
+                    {formatNumber(stats.total)}
+                  </p>
+                  <div className="flex items-center gap-2 text-sm text-blue-900/70 dark:text-blue-100/70">
+                    <Clock className="h-4 w-4 text-blue-500" />
+                    <span>
+                      {stats.total > 0
+                        ? `Last import ${formatDate(stats.lastSync)}`
+                        : "Awaiting first import"}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <Card className="bg-linear-to-br relative overflow-hidden border border-emerald-500/20 from-emerald-500/15 via-green-500/10 to-emerald-500/5 p-6 shadow-xl backdrop-blur-sm dark:border-emerald-500/20 dark:from-emerald-500/20 dark:via-green-500/20 dark:to-emerald-500/10">
+                <div className="absolute left-[-60px] top-[60px] h-40 w-40 rounded-full bg-emerald-500/20 blur-3xl" />
+                <CardHeader className="flex flex-col gap-2 p-0 pb-4">
+                  <CardTitle className="flex items-center gap-2 text-lg font-semibold text-emerald-700 dark:text-emerald-200">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-emerald-600 shadow-sm dark:bg-slate-900/60">
+                      <ClipboardCheck className="h-5 w-5" />
+                    </div>
+                    Match Review
+                  </CardTitle>
+                  <CardDescription className="text-sm text-emerald-900/70 dark:text-emerald-100/70">
+                    Resolve matches before syncing to ensure accuracy.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 p-0">
+                  <div className="flex items-center gap-3">
+                    <p className="text-4xl font-bold text-emerald-700 dark:text-emerald-200">
+                      {matchStatusText}
+                    </p>
+                    {renderMatchStatusBadge(matchStatus)}
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-xs text-emerald-900/70 dark:text-emerald-100/70">
+                    {matchStatus.totalMatches > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-1 shadow-sm dark:bg-slate-900/70">
+                        <BarChart2 className="h-3.5 w-3.5 text-emerald-500" />
+                        {formatNumber(matchStatus.totalMatches)} total matches
+                      </span>
+                    )}
+                    {matchStatus.skippedMatches > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-1 shadow-sm dark:bg-slate-900/70">
+                        <AlertCircle className="h-3.5 w-3.5 text-blue-500" />
+                        {formatNumber(matchStatus.skippedMatches)} skipped
+                      </span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <Card className="bg-linear-to-br relative overflow-hidden border border-purple-500/20 from-purple-500/15 via-fuchsia-500/10 to-purple-500/5 p-6 shadow-xl backdrop-blur-sm dark:border-purple-500/20 dark:from-purple-500/20 dark:via-fuchsia-500/20 dark:to-purple-500/10">
+                <div className="absolute right-[-70px] top-[40px] h-48 w-48 rounded-full bg-purple-500/25 blur-3xl" />
+                <CardHeader className="flex flex-col gap-2 p-0 pb-4">
+                  <CardTitle className="flex items-center gap-2 text-lg font-semibold text-purple-700 dark:text-purple-200">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-purple-600 shadow-sm dark:bg-slate-900/60">
+                      <Sparkles className="h-5 w-5" />
+                    </div>
+                    Sync Pulse
+                  </CardTitle>
+                  <CardDescription className="text-sm text-purple-900/70 dark:text-purple-100/70">
+                    Track how your latest syncs are performing.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 p-0 text-sm text-purple-900/80 dark:text-purple-100/80">
+                  <div className="flex items-center justify-between">
+                    <span className="text-foreground font-medium">
+                      Last sync
+                    </span>
+                    <span>
+                      {syncStats.lastSyncTime
+                        ? formatDate(syncStats.lastSyncTime)
+                        : "Not yet"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-foreground font-medium">
+                      Entries synced
+                    </span>
+                    <span>{formatNumber(syncStats.entriesSynced)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-foreground font-medium">
+                      Failed syncs
+                    </span>
+                    <span>{formatNumber(syncStats.failedSyncs)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-foreground font-medium">
+                      Total sync runs
+                    </span>
+                    <span>{formatNumber(syncStats.totalSyncs)}</span>
+                  </div>
+                  {syncSuccessRate !== null && (
+                    <div className="flex items-center justify-between rounded-xl bg-white/60 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-purple-700 shadow-sm dark:bg-slate-900/60 dark:text-purple-200">
+                      <span>Reliability</span>
+                      <span>{syncSuccessRate}% success</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          </motion.section>
+
+          <motion.section
+            className="mb-12"
+            variants={itemVariants}
+            initial="hidden"
+            animate="show"
+          >
+            <Card className="relative overflow-hidden border border-white/30 bg-white/80 p-6 shadow-xl backdrop-blur dark:border-white/10 dark:bg-slate-950/70">
+              <CardHeader className="space-y-2 p-0 pb-4">
+                <CardTitle className="text-xl font-semibold">
+                  Status distribution
+                </CardTitle>
+                <CardDescription>
+                  See how your library breaks down by reading state.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 p-0">
+                {statusBreakdown.map((status) => {
+                  const percent =
+                    stats.total > 0
+                      ? Math.round((status.value / stats.total) * 100)
+                      : 0;
                   return (
-                    <div
-                      key={metric.label}
-                      className="group rounded-2xl border border-white/40 bg-white/80 p-4 shadow-sm backdrop-blur-sm transition hover:-translate-y-1 hover:shadow-xl dark:border-white/10 dark:bg-slate-950/70"
-                    >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/70 shadow-sm dark:bg-slate-900/80">
-                        <Icon className={`h-5 w-5 ${metric.accent}`} />
+                    <div key={status.label} className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-foreground font-medium">
+                          {status.label}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {formatNumber(status.value)}{" "}
+                          {status.value === 1 ? "entry" : "entries"} • {percent}
+                          %
+                        </span>
                       </div>
-                      <p className="mt-3 text-2xl font-semibold">
-                        {formatNumber(metric.value)}
-                      </p>
-                      <p className="text-muted-foreground text-sm">
-                        {metric.label}
-                      </p>
+                      <div className="bg-muted relative h-2.5 overflow-hidden rounded-full">
+                        <div
+                          className={`bg-linear-to-r absolute inset-y-0 left-0 rounded-full ${status.gradient}`}
+                          style={{ width: `${percent}%` }}
+                        />
+                      </div>
                     </div>
                   );
                 })}
-              </div>
-            </div>
-          </div>
-        </motion.section>
-
-        <motion.section
-          className="mb-12 space-y-6"
-          variants={itemVariants}
-          initial="hidden"
-          animate="show"
-        >
-          <Carousel
-            opts={{
-              align: "start",
-              loop: true,
-            }}
-            plugins={[
-              Autoplay({
-                delay: 4000,
-                stopOnInteraction: false,
-                stopOnMouseEnter: true,
-              }),
-            ]}
-            className="w-full"
-          >
-            <CarouselContent className="-ml-4">
-              {featureCards.map((feature) => (
-                <CarouselItem
-                  key={feature.title}
-                  className="pl-4 md:basis-1/2 lg:basis-1/3"
-                >
-                  <div className="p-1">
-                    <Card className="relative h-full overflow-hidden border border-white/20 bg-white/70 shadow-lg backdrop-blur dark:border-white/10 dark:bg-slate-950/70">
-                      <div
-                        className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${feature.color}`}
-                      />
-                      <CardContent className="flex h-full flex-col justify-between p-6">
-                        <div>
-                          <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-700 shadow-sm dark:from-blue-900/20 dark:to-indigo-900/20 dark:text-blue-300">
-                            {feature.icon}
-                          </div>
-                          <h3 className="text-foreground mb-2 text-xl font-semibold">
-                            {feature.title}
-                          </h3>
-                          <p className="text-muted-foreground text-sm">
-                            {feature.description}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <div className="mt-4 flex justify-end gap-2">
-              <CarouselPrevious className="static translate-y-0" />
-              <CarouselNext className="static translate-y-0" />
-            </div>
-          </Carousel>
-        </motion.section>
-
-        <motion.section
-          className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3"
-          variants={containerVariants}
-          initial="hidden"
-          animate="show"
-        >
-          <motion.div variants={itemVariants}>
-            <Card className="relative overflow-hidden border border-blue-500/20 bg-gradient-to-br from-blue-500/15 via-indigo-500/10 to-blue-500/5 p-6 shadow-xl backdrop-blur-sm dark:border-blue-500/20 dark:from-blue-500/20 dark:via-indigo-500/20 dark:to-blue-500/10">
-              <div className="absolute right-[-40px] top-[-40px] h-40 w-40 rounded-full bg-blue-500/20 blur-3xl" />
-              <CardHeader className="flex flex-col gap-2 p-0 pb-4">
-                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-blue-700 dark:text-blue-200">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-blue-600 shadow-sm dark:bg-slate-900/60">
-                    <Library className="h-5 w-5" />
-                  </div>
-                  Imported Library
-                </CardTitle>
-                <CardDescription className="text-sm text-blue-900/70 dark:text-blue-100/70">
-                  {stats.total > 0
-                    ? "Current snapshot from your Kenmei export."
-                    : "Import your Kenmei CSV to populate the dashboard."}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4 p-0">
-                <p className="text-4xl font-bold text-blue-700 dark:text-blue-200">
-                  {formatNumber(stats.total)}
-                </p>
-                <div className="flex items-center gap-2 text-sm text-blue-900/70 dark:text-blue-100/70">
-                  <Clock className="h-4 w-4 text-blue-500" />
-                  <span>
-                    {stats.total > 0
-                      ? `Last import ${formatDate(stats.lastSync)}`
-                      : "Awaiting first import"}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          <motion.div variants={itemVariants}>
-            <Card className="relative overflow-hidden border border-emerald-500/20 bg-gradient-to-br from-emerald-500/15 via-green-500/10 to-emerald-500/5 p-6 shadow-xl backdrop-blur-sm dark:border-emerald-500/20 dark:from-emerald-500/20 dark:via-green-500/20 dark:to-emerald-500/10">
-              <div className="absolute left-[-60px] top-[60px] h-40 w-40 rounded-full bg-emerald-500/20 blur-3xl" />
-              <CardHeader className="flex flex-col gap-2 p-0 pb-4">
-                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-emerald-700 dark:text-emerald-200">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-emerald-600 shadow-sm dark:bg-slate-900/60">
-                    <ClipboardCheck className="h-5 w-5" />
-                  </div>
-                  Match Review
-                </CardTitle>
-                <CardDescription className="text-sm text-emerald-900/70 dark:text-emerald-100/70">
-                  Resolve matches before syncing to ensure accuracy.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4 p-0">
-                <div className="flex items-center gap-3">
-                  <p className="text-4xl font-bold text-emerald-700 dark:text-emerald-200">
-                    {matchStatusText}
+                {stats.total === 0 && (
+                  <p className="text-muted-foreground text-sm">
+                    Import your Kenmei CSV to unlock detailed visualizations.
                   </p>
-                  {renderMatchStatusBadge(matchStatus)}
-                </div>
-                <div className="flex flex-wrap gap-2 text-xs text-emerald-900/70 dark:text-emerald-100/70">
-                  {matchStatus.totalMatches > 0 && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-1 shadow-sm dark:bg-slate-900/70">
-                      <BarChart2 className="h-3.5 w-3.5 text-emerald-500" />
-                      {formatNumber(matchStatus.totalMatches)} total matches
-                    </span>
-                  )}
-                  {matchStatus.skippedMatches > 0 && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-1 shadow-sm dark:bg-slate-900/70">
-                      <AlertCircle className="h-3.5 w-3.5 text-blue-500" />
-                      {formatNumber(matchStatus.skippedMatches)} skipped
-                    </span>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          <motion.div variants={itemVariants}>
-            <Card className="relative overflow-hidden border border-purple-500/20 bg-gradient-to-br from-purple-500/15 via-fuchsia-500/10 to-purple-500/5 p-6 shadow-xl backdrop-blur-sm dark:border-purple-500/20 dark:from-purple-500/20 dark:via-fuchsia-500/20 dark:to-purple-500/10">
-              <div className="absolute right-[-70px] top-[40px] h-48 w-48 rounded-full bg-purple-500/25 blur-3xl" />
-              <CardHeader className="flex flex-col gap-2 p-0 pb-4">
-                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-purple-700 dark:text-purple-200">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-purple-600 shadow-sm dark:bg-slate-900/60">
-                    <Sparkles className="h-5 w-5" />
-                  </div>
-                  Sync Pulse
-                </CardTitle>
-                <CardDescription className="text-sm text-purple-900/70 dark:text-purple-100/70">
-                  Track how your latest syncs are performing.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3 p-0 text-sm text-purple-900/80 dark:text-purple-100/80">
-                <div className="flex items-center justify-between">
-                  <span className="text-foreground font-medium">Last sync</span>
-                  <span>
-                    {syncStats.lastSyncTime
-                      ? formatDate(syncStats.lastSyncTime)
-                      : "Not yet"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-foreground font-medium">
-                    Entries synced
-                  </span>
-                  <span>{formatNumber(syncStats.entriesSynced)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-foreground font-medium">
-                    Failed syncs
-                  </span>
-                  <span>{formatNumber(syncStats.failedSyncs)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-foreground font-medium">
-                    Total sync runs
-                  </span>
-                  <span>{formatNumber(syncStats.totalSyncs)}</span>
-                </div>
-                {syncSuccessRate !== null && (
-                  <div className="flex items-center justify-between rounded-xl bg-white/60 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-purple-700 shadow-sm dark:bg-slate-900/60 dark:text-purple-200">
-                    <span>Reliability</span>
-                    <span>{syncSuccessRate}% success</span>
-                  </div>
                 )}
               </CardContent>
             </Card>
-          </motion.div>
-        </motion.section>
+          </motion.section>
 
-        <motion.section
-          className="mb-12"
-          variants={itemVariants}
-          initial="hidden"
-          animate="show"
-        >
-          <Card className="relative overflow-hidden border border-white/30 bg-white/80 p-6 shadow-xl backdrop-blur dark:border-white/10 dark:bg-slate-950/70">
-            <CardHeader className="space-y-2 p-0 pb-4">
-              <CardTitle className="text-xl font-semibold">
-                Status distribution
-              </CardTitle>
-              <CardDescription>
-                See how your library breaks down by reading state.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 p-0">
-              {statusBreakdown.map((status) => {
-                const percent =
-                  stats.total > 0
-                    ? Math.round((status.value / stats.total) * 100)
-                    : 0;
-                return (
-                  <div key={status.label} className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-foreground font-medium">
-                        {status.label}
-                      </span>
-                      <span className="text-muted-foreground">
-                        {formatNumber(status.value)}{" "}
-                        {status.value === 1 ? "entry" : "entries"} • {percent}%
-                      </span>
-                    </div>
-                    <div className="bg-muted relative h-2.5 overflow-hidden rounded-full">
-                      <div
-                        className={`absolute inset-y-0 left-0 rounded-full bg-gradient-to-r ${status.gradient}`}
-                        style={{ width: `${percent}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-              {stats.total === 0 && (
-                <p className="text-muted-foreground text-sm">
-                  Import your Kenmei CSV to unlock detailed visualizations.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </motion.section>
-
-        <motion.section
-          className="mb-12"
-          variants={itemVariants}
-          initial="hidden"
-          animate="show"
-        >
-          <Card className="border border-white/30 bg-white/80 shadow-xl backdrop-blur dark:border-white/10 dark:bg-slate-950/70">
-            <CardHeader className="space-y-2">
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <Sparkles className="h-5 w-5 text-blue-500" />
-                Quick actions
-              </CardTitle>
-              <CardDescription>
-                Jump straight into the next best move for your migration.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {quickActionConfigs.map((action) => {
-                  const ActionIcon = action.icon;
-                  return (
-                    <Button
-                      key={action.key}
-                      asChild
-                      variant="outline"
-                      className={`group h-full w-full justify-start gap-4 rounded-2xl border border-transparent bg-gradient-to-br ${action.tone} dark:hover:border-primary/40 p-4 text-left transition hover:-translate-y-1 hover:border-white/40 hover:shadow-xl`}
-                    >
-                      <Link
-                        to={action.to}
-                        className="flex w-full items-center gap-4"
+          <motion.section
+            className="mb-12"
+            variants={itemVariants}
+            initial="hidden"
+            animate="show"
+          >
+            <Card className="border border-white/30 bg-white/80 shadow-xl backdrop-blur dark:border-white/10 dark:bg-slate-950/70">
+              <CardHeader className="space-y-2">
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Sparkles className="h-5 w-5 text-blue-500" />
+                  Quick actions
+                </CardTitle>
+                <CardDescription>
+                  Jump straight into the next best move for your migration.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {quickActionConfigs.map((action) => {
+                    const ActionIcon = action.icon;
+                    return (
+                      <Button
+                        key={action.key}
+                        asChild
+                        variant="outline"
+                        className={`bg-linear-to-br group h-full w-full justify-start gap-4 rounded-2xl border border-transparent ${action.tone} dark:hover:border-primary/40 p-4 text-left transition hover:-translate-y-1 hover:border-white/40 hover:shadow-xl`}
                       >
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/70 shadow-sm dark:bg-slate-900/70">
-                          <ActionIcon
-                            className={`h-5 w-5 ${action.iconClass}`}
-                          />
-                        </div>
-                        <div className="flex-1 space-y-1">
-                          <p className="text-foreground text-sm font-semibold">
-                            {action.label}
-                          </p>
-                          <p className="text-muted-foreground text-xs">
-                            {action.description}
-                          </p>
-                        </div>
-                        <div className="flex flex-col items-end gap-2">
-                          {action.footnote && (
-                            <Badge
-                              variant="outline"
-                              className={`rounded-full border-transparent px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide ${action.badgeClass}`}
-                            >
-                              {action.footnote}
-                            </Badge>
-                          )}
-                          <ChevronRight className="text-muted-foreground h-4 w-4 transition group-hover:translate-x-1" />
-                        </div>
-                      </Link>
-                    </Button>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.section>
+                        <Link
+                          to={action.to}
+                          className="flex w-full items-center gap-4"
+                        >
+                          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/70 shadow-sm dark:bg-slate-900/70">
+                            <ActionIcon
+                              className={`h-5 w-5 ${action.iconClass}`}
+                            />
+                          </div>
+                          <div className="flex-1 space-y-1">
+                            <p className="text-foreground text-sm font-semibold">
+                              {action.label}
+                            </p>
+                            <p className="text-muted-foreground text-xs">
+                              {action.description}
+                            </p>
+                          </div>
+                          <div className="flex flex-col items-end gap-2">
+                            {action.footnote && (
+                              <Badge
+                                variant="outline"
+                                className={`rounded-full border-transparent px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide ${action.badgeClass}`}
+                              >
+                                {action.footnote}
+                              </Badge>
+                            )}
+                            <ChevronRight className="text-muted-foreground h-4 w-4 transition group-hover:translate-x-1" />
+                          </div>
+                        </Link>
+                      </Button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.section>
 
-        <motion.section variants={itemVariants} initial="hidden" animate="show">
-          <Card className="border border-white/30 bg-gradient-to-r from-white/70 via-white/50 to-white/30 text-center shadow-lg backdrop-blur dark:border-white/10 dark:from-slate-950/70 dark:via-slate-950/60 dark:to-slate-950/40">
-            <CardContent className="flex flex-col items-center gap-2 py-6">
-              <p className="text-muted-foreground text-sm">
-                Kenmei to AniList Sync Tool • Version {getAppVersion()}
-              </p>
-              <div className="flex items-center gap-3">
-                {renderVersionBadge(versionStatus)}
-                <a
-                  href="https://github.com/RLAlpha49/KenmeiToAnilist"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs font-medium transition-colors"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  GitHub
-                </a>
-              </div>
-              <p className="text-muted-foreground/70 text-xs">
-                Made with ❤️ for manga readers
-              </p>
-            </CardContent>
-          </Card>
-        </motion.section>
-      </motion.div>
-    </div>
+          <motion.section
+            variants={itemVariants}
+            initial="hidden"
+            animate="show"
+          >
+            <Card className="bg-linear-to-r border border-white/30 from-white/70 via-white/50 to-white/30 text-center shadow-lg backdrop-blur dark:border-white/10 dark:from-slate-950/70 dark:via-slate-950/60 dark:to-slate-950/40">
+              <CardContent className="flex flex-col items-center gap-2 py-6">
+                <p className="text-muted-foreground text-sm">
+                  Kenmei to AniList Sync Tool • Version {getAppVersion()}
+                </p>
+                <div className="flex items-center gap-3">
+                  {renderVersionBadge(versionStatus)}
+                  <a
+                    href="https://github.com/RLAlpha49/KenmeiToAnilist"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs font-medium transition-colors"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    GitHub
+                  </a>
+                </div>
+                <p className="text-muted-foreground/70 text-xs">
+                  Made with ❤️ for manga readers
+                </p>
+              </CardContent>
+            </Card>
+          </motion.section>
+        </motion.div>
+      </div>
+    </>
   );
 }

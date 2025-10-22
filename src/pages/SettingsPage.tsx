@@ -2411,7 +2411,7 @@ export function SettingsPage() {
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-slate-700/50">
                     <div
-                      className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-300"
+                      className="bg-linear-to-r h-full from-blue-500 to-cyan-500 transition-all duration-300"
                       style={{ width: `${downloadProgress * 100}%` }}
                     />
                   </div>

@@ -100,7 +100,7 @@ const PauseResumeButton: React.FC<PauseResumeButtonProps> = ({
         className={cn(
           "group relative w-full rounded-2xl text-base font-semibold transition-all duration-200",
           isManuallyPaused
-            ? "bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 focus-visible:ring-emerald-400"
+            ? "bg-linear-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 focus-visible:ring-emerald-400"
             : "border border-slate-200/70 bg-slate-100/60 text-slate-500 shadow-inner shadow-slate-200/50 dark:border-slate-700/60 dark:bg-slate-900/40 dark:text-slate-400",
         )}
       >
@@ -121,7 +121,7 @@ const PauseResumeButton: React.FC<PauseResumeButtonProps> = ({
       size="lg"
       onClick={onPauseProcess}
       disabled={pauseButtonDisabled || !onPauseProcess}
-      className="group relative w-full rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-base font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 focus-visible:ring-indigo-400"
+      className="bg-linear-to-r group relative w-full rounded-2xl from-blue-600 via-indigo-600 to-purple-600 text-base font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 focus-visible:ring-indigo-400"
     >
       <span className="flex items-center justify-center gap-2">
         <Pause className="h-5 w-5" />
@@ -526,7 +526,7 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
 
   return (
     <Card className="relative isolate mb-8 overflow-hidden border">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.18)_0%,rgba(255,255,255,0)_70%)] dark:bg-[radial-gradient(circle_at_top,_rgba(30,64,175,0.14)_0%,rgba(15,23,42,0)_82%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.18)_0%,rgba(255,255,255,0)_70%)] dark:bg-[radial-gradient(circle_at_top,rgba(30,64,175,0.14)_0%,rgba(15,23,42,0)_82%)]" />
 
       <CardHeader className="relative z-10 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -601,7 +601,7 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25 }}
-            className="dark:from-blue-500/14 dark:via-indigo-500/12 dark:to-cyan-500/12 relative overflow-hidden rounded-2xl border border-blue-200/60 bg-gradient-to-r from-blue-500/15 via-indigo-500/10 to-cyan-500/10 p-4 shadow-inner dark:border-blue-500/25"
+            className="dark:from-blue-500/14 dark:via-indigo-500/12 dark:to-cyan-500/12 bg-linear-to-r relative overflow-hidden rounded-2xl border border-blue-200/60 from-blue-500/15 via-indigo-500/10 to-cyan-500/10 p-4 shadow-inner dark:border-blue-500/25"
           >
             <div className="flex items-center gap-4">
               <div className="dark:bg-blue-500/18 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/20 text-blue-600 dark:text-blue-200">
@@ -628,7 +628,7 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
               key={label}
               className="group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/60 p-4 shadow-sm shadow-blue-500/10 transition duration-300 ease-out hover:-translate-y-1 hover:shadow-xl dark:border-slate-700/60 dark:bg-slate-900/55"
             >
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/70 to-transparent opacity-60 dark:from-slate-900/45" />
+              <div className="bg-linear-to-br pointer-events-none absolute inset-0 from-white/70 to-transparent opacity-60 dark:from-slate-900/45" />
               <div className="relative z-10 flex items-start gap-3">
                 <div className="dark:bg-blue-500/16 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-500 dark:text-blue-200">
                   <Icon className="h-5 w-5" />
@@ -657,7 +657,7 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25 }}
-            className="dark:from-purple-500/14 dark:via-blue-500/14 relative overflow-hidden rounded-2xl border border-purple-200/60 bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-slate-100/40 p-4 dark:border-purple-500/25 dark:to-slate-900/30"
+            className="dark:from-purple-500/14 dark:via-blue-500/14 bg-linear-to-r relative overflow-hidden rounded-2xl border border-purple-200/60 from-purple-500/10 via-blue-500/10 to-slate-100/40 p-4 dark:border-purple-500/25 dark:to-slate-900/30"
             style={{ minHeight: 80, maxHeight: 120 }}
           >
             <div className="flex items-center justify-between gap-3">
@@ -722,7 +722,7 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
               "group relative w-full overflow-hidden rounded-2xl text-base font-semibold transition-all duration-200",
               isCancelling
                 ? "border border-amber-400/50 bg-amber-50/80 text-amber-600 shadow-inner shadow-amber-200/40 dark:border-amber-500/40 dark:bg-amber-900/30 dark:text-amber-200"
-                : "bg-gradient-to-r from-rose-500 via-red-500 to-orange-500 text-white shadow-lg shadow-rose-500/30 hover:from-rose-600 hover:via-red-600 hover:to-orange-600 focus-visible:ring-rose-400",
+                : "bg-linear-to-r from-rose-500 via-red-500 to-orange-500 text-white shadow-lg shadow-rose-500/30 hover:from-rose-600 hover:via-red-600 hover:to-orange-600 focus-visible:ring-rose-400",
             )}
           >
             {isCancelling ? (

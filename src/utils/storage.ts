@@ -379,6 +379,7 @@ export const STORAGE_KEYS = {
   ACTIVE_SYNC_SNAPSHOT: "active_sync_snapshot",
   ANILIST_SEARCH_CACHE: "anilist_search_cache",
   UPDATE_DISMISSED_VERSIONS: "update_dismissed_versions",
+  ONBOARDING_COMPLETED: "onboarding_completed",
 };
 
 /**
@@ -948,5 +949,48 @@ export function isAniListIdIgnored(anilistId: number): boolean {
   } catch (error) {
     console.error("[Storage] Error checking if AniList ID is ignored", error);
     return false;
+  }
+}
+
+/**
+ * Checks if the onboarding wizard has been completed
+ * @returns {boolean} True if onboarding has been completed, false otherwise
+ */
+export function isOnboardingCompleted(): boolean {
+  try {
+    const value = storage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
+    return value === "true";
+  } catch (error) {
+    console.error(
+      "[Storage] Error checking onboarding completion status",
+      error,
+    );
+    return false;
+  }
+}
+
+/**
+ * Sets the onboarding completion status
+ * @param {boolean} completed - Whether the onboarding has been completed
+ */
+export function setOnboardingCompleted(completed: boolean): void {
+  try {
+    storage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETED, String(completed));
+  } catch (error) {
+    console.error(
+      "[Storage] Error setting onboarding completion status",
+      error,
+    );
+  }
+}
+
+/**
+ * Resets the onboarding status to allow the wizard to show again
+ */
+export function resetOnboarding(): void {
+  try {
+    storage.removeItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
+  } catch (error) {
+    console.error("[Storage] Error resetting onboarding status", error);
   }
 }
