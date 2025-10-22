@@ -196,7 +196,12 @@ function processBatchIteration(
     }
 
     // per-batch progress logging (kept concise for large imports)
-    logBatchProgress(batchIndex, totalBatches, processedEntries.length, validationErrors.length);
+    logBatchProgress(
+      batchIndex,
+      totalBatches,
+      processedEntries.length,
+      validationErrors.length,
+    );
   }
 }
 
@@ -241,7 +246,13 @@ export function processKenmeiMangaBatches(
           };
         }
 
-        processBatchIteration(mangaList, batchSize, parseOptions, validationErrors, processedEntries);
+        processBatchIteration(
+          mangaList,
+          batchSize,
+          parseOptions,
+          validationErrors,
+          processedEntries,
+        );
 
         const durationMs = Math.round(now() - startTime);
         console.info(
@@ -612,7 +623,8 @@ function processQuoteCharacter(
   newInQuotes: boolean;
   escapedQuoteDetected: boolean;
 } {
-  const nextChar = currentIndex < csvContent.length - 1 ? csvContent[currentIndex + 1] : "";
+  const nextChar =
+    currentIndex < csvContent.length - 1 ? csvContent[currentIndex + 1] : "";
 
   // If this is an escaped quote (i.e., "")
   if (nextChar === '"') {
@@ -671,7 +683,12 @@ function handleCSVCharacter(
   const char = csvContent[index];
 
   if (char === '"') {
-    const quoteResult = processQuoteCharacter(csvContent, index, state.currentValue, state.inQuotes);
+    const quoteResult = processQuoteCharacter(
+      csvContent,
+      index,
+      state.currentValue,
+      state.inQuotes,
+    );
     state.currentValue = quoteResult.newValue;
     state.inQuotes = quoteResult.newInQuotes;
     if (quoteResult.escapedQuoteDetected) {
@@ -693,7 +710,9 @@ function handleCSVCharacter(
     state.currentValue = "";
     state.rowCountAtCheckpoint++;
     if (state.rowCountAtCheckpoint % 1000 === 0) {
-      console.debug(`[KenmeiParser] Parsed ${state.rowCountAtCheckpoint} rows so far...`);
+      console.debug(
+        `[KenmeiParser] Parsed ${state.rowCountAtCheckpoint} rows so far...`,
+      );
     }
     return index + 1;
   }
@@ -724,7 +743,9 @@ function parseCSVRows(csvContent: string): string[][] {
     let charsProcessed = 0;
 
     try {
-      console.info(`[KenmeiParser] Starting CSV parse (length=${csvContent.length})`);
+      console.info(
+        `[KenmeiParser] Starting CSV parse (length=${csvContent.length})`,
+      );
 
       let i = 0;
       while (i < csvContent.length) {
@@ -735,17 +756,25 @@ function parseCSVRows(csvContent: string): string[][] {
       finalizeLastRow(state.currentValue, state.currentRow, state.rows);
 
       if (state.inQuotes) {
-        console.warn(`[KenmeiParser] CSV parsing finished with unbalanced quotes; some fields may be truncated.`);
+        console.warn(
+          `[KenmeiParser] CSV parsing finished with unbalanced quotes; some fields may be truncated.`,
+        );
       }
 
-      console.info(`[KenmeiParser] Completed CSV parse: rows=${state.rows.length}, charsProcessed=${charsProcessed}, escapedQuotes=${state.escapedQuoteCount}`);
+      console.info(
+        `[KenmeiParser] Completed CSV parse: rows=${state.rows.length}, charsProcessed=${charsProcessed}, escapedQuotes=${state.escapedQuoteCount}`,
+      );
 
       return state.rows;
     } catch (err) {
       if (err instanceof Error) {
-        console.error(`[KenmeiParser] Error while parsing CSV after ${charsProcessed} chars: ${err.message}`);
+        console.error(
+          `[KenmeiParser] Error while parsing CSV after ${charsProcessed} chars: ${err.message}`,
+        );
       } else {
-        console.error(`[KenmeiParser] Unknown error while parsing CSV after ${charsProcessed} chars`);
+        console.error(
+          `[KenmeiParser] Unknown error while parsing CSV after ${charsProcessed} chars`,
+        );
       }
       throw err;
     }

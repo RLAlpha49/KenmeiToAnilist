@@ -168,7 +168,7 @@ async function performTokenExchange(params: {
     }
 
     const data = (await response.json()) as TokenExchangeResponse["token"];
-    
+
     if (!data?.access_token) {
       return {
         success: false,
@@ -615,7 +615,12 @@ function processAuthCallback(
     console.error("[AuthIPC]", errorMessage);
 
     authReject?.(new Error(errorMessage));
-    sendResponse(res, 400, `Authentication failed: ${errorDescription}`, mainWindow);
+    sendResponse(
+      res,
+      400,
+      `Authentication failed: ${errorDescription}`,
+      mainWindow,
+    );
     return { shouldContinue: false, processed: true };
   }
 
@@ -629,7 +634,12 @@ function processAuthCallback(
   }
 
   // Neither code nor error
-  sendResponse(res, 400, "Invalid callback: missing code or error parameter", mainWindow);
+  sendResponse(
+    res,
+    400,
+    "Invalid callback: missing code or error parameter",
+    mainWindow,
+  );
   return { shouldContinue: false, processed: true };
 }
 
@@ -675,9 +685,7 @@ function handleSuccessfulAuth(
 function createAuthTimeout(): NodeJS.Timeout {
   return setTimeout(() => {
     if (authResolve) {
-      authReject?.(
-        new Error("Authentication timed out after 2 minutes"),
-      );
+      authReject?.(new Error("Authentication timed out after 2 minutes"));
       cleanupAuthServer();
     }
   }, 120000); // 2 minute timeout
@@ -694,14 +702,11 @@ function handleAuthCodePromise(
 ): void {
   authCodePromise
     .then((code) => {
-      console.info(
-        "[AuthIPC] Auth code received, sending to renderer...",
-        {
-          codeLength: code.length,
-          codeStart: code.substring(0, 10) + "...",
-          redirectUri,
-        },
-      );
+      console.info("[AuthIPC] Auth code received, sending to renderer...", {
+        codeLength: code.length,
+        codeStart: code.substring(0, 10) + "...",
+        redirectUri,
+      });
 
       // Make sure this code isn't truncated
       if (code.length > 500) {
@@ -720,9 +725,7 @@ function handleAuthCodePromise(
         mainWindow.webContents.send("auth:cancelled");
       }
       const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Authentication failed";
+        error instanceof Error ? error.message : "Authentication failed";
       console.error("[AuthIPC] Auth error:", errorMessage);
     });
 }
@@ -773,7 +776,12 @@ async function startAuthServer(
               !urlResult.parsedPath
             ) {
               endGroup();
-              return sendResponse(res, 400, "Bad Request: No URL provided", mainWindow);
+              return sendResponse(
+                res,
+                400,
+                "Bad Request: No URL provided",
+                mainWindow,
+              );
             }
 
             const { parsedUrl, parsedPath } = urlResult;
