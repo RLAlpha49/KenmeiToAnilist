@@ -27,6 +27,8 @@ jobs:
         with:
           node-version: 22
       - name: Install dependencies
+        env:
+          NPM_CONFIG_PRODUCTION: false
         run: npm ci --force
       - name: Build / Make (Windows)
         run: npm run make
@@ -54,6 +56,8 @@ jobs:
         with:
           node-version: 22
       - name: Install dependencies
+        env:
+          NPM_CONFIG_PRODUCTION: false
         run: npm ci --force
       - name: Build / Make (macOS)
         run: npm run make
@@ -81,6 +85,8 @@ jobs:
         with:
           node-version: 22
       - name: Install dependencies
+        env:
+          NPM_CONFIG_PRODUCTION: false
         run: npm ci --force
       - name: Build / Make (Linux)
         run: npm run make
@@ -130,6 +136,8 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
+        env:
+          NPM_CONFIG_PRODUCTION: false
         run: npm ci --force
 
       - name: Publish to GitHub Releases
