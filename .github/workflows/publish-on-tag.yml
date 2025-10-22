@@ -69,8 +69,8 @@ jobs:
         with:
           name: macos-installers
           path: |
-            out/make/dmg/x64/*.dmg
-            out/make/zip/darwin/x64/*.zip
+            out/make/*.dmg
+            out/make/zip/darwin/arm64/*.zip
           if-no-files-found: warn
 
   build-linux:
