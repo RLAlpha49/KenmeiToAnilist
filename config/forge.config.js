@@ -106,6 +106,19 @@ const config = {
       },
     },
   ],
+  publishers: [
+    {
+      name: "@electron-forge/publisher-github",
+      config: {
+        repository: {
+          owner: "RLAlpha49",
+          name: "KenmeiToAnilist",
+        },
+        draft: false,
+        prerelease: false,
+      },
+    },
+  ],
 };
 
 module.exports = config;
