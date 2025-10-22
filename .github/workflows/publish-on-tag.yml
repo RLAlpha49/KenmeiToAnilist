@@ -15,10 +15,10 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       NODE_ENV: production
-      VITE_ANILIST_CLIENT_ID : ${{ secrets.ANILIST_CLIENT_ID }}
-      VITE_ANILIST_CLIENT_SECRET : ${{ secrets.ANILIST_CLIENT_SECRET }}
-      VITE_ANILIST_ENCRYPTION_KEY : ${{ secrets.ANILIST_ENCRYPTION_KEY }}
-      SENTRY_DSN : ${{ secrets.SENTRY_DSN }}
+      VITE_ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
+      VITE_ANILIST_CLIENT_SECRET: ${{ secrets.ANILIST_CLIENT_SECRET }}
+      VITE_ANILIST_ENCRYPTION_KEY: ${{ secrets.ANILIST_ENCRYPTION_KEY }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,10 +42,10 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       NODE_ENV: production
-      VITE_ANILIST_CLIENT_ID : ${{ secrets.ANILIST_CLIENT_ID }}
-      VITE_ANILIST_CLIENT_SECRET : ${{ secrets.ANILIST_CLIENT_SECRET }}
-      VITE_ANILIST_ENCRYPTION_KEY : ${{ secrets.ANILIST_ENCRYPTION_KEY }}
-      SENTRY_DSN : ${{ secrets.SENTRY_DSN }}
+      VITE_ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
+      VITE_ANILIST_CLIENT_SECRET: ${{ secrets.ANILIST_CLIENT_SECRET }}
+      VITE_ANILIST_ENCRYPTION_KEY: ${{ secrets.ANILIST_ENCRYPTION_KEY }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -69,10 +69,10 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       NODE_ENV: production
-      VITE_ANILIST_CLIENT_ID : ${{ secrets.ANILIST_CLIENT_ID }}
-      VITE_ANILIST_CLIENT_SECRET : ${{ secrets.ANILIST_CLIENT_SECRET }}
-      VITE_ANILIST_ENCRYPTION_KEY : ${{ secrets.ANILIST_ENCRYPTION_KEY }}
-      SENTRY_DSN : ${{ secrets.SENTRY_DSN }}
+      VITE_ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
+      VITE_ANILIST_CLIENT_SECRET: ${{ secrets.ANILIST_CLIENT_SECRET }}
+      VITE_ANILIST_ENCRYPTION_KEY: ${{ secrets.ANILIST_ENCRYPTION_KEY }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -98,10 +98,10 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       NODE_ENV: production
-      VITE_ANILIST_CLIENT_ID : ${{ secrets.ANILIST_CLIENT_ID }}
-      VITE_ANILIST_CLIENT_SECRET : ${{ secrets.ANILIST_CLIENT_SECRET }}
-      VITE_ANILIST_ENCRYPTION_KEY : ${{ secrets.ANILIST_ENCRYPTION_KEY }}
-      SENTRY_DSN : ${{ secrets.SENTRY_DSN }}
+      VITE_ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
+      VITE_ANILIST_CLIENT_SECRET: ${{ secrets.ANILIST_CLIENT_SECRET }}
+      VITE_ANILIST_ENCRYPTION_KEY: ${{ secrets.ANILIST_ENCRYPTION_KEY }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
