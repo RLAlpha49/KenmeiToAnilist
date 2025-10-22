@@ -1,4 +1,4 @@
-name: Beta Release (Auto)
+name: Beta Release
 
 on:
   push:

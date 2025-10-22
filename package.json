@@ -10,29 +10,16 @@
     "forge": "config/forge.config.js"
   },
   "scripts": {
-    "build": "electron-forge make",
     "docs": "typedoc --options config/typedoc.json",
     "format:write": "prettier --write .",
     "lint": "eslint -c config/eslint.config.mjs .",
     "make": "electron-forge make",
     "precommit": "npm run format:write && npm run lint",
-    "publish": "electron-forge publish",
     "start": "electron-forge start",
     "update": "ncu -u -x typedoc,typedoc-*,@typedoc/*"
   },
   "author": "Alex Pettigrew <alexpettigrew29@gmail.com>",
   "license": "MIT",
-  "publish": {
-    "provider": "github",
-    "owner": "RLAlpha49",
-    "repo": "KenmeiToAnilist",
-    "releaseType": "release"
-  },
-  "publishConfig": {
-    "providers": [
-      "github"
-    ]
-  },
   "devDependencies": {
     "@electron-forge/cli": "^7.10.2",
     "@electron-forge/maker-deb": "^7.10.2",
