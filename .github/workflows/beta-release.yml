@@ -201,10 +201,10 @@ jobs:
             $md += "**Author:** $author"
             $md += "**Date:** $date"
             $md += ""
-            $md += "**Commit message:**"
-            $md += "```"
-            $md += "$message"
-            $md += "```"
+            $md += '**Commit message:**'
+            $md += '```'
+            $md += $message
+            $md += '```'
             $md += ""
             $md += "**CI Run:** [$run_url]($run_url) by $actor"
             $md += ""
