@@ -9,6 +9,7 @@ import { exposeWindowContext } from "./window/window-context";
 import { exposeAuthContext } from "./auth/auth-context";
 import { exposeStoreContext } from "./store/store-context";
 import { exposeApiContext } from "./api/api-context";
+import { exposeUpdateContext } from "./update/update-context";
 
 /**
  * Exposes all IPC context bridges for the Electron renderer process.
@@ -49,5 +50,12 @@ export default function exposeContexts() {
     console.log("[Context] ✅ API context exposed");
   } catch (error) {
     console.error("[Context] ❌ Failed to expose API context:", error);
+  }
+
+  try {
+    exposeUpdateContext();
+    console.log("[Context] ✅ Update context exposed");
+  } catch (error) {
+    console.error("[Context] ❌ Failed to expose update context:", error);
   }
 }

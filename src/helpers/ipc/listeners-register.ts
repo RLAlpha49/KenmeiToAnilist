@@ -10,6 +10,7 @@ import { addWindowEventListeners } from "./window/window-listeners";
 import { addAuthEventListeners } from "./auth/auth-listeners";
 import { setupStoreIPC } from "./store/store-setup";
 import { setupAniListAPI } from "./api/api-listeners";
+import { addUpdateEventListeners } from "./update/update-listeners";
 
 /**
  * Registers all IPC event listeners for the Electron main process.
@@ -23,4 +24,5 @@ export default function registerListeners(mainWindow: BrowserWindow) {
   addAuthEventListeners(mainWindow);
   setupStoreIPC();
   setupAniListAPI();
+  addUpdateEventListeners(mainWindow);
 }

@@ -306,7 +306,10 @@ export function captureError(
         });
       })
       .catch((err) => {
-        console.debug("[ErrorHandling] Failed to capture error to Sentry:", err);
+        console.debug(
+          "[ErrorHandling] Failed to capture error to Sentry:",
+          err,
+        );
       });
   }
 

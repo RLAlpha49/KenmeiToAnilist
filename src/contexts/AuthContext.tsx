@@ -593,14 +593,9 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     } catch (err: unknown) {
       console.error("[AuthContext] Token refresh error:", err);
       const msg = err instanceof Error ? err.message : "Token refresh failed";
-      captureError(
-        ErrorType.AUTH,
-        "Token refresh failed",
-        err,
-        {
-          stage: "token_refresh",
-        },
-      );
+      captureError(ErrorType.AUTH, "Token refresh failed", err, {
+        stage: "token_refresh",
+      });
       recordEvent({
         type: "auth.refresh",
         message: `Token refresh failed: ${msg}`,
@@ -743,15 +738,10 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
       } catch (err: unknown) {
         console.error("[AuthContext] Login error:", err);
         const msg = err instanceof Error ? err.message : "Login failed";
-        captureError(
-          ErrorType.AUTH,
-          "Login failed",
-          err,
-          {
-            credentialSource: credentials.source,
-            stage: "login",
-          },
-        );
+        captureError(ErrorType.AUTH, "Login failed", err, {
+          credentialSource: credentials.source,
+          stage: "login",
+        });
         toast.error(msg);
         setError(msg);
         setStatusMessage(null);

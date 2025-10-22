@@ -23,6 +23,7 @@ import {
   startGroup,
   endGroup,
 } from "./utils/logging";
+import { autoUpdater } from "electron-updater";
 
 // --- Sentry Initialization ---
 startGroup(`[Main] App Initialization v${app.getVersion()}`);
@@ -35,6 +36,38 @@ Sentry.init({
   release: app.getVersion(),
 });
 console.debug("[Main] 🔍 Sentry initialized");
+
+// --- Auto-Updater Configuration ---
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = false;
+autoUpdater.logger = console;
+
+// Set up auto-updater event listeners for logging
+autoUpdater.on("checking-for-update", () => {
+  console.info("[Auto-Updater] 🔍 Checking for updates...");
+});
+
+autoUpdater.on("update-available", (info) => {
+  console.info(`[Auto-Updater] ✅ Update available: v${info.version}`);
+});
+
+autoUpdater.on("update-not-available", (info) => {
+  console.info(
+    `[Auto-Updater] ℹ️ No updates available (current: v${info.version})`,
+  );
+});
+
+autoUpdater.on("error", (error) => {
+  console.error("[Auto-Updater] ❌ Update error:", error);
+  // Report update errors to Sentry
+  Sentry.captureException(error, {
+    tags: {
+      component: "auto-updater",
+    },
+  });
+});
+
+console.debug("[Main] 🔍 Auto-updater configured");
 endGroup();
 // --- End Sentry Initialization ---
 
@@ -298,7 +331,35 @@ app
       return createWindow();
     });
   })
-  .then(installExtensions);
+  .then(installExtensions)
+  .then(() => {
+    // Schedule initial update check after 10 seconds to avoid blocking startup
+    setTimeout(() => {
+      withGroupAsync(`[Main] Initial Update Check`, async () => {
+        try {
+          console.info("[Main] 🔍 Performing initial update check...");
+          await autoUpdater.checkForUpdates();
+        } catch (error) {
+          console.error("[Main] ❌ Initial update check failed:", error);
+        }
+      });
+    }, 10000);
+
+    // Set up periodic update checks every 4 hours
+    setInterval(
+      () => {
+        withGroupAsync(`[Main] Periodic Update Check`, async () => {
+          try {
+            console.info("[Main] 🔍 Performing periodic update check...");
+            await autoUpdater.checkForUpdates();
+          } catch (error) {
+            console.error("[Main] ❌ Periodic update check failed:", error);
+          }
+        });
+      },
+      4 * 60 * 60 * 1000,
+    );
+  });
 
 //osX only
 app.on("window-all-closed", () => {

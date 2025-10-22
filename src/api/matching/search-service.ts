@@ -283,18 +283,13 @@ export async function batchMatchManga(
         }
 
         // For non-cancellation errors, capture to Sentry
-        captureError(
-          ErrorType.UNKNOWN,
-          "Batch manga matching failed",
-          error,
-          {
-            mangaListLength: mangaList.length,
-            searchConfig: {
-              confidenceThreshold: config.matchConfig?.confidenceThreshold,
-            },
-            stage: "batch_match",
+        captureError(ErrorType.UNKNOWN, "Batch manga matching failed", error, {
+          mangaListLength: mangaList.length,
+          searchConfig: {
+            confidenceThreshold: config.matchConfig?.confidenceThreshold,
           },
-        );
+          stage: "batch_match",
+        });
 
         // Otherwise rethrow the error
         throw error;

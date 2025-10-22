@@ -14,6 +14,9 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { DebugProvider } from "./contexts/DebugContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { initializeStorage } from "./utils/storage";
+import { AnimatePresence } from "framer-motion";
+import { UpdateNotification } from "./components/UpdateNotification";
+import { useAutoUpdater } from "./hooks/useAutoUpdater";
 
 /**
  * Main application component that wraps the router with context providers.
@@ -21,6 +24,18 @@ import { initializeStorage } from "./utils/storage";
  * @source
  */
 export default function App() {
+  const {
+    updateAvailable,
+    updateInfo,
+    downloadProgress,
+    isDownloading,
+    isDownloaded,
+    error,
+    downloadUpdate,
+    installUpdate,
+    dismissUpdate,
+  } = useAutoUpdater();
+
   return (
     <ErrorBoundary>
       <DebugProvider>
@@ -29,6 +44,26 @@ export default function App() {
             <RateLimitProvider>
               <RouterProvider router={router} />
               <SonnerProvider />
+
+              {/* Update Notification Overlay */}
+              <AnimatePresence>
+                {updateAvailable && updateInfo && (
+                  <div className="fixed bottom-4 right-4 z-50 max-w-md">
+                    <UpdateNotification
+                      version={updateInfo.version}
+                      releaseNotes={updateInfo.releaseNotes}
+                      releaseDate={updateInfo.releaseDate}
+                      downloadProgress={downloadProgress}
+                      isDownloading={isDownloading}
+                      isDownloaded={isDownloaded}
+                      error={error ?? undefined}
+                      onDownload={downloadUpdate}
+                      onInstall={installUpdate}
+                      onDismiss={dismissUpdate}
+                    />
+                  </div>
+                )}
+              </AnimatePresence>
             </RateLimitProvider>
           </AuthProvider>
         </ThemeProvider>

@@ -378,6 +378,7 @@ export const STORAGE_KEYS = {
   IGNORED_DUPLICATES: "ignored_duplicates",
   ACTIVE_SYNC_SNAPSHOT: "active_sync_snapshot",
   ANILIST_SEARCH_CACHE: "anilist_search_cache",
+  UPDATE_DISMISSED_VERSIONS: "update_dismissed_versions",
 };
 
 /**

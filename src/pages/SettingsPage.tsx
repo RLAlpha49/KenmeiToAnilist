@@ -23,8 +23,11 @@ import {
   Bug,
   Loader2,
   ShieldCheck,
+  Download,
+  Check,
 } from "lucide-react";
 import { useAuthActions, useAuthState } from "../hooks/useAuth";
+import { useAutoUpdater } from "../hooks/useAutoUpdater";
 import { useDebugActions, useDebugState } from "../contexts/DebugContext";
 import { APICredentials } from "../types/auth";
 import { DEFAULT_ANILIST_CONFIG, DEFAULT_AUTH_PORT } from "../config/anilist";
@@ -118,6 +121,9 @@ export function SettingsPage() {
     setConfidenceTestExporterEnabled,
     recordEvent,
   } = useDebugActions();
+
+  // Auto-updater hook for managing download/install operations
+  const { isDownloading, downloadProgress, isDownloaded } = useAutoUpdater();
 
   const prevCredentialSourceRef = useRef<"default" | "custom">(
     authState.credentialSource,
@@ -805,8 +811,8 @@ export function SettingsPage() {
   };
 
   /**
-   * Fetches and displays available updates from the GitHub releases API.
-   * Compares current version to latest release and updates UI accordingly.
+   * Check for updates using electron-updater IPC.
+   * Uses the configured update channel preference.
    * @source
    */
   const handleCheckForUpdates = async () => {
@@ -815,44 +821,59 @@ export function SettingsPage() {
     setUpdateError(null);
     setUpdateInfo(null);
     try {
-      const response = await fetch(
-        "https://api.github.com/repos/RLAlpha49/KenmeiToAnilist/releases?per_page=10",
-      );
-      if (!response.ok) {
-        console.warn(
-          `[Settings] ⚠️ Failed to fetch releases: HTTP ${response.status}`,
-        );
-        throw new Error("Failed to fetch releases");
-      }
-      type Release = {
-        draft: boolean;
-        prerelease: boolean;
-        tag_name: string;
-        html_url: string;
-        body: string;
-      };
-      const releases: Release[] = await response.json();
-      let release: Release | null = null;
-      if (updateChannel === "stable") {
-        release = releases.find((r) => !r.draft && !r.prerelease) || null;
-      } else {
-        release =
-          releases.find((r) => !r.draft && r.prerelease) ||
-          releases.find((r) => !r.draft && !r.prerelease) ||
-          null;
-      }
-      if (!release) throw new Error("No release found for selected channel");
-      setUpdateInfo({
-        version: release.tag_name,
-        url: release.html_url,
-        isBeta: !!release.prerelease,
+      const result = await globalThis.electronUpdater.checkForUpdates({
+        allowPrerelease: updateChannel === "beta",
       });
-      console.info(`[Settings] ✅ Update check complete: ${release.tag_name}`);
+
+      if (result.updateAvailable && result.version) {
+        setUpdateInfo({
+          version: result.version,
+          url: `https://github.com/RLAlpha49/KenmeiToAnilist/releases/tag/v${result.version}`,
+          isBeta: updateChannel === "beta",
+        });
+        console.info(`[Settings] ✅ Update available: ${result.version}`);
+      } else {
+        console.info("[Settings] ℹ️ No updates available");
+        // Show info message that no updates are available
+        setUpdateError("You're already on the latest version!");
+      }
     } catch (e) {
       console.error("[Settings] ❌ Error checking for updates:", e);
       setUpdateError(e instanceof Error ? e.message : "Unknown error");
     } finally {
       setIsCheckingUpdate(false);
+    }
+  };
+
+  /**
+   * Download an available update.
+   * Progress is tracked via the useAutoUpdater hook.
+   * @source
+   */
+  const handleDownloadUpdate = async () => {
+    console.info("[Settings] 📥 Starting update download...");
+    try {
+      await globalThis.electronUpdater.downloadUpdate();
+      console.info("[Settings] ✅ Update download initiated");
+    } catch (e) {
+      console.error("[Settings] ❌ Error downloading update:", e);
+      setUpdateError(e instanceof Error ? e.message : "Download failed");
+    }
+  };
+
+  /**
+   * Install the downloaded update.
+   * Quits the application and applies the update.
+   * @source
+   */
+  const handleInstallUpdate = async () => {
+    console.info("[Settings] 🔄 Installing update...");
+    try {
+      await globalThis.electronUpdater.installUpdate();
+      console.info("[Settings] ✅ Update installed");
+    } catch (e) {
+      console.error("[Settings] ❌ Error installing update:", e);
+      setUpdateError(e instanceof Error ? e.message : "Installation failed");
     }
   };
 
@@ -2352,7 +2373,7 @@ export function SettingsPage() {
                 View release notes
               </button>
             </div>
-            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-200">
+            <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-slate-200">
               <span className="font-mono">Current: {getAppVersion()}</span>
               {(() => {
                 const current = getAppVersion().replace(/^v/, "");
@@ -2377,6 +2398,49 @@ export function SettingsPage() {
                   </Badge>
                 );
               })()}
+            </div>
+
+            {/* Download/Install Actions */}
+            <div className="space-y-3">
+              {/* Download Progress Bar */}
+              {(isDownloading || downloadProgress > 0) && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs text-slate-300">
+                    <span>Downloading...</span>
+                    <span>{Math.round(downloadProgress * 100)}%</span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-slate-700/50">
+                    <div
+                      className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-300"
+                      style={{ width: `${downloadProgress * 100}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Download Button */}
+              {!isDownloading && !isDownloaded && (
+                <Button
+                  onClick={handleDownloadUpdate}
+                  disabled={isCheckingUpdate}
+                  className="w-full"
+                  variant="default"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Update
+                </Button>
+              )}
+
+              {/* Install Button */}
+              {isDownloaded && !isDownloading && (
+                <Button
+                  onClick={handleInstallUpdate}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                >
+                  <Check className="mr-2 h-4 w-4" />
+                  Install Update
+                </Button>
+              )}
             </div>
           </div>
         )}

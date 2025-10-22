@@ -30,6 +30,7 @@
 - **One-Click Sync**: Synchronize your collection to AniList with a single click after reviewing matches.
 - **Auto-Pause Manga**: Automatically pause manga that haven't been updated within a customizable time period.
 - **Flexible Configuration**: Customize how synchronization works with priority settings for status, progress, and scores.
+- **Automatic Updates**: Stay up-to-date with automatic update checking and seamless installation via GitHub releases.
 
 ---
 
@@ -102,6 +103,7 @@ VITE_ANILIST_CLIENT_SECRET=your-client-secret
 - **[Architecture Documentation](./docs/guides/ARCHITECTURE.md)** – Technology choices, processes, structure, performance & security
 - **[Storage Implementation Guide](./docs/guides/STORAGE_IMPLEMENTATION.md)** – Three‑layer storage architecture details
 - **[AniList API Reference](./docs/guides/API_REFERENCE.md)** – GraphQL operations, auth, rate limiting, error handling
+- **[Auto-Update System](./docs/guides/AUTO_UPDATE.md)** – Update system architecture, configuration, and development guide
 
 ### Generated API (TypeDoc)
 

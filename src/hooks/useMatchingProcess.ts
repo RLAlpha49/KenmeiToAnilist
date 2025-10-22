@@ -332,51 +332,49 @@ export const useMatchingProcess = ({
    * @param err - The error object caught during matching operations.
    * @source
    */
-  const handleMatchingError = useCallback((err: unknown) => {
-    if (cancelMatchingRef.current) {
-      setError("Matching process was cancelled");
-      return;
-    }
-
-    let errorMessage = "An error occurred during the matching process.";
-    const apiError = err as ApiError;
-
-    if (apiError?.message) {
-      errorMessage += ` Error: ${apiError.message}`;
-    }
-
-    if (
-      apiError?.name === "TypeError" &&
-      apiError?.message?.includes("fetch")
-    ) {
-      errorMessage =
-        "Failed to connect to AniList API. Please check your internet connection and try again.";
-    } else if (apiError?.status) {
-      if (apiError.status === 401 || apiError.status === 403) {
-        errorMessage =
-          "Authentication failed. Please reconnect your AniList account in Settings.";
-      } else if (apiError.status === 429) {
-        errorMessage =
-          "Rate limit exceeded. Please wait a few minutes and try again.";
-      } else if (apiError.status >= 500) {
-        errorMessage = "AniList server error. Please try again later.";
+  const handleMatchingError = useCallback(
+    (err: unknown) => {
+      if (cancelMatchingRef.current) {
+        setError("Matching process was cancelled");
+        return;
       }
-    }
 
-    captureError(
-      ErrorType.UNKNOWN,
-      "Matching process error",
-      err,
-      {
+      let errorMessage = "An error occurred during the matching process.";
+      const apiError = err as ApiError;
+
+      if (apiError?.message) {
+        errorMessage += ` Error: ${apiError.message}`;
+      }
+
+      if (
+        apiError?.name === "TypeError" &&
+        apiError?.message?.includes("fetch")
+      ) {
+        errorMessage =
+          "Failed to connect to AniList API. Please check your internet connection and try again.";
+      } else if (apiError?.status) {
+        if (apiError.status === 401 || apiError.status === 403) {
+          errorMessage =
+            "Authentication failed. Please reconnect your AniList account in Settings.";
+        } else if (apiError.status === 429) {
+          errorMessage =
+            "Rate limit exceeded. Please wait a few minutes and try again.";
+        } else if (apiError.status >= 500) {
+          errorMessage = "AniList server error. Please try again later.";
+        }
+      }
+
+      captureError(ErrorType.UNKNOWN, "Matching process error", err, {
         mangaCount: progressRef.current.total,
         currentProgress: progressRef.current.current,
         bypassCache,
-      },
-    );
+      });
 
-    setError(errorMessage);
-    setDetailedError(apiError);
-  }, [bypassCache]);
+      setError(errorMessage);
+      setDetailedError(apiError);
+    },
+    [bypassCache],
+  );
 
   /**
    * Starts the batch matching process for the provided manga list.
