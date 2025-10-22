@@ -24,6 +24,7 @@ import { ApiError, MatchingProgress } from "../types/matching";
 import { captureError, ErrorType } from "../utils/errorHandling";
 import { useTimeEstimate } from "./useTimeEstimate";
 import { usePendingManga } from "./usePendingManga";
+import { createBackup } from "../utils/backup";
 
 /**
  * Manages the manga matching process with batch operations, progress tracking, and pause/resume support.
@@ -449,6 +450,10 @@ export const useMatchingProcess = ({
       const initialEstimate = initializeTimeTracking();
       setPendingManga(mangaList);
 
+      // Determine if this is a fresh matching session BEFORE setting isRunning to true
+      const wasRunning = Boolean(globalThis.matchingProcessState?.isRunning);
+      const isFreshSession = !wasRunning;
+
       globalThis.matchingProcessState = {
         isRunning: true,
         progress: { current: 0, total: mangaList.length, currentTitle: "" },
@@ -463,6 +468,40 @@ export const useMatchingProcess = ({
 
       const abortController = new AbortController();
       globalThis.activeAbortController = abortController;
+
+      // Create automatic backup before matching if enabled and this is a fresh session
+      if (
+        isFreshSession &&
+        storage.getItem(STORAGE_KEYS.AUTO_BACKUP_ENABLED) === "true"
+      ) {
+        try {
+          console.info(
+            "[Matching] 📦 Creating automatic backup before matching...",
+          );
+          await createBackup();
+          Sentry.addBreadcrumb({
+            category: "backup",
+            message: "Automatic backup created before matching",
+            level: "info",
+          });
+        } catch (backupError) {
+          console.warn(
+            "[Matching] ⚠️ Automatic backup failed (non-blocking):",
+            backupError,
+          );
+          Sentry.addBreadcrumb({
+            category: "backup",
+            message: "Automatic backup failed before matching",
+            level: "warning",
+            data: {
+              error:
+                backupError instanceof Error
+                  ? backupError.message
+                  : String(backupError),
+            },
+          });
+        }
+      }
 
       // Cancellation check used inside batch
       const checkCancellation = () => {

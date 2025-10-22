@@ -153,6 +153,70 @@ Before syncing, configure which fields to synchronize:
 
 **Important**: Always review the preview before syncing to ensure accuracy. Changes to AniList cannot be easily undone.
 
+## 💾 Backup & Restore
+
+### Creating Backups
+
+Backups preserve your complete application data in a single file, allowing you to restore your progress at any time.
+
+**Data Included in Backups:**
+
+- Kenmei manga library (from import)
+- Match results and confidence scores
+- Sync configuration and statistics
+- Import history and statistics
+- Ignored duplicates
+- AniList search cache
+- Onboarding status
+
+**Manual Backup Creation:**
+
+1. Navigate to **Settings → Data Management**
+2. Click **"Create Backup Now"** button
+3. A backup file (`kenmei-backup-TIMESTAMP.json`) will download to your Downloads folder
+4. Store the file in a safe location
+
+**Automatic Backups:**
+
+Enable automatic backups to create backup files before each sync or matching operation:
+
+1. Navigate to **Settings → Data Management**
+2. Enable the **"Enable automatic backups before sync/matching operations"** checkbox
+3. Backups will now be created automatically before major operations
+4. Automatic backup files are saved alongside manual backups in your Downloads folder
+
+### Restoring Backups
+
+Restore a backup to return your application data to a previous state.
+
+**⚠️ Warning**: Restoring a backup will **overwrite all current application data**. Create a backup first if needed.
+
+**To Restore a Backup:**
+
+1. Navigate to **Settings → Data Management**
+2. Click the file upload area under "Restore from Backup"
+3. Select a previously saved backup file (`.json`)
+4. A confirmation dialog will display:
+   - Backup timestamp
+   - Application version when backup was created
+   - List of data that will be restored
+5. Click **"Restore Backup"** to confirm
+6. Application will automatically reload with restored data
+
+### Backup History
+
+Recently created backups are tracked in backup history:
+
+1. Navigate to **Settings → Data Management → Recent Backups**
+2. Click **"Show"** to expand the backup history
+3. History displays:
+   - Backup date and time
+   - Application version at backup time
+   - Backup file size
+4. Click **"Restore"** next to any backup to restore from history
+   - *Note: This requires the original backup file; history shows metadata only*
+5. Click **"Clear History"** to remove all history entries
+
 ## ❓ Frequently Asked Questions
 
 ### General Questions

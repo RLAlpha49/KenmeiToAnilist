@@ -25,6 +25,8 @@ import {
   ShieldCheck,
   Download,
   Check,
+  Upload,
+  History,
 } from "lucide-react";
 import { useAuthActions, useAuthState } from "../hooks/useAuth";
 import { useAutoUpdater } from "../hooks/useAutoUpdater";
@@ -39,7 +41,16 @@ import {
   getMatchConfig,
   saveMatchConfig,
   MatchConfig,
+  storage,
 } from "../utils/storage";
+import {
+  createBackup,
+  getBackupHistory,
+  clearBackupHistory,
+  restoreBackup,
+  importBackupFromFile,
+  BackupHistoryEntry,
+} from "../utils/backup";
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
 import {
   Tabs,
@@ -174,6 +185,21 @@ export function SettingsPage() {
     isBeta: boolean;
   }>(null);
   const [updateError, setUpdateError] = useState<string | null>(null);
+
+  // Backup management state
+  const [backupHistory, setBackupHistory] = useState<BackupHistoryEntry[]>([]);
+  const [isCreatingBackup, setIsCreatingBackup] = useState(false);
+  const [isRestoringBackup, setIsRestoringBackup] = useState(false);
+  const [autoBackupEnabled, setAutoBackupEnabled] = useState(
+    storage.getItem(STORAGE_KEYS.AUTO_BACKUP_ENABLED) === "true",
+  );
+  const [selectedBackupFile, setSelectedBackupFile] = useState<File | null>(
+    null,
+  );
+  const [backupValidationError, setBackupValidationError] = useState<
+    string | null
+  >(null);
+  const [showBackupHistory, setShowBackupHistory] = useState(false);
 
   // Wrapper functions to log events when configs are saved
   const saveSyncConfigWithEvent = (
@@ -419,6 +445,11 @@ export function SettingsPage() {
     return () => {
       mounted = false;
     };
+  }, []);
+
+  // Load backup history on mount
+  useEffect(() => {
+    setBackupHistory(getBackupHistory());
   }, []);
 
   /**
@@ -700,6 +731,170 @@ export function SettingsPage() {
   const dismissError = () => {
     console.debug("[Settings] 🔍 Dismissing error message");
     setError(null);
+  };
+
+  /**
+   * Creates a backup of all application data and triggers download.
+   * Updates backup history and shows success message.
+   * @source
+   */
+  const handleCreateBackup = async () => {
+    try {
+      console.info("[Settings] 📦 Starting backup creation...");
+      setIsCreatingBackup(true);
+      setBackupValidationError(null);
+
+      const backupId = await createBackup();
+
+      // Update backup history
+      setBackupHistory(getBackupHistory());
+
+      console.info("[Settings] ✅ Backup created successfully:", backupId);
+
+      // Show success message (using browser toast or similar)
+      recordEvent({
+        type: "backup.created",
+        message: "Application data backup created successfully",
+        level: "info",
+        metadata: { backupId },
+      });
+    } catch (err) {
+      console.error("[Settings] ❌ Failed to create backup:", err);
+      const message =
+        err instanceof Error ? err.message : "Failed to create backup";
+      setBackupValidationError(message);
+      recordEvent({
+        type: "backup.error",
+        message: `Backup creation failed: ${message}`,
+        level: "error",
+      });
+    } finally {
+      setIsCreatingBackup(false);
+    }
+  };
+
+  /**
+   * Handles import of backup file from user selection.
+   * Validates and prompts for restore mode (Replace vs Merge) before restoring.
+   * @source
+   */
+  const handleImportBackup = async () => {
+    if (!selectedBackupFile) {
+      setBackupValidationError("No file selected");
+      return;
+    }
+
+    try {
+      console.info(
+        "[Settings] 📥 Importing backup file:",
+        selectedBackupFile.name,
+      );
+      setIsRestoringBackup(true);
+      setBackupValidationError(null);
+
+      // Import and validate backup
+      const backupData = await importBackupFromFile(selectedBackupFile);
+
+      // Show confirmation dialog with details
+      const shouldRestore = globalThis.confirm(
+        `Restore backup from ${new Date(backupData.metadata.timestamp).toLocaleString()}?\n\n` +
+          `App Version: ${backupData.metadata.appVersion}\n` +
+          `This will overwrite your current data. Create a backup first if needed.`,
+      );
+
+      if (!shouldRestore) {
+        console.info("[Settings] 🚫 Backup restore cancelled by user");
+        setIsRestoringBackup(false);
+        return;
+      }
+
+      // Show merge vs replace dialog
+      const useMergeMode = globalThis.confirm(
+        "How would you like to restore match results?\n\n" +
+          "🔄 MERGE (OK): Combine existing matches with backup matches\n" +
+          "   • Preserves your current match selections\n" +
+          "   • Only MATCH_RESULTS are merged, other data is replaced\n\n" +
+          "🔁 REPLACE (Cancel): Completely overwrite all data\n" +
+          "   • Discards current data entirely\n" +
+          "   • Fully reverts to backup state\n\n" +
+          "Choose MERGE (OK) to preserve existing matches, or REPLACE (Cancel) to completely restore the backup.",
+      );
+
+      console.info(
+        "[Settings] 📋 Restore mode selected:",
+        useMergeMode ? "Merge" : "Replace",
+      );
+
+      // Restore backup with selected mode
+      const result = await restoreBackup(backupData, { merge: useMergeMode });
+
+      if (result.success) {
+        console.info(
+          "[Settings] ✅ Backup restored successfully (mode:",
+          useMergeMode ? "Merge" : "Replace",
+          ")",
+        );
+        recordEvent({
+          type: "backup.restored",
+          message: `Application data restored from backup (${useMergeMode ? "Merge" : "Replace"} mode)`,
+          level: "info",
+          metadata: { mergeMode: useMergeMode },
+        });
+
+        // Clear file selection
+        setSelectedBackupFile(null);
+
+        // Reload page to refresh all data
+        setTimeout(() => {
+          globalThis.location.reload();
+        }, 1000);
+      } else {
+        throw new Error(result.errors.join("; "));
+      }
+    } catch (err) {
+      console.error("[Settings] ❌ Failed to restore backup:", err);
+      const message =
+        err instanceof Error ? err.message : "Failed to restore backup";
+      setBackupValidationError(message);
+      recordEvent({
+        type: "backup.error",
+        message: `Backup restore failed: ${message}`,
+        level: "error",
+      });
+    } finally {
+      setIsRestoringBackup(false);
+    }
+  };
+
+  /**
+   * Toggles automatic backup setting.
+   * @source
+   */
+  const handleToggleAutoBackup = (enabled: boolean) => {
+    setAutoBackupEnabled(enabled);
+    storage.setItem(
+      STORAGE_KEYS.AUTO_BACKUP_ENABLED,
+      enabled ? "true" : "false",
+    );
+    console.info("[Settings] 🔄 Auto-backup toggled:", enabled);
+    recordEvent({
+      type: "backup.auto-backup-toggled",
+      message: `Auto-backup ${enabled ? "enabled" : "disabled"}`,
+      level: "info",
+    });
+  };
+
+  /**
+   * Handles file selection for backup import.
+   * @source
+   */
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedBackupFile(file);
+      setBackupValidationError(null);
+      console.debug("[Settings] 📄 File selected:", file.name);
+    }
   };
 
   /**
@@ -2002,6 +2197,239 @@ export function SettingsPage() {
                       </Button>
                     );
                   })()}
+                </motion.div>
+              </SettingsSectionShell>
+            </motion.div>
+
+            <motion.div variants={itemVariants} initial="hidden" animate="show">
+              <SettingsSectionShell
+                icon={Download}
+                title="Backup & Restore"
+                description="Export and restore your complete application data."
+                accent="from-violet-500/15 via-purple-500/10 to-transparent"
+                contentClassName="space-y-5"
+              >
+                <motion.div
+                  className="bg-muted/40 space-y-4 rounded-xl border p-4"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2, duration: 0.4 }}
+                >
+                  {/* Export Section */}
+                  <div>
+                    <h3 className="flex items-center gap-2 text-sm font-medium">
+                      <Download className="h-4 w-4 text-violet-500" />
+                      Create Backup
+                    </h3>
+                    <p className="text-muted-foreground text-xs">
+                      Export all your Kenmei data, match results, sync
+                      configuration, and import statistics.
+                    </p>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-3">
+                    <label
+                      className="hover:bg-muted flex items-center gap-2 rounded-md p-2"
+                      htmlFor="auto-backup-enabled"
+                      aria-label="Enable automatic backups"
+                    >
+                      <input
+                        id="auto-backup-enabled"
+                        type="checkbox"
+                        className="border-primary text-primary h-4 w-4 rounded"
+                        checked={autoBackupEnabled}
+                        onChange={(e) =>
+                          handleToggleAutoBackup(e.target.checked)
+                        }
+                      />
+                      <div>
+                        <span className="text-sm font-medium">
+                          Enable automatic backups
+                        </span>
+                        <p className="text-muted-foreground text-xs">
+                          Create backups before sync and matching operations
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+
+                  <Button
+                    onClick={handleCreateBackup}
+                    disabled={isCreatingBackup}
+                    className="w-full"
+                  >
+                    {isCreatingBackup ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating backup...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="mr-2 h-4 w-4" />
+                        Create Backup Now
+                      </>
+                    )}
+                  </Button>
+
+                  {backupValidationError && (
+                    <div className="rounded-md bg-red-50 p-3 dark:bg-red-900/20">
+                      <div className="flex gap-3">
+                        <AlertTriangle className="mt-0.5 h-4 w-4 text-red-400" />
+                        <p className="text-sm text-red-800 dark:text-red-200">
+                          {backupValidationError}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+
+                {/* Import Section */}
+                <motion.div
+                  className="bg-muted/40 space-y-4 rounded-xl border p-4"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3, duration: 0.4 }}
+                >
+                  <div>
+                    <h3 className="flex items-center gap-2 text-sm font-medium">
+                      <Upload className="h-4 w-4 text-purple-500" />
+                      Restore from Backup
+                    </h3>
+                    <p className="text-muted-foreground text-xs">
+                      Import a previously created backup file to restore your
+                      data.
+                    </p>
+                  </div>
+
+                  <Separator />
+
+                  <div className="rounded-md bg-yellow-50 p-3 dark:bg-yellow-900/20">
+                    <div className="flex gap-3">
+                      <AlertTriangle className="mt-0.5 h-4 w-4 text-yellow-400" />
+                      <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                        <strong>Warning:</strong> Restoring from backup will
+                        overwrite your current data. Create a backup first if
+                        needed.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <input
+                      type="file"
+                      id="backup-file-input"
+                      accept=".json"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="backup-file-input"
+                      className="hover:bg-muted/60 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors"
+                    >
+                      <Upload className="text-muted-foreground mb-2 h-8 w-8" />
+                      <span className="text-sm font-medium">
+                        {selectedBackupFile
+                          ? selectedBackupFile.name
+                          : "Choose backup file or drag and drop"}
+                      </span>
+                      <span className="text-muted-foreground text-xs">
+                        JSON backup file
+                      </span>
+                    </label>
+                  </div>
+
+                  <Button
+                    onClick={handleImportBackup}
+                    disabled={isRestoringBackup || !selectedBackupFile}
+                    className="w-full"
+                  >
+                    {isRestoringBackup ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Restoring...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Restore Backup
+                      </>
+                    )}
+                  </Button>
+                </motion.div>
+
+                {/* Backup History Section */}
+                <motion.div
+                  className="bg-muted/40 space-y-4 rounded-xl border p-4"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4, duration: 0.4 }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="flex items-center gap-2 text-sm font-medium">
+                        <History className="h-4 w-4 text-indigo-500" />
+                        Recent Backups
+                      </h3>
+                      <p className="text-muted-foreground text-xs">
+                        Last {Math.min(backupHistory.length, 5)} backups
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowBackupHistory(!showBackupHistory)}
+                    >
+                      {showBackupHistory ? "Hide" : "Show"}
+                    </Button>
+                  </div>
+
+                  {showBackupHistory && (
+                    <>
+                      <Separator />
+                      {backupHistory.length > 0 ? (
+                        <div className="space-y-2">
+                          {backupHistory.map((entry) => (
+                            <div
+                              key={entry.id}
+                              className="hover:bg-muted/60 flex items-center justify-between rounded-md p-3 transition-colors"
+                            >
+                              <div className="space-y-1">
+                                <p className="text-sm font-medium">
+                                  {new Date(entry.timestamp).toLocaleString()}
+                                </p>
+                                <div className="flex gap-2">
+                                  <Badge variant="outline" className="text-xs">
+                                    v{entry.appVersion}
+                                  </Badge>
+                                  <span className="text-muted-foreground text-xs">
+                                    {(entry.size / 1024).toFixed(2)} KB
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          <Separator className="my-2" />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-xs"
+                            onClick={() => {
+                              clearBackupHistory();
+                              setBackupHistory([]);
+                            }}
+                          >
+                            Clear History
+                          </Button>
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground text-sm">
+                          No backups available yet. Create one to get started.
+                        </p>
+                      )}
+                    </>
+                  )}
                 </motion.div>
               </SettingsSectionShell>
             </motion.div>

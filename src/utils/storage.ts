@@ -380,6 +380,8 @@ export const STORAGE_KEYS = {
   ANILIST_SEARCH_CACHE: "anilist_search_cache",
   UPDATE_DISMISSED_VERSIONS: "update_dismissed_versions",
   ONBOARDING_COMPLETED: "onboarding_completed",
+  BACKUP_HISTORY: "backup_history",
+  AUTO_BACKUP_ENABLED: "auto_backup_enabled",
 };
 
 /**

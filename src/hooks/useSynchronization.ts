@@ -23,6 +23,7 @@ import {
   useDebugActions,
   StateInspectorHandle,
 } from "../contexts/DebugContext";
+import { createBackup } from "../utils/backup";
 
 /**
  * Snapshot of an in-progress synchronization session for pause/resume recovery.
@@ -1157,6 +1158,40 @@ export function useSynchronization(): [
         : null;
 
       pauseRequestedRef.current = false;
+
+      // Create automatic backup before sync if enabled
+      if (
+        !isResume &&
+        storage.getItem(STORAGE_KEYS.AUTO_BACKUP_ENABLED) === "true"
+      ) {
+        try {
+          console.info(
+            "[Synchronization] 📦 Creating automatic backup before sync...",
+          );
+          await createBackup();
+          Sentry.addBreadcrumb({
+            category: "backup",
+            message: "Automatic backup created before sync",
+            level: "info",
+          });
+        } catch (backupError) {
+          console.warn(
+            "[Synchronization] ⚠️ Automatic backup failed (non-blocking):",
+            backupError,
+          );
+          Sentry.addBreadcrumb({
+            category: "backup",
+            message: "Automatic backup failed before sync",
+            level: "warning",
+            data: {
+              error:
+                backupError instanceof Error
+                  ? backupError.message
+                  : String(backupError),
+            },
+          });
+        }
+      }
 
       // Main orchestration
       try {
