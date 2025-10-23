@@ -82,7 +82,7 @@ const SyncResultsView: React.FC<SyncResultsViewProps> = ({
 
   return (
     <Card className="relative mx-auto w-full max-w-3xl overflow-hidden border border-slate-200/70 bg-white/85 shadow-xl shadow-emerald-500/10 backdrop-blur-2xl dark:border-slate-800/60 dark:bg-slate-950/75">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.18),_transparent_65%)] dark:bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.25),_transparent_65%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.18),transparent_65%)] dark:bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.25),transparent_65%)]" />
       <CardHeader className="relative space-y-4 pb-6">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -96,7 +96,7 @@ const SyncResultsView: React.FC<SyncResultsViewProps> = ({
               Completed on {formattedTime}
             </CardDescription>
           </div>
-          <div className="h-18 w-18 flex flex-col items-center justify-center rounded-3xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/30">
+          <div className="h-18 w-18 bg-linear-to-br flex flex-col items-center justify-center rounded-3xl from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/30">
             <span className="text-[10px] uppercase tracking-[0.25em]">
               Success
             </span>
@@ -131,7 +131,7 @@ const SyncResultsView: React.FC<SyncResultsViewProps> = ({
       <CardContent className="relative z-10 space-y-8">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="relative overflow-hidden rounded-3xl border border-emerald-200/60 bg-emerald-50/70 p-4 text-emerald-700 shadow-inner dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-200">
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-emerald-200/40 via-transparent to-teal-200/20 dark:from-emerald-500/20 dark:to-teal-500/10" />
+            <div className="bg-linear-to-br pointer-events-none absolute inset-0 from-emerald-200/40 via-transparent to-teal-200/20 dark:from-emerald-500/20 dark:to-teal-500/10" />
             <div className="relative flex flex-col gap-1.5">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <CheckCircle className="h-4 w-4 text-emerald-500 dark:text-emerald-300" />
@@ -147,7 +147,7 @@ const SyncResultsView: React.FC<SyncResultsViewProps> = ({
           </div>
 
           <div className="relative overflow-hidden rounded-3xl border border-rose-200/60 bg-rose-50/70 p-4 text-rose-700 shadow-inner dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-200">
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-rose-200/40 via-transparent to-red-200/20 dark:from-rose-500/20 dark:to-red-500/10" />
+            <div className="bg-linear-to-br pointer-events-none absolute inset-0 from-rose-200/40 via-transparent to-red-200/20 dark:from-rose-500/20 dark:to-red-500/10" />
             <div className="relative flex flex-col gap-1.5">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <XCircle className="h-4 w-4 text-rose-500 dark:text-rose-300" />
@@ -163,7 +163,7 @@ const SyncResultsView: React.FC<SyncResultsViewProps> = ({
           </div>
 
           <div className="relative overflow-hidden rounded-3xl border border-amber-200/60 bg-amber-50/70 p-4 text-amber-700 shadow-inner dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-amber-200/40 via-transparent to-orange-200/20 dark:from-amber-500/20 dark:to-orange-500/10" />
+            <div className="bg-linear-to-br pointer-events-none absolute inset-0 from-amber-200/40 via-transparent to-orange-200/20 dark:from-amber-500/20 dark:to-orange-500/10" />
             <div className="relative flex flex-col gap-1.5">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <Clock className="h-4 w-4 text-amber-500 dark:text-amber-300" />
@@ -181,7 +181,7 @@ const SyncResultsView: React.FC<SyncResultsViewProps> = ({
           </div>
 
           <div className="relative overflow-hidden rounded-3xl border border-slate-200/60 bg-slate-50/70 p-4 text-slate-700 shadow-inner dark:border-slate-800/60 dark:bg-slate-950/40 dark:text-slate-200">
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-slate-200/50 via-transparent to-indigo-200/30 dark:from-slate-700/40 dark:to-indigo-900/30" />
+            <div className="bg-linear-to-br pointer-events-none absolute inset-0 from-slate-200/50 via-transparent to-indigo-200/30 dark:from-slate-700/40 dark:to-indigo-900/30" />
             <div className="relative flex flex-col gap-1.5">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <Gauge className="h-4 w-4 text-indigo-500 dark:text-indigo-300" />
@@ -204,7 +204,7 @@ const SyncResultsView: React.FC<SyncResultsViewProps> = ({
           </div>
           <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-white/60 dark:bg-slate-900/40">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 transition-all duration-700"
+              className="bg-linear-to-r h-full rounded-full from-emerald-500 via-teal-500 to-cyan-500 transition-all duration-700"
               style={{ width: `${successRate}%` }}
             />
           </div>
@@ -287,7 +287,7 @@ const SyncResultsView: React.FC<SyncResultsViewProps> = ({
           )}
           <Button
             onClick={onClose}
-            className="gap-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/30 transition hover:from-emerald-500 hover:via-teal-500 hover:to-cyan-500"
+            className="bg-linear-to-r gap-2 from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/30 transition hover:from-emerald-500 hover:via-teal-500 hover:to-cyan-500"
           >
             <Sparkles className="h-4 w-4" />
             Done
@@ -299,14 +299,10 @@ const SyncResultsView: React.FC<SyncResultsViewProps> = ({
 };
 
 /**
- * Displays the results of the AniList synchronization process, including summary statistics, a progress bar, and error details.
- *
+ * Displays the results of the AniList synchronization process.
+ * Shows summary statistics, progress bar, and error details for completed sync operations.
  * @param props - The props for the SyncResultsView component.
  * @returns The rendered synchronization results view React element.
  * @source
- * @example
- * ```tsx
- * <SyncResultsView report={report} onClose={handleClose} onExportErrors={handleExportErrors} />
- * ```
  */
 export default SyncResultsView;

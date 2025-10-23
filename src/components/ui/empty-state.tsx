@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 
 /**
  * Color scheme variants for empty states.
+ * @source
  */
 const colorSchemes = {
   default: {
@@ -34,13 +35,13 @@ const colorSchemes = {
 
 /**
  * Props for the EmptyState component.
- *
- * @property icon - React node to display as the icon
- * @property title - Title text for the empty state
- * @property description - Description text for the empty state
- * @property actionLabel - Optional label for the action button
- * @property onAction - Optional callback when action button is clicked
- * @property variant - Color scheme variant (default: "default")
+ * @property icon - React node to display as the icon.
+ * @property title - Title text for the empty state.
+ * @property description - Description text for the empty state.
+ * @property actionLabel - Optional label for the action button.
+ * @property onAction - Optional callback when action button is clicked.
+ * @property variant - Color scheme variant (default: "default").
+ * @source
  */
 interface EmptyStateProps {
   icon: React.ReactNode;
@@ -53,23 +54,11 @@ interface EmptyStateProps {
 
 /**
  * Reusable empty state component for displaying empty/no-data states.
- *
  * Displays a centered layout with icon, title, description, and optional action button.
  * Supports multiple color scheme variants with smooth animations.
- *
- * @param props - The component props
- * @returns The rendered empty state
- * @example
- * ```tsx
- * <EmptyState
- *   icon={<SearchIcon className="h-10 w-10" />}
- *   title="No results found"
- *   description="Try adjusting your search criteria"
- *   actionLabel="Clear filters"
- *   onAction={() => clearFilters()}
- *   variant="info"
- * />
- * ```
+ * @param props - The component props.
+ * @returns The rendered empty state.
+ * @source
  */
 export default function EmptyState({
   icon,

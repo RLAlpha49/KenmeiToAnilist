@@ -32,10 +32,9 @@ import {
 
 /**
  * Props for the ShortcutsPanel component.
- *
- * @interface ShortcutsPanelProps
- * @property {boolean} isOpen - Whether the shortcuts panel is currently visible
- * @property {() => void} onClose - Callback function invoked when panel should close
+ * @property isOpen - Whether the shortcuts panel is currently visible.
+ * @property onClose - Callback function invoked when panel should close.
+ * @source
  */
 interface ShortcutsPanelProps {
   isOpen: boolean;
@@ -52,23 +51,11 @@ const categoryIcons = {
 
 /**
  * Renders a keyboard shortcuts reference panel as a modal dialog.
- *
  * Displays shortcuts organized by category with search functionality.
  * Allows users to discover and reference all available keyboard shortcuts.
- *
- * @param {ShortcutsPanelProps} props - Component props
- * @returns {React.ReactElement} The rendered shortcuts panel dialog
- *
- * @example
- * ```tsx
- * const [isOpen, setIsOpen] = useState(false);
- * return (
- *   <>
- *     <Button onClick={() => setIsOpen(true)}>View Shortcuts</Button>
- *     <ShortcutsPanel isOpen={isOpen} onClose={() => setIsOpen(false)} />
- *   </>
- * );
- * ```
+ * @param props - Component props.
+ * @returns The rendered shortcuts panel dialog.
+ * @source
  */
 export function ShortcutsPanel({
   isOpen,

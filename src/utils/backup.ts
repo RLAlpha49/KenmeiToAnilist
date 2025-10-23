@@ -14,8 +14,9 @@ import { getAppVersion } from "@/utils/app-version";
 import { exportToJson } from "@/utils/exportUtils";
 
 /**
- * Interface for backup metadata
- * Includes version information and data structure details
+ * Interface for backup metadata.
+ * Includes version information and data structure details.
+ * @source
  */
 export interface BackupMetadata {
   /** ISO timestamp of when backup was created */
@@ -31,8 +32,9 @@ export interface BackupMetadata {
 }
 
 /**
- * Interface for backup data structure
- * Contains metadata and all backed-up application data
+ * Interface for backup data structure.
+ * Contains metadata and all backed-up application data.
+ * @source
  */
 export interface BackupData {
   /** Metadata about the backup */
@@ -42,8 +44,9 @@ export interface BackupData {
 }
 
 /**
- * Interface for backup history entries
- * Tracks backup metadata for restore history
+ * Interface for backup history entries.
+ * Tracks backup metadata for restore history.
+ * @source
  */
 export interface BackupHistoryEntry {
   /** Unique identifier for this backup entry */
@@ -59,25 +62,29 @@ export interface BackupHistoryEntry {
 }
 
 /**
- * Storage key for backup history in localStorage
- * @internal Not included in STORAGE_KEYS to avoid circular dependency
+ * Storage key for backup history in localStorage.
+ * @internal Not included in STORAGE_KEYS to avoid circular dependency.
+ * @source
  */
 export const BACKUP_HISTORY_KEY = "backup_history";
 
 /**
- * Maximum number of backups to keep in history
+ * Maximum number of backups to keep in history.
+ * @source
  */
 export const MAX_BACKUP_HISTORY = 5;
 
 /**
- * Current backup format version
- * Increment when backup schema changes to ensure compatibility
+ * Current backup format version.
+ * Increment when backup schema changes to ensure compatibility.
+ * @source
  */
 export const BACKUP_VERSION = 1;
 
 /**
- * Storage keys that should be included in backups
- * Excludes transient keys (ACTIVE_SYNC_SNAPSHOT, UPDATE_DISMISSED_VERSIONS)
+ * Storage keys that should be included in backups.
+ * Excludes transient keys (ACTIVE_SYNC_SNAPSHOT, UPDATE_DISMISSED_VERSIONS).
+ * @source
  */
 export const BACKUPABLE_KEYS = [
   STORAGE_KEYS.KENMEI_DATA,
@@ -94,7 +101,8 @@ export const BACKUPABLE_KEYS = [
 ] as const;
 
 /**
- * Validation result from backup validation
+ * Validation result from backup validation.
+ * @source
  */
 interface ValidationResult {
   valid: boolean;
@@ -102,17 +110,11 @@ interface ValidationResult {
 }
 
 /**
- * Creates a complete backup of application data and triggers file download
- * Automatically adds entry to backup history and manages history limit
- *
- * @returns Unique identifier for the created backup
- * @throws Error if backup creation or export fails
- *
- * @example
- * ```ts
- * const backupId = await createBackup();
- * console.log("Backup created:", backupId);
- * ```
+ * Creates a complete backup of application data and triggers file download.
+ * Automatically adds entry to backup history and manages history limit.
+ * @returns Unique identifier for the created backup.
+ * @throws {Error} If backup creation or export fails.
+ * @source
  */
 export async function createBackup(): Promise<string> {
   try {
@@ -188,16 +190,10 @@ export async function createBackup(): Promise<string> {
 }
 
 /**
- * Retrieves backup history from storage
- * Returns entries sorted by timestamp in descending order (newest first)
- *
- * @returns Array of backup history entries
- *
- * @example
- * ```ts
- * const history = getBackupHistory();
- * console.log(`${history.length} backups available`);
- * ```
+ * Retrieves backup history from storage.
+ * Returns entries sorted by timestamp in descending order (newest first).
+ * @returns Array of backup history entries.
+ * @source
  */
 export function getBackupHistory(): BackupHistoryEntry[] {
   try {
@@ -216,24 +212,11 @@ export function getBackupHistory(): BackupHistoryEntry[] {
 }
 
 /**
- * Adds entry to backup history and manages history limit
- * Prepends new entry and removes oldest entries when history exceeds MAX_BACKUP_HISTORY
- *
- * @param entry - Backup history entry to add
- *
- * @internal Used internally by createBackup
- *
- * @example
- * ```ts
- * const entry: BackupHistoryEntry = {
- *   id: "backup_123456",
- *   timestamp: Date.now(),
- *   appVersion: "1.0.0",
- *   dataKeys: [...],
- *   size: 12345,
- * };
- * addBackupToHistory(entry);
- * ```
+ * Adds entry to backup history and manages history limit.
+ * Prepends new entry and removes oldest entries when history exceeds MAX_BACKUP_HISTORY.
+ * @param entry - Backup history entry to add.
+ * @internal Used internally by createBackup.
+ * @source
  */
 export function addBackupToHistory(entry: BackupHistoryEntry): void {
   try {
@@ -254,13 +237,8 @@ export function addBackupToHistory(entry: BackupHistoryEntry): void {
 }
 
 /**
- * Clears all backup history from storage
- *
- * @example
- * ```ts
- * clearBackupHistory();
- * console.log("Backup history cleared");
- * ```
+ * Clears all backup history from storage.
+ * @source
  */
 export function clearBackupHistory(): void {
   try {
@@ -272,21 +250,12 @@ export function clearBackupHistory(): void {
 }
 
 /**
- * Validates backup data structure and compatibility
- * Checks for required keys, version compatibility, and data integrity
- *
- * @param backupData - Backup data to validate
- * @returns Validation result with valid flag and any errors found
- *
- * @internal Used internally by importBackupFromFile and restoreBackup
- *
- * @example
- * ```ts
- * const result = validateBackup(backupData);
- * if (!result.valid) {
- *   console.error("Validation errors:", result.errors);
- * }
- * ```
+ * Validates backup data structure and compatibility.
+ * Checks for required keys, version compatibility, and data integrity.
+ * @param backupData - Backup data to validate.
+ * @returns Validation result with valid flag and any errors found.
+ * @internal Used internally by importBackupFromFile and restoreBackup.
+ * @source
  */
 export function validateBackup(backupData: BackupData): ValidationResult {
   const errors: string[] = [];
@@ -374,22 +343,14 @@ export function validateBackup(backupData: BackupData): ValidationResult {
 }
 
 /**
- * Restores application data from backup
- * Validates backup before restoration and optionally merges match results
- *
- * @param backupData - Backup data to restore
- * @param options - Restoration options
- * @param options.merge - If true, merge match results instead of replacing (default: false)
- * @returns Success status and any error messages
- * @throws Error if validation fails or restoration encounters critical error
- *
- * @example
- * ```ts
- * const result = await restoreBackup(backupData, { merge: true });
- * if (result.success) {
- *   window.location.reload();
- * }
- * ```
+ * Restores application data from backup.
+ * Validates backup before restoration and optionally merges match results.
+ * @param backupData - Backup data to restore.
+ * @param options - Restoration options.
+ * @param options.merge - If true, merge match results instead of replacing (default: false).
+ * @returns Success status and any error messages.
+ * @throws {Error} If validation fails or restoration encounters critical error.
+ * @source
  */
 export async function restoreBackup(
   backupData: BackupData,
@@ -462,22 +423,12 @@ export async function restoreBackup(
 }
 
 /**
- * Imports backup from file and validates it
- * Reads file content and parses JSON backup format
- *
- * @param file - File to import as backup
- * @returns Parsed and validated backup data
- * @throws Error if file cannot be read or is not valid backup format
- *
- * @example
- * ```ts
- * try {
- *   const backupData = await importBackupFromFile(file);
- *   const result = await restoreBackup(backupData);
- * } catch (error) {
- *   console.error("Import failed:", error.message);
- * }
- * ```
+ * Imports backup from file and validates it.
+ * Reads file content and parses JSON backup format.
+ * @param file - File to import as backup.
+ * @returns Parsed and validated backup data.
+ * @throws {Error} If file cannot be read or is not valid backup format.
+ * @source
  */
 export async function importBackupFromFile(file: File): Promise<BackupData> {
   try {

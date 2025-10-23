@@ -1,16 +1,15 @@
 /**
- * Undo/Redo System for Match Operations
- *
+ * Undo/Redo System for Match Operations.
  * Implements a command pattern-based undo/redo system that tracks and manages
  * all match operations (accept, reject, select alternative, etc.).
- *
- * @module utils/undoRedo
+ * @source
  */
 
 import type { MangaMatchResult } from "@/api/anilist/types";
 
 /**
- * Command types that can be undone/redone
+ * Command types that can be undone/redone.
+ * @source
  */
 export enum CommandType {
   ACCEPT_MATCH = "accept_match",
@@ -22,7 +21,8 @@ export enum CommandType {
 }
 
 /**
- * Metadata about a command for user feedback and debugging
+ * Metadata about a command for user feedback and debugging.
+ * @source
  */
 export interface CommandMetadata {
   type: CommandType;
@@ -32,7 +32,8 @@ export interface CommandMetadata {
 }
 
 /**
- * Base interface for all commands
+ * Base interface for all commands.
+ * @source
  */
 export interface Command {
   execute(): void;
@@ -42,25 +43,16 @@ export interface Command {
 }
 
 /**
- * Callback function signature for executing state updates
+ * Callback function signature for executing state updates.
+ * @source
  */
 type OnExecuteCallback = (state: MangaMatchResult) => void;
 
 /**
- * Abstract base class for all match operation commands
- *
+ * Abstract base class for all match operation commands.
  * Stores the minimal diff required to undo/redo: the affected match index
  * and the before/after states of that match.
- *
- * @example
- * const command = new AcceptMatchCommand(
- *   matchIndex,
- *   beforeState,
- *   afterState,
- *   (state) => setMatchResults(prev => updateMatch(prev, matchIndex, state)),
- *   "User accepted AI suggestion"
- * );
- * undoRedoManager.executeCommand(command);
+ * @source
  */
 abstract class BaseCommand implements Command {
   protected metadata: CommandMetadata;
@@ -82,28 +74,32 @@ abstract class BaseCommand implements Command {
   }
 
   /**
-   * Execute the command (apply "after" state)
+   * Execute the command (apply "after" state).
+   * @source
    */
   execute(): void {
     this.onExecute(this.afterState);
   }
 
   /**
-   * Undo the command (restore "before" state)
+   * Undo the command (restore "before" state).
+   * @source
    */
   undo(): void {
     this.onExecute(this.beforeState);
   }
 
   /**
-   * Get user-friendly description of what this command does
+   * Get user-friendly description of what this command does.
+   * @source
    */
   getDescription(): string {
     return this.metadata.description;
   }
 
   /**
-   * Get metadata about this command
+   * Get metadata about this command.
+   * @source
    */
   getMetadata(): CommandMetadata {
     return this.metadata;
@@ -111,7 +107,8 @@ abstract class BaseCommand implements Command {
 }
 
 /**
- * Command for accepting a match suggestion
+ * Command for accepting a match suggestion.
+ * @source
  */
 export class AcceptMatchCommand extends BaseCommand {
   constructor(
@@ -132,7 +129,8 @@ export class AcceptMatchCommand extends BaseCommand {
 }
 
 /**
- * Command for rejecting/skipping a match
+ * Command for rejecting/skipping a match.
+ * @source
  */
 export class RejectMatchCommand extends BaseCommand {
   constructor(
@@ -153,7 +151,8 @@ export class RejectMatchCommand extends BaseCommand {
 }
 
 /**
- * Command for selecting an alternative match from suggestions
+ * Command for selecting an alternative match from suggestions.
+ * @source
  */
 export class SelectAlternativeCommand extends BaseCommand {
   constructor(
@@ -174,7 +173,8 @@ export class SelectAlternativeCommand extends BaseCommand {
 }
 
 /**
- * Command for resetting a match back to pending status
+ * Command for resetting a match back to pending status.
+ * @source
  */
 export class ResetToPendingCommand extends BaseCommand {
   constructor(
@@ -195,7 +195,8 @@ export class ResetToPendingCommand extends BaseCommand {
 }
 
 /**
- * Command for selecting a result from manual search
+ * Command for selecting a result from manual search.
+ * @source
  */
 export class SelectSearchMatchCommand extends BaseCommand {
   constructor(
@@ -216,10 +217,10 @@ export class SelectSearchMatchCommand extends BaseCommand {
 }
 
 /**
- * Composite command that groups multiple commands into a single undo/redo unit
- *
+ * Composite command that groups multiple commands into a single undo/redo unit.
  * Useful for batch operations where multiple matches are modified together.
  * When undone/redone, all grouped commands are processed together.
+ * @source
  */
 export class BatchCommand implements Command {
   private readonly metadata: CommandMetadata;
@@ -262,21 +263,11 @@ export class BatchCommand implements Command {
 }
 
 /**
- * Manages undo/redo history for match operations
- *
+ * Manages undo/redo history for match operations.
  * Maintains two stacks: undo stack and redo stack. When a command is executed,
  * it's pushed to the undo stack and the redo stack is cleared. Commands can be
  * undone/redone using the public methods.
- *
- * @example
- * const manager = new UndoRedoManager(50); // Keep last 50 actions
- * const command = new AcceptMatchCommand(...);
- * manager.executeCommand(command);
- *
- * if (manager.canUndo()) {
- *   const metadata = manager.undo();
- *   console.log(`Undone: ${metadata.description}`);
- * }
+ * @source
  */
 export class UndoRedoManager {
   private undoStack: Command[] = [];
@@ -284,21 +275,21 @@ export class UndoRedoManager {
   private isEnabled: boolean = true;
 
   /**
-   * Create a new undo/redo manager
-   * @param maxHistorySize Maximum number of commands to keep in history (default: 50)
+   * Create a new undo/redo manager.
+   * @param maxHistorySize - Maximum number of commands to keep in history (default: 50).
+   * @source
    */
   constructor(private readonly maxHistorySize: number = 50) {}
 
   /**
-   * Execute a command and add it to undo history
-   *
+   * Execute a command and add it to undo history.
    * Calling this method will:
    * 1. Execute the command
    * 2. Push it to the undo stack
    * 3. Clear the redo stack (since we've made a new action)
    * 4. Maintain history size by removing oldest entries
-   *
-   * @param command The command to execute
+   * @param command - The command to execute.
+   * @source
    */
   executeCommand(command: Command): void {
     if (!this.isEnabled) return;
@@ -314,9 +305,9 @@ export class UndoRedoManager {
   }
 
   /**
-   * Undo the last command
-   *
-   * @returns Metadata about the undone command, or null if nothing to undo
+   * Undo the last command.
+   * @returns Metadata about the undone command, or null if nothing to undo.
+   * @source
    */
   undo(): CommandMetadata | null {
     if (this.undoStack.length === 0) return null;
@@ -329,9 +320,9 @@ export class UndoRedoManager {
   }
 
   /**
-   * Redo the last undone command
-   *
-   * @returns Metadata about the redone command, or null if nothing to redo
+   * Redo the last undone command.
+   * @returns Metadata about the redone command, or null if nothing to redo.
+   * @source
    */
   redo(): CommandMetadata | null {
     if (this.redoStack.length === 0) return null;
@@ -344,38 +335,42 @@ export class UndoRedoManager {
   }
 
   /**
-   * Check if there are commands available to undo
+   * Check if there are commands available to undo.
+   * @source
    */
   canUndo(): boolean {
     return this.undoStack.length > 0;
   }
 
   /**
-   * Check if there are commands available to redo
+   * Check if there are commands available to redo.
+   * @source
    */
   canRedo(): boolean {
     return this.redoStack.length > 0;
   }
 
   /**
-   * Get a description of what will be undone (for UI display)
+   * Get a description of what will be undone (for UI display).
+   * @source
    */
   getUndoDescription(): string | null {
     return this.undoStack.at(-1)?.getDescription() ?? null;
   }
 
   /**
-  /**
-   * Get a description of what will be redone (for UI display)
+   * Get a description of what will be redone (for UI display).
+   * @source
    */
   getRedoDescription(): string | null {
     return this.redoStack.at(-1)?.getDescription() ?? null;
   }
+
   /**
-   * Clear all undo and redo history
-   *
+   * Clear all undo and redo history.
    * Use this when operations occur that invalidate the history,
    * such as rematch operations that clear the cache.
+   * @source
    */
   clear(): void {
     this.undoStack = [];
@@ -383,20 +378,20 @@ export class UndoRedoManager {
   }
 
   /**
-   * Temporarily enable or disable command recording
-   *
+   * Temporarily enable or disable command recording.
    * When disabled, executeCommand() becomes a no-op. This is useful
    * during operations like initial data loading where we don't want
    * to record intermediate states.
-   *
-   * @param enabled Whether to enable or disable the manager
+   * @param enabled - Whether to enable or disable the manager.
+   * @source
    */
   setEnabled(enabled: boolean): void {
     this.isEnabled = enabled;
   }
 
   /**
-   * Get information about current history size
+   * Get information about current history size.
+   * @source
    */
   getHistorySize(): { undo: number; redo: number } {
     return {

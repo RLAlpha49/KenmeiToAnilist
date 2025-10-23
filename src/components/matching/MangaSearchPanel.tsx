@@ -31,7 +31,8 @@ import {
 import { getMatchConfig } from "../../utils/storage";
 
 /**
- * Get CSS classes for source badge based on source type
+ * Get CSS classes for source badge based on source type.
+ * @source
  */
 function getSourceBadgeClasses(source: string): string {
   switch (source) {
@@ -64,8 +65,8 @@ export interface MangaSearchPanelProps {
 }
 
 /**
- * MangaSearchPanel React component for searching and selecting AniList manga matches for a given Kenmei manga, with manual search and result selection features.
- *
+ * Panel for searching and selecting AniList manga matches for a given Kenmei manga.
+ * Supports manual search and result selection with keyboard navigation.
  * @param props - The props for the MangaSearchPanel component.
  * @returns The rendered manga search panel React element.
  * @source
@@ -394,23 +395,6 @@ export function MangaSearchPanel({
     onSelectMatch(match.manga); // Pass the manga object to the parent
   };
 
-  /**
-   * Displays a panel for searching and selecting AniList manga matches for a given Kenmei manga, supporting manual search and result selection.
-   *
-   * @param props - The props for the MangaSearchPanel component.
-   * @returns The rendered manga search panel React element.
-   * @source
-   * @example
-   * ```tsx
-   * <MangaSearchPanel
-   *   kenmeiManga={manga}
-   *   onClose={handleClose}
-   *   onSelectMatch={handleSelect}
-   *   token={token}
-   *   bypassCache={false}
-   * />
-   * ```
-   */
   return (
     <div
       className="bg-linear-to-br relative flex h-full flex-col overflow-hidden rounded-3xl border border-white/30 from-white/95 via-white/90 to-white/80 shadow-[0_30px_70px_-40px_rgba(15,23,42,0.55)] backdrop-blur-xl dark:border-slate-700/70 dark:from-slate-900/95 dark:via-slate-950/90 dark:to-slate-950/80"

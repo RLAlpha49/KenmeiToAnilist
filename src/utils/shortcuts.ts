@@ -6,8 +6,7 @@
 
 /**
  * Enum for shortcut categories used to organize shortcuts in the UI.
- *
- * @enum {string}
+ * @source
  */
 export enum ShortcutCategory {
   NAVIGATION = "Navigation",
@@ -19,13 +18,12 @@ export enum ShortcutCategory {
 
 /**
  * Represents a keyboard key combination component.
- *
- * @interface ShortcutKey
  * @property {string} key - The keyboard key (e.g., 'z', 'f', '1', '/')
  * @property {boolean} [ctrl] - Whether Ctrl key is required (Windows/Linux)
  * @property {boolean} [shift] - Whether Shift key is required
  * @property {boolean} [alt] - Whether Alt key is required
  * @property {boolean} [meta] - Whether Meta/Cmd key is required (Mac)
+ * @source
  */
 interface ShortcutKey {
   key: string;
@@ -37,8 +35,6 @@ interface ShortcutKey {
 
 /**
  * Represents a complete keyboard shortcut definition with metadata and alternatives.
- *
- * @interface Shortcut
  * @property {string} id - Unique identifier for the shortcut (e.g., 'nav-home', 'match-search')
  * @property {ShortcutCategory} category - Category for organizing shortcuts
  * @property {ShortcutKey} keys - Primary key combination
@@ -46,6 +42,7 @@ interface ShortcutKey {
  * @property {string} description - User-facing description of what the shortcut does
  * @property {string} action - Action identifier for dispatcher (e.g., 'navigate:home', 'toggle-search')
  * @property {string} [scope] - Optional scope (e.g., 'matching-page', 'global') for context-aware handling
+ * @source
  */
 interface Shortcut {
   id: string;
@@ -59,12 +56,9 @@ interface Shortcut {
 
 /**
  * Comprehensive registry of all application keyboard shortcuts.
- *
  * Organized by category and sorted by key combination for easy lookup.
  * Serves as the single source of truth for all keyboard shortcuts.
- *
- * @constant SHORTCUTS
- * @type {Shortcut[]}
+ * @source
  */
 export const SHORTCUTS: Shortcut[] = [
   // Navigation shortcuts
@@ -178,19 +172,10 @@ export const SHORTCUTS: Shortcut[] = [
 
 /**
  * Formats a shortcut key combination into a human-readable string.
- *
  * Handles platform-specific key names (Ctrl vs Cmd on Mac).
- * Returns formatted string like "Ctrl+Z", "Cmd+Shift+Z", or "?".
- *
  * @param {ShortcutKey} key - The key combination to format
  * @returns {string} Human-readable shortcut string (e.g., "Ctrl+Z")
- *
- * @example
- * ```tsx
- * const undoKey = { key: 'z', ctrl: true };
- * const keyString = formatShortcutKey(undoKey);
- * // Returns: "Ctrl+Z" on Windows/Linux, "Cmd+Z" on Mac
- * ```
+ * @source
  */
 export function formatShortcutKey(key: ShortcutKey): string {
   const parts: string[] = [];
@@ -214,23 +199,12 @@ export function formatShortcutKey(key: ShortcutKey): string {
 
 /**
  * Checks if a keyboard event matches a specific shortcut definition.
- *
  * Handles both primary and alternative key combinations.
  * Ignores case sensitivity for letter keys and handles platform-specific modifiers.
- *
  * @param {KeyboardEvent} event - The keyboard event to check
  * @param {Shortcut} shortcut - The shortcut definition to match against
  * @returns {boolean} True if the event matches the shortcut
- *
- * @example
- * ```tsx
- * document.addEventListener('keydown', (event) => {
- *   const undoShortcut = SHORTCUTS.find(s => s.id === 'match-undo');
- *   if (matchesShortcut(event, undoShortcut)) {
- *     handleUndo();
- *   }
- * });
- * ```
+ * @source
  */
 export function matchesShortcut(
   event: KeyboardEvent,
@@ -287,17 +261,10 @@ export function matchesShortcut(
 
 /**
  * Retrieves all shortcuts in a specific category.
- *
  * Useful for organizing shortcuts in the UI by category.
- *
  * @param {ShortcutCategory} category - The category to filter by
  * @returns {Shortcut[]} Array of shortcuts in the specified category
- *
- * @example
- * ```tsx
- * const navShortcuts = getShortcutsByCategory(ShortcutCategory.NAVIGATION);
- * // Returns array of all navigation shortcuts
- * ```
+ * @source
  */
 export function getShortcutsByCategory(category: ShortcutCategory): Shortcut[] {
   return SHORTCUTS.filter((shortcut) => shortcut.category === category);
@@ -305,17 +272,9 @@ export function getShortcutsByCategory(category: ShortcutCategory): Shortcut[] {
 
 /**
  * Finds a shortcut by its unique identifier.
- *
  * @param {string} id - The shortcut ID to find
  * @returns {Shortcut | undefined} The shortcut if found, undefined otherwise
- *
- * @example
- * ```tsx
- * const undoShortcut = getShortcutById('match-undo');
- * if (undoShortcut) {
- *   console.log(`Undo shortcut: ${formatShortcutKey(undoShortcut)}`);
- * }
- * ```
+ * @source
  */
 export function getShortcutById(id: string): Shortcut | undefined {
   return SHORTCUTS.find((shortcut) => shortcut.id === id);

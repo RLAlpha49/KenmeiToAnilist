@@ -11,13 +11,10 @@ import {
 } from "./table";
 
 /**
- * Base skeleton component for loading states.
- * Renders an animated pulsing placeholder element.
- *
- * @param props - Standard div element props
- * @returns A pulsing skeleton element
- * @example
- * <Skeleton className="h-12 w-12 rounded-full" />
+ * Renders an animated pulsing placeholder element for loading states.
+ * @param props - Standard div element props.
+ * @returns A pulsing skeleton element.
+ * @source
  */
 function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -30,12 +27,10 @@ function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 /**
- * Skeleton component for card-shaped content.
+ * Skeleton card component for loading states.
  * Displays a Card with skeleton lines for title, description, and content.
- *
- * @returns A skeleton card element
- * @example
- * <SkeletonCard />
+ * @returns A skeleton card element.
+ * @source
  */
 function SkeletonCard() {
   return (
@@ -57,21 +52,19 @@ function SkeletonCard() {
 
 /**
  * Props for the SkeletonTable component.
- *
- * @property rows - Number of skeleton rows to display (default: 5)
+ * @property rows - Number of skeleton rows to display (default: 5).
+ * @source
  */
 interface SkeletonTableProps {
   rows?: number;
 }
 
 /**
- * Skeleton component for table-shaped content.
+ * Skeleton table component for loading states.
  * Displays a Table with skeleton header and rows.
- *
- * @param props - Component props
- * @returns A skeleton table element
- * @example
- * <SkeletonTable rows={10} />
+ * @param props - Component props.
+ * @returns A skeleton table element.
+ * @source
  */
 function SkeletonTable({ rows = 5 }: Readonly<SkeletonTableProps>) {
   return (
@@ -116,21 +109,19 @@ function SkeletonTable({ rows = 5 }: Readonly<SkeletonTableProps>) {
 
 /**
  * Props for the SkeletonList component.
- *
- * @property items - Number of skeleton items to display (default: 3)
+ * @property items - Number of skeleton items to display (default: 3).
+ * @source
  */
 interface SkeletonListProps {
   items?: number;
 }
 
 /**
- * Skeleton component for list-shaped content.
+ * Skeleton list component for loading states.
  * Displays vertical list of skeleton items with varying widths.
- *
- * @param props - Component props
- * @returns A skeleton list element
- * @example
- * <SkeletonList items={8} />
+ * @param props - Component props.
+ * @returns A skeleton list element.
+ * @source
  */
 function SkeletonList({ items = 3 }: Readonly<SkeletonListProps>) {
   return (
