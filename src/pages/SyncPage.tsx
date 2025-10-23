@@ -42,6 +42,7 @@ import {
   CheckCircle2,
   Layers,
   UserPlus,
+  History,
 } from "lucide-react";
 import { exportSyncErrorLog } from "../utils/exportUtils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -79,6 +80,8 @@ import { LoadingStateDisplay } from "../components/sync/LoadingStateDisplay";
 import { SyncConfigurationPanel } from "../components/sync/SyncConfigurationPanel";
 import { ChangesSummary } from "../components/sync/ChangesSummary";
 import { ViewControls } from "../components/sync/ViewControls";
+import { SkeletonCard, SkeletonList } from "../components/ui/skeleton";
+import EmptyState from "../components/ui/empty-state";
 
 /**
  * Sync page component for the Kenmei to AniList sync tool.
@@ -205,6 +208,9 @@ export function SyncPage() {
   const [retryCount, setRetryCount] = useState(0);
   const maxRetries = 3;
 
+  // Track initial manga load to show skeletons
+  const [isInitialMangaLoad, setIsInitialMangaLoad] = useState(true);
+
   // Sorting and filtering options
   const [sortOption, setSortOption] = useState<SortOption>({
     field: "title",
@@ -228,6 +234,7 @@ export function SyncPage() {
     } else {
       console.error("[SyncPage] No match results found in storage");
     }
+    setIsInitialMangaLoad(false);
   }, []);
 
   // Handle rate limit errors
@@ -1011,8 +1018,49 @@ export function SyncPage() {
   }
 
   // If no manga matches are loaded yet, show loading state
+  if (isInitialMangaLoad && mangaMatches.length === 0) {
+    return (
+      <motion.div
+        className="container mx-auto flex h-full max-w-full flex-col px-4 py-6 md:px-6"
+        variants={pageVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.div className="mb-8 space-y-4">
+          <h1 className="text-3xl font-semibold tracking-tight">
+            Sync Preview
+          </h1>
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            Loading your matched manga...
+          </p>
+        </motion.div>
+        <motion.div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <motion.div key={`skeleton-stat-${index + 1}`}>
+              <SkeletonCard />
+            </motion.div>
+          ))}
+        </motion.div>
+        <motion.div className="mt-8">
+          <SkeletonList items={8} />
+        </motion.div>
+      </motion.div>
+    );
+  }
+
   if (mangaMatches.length === 0) {
-    return <LoadingStateDisplay type="manga" />;
+    return (
+      <AnimatePresence>
+        <EmptyState
+          icon={<History className="h-10 w-10" />}
+          title="No matches to sync"
+          description="Complete the matching process first to see sync preview."
+          actionLabel="Go to Matching"
+          onAction={() => navigate({ to: "/review" })}
+          variant="info"
+        />
+      </AnimatePresence>
+    );
   }
 
   // If library is loading, show loading state

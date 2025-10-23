@@ -3,7 +3,7 @@
  * @module DataTable
  * @description Displays a paginated, scrollable table of Kenmei manga items with status badges and load more functionality.
  */
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { KenmeiMangaItem } from "../../types/kenmei";
 import {
   Table,
@@ -17,6 +17,7 @@ import {
 import { ScrollArea } from "../ui/scroll-area";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import { Skeleton } from "../ui/skeleton";
 import { Loader2, ChevronDown } from "lucide-react";
 
 /**
@@ -24,6 +25,7 @@ import { Loader2, ChevronDown } from "lucide-react";
  *
  * @property data - Array of KenmeiMangaItem objects to display in the table
  * @property itemsPerPage - Optional number of items to show per page (default: 50)
+ * @property isLoading - Optional flag to display skeleton rows during initial data load
  *
  * @internal
  * @source
@@ -31,11 +33,13 @@ import { Loader2, ChevronDown } from "lucide-react";
 export interface DataTableProps {
   data: KenmeiMangaItem[];
   itemsPerPage?: number;
+  isLoading?: boolean;
 }
 
 /**
  * Renders a paginated table of manga items with load-more functionality.
  * Displays columns based on available data: title, status, chapters, volumes, score, last read.
+ * Shows skeleton rows when loading initial data.
  * @param props - Table configuration including data and items per page.
  * @returns Table component with pagination support.
  * @source
@@ -43,10 +47,12 @@ export interface DataTableProps {
 export function DataTable({
   data,
   itemsPerPage = 50,
+  isLoading = false,
 }: Readonly<DataTableProps>) {
   const [visibleData, setVisibleData] = useState<KenmeiMangaItem[]>([]);
   const [displayCount, setDisplayCount] = useState(itemsPerPage);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setVisibleData(data.slice(0, displayCount));
@@ -59,16 +65,27 @@ export function DataTable({
 
   /**
    * Loads additional manga items with simulated delay for better UX.
+   * Scrolls to the bottom of the scroll area after loading completes.
    * @source
    */
   const handleLoadMore = () => {
     if (displayCount < data.length) {
-      setIsLoading(true);
+      setIsLoadingMore(true);
 
       // Simulate delay for smoother UX
       setTimeout(() => {
         setDisplayCount((prev) => Math.min(prev + itemsPerPage, data.length));
-        setIsLoading(false);
+        setIsLoadingMore(false);
+
+        // Scroll to bottom after new items are loaded
+        if (scrollAreaRef.current) {
+          const scrollViewport = scrollAreaRef.current.querySelector(
+            "[data-radix-scroll-area-viewport]",
+          );
+          if (scrollViewport) {
+            scrollViewport.scrollTop = scrollViewport.scrollHeight;
+          }
+        }
       }, 300);
     }
   };
@@ -167,8 +184,8 @@ export function DataTable({
   };
 
   return (
-    <div className="rounded-md border">
-      <ScrollArea className="h-[500px] rounded-md">
+    <div className="rounded-md border" aria-busy={isLoading}>
+      <ScrollArea ref={scrollAreaRef} className="h-[500px] rounded-md">
         <Table>
           <TableCaption>
             Showing {visibleData.length} of {data.length} entries
@@ -179,9 +196,9 @@ export function DataTable({
               <TableHead className="w-[45%] min-w-[200px]">Title</TableHead>
               <TableHead>Status</TableHead>
 
-              {hasChapters && <TableHead className="w-[80px]">Ch</TableHead>}
-              {hasVolumes && <TableHead className="w-[80px]">Vol</TableHead>}
-              {hasScore && <TableHead className="w-[80px]">Score</TableHead>}
+              {hasChapters && <TableHead className="w-20">Ch</TableHead>}
+              {hasVolumes && <TableHead className="w-20">Vol</TableHead>}
+              {hasScore && <TableHead className="w-20">Score</TableHead>}
 
               {hasLastRead && (
                 <TableHead className="w-[120px]">Last Read</TableHead>
@@ -190,50 +207,82 @@ export function DataTable({
           </TableHeader>
 
           <TableBody>
-            {visibleData.map((item) => (
-              <TableRow
-                key={`${item.title}-${item.status}-${item.updated_at ?? item.created_at}`}
-                className="hover:bg-muted/40"
-              >
-                <TableCell
-                  className="max-w-[300px] truncate font-medium"
-                  title={item.title}
-                >
-                  {item.title}
-                </TableCell>
-
-                <TableCell>{getStatusBadge(item.status)}</TableCell>
-
-                {hasChapters && (
-                  <TableCell className="text-muted-foreground">
-                    {item.chapters_read || "-"}
-                  </TableCell>
-                )}
-
-                {hasVolumes && (
-                  <TableCell className="text-muted-foreground">
-                    {item.volumes_read || "-"}
-                  </TableCell>
-                )}
-
-                {hasScore && (
-                  <TableCell className="text-muted-foreground">
-                    {item.score ? item.score.toFixed(1) : "-"}
-                  </TableCell>
-                )}
-
-                {hasLastRead && (
-                  <TableCell
-                    className="text-muted-foreground"
-                    title={item.updated_at || item.created_at}
+            {isLoading || isLoadingMore
+              ? // Render skeleton rows during loading, regardless of data presence
+                Array.from({ length: 10 }).map((_, index) => (
+                  <TableRow key={`skeleton-row-${index + 1}`}>
+                    <TableCell className="max-w-[300px] truncate">
+                      <Skeleton className="h-4 w-full" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-6 w-16" />
+                    </TableCell>
+                    {hasChapters && (
+                      <TableCell>
+                        <Skeleton className="h-4 w-8" />
+                      </TableCell>
+                    )}
+                    {hasVolumes && (
+                      <TableCell>
+                        <Skeleton className="h-4 w-8" />
+                      </TableCell>
+                    )}
+                    {hasScore && (
+                      <TableCell>
+                        <Skeleton className="h-4 w-12" />
+                      </TableCell>
+                    )}
+                    {hasLastRead && (
+                      <TableCell>
+                        <Skeleton className="h-4 w-20" />
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))
+              : visibleData.map((item) => (
+                  <TableRow
+                    key={`${item.title}-${item.status}-${item.updated_at ?? item.created_at}`}
+                    className="hover:bg-muted/40"
                   >
-                    {formatDate(item.updated_at || item.created_at)}
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
+                    <TableCell
+                      className="max-w-[300px] truncate font-medium"
+                      title={item.title}
+                    >
+                      {item.title}
+                    </TableCell>
 
-            {/* Display empty state when no items are visible */}
+                    <TableCell>{getStatusBadge(item.status)}</TableCell>
+
+                    {hasChapters && (
+                      <TableCell className="text-muted-foreground">
+                        {item.chapters_read || "-"}
+                      </TableCell>
+                    )}
+
+                    {hasVolumes && (
+                      <TableCell className="text-muted-foreground">
+                        {item.volumes_read || "-"}
+                      </TableCell>
+                    )}
+
+                    {hasScore && (
+                      <TableCell className="text-muted-foreground">
+                        {item.score ? item.score.toFixed(1) : "-"}
+                      </TableCell>
+                    )}
+
+                    {hasLastRead && (
+                      <TableCell
+                        className="text-muted-foreground"
+                        title={item.updated_at || item.created_at}
+                      >
+                        {formatDate(item.updated_at || item.created_at)}
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+
+            {/* Display empty state when no items are visible and not loading */}
             {visibleData.length === 0 && !isLoading && (
               <TableRow>
                 <TableCell
@@ -260,10 +309,11 @@ export function DataTable({
           <Button
             variant="outline"
             onClick={handleLoadMore}
-            disabled={isLoading}
+            disabled={isLoading || isLoadingMore}
+            aria-disabled={isLoading || isLoadingMore}
             className="w-full max-w-xs"
           >
-            {isLoading ? (
+            {isLoadingMore ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Loading...

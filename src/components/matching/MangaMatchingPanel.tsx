@@ -30,7 +30,8 @@ import {
   CardTitle,
 } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
-import { AnimatePresence } from "framer-motion";
+import { SkeletonCard } from "../../components/ui/skeleton";
+import { AnimatePresence, motion } from "framer-motion";
 import MatchCard from "./MangaMatchingPanel/MatchCard";
 import { MatchStatisticsCard } from "./MangaMatchingPanel/MatchStatisticsCard";
 import { MatchBulkActions } from "./MangaMatchingPanel/MatchBulkActions";
@@ -49,6 +50,7 @@ import { AlternativeSearchSettingsCard } from "./MangaMatchingPanel/AlternativeS
  * @property onRejectMatch - Optional callback to reject a match result.
  * @property onSelectAlternative - Optional callback to select an alternative match.
  * @property onResetToPending - Optional callback to reset a match to pending status.
+ * @property isLoadingInitial - Optional flag to show skeleton loaders during initial load.
  * @internal
  * @source
  */
@@ -67,6 +69,7 @@ export interface MangaMatchingPanelProps {
   searchQuery?: string;
   onSetMatchedToPending?: () => void;
   disableSetMatchedToPending?: boolean;
+  isLoadingInitial?: boolean;
 }
 
 /**
@@ -85,6 +88,7 @@ export function MangaMatchingPanel({
   onResetToPending,
   searchQuery,
   onSetMatchedToPending,
+  isLoadingInitial = false,
 }: Readonly<MangaMatchingPanelProps>) {
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilters, setStatusFilters] = useState<StatusFiltersState>({
@@ -834,14 +838,14 @@ export function MangaMatchingPanel({
                   type="button"
                   onClick={() => handleSortChange(field)}
                   className={cn(
-                    "group relative overflow-hidden rounded-2xl border border-white/40 bg-white/65 p-4 text-left shadow-md transition-all hover:translate-y-[-2px] hover:border-white/60 hover:bg-white/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 dark:border-slate-800/60 dark:bg-slate-900/65 dark:hover:border-slate-700",
+                    "group relative overflow-hidden rounded-2xl border border-white/40 bg-white/65 p-4 text-left shadow-md transition-all hover:-translate-y-0.5 hover:border-white/60 hover:bg-white/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 dark:border-slate-800/60 dark:bg-slate-900/65 dark:hover:border-slate-700",
                     isActive &&
                       "ring-offset-background ring-2 ring-indigo-400 ring-offset-2",
                   )}
                 >
                   <div
                     className={cn(
-                      "absolute inset-0 bg-gradient-to-br opacity-40 transition-opacity duration-300 group-hover:opacity-70",
+                      "bg-linear-to-br absolute inset-0 opacity-40 transition-opacity duration-300 group-hover:opacity-70",
                       accent,
                     )}
                   />
@@ -925,7 +929,20 @@ export function MangaMatchingPanel({
 
       {/* Match list */}
       <div className="space-y-6" aria-live="polite">
-        {currentMatches.length > 0 ? (
+        {isLoadingInitial && matches.length === 0 ? (
+          <motion.div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <motion.div
+                key={`skeleton-card-${index + 1}`}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, delay: index * 0.05 }}
+              >
+                <SkeletonCard />
+              </motion.div>
+            ))}
+          </motion.div>
+        ) : currentMatches.length > 0 ? (
           <AnimatePresence mode="popLayout">
             {currentMatches.map((match, index) => {
               // Generate a unique key using index as fallback when ID is undefined

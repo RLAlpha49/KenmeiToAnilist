@@ -34,7 +34,6 @@ import InitializationCard from "../components/matching/InitializationCard";
 import AuthRequiredCard from "../components/matching/AuthRequiredCard";
 import { AnimatePresence, motion } from "framer-motion";
 import MatchingErrorToast from "../components/matching/MatchingErrorToast";
-import NoResultsView from "../components/matching/NoResultsView";
 import MatchingPageHeader from "../components/matching/MatchingPageHeader";
 import MatchingPanel from "../components/matching/MatchingPanel";
 import MatchingResume from "../components/matching/MatchingResume";
@@ -44,6 +43,9 @@ import {
 } from "../components/matching/DuplicateWarning";
 import { detectDuplicateAniListIds } from "../components/matching/detectDuplicateAniListIds";
 import { LoadingView } from "../components/matching/LoadingView";
+import { SkeletonCard } from "../components/ui/skeleton";
+import EmptyState from "../components/ui/empty-state";
+import { FileSearch } from "lucide-react";
 
 // Animation variants
 const pageVariants = {
@@ -77,6 +79,17 @@ const contentVariants = {
       duration: 0.3,
       delay: 0.15,
       when: "beforeChildren",
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.2,
     },
   },
 };
@@ -130,6 +143,9 @@ export function MatchingPage() {
 
   // State for search query (to be passed to MangaMatchingPanel)
   const [searchQuery, setSearchQuery] = useState<string>("");
+
+  // Track initial page load to show skeletons
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const matchStatusSummary = useMemo(() => {
     const total = matchResults.length;
@@ -772,6 +788,7 @@ export function MatchingPage() {
       // Mark as initialized since we have results
       matchingProcess.matchingInitialized.current = true;
       matchingProcess.setIsInitializing(false);
+      setIsInitialLoad(false);
 
       console.info(
         "[MatchingPage] *** INITIALIZATION COMPLETE - Using saved results ***",
@@ -781,6 +798,7 @@ export function MatchingPage() {
 
     // Handle module preloading and final initialization steps
     handleModulePreloadingAndInitialization(importedManga as KenmeiManga[]);
+    setIsInitialLoad(false);
 
     // Cleanup function to ensure initialization state is reset
     return () => {
@@ -1362,7 +1380,87 @@ export function MatchingPage() {
     }
   };
 
+  // Check for authentication error first - show before skeleton loading
+  if (matchingProcess.error?.includes("Authentication Required")) {
+    return (
+      <div className="relative flex h-full w-full flex-1">
+        <motion.div
+          className="container mx-auto flex h-full max-w-full flex-col px-4 py-6 md:px-6"
+          variants={pageVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <MatchingPageHeader
+            headerVariants={headerVariants}
+            matchResultsLength={0}
+            showRematchOptions={false}
+            setShowRematchOptions={() => {}}
+            handleSetAllMatchedToPending={() => {}}
+            matchingProcessIsLoading={false}
+            rateLimitIsRateLimited={false}
+            statusSummary={matchStatusSummary}
+            pendingBacklog={0}
+            handleUndo={() => {}}
+            handleRedo={() => {}}
+            canUndo={false}
+            canRedo={false}
+          />
+          <motion.div
+            className="relative flex flex-1 items-center justify-center"
+            variants={contentVariants}
+          >
+            <AuthRequiredCard
+              onGoToSettings={() => navigate({ to: "/settings" })}
+            />
+          </motion.div>
+        </motion.div>
+      </div>
+    );
+  }
+
   // Loading state
+  if (isInitialLoad && matchResults.length === 0) {
+    return (
+      <div className="relative flex h-full w-full flex-1">
+        <motion.div
+          className="container mx-auto flex h-full max-w-full flex-col px-4 py-6 md:px-6"
+          variants={pageVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <MatchingPageHeader
+            headerVariants={headerVariants}
+            matchResultsLength={0}
+            showRematchOptions={false}
+            setShowRematchOptions={() => {}}
+            handleSetAllMatchedToPending={() => {}}
+            matchingProcessIsLoading={false}
+            rateLimitIsRateLimited={false}
+            statusSummary={matchStatusSummary}
+            pendingBacklog={0}
+            handleUndo={() => {}}
+            handleRedo={() => {}}
+            canUndo={false}
+            canRedo={false}
+          />
+          <motion.div
+            className="relative grid flex-1 grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
+            variants={contentVariants}
+          >
+            {Array.from({ length: 6 }).map((_, index) => (
+              <motion.div
+                key={`skeleton-card-${index + 1}`}
+                variants={itemVariants}
+              >
+                <SkeletonCard />
+              </motion.div>
+            ))}
+          </motion.div>
+        </motion.div>
+      </div>
+    );
+  }
+
   if (matchingProcess.isLoading) {
     return (
       <LoadingView
@@ -1386,173 +1484,168 @@ export function MatchingPage() {
         initial="hidden"
         animate="visible"
       >
-        {/* Authentication Error - Display regardless of loading state */}
-        {matchingProcess.error?.includes("Authentication Required") ? (
-          <AuthRequiredCard
-            onGoToSettings={() => navigate({ to: "/settings" })}
-          />
-        ) : (
-          <>
-            <MatchingPageHeader
-              headerVariants={headerVariants}
-              matchResultsLength={matchResults.length}
-              showRematchOptions={showRematchOptions}
-              setShowRematchOptions={setShowRematchOptions}
-              handleSetAllMatchedToPending={handleSetAllMatchedToPending}
-              matchingProcessIsLoading={matchingProcess.isLoading}
-              rateLimitIsRateLimited={rateLimitState.isRateLimited}
-              statusSummary={matchStatusSummary}
-              pendingBacklog={pendingMangaState.pendingManga.length}
-              handleUndo={handleUndo}
-              handleRedo={handleRedo}
-              canUndo={canUndo}
-              canRedo={canRedo}
-            />
+        <MatchingPageHeader
+          headerVariants={headerVariants}
+          matchResultsLength={matchResults.length}
+          showRematchOptions={showRematchOptions}
+          setShowRematchOptions={setShowRematchOptions}
+          handleSetAllMatchedToPending={handleSetAllMatchedToPending}
+          matchingProcessIsLoading={matchingProcess.isLoading}
+          rateLimitIsRateLimited={rateLimitState.isRateLimited}
+          statusSummary={matchStatusSummary}
+          pendingBacklog={pendingMangaState.pendingManga.length}
+          handleUndo={handleUndo}
+          handleRedo={handleRedo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+        />
 
-            {/* Rematch by status options */}
-            <AnimatePresence>
-              {showRematchOptions &&
-                !matchingProcess.isLoading &&
-                matchResults.length > 0 && (
-                  <RematchOptions
-                    selectedStatuses={selectedStatuses}
-                    onChangeSelectedStatuses={setSelectedStatuses}
-                    matchResults={matchResults}
-                    rematchWarning={rematchWarning}
-                    onRematchByStatus={handleRematchByStatus}
-                    onCloseOptions={() => setShowRematchOptions(false)}
-                  />
-                )}
-            </AnimatePresence>
-
-            {/* Duplicate AniList ID Warning */}
-            <AnimatePresence>
-              {showDuplicateWarning && duplicateEntries.length > 0 && (
-                <DuplicateWarning
-                  duplicates={duplicateEntries}
-                  onDismiss={() => setShowDuplicateWarning(false)}
-                  onSearchAnilist={(title) => setSearchQuery(title)}
-                  onIgnoreDuplicate={(anilistId, anilistTitle) => {
-                    addIgnoredDuplicate(anilistId, anilistTitle);
-                    // Refresh duplicates to remove the ignored one
-                    const updatedDuplicates =
-                      detectDuplicateAniListIds(matchResults);
-                    setDuplicateEntries(updatedDuplicates);
-                    // Hide warning if no duplicates remain
-                    if (updatedDuplicates.length === 0) {
-                      setShowDuplicateWarning(false);
-                    }
-                  }}
-                />
-              )}
-            </AnimatePresence>
-
-            {/* Initialization state - only show if not already loading and we have pending manga */}
-            {matchingProcess.isInitializing &&
-              !matchingProcess.isLoading &&
-              pendingMangaState.pendingManga.length > 0 && (
-                <InitializationCard />
-              )}
-
-            {/* Resume message when we have pending manga but aren't already in the loading state */}
-            {resumeState.needsProcessing &&
-              !matchingProcess.isLoading &&
-              !matchingProcess.isInitializing && (
-                <MatchingResume
-                  pendingMangaCount={resumeState.unprocessedCount}
-                  onResumeMatching={() => {
-                    console.info(
-                      "[MatchingPage] Resume matching clicked - ensuring unprocessed manga are processed",
-                    );
-
-                    if (resumeState.unprocessedManga.length > 0) {
-                      pendingMangaState.savePendingManga(
-                        resumeState.unprocessedManga,
-                      );
-                      setTimeout(() => {
-                        matchingProcess.handleResumeMatching(
-                          matchResults,
-                          setMatchResults,
-                        );
-                      }, 100);
-                    } else {
-                      pendingMangaState.savePendingManga([]);
-                      matchingProcess.setError(
-                        "All manga have already been processed. No additional matching is needed.",
-                      );
-                    }
-                  }}
-                  onCancelResume={matchingProcess.handleCancelResume}
-                />
-              )}
-
-            {/* Main content */}
-            <motion.div className="relative flex-1" variants={contentVariants}>
-              {matchResults.length > 0 ? (
-                <MatchingPanel
-                  matches={matchResults}
-                  onManualSearch={matchHandlers.handleManualSearch}
-                  onAcceptMatch={matchHandlers.handleAcceptMatch}
-                  onRejectMatch={matchHandlers.handleRejectMatch}
-                  onSelectAlternative={matchHandlers.handleSelectAlternative}
-                  onResetToPending={matchHandlers.handleResetToPending}
-                  searchQuery={searchQuery}
-                  onSetMatchedToPending={handleSetAllMatchedToPending}
-                  disableSetMatchedToPending={
-                    matchingProcess.isLoading || rateLimitState.isRateLimited
-                  }
-                  onProceedToSync={handleProceedToSync}
-                  onBackToImport={() => {
-                    pendingMangaState.savePendingManga([]);
-                    navigate({ to: "/import" });
-                  }}
-                />
-              ) : (
-                <NoResultsView
-                  onGoToImport={() => {
-                    // Clear any pending manga data
-                    pendingMangaState.savePendingManga([]);
-                    navigate({ to: "/import" });
-                  }}
-                />
-              )}
-            </motion.div>
-
-            {/* Search Modal */}
-            <SearchModal
-              isOpen={isSearchOpen}
-              searchTarget={searchTarget}
-              accessToken={authState.accessToken || ""}
-              bypassCache={true}
-              onClose={() => {
-                setIsSearchOpen(false);
-                setSearchTarget(undefined);
-                matchingProcess.setBypassCache(false);
-              }}
-              onSelectMatch={matchHandlers.handleSelectSearchMatch}
-            />
-
-            {/* Cache Clearing Notification */}
-            {matchingProcess.isCacheClearing && (
-              <CacheClearingNotification
-                cacheClearingCount={matchingProcess.cacheClearingCount}
+        {/* Rematch by status options */}
+        <AnimatePresence>
+          {showRematchOptions &&
+            !matchingProcess.isLoading &&
+            matchResults.length > 0 && (
+              <RematchOptions
+                selectedStatuses={selectedStatuses}
+                onChangeSelectedStatuses={setSelectedStatuses}
+                matchResults={matchResults}
+                rematchWarning={rematchWarning}
+                onRematchByStatus={handleRematchByStatus}
+                onCloseOptions={() => setShowRematchOptions(false)}
               />
             )}
+        </AnimatePresence>
 
-            {/* Error display when we have an error but also have results */}
+        {/* Duplicate AniList ID Warning */}
+        <AnimatePresence>
+          {showDuplicateWarning && duplicateEntries.length > 0 && (
+            <DuplicateWarning
+              duplicates={duplicateEntries}
+              onDismiss={() => setShowDuplicateWarning(false)}
+              onSearchAnilist={(title) => setSearchQuery(title)}
+              onIgnoreDuplicate={(anilistId, anilistTitle) => {
+                addIgnoredDuplicate(anilistId, anilistTitle);
+                // Refresh duplicates to remove the ignored one
+                const updatedDuplicates =
+                  detectDuplicateAniListIds(matchResults);
+                setDuplicateEntries(updatedDuplicates);
+                // Hide warning if no duplicates remain
+                if (updatedDuplicates.length === 0) {
+                  setShowDuplicateWarning(false);
+                }
+              }}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Initialization state - only show if not already loading and we have pending manga */}
+        {matchingProcess.isInitializing &&
+          !matchingProcess.isLoading &&
+          pendingMangaState.pendingManga.length > 0 && <InitializationCard />}
+
+        {/* Resume message when we have pending manga but aren't already in the loading state */}
+        {resumeState.needsProcessing &&
+          !matchingProcess.isLoading &&
+          !matchingProcess.isInitializing && (
+            <MatchingResume
+              pendingMangaCount={resumeState.unprocessedCount}
+              onResumeMatching={() => {
+                console.info(
+                  "[MatchingPage] Resume matching clicked - ensuring unprocessed manga are processed",
+                );
+
+                if (resumeState.unprocessedManga.length > 0) {
+                  pendingMangaState.savePendingManga(
+                    resumeState.unprocessedManga,
+                  );
+                  setTimeout(() => {
+                    matchingProcess.handleResumeMatching(
+                      matchResults,
+                      setMatchResults,
+                    );
+                  }, 100);
+                } else {
+                  pendingMangaState.savePendingManga([]);
+                  matchingProcess.setError(
+                    "All manga have already been processed. No additional matching is needed.",
+                  );
+                }
+              }}
+              onCancelResume={matchingProcess.handleCancelResume}
+            />
+          )}
+
+        {/* Main content */}
+        <motion.div className="relative flex-1" variants={contentVariants}>
+          {matchResults.length > 0 ? (
+            <MatchingPanel
+              matches={matchResults}
+              onManualSearch={matchHandlers.handleManualSearch}
+              onAcceptMatch={matchHandlers.handleAcceptMatch}
+              onRejectMatch={matchHandlers.handleRejectMatch}
+              onSelectAlternative={matchHandlers.handleSelectAlternative}
+              onResetToPending={matchHandlers.handleResetToPending}
+              searchQuery={searchQuery}
+              onSetMatchedToPending={handleSetAllMatchedToPending}
+              disableSetMatchedToPending={
+                matchingProcess.isLoading || rateLimitState.isRateLimited
+              }
+              onProceedToSync={handleProceedToSync}
+              onBackToImport={() => {
+                pendingMangaState.savePendingManga([]);
+                navigate({ to: "/import" });
+              }}
+            />
+          ) : (
             <AnimatePresence>
-              {matchingProcess.error &&
-                !matchingProcess.error.includes("Authentication Required") &&
-                matchResults.length > 0 &&
-                !rateLimitState.isRateLimited && (
-                  <MatchingErrorToast
-                    error={matchingProcess.error}
-                    onDismiss={() => matchingProcess.setError(null)}
-                  />
-                )}
+              <EmptyState
+                icon={<FileSearch className="h-10 w-10" />}
+                title="No manga to match"
+                description="No manga data available. Import your Kenmei library to get started."
+                actionLabel="Go to Import"
+                onAction={() => {
+                  pendingMangaState.savePendingManga([]);
+                  navigate({ to: "/import" });
+                }}
+                variant="info"
+              />
             </AnimatePresence>
-          </>
+          )}
+        </motion.div>
+
+        {/* Search Modal */}
+        <SearchModal
+          isOpen={isSearchOpen}
+          searchTarget={searchTarget}
+          accessToken={authState.accessToken || ""}
+          bypassCache={true}
+          onClose={() => {
+            setIsSearchOpen(false);
+            setSearchTarget(undefined);
+            matchingProcess.setBypassCache(false);
+          }}
+          onSelectMatch={matchHandlers.handleSelectSearchMatch}
+        />
+
+        {/* Cache Clearing Notification */}
+        {matchingProcess.isCacheClearing && (
+          <CacheClearingNotification
+            cacheClearingCount={matchingProcess.cacheClearingCount}
+          />
         )}
+
+        {/* Error display when we have an error but also have results */}
+        <AnimatePresence>
+          {matchingProcess.error &&
+            !matchingProcess.error.includes("Authentication Required") &&
+            matchResults.length > 0 &&
+            !rateLimitState.isRateLimited && (
+              <MatchingErrorToast
+                error={matchingProcess.error}
+                onDismiss={() => matchingProcess.setError(null)}
+              />
+            )}
+        </AnimatePresence>
       </motion.div>
     </div>
   );

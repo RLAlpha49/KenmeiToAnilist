@@ -82,6 +82,7 @@ export function MatchingPanel({
             onResetToPending={onResetToPending}
             searchQuery={searchQuery}
             onSetMatchedToPending={onSetMatchedToPending}
+            isLoadingInitial={matches.length === 0}
           />
         </div>
       </div>

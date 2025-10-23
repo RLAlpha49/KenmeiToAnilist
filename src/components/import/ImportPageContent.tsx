@@ -31,6 +31,7 @@ import {
   formatStatusLabel,
   type StatusCounts,
 } from "../../utils/manga-status-utils";
+import { SkeletonCard } from "../ui/skeleton";
 
 /** Animation variants for container entrance with staggered children. @source */
 const containerVariants = {
@@ -87,12 +88,12 @@ export function ImportSuccessContent({
       transition={{ duration: 0.3 }}
     >
       <div className="relative overflow-hidden rounded-3xl border border-white/30 bg-white/80 p-8 shadow-2xl backdrop-blur-lg dark:border-white/10 dark:bg-slate-950/70">
-        <div className="pointer-events-none absolute right-[-60px] top-[-60px] h-48 w-48 rounded-full bg-gradient-to-br from-emerald-500/25 via-green-500/20 to-transparent blur-3xl" />
-        <div className="pointer-events-none absolute bottom-[-80px] left-[-80px] h-64 w-64 rounded-full bg-gradient-to-br from-blue-400/20 via-indigo-400/15 to-transparent blur-3xl" />
+        <div className="bg-linear-to-br pointer-events-none absolute right-[-60px] top-[-60px] h-48 w-48 rounded-full from-emerald-500/25 via-green-500/20 to-transparent blur-3xl" />
+        <div className="bg-linear-to-br pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full from-blue-400/20 via-indigo-400/15 to-transparent blur-3xl" />
 
-        <div className="relative z-[1] mx-auto max-w-md space-y-6 text-center">
+        <div className="z-1 relative mx-auto max-w-md space-y-6 text-center">
           <motion.div
-            className="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-green-500 text-white shadow-2xl"
+            className="bg-linear-to-br mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-full from-emerald-500 to-green-500 text-white shadow-2xl"
             initial={{ scale: 0, rotate: -180 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{ type: "spring", stiffness: 200, damping: 15 }}
@@ -172,13 +173,13 @@ export function FileUploadContent({
       transition={{ duration: 0.5, delay: 0.2 }}
     >
       <div className="relative overflow-hidden rounded-3xl border border-white/30 bg-white/80 p-6 shadow-2xl backdrop-blur-lg dark:border-white/10 dark:bg-slate-950/70">
-        <div className="pointer-events-none absolute right-[-40px] top-[-40px] h-40 w-40 rounded-full bg-gradient-to-br from-blue-500/25 via-indigo-500/20 to-transparent blur-3xl" />
-        <div className="pointer-events-none absolute bottom-[-60px] left-[-60px] h-48 w-48 rounded-full bg-gradient-to-br from-emerald-400/20 via-teal-400/15 to-transparent blur-3xl" />
+        <div className="bg-linear-to-br pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full from-blue-500/25 via-indigo-500/20 to-transparent blur-3xl" />
+        <div className="bg-linear-to-br pointer-events-none absolute bottom-[-60px] left-[-60px] h-48 w-48 rounded-full from-emerald-400/20 via-teal-400/15 to-transparent blur-3xl" />
 
-        <div className="relative z-[1] space-y-6">
+        <div className="z-1 relative space-y-6">
           <div className="flex items-center gap-4">
             <motion.div
-              className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg"
+              className="bg-linear-to-r flex h-12 w-12 items-center justify-center rounded-2xl from-blue-500 to-indigo-500 text-white shadow-lg"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -234,7 +235,7 @@ export function FileUploadContent({
 
             <TabsContent value="help" className="space-y-6 pt-6">
               <motion.div
-                className="rounded-2xl border border-white/20 bg-gradient-to-br from-blue-500/10 via-indigo-500/5 to-transparent p-6 backdrop-blur-sm dark:border-white/10 dark:from-blue-500/20 dark:via-indigo-500/10"
+                className="bg-linear-to-br rounded-2xl border border-white/20 from-blue-500/10 via-indigo-500/5 to-transparent p-6 backdrop-blur-sm dark:border-white/10 dark:from-blue-500/20 dark:via-indigo-500/10"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.3, duration: 0.5 }}
@@ -294,6 +295,73 @@ export function FileReadyContent({
   onImport,
   onReset,
 }: Readonly<FileReadyProps>) {
+  // Show processing state during import
+  if (isLoading) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
+        <div className="relative overflow-hidden rounded-3xl border border-white/30 bg-white/80 p-6 shadow-2xl backdrop-blur-lg dark:border-white/10 dark:bg-slate-950/70">
+          <div className="bg-linear-to-br pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full from-blue-500/25 via-indigo-500/20 to-transparent blur-3xl" />
+          <div className="bg-linear-to-br pointer-events-none absolute bottom-[-60px] left-[-60px] h-48 w-48 rounded-full from-emerald-400/20 via-teal-400/15 to-transparent blur-3xl" />
+
+          <div className="z-1 relative space-y-6">
+            <div className="flex items-center gap-4">
+              <motion.div
+                className="bg-linear-to-r flex h-12 w-12 items-center justify-center rounded-2xl from-blue-500 to-indigo-500 text-white shadow-lg"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              >
+                <div className="h-6 w-6 rounded-full border-2 border-white/30 border-t-white" />
+              </motion.div>
+              <div>
+                <h2 className="text-foreground text-2xl font-semibold">
+                  Processing Your Library
+                </h2>
+                <p className="text-muted-foreground">
+                  Merging entries and preparing for review...
+                </p>
+              </div>
+            </div>
+
+            <motion.div
+              className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+              variants={containerVariants}
+              initial="hidden"
+              animate="show"
+            >
+              {Array.from({ length: 3 }).map((_, index) => (
+                <motion.div
+                  key={`processing-skeleton-${index + 1}`}
+                  variants={itemVariants}
+                >
+                  <SkeletonCard />
+                </motion.div>
+              ))}
+            </motion.div>
+
+            <motion.div
+              className="space-y-3"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5, duration: 0.5 }}
+            >
+              <div className="flex items-center justify-between text-sm font-medium text-blue-600 dark:text-blue-300">
+                <span>Processing entries</span>
+              </div>
+              <Progress value={0} className="h-2 animate-pulse" />
+              <p className="text-muted-foreground text-xs">
+                Combining your library with previously matched entries...
+              </p>
+            </motion.div>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -301,13 +369,13 @@ export function FileReadyContent({
       transition={{ duration: 0.5, delay: 0.2 }}
     >
       <div className="relative overflow-hidden rounded-3xl border border-white/30 bg-white/80 p-6 shadow-2xl backdrop-blur-lg dark:border-white/10 dark:bg-slate-950/70">
-        <div className="pointer-events-none absolute right-[-40px] top-[-40px] h-40 w-40 rounded-full bg-gradient-to-br from-emerald-500/25 via-green-500/20 to-transparent blur-3xl" />
-        <div className="pointer-events-none absolute bottom-[-60px] left-[-60px] h-48 w-48 rounded-full bg-gradient-to-br from-blue-400/20 via-indigo-400/15 to-transparent blur-3xl" />
+        <div className="bg-linear-to-br pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full from-emerald-500/25 via-green-500/20 to-transparent blur-3xl" />
+        <div className="bg-linear-to-br pointer-events-none absolute bottom-[-60px] left-[-60px] h-48 w-48 rounded-full from-blue-400/20 via-indigo-400/15 to-transparent blur-3xl" />
 
-        <div className="relative z-[1] space-y-6">
+        <div className="z-1 relative space-y-6">
           <div className="flex items-center gap-4">
             <motion.div
-              className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-500 to-green-500 text-white shadow-lg"
+              className="bg-linear-to-r flex h-12 w-12 items-center justify-center rounded-2xl from-emerald-500 to-green-500 text-white shadow-lg"
               whileHover={{ scale: 1.05 }}
             >
               <FileCheck className="h-6 w-6" />
@@ -329,9 +397,9 @@ export function FileReadyContent({
             animate="show"
           >
             <motion.div variants={itemVariants}>
-              <div className="relative overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-blue-500/15 via-indigo-500/10 to-blue-500/5 p-4 shadow-xl backdrop-blur-sm dark:border-blue-500/20 dark:from-blue-500/20 dark:via-indigo-500/20 dark:to-blue-500/10">
-                <div className="absolute right-[-20px] top-[-20px] h-20 w-20 rounded-full bg-blue-500/20 blur-2xl" />
-                <div className="relative z-[1] flex items-center gap-3">
+              <div className="bg-linear-to-br relative overflow-hidden rounded-2xl border border-blue-500/20 from-blue-500/15 via-indigo-500/10 to-blue-500/5 p-4 shadow-xl backdrop-blur-sm dark:border-blue-500/20 dark:from-blue-500/20 dark:via-indigo-500/20 dark:to-blue-500/10">
+                <div className="absolute -right-5 -top-5 h-20 w-20 rounded-full bg-blue-500/20 blur-2xl" />
+                <div className="z-1 relative flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-blue-600 shadow-sm dark:bg-slate-900/60">
                     <BarChart className="h-5 w-5" />
                   </div>
@@ -350,9 +418,9 @@ export function FileReadyContent({
             {/* Show previously matched count if available */}
             {previousMatchCount > 0 && (
               <motion.div variants={itemVariants}>
-                <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-green-500/10 to-emerald-500/5 p-4 shadow-xl backdrop-blur-sm dark:border-emerald-500/25 dark:from-emerald-500/20 dark:via-green-500/15 dark:to-emerald-500/10">
-                  <div className="absolute right-[-20px] top-[-20px] h-20 w-20 rounded-full bg-emerald-500/20 blur-2xl" />
-                  <div className="relative z-[1] flex items-center gap-3">
+                <div className="bg-linear-to-br relative overflow-hidden rounded-2xl border border-emerald-500/30 from-emerald-500/15 via-green-500/10 to-emerald-500/5 p-4 shadow-xl backdrop-blur-sm dark:border-emerald-500/25 dark:from-emerald-500/20 dark:via-green-500/15 dark:to-emerald-500/10">
+                  <div className="absolute -right-5 -top-5 h-20 w-20 rounded-full bg-emerald-500/20 blur-2xl" />
+                  <div className="z-1 relative flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-emerald-600 shadow-sm dark:bg-slate-900/60">
                       <Clock className="h-5 w-5" />
                     </div>
@@ -375,8 +443,8 @@ export function FileReadyContent({
                 <div
                   className={`relative overflow-hidden rounded-2xl border p-4 shadow-xl backdrop-blur-sm ${getStatusColor(status)}`}
                 >
-                  <div className="from-current/20 absolute right-[-20px] top-[-20px] h-20 w-20 rounded-full bg-gradient-to-br to-transparent blur-2xl" />
-                  <div className="relative z-[1] flex items-center gap-3">
+                  <div className="from-current/20 bg-linear-to-br absolute -right-5 -top-5 h-20 w-20 rounded-full to-transparent blur-2xl" />
+                  <div className="z-1 relative flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 shadow-sm dark:bg-slate-900/60">
                       {getStatusIcon(status)}
                     </div>
@@ -403,7 +471,11 @@ export function FileReadyContent({
             <h3 className="text-foreground mb-4 text-lg font-semibold">
               Manga Entries
             </h3>
-            <DataTable data={importData.manga} itemsPerPage={50} />
+            <DataTable
+              data={importData.manga}
+              itemsPerPage={50}
+              isLoading={isLoading}
+            />
           </motion.div>
 
           <motion.div
@@ -416,7 +488,7 @@ export function FileReadyContent({
               onClick={onImport}
               disabled={isLoading}
               size="lg"
-              className="group h-auto rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-6 py-3 text-base font-semibold text-white shadow-lg transition hover:shadow-xl focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950"
+              className="bg-linear-to-r group h-auto rounded-full from-blue-600 via-indigo-600 to-purple-600 px-6 py-3 text-base font-semibold text-white shadow-lg transition hover:shadow-xl focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950"
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">
