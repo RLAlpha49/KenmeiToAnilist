@@ -4,7 +4,7 @@
  * @description Application header component with logo, navigation, theme toggle, and window controls.
  */
 
-import React, { useState } from "react";
+import React from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import { getPathname } from "@/utils/getPathname";
 import ToggleTheme from "../ToggleTheme";
@@ -25,6 +25,7 @@ import {
   Settings as SettingsIcon,
   ArrowUpDown as SyncIcon,
   Bug,
+  HelpCircle,
 } from "lucide-react";
 import {
   minimizeWindow,
@@ -39,7 +40,7 @@ import {
 } from "../ui/tooltip";
 import { motion } from "framer-motion";
 import appIcon from "../../assets/k2a-icon-512x512.png";
-import { useDebugState } from "../../contexts/DebugContext";
+import { useDebugState, useDebugActions } from "../../contexts/DebugContext";
 import { DebugMenu } from "../debug/DebugMenu";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/utils/tailwind";
@@ -69,12 +70,17 @@ const NAV_ITEMS: NavItem[] = [
 /**
  * Header React component that displays the application header with logo, navigation links, theme toggle, and window controls.
  *
+ * @param onOpenShortcutsPanel - Optional callback function invoked to open the shortcuts panel.
  * @returns The rendered header React element.
  * @source
  */
-export function Header() {
-  const { isDebugEnabled } = useDebugState();
-  const [isDebugMenuOpen, setIsDebugMenuOpen] = useState(false);
+export function Header({
+  onOpenShortcutsPanel,
+}: Readonly<{
+  onOpenShortcutsPanel?: () => void;
+}>) {
+  const { isDebugEnabled, debugMenuOpen } = useDebugState();
+  const { openDebugMenu, closeDebugMenu } = useDebugActions();
 
   const location = useLocation();
 
@@ -85,7 +91,7 @@ export function Header() {
       <header className="border-border bg-background/80 sticky top-0 z-40 border-b backdrop-blur-xl">
         <div className="draglayer w-full">
           <div className="relative flex h-16 items-center justify-between px-4">
-            <div className="pointer-events-none absolute inset-x-6 top-1/2 z-0 h-24 -translate-y-1/2 rounded-full bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-transparent blur-2xl" />
+            <div className="bg-linear-to-r pointer-events-none absolute inset-x-6 top-1/2 z-0 h-24 -translate-y-1/2 rounded-full from-blue-500/10 via-purple-500/10 to-transparent blur-2xl" />
             <div className="flex items-center gap-4">
               {/* Logo and title */}
               <Link to="/" className="non-draggable flex items-center">
@@ -101,10 +107,10 @@ export function Header() {
                     Sync Tool
                   </p>
                   <h1 className="font-mono text-lg font-semibold leading-tight">
-                    <span className="min-[44rem]:inline hidden bg-gradient-to-r from-blue-500 via-purple-500 to-fuchsia-500 bg-clip-text text-transparent">
+                    <span className="min-[44rem]:inline bg-linear-to-r hidden from-blue-500 via-purple-500 to-fuchsia-500 bg-clip-text text-transparent">
                       Kenmei → AniList
                     </span>
-                    <span className="max-[44rem]:inline min-[44rem]:hidden inline bg-gradient-to-r from-blue-500 via-purple-500 to-fuchsia-500 bg-clip-text text-transparent">
+                    <span className="max-[44rem]:inline min-[44rem]:hidden bg-linear-to-r inline from-blue-500 via-purple-500 to-fuchsia-500 bg-clip-text text-transparent">
                       K2A
                     </span>
                   </h1>
@@ -157,6 +163,24 @@ export function Header() {
               <div className="non-draggable">
                 <ToggleTheme />
               </div>
+              <div className="non-draggable">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={onOpenShortcutsPanel}
+                      className="h-8 w-8 rounded-full"
+                      aria-label="View keyboard shortcuts"
+                    >
+                      <HelpCircle className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    Keyboard Shortcuts (?)
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               {isDebugEnabled && (
                 <div className="non-draggable">
                   <Tooltip>
@@ -164,7 +188,7 @@ export function Header() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setIsDebugMenuOpen(true)}
+                        onClick={() => openDebugMenu()}
                         className="h-8 w-8 rounded-full"
                       >
                         <Bug className="h-4 w-4" />
@@ -223,10 +247,7 @@ export function Header() {
       </header>
 
       {/* Debug Menu */}
-      <DebugMenu
-        isOpen={isDebugMenuOpen}
-        onClose={() => setIsDebugMenuOpen(false)}
-      />
+      <DebugMenu isOpen={debugMenuOpen} onClose={() => closeDebugMenu()} />
     </TooltipProvider>
   );
 }

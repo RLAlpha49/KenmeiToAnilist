@@ -157,6 +157,62 @@ The matching interface includes built-in undo/redo functionality to help you exp
 
 **Tip**: Use undo/redo to safely try different match selections. If you're not sure about a choice, you can always undo and try something else!
 
+## ⌨️ Keyboard Shortcuts
+
+The app supports keyboard shortcuts for efficient navigation and control. Press `?` or `Ctrl+/` to open the keyboard shortcuts panel and view all available shortcuts.
+
+### Navigation Shortcuts
+
+Navigate quickly between pages using number keys (Windows/Linux and Mac):
+
+| Shortcut | Action |
+|----------|--------|
+| **Ctrl+1** / **Cmd+1** | Go to Home page |
+| **Ctrl+2** / **Cmd+2** | Go to Import page |
+| **Ctrl+3** / **Cmd+3** | Go to Review / Matching page |
+| **Ctrl+4** / **Cmd+4** | Go to Sync page |
+| **Ctrl+5** / **Cmd+5** | Go to Settings page |
+
+### Matching Page Shortcuts
+
+When on the Review/Matching page, use these shortcuts for efficient matching:
+
+| Shortcut | Action |
+|----------|--------|
+| **Ctrl+F** / **Cmd+F** | Focus search input in the manga search modal |
+| **Ctrl+Z** / **Cmd+Z** | Undo last match action |
+| **Ctrl+Shift+Z** / **Cmd+Shift+Z** | Redo last undone action |
+| **Ctrl+Y** / **Cmd+Y** | Redo last undone action (alternative) |
+
+### Sync & Settings Shortcuts
+
+Configure and save your preferences:
+
+| Shortcut | Action |
+|----------|--------|
+| **Ctrl+S** / **Cmd+S** | Save configuration (context-aware: saves sync config on Sync page, match config on Settings page) |
+
+### Debug Shortcuts
+
+For troubleshooting and advanced features:
+
+| Shortcut | Action |
+|----------|--------|
+| **Ctrl+Shift+D** / **Cmd+Shift+D** | Open/Toggle debug menu |
+
+### General Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| **?** | Open keyboard shortcuts panel |
+| **Ctrl+/** / **Cmd+/** | Open keyboard shortcuts panel (alternative) |
+| **Escape** | Close open dialogs and modals |
+
+### Platform-Specific Modifiers
+
+- **Windows / Linux**: Use `Ctrl` for modifier key combinations
+- **Mac**: Use `Cmd` for modifier key combinations (shown as `⌘` on Mac keyboards)
+
 ## 🔄 Synchronizing to AniList
 
 ### Sync Options

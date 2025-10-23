@@ -501,6 +501,7 @@ export function MangaSearchPanel({
               aria-label="Search manga title or AniList ID"
               autoComplete="off"
               onKeyDown={handleKeyDown}
+              data-search-input
             />
             <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
               <span className="hidden text-xs font-semibold uppercase tracking-[0.3em] text-slate-400/70 sm:block">

@@ -49,6 +49,7 @@ import type {
  */
 interface DebugStateContextValue {
   isDebugEnabled: boolean;
+  debugMenuOpen: boolean;
   storageDebuggerEnabled: boolean;
   logViewerEnabled: boolean;
   logRedactionEnabled: boolean;
@@ -68,6 +69,9 @@ interface DebugStateContextValue {
 interface DebugActionsContextValue {
   toggleDebug: () => void;
   setDebugEnabled: (enabled: boolean) => void;
+  openDebugMenu: () => void;
+  closeDebugMenu: () => void;
+  toggleDebugMenu: () => void;
   setStorageDebuggerEnabled: (enabled: boolean) => void;
   toggleStorageDebugger: () => void;
   setLogViewerEnabled: (enabled: boolean) => void;
@@ -257,6 +261,7 @@ export function DebugProvider({
   const [stateSourceSnapshots, setStateSourceSnapshots] = useState<
     StateInspectorSourceSnapshot[]
   >([]);
+  const [debugMenuOpen, setDebugMenuOpen] = useState(false);
   const stateSourcesRef = useRef(
     new Map<string, StateInspectorSourceInternal>(),
   );
@@ -625,6 +630,11 @@ export function DebugProvider({
     setConfidenceTestExporterEnabled(!featureToggles.confidenceTestExporter);
   }, [featureToggles.confidenceTestExporter, setConfidenceTestExporterEnabled]);
 
+  // Debug menu open/close state
+  const openDebugMenu = useCallback(() => setDebugMenuOpen(true), []);
+  const closeDebugMenu = useCallback(() => setDebugMenuOpen(false), []);
+  const toggleDebugMenu = useCallback(() => setDebugMenuOpen((v) => !v), []);
+
   const registerStateInspector = useCallback(
     <T,>(config: StateInspectorRegistration<T>): StateInspectorHandle<T> => {
       const serialize = config.serialize
@@ -868,6 +878,7 @@ export function DebugProvider({
   const stateContextValue = React.useMemo<DebugStateContextValue>(
     () => ({
       isDebugEnabled,
+      debugMenuOpen,
       storageDebuggerEnabled,
       logViewerEnabled,
       logRedactionEnabled,
@@ -884,6 +895,7 @@ export function DebugProvider({
       maxLogEntries: MAX_LOG_ENTRIES,
     }),
     [
+      debugMenuOpen,
       eventLogEntries,
       eventLoggerEnabled,
       featureToggles.confidenceTestExporter,
@@ -904,6 +916,9 @@ export function DebugProvider({
     () => ({
       toggleDebug,
       setDebugEnabled,
+      openDebugMenu,
+      closeDebugMenu,
+      toggleDebugMenu,
       setStorageDebuggerEnabled,
       toggleStorageDebugger,
       setLogViewerEnabled,
