@@ -252,6 +252,9 @@ Use these scopes to indicate which part of the codebase is affected:
 - `build` - Build system
 - `release` - Release process
 - `docs` - Documentation
+- `readme` - README and top-level documentation files
+- `types` - TypeScript types and interfaces
+- `build-system` - Build tooling and scripts (CI/build-system changes)
 
 ### Examples
 

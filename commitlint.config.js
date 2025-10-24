@@ -20,7 +20,7 @@ module.exports = {
       ],
     ],
     "scope-enum": [
-      2,
+      1,
       "always",
       [
         // Core features
@@ -40,12 +40,15 @@ module.exports = {
         "hooks",
         "utils",
 
-        // Infrastructure
+        // Infrastructure / docs
         "deps",
         "config",
         "build",
+        "build-system",
         "release",
         "docs",
+        "readme",
+        "types",
       ],
     ],
     "scope-case": [2, "always", "kebab-case"],
