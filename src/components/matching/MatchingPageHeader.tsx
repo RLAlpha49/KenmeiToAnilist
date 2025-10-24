@@ -270,7 +270,9 @@ export function MatchingPageHeader({
                       matches={matchResults}
                       variant="outline"
                       size="default"
-                      disabled={matchingProcessIsLoading || rateLimitIsRateLimited}
+                      disabled={
+                        matchingProcessIsLoading || rateLimitIsRateLimited
+                      }
                     />
                     <div className="h-8 w-px bg-slate-300/50 dark:bg-slate-600/50" />
                   </>

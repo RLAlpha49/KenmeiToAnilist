@@ -156,7 +156,13 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
         unmatchedOnly,
       ),
     ).length;
-  }, [matches, statusFilters, confidenceThreshold, includeUnmatched, unmatchedOnly]);
+  }, [
+    matches,
+    statusFilters,
+    confidenceThreshold,
+    includeUnmatched,
+    unmatchedOnly,
+  ]);
 
   const handleExport = useCallback(() => {
     try {
@@ -185,20 +191,17 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
     filteredCount,
   ]);
 
-  const toggleStatusFilter = useCallback(
-    (status: MatchStatusType) => {
-      setStatusFilters((prev) => {
-        const next = new Set(prev);
-        if (next.has(status)) {
-          next.delete(status);
-        } else {
-          next.add(status);
-        }
-        return next;
-      });
-    },
-    [],
-  );
+  const toggleStatusFilter = useCallback((status: MatchStatusType) => {
+    setStatusFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(status)) {
+        next.delete(status);
+      } else {
+        next.add(status);
+      }
+      return next;
+    });
+  }, []);
 
   return (
     <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
@@ -213,7 +216,7 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
           <Download className="h-4 w-4" />
           <span>Export Matches</span>
           {matches.length > 0 && (
-            <span className="ml-1 rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium">
+            <span className="bg-primary/10 ml-1 rounded px-1.5 py-0.5 text-xs font-medium">
               {matches.length}
             </span>
           )}
@@ -251,7 +254,7 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
         >
           <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-500" />
           Matched
-          <span className="ml-auto text-xs text-muted-foreground">
+          <span className="text-muted-foreground ml-auto text-xs">
             {statusCounts.matched}
           </span>
         </DropdownMenuCheckboxItem>
@@ -262,7 +265,7 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
         >
           <Wand2 className="mr-2 h-4 w-4 text-sky-500" />
           Manual
-          <span className="ml-auto text-xs text-muted-foreground">
+          <span className="text-muted-foreground ml-auto text-xs">
             {statusCounts.manual}
           </span>
         </DropdownMenuCheckboxItem>
@@ -273,7 +276,7 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
         >
           <Clock3 className="mr-2 h-4 w-4 text-amber-500" />
           Pending
-          <span className="ml-auto text-xs text-muted-foreground">
+          <span className="text-muted-foreground ml-auto text-xs">
             {statusCounts.pending}
           </span>
         </DropdownMenuCheckboxItem>
@@ -284,7 +287,7 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
         >
           <XCircle className="mr-2 h-4 w-4 text-rose-500" />
           Skipped
-          <span className="ml-auto text-xs text-muted-foreground">
+          <span className="text-muted-foreground ml-auto text-xs">
             {statusCounts.skipped}
           </span>
         </DropdownMenuCheckboxItem>
@@ -303,16 +306,28 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
                 )
               }
             >
-              <DropdownMenuRadioItem value="0" onSelect={(e) => e.preventDefault()}>
+              <DropdownMenuRadioItem
+                value="0"
+                onSelect={(e) => e.preventDefault()}
+              >
                 All
               </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="50" onSelect={(e) => e.preventDefault()}>
+              <DropdownMenuRadioItem
+                value="50"
+                onSelect={(e) => e.preventDefault()}
+              >
                 &gt;50%
               </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="75" onSelect={(e) => e.preventDefault()}>
+              <DropdownMenuRadioItem
+                value="75"
+                onSelect={(e) => e.preventDefault()}
+              >
                 &gt;75%
               </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="90" onSelect={(e) => e.preventDefault()}>
+              <DropdownMenuRadioItem
+                value="90"
+                onSelect={(e) => e.preventDefault()}
+              >
                 &gt;90%
               </DropdownMenuRadioItem>
             </DropdownMenuRadioGroup>
@@ -350,7 +365,7 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
         <DropdownMenuItem
           onClick={handleExport}
           disabled={statusFilters.size === 0 || filteredCount === 0}
-          className="cursor-pointer bg-primary/5 font-medium text-primary hover:bg-primary/10"
+          className="bg-primary/5 text-primary hover:bg-primary/10 cursor-pointer font-medium"
         >
           <Download className="mr-2 h-4 w-4" />
           Export {filteredCount} matches

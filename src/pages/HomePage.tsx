@@ -816,7 +816,7 @@ export function HomePage() {
           >
             <div className="bg-linear-to-br relative overflow-hidden rounded-3xl border border-white/30 from-white/85 via-white/60 to-white/30 p-8 shadow-2xl backdrop-blur-lg dark:border-white/10 dark:from-slate-950/70 dark:via-slate-950/60 dark:to-slate-950/40">
               <div className="bg-linear-to-br pointer-events-none absolute -left-32 top-[-140px] h-64 w-64 rounded-full from-blue-500/25 via-purple-500/20 to-transparent blur-3xl" />
-              <div className="bg-linear-to-br pointer-events-none absolute bottom-[-140px] -right-10 h-64 w-64 rounded-full from-fuchsia-500/25 via-purple-500/15 to-transparent blur-3xl" />
+              <div className="bg-linear-to-br pointer-events-none absolute -right-10 bottom-[-140px] h-64 w-64 rounded-full from-fuchsia-500/25 via-purple-500/15 to-transparent blur-3xl" />
               <div className="z-1 relative flex flex-col gap-10 lg:flex-row lg:items-center">
                 <div className="space-y-6 lg:flex-1">
                   <Badge

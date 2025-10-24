@@ -148,9 +148,7 @@ export function flattenMatchResult(
 
   // Extract confidence from MangaMatch or default to 0
   const confidence =
-    matchForData && "confidence" in matchForData
-      ? matchForData.confidence
-      : 0;
+    matchForData && "confidence" in matchForData ? matchForData.confidence : 0;
 
   // For AniListManga properties, use the matched entry
   let anilistData: AniListManga | undefined;
@@ -183,7 +181,7 @@ export function flattenMatchResult(
     matchDate:
       match.matchDate instanceof Date
         ? match.matchDate.toISOString()
-        : match.matchDate ?? "",
+        : (match.matchDate ?? ""),
     confidence,
 
     // AniList data
@@ -191,14 +189,14 @@ export function flattenMatchResult(
     anilistTitleRomaji:
       typeof anilistData?.title === "object"
         ? anilistData.title.romaji
-        : anilistData?.title ?? "",
+        : (anilistData?.title ?? ""),
     anilistTitleEnglish:
       typeof anilistData?.title === "object"
-        ? anilistData.title.english ?? ""
+        ? (anilistData.title.english ?? "")
         : "",
     anilistTitleNative:
       typeof anilistData?.title === "object"
-        ? anilistData.title.native ?? ""
+        ? (anilistData.title.native ?? "")
         : "",
     format: anilistData?.format ?? "",
     totalChapters: anilistData?.chapters ?? null,
@@ -388,7 +386,9 @@ export function exportMatchResults(
   format: ExportFormat,
   filters?: ExportFilterOptions,
 ): string {
-  console.info(`[Export] 📤 Exporting ${matches.length} match results as ${format}`);
+  console.info(
+    `[Export] 📤 Exporting ${matches.length} match results as ${format}`,
+  );
 
   // Apply filters if provided
   const filteredMatches = filters
@@ -401,10 +401,7 @@ export function exportMatchResults(
 
   switch (format) {
     case "json":
-      filename = exportToJson(
-        filteredMatches,
-        "match-results",
-      );
+      filename = exportToJson(filteredMatches, "match-results");
       break;
     case "csv": {
       const flattened = filteredMatches.map(flattenMatchResult);
