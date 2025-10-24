@@ -1,10 +1,13 @@
 /**
  * @packageDocumentation
  * @module exportUtils
- * @description Utility functions for exporting data to JSON files and sync reports.
+ * @description Utility functions for exporting data to JSON, CSV, and Excel files, including match results and sync reports.
  */
 
+import Papa from "papaparse";
+import * as XLSX from "xlsx";
 import { SyncReport } from "../api/anilist/sync-service";
+import { MangaMatchResult, AniListManga } from "../api/anilist/types";
 
 /**
  * Generates a timestamp string suitable for use in filenames.
@@ -21,12 +24,68 @@ export function generateExportTimestamp(): string {
 }
 
 /**
- * Exports a data object as a JSON file and triggers browser download.
+ * Export format options.
+ * @source
+ */
+export type ExportFormat = "json" | "csv" | "excel";
+
+/**
+ * Options for filtering data during export.
+ * @source
+ */
+export interface ExportFilterOptions {
+  /** Filter by match status */
+  statusFilter?: ("matched" | "manual" | "pending" | "skipped")[];
+  /** Minimum confidence threshold (0-100) */
+  confidenceThreshold?: number;
+  /** Include entries without matches */
+  includeUnmatched?: boolean;
+  /** Only export unmatched entries (no selectedMatch and no anilistMatches) */
+  unmatchedOnly?: boolean;
+}
+
+/**
+ * Flattened representation of match result for CSV/Excel export.
+ * @source
+ */
+export interface FlattenedMatchResult {
+  // Kenmei data
+  kenmeiId: number;
+  kenmeiTitle: string;
+  kenmeiStatus: string;
+  kenmeiScore: number | null;
+  chaptersRead: number;
+  volumesRead: number;
+  author: string;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+  lastReadAt: string;
+
+  // Match data
+  matchStatus: string;
+  matchDate: string;
+  confidence: number;
+
+  // AniList data
+  anilistId: number | null;
+  anilistTitleRomaji: string;
+  anilistTitleEnglish: string;
+  anilistTitleNative: string;
+  format: string;
+  totalChapters: number | null;
+  totalVolumes: number | null;
+  genres: string;
+}
+
+/**
+ * Exports data as a JSON file and triggers browser download.
  *
  * Handles all the boilerplate of creating a blob, object URL, and anchor element for triggering
  * a file download. Automatically appends a timestamp to the filename.
+ * Supports both objects and arrays for flexible data export.
  *
- * @param data - The data object to export (will be stringified to pretty-printed JSON).
+ * @param data - The data to export (object or array that will be stringified to pretty-printed JSON).
  * @param baseFilename - The base filename without extension or timestamp.
  * @returns The full filename that was used for download (including timestamp and extension).
  * @throws Will throw if JSON stringification fails (e.g., circular references).
@@ -34,7 +93,7 @@ export function generateExportTimestamp(): string {
  * @source
  */
 export function exportToJson(
-  data: Record<string, unknown>,
+  data: Record<string, unknown> | unknown[],
   baseFilename: string,
 ): string {
   // Serialize to pretty-printed JSON
@@ -59,6 +118,315 @@ export function exportToJson(
   // Clean up object URL
   URL.revokeObjectURL(url);
 
+  return filename;
+}
+
+/**
+ * Flattens a nested MangaMatchResult into a single-level object for CSV/Excel export.
+ *
+ * @param match - The match result to flatten.
+ * @returns Flattened representation with all key fields at the top level.
+ * @source
+ */
+export function flattenMatchResult(
+  match: MangaMatchResult,
+): FlattenedMatchResult {
+  const kenmei = match.kenmeiManga;
+
+  // Find the highest confidence match from anilistMatches
+  const highestConfidenceMatch =
+    match.anilistMatches && match.anilistMatches.length > 0
+      ? match.anilistMatches.reduce(
+          (prev, current) =>
+            current.confidence > prev.confidence ? current : prev,
+          match.anilistMatches[0],
+        )
+      : null;
+
+  // Use selectedMatch or fall back to highest confidence match
+  const matchForData = match.selectedMatch ?? highestConfidenceMatch;
+
+  // Extract confidence from MangaMatch or default to 0
+  const confidence =
+    matchForData && "confidence" in matchForData
+      ? matchForData.confidence
+      : 0;
+
+  // For AniListManga properties, use the matched entry
+  let anilistData: AniListManga | undefined;
+  if (!matchForData) {
+    anilistData = undefined;
+  } else if ("manga" in matchForData) {
+    // It's a MangaMatch, extract the manga property
+    anilistData = matchForData.manga;
+  } else {
+    // It's already an AniListManga
+    anilistData = matchForData;
+  }
+
+  return {
+    // Kenmei data
+    kenmeiId: kenmei.id,
+    kenmeiTitle: kenmei.title,
+    kenmeiStatus: kenmei.status || "",
+    kenmeiScore: kenmei.score,
+    chaptersRead: kenmei.chapters_read || 0,
+    volumesRead: kenmei.volumes_read || 0,
+    author: kenmei.author || "",
+    notes: kenmei.notes || "",
+    createdAt: kenmei.created_at || "",
+    updatedAt: kenmei.updated_at || "",
+    lastReadAt: kenmei.last_read_at || "",
+
+    // Match data
+    matchStatus: match.status,
+    matchDate:
+      match.matchDate instanceof Date
+        ? match.matchDate.toISOString()
+        : match.matchDate ?? "",
+    confidence,
+
+    // AniList data
+    anilistId: anilistData?.id ?? null,
+    anilistTitleRomaji:
+      typeof anilistData?.title === "object"
+        ? anilistData.title.romaji
+        : anilistData?.title ?? "",
+    anilistTitleEnglish:
+      typeof anilistData?.title === "object"
+        ? anilistData.title.english ?? ""
+        : "",
+    anilistTitleNative:
+      typeof anilistData?.title === "object"
+        ? anilistData.title.native ?? ""
+        : "",
+    format: anilistData?.format ?? "",
+    totalChapters: anilistData?.chapters ?? null,
+    totalVolumes: anilistData?.volumes ?? null,
+    genres: Array.isArray(anilistData?.genres)
+      ? anilistData.genres.join("; ")
+      : "",
+  };
+}
+
+/**
+ * Filters match results based on provided criteria.
+ *
+ * @param matches - Array of match results to filter.
+ * @param filters - Filter options to apply.
+ * @returns Filtered array of match results.
+ * @source
+ */
+export function filterMatchResults(
+  matches: MangaMatchResult[],
+  filters: ExportFilterOptions,
+): MangaMatchResult[] {
+  let filtered = [...matches];
+
+  // Apply status filter
+  if (filters.statusFilter && filters.statusFilter.length > 0) {
+    filtered = filtered.filter((match) =>
+      filters.statusFilter!.includes(
+        match.status as "matched" | "manual" | "pending" | "skipped",
+      ),
+    );
+  }
+
+  // Apply confidence threshold
+  if (
+    filters.confidenceThreshold !== undefined &&
+    filters.confidenceThreshold > 0
+  ) {
+    filtered = filtered.filter((match) => {
+      const highestConfidenceMatch =
+        match.anilistMatches && match.anilistMatches.length > 0
+          ? match.anilistMatches.reduce(
+              (prev, current) =>
+                current.confidence > prev.confidence ? current : prev,
+              match.anilistMatches[0],
+            )
+          : null;
+      return (
+        highestConfidenceMatch &&
+        highestConfidenceMatch.confidence >= filters.confidenceThreshold!
+      );
+    });
+  }
+
+  // Apply unmatchedOnly filter (takes precedence over includeUnmatched)
+  if (filters.unmatchedOnly === true) {
+    filtered = filtered.filter(
+      (match) =>
+        !match.selectedMatch &&
+        (!match.anilistMatches || match.anilistMatches.length === 0),
+    );
+  } else if (filters.includeUnmatched === false) {
+    // Apply unmatched filter only if unmatchedOnly is not set
+    filtered = filtered.filter(
+      (match) =>
+        match.selectedMatch ||
+        (match.anilistMatches && match.anilistMatches.length > 0),
+    );
+  }
+
+  return filtered;
+}
+
+/**
+ * Exports data to CSV format and triggers browser download.
+ *
+ * Includes UTF-8 BOM prefix to improve Excel compatibility on Windows.
+ *
+ * @param data - Array of objects to export.
+ * @param baseFilename - Base filename without extension or timestamp.
+ * @returns The full filename used for download.
+ * @throws Will throw if CSV generation fails.
+ * @source
+ */
+export function exportToCSV(
+  data: Record<string, unknown>[],
+  baseFilename: string,
+): string {
+  // Convert to CSV using papaparse
+  const csv = Papa.unparse(data, {
+    header: true,
+    quotes: true,
+  });
+
+  // Create blob with UTF-8 BOM prefix for better Excel compatibility
+  const bom = "\ufeff";
+  const blob = new Blob([bom, csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  // Generate timestamped filename
+  const timestamp = generateExportTimestamp();
+  const filename = `${baseFilename}-${timestamp}.csv`;
+
+  // Trigger download
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  // Clean up object URL
+  URL.revokeObjectURL(url);
+
+  return filename;
+}
+
+/**
+ * Exports data to Excel (.xlsx) format and triggers browser download.
+ *
+ * @param data - Array of objects to export.
+ * @param baseFilename - Base filename without extension or timestamp.
+ * @param sheetName - Name for the worksheet (default: "Sheet1").
+ * @returns The full filename used for download.
+ * @throws Will throw if Excel generation fails.
+ * @source
+ */
+export function exportToExcel(
+  data: Record<string, unknown>[],
+  baseFilename: string,
+  sheetName: string = "Sheet1",
+): string {
+  // Create workbook and worksheet
+  const workbook = XLSX.utils.book_new();
+  const worksheet = XLSX.utils.json_to_sheet(data);
+
+  // Add worksheet to workbook
+  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+
+  // Generate binary
+  const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+
+  // Create blob and download link
+  const blob = new Blob([excelBuffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  // Generate timestamped filename
+  const timestamp = generateExportTimestamp();
+  const filename = `${baseFilename}-${timestamp}.xlsx`;
+
+  // Trigger download
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  // Clean up object URL
+  URL.revokeObjectURL(url);
+
+  return filename;
+}
+
+/**
+ * Exports match results in the specified format with optional filtering.
+ *
+ * @param matches - Array of match results to export.
+ * @param format - Export format (json, csv, or excel).
+ * @param filters - Optional filters to apply before export.
+ * @returns The filename of the exported file.
+ * @throws Will throw if export fails.
+ * @example
+ * ```typescript
+ * // Export matched items only as CSV
+ * const filename = exportMatchResults(matches, 'csv', {
+ *   statusFilter: ['matched'],
+ *   confidenceThreshold: 75
+ * });
+ * ```
+ * @source
+ */
+export function exportMatchResults(
+  matches: MangaMatchResult[],
+  format: ExportFormat,
+  filters?: ExportFilterOptions,
+): string {
+  console.info(`[Export] 📤 Exporting ${matches.length} match results as ${format}`);
+
+  // Apply filters if provided
+  const filteredMatches = filters
+    ? filterMatchResults(matches, filters)
+    : matches;
+
+  console.info(`[Export] 🔍 Filtered to ${filteredMatches.length} matches`);
+
+  let filename: string;
+
+  switch (format) {
+    case "json":
+      filename = exportToJson(
+        filteredMatches,
+        "match-results",
+      );
+      break;
+    case "csv": {
+      const flattened = filteredMatches.map(flattenMatchResult);
+      filename = exportToCSV(
+        flattened as unknown as Record<string, unknown>[],
+        "match-results",
+      );
+      break;
+    }
+    case "excel": {
+      const flattened = filteredMatches.map(flattenMatchResult);
+      filename = exportToExcel(
+        flattened as unknown as Record<string, unknown>[],
+        "match-results",
+        "Match Results",
+      );
+      break;
+    }
+    default:
+      throw new Error(`Unsupported export format: ${format}`);
+  }
+  console.info(`[Export] ✅ Successfully exported to ${filename}`);
   return filename;
 }
 

@@ -31,6 +31,7 @@ import {
   storage,
   STORAGE_KEYS,
   resetOnboarding,
+  getSavedMatchResults,
 } from "../utils/storage";
 import { motion, AnimatePresence } from "framer-motion";
 import { OnboardingWizard } from "../components/onboarding/OnboardingWizard";
@@ -502,15 +503,14 @@ export function HomePage() {
     const parseMatchResults = () => {
       try {
         console.debug("[HomePage] 🔍 Loading match results...");
-        const matchResultsStr = localStorage.getItem("match_results");
-        if (!matchResultsStr) {
+        const matchResults = getSavedMatchResults();
+        if (!matchResults || matchResults.length === 0) {
           console.debug("[HomePage] 🔍 No match results found");
           setMatchStatus(getEmptyMatchStatus());
           return;
         }
 
-        const matchResults = JSON.parse(matchResultsStr) || {};
-        const entries = Object.values(matchResults);
+        const entries = matchResults;
         const totalCount = entries.length;
 
         if (totalCount === 0) {
@@ -798,7 +798,7 @@ export function HomePage() {
       <div className="relative min-h-screen overflow-hidden">
         <div className="pointer-events-none absolute inset-0">
           <div className="bg-linear-to-br absolute -left-1/3 top-[8%] h-[420px] w-[420px] rounded-full from-blue-500/25 via-purple-500/20 to-transparent blur-3xl" />
-          <div className="bg-linear-to-br absolute right-[-10%] top-[35%] h-[320px] w-[320px] rounded-full from-emerald-400/20 via-teal-400/20 to-transparent blur-[140px]" />
+          <div className="bg-linear-to-br absolute right-[-10%] top-[35%] h-80 w-[320px] rounded-full from-emerald-400/20 via-teal-400/20 to-transparent blur-[140px]" />
           <div className="bg-linear-to-br absolute bottom-[-20%] left-1/2 h-[280px] w-[480px] -translate-x-1/2 rounded-full from-amber-300/20 via-pink-300/20 to-transparent blur-[200px]" />
         </div>
 
@@ -816,7 +816,7 @@ export function HomePage() {
           >
             <div className="bg-linear-to-br relative overflow-hidden rounded-3xl border border-white/30 from-white/85 via-white/60 to-white/30 p-8 shadow-2xl backdrop-blur-lg dark:border-white/10 dark:from-slate-950/70 dark:via-slate-950/60 dark:to-slate-950/40">
               <div className="bg-linear-to-br pointer-events-none absolute -left-32 top-[-140px] h-64 w-64 rounded-full from-blue-500/25 via-purple-500/20 to-transparent blur-3xl" />
-              <div className="bg-linear-to-br pointer-events-none absolute bottom-[-140px] right-[-40px] h-64 w-64 rounded-full from-fuchsia-500/25 via-purple-500/15 to-transparent blur-3xl" />
+              <div className="bg-linear-to-br pointer-events-none absolute bottom-[-140px] -right-10 h-64 w-64 rounded-full from-fuchsia-500/25 via-purple-500/15 to-transparent blur-3xl" />
               <div className="z-1 relative flex flex-col gap-10 lg:flex-row lg:items-center">
                 <div className="space-y-6 lg:flex-1">
                   <Badge
@@ -965,7 +965,7 @@ export function HomePage() {
           >
             <motion.div variants={itemVariants}>
               <Card className="bg-linear-to-br relative overflow-hidden border border-blue-500/20 from-blue-500/15 via-indigo-500/10 to-blue-500/5 p-6 shadow-xl backdrop-blur-sm dark:border-blue-500/20 dark:from-blue-500/20 dark:via-indigo-500/20 dark:to-blue-500/10">
-                <div className="absolute right-[-40px] top-[-40px] h-40 w-40 rounded-full bg-blue-500/20 blur-3xl" />
+                <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-blue-500/20 blur-3xl" />
                 <CardHeader className="flex flex-col gap-2 p-0 pb-4">
                   <CardTitle className="flex items-center gap-2 text-lg font-semibold text-blue-700 dark:text-blue-200">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-blue-600 shadow-sm dark:bg-slate-900/60">
@@ -1036,7 +1036,7 @@ export function HomePage() {
 
             <motion.div variants={itemVariants}>
               <Card className="bg-linear-to-br relative overflow-hidden border border-purple-500/20 from-purple-500/15 via-fuchsia-500/10 to-purple-500/5 p-6 shadow-xl backdrop-blur-sm dark:border-purple-500/20 dark:from-purple-500/20 dark:via-fuchsia-500/20 dark:to-purple-500/10">
-                <div className="absolute right-[-70px] top-[40px] h-48 w-48 rounded-full bg-purple-500/25 blur-3xl" />
+                <div className="absolute right-[-70px] top-10 h-48 w-48 rounded-full bg-purple-500/25 blur-3xl" />
                 <CardHeader className="flex flex-col gap-2 p-0 pb-4">
                   <CardTitle className="flex items-center gap-2 text-lg font-semibold text-purple-700 dark:text-purple-200">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-purple-600 shadow-sm dark:bg-slate-900/60">

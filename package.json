@@ -37,6 +37,7 @@
     "@types/electron-squirrel-startup": "^1.0.2",
     "@types/node": "^24.9.1",
     "@types/node-fetch": "^3.0.2",
+    "@types/papaparse": "^5.3.14",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
     "@vitejs/plugin-react": "^5.0.4",
@@ -95,12 +96,14 @@
     "lucide-react": "^0.546.0",
     "natural": "^8.1.0",
     "node-fetch": "^3.3.2",
+    "papaparse": "^5.4.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "sonner": "^2.0.7",
     "string-similarity": "^4.0.4",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4.1.15",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "xlsx": "^0.18.5"
   }
 }

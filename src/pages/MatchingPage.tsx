@@ -4,6 +4,8 @@
  * @description Matching page component for the Kenmei to AniList sync tool. Handles manga matching, review, rematch, and sync preparation.
  */
 
+// TODO: Header should align buttons to next line at a sooner width.
+
 import React, {
   useState,
   useEffect,
@@ -1506,6 +1508,7 @@ export function MatchingPage() {
             handleRedo={() => {}}
             canUndo={false}
             canRedo={false}
+            matchResults={[]}
           />
           <motion.div
             className="relative flex flex-1 items-center justify-center"
@@ -1544,6 +1547,7 @@ export function MatchingPage() {
             handleRedo={() => {}}
             canUndo={false}
             canRedo={false}
+            matchResults={[]}
           />
           <motion.div
             className="relative grid flex-1 grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
@@ -1600,6 +1604,7 @@ export function MatchingPage() {
           handleRedo={handleRedo}
           canUndo={canUndo}
           canRedo={canRedo}
+          matchResults={matchResults}
         />
 
         {/* Rematch by status options */}

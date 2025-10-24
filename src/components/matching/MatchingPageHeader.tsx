@@ -19,6 +19,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "../ui/tooltip";
+import { ExportMatchesButton } from "./ExportMatchesButton";
+import { MangaMatchResult } from "../../api/anilist/types";
 
 /**
  * Highlight stat configuration for display in the header.
@@ -76,6 +78,7 @@ interface Props {
   handleRedo?: () => void;
   canUndo?: boolean;
   canRedo?: boolean;
+  matchResults: MangaMatchResult[];
 }
 
 /**
@@ -102,6 +105,7 @@ export function MatchingPageHeader({
   handleRedo,
   canUndo = false,
   canRedo = false,
+  matchResults,
 }: Readonly<Props>) {
   const { matched, manual, pending, reviewed, total, completionPercent } =
     statusSummary;
@@ -257,6 +261,19 @@ export function MatchingPageHeader({
                     </div>
                     <div className="h-8 w-px bg-slate-300/50 dark:bg-slate-600/50" />
                   </TooltipProvider>
+                )}
+
+                {/* Export Button */}
+                {matchResultsLength > 0 && (
+                  <>
+                    <ExportMatchesButton
+                      matches={matchResults}
+                      variant="outline"
+                      size="default"
+                      disabled={matchingProcessIsLoading || rateLimitIsRateLimited}
+                    />
+                    <div className="h-8 w-px bg-slate-300/50 dark:bg-slate-600/50" />
+                  </>
                 )}
 
                 {matched > 0 && (
