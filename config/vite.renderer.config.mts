@@ -57,7 +57,11 @@ export default defineConfig({
             { match: "/components/import/", name: "app-import-components" },
             { match: "/components/matching/", name: "app-matching-components" },
             { match: "/components/sync/", name: "app-sync-components" },
-            { match: "/context/", name: "app-context" },
+            {
+              match: "/components/statistics/",
+              name: "app-statistics-components",
+            },
+            { match: "/contexts/", name: "app-context" },
             { match: "/helpers/", name: "app-helpers" },
             { match: "/hooks/", name: "app-hooks" },
             { match: "/pages/", name: "app-pages" },

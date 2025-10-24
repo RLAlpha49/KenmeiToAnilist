@@ -59,6 +59,7 @@ export function Root() {
         "navigate:import": "/import",
         "navigate:review": "/review",
         "navigate:sync": "/sync",
+        "navigate:statistics": "/statistics",
         "navigate:settings": "/settings",
       };
       if (routes[action]) {

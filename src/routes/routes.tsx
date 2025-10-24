@@ -11,6 +11,7 @@ import { ImportPage } from "../pages/ImportPage";
 import { SettingsPage } from "../pages/SettingsPage";
 import { MatchingPage } from "../pages/MatchingPage";
 import { SyncPage } from "../pages/SyncPage";
+import { StatisticsPage } from "../pages/StatisticsPage";
 
 // Steps to add a new route:
 // 1. Create a new page component in the '../pages/' directory (e.g., NewPage.tsx)
@@ -87,6 +88,17 @@ export const SettingsRoute = createRoute({
 });
 
 /**
+ * Route for the statistics page ('/statistics').
+ *
+ * @source
+ */
+export const StatisticsRoute = createRoute({
+  getParentRoute: () => RootRoute,
+  path: "/statistics",
+  component: StatisticsPage,
+});
+
+/**
  * The root route tree containing all main application routes.
  *
  * @source
@@ -97,4 +109,5 @@ export const rootTree = RootRoute.addChildren([
   ReviewRoute,
   SyncRoute,
   SettingsRoute,
+  StatisticsRoute,
 ]);

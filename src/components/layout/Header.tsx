@@ -24,6 +24,7 @@ import {
   ClipboardCheck,
   Settings as SettingsIcon,
   ArrowUpDown as SyncIcon,
+  BarChart3,
   Bug,
   HelpCircle,
 } from "lucide-react";
@@ -64,6 +65,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Import", to: "/import", icon: Download },
   { label: "Review", to: "/review", icon: ClipboardCheck },
   { label: "Sync", to: "/sync", icon: SyncIcon },
+  { label: "Statistics", to: "/statistics", icon: BarChart3 },
   { label: "Settings", to: "/settings", icon: SettingsIcon },
 ];
 

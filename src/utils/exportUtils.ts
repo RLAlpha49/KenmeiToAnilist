@@ -8,6 +8,7 @@ import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { SyncReport } from "../api/anilist/sync-service";
 import { MangaMatchResult, AniListManga } from "../api/anilist/types";
+import { storage, STORAGE_KEYS } from "./storage";
 
 /**
  * Generates a timestamp string suitable for use in filenames.
@@ -104,21 +105,23 @@ export function exportToJson(
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
 
-  // Generate timestamped filename
-  const timestamp = generateExportTimestamp();
-  const filename = `${baseFilename}-${timestamp}.json`;
+  try {
+    // Generate timestamped filename
+    const timestamp = generateExportTimestamp();
+    const filename = `${baseFilename}-${timestamp}.json`;
 
-  // Trigger download
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
+    // Trigger download
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
 
-  // Clean up object URL
-  URL.revokeObjectURL(url);
-
-  return filename;
+    return filename;
+  } finally {
+    // Ensure cleanup always runs
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
 }
 
 /**
@@ -128,19 +131,76 @@ export function exportToJson(
  * @returns Flattened representation with all key fields at the top level.
  * @source
  */
+/**
+ * Minimal match result acceptable for flattening.
+ * Compatible with both MangaMatchResult and statistics-normalized results.
+ * @source
+ */
+type FlattenableMatchResult = {
+  readonly kenmeiManga: {
+    id: string | number;
+    title: string;
+    status?: string;
+    score?: number;
+    chapters_read?: number;
+    volumes_read?: number;
+    notes?: string;
+    created_at?: string;
+    updated_at?: string;
+    last_read_at?: string;
+  };
+  readonly anilistMatches?: Array<{
+    confidence?: number;
+    manga?: AniListManga;
+  }>;
+  readonly selectedMatch?: {
+    format?: string;
+    genres?: string[];
+  };
+  readonly status: string;
+  readonly matchDate?: Date;
+};
+
+/**
+ * Extracts AniListManga data from match data.
+ * Handles both MangaMatch (with confidence) and minimal selectedMatch objects.
+ */
+function extractAniListData(matchForData: unknown): AniListManga | undefined {
+  if (!matchForData) return undefined;
+
+  const obj = matchForData as Record<string, unknown>;
+
+  // Check if it's a MangaMatch with manga property
+  if (obj.manga && typeof obj.manga === "object") {
+    return obj.manga as AniListManga;
+  }
+
+  // Check if it's the minimal selectedMatch (has format/genres but no id)
+  if ("format" in obj && "genres" in obj && !("id" in obj)) {
+    return undefined;
+  }
+
+  // Check if it's already an AniListManga (has id)
+  if ("id" in obj) {
+    return obj as unknown as AniListManga;
+  }
+
+  return undefined;
+}
+
 export function flattenMatchResult(
-  match: MangaMatchResult,
+  match: MangaMatchResult | FlattenableMatchResult,
 ): FlattenedMatchResult {
   const kenmei = match.kenmeiManga;
 
   // Find the highest confidence match from anilistMatches
   const highestConfidenceMatch =
     match.anilistMatches && match.anilistMatches.length > 0
-      ? match.anilistMatches.reduce(
-          (prev, current) =>
-            current.confidence > prev.confidence ? current : prev,
-          match.anilistMatches[0],
-        )
+      ? match.anilistMatches.reduce((prev, current) => {
+          const prevConf = prev.confidence ?? 0;
+          const currConf = current.confidence ?? 0;
+          return currConf > prevConf ? current : prev;
+        }, match.anilistMatches[0])
       : null;
 
   // Use selectedMatch or fall back to highest confidence match
@@ -148,29 +208,22 @@ export function flattenMatchResult(
 
   // Extract confidence from MangaMatch or default to 0
   const confidence =
-    matchForData && "confidence" in matchForData ? matchForData.confidence : 0;
+    matchForData && "confidence" in matchForData
+      ? (matchForData.confidence ?? 0)
+      : 0;
 
-  // For AniListManga properties, use the matched entry
-  let anilistData: AniListManga | undefined;
-  if (!matchForData) {
-    anilistData = undefined;
-  } else if ("manga" in matchForData) {
-    // It's a MangaMatch, extract the manga property
-    anilistData = matchForData.manga;
-  } else {
-    // It's already an AniListManga
-    anilistData = matchForData;
-  }
+  // Extract AniListManga data safely
+  const anilistData = extractAniListData(matchForData);
 
   return {
     // Kenmei data
-    kenmeiId: kenmei.id,
+    kenmeiId: Number(kenmei.id),
     kenmeiTitle: kenmei.title,
     kenmeiStatus: kenmei.status || "",
-    kenmeiScore: kenmei.score,
+    kenmeiScore: kenmei.score ?? null,
     chaptersRead: kenmei.chapters_read || 0,
     volumesRead: kenmei.volumes_read || 0,
-    author: kenmei.author || "",
+    author: "author" in kenmei ? (kenmei.author ?? "") : "",
     notes: kenmei.notes || "",
     createdAt: kenmei.created_at || "",
     updatedAt: kenmei.updated_at || "",
@@ -188,16 +241,16 @@ export function flattenMatchResult(
     anilistId: anilistData?.id ?? null,
     anilistTitleRomaji:
       typeof anilistData?.title === "object"
-        ? anilistData.title.romaji
-        : (anilistData?.title ?? ""),
+        ? (anilistData.title.romaji ?? kenmei.title)
+        : (anilistData?.title ?? kenmei.title),
     anilistTitleEnglish:
       typeof anilistData?.title === "object"
-        ? (anilistData.title.english ?? "")
-        : "",
+        ? (anilistData.title.english ?? kenmei.title)
+        : (anilistData?.title ?? kenmei.title),
     anilistTitleNative:
       typeof anilistData?.title === "object"
-        ? (anilistData.title.native ?? "")
-        : "",
+        ? (anilistData.title.native ?? kenmei.title)
+        : (anilistData?.title ?? kenmei.title),
     format: anilistData?.format ?? "",
     totalChapters: anilistData?.chapters ?? null,
     totalVolumes: anilistData?.volumes ?? null,
@@ -297,21 +350,23 @@ export function exportToCSV(
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
 
-  // Generate timestamped filename
-  const timestamp = generateExportTimestamp();
-  const filename = `${baseFilename}-${timestamp}.csv`;
+  try {
+    // Generate timestamped filename
+    const timestamp = generateExportTimestamp();
+    const filename = `${baseFilename}-${timestamp}.csv`;
 
-  // Trigger download
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
+    // Trigger download
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
 
-  // Clean up object URL
-  URL.revokeObjectURL(url);
-
-  return filename;
+    return filename;
+  } finally {
+    // Ensure cleanup always runs
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
 }
 
 /**
@@ -346,21 +401,23 @@ export function exportToExcel(
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
 
-  // Generate timestamped filename
-  const timestamp = generateExportTimestamp();
-  const filename = `${baseFilename}-${timestamp}.xlsx`;
+  try {
+    // Generate timestamped filename
+    const timestamp = generateExportTimestamp();
+    const filename = `${baseFilename}-${timestamp}.xlsx`;
 
-  // Trigger download
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
+    // Trigger download
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
 
-  // Clean up object URL
-  URL.revokeObjectURL(url);
-
-  return filename;
+    return filename;
+  } finally {
+    // Ensure cleanup always runs
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
 }
 
 /**
@@ -495,18 +552,17 @@ export function exportSyncReport(report: SyncReport): void {
 }
 
 /**
- * Saves a sync report to localStorage for later reference.
+ * Saves a sync report to storage for later reference.
  *
- * Persists the report to browser storage and maintains a history of up to 10 most recent reports.
+ * Persists the report using the storage abstraction and maintains a history of up to 10 most recent reports.
  *
  * @param report - The sync report to save.
  * @source
  */
 export function saveSyncReportToHistory(report: SyncReport): void {
   try {
-    // Get existing history from localStorage
-    const storageKey = "anilist_sync_history";
-    const existingHistoryJson = localStorage.getItem(storageKey);
+    // Get existing history from storage
+    const existingHistoryJson = storage.getItem(STORAGE_KEYS.SYNC_HISTORY);
     const existingHistory: SyncReport[] = existingHistoryJson
       ? JSON.parse(existingHistoryJson)
       : [];
@@ -514,8 +570,8 @@ export function saveSyncReportToHistory(report: SyncReport): void {
     // Add new report to history (limit to most recent 10)
     const updatedHistory = [report, ...existingHistory].slice(0, 10);
 
-    // Save back to localStorage
-    localStorage.setItem(storageKey, JSON.stringify(updatedHistory));
+    // Save back to storage
+    storage.setItem(STORAGE_KEYS.SYNC_HISTORY, JSON.stringify(updatedHistory));
 
     console.debug("[Export] Sync report saved to history");
   } catch (error) {

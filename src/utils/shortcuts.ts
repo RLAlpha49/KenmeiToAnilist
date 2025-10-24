@@ -95,9 +95,17 @@ export const SHORTCUTS: Shortcut[] = [
     scope: "global",
   },
   {
-    id: "nav-settings",
+    id: "nav-statistics",
     category: ShortcutCategory.NAVIGATION,
     keys: { key: "5", ctrl: true },
+    description: "Navigate to Statistics",
+    action: "navigate:statistics",
+    scope: "global",
+  },
+  {
+    id: "nav-settings",
+    category: ShortcutCategory.NAVIGATION,
+    keys: { key: "6", ctrl: true },
     description: "Navigate to Settings",
     action: "navigate:settings",
     scope: "global",

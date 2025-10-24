@@ -27,3 +27,46 @@ export const formatTimeRemaining = (seconds: number): string => {
     return `${hours} hour${hours === 1 ? "" : "s"} ${minutes} minute${minutes === 1 ? "" : "s"}`;
   }
 };
+
+/**
+ * Formats a timestamp into a relative time string (e.g., "2 hours ago", "3 days ago").
+ *
+ * Converts an ISO 8601 timestamp or null value into a human-readable relative time.
+ * Falls back to "Never" if no timestamp is provided.
+ *
+ * @param timestamp - ISO 8601 timestamp string or null.
+ * @returns A human-readable relative time string.
+ * @source
+ */
+export const formatRelativeTime = (timestamp: string | null): string => {
+  if (!timestamp) return "Never";
+
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) {
+    return "Unknown";
+  }
+
+  const diffMs = Date.now() - date.getTime();
+  const minute = 60_000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+
+  if (diffMs < minute) return "Just now";
+  if (diffMs < hour) {
+    const minutes = Math.round(diffMs / minute);
+    return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  }
+  if (diffMs < day) {
+    const hours = Math.round(diffMs / hour);
+    return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  }
+  if (diffMs < 7 * day) {
+    const days = Math.round(diffMs / day);
+    return `${days} day${days === 1 ? "" : "s"} ago`;
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+};

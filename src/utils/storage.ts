@@ -155,7 +155,12 @@ export const storage = {
    * Stores a value across all storage layers (cache → localStorage → electron-store).
    *
    * Updates cache immediately and syncs to localStorage and electron-store asynchronously.
-   * Skips redundant writes if the value hasn't changed.
+   * **Important**: Skips redundant writes if the in-memory cache already holds the same value.
+   * This optimization avoids thrashing localStorage and electron-store during rapid successive writes
+   * with the same value, but can cause drift if the storage layers become out of sync.
+   *
+   * If you suspect cache/localStorage/electron-store drift, clear the cache or use `storage.getItemAsync()`
+   * to explicitly sync from the authoritative electron-store layer before writing.
    *
    * @param key - The storage key.
    * @param value - The value to store.
@@ -163,7 +168,8 @@ export const storage = {
    */
   setItem: (key: string, value: string): void => {
     try {
-      // Check if value changed to avoid redundant operations
+      // Redundancy check: skip write if value hasn't changed in cache
+      // This prevents unnecessary I/O, but can cause drift if layers get out of sync
       if (storageCache[key] === value) {
         console.debug(`[Storage] 🔍 Skipping redundant write for key: ${key}`);
         return;
@@ -382,6 +388,7 @@ export const STORAGE_KEYS = {
   ONBOARDING_COMPLETED: "onboarding_completed",
   BACKUP_HISTORY: "backup_history",
   AUTO_BACKUP_ENABLED: "auto_backup_enabled",
+  SYNC_HISTORY: "sync_history",
 };
 
 /**

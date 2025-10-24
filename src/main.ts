@@ -30,12 +30,24 @@ startGroup(`[Main] App Initialization v${app.getVersion()}`);
 console.info(
   `[Main] 🚀 Initializing app v${app.getVersion()} in ${process.env.NODE_ENV || "production"} mode`,
 );
-Sentry.init({
-  dsn: process.env.SENTRY_DSN || undefined,
-  environment: process.env.NODE_ENV,
-  release: app.getVersion(),
-});
-console.debug("[Main] 🔍 Sentry initialized");
+
+// Initialize Sentry only in production with a valid DSN
+const sentryDsn = process.env.SENTRY_DSN;
+const isProduction = process.env.NODE_ENV === "production";
+if (sentryDsn && isProduction) {
+  Sentry.init({
+    dsn: sentryDsn,
+    environment: process.env.NODE_ENV,
+    release: app.getVersion(),
+  });
+  console.debug("[Main] 🔍 Sentry initialized");
+} else if (isProduction) {
+  console.debug("[Main] 🔍 Sentry DSN not configured, skipping initialization");
+} else {
+  console.debug(
+    "[Main] 🔍 Sentry disabled in non-production environment (NODE_ENV !== production)",
+  );
+}
 
 // --- Auto-Updater Configuration ---
 autoUpdater.autoDownload = false;
@@ -44,17 +56,23 @@ autoUpdater.logger = console;
 
 // Set up auto-updater event listeners for logging
 autoUpdater.on("checking-for-update", () => {
-  console.info("[Auto-Updater] 🔍 Checking for updates...");
+  if (!isProduction) {
+    console.info("[Auto-Updater] 🔍 Checking for updates...");
+  }
 });
 
 autoUpdater.on("update-available", (info) => {
-  console.info(`[Auto-Updater] ✅ Update available: v${info.version}`);
+  if (!isProduction) {
+    console.info(`[Auto-Updater] ✅ Update available: v${info.version}`);
+  }
 });
 
 autoUpdater.on("update-not-available", (info) => {
-  console.info(
-    `[Auto-Updater] ℹ️ No updates available (current: v${info.version})`,
-  );
+  if (!isProduction) {
+    console.info(
+      `[Auto-Updater] ℹ️ No updates available (current: v${info.version})`,
+    );
+  }
 });
 
 autoUpdater.on("error", (error) => {
@@ -67,7 +85,9 @@ autoUpdater.on("error", (error) => {
   });
 });
 
-console.debug("[Main] 🔍 Auto-updater configured");
+if (!isProduction) {
+  console.debug("[Main] 🔍 Auto-updater configured");
+}
 endGroup();
 // --- End Sentry Initialization ---
 
@@ -305,11 +325,19 @@ function createWindow() {
 
 /**
  * Installs development extensions (e.g., React Developer Tools).
- * @returns Promise that resolves when extensions are installed.
- * @remarks Only runs in development mode.
+ * @returns Promise that resolves when extensions are installed, or no-op if dev tools not enabled.
+ * @remarks Only runs when inDevelopment is true or enableDevTools is set via environment.
  * @source
  */
 async function installExtensions() {
+  // Gate behind dev-only or explicit opt-in
+  if (!inDevelopment && !enableDevTools) {
+    console.debug(
+      "[Main] 🔍 Dev tools not enabled, skipping extension installation",
+    );
+    return;
+  }
+
   return withGroupAsync(`[Main] Install Extensions`, async () => {
     try {
       const result = await installExtension(REACT_DEVELOPER_TOOLS);

@@ -13,9 +13,6 @@ import { storage, STORAGE_KEYS } from "@/utils/storage";
 storage.setItem(STORAGE_KEYS.KENMEI_DATA, JSON.stringify(data));
 const data = storage.getItem(STORAGE_KEYS.KENMEI_DATA);
 
-// Force write to override redundancy check:
-storage.setItem(STORAGE_KEYS.MATCH_RESULTS, JSON.stringify(results), true);
-
 // ❌ WRONG - security violation
 localStorage.getItem(key);
 ipcRenderer.invoke("store:set", key, value);
@@ -93,7 +90,7 @@ throw error; // raw error without context
 
 1. **Not respecting AniList rate limits** (60 req/min) - batch operations must check `RateLimitContext`
 2. **Bypassing search cache for no reason** - cache reduces API calls significantly
-3. **Redundant storage writes** - use `forceWrite` parameter only when actually overriding
+3. **Redundant storage writes** - storage layer automatically skips writes if value hasn't changed via cache check
 4. **Not memoizing expensive calculations** - React Compiler auto-memoizes, but profile before manual `useMemo`
 
 ### Type Safety Issues
@@ -118,7 +115,9 @@ throw error; // raw error without context
 - Manual memoization usually unnecessary - compiler handles optimization
 - Only manually optimize after profiling shows benefit
 
-## Storage Keys (STORAGE_KEYS constant)
+## Storage Keys (Canonical Source: `src/utils/storage.ts` STORAGE_KEYS)
+
+The `STORAGE_KEYS` constant in `src/utils/storage.ts` is the **single source of truth**. Always reference it there for the authoritative list:
 
 ```typescript
 (KENMEI_DATA,
@@ -130,7 +129,15 @@ throw error; // raw error without context
   SYNC_STATS,
   MATCH_CONFIG,
   IGNORED_DUPLICATES,
-  ACTIVE_SYNC_SNAPSHOT);
+  ACTIVE_SYNC_SNAPSHOT,
+  ANILIST_SEARCH_CACHE,
+  UPDATE_DISMISSED_VERSIONS,
+  ONBOARDING_COMPLETED,
+  BACKUP_HISTORY,
+  AUTO_BACKUP_ENABLED,
+  SYNC_HISTORY);
 ```
 
 **Cache Versioning**: `CURRENT_CACHE_VERSION = 1` - increment when changing data structure to invalidate old data
+
+**Storage Write Behavior**: `storage.setItem()` skips redundant writes if the in-memory cache already holds the same value. This avoids thrashing localStorage and electron-store, but can cause drift if the layers get out of sync. For cases requiring forced convergence, use `storage.setItemAsync()` directly or clear the cache before writing.
