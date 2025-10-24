@@ -342,8 +342,8 @@ function navigateToSync() {
 #### MatchingPage (`src/pages/MatchingPage.tsx`)
 
 - **Purpose**: Manga matching interface with manual review capabilities
-- **Features**: Automatic matching, manual search, confidence scoring
-- **Key State**: Match results, search progress, user selections
+- **Features**: Automatic matching, manual search, confidence scoring, batch selection
+- **Key State**: Match results, search progress, user selections, batch selection state
 - **Integration**: Uses matching algorithms, AniList search, storage persistence
 
 #### SyncPage (`src/pages/SyncPage.tsx`)

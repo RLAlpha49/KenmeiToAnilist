@@ -3,7 +3,7 @@
  * @module MangaMatchingPanel
  * @description React component for reviewing, filtering, sorting, and managing manga match results, including manual search, acceptance, rejection, and alternative selection.
  */
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { KenmeiManga } from "../../api/kenmei/types";
 import { MangaMatchResult, AniListManga } from "../../api/anilist/types";
 import {
@@ -51,6 +51,10 @@ import { AlternativeSearchSettingsCard } from "./MangaMatchingPanel/AlternativeS
  * @property onSelectAlternative - Optional callback to select an alternative match.
  * @property onResetToPending - Optional callback to reset a match to pending status.
  * @property isLoadingInitial - Optional flag to show skeleton loaders during initial load.
+ * @property selectedMatchIds - Optional set of selected match IDs for batch operations.
+ * @property onToggleSelection - Optional callback to toggle selection of a match.
+ * @property onSelectAll - Optional callback to select all visible matches with list of IDs.
+ * @property onClearSelection - Optional callback to clear all selections.
  * @internal
  * @source
  */
@@ -70,6 +74,10 @@ export interface MangaMatchingPanelProps {
   onSetMatchedToPending?: () => void;
   disableSetMatchedToPending?: boolean;
   isLoadingInitial?: boolean;
+  selectedMatchIds?: Set<number>;
+  onToggleSelection?: (matchId: number) => void;
+  onSelectAll?: (ids: number[]) => void;
+  onClearSelection?: () => void;
 }
 
 /**
@@ -89,6 +97,10 @@ export function MangaMatchingPanel({
   searchQuery,
   onSetMatchedToPending,
   isLoadingInitial = false,
+  selectedMatchIds,
+  onToggleSelection,
+  onSelectAll,
+  onClearSelection,
 }: Readonly<MangaMatchingPanelProps>) {
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilters, setStatusFilters] = useState<StatusFiltersState>({
@@ -200,6 +212,14 @@ export function MangaMatchingPanel({
       setEnableMangaDexSearch(!enabled);
     }
   };
+
+  // Selection helper
+  const isMatchSelected = useCallback(
+    (matchId: number): boolean => {
+      return selectedMatchIds?.has(matchId) ?? false;
+    },
+    [selectedMatchIds],
+  );
 
   // Handler for opening external links in the default browser
   const handleOpenExternal = (url: string) => (e: React.MouseEvent) => {
@@ -377,6 +397,39 @@ export function MangaMatchingPanel({
     globalThis.addEventListener("keydown", handleKeyDown);
     return () => globalThis.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  // Handle Ctrl+A to select all visible items on current page
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger when typing in input fields or text areas
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+      const modifier = isMac ? e.metaKey : e.ctrlKey;
+
+      // Ctrl/Cmd+A to select all visible items on current page
+      if (
+        modifier &&
+        e.key === "a" &&
+        currentMatches.length > 0 &&
+        onSelectAll
+      ) {
+        e.preventDefault();
+        const visibleIds = currentMatches.map((match) => match.kenmeiManga.id);
+        onSelectAll(visibleIds);
+      }
+    };
+
+    globalThis.addEventListener("keydown", handleKeyDown);
+    return () => globalThis.removeEventListener("keydown", handleKeyDown);
+  }, [currentMatches, onSelectAll]);
 
   // Count statistics
   const matchStats = {
@@ -761,6 +814,55 @@ export function MangaMatchingPanel({
         matchStats={matchStats}
       />
 
+      {/* Batch Selection Controls */}
+      {onSelectAll && (
+        <Card className="relative mb-4 overflow-hidden rounded-3xl border border-white/40 bg-white/75 shadow-xl shadow-slate-900/5 backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/70">
+          <CardHeader className="relative z-10">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <CardTitle className="text-base font-semibold text-slate-900 dark:text-white">
+                  Batch Selection
+                </CardTitle>
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                  {selectedMatchIds && selectedMatchIds.size > 0
+                    ? `${selectedMatchIds.size} match${selectedMatchIds.size === 1 ? "" : "es"} selected`
+                    : "Select multiple matches for batch operations"}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                {selectedMatchIds && selectedMatchIds.size > 0 ? (
+                  <button
+                    type="button"
+                    onClick={onClearSelection}
+                    className="rounded-xl bg-slate-500/10 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-500/20 dark:text-slate-300 dark:hover:bg-slate-500/30"
+                    title="Clear Selection (Esc)"
+                  >
+                    Clear Selection
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onSelectAll) {
+                        // Only select items currently visible on this page
+                        const visibleIds = currentMatches.map(
+                          (match) => match.kenmeiManga.id,
+                        );
+                        onSelectAll(visibleIds);
+                      }
+                    }}
+                    className="rounded-xl bg-blue-500/10 px-4 py-2 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30"
+                    title="Select All Visible Matches on This Page (Ctrl+A)"
+                  >
+                    Select All Visible
+                  </button>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+      )}
+
       <AlternativeSearchSettingsCard
         enableMangaDexSearch={enableMangaDexSearch}
         onComickSearchToggle={handleComickSearchToggle}
@@ -1010,6 +1112,12 @@ export function MangaMatchingPanel({
                   onRejectMatch={onRejectMatch}
                   onSelectAlternative={onSelectAlternative}
                   onResetToPending={onResetToPending}
+                  isSelected={isMatchSelected(match.kenmeiManga.id)}
+                  onToggleSelection={
+                    onToggleSelection
+                      ? () => onToggleSelection(match.kenmeiManga.id)
+                      : undefined
+                  }
                 />
               );
             })}

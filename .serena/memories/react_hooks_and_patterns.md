@@ -125,15 +125,30 @@ useEffect(() => {
 
 ### useMatchHandlers()
 
-**Purpose**: Handle all match actions (accept, reject, rematch)
+**Purpose**: Handle all match actions (accept, reject, rematch) with support for batch operations
 **From**: `src/hooks/useMatchHandlers.ts`
 **Returns**: `MatchHandlersProps` object with handlers:
 
 - `onManualSearch(manga)` - User manual search
-- `onAcceptMatch(result)` - Accept suggested match
-- `onRejectMatch(result)` - Reject match
+- `onAcceptMatch(result | batchOp)` - Accept suggested match (single or batch)
+- `onRejectMatch(result | batchOp)` - Reject match (single or batch)
 - `onSelectAlternative(result, index)` - Pick from alternatives
-- `onResetToPending(result)` - Reset to pending status
+- `onResetToPending(result | batchOp)` - Reset to pending status (single or batch)
+- `createBatchOperation(matches)` - Helper to create type-safe batch operations
+
+**Batch Operation Support**:
+
+```typescript
+// Single match
+handleAcceptMatch(matchResult);
+
+// Batch operation
+const selectedMatches = matchResults.filter((m) => selectedIds.has(m.kenmeiManga.id));
+handleAcceptMatch({ isBatchOperation: true, matches: selectedMatches });
+
+// Using helper
+handleAcceptMatch(createBatchOperation(selectedMatches));
+```
 
 ### usePendingManga()
 
@@ -148,6 +163,58 @@ useEffect(() => {
   updatePending: (results) => void;
 }
 ```
+
+---
+
+## Common Patterns
+
+### Batch Selection Pattern
+
+**Purpose**: Enable users to select multiple items and perform batch operations with undo/redo support.
+
+**Implementation in MatchingPage**:
+
+- State: `useState<Set<number>>(new Set())` for tracking selected IDs
+- Use Set for O(1) lookup and automatic deduplication
+- Create new Set instance when updating to trigger re-renders: `setSelected(new Set(prev).add(id))`
+
+**Integration with useMatchHandlers**:
+
+- Batch operations use the existing `{ isBatchOperation: true, matches: MangaMatchResult[] }` pattern
+- Handlers automatically create `BatchCommand` instances for undo/redo
+- Example:
+  ```typescript
+  const selectedMatches = matchResults.filter((m) => selectedIds.has(m.kenmeiManga.id));
+  handleAcceptMatch({ isBatchOperation: true, matches: selectedMatches });
+  ```
+
+**Virtual Scrolling Compatibility**:
+
+- Selection state is independent of rendered items
+- Use unique IDs (kenmeiManga.id) rather than array indices
+- Selection persists during scroll, filter, and sort operations
+- Clear selection on rematch operations to avoid stale references
+
+**Keyboard Shortcuts**:
+
+- Ctrl+A: Select all visible/filtered items
+- Escape: Clear selection
+- Check `event.target` to avoid triggering in input fields
+- Use `event.preventDefault()` to prevent browser default behavior
+
+**Visual Feedback**:
+
+- Checkbox in card top-left corner (absolute positioning)
+- Ring border when selected: `ring-2 ring-blue-500 ring-offset-2`
+- Subtle background tint: `bg-blue-50/50 dark:bg-blue-950/20`
+- Floating toolbar appears when items selected
+
+**Performance Considerations**:
+
+- Memoize selection handlers with `useCallback`
+- Pass stable props to MatchCard to prevent unnecessary re-renders
+- Use React.memo on BatchSelectionToolbar
+- Batch state updates when selecting multiple items
 
 ---
 

@@ -46,6 +46,8 @@ export interface MatchCardProps {
     directAccept?: boolean,
   ) => void;
   onResetToPending?: (match: MangaMatchResult) => void;
+  isSelected?: boolean;
+  onToggleSelection?: () => void;
 }
 
 const renderAltCover = (
@@ -66,7 +68,7 @@ const renderAltCover = (
   }
 
   return (
-    <div className="relative overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-indigo-200/60 via-white/70 to-indigo-100/40 p-[3px] shadow-[0_22px_60px_-28px_rgba(37,99,235,0.55)] transition-all duration-500 group-hover/cover:-translate-y-1 group-hover/cover:shadow-[0_32px_70px_-25px_rgba(59,130,246,0.65)] dark:from-slate-900/70 dark:via-slate-900/50 dark:to-indigo-500/20">
+    <div className="bg-linear-to-br relative overflow-hidden rounded-3xl from-indigo-200/60 via-white/70 to-indigo-100/40 p-[3px] shadow-[0_22px_60px_-28px_rgba(37,99,235,0.55)] transition-all duration-500 group-hover/cover:-translate-y-1 group-hover/cover:shadow-[0_32px_70px_-25px_rgba(59,130,246,0.65)] dark:from-slate-900/70 dark:via-slate-900/50 dark:to-indigo-500/20">
       <div className="relative h-44 w-32 overflow-hidden rounded-[1.35rem] ring-1 ring-white/60 backdrop-blur-sm dark:ring-slate-800/60">
         {altIsAdult ? (
           <button
@@ -112,7 +114,7 @@ const renderAltCover = (
           <div className="absolute left-1 top-1">
             <Badge
               variant="destructive"
-              className={`${sourceBadgeBaseClasses} border-rose-300/70 bg-gradient-to-r from-rose-500/95 via-rose-500/90 to-rose-600/95 text-white shadow-[0_14px_30px_-18px_rgba(190,18,60,0.6)]`}
+              className={`${sourceBadgeBaseClasses} bg-linear-to-r border-rose-300/70 from-rose-500/95 via-rose-500/90 to-rose-600/95 text-white shadow-[0_14px_30px_-18px_rgba(190,18,60,0.6)]`}
               title="Adult Content"
             >
               18+
@@ -276,7 +278,7 @@ const renderPrimarySourceBadges = (
     <div className="pointer-events-none absolute -left-3 -top-3 flex gap-1">
       {hasComick && (
         <Badge
-          className={`${sourceBadgeBaseClasses} border-orange-300/70 bg-gradient-to-r from-orange-500/95 via-orange-400/85 to-orange-500/90 text-white shadow-[0_14px_34px_-18px_rgba(249,115,22,0.55)]`}
+          className={`${sourceBadgeBaseClasses} bg-linear-to-r border-orange-300/70 from-orange-500/95 via-orange-400/85 to-orange-500/90 text-white shadow-[0_14px_34px_-18px_rgba(249,115,22,0.55)]`}
           title={`Found via Comick: ${firstMatch?.sourceInfo?.title || firstMatch?.comickSource?.title}`}
         >
           Comick
@@ -284,7 +286,7 @@ const renderPrimarySourceBadges = (
       )}
       {hasMangaDex && (
         <Badge
-          className={`${sourceBadgeBaseClasses} border-sky-300/70 bg-gradient-to-r from-sky-500/95 via-sky-400/85 to-sky-500/90 text-white shadow-[0_14px_34px_-18px_rgba(56,189,248,0.55)]`}
+          className={`${sourceBadgeBaseClasses} bg-linear-to-r border-sky-300/70 from-sky-500/95 via-sky-400/85 to-sky-500/90 text-white shadow-[0_14px_34px_-18px_rgba(56,189,248,0.55)]`}
           title={`Found via MangaDex: ${firstMatch?.sourceInfo?.title || firstMatch?.mangaDexSource?.title}`}
         >
           MangaDex
@@ -570,7 +572,7 @@ const renderTitleEntries = (
       {titleEntries.map((entry, idx) => (
         <li
           key={`${entry.label}-${idx}`}
-          className="break-words leading-snug [word-break:break-word]"
+          className="wrap-break-word leading-snug [word-break:break-word]"
         >
           <span className="font-semibold text-gray-600 dark:text-gray-300">
             {entry.label}:
@@ -654,7 +656,7 @@ const renderPrimaryCover = (
   }
 
   return (
-    <div className="relative overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-indigo-200/60 via-white/70 to-indigo-100/40 p-[3px] shadow-[0_22px_60px_-28px_rgba(37,99,235,0.55)] transition-all duration-500 group-hover/cover:-translate-y-1 group-hover/cover:shadow-[0_32px_70px_-25px_rgba(59,130,246,0.65)] dark:from-slate-900/70 dark:via-slate-900/50 dark:to-indigo-500/20">
+    <div className="bg-linear-to-br relative overflow-hidden rounded-3xl from-indigo-200/60 via-white/70 to-indigo-100/40 p-[3px] shadow-[0_22px_60px_-28px_rgba(37,99,235,0.55)] transition-all duration-500 group-hover/cover:-translate-y-1 group-hover/cover:shadow-[0_32px_70px_-25px_rgba(59,130,246,0.65)] dark:from-slate-900/70 dark:via-slate-900/50 dark:to-indigo-500/20">
       <div className="relative h-44 w-32 overflow-hidden rounded-[1.35rem] ring-1 ring-white/60 backdrop-blur-sm dark:ring-slate-800/60">
         {primaryIsAdult ? (
           <button
@@ -702,7 +704,7 @@ const renderPrimaryCover = (
           <div className="absolute left-1 top-1">
             <Badge
               variant="destructive"
-              className={`${sourceBadgeBaseClasses} border-rose-300/70 bg-gradient-to-r from-rose-500/95 via-rose-500/90 to-rose-600/95 text-white shadow-[0_14px_30px_-18px_rgba(190,18,60,0.6)]`}
+              className={`${sourceBadgeBaseClasses} bg-linear-to-r border-rose-300/70 from-rose-500/95 via-rose-500/90 to-rose-600/95 text-white shadow-[0_14px_30px_-18px_rgba(190,18,60,0.6)]`}
               title="Adult Content"
             >
               18+
@@ -823,14 +825,14 @@ const AlternativeMatchItemComponent: React.FC<AlternativeMatchItemProps> = ({
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
-            <div className="group/cover relative flex-shrink-0">
+            <div className="group/cover relative shrink-0">
               {coverContent}
 
               {(hasComick || hasMangaDex) && (
                 <div className="pointer-events-none absolute -left-3 -top-3 flex gap-1">
                   {hasComick && (
                     <Badge
-                      className={`${sourceBadgeBaseClasses} border-orange-300/70 bg-gradient-to-r from-orange-500/95 via-orange-400/85 to-orange-500/90 text-white shadow-[0_14px_34px_-18px_rgba(249,115,22,0.55)]`}
+                      className={`${sourceBadgeBaseClasses} bg-linear-to-r border-orange-300/70 from-orange-500/95 via-orange-400/85 to-orange-500/90 text-white shadow-[0_14px_34px_-18px_rgba(249,115,22,0.55)]`}
                       title={`Found via Comick: ${altMatch.sourceInfo?.title || altMatch.comickSource?.title}`}
                     >
                       Comick
@@ -838,7 +840,7 @@ const AlternativeMatchItemComponent: React.FC<AlternativeMatchItemProps> = ({
                   )}
                   {hasMangaDex && (
                     <Badge
-                      className={`${sourceBadgeBaseClasses} border-sky-300/70 bg-gradient-to-r from-sky-500/95 via-sky-400/85 to-sky-500/90 text-white shadow-[0_14px_34px_-18px_rgba(56,189,248,0.55)]`}
+                      className={`${sourceBadgeBaseClasses} bg-linear-to-r border-sky-300/70 from-sky-500/95 via-sky-400/85 to-sky-500/90 text-white shadow-[0_14px_34px_-18px_rgba(56,189,248,0.55)]`}
                       title={`Found via MangaDex: ${altMatch.sourceInfo?.title || altMatch.mangaDexSource?.title}`}
                     >
                       MangaDex
@@ -858,7 +860,7 @@ const AlternativeMatchItemComponent: React.FC<AlternativeMatchItemProps> = ({
                   {altTitleEntries.map((entry, altIdx) => (
                     <li
                       key={`${entry.label}-${altIdx}`}
-                      className="break-words leading-snug [word-break:break-word]"
+                      className="wrap-break-word leading-snug [word-break:break-word]"
                     >
                       <span className="font-semibold text-gray-600 dark:text-gray-300">
                         {entry.label}:
@@ -870,7 +872,7 @@ const AlternativeMatchItemComponent: React.FC<AlternativeMatchItemProps> = ({
               )}
             </div>
           </div>
-          <div className="flex w-full flex-col gap-2 sm:min-w-[240px] sm:max-w-[360px] sm:flex-shrink-0 sm:items-end sm:self-start">
+          <div className="flex w-full flex-col gap-2 sm:min-w-60 sm:max-w-[360px] sm:shrink-0 sm:items-end sm:self-start">
             <div className="flex w-full flex-col items-end gap-2 self-stretch sm:w-auto sm:self-end">
               {altMatch.confidence !== undefined && (
                 <ConfidenceBadge
@@ -974,7 +976,7 @@ const AlternativeMatchItemComponent: React.FC<AlternativeMatchItemProps> = ({
         <div className="flex flex-wrap items-center justify-start gap-3">
           <Button
             type="button"
-            className="relative overflow-hidden rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-400 to-lime-400 px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_32px_-15px_rgba(16,185,129,0.6)] transition-all hover:shadow-[0_20px_45px_-18px_rgba(101,163,13,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/80 focus-visible:ring-offset-2 dark:from-emerald-500 dark:via-emerald-400 dark:to-lime-500"
+            className="bg-linear-to-r relative overflow-hidden rounded-xl from-emerald-500 via-emerald-400 to-lime-400 px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_32px_-15px_rgba(16,185,129,0.6)] transition-all hover:shadow-[0_20px_45px_-18px_rgba(101,163,13,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/80 focus-visible:ring-offset-2 dark:from-emerald-500 dark:via-emerald-400 dark:to-lime-500"
             onClick={() => onSelectAlternative?.(match, index + 1, false, true)}
             aria-label={
               "Accept " +
@@ -1030,6 +1032,8 @@ function MatchCard({
   onRejectMatch,
   onSelectAlternative,
   onResetToPending,
+  isSelected = false,
+  onToggleSelection,
 }: Readonly<MatchCardProps>) {
   const { confidenceTestExporterEnabled } = useDebug();
 
@@ -1142,22 +1146,50 @@ function MatchCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.2 }}
-      className={`group relative overflow-hidden rounded-3xl border ${borderColorClass} bg-gradient-to-br from-white/85 via-slate-50/70 to-white/90 p-1 shadow-[0_28px_80px_-30px_rgba(30,41,59,0.55)] ring-1 ring-slate-200/60 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_38px_95px_-30px_rgba(30,41,59,0.65)] dark:from-slate-950/85 dark:via-slate-900/75 dark:to-slate-950/90 dark:ring-slate-900/60 ${glowClass}`}
+      className={`group relative overflow-hidden rounded-3xl border ${borderColorClass} ${isSelected ? "bg-blue-50/50 ring-2 ring-blue-500 ring-offset-2 ring-offset-white dark:bg-blue-950/20 dark:ring-blue-400 dark:ring-offset-slate-950" : "bg-linear-to-br from-white/85 via-slate-50/70 to-white/90 ring-1 ring-slate-200/60 dark:from-slate-950/85 dark:via-slate-900/75 dark:to-slate-950/90 dark:ring-slate-900/60"} p-1 shadow-[0_28px_80px_-30px_rgba(30,41,59,0.55)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_38px_95px_-30px_rgba(30,41,59,0.65)] ${glowClass}`}
       tabIndex={0}
       aria-label={`Match result for ${match.kenmeiManga.title}`}
     >
+      {/* Selection Checkbox */}
+      {onToggleSelection && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSelection();
+          }}
+          className="top-6.5 absolute left-5 z-20 flex h-6 w-6 items-center justify-center rounded-md border-2 border-slate-300 bg-white transition-all hover:border-blue-400 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:border-slate-600 dark:bg-slate-900 dark:hover:border-blue-500 dark:hover:bg-blue-950/30 dark:focus:ring-offset-slate-950"
+          aria-label="Select this match"
+          aria-pressed={isSelected}
+        >
+          {isSelected && (
+            <svg
+              className="h-4 w-4 text-blue-600 dark:text-blue-400"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                clipRule="evenodd"
+              />
+            </svg>
+          )}
+        </button>
+      )}
+
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -bottom-20 left-1/2 h-60 w-60 -translate-x-1/2 rounded-full bg-indigo-200/30 blur-3xl dark:bg-indigo-500/20"
       />
-      <div className="relative z-[1] flex flex-col gap-4">
+      <div className="z-1 relative flex flex-col gap-4">
         {/* Title and Status Bar with color indicator */}
-        <div className="relative overflow-hidden rounded-2xl border border-white/40 bg-gradient-to-r from-white/90 via-white/60 to-white/30 p-5 shadow-sm dark:border-slate-800/60 dark:from-slate-900/80 dark:via-slate-900/60 dark:to-slate-950/60">
+        <div className="bg-linear-to-r relative overflow-hidden rounded-2xl border border-white/40 from-white/90 via-white/60 to-white/30 p-5 shadow-sm dark:border-slate-800/60 dark:from-slate-900/80 dark:via-slate-900/60 dark:to-slate-950/60">
           {/* Status color indicator */}
           <div
             className={`absolute inset-y-0 left-0 w-1 ${statusBgColorClass}`}
           ></div>
-          <div className="relative flex items-center justify-between pl-2">
+          <div className="relative flex items-center justify-between pl-6">
             <div className="flex items-center">
               {renderMatchStatusBadge(
                 match,
@@ -1172,12 +1204,14 @@ function MatchCard({
                 {match.kenmeiManga.title}
               </h3>
             </div>
-            {renderKenmeiHeaderLink(
-              kenmeiHeaderUrl,
-              handleOpenExternal,
-              kenmeiHeaderBadgeClasses,
-              match.kenmeiManga.title,
-            )}
+            <div className="min-w-[120px]">
+              {renderKenmeiHeaderLink(
+                kenmeiHeaderUrl,
+                handleOpenExternal,
+                kenmeiHeaderBadgeClasses,
+                match.kenmeiManga.title,
+              )}
+            </div>
           </div>
         </div>
 
@@ -1187,7 +1221,7 @@ function MatchCard({
             <div className="flex flex-col gap-6">
               <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
-                  <div className="group/cover relative flex-shrink-0">
+                  <div className="group/cover relative shrink-0">
                     {/* Cover image with proper fallbacks and adult content handling */}
                     {renderPrimaryCover(
                       primaryCoverImage,
@@ -1212,7 +1246,7 @@ function MatchCard({
                     {renderTitleEntries(titleEntries)}
                   </div>
                 </div>
-                <div className="flex w-full flex-col gap-2 sm:min-w-[240px] sm:max-w-[360px] sm:flex-shrink-0 sm:items-end sm:self-start">
+                <div className="flex w-full flex-col gap-2 sm:min-w-60 sm:max-w-[360px] sm:shrink-0 sm:items-end sm:self-start">
                   <div className="flex w-full flex-col items-end gap-2 self-stretch sm:w-auto sm:self-end">
                     {renderConfidenceBadge(match)}
                     {confidenceTestExporterEnabled && (
@@ -1283,7 +1317,7 @@ function MatchCard({
 
         {/* Alternative matches - only show for non-matched entries */}
         {shouldShowAlternativeMatches(match) && (
-          <div className="rounded-2xl border border-white/30 bg-gradient-to-br from-white/80 via-white/60 to-white/40 px-5 py-5 shadow-lg shadow-slate-900/10 backdrop-blur-sm dark:border-slate-800/60 dark:from-slate-900/80 dark:via-slate-900/65 dark:to-slate-950/55">
+          <div className="bg-linear-to-br rounded-2xl border border-white/30 from-white/80 via-white/60 to-white/40 px-5 py-5 shadow-lg shadow-slate-900/10 backdrop-blur-sm dark:border-slate-800/60 dark:from-slate-900/80 dark:via-slate-900/65 dark:to-slate-950/55">
             <h4 className="mb-4 flex items-center text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-300">
               <ChevronRight className="mr-1 h-4 w-4" aria-hidden="true" />
               Alternative Matches

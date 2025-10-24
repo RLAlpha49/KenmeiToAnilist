@@ -113,6 +113,22 @@ export const SHORTCUTS: Shortcut[] = [
     scope: "matching-page",
   },
   {
+    id: "match-select-all",
+    category: ShortcutCategory.MATCHING,
+    keys: { key: "a", ctrl: true },
+    description: "Select all visible matches",
+    action: "select-all:matches",
+    scope: "matching-page",
+  },
+  {
+    id: "match-clear-selection",
+    category: ShortcutCategory.MATCHING,
+    keys: { key: "Escape" },
+    description: "Clear current selection",
+    action: "clear-selection",
+    scope: "matching-page",
+  },
+  {
     id: "match-undo",
     category: ShortcutCategory.MATCHING,
     keys: { key: "z", ctrl: true },

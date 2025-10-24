@@ -19,6 +19,10 @@ import type { KenmeiManga } from "../../api/kenmei/types";
  * @property onBackToImport - Callback to return to the import stage.
  * @property onSetMatchedToPending - Optional callback to reset matched items to pending.
  * @property disableSetMatchedToPending - Whether to disable the pending reset button.
+ * @property selectedMatchIds - Optional set of selected match IDs for batch operations.
+ * @property onToggleSelection - Optional callback to toggle selection of a match.
+ * @property onSelectAll - Optional callback to select all visible matches.
+ * @property onClearSelection - Optional callback to clear all selections.
  * @source
  */
 interface Props {
@@ -38,6 +42,10 @@ interface Props {
   onBackToImport: () => void;
   onSetMatchedToPending?: () => void;
   disableSetMatchedToPending?: boolean;
+  selectedMatchIds?: Set<number>;
+  onToggleSelection?: (matchId: number) => void;
+  onSelectAll?: (ids: number[]) => void;
+  onClearSelection?: () => void;
 }
 
 /**
@@ -61,6 +69,10 @@ export function MatchingPanel({
   onProceedToSync,
   onBackToImport,
   onSetMatchedToPending,
+  selectedMatchIds,
+  onToggleSelection,
+  onSelectAll,
+  onClearSelection,
 }: Readonly<Props>) {
   return (
     <motion.div
@@ -83,6 +95,10 @@ export function MatchingPanel({
             searchQuery={searchQuery}
             onSetMatchedToPending={onSetMatchedToPending}
             isLoadingInitial={matches.length === 0}
+            selectedMatchIds={selectedMatchIds}
+            onToggleSelection={onToggleSelection}
+            onSelectAll={onSelectAll}
+            onClearSelection={onClearSelection}
           />
         </div>
       </div>

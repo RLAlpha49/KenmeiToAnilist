@@ -4,7 +4,13 @@
  * @description Matching page component for the Kenmei to AniList sync tool. Handles manga matching, review, rematch, and sync preparation.
  */
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { KenmeiManga } from "../api/kenmei/types";
 import { useAuthState } from "../hooks/useAuth";
@@ -30,6 +36,7 @@ import { toast } from "sonner";
 import { RematchOptions } from "../components/matching/RematchOptions";
 import { CacheClearingNotification } from "../components/matching/CacheClearingNotification";
 import { SearchModal } from "../components/matching/SearchModal";
+import { BatchSelectionToolbar } from "../components/matching/BatchSelectionToolbar";
 import InitializationCard from "../components/matching/InitializationCard";
 import AuthRequiredCard from "../components/matching/AuthRequiredCard";
 import { AnimatePresence, motion } from "framer-motion";
@@ -106,6 +113,11 @@ export function MatchingPage() {
   const { authState } = useAuthState();
   const { rateLimitState } = useRateLimit();
   const { recordEvent } = useDebugActions();
+
+  // State for batch selection
+  const [selectedMatchIds, setSelectedMatchIds] = useState<Set<number>>(
+    new Set(),
+  );
 
   // State for manga data
   const [manga, setManga] = useState<KenmeiManga[]>([]);
@@ -252,6 +264,66 @@ export function MatchingPage() {
     undoRedoManager,
   );
 
+  // Batch selection handlers
+  const handleToggleSelection = useCallback((matchId: number) => {
+    setSelectedMatchIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(matchId)) {
+        newSet.delete(matchId);
+      } else {
+        newSet.add(matchId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback((ids: number[]) => {
+    setSelectedMatchIds(new Set(ids));
+  }, []);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedMatchIds(new Set());
+  }, []);
+
+  const handleBatchAccept = useCallback(() => {
+    const selectedMatches = matchResults.filter((match) =>
+      selectedMatchIds.has(match.kenmeiManga.id),
+    );
+    if (selectedMatches.length > 0) {
+      matchHandlers.handleAcceptMatch({
+        isBatchOperation: true,
+        matches: selectedMatches,
+      });
+      handleClearSelection();
+    }
+  }, [matchResults, selectedMatchIds, matchHandlers, handleClearSelection]);
+
+  const handleBatchReject = useCallback(() => {
+    const selectedMatches = matchResults.filter((match) =>
+      selectedMatchIds.has(match.kenmeiManga.id),
+    );
+    if (selectedMatches.length > 0) {
+      matchHandlers.handleRejectMatch({
+        isBatchOperation: true,
+        matches: selectedMatches,
+      });
+      handleClearSelection();
+    }
+  }, [matchResults, selectedMatchIds, matchHandlers, handleClearSelection]);
+
+  const handleBatchReset = useCallback(() => {
+    const selectedMatches = matchResults.filter((match) =>
+      selectedMatchIds.has(match.kenmeiManga.id),
+    );
+    if (selectedMatches.length > 0) {
+      matchHandlers.handleResetToPending({
+        isBatchOperation: true,
+        matches: selectedMatches,
+      });
+      handleClearSelection();
+    }
+  }, [matchResults, selectedMatchIds, matchHandlers, handleClearSelection]);
+
   // Add a ref to track if we've already done initialization
   const hasInitialized = useRef(false);
   const lastGlobalSyncSnapshot = useRef<{
@@ -355,6 +427,30 @@ export function MatchingPage() {
     globalThis.addEventListener("keydown", handleKeyDown);
     return () => globalThis.removeEventListener("keydown", handleKeyDown);
   }, [undoRedoManager, matchingProcess.isLoading, handleUndo, handleRedo]);
+
+  // Keyboard shortcuts for batch selection
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts when typing in input fields
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      // Escape to clear selection
+      if (e.key === "Escape" && selectedMatchIds.size > 0) {
+        e.preventDefault();
+        handleClearSelection();
+      }
+    };
+
+    globalThis.addEventListener("keydown", handleKeyDown);
+    return () => globalThis.removeEventListener("keydown", handleKeyDown);
+  }, [selectedMatchIds, handleClearSelection]);
 
   // Clear pending manga if all are processed (prevents infinite loops)
   useEffect(() => {
@@ -1168,6 +1264,9 @@ export function MatchingPage() {
    * @source
    */
   const handleRetry = () => {
+    // Clear selection state on rematch
+    handleClearSelection();
+
     // Clear any pending manga data
     pendingMangaState.savePendingManga([]);
 
@@ -1213,6 +1312,9 @@ export function MatchingPage() {
    * @source
    */
   const handleRematchByStatus = async () => {
+    // Clear selection state on rematch
+    handleClearSelection();
+
     // Reset any previous warnings
     setRematchWarning(null);
 
@@ -1578,24 +1680,41 @@ export function MatchingPage() {
         {/* Main content */}
         <motion.div className="relative flex-1" variants={contentVariants}>
           {matchResults.length > 0 ? (
-            <MatchingPanel
-              matches={matchResults}
-              onManualSearch={matchHandlers.handleManualSearch}
-              onAcceptMatch={matchHandlers.handleAcceptMatch}
-              onRejectMatch={matchHandlers.handleRejectMatch}
-              onSelectAlternative={matchHandlers.handleSelectAlternative}
-              onResetToPending={matchHandlers.handleResetToPending}
-              searchQuery={searchQuery}
-              onSetMatchedToPending={handleSetAllMatchedToPending}
-              disableSetMatchedToPending={
-                matchingProcess.isLoading || rateLimitState.isRateLimited
-              }
-              onProceedToSync={handleProceedToSync}
-              onBackToImport={() => {
-                pendingMangaState.savePendingManga([]);
-                navigate({ to: "/import" });
-              }}
-            />
+            <>
+              {/* Batch Selection Toolbar */}
+              {selectedMatchIds.size > 0 && (
+                <BatchSelectionToolbar
+                  selectedCount={selectedMatchIds.size}
+                  onAccept={handleBatchAccept}
+                  onReject={handleBatchReject}
+                  onReset={handleBatchReset}
+                  onClearSelection={handleClearSelection}
+                />
+              )}
+
+              <MatchingPanel
+                matches={matchResults}
+                onManualSearch={matchHandlers.handleManualSearch}
+                onAcceptMatch={matchHandlers.handleAcceptMatch}
+                onRejectMatch={matchHandlers.handleRejectMatch}
+                onSelectAlternative={matchHandlers.handleSelectAlternative}
+                onResetToPending={matchHandlers.handleResetToPending}
+                searchQuery={searchQuery}
+                onSetMatchedToPending={handleSetAllMatchedToPending}
+                disableSetMatchedToPending={
+                  matchingProcess.isLoading || rateLimitState.isRateLimited
+                }
+                onProceedToSync={handleProceedToSync}
+                onBackToImport={() => {
+                  pendingMangaState.savePendingManga([]);
+                  navigate({ to: "/import" });
+                }}
+                selectedMatchIds={selectedMatchIds}
+                onToggleSelection={handleToggleSelection}
+                onSelectAll={handleSelectAll}
+                onClearSelection={handleClearSelection}
+              />
+            </>
           ) : (
             <AnimatePresence>
               <EmptyState

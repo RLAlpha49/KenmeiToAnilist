@@ -1,7 +1,19 @@
 /**
  * @packageDocumentation
  * @module useMatchHandlers
- * @description Custom React hook providing handler functions for managing manga match results and user interactions in the Kenmei to AniList sync tool.
+ * @description Custom React hook providing handler functions for managing manga match results and user interactions in the Kenmei to AniList sync tool. Supports both single and batch operations with undo/redo capabilities.
+ * @example
+ * ```typescript
+ * // Single match operation
+ * handleAcceptMatch(matchResult);
+ *
+ * // Batch operation
+ * const selectedMatches = matchResults.filter(m => selectedIds.has(m.kenmeiManga.id));
+ * handleAcceptMatch({ isBatchOperation: true, matches: selectedMatches });
+ *
+ * // Using the helper
+ * handleAcceptMatch(createBatchOperation(selectedMatches));
+ * ```
  */
 
 import { useCallback } from "react";
@@ -238,6 +250,15 @@ export const useMatchHandlers = (
     ) => {
       // Check if this is a batch operation
       if ("isBatchOperation" in match && match.isBatchOperation) {
+        // Validate batch operation has matches
+        if (!match.matches || match.matches.length === 0) {
+          console.warn(
+            `[MatchHandlers] Batch ${actionName} operation called with empty matches array`,
+          );
+          return;
+        }
+
+        const startTime = performance.now();
         console.debug(
           `[MatchHandlers] Processing batch ${actionName} operation for ${match.matches.length} matches`,
         );
@@ -261,10 +282,18 @@ export const useMatchHandlers = (
             );
             const currentMatch = currentIdx >= 0 ? matchResults[currentIdx] : m;
 
+            // Create the updated match state with new status
+            const updatedMatch = {
+              ...currentMatch,
+              status: newStatus,
+              selectedMatch: getSelectedMatch(currentMatch),
+              matchDate: new Date(),
+            };
+
             return new commandType(
               Math.max(currentIdx, 0),
               structuredClone(currentMatch),
-              m,
+              updatedMatch,
               applyCommandPatch,
             );
           });
@@ -273,9 +302,46 @@ export const useMatchHandlers = (
             `Batch ${actionName.toLowerCase()}`,
           );
           undoRedoManager.executeCommand(batchCommand);
+
+          // Update matchResults to trigger state update for UI re-render
+          const updatedResults = matchResults.map((m) => {
+            const isInBatch = match.matches.some(
+              (bm) => bm.kenmeiManga.id === m.kenmeiManga.id,
+            );
+            if (isInBatch) {
+              return {
+                ...m,
+                status: newStatus,
+                selectedMatch: getSelectedMatch(m),
+                matchDate: new Date(),
+              };
+            }
+            return m;
+          });
+          updateMatchResults(updatedResults);
         } else {
-          updateMatchResults(match.matches);
+          // Fallback: update results directly without undo/redo
+          const updatedResults = matchResults.map((m) => {
+            const isInBatch = match.matches.some(
+              (bm) => bm.kenmeiManga.id === m.kenmeiManga.id,
+            );
+            if (isInBatch) {
+              return {
+                ...m,
+                status: newStatus,
+                selectedMatch: getSelectedMatch(m),
+                matchDate: new Date(),
+              };
+            }
+            return m;
+          });
+          updateMatchResults(updatedResults);
         }
+
+        const endTime = performance.now();
+        console.debug(
+          `[MatchHandlers] Batch ${actionName} completed in ${(endTime - startTime).toFixed(2)}ms`,
+        );
         return;
       }
 
@@ -567,12 +633,99 @@ export const useMatchHandlers = (
 
       // Check if this is a batch operation
       if ("isBatchOperation" in match && match.isBatchOperation) {
+        // Validate batch operation has matches
+        if (!match.matches || match.matches.length === 0) {
+          console.warn(
+            "[MatchHandlers] Batch reset operation called with empty matches array",
+          );
+          return;
+        }
+
+        const startTime = performance.now();
         console.debug(
           `[MatchHandlers] Processing batch reset operation for ${match.matches.length} matches`,
         );
 
-        // For batch operations, simply update the results
-        updateMatchResults(match.matches);
+        recordEvent({
+          type: "match.batch-reset",
+          message: `Batch reset: ${match.matches.length} matches`,
+          level: "info",
+          metadata: {
+            matchCount: match.matches.length,
+            action: "reset",
+          },
+        });
+
+        // For batch operations, create individual commands wrapped in a BatchCommand
+        if (undoRedoManager) {
+          const commands = match.matches.map((m) => {
+            // Find the current state of this match in matchResults
+            const currentIdx = matchResults.findIndex(
+              (mr) => mr.kenmeiManga.id === m.kenmeiManga.id,
+            );
+            const currentMatch = currentIdx >= 0 ? matchResults[currentIdx] : m;
+
+            // Create the reset state matching single operation logic
+            const originalMainMatch = currentMatch.anilistMatches?.length
+              ? currentMatch.anilistMatches[0].manga
+              : undefined;
+
+            const resetMatch = {
+              ...currentMatch,
+              status: "pending" as const,
+              selectedMatch: originalMainMatch,
+              matchDate: new Date(),
+            };
+
+            return new ResetToPendingCommand(
+              Math.max(currentIdx, 0),
+              structuredClone(currentMatch),
+              resetMatch,
+              applyCommandPatch,
+            );
+          });
+          const batchCommand = new BatchCommand(commands, "Batch reset");
+          undoRedoManager.executeCommand(batchCommand);
+
+          // Update matchResults to trigger state update for UI re-render
+          const updatedResults = matchResults.map((m) => {
+            const isInBatch = match.matches.some(
+              (bm) => bm.kenmeiManga.id === m.kenmeiManga.id,
+            );
+            if (isInBatch) {
+              const originalMainMatch = m.anilistMatches?.length
+                ? m.anilistMatches[0].manga
+                : undefined;
+              return {
+                ...m,
+                status: "pending" as const,
+                selectedMatch: originalMainMatch,
+                matchDate: new Date(),
+              };
+            }
+            return m;
+          });
+          updateMatchResults(updatedResults);
+        } else {
+          // Fallback: create reset state for all matches without undo/redo
+          const resetMatches = match.matches.map((m) => {
+            const originalMainMatch = m.anilistMatches?.length
+              ? m.anilistMatches[0].manga
+              : undefined;
+            return {
+              ...m,
+              status: "pending" as const,
+              selectedMatch: originalMainMatch,
+              matchDate: new Date(),
+            };
+          });
+          updateMatchResults(resetMatches);
+        }
+
+        const endTime = performance.now();
+        console.debug(
+          `[MatchHandlers] Batch reset completed in ${(endTime - startTime).toFixed(2)}ms`,
+        );
         return;
       }
 
@@ -742,6 +895,37 @@ export const useMatchHandlers = (
     ],
   );
 
+  /**
+   * Creates a type-safe batch operation object for processing multiple matches.
+   *
+   * @param matches - Array of matches to process in batch
+   * @returns Batch operation object with type safety
+   * @throws Error if matches array is empty
+   * @example
+   * ```typescript
+   * // Create a batch operation from selected matches
+   * const selectedMatches = matchResults.filter(m => selectedIds.has(m.kenmeiManga.id));
+   * const batchOp = createBatchOperation(selectedMatches);
+   * handleAcceptMatch(batchOp);
+   * ```
+   */
+  const createBatchOperation = useCallback(
+    (
+      matches: MangaMatchResult[],
+    ): { isBatchOperation: true; matches: MangaMatchResult[] } => {
+      if (!matches || matches.length === 0) {
+        throw new Error(
+          "Cannot create batch operation with empty matches array",
+        );
+      }
+      return {
+        isBatchOperation: true,
+        matches,
+      };
+    },
+    [],
+  );
+
   return {
     handleManualSearch,
     handleAcceptMatch,
@@ -749,5 +933,6 @@ export const useMatchHandlers = (
     handleSelectAlternative,
     handleResetToPending,
     handleSelectSearchMatch,
+    createBatchOperation,
   };
 };
