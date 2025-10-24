@@ -100,6 +100,7 @@ VITE_ANILIST_CLIENT_SECRET=your-client-secret
 
 ### For Developers
 
+- **[Contributing Guide](./CONTRIBUTING.md)** – How to contribute to the project
 - **[Architecture Documentation](./docs/guides/ARCHITECTURE.md)** – Technology choices, processes, structure, performance & security
 - **[Storage Implementation Guide](./docs/guides/STORAGE_IMPLEMENTATION.md)** – Three‑layer storage architecture details
 - **[AniList API Reference](./docs/guides/API_REFERENCE.md)** – GraphQL operations, auth, rate limiting, error handling
@@ -123,12 +124,32 @@ This project makes use of several external APIs and services:
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please:
+We welcome contributions from the community! Whether you're fixing bugs, adding features, improving documentation, or suggesting ideas, your help is appreciated.
 
-- Fork the repo and create your branch
-- Follow the code style
-- Open a pull request with a clear description
-- For major changes, open an issue first to discuss
+### Quick Links
+
+- [Contributing Guide](./CONTRIBUTING.md) - Setup, coding standards, PR process
+- [Bug Report Template](./.github/ISSUE_TEMPLATE/bug_report.yml) - Report bugs
+- [Architecture Documentation](./docs/guides/ARCHITECTURE.md) - Understand the codebase
+
+### Development Quick Start
+
+```bash
+# Fork and clone the repository
+git clone https://github.com/YOUR_USERNAME/KenmeiToAnilist.git
+cd KenmeiToAnilist
+
+# Install dependencies
+npm install --force
+
+# Run in development mode
+npm start
+
+# Before committing (runs automatically via Husky)
+npm run precommit
+```
+
+For detailed instructions, see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ---
 
