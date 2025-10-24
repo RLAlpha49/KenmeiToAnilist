@@ -1,5 +1,0 @@
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
-
-echo "Running pre-commit hook..." | tee -a .husky/pre-commit.log
-npm run precommit 2>&1 | tee -a .husky/pre-commit.log

@@ -1,7 +1,7 @@
 {
   "name": "kenmei-to-anilist",
   "productName": "Kenmei to Anilist",
-  "version": "3.1.0",
+  "version": "3.0.0",
   "description": "Kenmei to Anilist",
   "main": ".vite/build/main.js",
   "type": "commonjs",
