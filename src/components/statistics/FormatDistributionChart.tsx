@@ -123,7 +123,12 @@ function buildFormatData(
  * @source
  */
 export const FormatDistributionChart: FC<FormatDistributionChartProps> =
-  React.memo(function FormatDistributionChartMemo({ matchResults, className }) {
+  React.memo(function FormatDistributionChartMemo({
+    // eslint-disable-next-line react/prop-types
+    matchResults,
+    // eslint-disable-next-line react/prop-types
+    className,
+  }) {
     const data = useMemo(() => buildFormatData(matchResults), [matchResults]);
     const total = useMemo(
       () => data.reduce((acc, item) => acc + item.value, 0),

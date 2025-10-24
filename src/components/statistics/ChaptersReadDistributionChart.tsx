@@ -174,14 +174,16 @@ function buildHistogram(matchResults?: Array<MinimalMatchResult> | null): {
 }
 
 /**
- * ChaptersReadDistributionChart visualizes how many chapters have been read per manga entry.
- * @param props - Component props containing match results.
- * @returns Histogram chart with summary statistics or empty state if no data.
+ * Chapters read distribution chart component.
+ * @param props - Component props.
+ * @returns Rendered chart component.
  * @source
  */
 export const ChaptersReadDistributionChart: FC<ChaptersReadDistributionChartProps> =
   React.memo(function ChaptersReadDistributionChartMemo({
+    // eslint-disable-next-line react/prop-types
     matchResults,
+    // eslint-disable-next-line react/prop-types
     className,
   }) {
     const { bins, stats } = useMemo(

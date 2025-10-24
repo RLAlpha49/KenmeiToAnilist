@@ -72,7 +72,12 @@ type ChartDatum = {
  * @source
  */
 export const StatusDistributionChart: FC<StatusDistributionChartProps> =
-  React.memo(function StatusDistributionChartMemo({ data, className }) {
+  React.memo(function StatusDistributionChartMemo({
+    // eslint-disable-next-line react/prop-types
+    data,
+    // eslint-disable-next-line react/prop-types
+    className,
+  }) {
     const chartData = useMemo<ChartDatum[]>(() => {
       if (!data) return [];
 

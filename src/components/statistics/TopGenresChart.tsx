@@ -50,8 +50,14 @@ const MAX_GENRES = 10;
  * @source
  */
 export const TopGenresChart: FC<TopGenresChartProps> = React.memo(
-  function TopGenresChartMemo({ matchResults, className }) {
+  function TopGenresChartMemo({
+    // eslint-disable-next-line react/prop-types
+    matchResults,
+    // eslint-disable-next-line react/prop-types
+    className,
+  }) {
     const { data, uniqueCount } = useMemo(() => {
+      // eslint-disable-next-line react/prop-types
       if (!matchResults?.length) {
         return { data: [] as GenreDatum[], uniqueCount: 0 };
       }

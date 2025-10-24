@@ -63,7 +63,12 @@ function getSuccessRateTone(successRate: number): string {
  * @source
  */
 export const SyncMetricsChart: FC<SyncMetricsChartProps> = React.memo(
-  function SyncMetricsChartMemo({ syncStats, className }) {
+  function SyncMetricsChartMemo({
+    // eslint-disable-next-line react/prop-types
+    syncStats,
+    // eslint-disable-next-line react/prop-types
+    className,
+  }) {
     const { chartData, successRate, successfulCount, failedCount, totalSyncs } =
       useMemo(() => {
         if (!syncStats) {
@@ -78,9 +83,12 @@ export const SyncMetricsChart: FC<SyncMetricsChartProps> = React.memo(
 
         const successful = Math.max(
           0,
+          // eslint-disable-next-line react/prop-types
           (syncStats.entriesSynced ?? 0) - (syncStats.failedSyncs ?? 0),
         );
+        // eslint-disable-next-line react/prop-types
         const failed = Math.max(syncStats.failedSyncs ?? 0, 0);
+        // eslint-disable-next-line react/prop-types
         const attempts = Math.max(syncStats.entriesSynced ?? 0, 0);
         const rate = attempts > 0 ? (successful / attempts) * 100 : 0;
 
@@ -96,6 +104,7 @@ export const SyncMetricsChart: FC<SyncMetricsChartProps> = React.memo(
           successRate: Number(rate.toFixed(1)),
           successfulCount: successful,
           failedCount: failed,
+          // eslint-disable-next-line react/prop-types
           totalSyncs: Math.max(syncStats.totalSyncs ?? 0, 0),
         };
       }, [syncStats]);
@@ -131,6 +140,7 @@ export const SyncMetricsChart: FC<SyncMetricsChartProps> = React.memo(
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4" aria-hidden="true" />
                 <span>
+                  {/* eslint-disable-next-line react/prop-types */}
                   Last sync: {formatRelativeTime(syncStats.lastSyncTime)}
                 </span>
               </div>

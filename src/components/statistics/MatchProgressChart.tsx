@@ -175,7 +175,12 @@ function buildTimeline(matchResults?: Array<MinimalMatchResult> | null): {
  * @source
  */
 export const MatchProgressChart: FC<MatchProgressChartProps> = React.memo(
-  function MatchProgressChartMemo({ matchResults, className }) {
+  function MatchProgressChartMemo({
+    // eslint-disable-next-line react/prop-types
+    matchResults,
+    // eslint-disable-next-line react/prop-types
+    className,
+  }) {
     const { data, totalMatches, startLabel, endLabel } = useMemo(
       () => buildTimeline(matchResults),
       [matchResults],
