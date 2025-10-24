@@ -1,0 +1,5 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "Validating commit message..." | tee -a .husky/commit-msg.log
+npx --no -- commitlint --edit "$1" 2>&1 | tee -a .husky/commit-msg.log

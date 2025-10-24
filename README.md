@@ -126,9 +126,12 @@ This project makes use of several external APIs and services:
 
 We welcome contributions from the community! Whether you're fixing bugs, adding features, improving documentation, or suggesting ideas, your help is appreciated.
 
+This project follows [Conventional Commits](https://www.conventionalcommits.org/) for commit messages, enabling automatic changelog generation and semantic versioning.
+
 ### Quick Links
 
 - [Contributing Guide](./CONTRIBUTING.md) - Setup, coding standards, PR process
+- [Commit Message Guidelines](./CONTRIBUTING.md#commit-message-guidelines) - Conventional commits format
 - [Bug Report Template](./.github/ISSUE_TEMPLATE/bug_report.yml) - Report bugs
 - [Architecture Documentation](./docs/guides/ARCHITECTURE.md) - Understand the codebase
 
@@ -147,6 +150,11 @@ npm start
 
 # Before committing (runs automatically via Husky)
 npm run precommit
+
+# Commit your changes using conventional commits format
+git commit -m "feat(scope): description of your changes"
+
+# See CONTRIBUTING.md for commit message guidelines
 ```
 
 For detailed instructions, see [CONTRIBUTING.md](./CONTRIBUTING.md).

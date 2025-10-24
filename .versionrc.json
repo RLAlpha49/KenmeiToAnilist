@@ -1,0 +1,37 @@
+{
+  "types": [
+    { "type": "feat", "section": "✨ Features" },
+    { "type": "fix", "section": "🐛 Bug Fixes" },
+    { "type": "perf", "section": "⚡ Performance Improvements" },
+    { "type": "refactor", "section": "♻️ Code Refactoring" },
+    { "type": "docs", "section": "📚 Documentation" },
+    { "type": "build", "section": "🏗️ Build System" },
+    { "type": "ci", "section": "👷 CI/CD" },
+    { "type": "test", "section": "✅ Tests" },
+    { "type": "style", "hidden": true },
+    { "type": "chore", "hidden": true },
+    { "type": "revert", "section": "⏪ Reverts" }
+  ],
+  "commitUrlFormat": "https://github.com/RLAlpha49/KenmeiToAnilist/commit/{{hash}}",
+  "compareUrlFormat": "https://github.com/RLAlpha49/KenmeiToAnilist/compare/{{previousTag}}...{{currentTag}}",
+  "issueUrlFormat": "https://github.com/RLAlpha49/KenmeiToAnilist/issues/{{id}}",
+  "userUrlFormat": "https://github.com/{{user}}",
+  "releaseCommitMessageFormat": "chore(release): {{currentTag}}",
+  "skip": {
+    "changelog": false,
+    "commit": false,
+    "tag": false
+  },
+  "bumpFiles": [
+    {
+      "filename": "package.json",
+      "type": "json"
+    }
+  ],
+  "packageFiles": [
+    {
+      "filename": "package.json",
+      "type": "json"
+    }
+  ]
+}

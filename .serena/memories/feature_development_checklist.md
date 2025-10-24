@@ -311,3 +311,70 @@ Before committing:
 5. [ ] Check console for any warnings/errors
 6. [ ] Verify performance is acceptable
 7. [ ] Use SonarQube if making complex changes
+
+---
+
+## Commit Messages and Versioning
+
+### Writing Commits
+
+- [ ] Use conventional commits format: `type(scope): subject`
+- [ ] Choose appropriate type: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
+- [ ] Use valid scope from commitlint.config.js
+- [ ] Keep subject line under 100 characters
+- [ ] Use lowercase for subject (no trailing period)
+- [ ] Write in present tense: "add" not "added"
+- [ ] Add body for complex changes (explain what and why)
+- [ ] Reference issues in footer: `Fixes #123`, `Closes #456`
+- [ ] Mark breaking changes: `BREAKING CHANGE:` in footer or `!` after type/scope
+
+### Commit Validation
+
+- [ ] Commit message passes commitlint validation
+- [ ] Check `.husky/commit-msg.log` if validation fails
+- [ ] Fix validation errors before force-pushing
+- [ ] Ensure all commits in PR follow conventional format
+
+### Before Release
+
+- [ ] All commits since last release follow conventional commits
+- [ ] Commit messages accurately describe changes
+- [ ] Breaking changes are properly marked
+- [ ] Issue references are included where applicable
+- [ ] Run `npm run release` to generate changelog and bump version
+- [ ] Review generated CHANGELOG.md entry
+- [ ] Review package.json version bump
+- [ ] Verify git tag was created
+
+### Release Process
+
+- [ ] Run appropriate release command:
+  - `npm run release` (automatic version detection)
+  - `npm run release:major` (breaking changes)
+  - `npm run release:minor` (new features)
+  - `npm run release:patch` (bug fixes)
+- [ ] Review release commit: `git log -1`
+- [ ] Review changelog: `cat CHANGELOG.md`
+- [ ] Push with tags: `git push --follow-tags origin main`
+- [ ] Build with Electron Forge: `npm run make`
+- [ ] Create GitHub release with tag
+- [ ] Upload binaries from `out/make/`
+- [ ] Copy changelog entry to release notes
+- [ ] Verify auto-update works for users
+
+### Changelog Maintenance
+
+- [ ] Changelog is automatically generated (don't manually edit)
+- [ ] Changelog includes all relevant commits since last release
+- [ ] Changelog sections are properly categorized (Features, Bug Fixes, etc.)
+- [ ] Commit links work correctly
+- [ ] Version comparison links work correctly
+- [ ] Add manual clarifications if needed (after generation)
+
+### Common Issues
+
+- [ ] If commit validation fails: check commitlint.config.js for valid types/scopes
+- [ ] If changelog is missing commits: ensure commits follow conventional format
+- [ ] If version bump is wrong: use manual release commands (release:major/minor/patch)
+- [ ] If tag already exists: delete tag and re-run release
+- [ ] If changelog has duplicates: ensure clean git history before release

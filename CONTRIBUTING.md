@@ -175,6 +175,182 @@ For AniList API operations:
 
 3. **Use in client** via `src/api/anilist/anilist-client.ts` or create a new function.
 
+## Commit Message Guidelines
+
+This project follows the [Conventional Commits](https://www.conventionalcommits.org/) specification for commit messages. This enables automatic changelog generation and semantic versioning.
+
+### Commit Message Format
+
+Each commit message consists of a **header**, an optional **body**, and an optional **footer**:
+
+```text
+<type>(<scope>): <subject>
+<BLANK LINE>
+<body>
+<BLANK LINE>
+<footer>
+```
+
+**Header** (required):
+
+- **type**: The type of change (see below)
+- **scope**: The area of the codebase affected (see below)
+- **subject**: A brief description of the change (lowercase, no period at end, max 100 chars)
+
+**Body** (optional):
+
+- Detailed explanation of the change
+- Explain the motivation and contrast with previous behavior
+- Use present tense ("add" not "added")
+
+**Footer** (optional):
+
+- Reference issues: `Fixes #123`, `Closes #456`
+- Breaking changes: `BREAKING CHANGE: description`
+
+### Commit Types
+
+- **feat**: A new feature for the user
+- **fix**: A bug fix
+- **docs**: Documentation changes only
+- **style**: Code style changes (formatting, missing semicolons, etc.)
+- **refactor**: Code changes that neither fix bugs nor add features
+- **perf**: Performance improvements
+- **test**: Adding or updating tests
+- **build**: Changes to build system or dependencies
+- **ci**: Changes to CI/CD configuration
+- **chore**: Other changes that don't modify src or test files
+- **revert**: Revert a previous commit
+
+### Commit Scopes
+
+Use these scopes to indicate which part of the codebase is affected:
+
+**Core Features:**
+
+- `import` - CSV import functionality
+- `matching` - Manga matching algorithms
+- `sync` - AniList synchronization
+- `auth` - Authentication system
+- `settings` - Settings page and configuration
+- `statistics` - Statistics dashboard
+
+**Technical Areas:**
+
+- `api` - API clients (AniList, Kenmei, manga sources)
+- `storage` - Storage layer (cache, localStorage, electron-store)
+- `cache` - Caching system
+- `ipc` - IPC communication (main/renderer)
+- `ui` - UI components
+- `hooks` - React hooks
+- `utils` - Utility functions
+
+**Infrastructure:**
+
+- `deps` - Dependency updates
+- `config` - Configuration files
+- `build` - Build system
+- `release` - Release process
+- `docs` - Documentation
+
+### Examples
+
+**Good commit messages:**
+
+```text
+feat(matching): add virtual scrolling for large lists
+
+Implements virtual scrolling using @tanstack/react-virtual to improve
+performance when rendering 1000+ manga entries. Reduces initial render
+time from 2s to 200ms.
+
+Fixes #123
+```
+
+```text
+fix(sync): handle offline errors gracefully
+
+Adds offline detection before sync operations and queues failed
+operations for automatic retry when connection is restored.
+
+Closes #456
+```
+
+```text
+docs(readme): update contributing guidelines
+
+Adds section on commit message format and conventional commits.
+```
+
+```text
+chore(deps): update electron to v38.3.0
+```
+
+**Bad commit messages:**
+
+```text
+Add feature          ❌ Missing type and scope
+Feat: Add Feature    ❌ Subject should be lowercase
+fix(unknown): bug    ❌ Invalid scope
+feat(matching): add. ❌ Trailing period
+```
+
+### Breaking Changes
+
+If your commit introduces a breaking change, add `BREAKING CHANGE:` in the footer:
+
+```text
+feat(api)!: change authentication flow
+
+BREAKING CHANGE: The authentication flow now requires OAuth2 instead of
+API tokens. Users will need to re-authenticate after this update.
+
+Migration guide: See docs/guides/MIGRATION.md
+```
+
+Alternatively, add `!` after the type/scope: `feat(api)!: change authentication flow`
+
+### Commit Message Validation
+
+Commit messages are automatically validated using commitlint. If your message doesn't follow the format:
+
+1. The commit will be rejected
+2. You'll see an error message explaining what's wrong
+3. Fix your message and try again
+
+**Testing your commit message:**
+
+```bash
+# This will fail validation
+git commit -m "invalid message"
+
+# This will pass validation
+git commit -m "feat(matching): add virtual scrolling"
+```
+
+### Tips
+
+- Use `git commit` (without `-m`) to open your editor for multi-line messages
+- Keep the subject line under 100 characters
+- Use the body to explain _what_ and _why_, not _how_
+- Reference issues and PRs in the footer
+- Use present tense: "add" not "added", "fix" not "fixed"
+- Be specific: "fix(sync): handle rate limit errors" not "fix: bug"
+
+### Changelog Generation
+
+Commit messages following this format are automatically included in the CHANGELOG.md:
+
+- `feat` commits appear under "✨ Features"
+- `fix` commits appear under "🐛 Bug Fixes"
+- `perf` commits appear under "⚡ Performance Improvements"
+- `docs` commits appear under "📚 Documentation"
+- Other types may be hidden from the changelog
+
+For more information, see the [Conventional Commits specification](https://www.conventionalcommits.org/).
+
+---
+
 ## Pull Request Process
 
 ### Before Submitting
