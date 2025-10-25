@@ -198,8 +198,8 @@ export function MatchingPageHeader({
           </div>
         </div>
 
-        <div className="relative z-10 mt-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="w-full lg:max-w-2xl">
+  <div className="relative z-10 mt-6 flex flex-col gap-4">
+          <div className="w-full">
             <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               <span>Review progress</span>
               <span>
@@ -220,9 +220,9 @@ export function MatchingPageHeader({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.25 }}
-              className="flex w-full flex-col gap-2 sm:flex-row sm:justify-end"
+              className="flex w-full flex-col gap-2"
             >
-              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:gap-3">
+              <div className="flex w-full flex-col gap-2 md:flex-row md:items-center md:justify-end md:gap-3">
                 {/* Undo/Redo buttons */}
                 {(canUndo || canRedo) && (
                   <TooltipProvider>
@@ -282,7 +282,7 @@ export function MatchingPageHeader({
                   <Button
                     variant="outline"
                     onClick={handleSetAllMatchedToPending}
-                    className="group flex grow items-center justify-center gap-2 rounded-2xl border border-slate-300/70 bg-white/70 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400/80 hover:bg-white/90 hover:text-slate-900 dark:border-slate-700/70 dark:bg-slate-900/60 dark:text-slate-200 dark:hover:border-slate-600/70 dark:hover:bg-slate-900"
+                    className="group flex md:grow-0 grow items-center justify-center gap-2 rounded-2xl border border-slate-300/70 bg-white/70 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400/80 hover:bg-white/90 hover:text-slate-900 dark:border-slate-700/70 dark:bg-slate-900/60 dark:text-slate-200 dark:hover:border-slate-600/70 dark:hover:bg-slate-900"
                   >
                     <RotateCcw className="h-4 w-4" />
                     Reset matched to pending
@@ -291,7 +291,7 @@ export function MatchingPageHeader({
                 <Button
                   onClick={() => setShowRematchOptions(!showRematchOptions)}
                   variant="default"
-                  className="bg-linear-to-r grow rounded-2xl from-indigo-500 via-sky-500 to-blue-500 text-sm font-semibold shadow-lg hover:from-indigo-600 hover:via-sky-600 hover:to-blue-600 sm:grow-0"
+                  className="bg-linear-to-r grow rounded-2xl from-indigo-500 via-sky-500 to-blue-500 text-sm font-semibold shadow-lg hover:from-indigo-600 hover:via-sky-600 hover:to-blue-600 md:grow-0"
                 >
                   {showRematchOptions
                     ? "Hide Rematch Options"

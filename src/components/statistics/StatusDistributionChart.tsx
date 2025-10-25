@@ -165,48 +165,98 @@ export const StatusDistributionChart: FC<StatusDistributionChartProps> =
             </p>
           </div>
         ) : (
-          <figure className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={chartData}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={2}
-                  labelLine={false}
-                  label={({ percent }) =>
-                    `${Math.round((percent ?? 0) * 100)}%`
-                  }
+          <>
+            {/* Chart with accessible label summarizing key values */}
+            {(() => {
+              const chartSummary = chartData
+                .map(
+                  (item) =>
+                    `${item.name} ${item.value} ${item.value === 1 ? "title" : "titles"}`,
+                )
+                .join(", ");
+              return (
+                <figure
+                  className="h-[300px] w-full"
+                  aria-label={`Library status distribution: ${chartSummary}`}
                 >
-                  {chartData.map((entry) => (
-                    <Cell key={entry.rawKey} fill={entry.color} />
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={chartData}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius={60}
+                        outerRadius={100}
+                        paddingAngle={2}
+                        labelLine={false}
+                        label={(props: Record<string, unknown>) =>
+                          // eslint-disable-next-line react/prop-types
+                          `${Math.round(((props.percent as number) ?? 0) * 100)}%`
+                        }
+                      >
+                        {chartData.map((entry) => (
+                          <Cell key={entry.rawKey} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--muted))",
+                          borderRadius: "calc(var(--radius) - 4px)",
+                          padding: "0.5rem 0.75rem",
+                          border: "none",
+                        }}
+                        itemStyle={{ color: "white" }}
+                        formatter={(value: number, name: string) => {
+                          // Recharts payload.percent can be inconsistent across versions/contexts.
+                          // Use the computed totalCount to derive a reliable percentage.
+                          const numeric = Number(value ?? 0);
+                          const percent =
+                            totalCount > 0 ? numeric / totalCount : 0;
+                          return [
+                            `${numeric.toLocaleString()} (${Math.round(percent * 100)}%)`,
+                            name,
+                          ];
+                        }}
+                      />
+                      <Legend
+                        iconType="circle"
+                        verticalAlign="bottom"
+                        height={36}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </figure>
+              );
+            })()}
+
+            {/* Visually hidden data table for screen readers */}
+            <div className="sr-only">
+              <table>
+                <caption>Library status distribution data</caption>
+                <thead>
+                  <tr>
+                    <th>Status</th>
+                    <th>Count</th>
+                    <th>Percentage</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {chartData.map((item) => (
+                    <tr key={item.rawKey}>
+                      <td>{item.name}</td>
+                      <td>{item.value.toLocaleString()}</td>
+                      <td>
+                        {totalCount > 0
+                          ? Math.round((item.value / totalCount) * 100)
+                          : 0}
+                        %
+                      </td>
+                    </tr>
                   ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--muted))",
-                    borderRadius: "calc(var(--radius) - 4px)",
-                    padding: "0.5rem 0.75rem",
-                    border: "none",
-                  }}
-                  itemStyle={{ color: "white" }}
-                  formatter={(value: number, name: string) => {
-                    // Recharts payload.percent can be inconsistent across versions/contexts.
-                    // Use the computed totalCount to derive a reliable percentage.
-                    const numeric = Number(value ?? 0);
-                    const percent = totalCount > 0 ? numeric / totalCount : 0;
-                    return [
-                      `${numeric.toLocaleString()} (${Math.round(percent * 100)}%)`,
-                      name,
-                    ];
-                  }}
-                />
-                <Legend iconType="circle" verticalAlign="bottom" height={36} />
-              </PieChart>
-            </ResponsiveContainer>
-          </figure>
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </section>
     );

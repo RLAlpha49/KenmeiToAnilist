@@ -55,7 +55,15 @@ function BatchSelectionToolbarComponent({
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
         transition={{ duration: 0.2 }}
+        role="toolbar"
+        aria-label="Batch selection actions"
+        aria-orientation="horizontal"
       >
+        {/* Selection count announcement */}
+        <output className="sr-only" aria-live="polite" aria-atomic="true">
+          {selectedCount} {selectedCount === 1 ? "item" : "items"} selected
+        </output>
+
         <Card className="border-blue-400/40 bg-white/90 p-4 shadow-lg shadow-slate-900/10 backdrop-blur-md dark:border-blue-500/30 dark:bg-slate-900/90">
           <div className="flex flex-col items-center gap-4 sm:flex-row">
             {/* Selection Count Badge */}
@@ -78,7 +86,7 @@ function BatchSelectionToolbarComponent({
                       onClick={onAccept}
                       disabled={isProcessing}
                       className="bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700"
-                      aria-label="Accept selected matches"
+                      aria-label={`Accept ${selectedCount} selected ${selectedCount === 1 ? "match" : "matches"}`}
                     >
                       {isProcessing ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -101,7 +109,7 @@ function BatchSelectionToolbarComponent({
                       onClick={onReject}
                       disabled={isProcessing}
                       className="bg-rose-500 text-white hover:bg-rose-600 dark:bg-rose-600 dark:hover:bg-rose-700"
-                      aria-label="Reject selected matches"
+                      aria-label={`Reject ${selectedCount} selected ${selectedCount === 1 ? "match" : "matches"}`}
                     >
                       {isProcessing ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -124,7 +132,7 @@ function BatchSelectionToolbarComponent({
                       onClick={onReset}
                       disabled={isProcessing}
                       className="bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700"
-                      aria-label="Reset selected matches to pending"
+                      aria-label={`Reset ${selectedCount} selected ${selectedCount === 1 ? "match" : "matches"} to pending`}
                     >
                       {isProcessing ? (
                         <Loader2 className="h-4 w-4 animate-spin" />

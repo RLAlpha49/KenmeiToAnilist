@@ -37,15 +37,32 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
+  /** Accessible label for icon-only buttons or when additional context is needed */
+  ariaLabel?: string;
+  /** ID of element that provides additional description */
+  ariaDescribedBy?: string;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  (
+    {
+      className,
+      variant,
+      size,
+      asChild = false,
+      ariaLabel,
+      ariaDescribedBy,
+      ...props
+    },
+    ref,
+  ) => {
     const Comp = asChild ? Slot : "button";
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
+        aria-label={ariaLabel}
+        aria-describedby={ariaDescribedBy}
         {...props}
       />
     );

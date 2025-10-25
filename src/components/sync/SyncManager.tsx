@@ -69,9 +69,15 @@ const ProgressDisplay: React.FC<{
 
   return (
     <div className="mb-6 rounded-3xl border border-slate-200/70 bg-white/80 p-5 shadow-sm backdrop-blur-md dark:border-slate-800/60 dark:bg-slate-950/60">
+      {/* Live region for progress updates */}
+      <output className="sr-only" aria-live="polite" aria-atomic="true">
+        {completedEntries} of {totalEntries} entries synced.{" "}
+        {progressPercentage}% complete.
+      </output>
+
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-start gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-lg">
+          <div className="bg-linear-to-br flex h-12 w-12 shrink-0 items-center justify-center rounded-full from-blue-500 to-indigo-500 text-white shadow-lg">
             <Activity className="h-6 w-6" />
           </div>
           <div>
@@ -92,9 +98,15 @@ const ProgressDisplay: React.FC<{
             {progressPercentage}%
           </div>
           <div className="min-w-[200px]">
-            <div className="h-3 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800/60">
+            <div
+              className="h-3 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800/60"
+              aria-valuenow={progressPercentage}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={`Synchronization progress: ${progressPercentage}% complete`}
+            >
               <div
-                className="h-full rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 transition-all duration-500"
+                className="bg-linear-to-r h-full rounded-full from-blue-500 via-indigo-500 to-purple-500 transition-all duration-500"
                 style={{ width: `${Math.min(progressPercentage, 100)}%` }}
               />
             </div>
@@ -133,9 +145,9 @@ const StatusAlerts: React.FC<{
     return (
       <div className="mb-6 text-center">
         <div className="relative overflow-hidden rounded-3xl border border-blue-200/70 bg-blue-50/70 p-6 shadow-sm dark:border-blue-800/60 dark:bg-blue-900/30">
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-blue-100/70 via-transparent to-indigo-100/40 dark:from-blue-900/30 dark:via-transparent dark:to-indigo-900/30" />
+          <div className="bg-linear-to-br pointer-events-none absolute inset-0 from-blue-100/70 via-transparent to-indigo-100/40 dark:from-blue-900/30 dark:via-transparent dark:to-indigo-900/30" />
           <div className="relative flex flex-col items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-lg">
+            <div className="bg-linear-to-br flex h-12 w-12 items-center justify-center rounded-full from-blue-500 to-indigo-500 text-white shadow-lg">
               <Sparkles className="h-6 w-6" />
             </div>
             <div>
@@ -178,7 +190,7 @@ const StatusAlerts: React.FC<{
     return (
       <Alert className="mb-4 border-blue-200/70 bg-blue-50/80 backdrop-blur-md dark:border-blue-800/60 dark:bg-blue-900/30">
         <div className="flex gap-3">
-          <div className="flex h-10 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow">
+          <div className="bg-linear-to-br flex h-10 w-20 shrink-0 items-center justify-center rounded-full from-blue-500 to-indigo-500 text-white shadow">
             <RefreshCw className="h-5 w-10 animate-spin" />
           </div>
           <div className="min-w-0 flex-1">
@@ -204,7 +216,7 @@ const StatusAlerts: React.FC<{
     return (
       <Alert className="mb-4 border-amber-200/70 bg-amber-50/80 backdrop-blur-md dark:border-amber-800/60 dark:bg-amber-900/30">
         <div className="flex gap-3">
-          <div className="flex h-10 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow">
+          <div className="bg-linear-to-br flex h-10 w-20 shrink-0 items-center justify-center rounded-full from-amber-500 to-orange-500 text-white shadow">
             <PauseCircle className="h-5 w-10" />
           </div>
           <div className="min-w-0 flex-1">
@@ -230,7 +242,7 @@ const StatusAlerts: React.FC<{
     return (
       <Alert className="mb-4 border-emerald-200/70 bg-emerald-50/80 backdrop-blur-md dark:border-emerald-800/50 dark:bg-emerald-900/20">
         <div className="flex gap-3">
-          <div className="flex h-10 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow">
+          <div className="bg-linear-to-br flex h-10 w-20 shrink-0 items-center justify-center rounded-full from-emerald-500 to-teal-500 text-white shadow">
             <CheckCircle className="h-5 w-10" />
           </div>
           <div className="min-w-0 flex-1">
@@ -251,7 +263,7 @@ const StatusAlerts: React.FC<{
     return (
       <Alert className="mb-4 border-rose-200/70 bg-rose-50/80 backdrop-blur-md dark:border-rose-900/60 dark:bg-rose-950/30">
         <div className="flex gap-3">
-          <div className="flex h-10 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-red-500 text-white shadow">
+          <div className="bg-linear-to-br flex h-10 w-20 shrink-0 items-center justify-center rounded-full from-rose-500 to-red-500 text-white shadow">
             <ShieldAlert className="h-5 w-10" />
           </div>
           <div className="min-w-0 flex-1">
@@ -283,7 +295,7 @@ const CurrentEntryDisplay: React.FC<{
   if (status !== "syncing" || !progress.currentEntry) return null;
 
   return (
-    <div className="relative mb-6 overflow-hidden rounded-3xl border border-blue-200/70 bg-gradient-to-br from-blue-50/70 via-white/70 to-indigo-50/70 p-5 shadow-sm backdrop-blur-xl dark:border-blue-900/60 dark:from-blue-950/30 dark:via-slate-950/40 dark:to-indigo-950/30">
+    <div className="bg-linear-to-br relative mb-6 overflow-hidden rounded-3xl border border-blue-200/70 from-blue-50/70 via-white/70 to-indigo-50/70 p-5 shadow-sm backdrop-blur-xl dark:border-blue-900/60 dark:from-blue-950/30 dark:via-slate-950/40 dark:to-indigo-950/30">
       <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start">
         {progress.currentEntry.coverImage && (
           <div className="relative h-28 w-20 overflow-hidden rounded-2xl shadow-lg">
@@ -292,7 +304,7 @@ const CurrentEntryDisplay: React.FC<{
               alt={progress.currentEntry.title}
               className="h-full w-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+            <div className="bg-linear-to-t absolute inset-0 from-black/40 via-transparent to-transparent" />
           </div>
         )}
 
@@ -325,7 +337,7 @@ const CurrentEntryDisplay: React.FC<{
           {incrementalSync && progress.totalSteps && progress.currentStep && (
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-blue-200/70 dark:bg-blue-900/40">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 transition-all duration-300"
+                className="bg-linear-to-r h-full rounded-full from-blue-500 via-indigo-500 to-purple-500 transition-all duration-300"
                 style={{
                   width: `${(progress.currentStep / progress.totalSteps) * 100}%`,
                 }}
@@ -506,7 +518,7 @@ const SyncActions: React.FC<{
         </Button>
         <Button
           onClick={onStartSync}
-          className="gap-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-lg shadow-blue-500/30 transition hover:from-blue-500 hover:via-indigo-500 hover:to-purple-500"
+          className="bg-linear-to-r gap-2 from-blue-600 via-indigo-600 to-purple-600 text-white shadow-lg shadow-blue-500/30 transition hover:from-blue-500 hover:via-indigo-500 hover:to-purple-500"
         >
           <Sparkles className="h-4 w-4" />
           Launch sync
@@ -531,7 +543,7 @@ const SyncActions: React.FC<{
         <Button
           variant="destructive"
           onClick={onCancel}
-          className="gap-2 bg-gradient-to-r from-rose-500 to-red-500 text-white shadow-md shadow-rose-500/30 transition hover:from-rose-500 hover:to-red-500"
+          className="bg-linear-to-r gap-2 from-rose-500 to-red-500 text-white shadow-md shadow-rose-500/30 transition hover:from-rose-500 hover:to-red-500"
         >
           <ShieldAlert className="h-4 w-4" />
           Cancel sync
@@ -554,7 +566,7 @@ const SyncActions: React.FC<{
         {onResume && canResume && (
           <Button
             onClick={onResume}
-            className="gap-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-lg shadow-blue-500/30 transition hover:from-blue-500 hover:via-indigo-500 hover:to-purple-500"
+            className="bg-linear-to-r gap-2 from-blue-600 via-indigo-600 to-purple-600 text-white shadow-lg shadow-blue-500/30 transition hover:from-blue-500 hover:via-indigo-500 hover:to-purple-500"
           >
             <RefreshCw className="h-4 w-4" />
             Resume sync
@@ -581,7 +593,7 @@ const SyncActions: React.FC<{
           syncState.report.errors.length > 0 && (
             <Button
               onClick={onStartSync}
-              className="gap-2 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white shadow-lg shadow-amber-500/30 transition hover:from-amber-500 hover:via-orange-500 hover:to-rose-500"
+              className="bg-linear-to-r gap-2 from-amber-500 via-orange-500 to-rose-500 text-white shadow-lg shadow-amber-500/30 transition hover:from-amber-500 hover:via-orange-500 hover:to-rose-500"
             >
               <RefreshCw className="h-4 w-4" />
               Retry failed updates
@@ -1009,7 +1021,7 @@ const SyncManager: React.FC<SyncManagerProps> = ({
 
   return (
     <Card className="relative mx-auto w-full max-w-3xl overflow-hidden border border-slate-200/70 bg-white/85 shadow-xl shadow-blue-500/10 backdrop-blur-2xl dark:border-slate-800/60 dark:bg-slate-950/75">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.18),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_rgba(76,29,149,0.32),_transparent_60%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.18),transparent_60%)] dark:bg-[radial-gradient(circle_at_top,rgba(76,29,149,0.32),transparent_60%)]" />
       <CardHeader className="relative space-y-4 pb-6">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -1025,7 +1037,7 @@ const SyncManager: React.FC<SyncManagerProps> = ({
               changes.
             </CardDescription>
           </div>
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-500 text-white shadow-lg shadow-blue-500/30">
+          <div className="bg-linear-to-br flex h-14 w-14 items-center justify-center rounded-2xl from-blue-500 via-indigo-500 to-purple-500 text-white shadow-lg shadow-blue-500/30">
             <Activity className="h-6 w-6" />
           </div>
         </div>
@@ -1078,7 +1090,7 @@ const SyncManager: React.FC<SyncManagerProps> = ({
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="relative overflow-hidden rounded-3xl border border-emerald-200/60 bg-emerald-50/70 p-4 text-emerald-700 shadow-inner dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-200">
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-emerald-200/40 via-transparent to-teal-200/20 dark:from-emerald-500/20 dark:to-teal-500/10" />
+            <div className="bg-linear-to-br pointer-events-none absolute inset-0 from-emerald-200/40 via-transparent to-teal-200/20 dark:from-emerald-500/20 dark:to-teal-500/10" />
             <div className="relative flex flex-col gap-1.5">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <CheckCircle className="h-4 w-4 text-emerald-500 dark:text-emerald-300" />
@@ -1094,7 +1106,7 @@ const SyncManager: React.FC<SyncManagerProps> = ({
           </div>
 
           <div className="relative overflow-hidden rounded-3xl border border-rose-200/60 bg-rose-50/70 p-4 text-rose-700 shadow-inner dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-200">
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-rose-200/40 via-transparent to-red-200/20 dark:from-rose-500/20 dark:to-red-500/10" />
+            <div className="bg-linear-to-br pointer-events-none absolute inset-0 from-rose-200/40 via-transparent to-red-200/20 dark:from-rose-500/20 dark:to-red-500/10" />
             <div className="relative flex flex-col gap-1.5">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <XCircle className="h-4 w-4 text-rose-500 dark:text-rose-300" />
@@ -1110,7 +1122,7 @@ const SyncManager: React.FC<SyncManagerProps> = ({
           </div>
 
           <div className="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-slate-50/70 p-4 text-slate-700 shadow-inner dark:border-slate-800/60 dark:bg-slate-950/40 dark:text-slate-200">
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-slate-200/50 via-transparent to-indigo-200/30 dark:from-slate-700/40 dark:to-indigo-900/30" />
+            <div className="bg-linear-to-br pointer-events-none absolute inset-0 from-slate-200/50 via-transparent to-indigo-200/30 dark:from-slate-700/40 dark:to-indigo-900/30" />
             <div className="relative flex flex-col gap-1.5">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <Clock className="h-4 w-4 text-slate-500 dark:text-slate-300" />
@@ -1127,7 +1139,7 @@ const SyncManager: React.FC<SyncManagerProps> = ({
           <div className="overflow-hidden rounded-3xl border border-amber-200/60 bg-amber-50/70 p-5 shadow-sm dark:border-amber-900/50 dark:bg-amber-950/30">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex items-start gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-lg">
+                <div className="bg-linear-to-br flex h-12 w-12 items-center justify-center rounded-2xl from-amber-400 to-orange-500 text-white shadow-lg">
                   <TimerReset className="h-6 w-6" />
                 </div>
                 <div>
@@ -1180,7 +1192,7 @@ const SyncManager: React.FC<SyncManagerProps> = ({
             <div className="overflow-hidden rounded-3xl border border-rose-200/60 bg-rose-50/80 p-5 shadow-sm backdrop-blur dark:border-rose-900/50 dark:bg-rose-950/30">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500 to-red-500 text-white shadow-lg">
+                  <div className="bg-linear-to-br flex h-12 w-12 items-center justify-center rounded-2xl from-rose-500 to-red-500 text-white shadow-lg">
                     <Clock className="h-6 w-6" />
                   </div>
                   <div>

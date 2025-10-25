@@ -35,7 +35,12 @@ export default function BaseLayout({
 
       <BackgroundMatchingIndicator />
 
-      <main className="z-1 relative flex-1 overflow-auto px-4 py-6 md:px-6">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="z-1 relative flex-1 overflow-auto px-4 py-6 md:px-6"
+        aria-label="Main content"
+      >
         <div className="container mx-auto">
           <div className="bg-background/70 rounded-3xl border border-white/20 p-0 shadow-[0_20px_80px_-50px_rgba(59,130,246,0.6)] backdrop-blur-xl transition-colors dark:border-white/5 dark:bg-slate-950/70">
             {children}

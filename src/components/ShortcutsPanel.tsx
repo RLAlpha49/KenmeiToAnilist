@@ -211,44 +211,65 @@ export function ShortcutsPanel({
                 className="border-white/10 bg-white/5 pl-10 focus:bg-white/10"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Search shortcuts"
+                aria-controls="shortcuts-list"
               />
             </div>
 
             {/* Shortcuts Display */}
             <ScrollArea className="h-[400px] w-full rounded-lg border border-white/10 bg-white/5 p-4">
-              {hasResults ? (
-                <div className="space-y-6 pr-4">
-                  {searchQuery ? (
-                    // Show all matching shortcuts when searching
-                    <div className="space-y-2">
-                      {filteredShortcuts.map((shortcut) => (
-                        <ShortcutCard
-                          key={shortcut.id}
-                          shortcutItem={shortcut}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    // Show organized by category
-                    <>
-                      {Object.values(ShortcutCategory).map((category) => (
-                        <ShortcutCategorySection
-                          key={category}
-                          category={category}
-                        />
-                      ))}
-                    </>
-                  )}
-                </div>
-              ) : (
-                <div className="flex h-full items-center justify-center">
-                  <div className="text-center">
-                    <p className="text-muted-foreground">
-                      No shortcuts found matching &quot;{searchQuery}&quot;
-                    </p>
-                  </div>
-                </div>
+              {/* Live region for search results announcement */}
+              {searchQuery && (
+                <output
+                  className="sr-only"
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
+                  {(() => {
+                    const countText =
+                      filteredShortcuts.length === 1 ? "shortcut" : "shortcuts";
+                    return hasResults
+                      ? `Found ${filteredShortcuts.length} ${countText}`
+                      : `No shortcuts found matching "${searchQuery}"`;
+                  })()}
+                </output>
               )}
+
+              <section id="shortcuts-list" aria-label="Search results">
+                {hasResults ? (
+                  <div className="space-y-6 pr-4">
+                    {searchQuery ? (
+                      // Show all matching shortcuts when searching
+                      <div className="space-y-2">
+                        {filteredShortcuts.map((shortcut) => (
+                          <ShortcutCard
+                            key={shortcut.id}
+                            shortcutItem={shortcut}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      // Show organized by category
+                      <>
+                        {Object.values(ShortcutCategory).map((category) => (
+                          <ShortcutCategorySection
+                            key={category}
+                            category={category}
+                          />
+                        ))}
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex h-full items-center justify-center">
+                    <div className="text-center">
+                      <p className="text-muted-foreground">
+                        No shortcuts found matching &quot;{searchQuery}&quot;
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </section>
             </ScrollArea>
 
             {/* Footer */}

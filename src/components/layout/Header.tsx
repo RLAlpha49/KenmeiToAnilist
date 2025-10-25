@@ -91,6 +91,13 @@ export function Header({
   return (
     <TooltipProvider>
       <header className="border-border bg-background/80 sticky top-0 z-40 border-b backdrop-blur-xl">
+        {/* Skip to main content link for keyboard users */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-white focus:px-4 focus:py-2 focus:text-blue-600 focus:shadow-lg dark:focus:bg-slate-900 dark:focus:text-blue-400"
+        >
+          Skip to main content
+        </a>
         <div className="draglayer w-full">
           <div className="relative flex h-16 items-center justify-between px-4">
             <div className="bg-linear-to-r pointer-events-none absolute inset-x-6 top-1/2 z-0 h-24 -translate-y-1/2 rounded-full from-blue-500/10 via-purple-500/10 to-transparent blur-2xl" />
@@ -120,7 +127,11 @@ export function Header({
               </Link>
 
               {/* Always visible navigation - icon-only on small screens, icon+text on larger screens */}
-              <div className="non-draggable">
+              <nav
+                className="non-draggable"
+                role="navigation"
+                aria-label="Main navigation"
+              >
                 <NavigationMenu>
                   <NavigationMenuList className="bg-background/60 flex rounded-full p-1 text-xs font-medium shadow-inner shadow-black/5 ring-1 ring-white/40 backdrop-blur-sm dark:bg-slate-950/60 dark:ring-white/10">
                     {NAV_ITEMS.map(({ label, to, icon: Icon }) => {
@@ -143,6 +154,7 @@ export function Header({
                                 <Link
                                   to={to}
                                   className="flex items-center gap-2"
+                                  aria-current={isActive ? "page" : undefined}
                                 >
                                   <Icon className="h-4 w-4" />
                                   <span className="max-lg:hidden">{label}</span>
@@ -158,7 +170,7 @@ export function Header({
                     })}
                   </NavigationMenuList>
                 </NavigationMenu>
-              </div>
+              </nav>
             </div>
 
             <div className="flex items-center gap-2">
@@ -192,6 +204,7 @@ export function Header({
                         size="icon"
                         onClick={() => openDebugMenu()}
                         className="h-8 w-8 rounded-full"
+                        aria-label="Open debug menu"
                       >
                         <Bug className="h-4 w-4" />
                       </Button>
@@ -208,6 +221,7 @@ export function Header({
                       size="icon"
                       onClick={minimizeWindow}
                       className="h-8 w-8 rounded-full"
+                      aria-label="Minimize window"
                     >
                       <Minimize2 className="h-4 w-4" />
                     </Button>
@@ -222,6 +236,7 @@ export function Header({
                       size="icon"
                       onClick={maximizeWindow}
                       className="h-8 w-8 rounded-full"
+                      aria-label="Maximize window"
                     >
                       <Maximize2 className="h-4 w-4" />
                     </Button>
@@ -236,6 +251,7 @@ export function Header({
                       size="icon"
                       onClick={closeWindow}
                       className="hover:bg-destructive hover:text-destructive-foreground h-8 w-8 rounded-full"
+                      aria-label="Close window"
                     >
                       <X className="h-4 w-4" />
                     </Button>

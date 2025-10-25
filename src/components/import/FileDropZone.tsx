@@ -227,6 +227,7 @@ export function FileDropZone({
         accept=".csv"
         className="hidden"
         onChange={handleFileSelect}
+        data-onboarding="file-input"
       />
 
       {fileName ? (

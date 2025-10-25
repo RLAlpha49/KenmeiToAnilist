@@ -74,6 +74,60 @@ export const SearchModal: React.FC<SearchModalProps> = ({
     };
   }, [isOpen]);
 
+  // Focus management when modal opens - focus search input
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Focus search input with a small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      const searchInput = document.querySelector(
+        "[data-search-input]",
+      ) as HTMLElement;
+      if (searchInput) {
+        searchInput.focus();
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [isOpen]);
+
+  // Focus trap for keyboard navigation within modal
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Tab") {
+        // Get modal container and find focusable elements within it
+        const modalContainer = document.querySelector(
+          '[role="dialog"][aria-modal="true"]',
+        ) as HTMLElement;
+        if (!modalContainer) return;
+
+        // Only handle Tab if active element is within this modal
+        if (!modalContainer.contains(document.activeElement as Node)) return;
+
+        const focusableElements = Array.from(
+          modalContainer.querySelectorAll<HTMLElement>(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+          ),
+        );
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements.at(-1);
+
+        if (e.shiftKey && document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement?.focus();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement?.focus();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen]);
+
   const portalTarget =
     globalThis.window !== undefined && typeof document !== "undefined"
       ? document.body
@@ -99,8 +153,11 @@ export const SearchModal: React.FC<SearchModalProps> = ({
             transition={{ duration: 0.2 }}
           ></motion.div>
 
-          <motion.div
-            className="relative z-50 m-4 max-h-[85vh] w-full max-w-6xl overflow-visible rounded-[32px] border border-white/15 bg-gradient-to-br from-blue-400/25 via-white/15 to-purple-500/20 p-[1.5px] shadow-[0_40px_160px_-60px_rgba(30,64,175,0.7)] backdrop-blur-2xl dark:border-slate-700/40"
+          <motion.dialog
+            aria-modal="true"
+            aria-labelledby="search-modal-title"
+            aria-describedby="search-description"
+            className="rounded-4xl bg-linear-to-br relative z-50 m-4 max-h-[85vh] w-full max-w-6xl overflow-visible border border-white/15 from-blue-400/25 via-white/15 to-purple-500/20 p-[1.5px] shadow-[0_40px_160px_-60px_rgba(30,64,175,0.7)] backdrop-blur-2xl dark:border-slate-700/40"
             initial={{ opacity: 0, y: 20, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.98 }}
@@ -111,6 +168,10 @@ export const SearchModal: React.FC<SearchModalProps> = ({
               damping: 30,
             }}
           >
+            {/* Visually hidden description for accessibility */}
+            <div id="search-description" className="sr-only">
+              Search for AniList manga matches for {searchTarget?.title}
+            </div>
             <div className="max-h-[85vh] overflow-auto rounded-[30px] bg-white/90 p-2 shadow-[inset_0_0_1px_rgba(255,255,255,0.4)] dark:bg-slate-950/85">
               <MangaSearchPanel
                 key={`search-${searchTarget.id}`}
@@ -121,7 +182,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                 bypassCache={bypassCache}
               />
             </div>
-          </motion.div>
+          </motion.dialog>
         </div>
       )}
     </AnimatePresence>,

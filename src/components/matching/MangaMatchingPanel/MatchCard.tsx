@@ -1140,7 +1140,7 @@ function MatchCard({
   const kenmeiHeaderBadgeClasses =
     "inline-flex items-center min-w-[10.3%] gap-1 rounded-full border border-indigo-200/70 bg-indigo-50/80 px-3 py-1 text-xs font-semibold text-indigo-700 shadow-sm transition duration-200 hover:-translate-y-[1px] hover:bg-indigo-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-indigo-500/30 dark:bg-indigo-900/40 dark:text-indigo-200 dark:hover:bg-indigo-900/55 dark:focus-visible:ring-indigo-400 dark:focus-visible:ring-offset-slate-950";
   return (
-    <motion.div
+    <motion.article
       key={uniqueKey}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -1148,7 +1148,7 @@ function MatchCard({
       transition={{ duration: 0.2 }}
       className={`group relative overflow-hidden rounded-3xl border ${borderColorClass} ${isSelected ? "bg-blue-50/50 ring-2 ring-blue-500 ring-offset-2 ring-offset-white dark:bg-blue-950/20 dark:ring-blue-400 dark:ring-offset-slate-950" : "bg-linear-to-br from-white/85 via-slate-50/70 to-white/90 ring-1 ring-slate-200/60 dark:from-slate-950/85 dark:via-slate-900/75 dark:to-slate-950/90 dark:ring-slate-900/60"} p-1 shadow-[0_28px_80px_-30px_rgba(30,41,59,0.55)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_38px_95px_-30px_rgba(30,41,59,0.65)] ${glowClass}`}
       tabIndex={0}
-      aria-label={`Match result for ${match.kenmeiManga.title}`}
+      aria-labelledby={`match-card-title-${uniqueKey}`}
     >
       {/* Selection Checkbox */}
       {onToggleSelection && (
@@ -1200,7 +1200,10 @@ function MatchCard({
                 statusBadgeSkippedClasses,
                 statusBadgePendingClasses,
               )}
-              <h3 className="line-clamp-1 text-xl font-semibold tracking-tight text-gray-900 dark:text-white">
+              <h3
+                id={`match-card-title-${uniqueKey}`}
+                className="line-clamp-1 text-xl font-semibold tracking-tight text-gray-900 dark:text-white"
+              >
                 {match.kenmeiManga.title}
               </h3>
             </div>
@@ -1317,12 +1320,15 @@ function MatchCard({
 
         {/* Alternative matches - only show for non-matched entries */}
         {shouldShowAlternativeMatches(match) && (
-          <div className="bg-linear-to-br rounded-2xl border border-white/30 from-white/80 via-white/60 to-white/40 px-5 py-5 shadow-lg shadow-slate-900/10 backdrop-blur-sm dark:border-slate-800/60 dark:from-slate-900/80 dark:via-slate-900/65 dark:to-slate-950/55">
+          <div
+            id={`alternatives-${uniqueKey}`}
+            className="bg-linear-to-br rounded-2xl border border-white/30 from-white/80 via-white/60 to-white/40 px-5 py-5 shadow-lg shadow-slate-900/10 backdrop-blur-sm dark:border-slate-800/60 dark:from-slate-900/80 dark:via-slate-900/65 dark:to-slate-950/55"
+          >
             <h4 className="mb-4 flex items-center text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-300">
               <ChevronRight className="mr-1 h-4 w-4" aria-hidden="true" />
               Alternative Matches
             </h4>
-            <div className="space-y-3">
+            <div id={`alternatives-list-${uniqueKey}`} className="space-y-3">
               {match.anilistMatches?.slice(1, 5).map((altMatch, index) => (
                 <AlternativeMatchItem
                   key={
@@ -1347,7 +1353,7 @@ function MatchCard({
           </div>
         )}
       </div>
-    </motion.div>
+    </motion.article>
   );
 }
 

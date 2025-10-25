@@ -532,6 +532,21 @@ export function MangaSearchPanel({
         aria-label="Search results"
         aria-live="polite"
       >
+        {/* Loading state announcement */}
+        {isSearching && (
+          <output className="sr-only" aria-live="polite">
+            Searching for matches...
+          </output>
+        )}
+
+        {/* Results count announcement */}
+        {!isSearching && searchResults.length > 0 && (
+          <output className="sr-only" aria-live="polite">
+            Found {searchResults.length}{" "}
+            {searchResults.length === 1 ? "result" : "results"}
+          </output>
+        )}
+
         {error && (
           <div
             className="mb-6 rounded-2xl border border-red-200/60 bg-red-50/80 p-4 text-base text-red-700 shadow-sm backdrop-blur dark:border-red-500/20 dark:bg-red-900/30 dark:text-red-200"
