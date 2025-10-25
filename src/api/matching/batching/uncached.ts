@@ -138,7 +138,9 @@ export async function processUncachedManga(
       manga.title,
       token,
       searchConfig,
-      abortSignal, // Pass the abort signal to the search function
+      abortSignal,
+      undefined,
+      manga,
     );
 
     // Store the results, preserving both manga and Comick source info

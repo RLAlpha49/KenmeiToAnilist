@@ -530,12 +530,64 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
  *
  * @source
  */
+/**
+ * Represents a single custom matching rule.
+ *
+ * @property id - Unique identifier (timestamp-based)
+ * @property pattern - Regex pattern string to match against manga titles
+ * @property description - User-friendly label describing the rule's purpose
+ * @property enabled - Whether the rule is currently active
+ * @property caseSensitive - Whether pattern matching should be case-sensitive
+ * @property createdAt - ISO timestamp of rule creation
+ *
+ * @example
+ * ```typescript
+ * const skipAnthologies: CustomRule = {
+ *   id: "1234567890_abc123",
+ *   pattern: "anthology",
+ *   description: "Skip anthology collections",
+ *   enabled: true,
+ *   caseSensitive: false,
+ *   createdAt: "2025-10-25T12:00:00.000Z"
+ * };
+ * ```
+ *
+ * @source
+ */
+export type CustomRule = {
+  id: string;
+  pattern: string;
+  description: string;
+  enabled: boolean;
+  caseSensitive: boolean;
+  createdAt: string;
+};
+
+/**
+ * Configuration for custom matching rules.
+ *
+ * @property skipRules - Rules for automatically excluding manga from matching results
+ * @property acceptRules - Rules for automatically boosting confidence scores for matches
+ *
+ * @remarks
+ * Skip rules are evaluated before ranking and prevent manga from appearing in results.
+ * Accept rules are evaluated after ranking and boost confidence scores to ensure inclusion.
+ * Both rule types check all title variants (romaji, english, native, synonyms, alternative titles).
+ *
+ * @source
+ */
+export type CustomRulesConfig = {
+  skipRules: CustomRule[];
+  acceptRules: CustomRule[];
+};
+
 export type MatchConfig = {
   ignoreOneShots: boolean;
   ignoreAdultContent: boolean;
   blurAdultContent: boolean;
   enableComickSearch: boolean;
   enableMangaDexSearch: boolean;
+  customRules?: CustomRulesConfig;
 };
 
 /**
@@ -549,6 +601,10 @@ export const DEFAULT_MATCH_CONFIG: MatchConfig = {
   blurAdultContent: true,
   enableComickSearch: false, // Temporarily disabled - Comick unavailable
   enableMangaDexSearch: true,
+  customRules: {
+    skipRules: [],
+    acceptRules: [],
+  },
 };
 
 /**
@@ -918,7 +974,12 @@ export function saveMatchConfig(config: MatchConfig): void {
 export function getMatchConfig(): MatchConfig {
   try {
     const config = storage.getItem(STORAGE_KEYS.MATCH_CONFIG);
-    return config ? JSON.parse(config) : DEFAULT_MATCH_CONFIG;
+    if (!config) {
+      return DEFAULT_MATCH_CONFIG;
+    }
+    const parsed = JSON.parse(config);
+    // Merge with defaults to ensure new fields like customRules are always populated
+    return { ...DEFAULT_MATCH_CONFIG, ...parsed };
   } catch (error) {
     console.error(
       "[Storage] Error retrieving match config from storage",
@@ -926,6 +987,83 @@ export function getMatchConfig(): MatchConfig {
     );
     return DEFAULT_MATCH_CONFIG;
   }
+}
+
+/**
+ * Validates a custom matching rule.
+ *
+ * Checks that the regex pattern is valid and all required fields are present.
+ *
+ * @param rule - The custom rule to validate.
+ * @returns Validation result with error message if invalid.
+ *
+ * @example
+ * ```typescript
+ * const rule: CustomRule = {
+ *   id: "123",
+ *   pattern: "anthology",
+ *   description: "Skip anthologies",
+ *   enabled: true,
+ *   caseSensitive: false,
+ *   createdAt: new Date().toISOString()
+ * };
+ * const result = validateCustomRule(rule);
+ * if (!result.valid) {
+ *   console.error(result.error);
+ * }
+ * ```
+ *
+ * @source
+ */
+export function validateCustomRule(rule: CustomRule): {
+  valid: boolean;
+  error?: string;
+  warning?: string;
+} {
+  // Check pattern is not empty
+  if (!rule.pattern || rule.pattern.trim() === "") {
+    return { valid: false, error: "Pattern cannot be empty" };
+  }
+
+  // Check description is not empty
+  if (!rule.description || rule.description.trim() === "") {
+    return { valid: false, error: "Description cannot be empty" };
+  }
+
+  // Validate regex pattern with Unicode flag (u) and case-insensitive flag (i) if needed
+  try {
+    new RegExp(rule.pattern, rule.caseSensitive ? "u" : "ui");
+  } catch (error) {
+    return {
+      valid: false,
+      error: `Invalid regex pattern: ${error instanceof Error ? error.message : "Unknown error"}`,
+    };
+  }
+
+  // Check for potentially problematic broad patterns
+  const trimmedPattern = rule.pattern.trim();
+
+  // Patterns that match almost anything
+  const broadPatterns = [
+    /^(\.\*|\^?\.\*\$?|\(\.\*\))$/, // .* or ^.*$ or (.*)
+    /^\(\|.*\|?\)$/, // (|...) empty alternations
+    /^\|/, // starts with |
+  ];
+
+  for (const broadPattern of broadPatterns) {
+    if (broadPattern.test(trimmedPattern)) {
+      return {
+        valid: true,
+        warning: `⚠️ This pattern matches almost everything. It will ${
+          rule.pattern === ".*" || rule.pattern === "^.*$"
+            ? "likely match all manga titles"
+            : "match very broad sets of titles"
+        }. Make sure this is intentional.`,
+      };
+    }
+  }
+
+  return { valid: true };
 }
 
 /**

@@ -5,22 +5,30 @@
  */
 
 /**
+ * Debounced function with a cancel method to clear pending invocations
+ */
+interface DebouncedFunction<T extends (...args: unknown[]) => unknown> {
+  (...args: Parameters<T>): void;
+  cancel(): void;
+}
+
+/**
  * Creates a debounced version of a function that delays invoking func until after
  * wait milliseconds have elapsed since the last time the debounced function was invoked.
  *
  * @template T - The function type to debounce
  * @param func - The function to debounce
  * @param wait - The number of milliseconds to delay
- * @returns The debounced function
+ * @returns The debounced function with a cancel method
  * @source
  */
 export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number,
-): (...args: Parameters<T>) => void {
+): DebouncedFunction<T> {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-  return function debounced(...args: Parameters<T>): void {
+  function debounced(...args: Parameters<T>): void {
     if (timeoutId !== null) {
       clearTimeout(timeoutId);
     }
@@ -29,7 +37,16 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
       func(...args);
       timeoutId = null;
     }, wait);
+  }
+
+  debounced.cancel = (): void => {
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
   };
+
+  return debounced;
 }
 
 /**

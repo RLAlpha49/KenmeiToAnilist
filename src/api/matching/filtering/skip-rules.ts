@@ -5,6 +5,8 @@
  */
 
 import type { AniListManga } from "../../anilist/types";
+import type { KenmeiManga } from "@/api/kenmei/types";
+import { shouldSkipByCustomRules } from "./custom-rules";
 
 /**
  * Titles to ignore during automatic matching operations.
@@ -38,15 +40,29 @@ export function shouldIgnoreForAutomaticMatching(manga: AniListManga): boolean {
 
 /**
  * Checks if a manga should be skipped during ranking.
- * Skips light novels (format-based) and automatic matching blacklist entries.
+ *
+ * Skips light novels (format-based), automatic matching blacklist entries,
+ * and custom skip rules defined by the user.
+ *
  * @param manga - The manga to check.
  * @param isManualSearch - Whether this is a manual search operation.
+ * @param kenmeiManga - Optional Kenmei manga for custom rule evaluation.
  * @returns True if the manga should be skipped.
+ *
+ * @example
+ * ```typescript
+ * const shouldSkip = shouldSkipManga(anilistManga, false, kenmeiManga);
+ * if (shouldSkip) {
+ *   console.log("Manga will be excluded from results");
+ * }
+ * ```
+ *
  * @source
  */
 export function shouldSkipManga(
   manga: AniListManga,
   isManualSearch: boolean,
+  kenmeiManga?: KenmeiManga,
 ): boolean {
   // Skip Light Novels
   if (manga.format === "NOVEL" || manga.format === "LIGHT_NOVEL") {
@@ -60,6 +76,17 @@ export function shouldSkipManga(
   if (!isManualSearch && shouldIgnoreForAutomaticMatching(manga)) {
     console.debug(
       `[MangaSearchService] ⏭️ Skipping ignored title for automatic matching: ${manga.title?.romaji || manga.title?.english || "unknown"}`,
+    );
+    return true;
+  }
+
+  // Check custom skip rules if kenmeiManga provided
+  if (
+    kenmeiManga &&
+    shouldSkipByCustomRules(manga, kenmeiManga, isManualSearch)
+  ) {
+    console.debug(
+      `[MangaSearchService] ⏭️ Skipping due to custom rule: ${manga.title?.romaji || manga.title?.english || "unknown"}`,
     );
     return true;
   }

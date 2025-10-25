@@ -72,6 +72,7 @@ import {
 import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
 import { SettingsHero } from "../components/settings/SettingsHero";
 import { SettingsSectionShell } from "../components/settings/SettingsSectionShell";
+import { CustomRulesManager } from "@/components/settings/CustomRulesManager";
 
 const itemVariants = {
   hidden: { y: 20, opacity: 0 },
@@ -1594,6 +1595,14 @@ export function SettingsPage() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.45, duration: 0.4 }}
+                >
+                  <CustomRulesManager />
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5, duration: 0.4 }}
                 >
                   <Alert className="border-blue-200 bg-blue-50/50 dark:border-blue-900/50 dark:bg-blue-950/50">
                     <InfoIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />

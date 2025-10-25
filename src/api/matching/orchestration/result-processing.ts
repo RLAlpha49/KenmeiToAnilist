@@ -4,25 +4,37 @@
  */
 
 import type { AniListManga } from "@/api/anilist/types";
+import type { KenmeiManga } from "@/api/kenmei/types";
 import type { SearchServiceConfig } from "./types";
-import { isOneShot } from "../normalization";
 import { generateCacheKey, mangaCache, saveCache } from "../cache";
 import { getMatchConfig } from "@/utils/storage";
 import { rankMangaResults } from "./ranking";
+import { applySystemContentFilters } from "../filtering";
 
 /**
  * Process and rank search results, optionally caching them.
  *
+ * Applies filtering, ranking, and custom matching rules.
+ *
  * @param results - Raw search results from API
  * @param title - Original search title
  * @param searchConfig - Search configuration
+ * @param kenmeiManga - Optional Kenmei manga for custom rule evaluation
  * @returns Ranked manga results
+ *
+ * @example
+ * ```typescript
+ * const ranked = processSearchResults(results, "Naruto", config, kenmeiManga);
+ * console.log(`Processed ${ranked.length} results`);
+ * ```
+ *
  * @source
  */
 export function processSearchResults(
   results: AniListManga[],
   title: string,
   searchConfig: SearchServiceConfig,
+  kenmeiManga?: KenmeiManga,
 ): AniListManga[] {
   console.debug(
     `[MangaSearchService] 🔍 Found ${results.length} raw results for "${title}" before filtering/ranking`,
@@ -39,6 +51,7 @@ export function processSearchResults(
     title,
     exactMatchMode,
     searchConfig.bypassCache,
+    kenmeiManga,
   );
 
   console.info(
@@ -84,30 +97,12 @@ export function applyContentFiltering(
 
   if (!searchConfig.bypassCache) {
     const matchConfig = getMatchConfig();
-
-    if (matchConfig.ignoreOneShots) {
-      const beforeFilter = filteredResults.length;
-      filteredResults = filteredResults.filter((manga) => !isOneShot(manga));
-      const afterFilter = filteredResults.length;
-
-      if (beforeFilter > afterFilter) {
-        console.debug(
-          `[MangaSearchService] 🚫 Filtered out ${beforeFilter - afterFilter} one-shot(s) during automatic matching for "${title}"`,
-        );
-      }
-    }
-
-    if (matchConfig.ignoreAdultContent) {
-      const beforeFilter = filteredResults.length;
-      filteredResults = filteredResults.filter((manga) => !manga.isAdult);
-      const afterFilter = filteredResults.length;
-
-      if (beforeFilter > afterFilter) {
-        console.debug(
-          `[MangaSearchService] 🚫 Filtered out ${beforeFilter - afterFilter} adult content manga during automatic matching for "${title}"`,
-        );
-      }
-    }
+    filteredResults = applySystemContentFilters(
+      filteredResults,
+      matchConfig,
+      undefined,
+      title,
+    );
   }
 
   return filteredResults;

@@ -6,55 +6,82 @@
 import type { AniListManga, MangaMatchResult } from "@/api/anilist/types";
 import type { KenmeiManga } from "@/api/kenmei/types";
 import type { ComickSourceStorage, MangaDexSourceStorage } from "./types";
-import { isOneShot } from "../normalization";
+import type { CustomRule } from "@/utils/storage";
 import { calculateConfidence } from "../scoring";
 import { getSourceInfo } from "../sources";
 import { getMatchConfig } from "@/utils/storage";
+import {
+  shouldAcceptByCustomRules,
+  ACCEPT_RULE_CONFIDENCE_FLOOR_EXACT,
+  ACCEPT_RULE_CONFIDENCE_FLOOR_REGULAR,
+} from "../filtering/custom-rules";
+import { applySystemContentFilters } from "../filtering/system-filters";
 
 /**
- * Filter matches based on configuration rules (one-shots, adult content).
+ * Filter matches based on configuration rules (one-shots, adult content, custom rules).
  *
- * Applies user-configured filtering during automatic matching.
- * Filters are not applied during manual review.
+ * Applies user-configured filtering during automatic matching:
+ * 1. Filters out one-shots (if enabled)
+ * 2. Filters out adult content (if enabled)
+ * 3. **Skip rules applied first** - these take precedence and remove matches entirely
+ * 4. Accept rules tracked but not removed - matched accept rules are marked for confidence boost
+ *
+ * **Confidence Boost Behavior**:
+ * When a match satisfies a custom accept rule, it's marked internally. The createMangaMatchResult()
+ * function later applies a confidence floor: 85% for exact title matches, 75% otherwise.
+ * Skip rules always take precedence - if a match matches both skip and accept rules, it's skipped.
  *
  * @param potentialMatches - Potential manga matches.
  * @param mangaTitle - Title of manga being matched.
  * @param matchConfig - Configuration with ignoreOneShots, ignoreAdultContent.
- * @returns Filtered list of manga matches.
+ * @param kenmeiManga - Kenmei manga for custom rule evaluation.
+ * @returns Filtered list of manga matches (with internal accept rule tracking if applicable).
+ *
+ * @example
+ * ```typescript
+ * const filtered = applyMatchFiltering(matches, "Naruto", config, kenmeiManga);
+ * console.log(`Filtered to ${filtered.length} matches`);
+ * // Accept rule matches will have confidence boosted in createMangaMatchResult()
+ * ```
+ *
  * @source
  */
 export function applyMatchFiltering(
   potentialMatches: AniListManga[],
   mangaTitle: string,
   matchConfig: { ignoreOneShots?: boolean; ignoreAdultContent?: boolean },
-): AniListManga[] {
-  let filteredMatches = potentialMatches;
+  kenmeiManga: KenmeiManga,
+): Array<AniListManga & { __acceptRuleMatch?: CustomRule }> {
+  let filteredMatches: Array<
+    AniListManga & { __acceptRuleMatch?: CustomRule }
+  > = potentialMatches.map((m) => ({ ...m }));
 
-  // Filter out one-shots if the setting is enabled (for automatic matching)
-  if (matchConfig.ignoreOneShots) {
-    const beforeFilter = filteredMatches.length;
-    filteredMatches = filteredMatches.filter((match) => !isOneShot(match));
-    const afterFilter = filteredMatches.length;
+  // Apply system content filters (novels, one-shots, adult content)
+  const systemFiltered = applySystemContentFilters(
+    filteredMatches,
+    matchConfig,
+    kenmeiManga,
+    mangaTitle,
+  );
+  filteredMatches = systemFiltered.map((m) => ({
+    ...m,
+  })) as Array<AniListManga & { __acceptRuleMatch?: CustomRule }>;
 
-    if (beforeFilter > afterFilter) {
+  // Mark matches that satisfy custom accept rules (without removing them)
+  // Confidence will be boosted later in createMangaMatchResult()
+  filteredMatches = filteredMatches.map((match) => {
+    const { shouldAccept, matchedRule } = shouldAcceptByCustomRules(
+      match,
+      kenmeiManga,
+    );
+    if (shouldAccept && matchedRule) {
       console.debug(
-        `[MangaSearchService] 🚫 Filtered out ${beforeFilter - afterFilter} one-shot(s) for "${mangaTitle}" during batch matching`,
+        `[MangaSearchService] ⭐ Marking confidence boost for "${match.title?.romaji || match.title?.english}" due to custom accept rule: "${matchedRule.description}"`,
       );
+      return { ...match, __acceptRuleMatch: matchedRule };
     }
-  }
-
-  // Filter out adult content if the setting is enabled (for automatic matching)
-  if (matchConfig.ignoreAdultContent) {
-    const beforeFilter = filteredMatches.length;
-    filteredMatches = filteredMatches.filter((match) => !match.isAdult);
-    const afterFilter = filteredMatches.length;
-
-    if (beforeFilter > afterFilter) {
-      console.debug(
-        `[MangaSearchService] 🚫 Filtered out ${beforeFilter - afterFilter} adult content manga for "${mangaTitle}" during batch matching`,
-      );
-    }
-  }
+    return match;
+  });
 
   return filteredMatches;
 }
@@ -63,9 +90,12 @@ export function applyMatchFiltering(
  * Create MangaMatchResult for single manga with confidence scores and sources.
  *
  * Combines AniList matches with confidence scores and Comick/MangaDex source info.
+ * **Applies confidence floor boost** for matches that satisfied custom accept rules:
+ * - Exact matches: boosted to 85% confidence minimum
+ * - Other matches: boosted to 75% confidence minimum
  *
  * @param manga - Kenmei manga entry.
- * @param potentialMatches - AniList matches for this manga.
+ * @param potentialMatches - AniList matches for this manga (may have __acceptRuleMatch tracking).
  * @param comickSourceMap - Map of manga ID to Comick source info.
  * @param mangaDexSourceMap - Map of manga ID to MangaDex source info.
  * @returns Complete match result with confidence and source info.
@@ -73,7 +103,7 @@ export function applyMatchFiltering(
  */
 export function createMangaMatchResult(
   manga: KenmeiManga,
-  potentialMatches: AniListManga[],
+  potentialMatches: Array<AniListManga & { __acceptRuleMatch?: CustomRule }>,
   comickSourceMap: Map<
     number,
     {
@@ -101,10 +131,29 @@ export function createMangaMatchResult(
       mangaDexSourceMap,
     );
 
+    let confidence = calculateConfidence(manga.title, match);
+
+    // Apply confidence floor boost if accept rule matched
+    if (match.__acceptRuleMatch) {
+      const isExactMatch =
+        manga.title.toLowerCase() === match.title?.romaji?.toLowerCase() ||
+        manga.title.toLowerCase() === match.title?.english?.toLowerCase();
+      const minConfidence = isExactMatch
+        ? ACCEPT_RULE_CONFIDENCE_FLOOR_EXACT
+        : ACCEPT_RULE_CONFIDENCE_FLOOR_REGULAR;
+
+      if (confidence < minConfidence) {
+        console.debug(
+          `[MangaSearchService] ⭐ Boosting confidence from ${(confidence * 100).toFixed(0)}% to ${(minConfidence * 100).toFixed(0)}% for "${match.title?.romaji || match.title?.english}" (accept rule match)`,
+        );
+        confidence = minConfidence;
+      }
+    }
+
     return {
       manga: match,
-      confidence: calculateConfidence(manga.title, match),
-      comickSource: comickSourceMap.get(match.id), // Include Comick source if available
+      confidence,
+      comickSource: comickSourceMap.get(match.id),
       mangaDexSource: mangaDexSourceMap.get(match.id),
       sourceInfo,
     };
@@ -178,6 +227,7 @@ export function compileMatchResults(
       potentialMatches,
       manga.title,
       matchConfig,
+      manga,
     );
 
     // Update progress for any remaining manga

@@ -4,6 +4,7 @@
  */
 
 import type { MangaSearchResponse, SearchServiceConfig } from "./types";
+import type { KenmeiManga } from "@/api/kenmei/types";
 import { DEFAULT_SEARCH_CONFIG } from "./types";
 import { handleCacheBypass, processCachedResults } from "./cache-handlers";
 import { executeSearchLoop } from "./search-execution";
@@ -27,11 +28,17 @@ import {
  * Main entry point coordinating cache checking, AniList API search with pagination,
  * result ranking/filtering, fallback sources (Comick, MangaDex), and confidence scoring.
  *
+ * Note: Custom accept rules only apply when kenmeiManga context is provided (automatic
+ * matching flows). Manual searches that do not provide kenmeiManga will not have accept
+ * rules applied, only skip rules are skipped (they don't apply to manual searches).
+ * This is by design: accept rules require Kenmei context to evaluate properly.
+ *
  * @param title - Manga title to search for
  * @param token - Optional authentication token
  * @param config - Optional search service configuration
  * @param abortSignal - Optional abort signal to cancel search
  * @param specificPage - Optional specific page number (disables pagination)
+ * @param kenmeiManga - Optional Kenmei manga context for custom rule evaluation
  * @returns Promise resolving to manga search response with matches
  * @source
  */
@@ -41,6 +48,7 @@ export async function searchMangaByTitle(
   config: Partial<SearchServiceConfig> = {},
   abortSignal?: AbortSignal,
   specificPage?: number,
+  kenmeiManga?: KenmeiManga,
 ): Promise<MangaSearchResponse> {
   const searchConfig = { ...DEFAULT_SEARCH_CONFIG, ...config };
   const cacheKey = generateCacheKey(title);
@@ -49,7 +57,8 @@ export async function searchMangaByTitle(
   if (searchConfig.bypassCache && cacheKey) {
     handleCacheBypass(title, cacheKey);
   } else if (!searchConfig.bypassCache) {
-    const cachedResult = processCachedResults(title, cacheKey);
+    // Pass kenmeiManga to ensure cached results respect custom rules when context exists
+    const cachedResult = processCachedResults(title, cacheKey, kenmeiManga);
     if (cachedResult) {
       return cachedResult;
     }
@@ -73,7 +82,12 @@ export async function searchMangaByTitle(
   );
 
   // Process and filter results
-  const rankedResults = processSearchResults(results, title, searchConfig);
+  const rankedResults = processSearchResults(
+    results,
+    title,
+    searchConfig,
+    kenmeiManga,
+  );
   let filteredResults = applyContentFiltering(
     rankedResults,
     title,

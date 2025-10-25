@@ -291,6 +291,8 @@ async function performFallbackSearches(
                 token,
                 searchConfig,
                 abortSignal,
+                undefined,
+                manga,
               );
 
               ensureNotCancelled(abortSignal, checkCancellation);

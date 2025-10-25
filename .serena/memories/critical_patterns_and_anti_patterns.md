@@ -141,3 +141,88 @@ The `STORAGE_KEYS` constant in `src/utils/storage.ts` is the **single source of 
 **Cache Versioning**: `CURRENT_CACHE_VERSION = 1` - increment when changing data structure to invalidate old data
 
 **Storage Write Behavior**: `storage.setItem()` skips redundant writes if the in-memory cache already holds the same value. This avoids thrashing localStorage and electron-store, but can cause drift if the layers get out of sync. For cases requiring forced convergence, use `storage.setItemAsync()` directly or clear the cache before writing.
+
+### Custom Matching Rules Pattern
+
+**Purpose**: Allow users to define regex-based rules for automatically skipping or accepting manga during matching.
+
+**Architecture**:
+
+- **Storage**: Rules stored in `MatchConfig.customRules` with skip and accept arrays
+- **Evaluation**: `custom-rules.ts` module evaluates patterns against all title variants
+- **Integration**: Hooks into existing filtering pipeline (skip-rules.ts, inclusion-rules.ts, ranking.ts)
+
+**Rule Structure**:
+
+```typescript
+interface CustomRule {
+  id: string; // Unique identifier
+  pattern: string; // Regex pattern
+  description: string; // User-friendly label
+  enabled: boolean; // Active state
+  caseSensitive: boolean; // Case matching
+  createdAt: string; // ISO timestamp
+}
+```
+
+**Evaluation Flow**:
+
+1. System skip rules (light novels, hardcoded blacklist)
+2. Custom skip rules (user-defined exclusions)
+3. Scoring and ranking
+4. Custom accept rules (boost confidence)
+5. Inclusion threshold checks
+
+**Integration Points**:
+
+- `skip-rules.ts`: shouldSkipManga() checks custom skip rules after system rules
+- `inclusion-rules.ts`: shouldIncludeManga\*() checks custom accept rules before thresholds
+- `ranking.ts`: Passes KenmeiManga to filtering functions for title matching
+- `batching/results.ts`: Applies custom rules during batch compilation
+
+**Title Matching Scope**:
+
+- AniList titles: romaji, english, native, synonyms
+- Kenmei titles: title, alternative_titles
+- All titles tested against each rule pattern
+- First match wins (short-circuit evaluation)
+
+**Best Practices**:
+
+- ✅ Test patterns before saving (use validation)
+- ✅ Use specific patterns to avoid over-filtering
+- ✅ Provide clear descriptions for maintainability
+- ✅ Disable rules instead of deleting for experimentation
+- ✅ Use case-insensitive by default (more forgiving)
+- ❌ Avoid overly broad patterns (e.g., `.*` matches everything)
+- ❌ Don't use complex lookaheads/lookbehinds (performance)
+- ❌ Avoid patterns that match common words (e.g., `the`, `a`)
+
+**Common Patterns**:
+
+- Skip anthologies: `anthology`
+- Skip one-shots: `^one.?shot$`
+- Skip volumes: `vol(ume)?\s*\d+`
+- Accept official: `official`
+- Accept publisher: `viz\s*media|shueisha`
+
+**Error Handling**:
+
+- Invalid regex caught during validation (try-catch on new RegExp)
+- Malformed rules logged but don't crash matching
+- Graceful degradation if customRules is undefined
+
+**Performance Considerations**:
+
+- Regex compilation cached per rule evaluation
+- Short-circuit on first match
+- Only enabled rules evaluated
+- Minimal overhead (~1ms per manga with 10 rules)
+
+**Anti-Patterns**:
+
+- ❌ Creating duplicate rules (use edit instead)
+- ❌ Using patterns without testing
+- ❌ Overly complex regex (use multiple simple rules)
+- ❌ Forgetting to enable rules after creation
+- ❌ Not providing descriptions (hard to maintain)

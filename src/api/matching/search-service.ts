@@ -48,8 +48,16 @@ export async function searchMangaByTitle(
   config: Partial<SearchServiceConfig> = {},
   abortSignal?: AbortSignal,
   specificPage?: number,
+  kenmeiManga?: KenmeiManga,
 ): Promise<MangaSearchResponse> {
-  return orchestratedSearch(title, token, config, abortSignal, specificPage);
+  return orchestratedSearch(
+    title,
+    token,
+    config,
+    abortSignal,
+    specificPage,
+    kenmeiManga,
+  );
 }
 
 /**
@@ -76,6 +84,9 @@ export async function matchSingleManga(
     kenmeiManga.title,
     token,
     searchConfig,
+    undefined,
+    undefined,
+    kenmeiManga,
   );
 
   const potentialMatches = searchResponse.matches;

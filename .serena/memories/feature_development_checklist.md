@@ -378,3 +378,102 @@ Before committing:
 - [ ] If version bump is wrong: use manual release commands (release:major/minor/patch)
 - [ ] If tag already exists: delete tag and re-run release
 - [ ] If changelog has duplicates: ensure clean git history before release
+
+---
+
+## Adding Custom Matching Rules
+
+### Type Definitions
+
+- [ ] Define `CustomRule` interface in storage.ts
+- [ ] Define `CustomRulesConfig` interface in storage.ts
+- [ ] Extend `MatchConfig` type with `customRules` property
+- [ ] Update `DEFAULT_MATCH_CONFIG` with empty rule arrays
+- [ ] Add validation helper function for regex patterns
+
+### Rule Engine
+
+- [ ] Create `custom-rules.ts` in `src/api/matching/filtering/`
+- [ ] Implement `testRuleAgainstTitles()` helper function
+- [ ] Implement `shouldSkipByCustomRules()` function
+- [ ] Implement `shouldAcceptByCustomRules()` function
+- [ ] Implement `getCustomRuleMatchInfo()` utility
+- [ ] Add comprehensive error handling for invalid regex
+- [ ] Add logging for rule matches and skips
+- [ ] Export functions from filtering/index.ts
+
+### Integration with Existing Filters
+
+- [ ] Update `skip-rules.ts` to accept kenmeiManga parameter
+- [ ] Add custom skip rule check in shouldSkipManga()
+- [ ] Update `inclusion-rules.ts` to accept kenmeiManga parameter
+- [ ] Add custom accept rule check in shouldIncludeManga\*()
+- [ ] Update `ranking.ts` to pass kenmeiManga to filtering functions
+- [ ] Update `result-processing.ts` to pass kenmeiManga
+- [ ] Update `batching/results.ts` to apply custom rules
+- [ ] Update `cache-handlers.ts` to support custom rules
+
+### UI Component
+
+- [ ] Create `CustomRulesManager.tsx` in `src/components/settings/`
+- [ ] Implement rule list display (Table or Card list)
+- [ ] Implement add rule dialog with form
+- [ ] Implement edit rule dialog
+- [ ] Implement delete confirmation dialog
+- [ ] Add real-time regex validation
+- [ ] Add pattern testing functionality
+- [ ] Add enable/disable toggle for rules
+- [ ] Implement save/load from storage
+- [ ] Add empty states for no rules
+- [ ] Add error handling and toast notifications
+
+### Settings Page Integration
+
+- [ ] Import CustomRulesManager in SettingsPage.tsx
+- [ ] Add component to Matching tab
+- [ ] Position after existing toggles, before info Alert
+- [ ] Update animation delays for sequential stagger
+- [ ] Test responsive layout on mobile/tablet/desktop
+
+### Debug Context
+
+- [ ] Update SettingsDebugSnapshot interface
+- [ ] Include customRules in getSnapshot()
+- [ ] Handle customRules in setSnapshot()
+- [ ] Display custom rules in debug panel
+
+### Testing
+
+- [ ] Test with no custom rules (default state)
+- [ ] Test adding skip rules
+- [ ] Test adding accept rules
+- [ ] Test editing existing rules
+- [ ] Test deleting rules
+- [ ] Test enabling/disabling rules
+- [ ] Test invalid regex patterns (validation)
+- [ ] Test case-sensitive vs case-insensitive
+- [ ] Test with automatic matching
+- [ ] Test with manual search (rules should not apply to skip)
+- [ ] Test with batch operations
+- [ ] Test with cached results
+- [ ] Test with fallback sources (Comick, MangaDex)
+- [ ] Test rule persistence across app restarts
+
+### Documentation
+
+- [ ] Add custom rules section to USER_GUIDE.md
+- [ ] Document regex pattern examples
+- [ ] Add troubleshooting guide
+- [ ] Update critical_patterns_and_anti_patterns.md
+- [ ] Add JSDoc to all new functions
+- [ ] Update ARCHITECTURE.md with custom rules flow
+
+### Edge Cases
+
+- [ ] Handle malformed customRules in storage (migration)
+- [ ] Handle undefined customRules (backward compatibility)
+- [ ] Handle empty pattern strings
+- [ ] Handle very long patterns (performance)
+- [ ] Handle special regex characters in user input
+- [ ] Handle rules that match everything (warn user)
+- [ ] Handle conflicting skip and accept rules (skip takes precedence)

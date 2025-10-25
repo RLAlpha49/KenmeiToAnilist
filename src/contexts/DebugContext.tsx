@@ -200,11 +200,13 @@ export interface StateInspectorHandle<T> {
 
 /**
  * Settings configuration snapshot for debug inspection.
+ * Includes explicit customRules field for easier UI access and clarity.
  * @source
  */
 interface SettingsDebugSnapshot {
   syncConfig: SyncConfig;
   matchConfig: MatchConfig;
+  customRules?: MatchConfig["customRules"];
 }
 
 /**
@@ -782,10 +784,14 @@ export function DebugProvider({
         description:
           "Persisted sync and matching configuration stored in local preferences.",
         group: "Settings",
-        getSnapshot: () => ({
-          syncConfig: getSyncConfig(),
-          matchConfig: getMatchConfig(),
-        }),
+        getSnapshot: () => {
+          const matchConfig = getMatchConfig();
+          return {
+            syncConfig: getSyncConfig(),
+            matchConfig: matchConfig,
+            customRules: matchConfig.customRules,
+          };
+        },
         setSnapshot: (snapshot) => {
           if (snapshot.syncConfig) {
             saveSyncConfig(snapshot.syncConfig);
@@ -793,16 +799,24 @@ export function DebugProvider({
           if (snapshot.matchConfig) {
             saveMatchConfig(snapshot.matchConfig);
           }
+          // If customRules are provided separately, merge them back into matchConfig
+          if (snapshot.customRules && snapshot.matchConfig) {
+            snapshot.matchConfig.customRules = snapshot.customRules;
+            saveMatchConfig(snapshot.matchConfig);
+          }
         },
         serialize: (snapshot) => ({
           syncConfig: snapshot.syncConfig,
           matchConfig: snapshot.matchConfig,
+          customRules: snapshot.customRules,
         }),
         deserialize: (value) => {
           const candidate = value as Partial<SettingsDebugSnapshot> | null;
+          const matchConfig = candidate?.matchConfig ?? getMatchConfig();
           return {
             syncConfig: candidate?.syncConfig ?? getSyncConfig(),
-            matchConfig: candidate?.matchConfig ?? getMatchConfig(),
+            matchConfig: matchConfig,
+            customRules: candidate?.customRules ?? matchConfig.customRules,
           } satisfies SettingsDebugSnapshot;
         },
       });

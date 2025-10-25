@@ -551,6 +551,7 @@ graph TD
    - Confidence scoring based on multiple factors
    - Manual search and selection interface
    - Results persistence with user modifications
+   - Custom matching rules for automated filtering and prioritization
 
 3. **Synchronization Phase**
    - User library fetching with rate limit handling

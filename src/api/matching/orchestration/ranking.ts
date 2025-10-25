@@ -4,74 +4,13 @@
  */
 
 import type { AniListManga } from "@/api/anilist/types";
+import type { KenmeiManga } from "@/api/kenmei/types";
 import { calculateMatchScore } from "../scoring";
 import {
   shouldIncludeMangaExact,
   shouldIncludeMangaRegular,
 } from "../filtering/inclusion-rules";
-
-/**
- * Titles to ignore during automatic matching (manual searches allowed).
- * @source
- */
-const IGNORED_AUTOMATIC_MATCH_TITLES = new Set([
-  "watashi, isekai de dorei ni sarechaimashita (naki) shikamo goshujinsama wa seikaku no warui elf no joousama (demo chou bijin ← koko daiji) munou sugite nonoshiraremakuru kedo douryou no orc ga iyashi-kei da shi sato no elf wa kawaii shi",
-]);
-
-/**
- * Check if manga should be ignored during automatic matching.
- *
- * @param manga - Manga to check
- * @returns True if the manga should be ignored
- * @source
- */
-function shouldIgnoreForAutomaticMatching(manga: AniListManga): boolean {
-  // Get all titles to check (main titles + synonyms)
-  const titlesToCheck = [
-    manga.title?.romaji,
-    manga.title?.english,
-    manga.title?.native,
-    ...(manga.synonyms || []),
-  ].filter(Boolean) as string[];
-
-  // Check if any title matches ignored titles (case-insensitive)
-  return titlesToCheck.some((title) =>
-    IGNORED_AUTOMATIC_MATCH_TITLES.has(title.toLowerCase()),
-  );
-}
-
-/**
- * Determine if manga should be skipped during ranking.
- *
- * Skips light novels and (for automatic matches) ignored titles.
- *
- * @param manga - Manga to check
- * @param isManualSearch - Whether this is a manual search operation
- * @returns True if the manga should be skipped
- * @source
- */
-function shouldSkipManga(
-  manga: AniListManga,
-  isManualSearch: boolean,
-): boolean {
-  // Skip Light Novels
-  if (manga.format === "NOVEL" || manga.format === "LIGHT_NOVEL") {
-    console.debug(
-      `[MangaSearchService] ⏭️ Skipping light novel: ${manga.title?.romaji || manga.title?.english || "unknown"}`,
-    );
-    return true;
-  }
-
-  // Skip ignored titles for automatic matching (but allow for manual searches)
-  if (!isManualSearch && shouldIgnoreForAutomaticMatching(manga)) {
-    console.debug(
-      `[MangaSearchService] ⏭️ Skipping ignored title for automatic matching: ${manga.title?.romaji || manga.title?.english || "unknown"}`,
-    );
-    return true;
-  }
-
-  return false;
-}
+import { shouldSkipManga as shouldSkipMangaByRules } from "../filtering/skip-rules";
 
 /**
  * Core ranking logic applied with custom inclusion predicate.
@@ -83,7 +22,15 @@ function shouldSkipManga(
  * @param searchTitle - Original search title
  * @param isManualSearch - Whether this is a manual search operation
  * @param includeMangaFn - Predicate function determining inclusion
+ * @param kenmeiManga - Optional Kenmei manga for custom rule evaluation
  * @returns Ranked manga results
+ *
+ * @example
+ * ```typescript
+ * const ranked = rankMangaCore(results, "Naruto", false, includeFn, kenmeiManga);
+ * console.log(`Ranked ${ranked.length} results`);
+ * ```
+ *
  * @source
  */
 function rankMangaCore(
@@ -94,13 +41,14 @@ function rankMangaCore(
     manga: AniListManga,
     score: number,
   ) => { include: boolean; adjustedScore: number },
+  kenmeiManga?: KenmeiManga,
 ): AniListManga[] {
   const scoredResults: Array<{ manga: AniListManga; score: number }> = [];
 
   // Score each manga result
   for (const manga of results) {
     // Check if manga should be skipped
-    if (shouldSkipManga(manga, isManualSearch)) {
+    if (shouldSkipMangaByRules(manga, isManualSearch, kenmeiManga)) {
       continue;
     }
 
@@ -140,11 +88,21 @@ function rankMangaCore(
 /**
  * Filter and rank manga results by match quality.
  *
+ * Applies custom inclusion rules and sorts by confidence score.
+ *
  * @param results - Manga results to rank
  * @param searchTitle - Original search title
  * @param exactMatchingOnly - Use exact matching mode
  * @param isManualSearch - Whether this is a manual search operation
+ * @param kenmeiManga - Optional Kenmei manga for custom rule evaluation
  * @returns Ranked manga results
+ *
+ * @example
+ * ```typescript
+ * const ranked = rankMangaResults(results, "Naruto", true, false, kenmeiManga);
+ * console.log(`Ranked ${ranked.length} results`);
+ * ```
+ *
  * @source
  */
 export function rankMangaResults(
@@ -152,12 +110,19 @@ export function rankMangaResults(
   searchTitle: string,
   exactMatchingOnly: boolean,
   isManualSearch: boolean = false,
+  kenmeiManga?: KenmeiManga,
 ): AniListManga[] {
   const includeMangaFn = exactMatchingOnly
     ? (manga: AniListManga, score: number) =>
-        shouldIncludeMangaExact(manga, score, searchTitle, results)
+        shouldIncludeMangaExact(manga, score, searchTitle, results, kenmeiManga)
     : (manga: AniListManga, score: number) =>
-        shouldIncludeMangaRegular(manga, score, results);
+        shouldIncludeMangaRegular(manga, score, results, kenmeiManga);
 
-  return rankMangaCore(results, searchTitle, isManualSearch, includeMangaFn);
+  return rankMangaCore(
+    results,
+    searchTitle,
+    isManualSearch,
+    includeMangaFn,
+    kenmeiManga,
+  );
 }

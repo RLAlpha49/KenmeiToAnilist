@@ -157,6 +157,101 @@ The matching interface includes built-in undo/redo functionality to help you exp
 
 **Tip**: Use undo/redo to safely try different match selections. If you're not sure about a choice, you can always undo and try something else!
 
+## 🎨 Custom Matching Rules
+
+Define custom rules to automatically skip or accept manga during the matching process.
+
+### Accessing Custom Rules
+
+1. Navigate to Settings page
+2. Click the "Matching" tab
+3. Scroll to "Custom Matching Rules" section
+
+### Rule Types
+
+**Skip Rules**: Automatically exclude manga from matching results
+
+- Use cases: Filter out anthologies, specific publishers, unwanted formats
+- Example patterns:
+  - `anthology` - Skip manga with "anthology" in title
+  - `^one.?shot$` - Skip one-shots (case-insensitive)
+  - `(vol|volume)\s*\d+` - Skip volume compilations
+
+**Accept Rules**: Automatically boost confidence for matching results
+
+- Use cases: Prioritize specific series, publishers, or formats
+- Example patterns:
+  - `^naruto` - Boost Naruto series
+  - `shueisha` - Boost Shueisha publications
+  - `official.*translation` - Boost official translations
+
+### Creating Rules
+
+1. Click "Add Rule" button in Skip Rules or Accept Rules section
+2. Enter a description (e.g., "Skip anthologies")
+3. Enter regex pattern (e.g., `anthology`)
+4. Toggle case-sensitive if needed (default: case-insensitive)
+5. Toggle enabled (default: enabled)
+6. Click "Save Rule"
+
+### Regex Pattern Tips
+
+- **Simple text**: `anthology` matches any title containing "anthology"
+- **Start anchor**: `^one shot` matches titles starting with "one shot"
+- **End anchor**: `anthology$` matches titles ending with "anthology"
+- **Word boundary**: `\bvol\b` matches "vol" as whole word
+- **Alternation**: `(manga|manhwa|manhua)` matches any of the options
+- **Case-insensitive by default** (toggle for case-sensitive)
+
+### Testing Patterns
+
+- Use the "Test Pattern" button to verify your regex
+- Enter sample titles to see if pattern matches
+- Fix validation errors before saving
+
+### Managing Rules
+
+- **Edit**: Click edit icon to modify rule
+- **Delete**: Click delete icon and confirm removal
+- **Enable/Disable**: Toggle switch to activate/deactivate rule
+
+### How Rules Work
+
+- **Skip rules** run during automatic matching (not manual search)
+- **Accept rules** boost confidence scores to ensure inclusion
+- Rules check all title variants: romaji, english, native, synonyms, alternative titles
+- Multiple rules can match the same manga (first match wins)
+- Custom rules run after system rules (light novels, hardcoded blacklist)
+
+### Important Notes
+
+- Custom rules only apply to automatic matching
+- Manual searches ignore skip rules (all results shown)
+- Invalid regex patterns are highlighted and cannot be saved
+- Disabled rules are stored but not evaluated
+- Rules persist across app restarts
+
+### Examples
+
+**Skip Rule Examples**:
+
+- Description: "Skip anthologies", Pattern: `anthology`
+- Description: "Skip one-shots", Pattern: `^one.?shot$`
+- Description: "Skip volume compilations", Pattern: `vol(ume)?\s*\d+`
+
+**Accept Rule Examples**:
+
+- Description: "Prioritize official translations", Pattern: `official`
+- Description: "Boost Shonen Jump titles", Pattern: `shonen\s*jump`
+- Description: "Accept Viz Media", Pattern: `viz\s*media`
+
+### Troubleshooting
+
+- **Pattern doesn't match**: Test with "Test Pattern" button, check regex syntax
+- **Too many matches skipped**: Review skip rules, disable overly broad patterns
+- **Rule not working**: Verify rule is enabled, check pattern is valid
+- **Validation error**: Fix regex syntax, escape special characters (\\, ., *, +, ?, etc.)
+
 ## ⌨️ Keyboard Shortcuts
 
 The app supports keyboard shortcuts for efficient navigation and control. Press `?` or `Ctrl+/` to open the keyboard shortcuts panel and view all available shortcuts.

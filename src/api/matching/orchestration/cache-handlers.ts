@@ -4,6 +4,7 @@
  */
 
 import type { AniListManga } from "@/api/anilist/types";
+import type { KenmeiManga } from "@/api/kenmei/types";
 import type { MangaSearchResponse, SearchServiceConfig } from "./types";
 import {
   generateCacheKey,
@@ -11,9 +12,14 @@ import {
   mangaCache,
   saveCache,
 } from "../cache";
-import { isOneShot } from "../normalization";
 import { calculateConfidence, calculateTitleTypePriority } from "../scoring";
 import { getMatchConfig } from "@/utils/storage";
+import {
+  shouldAcceptByCustomRules,
+  ACCEPT_RULE_CONFIDENCE_FLOOR_EXACT,
+  ACCEPT_RULE_CONFIDENCE_FLOOR_REGULAR,
+} from "../filtering/custom-rules";
+import { applySystemContentFilters } from "../filtering/system-filters";
 
 /**
  * Clear existing cache entry when bypassing cache.
@@ -43,14 +49,43 @@ export function handleCacheBypass(title: string, cacheKey: string): void {
 /**
  * Process cached results with filtering and confidence recalculation.
  *
+ * When `kenmeiManga` is provided, applies custom rules in the following order:
+ * 1. System filters: one-shots, adult content
+ * 2. Custom skip rules - removes matches entirely (highest precedence)
+ * 3. Confidence recalculation based on cached results
+ * 4. Custom accept rule boost - applies confidence floor immediately (85% exact / 75% other)
+ *
+ * Without `kenmeiManga`, only system filters are applied (backward-compatible mode).
+ *
  * @param title - Manga title to process cached results for
  * @param cacheKey - Cache key to retrieve results from
+ * @param kenmeiManga - Optional Kenmei manga for custom rule evaluation
  * @returns Manga search response with cached results or null if cache invalid
+ *
+ * @remarks
+ * Custom rules are only evaluated when kenmeiManga is provided to enable proper filtering.
+ * For general caching without kenmeiManga, custom rules are not evaluated.
+ * Skip rules take precedence over accept rules - if a match satisfies both, it is skipped.
+ * Accept rule confidence boost is applied immediately within this function for cached results,
+ * ensuring consistent confidence values before returning to the caller.
+ *
+ * @example
+ * ```typescript
+ * // With custom rules enabled
+ * const response = processCachedResults("Naruto", "naruto_key", kenmeiManga);
+ * // Result includes skip-rule filtered matches and accept-rule boosted confidence
+ *
+ * // Without custom rules (backward compatible)
+ * const response = processCachedResults("Naruto", "naruto_key");
+ * // Result is only system-filtered
+ * ```
+ *
  * @source
  */
 export function processCachedResults(
   title: string,
   cacheKey: string,
+  kenmeiManga?: KenmeiManga,
 ): MangaSearchResponse | null {
   if (!isCacheValid(cacheKey)) return null;
 
@@ -61,42 +96,48 @@ export function processCachedResults(
 
   const matchConfig = getMatchConfig();
 
-  // Filter one-shots if enabled
-  if (matchConfig.ignoreOneShots) {
-    const beforeFilter = filteredManga.length;
-    filteredManga = filteredManga.filter((manga) => !isOneShot(manga));
-    const afterFilter = filteredManga.length;
-
-    if (beforeFilter > afterFilter) {
-      console.debug(
-        `[MangaSearchService] 🚫 Filtered out ${beforeFilter - afterFilter} one-shot(s) from cached results for "${title}"`,
-      );
-    }
-  }
-
-  // Filter adult content if enabled
-  if (matchConfig.ignoreAdultContent) {
-    const beforeFilter = filteredManga.length;
-    filteredManga = filteredManga.filter((manga) => !manga.isAdult);
-    const afterFilter = filteredManga.length;
-
-    if (beforeFilter > afterFilter) {
-      console.debug(
-        `[MangaSearchService] 🚫 Filtered out ${beforeFilter - afterFilter} adult content manga from cached results for "${title}"`,
-      );
-    }
-  }
+  // Apply system content filters (one-shots, adult content, custom skip rules)
+  filteredManga = applySystemContentFilters(
+    filteredManga,
+    matchConfig,
+    kenmeiManga,
+    title,
+  );
 
   console.debug(
     `[MangaSearchService] ⚖️ Calculating fresh confidence scores for ${filteredManga.length} cached matches`,
   );
 
   const matches = filteredManga.map((manga) => {
-    const confidence = calculateConfidence(title, manga);
+    let confidence = calculateConfidence(title, manga);
     const titleTypePriority = calculateTitleTypePriority(manga, title);
 
+    // Apply custom accept rule boost if kenmeiManga provided
+    if (kenmeiManga) {
+      const { shouldAccept, matchedRule } = shouldAcceptByCustomRules(
+        manga,
+        kenmeiManga,
+      );
+      if (shouldAccept && matchedRule) {
+        // Apply confidence floor boost immediately for cached results
+        const isExactMatch =
+          title.toLowerCase() === manga.title?.romaji?.toLowerCase() ||
+          title.toLowerCase() === manga.title?.english?.toLowerCase();
+        const minConfidence = isExactMatch
+          ? ACCEPT_RULE_CONFIDENCE_FLOOR_EXACT
+          : ACCEPT_RULE_CONFIDENCE_FLOOR_REGULAR;
+
+        if (confidence < minConfidence) {
+          console.debug(
+            `[MangaSearchService] ⭐ Boosting cached result confidence from ${(confidence * 100).toFixed(0)}% to ${(minConfidence * 100).toFixed(0)}% for "${manga.title?.romaji || manga.title?.english}" (custom accept rule: "${matchedRule.description}")`,
+          );
+          confidence = minConfidence;
+        }
+      }
+    }
+
     console.debug(
-      `[MangaSearchService] ⚖️ Cached match confidence for "${manga.title?.english || manga.title?.romaji}": ${confidence}% (priority: ${titleTypePriority})`,
+      `[MangaSearchService] ⚖️ Cached match confidence for "${manga.title?.english || manga.title?.romaji}": ${(confidence * 100).toFixed(0)}% (priority: ${titleTypePriority})`,
     );
 
     return { manga, confidence, titleTypePriority };
