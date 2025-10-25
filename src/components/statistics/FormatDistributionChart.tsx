@@ -41,6 +41,15 @@ type FormatDatum = {
   readonly raw: string;
 };
 
+/**
+ * Recharts pie chart label render props with strongly typed value field.
+ */
+type PieLabelPayload = {
+  value?: number;
+  name?: string;
+  index?: number;
+};
+
 const FORMAT_LABELS: Record<string, string> = {
   manga: "Manga",
   novel: "Light Novel",
@@ -183,7 +192,9 @@ export const FormatDistributionChart: FC<FormatDistributionChartProps> =
                   nameKey="name"
                   outerRadius={90}
                   labelLine={false}
-                  label={(entry) => `${entry.value.toLocaleString()}`}
+                  label={(entry: PieLabelPayload) =>
+                    `${(entry.value ?? 0).toLocaleString()}`
+                  }
                 >
                   {data.map((entry) => (
                     <Cell key={entry.raw} fill={entry.color} />

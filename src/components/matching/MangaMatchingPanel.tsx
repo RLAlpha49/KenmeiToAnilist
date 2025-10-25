@@ -571,7 +571,7 @@ export function MangaMatchingPanel({
             ...match,
             status: "skipped" as const,
             selectedMatch: undefined,
-            matchDate: new Date(),
+            matchDate: new Date().toISOString(),
           };
         }
         // Return the original for all other matches
@@ -637,7 +637,7 @@ export function MangaMatchingPanel({
             ...match,
             status: "matched" as const,
             selectedMatch: match.anilistMatches[0].manga,
-            matchDate: new Date(),
+            matchDate: new Date().toISOString(),
           };
         }
         // Return the original for all other matches
@@ -741,7 +741,7 @@ export function MangaMatchingPanel({
             ...match,
             status: "pending" as const,
             selectedMatch: undefined,
-            matchDate: new Date(),
+            matchDate: new Date().toISOString(),
           };
         }
         // Return the original for all other matches

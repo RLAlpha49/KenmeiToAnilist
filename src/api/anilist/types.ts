@@ -228,8 +228,8 @@ export interface MangaMatchResult {
   anilistMatches?: MangaMatch[];
   selectedMatch?: AniListManga;
   status: MatchStatus;
-  /** ISO 8601 string timestamp of when match was created or updated. Persisted as string in storage and should be parsed to Date when needed for comparisons or display. */
-  matchDate?: Date;
+  /** ISO 8601 string timestamp of when match was created or updated. */
+  matchDate?: string;
 }
 
 /**

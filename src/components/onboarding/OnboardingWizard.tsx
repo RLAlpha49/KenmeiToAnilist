@@ -1,3 +1,13 @@
+/**
+ * @deprecated Use `OnboardingOverlay` and `OnboardingContext` instead.
+ * This component is maintained for backwards compatibility only.
+ * The new onboarding system provides a non-blocking overlay experience
+ * that guides users through the actual app workflow.
+ *
+ * See: src/components/onboarding/OnboardingOverlay.tsx
+ * See: src/contexts/OnboardingContext.tsx
+ */
+
 import React, { useState, useCallback, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -19,6 +29,14 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Card,
   CardContent,
   CardFooter,
@@ -33,8 +51,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { setOnboardingCompleted } from "@/utils/storage";
-
-// TODO: Improve onboarding by having the user interact with each step rather than just reading through them.
 
 interface OnboardingWizardProps {
   onComplete: () => void;
@@ -84,6 +100,7 @@ export function OnboardingWizard({
 }: Readonly<OnboardingWizardProps>) {
   const [currentStep, setCurrentStep] = useState(1);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [showEscapeConfirmDialog, setShowEscapeConfirmDialog] = useState(false);
 
   const steps: StepConfig[] = [
     {
@@ -347,7 +364,7 @@ export function OnboardingWizard({
     setCurrentStep(1);
   }, []);
 
-  // Handle keyboard navigation (Enter to advance, Escape to skip with confirmation)
+  // Handle keyboard navigation (Enter to advance, Escape to show confirmation)
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (isCompleting) return;
@@ -357,12 +374,7 @@ export function OnboardingWizard({
         handleNext();
       } else if (event.key === "Escape") {
         event.preventDefault();
-        const confirmed = globalThis.confirm(
-          "Are you sure you want to skip the onboarding wizard? You can restart it later from the home page.",
-        );
-        if (confirmed) {
-          handleSkip();
-        }
+        setShowEscapeConfirmDialog(true);
       }
     };
 
@@ -370,117 +382,144 @@ export function OnboardingWizard({
     return () => {
       globalThis.removeEventListener("keydown", handleKeyDown);
     };
-  }, [handleNext, handleSkip, isCompleting]);
+  }, [handleNext, isCompleting]);
 
   const step = steps[currentStep - 1];
 
   return (
-    <Dialog open={true} onOpenChange={() => {}}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-        <DialogHeader className="space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="text-primary">{step.icon}</div>
-              <div>
-                <DialogTitle className="text-xl">{step.title}</DialogTitle>
-                <p className="text-muted-foreground text-sm">
-                  {step.description}
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleSkip}
-              disabled={isCompleting}
-              className="h-8 w-8"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="flex gap-1 pt-2">
-            {steps.map((_, index) => {
-              const isCompleted = index < currentStep;
-              const isCurrent = index === currentStep - 1;
-              let bgClass = "bg-muted";
-              if (isCurrent) {
-                bgClass = "bg-primary/70";
-              } else if (isCompleted) {
-                bgClass = "bg-primary";
-              }
-              return (
-                <div
-                  key={`step-${index + 1}`}
-                  className={`h-1 flex-1 rounded-full transition-colors ${bgClass}`}
-                />
-              );
-            })}
-          </div>
-        </DialogHeader>
-
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentStep}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Card className={`border-0 ${step.gradient}`}>
-              <CardHeader>
-                <CardTitle className="text-base">{step.title}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">{step.content}</CardContent>
-              <CardFooter className="flex justify-between pt-4">
-                <div className="text-muted-foreground text-xs">
-                  Step {currentStep} of {steps.length}
-                </div>
-              </CardFooter>
-            </Card>
-          </motion.div>
-        </AnimatePresence>
-
-        <DialogFooter className="flex justify-between gap-2">
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={handleBack}
-              disabled={currentStep === 1 || isCompleting}
-            >
-              <ChevronLeft className="mr-1 h-4 w-4" />
-              Back
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={handleSkip}
-              disabled={isCompleting}
+    <>
+      {/* Escape confirmation dialog */}
+      <AlertDialog
+        open={showEscapeConfirmDialog}
+        onOpenChange={setShowEscapeConfirmDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogTitle>Skip Onboarding?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to skip the onboarding wizard? You can restart
+            it later from the home page.
+          </AlertDialogDescription>
+          <div className="flex justify-end gap-2">
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowEscapeConfirmDialog(false);
+                handleSkip();
+              }}
             >
               Skip
-            </Button>
+            </AlertDialogAction>
           </div>
-          <Button
-            onClick={handleNext}
-            disabled={isCompleting}
-            className="bg-primary hover:bg-primary/90"
-          >
-            {renderButtonContent(currentStep, steps.length, isCompleting)}
-          </Button>
-        </DialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-        {currentStep === steps.length && (
-          <div className="mt-2 text-center">
-            <Button
-              variant="link"
-              size="sm"
-              onClick={handleRestartTour}
-              disabled={isCompleting}
-              className="text-xs"
+      <Dialog open={true} onOpenChange={() => {}}>
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+          <DialogHeader className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="text-primary">{step.icon}</div>
+                <div>
+                  <DialogTitle className="text-xl">{step.title}</DialogTitle>
+                  <p className="text-muted-foreground text-sm">
+                    {step.description}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleSkip}
+                disabled={isCompleting}
+                className="h-8 w-8"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex gap-1 pt-2">
+              {steps.map((_, index) => {
+                const isCompleted = index < currentStep;
+                const isCurrent = index === currentStep - 1;
+                let bgClass = "bg-muted";
+                if (isCurrent) {
+                  bgClass = "bg-primary/70";
+                } else if (isCompleted) {
+                  bgClass = "bg-primary";
+                }
+                return (
+                  <div
+                    key={`step-${index + 1}`}
+                    className={`h-1 flex-1 rounded-full transition-colors ${bgClass}`}
+                  />
+                );
+              })}
+            </div>
+          </DialogHeader>
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentStep}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
             >
-              ↻ Restart Tour
+              <Card className={`border-0 ${step.gradient}`}>
+                <CardHeader>
+                  <CardTitle className="text-base">{step.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">{step.content}</CardContent>
+                <CardFooter className="flex justify-between pt-4">
+                  <div className="text-muted-foreground text-xs">
+                    Step {currentStep} of {steps.length}
+                  </div>
+                </CardFooter>
+              </Card>
+            </motion.div>
+          </AnimatePresence>
+
+          <DialogFooter className="flex justify-between gap-2">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handleBack}
+                disabled={currentStep === 1 || isCompleting}
+              >
+                <ChevronLeft className="mr-1 h-4 w-4" />
+                Back
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={handleSkip}
+                disabled={isCompleting}
+              >
+                Skip
+              </Button>
+            </div>
+            <Button
+              onClick={handleNext}
+              disabled={isCompleting}
+              className="bg-primary hover:bg-primary/90"
+            >
+              {renderButtonContent(currentStep, steps.length, isCompleting)}
             </Button>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+          </DialogFooter>
+
+          {currentStep === steps.length && (
+            <div className="mt-2 text-center">
+              <Button
+                variant="link"
+                size="sm"
+                onClick={handleRestartTour}
+                disabled={isCompleting}
+                className="text-xs"
+              >
+                ↻ Restart Tour
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

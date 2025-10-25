@@ -35,7 +35,8 @@ import {
  * Provides handler functions for managing manga match results and user interactions during the matching workflow.
  * @param matchResults - Current array of manga match results.
  * @param setMatchResults - State setter for updating match results.
- * @param setSearchTarget - State setter for the current manga being searched.
+ * @param searchTargetRef - Ref to track the current manga being searched (owned by caller).
+ * @param setSearchTarget - State setter for the current manga being searched (for cleanup).
  * @param setIsSearchOpen - State setter for toggling the search panel.
  * @param setBypassCache - State setter for bypassing cache during manual search.
  * @param undoRedoManager - Optional undo/redo manager for recording commands.
@@ -45,6 +46,7 @@ import {
 export const useMatchHandlers = (
   matchResults: MangaMatchResult[],
   setMatchResults: React.Dispatch<React.SetStateAction<MangaMatchResult[]>>,
+  searchTargetRef: { current: KenmeiManga | undefined },
   setSearchTarget: React.Dispatch<
     React.SetStateAction<KenmeiManga | undefined>
   >,
@@ -53,6 +55,22 @@ export const useMatchHandlers = (
   undoRedoManager?: UndoRedoManager,
 ) => {
   const { recordEvent } = useDebugActions();
+
+  /**
+   * Updates both the search target ref and state.
+   * Used by callers to properly set the search target before opening search panel.
+   *
+   * @param manga - The manga to set as search target
+   * @source
+   */
+  const setSearchTargetExternal = useCallback(
+    (manga: KenmeiManga | undefined) => {
+      // eslint-disable-next-line
+      searchTargetRef.current = manga;
+      setSearchTarget(manga);
+    },
+    [searchTargetRef, setSearchTarget],
+  );
 
   /**
    * Finds the index of a match in the results array by ID or title.
@@ -287,7 +305,7 @@ export const useMatchHandlers = (
               ...currentMatch,
               status: newStatus,
               selectedMatch: getSelectedMatch(currentMatch),
-              matchDate: new Date(),
+              matchDate: new Date().toISOString(),
             };
 
             return new commandType(
@@ -313,7 +331,7 @@ export const useMatchHandlers = (
                 ...m,
                 status: newStatus,
                 selectedMatch: getSelectedMatch(m),
-                matchDate: new Date(),
+                matchDate: new Date().toISOString(),
               };
             }
             return m;
@@ -330,7 +348,7 @@ export const useMatchHandlers = (
                 ...m,
                 status: newStatus,
                 selectedMatch: getSelectedMatch(m),
-                matchDate: new Date(),
+                matchDate: new Date().toISOString(),
               };
             }
             return m;
@@ -368,7 +386,7 @@ export const useMatchHandlers = (
         ...singleMatch,
         status: newStatus,
         selectedMatch: getSelectedMatch(singleMatch),
-        matchDate: new Date(),
+        matchDate: new Date().toISOString(),
       };
 
       // Update the array with the new object
@@ -530,7 +548,7 @@ export const useMatchHandlers = (
           selectedMatch: { ...selectedAlternative.manga },
           anilistMatches: rearranged,
           status: "matched" as const,
-          matchDate: new Date(),
+          matchDate: new Date().toISOString(),
         };
       };
 
@@ -581,7 +599,7 @@ export const useMatchHandlers = (
           selectedMatch: { ...selectedAlternative.manga },
           anilistMatches: newAnilistMatches,
           status: autoAccept ? "matched" : currentMatch.status,
-          matchDate: new Date(),
+          matchDate: new Date().toISOString(),
         };
       };
 
@@ -674,7 +692,7 @@ export const useMatchHandlers = (
               ...currentMatch,
               status: "pending" as const,
               selectedMatch: originalMainMatch,
-              matchDate: new Date(),
+              matchDate: new Date().toISOString(),
             };
 
             return new ResetToPendingCommand(
@@ -700,26 +718,33 @@ export const useMatchHandlers = (
                 ...m,
                 status: "pending" as const,
                 selectedMatch: originalMainMatch,
-                matchDate: new Date(),
+                matchDate: new Date().toISOString(),
               };
             }
             return m;
           });
           updateMatchResults(updatedResults);
         } else {
-          // Fallback: create reset state for all matches without undo/redo
-          const resetMatches = match.matches.map((m) => {
-            const originalMainMatch = m.anilistMatches?.length
-              ? m.anilistMatches[0].manga
-              : undefined;
-            return {
-              ...m,
-              status: "pending" as const,
-              selectedMatch: originalMainMatch,
-              matchDate: new Date(),
-            };
+          // Fallback: build full updated results by mapping over all matchResults with inclusion check
+          // This ensures all changes are persisted, not just the subset being reset
+          const updatedResults = matchResults.map((m) => {
+            const isInBatch = match.matches.some(
+              (bm) => bm.kenmeiManga.id === m.kenmeiManga.id,
+            );
+            if (isInBatch) {
+              const originalMainMatch = m.anilistMatches?.length
+                ? m.anilistMatches[0].manga
+                : undefined;
+              return {
+                ...m,
+                status: "pending" as const,
+                selectedMatch: originalMainMatch,
+                matchDate: new Date().toISOString(),
+              };
+            }
+            return m;
           });
-          updateMatchResults(resetMatches);
+          updateMatchResults(updatedResults);
         }
 
         const endTime = performance.now();
@@ -760,7 +785,7 @@ export const useMatchHandlers = (
         status: "pending" as const,
         // Restore the original main match as the selectedMatch
         selectedMatch: originalMainMatch,
-        matchDate: new Date(),
+        matchDate: new Date().toISOString(),
       };
 
       // Update the array with the new object
@@ -795,18 +820,15 @@ export const useMatchHandlers = (
   /**
    * Handles selecting a manga from the search panel and updating the match result accordingly.
    * Creates a SelectSearchMatchCommand for undo/redo tracking if manager is available.
+   * Reads from searchTargetRef instead of using setState callback for React Compiler compatibility.
    *
    * @param manga - The AniList manga selected from the search panel.
    * @source
    */
   const handleSelectSearchMatch = useCallback(
     (manga: AniListManga) => {
-      // Get the current search target - this was causing the linter error
-      let searchTarget: KenmeiManga | undefined;
-      setSearchTarget((current) => {
-        searchTarget = current;
-        return current;
-      });
+      // Read from ref directly instead of using setState callback
+      const searchTarget = searchTargetRef.current;
 
       if (!searchTarget) {
         console.error("[MatchHandlers] No manga target was set for search");
@@ -853,7 +875,7 @@ export const useMatchHandlers = (
           ...existingMatch,
           status: "matched" as const, // Use "matched" status instead of "manual" since it's an existing alternative
           selectedMatch: existingMatch.anilistMatches[alternativeIndex].manga,
-          matchDate: new Date(),
+          matchDate: new Date().toISOString(),
         };
       } else {
         // It's a new match not in the alternatives, create a manual match
@@ -861,7 +883,7 @@ export const useMatchHandlers = (
           ...existingMatch, // Keep all existing properties
           status: "manual" as const, // Change status to manual
           selectedMatch: manga, // Update with the new selected match
-          matchDate: new Date(),
+          matchDate: new Date().toISOString(),
         };
       }
 
@@ -885,6 +907,7 @@ export const useMatchHandlers = (
       setSearchTarget(undefined);
     },
     [
+      searchTargetRef,
       findMatchIndex,
       matchResults,
       updateMatchResults,
@@ -934,5 +957,6 @@ export const useMatchHandlers = (
     handleResetToPending,
     handleSelectSearchMatch,
     createBatchOperation,
+    setSearchTargetExternal,
   };
 };

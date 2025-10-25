@@ -24,17 +24,15 @@ import {
   ArrowUpRight,
   HelpCircle,
 } from "lucide-react";
-import { toast } from "sonner";
 import { useAuthState } from "../hooks/useAuth";
 import {
   getImportStats,
   storage,
   STORAGE_KEYS,
-  resetOnboarding,
   getSavedMatchResults,
 } from "../utils/storage";
 import { motion, AnimatePresence } from "framer-motion";
-import { OnboardingWizard } from "../components/onboarding/OnboardingWizard";
+import { useOnboarding } from "@/contexts/OnboardingContext";
 import {
   Card,
   CardContent,
@@ -435,6 +433,8 @@ const featureCards = [
 export function HomePage() {
   // Get auth state to check authentication status
   const { authState } = useAuthState();
+  const { startOnboarding: startOnboardingFlow, isActive: isOnboardingActive } =
+    useOnboarding();
 
   // State for dashboard data
   const [stats, setStats] = useState<StatsState>({
@@ -469,7 +469,6 @@ export function HomePage() {
     failedSyncs: 0,
     totalSyncs: 0,
   });
-  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -567,42 +566,8 @@ export function HomePage() {
     loadSyncStats();
   }, []);
 
-  // Check onboarding status on mount using async storage read
-  useEffect(() => {
-    const checkOnboardingStatus = async () => {
-      try {
-        const value = await storage.getItemAsync(
-          STORAGE_KEYS.ONBOARDING_COMPLETED,
-        );
-        setShowOnboarding(value !== "true");
-      } catch (error) {
-        console.error("[HomePage] Error checking onboarding status:", error);
-        setShowOnboarding(true);
-      }
-    };
-
-    checkOnboardingStatus();
-  }, []);
-
-  const handleOnboardingComplete = () => {
-    setShowOnboarding(false);
-    toast.success("🎉 Onboarding completed! Welcome aboard!", {
-      description: "Your app is now ready to use.",
-      duration: 4000,
-    });
-  };
-
-  const handleOnboardingSkip = () => {
-    setShowOnboarding(false);
-    toast.info("ℹ️ Onboarding skipped", {
-      description: "You can restart it anytime from the home page.",
-      duration: 3000,
-    });
-  };
-
   const handleRestartOnboarding = () => {
-    resetOnboarding();
-    setShowOnboarding(true);
+    startOnboardingFlow();
   };
 
   /**
@@ -787,14 +752,7 @@ export function HomePage() {
 
   return (
     <>
-      <AnimatePresence mode="wait">
-        {showOnboarding && (
-          <OnboardingWizard
-            onComplete={handleOnboardingComplete}
-            onSkip={handleOnboardingSkip}
-          />
-        )}
-      </AnimatePresence>
+      <AnimatePresence mode="wait"></AnimatePresence>
       <div className="relative min-h-screen overflow-hidden">
         <div className="pointer-events-none absolute inset-0">
           <div className="bg-linear-to-br absolute -left-1/3 top-[8%] h-[420px] w-[420px] rounded-full from-blue-500/25 via-purple-500/20 to-transparent blur-3xl" />
@@ -865,15 +823,17 @@ export function HomePage() {
                         <ExternalLink className="h-4 w-4" />
                       </a>
                     </Button>
-                    <Button
-                      onClick={handleRestartOnboarding}
-                      variant="ghost"
-                      size="lg"
-                      className="h-auto rounded-full px-6 py-3 text-base font-semibold"
-                    >
-                      <HelpCircle className="mr-2 h-4 w-4" />
-                      Restart Onboarding
-                    </Button>
+                    {!isOnboardingActive && (
+                      <Button
+                        onClick={handleRestartOnboarding}
+                        variant="ghost"
+                        size="lg"
+                        className="h-auto rounded-full px-6 py-3 text-base font-semibold"
+                      >
+                        <HelpCircle className="mr-2 h-4 w-4" />
+                        Start guided tour
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-3 lg:w-80 lg:grid-cols-1">

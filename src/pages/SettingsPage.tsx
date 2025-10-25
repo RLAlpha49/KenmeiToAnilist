@@ -31,6 +31,7 @@ import {
 import { useAuthActions, useAuthState } from "../hooks/useAuth";
 import { useAutoUpdater } from "../hooks/useAutoUpdater";
 import { useDebugActions, useDebugState } from "../contexts/DebugContext";
+import { useOnboarding } from "../contexts/OnboardingContext";
 import { APICredentials } from "../types/auth";
 import { DEFAULT_ANILIST_CONFIG, DEFAULT_AUTH_PORT } from "../config/anilist";
 import {
@@ -132,6 +133,8 @@ export function SettingsPage() {
     setConfidenceTestExporterEnabled,
     recordEvent,
   } = useDebugActions();
+
+  const { completeStep, isActive } = useOnboarding();
 
   // Auto-updater hook for managing download/install operations
   const { isDownloading, downloadProgress, isDownloaded } = useAutoUpdater();
@@ -326,6 +329,13 @@ export function SettingsPage() {
       setShowStatusMessage(true);
     }
   }, [authState.isAuthenticated, statusMessage, isLoading]);
+
+  // Track auth completion for onboarding
+  useEffect(() => {
+    if (isActive && authState.isAuthenticated && !isLoading) {
+      completeStep("auth");
+    }
+  }, [authState.isAuthenticated, isActive, isLoading, completeStep]);
 
   // Add a timeout to detect stuck loading state
   useEffect(() => {
@@ -1386,6 +1396,7 @@ export function SettingsPage() {
             </TabsTrigger>
             <TabsTrigger
               value="sync"
+              data-onboarding="sync-tab"
               className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent px-5 py-3.5 font-medium text-slate-600 transition hover:border-slate-200 hover:text-slate-900 data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg dark:hover:border-white/20 dark:hover:text-white dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-white/20 dark:data-[state=active]:text-white"
             >
               <RefreshCw className="h-4 w-4" />
@@ -1399,7 +1410,11 @@ export function SettingsPage() {
               Data
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="matching" className="space-y-6">
+          <TabsContent
+            value="matching"
+            className="space-y-6"
+            data-onboarding="settings-form"
+          >
             <motion.div variants={itemVariants} initial="hidden" animate="show">
               <SettingsSectionShell
                 icon={Search}
@@ -1597,7 +1612,12 @@ export function SettingsPage() {
           </TabsContent>
 
           <TabsContent value="sync" className="space-y-6">
-            <motion.div variants={itemVariants} initial="hidden" animate="show">
+            <motion.div
+              variants={itemVariants}
+              initial="hidden"
+              animate="show"
+              data-onboarding="sync-settings"
+            >
               <SettingsSectionShell
                 icon={RefreshCw}
                 title="Sync preferences"

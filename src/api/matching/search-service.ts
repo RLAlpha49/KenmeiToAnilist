@@ -97,7 +97,7 @@ export async function matchSingleManga(
         ],
         selectedMatch: potentialMatches[0].manga,
         status: "matched",
-        matchDate: new Date(),
+        matchDate: new Date().toISOString(),
       };
     }
   }

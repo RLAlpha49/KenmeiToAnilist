@@ -10,6 +10,7 @@ import { ErrorMessage } from "../components/ui/error-message";
 import { ErrorType, AppError, createError } from "../utils/errorHandling";
 import { KenmeiData } from "../types/kenmei";
 import { saveKenmeiData, getSavedMatchResults } from "../utils/storage";
+import { useOnboarding } from "../contexts/OnboardingContext";
 import {
   ImportSuccessContent,
   FileUploadContent,
@@ -38,6 +39,7 @@ import { useDebugActions } from "../contexts/DebugContext";
 export function ImportPage() {
   const navigate = useNavigate();
   const { recordEvent } = useDebugActions();
+  const { completeStep } = useOnboarding();
   const [importData, setImportData] = useState<KenmeiData | null>(null);
   const [error, setError] = useState<AppError | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -213,6 +215,9 @@ export function ImportPage() {
         duration: 2800,
         description: "We'll take you to the match review in just a sec.",
       });
+
+      // Mark import step as complete
+      completeStep("import");
 
       // Redirect to the review page after a short delay
       setTimeout(() => {

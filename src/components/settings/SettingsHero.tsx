@@ -88,7 +88,7 @@ export function SettingsHero({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="relative overflow-hidden rounded-[36px] border border-slate-200/70 bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900 shadow-[0_40px_120px_-60px_rgba(79,70,229,0.25)] dark:border-white/10 dark:from-indigo-600/40 dark:via-slate-900 dark:to-slate-950 dark:text-white dark:shadow-[0_40px_120px_-60px_rgba(79,70,229,0.9)]"
+      className="bg-linear-to-br relative overflow-hidden rounded-[36px] border border-slate-200/70 from-white via-slate-50 to-slate-100 text-slate-900 shadow-[0_40px_120px_-60px_rgba(79,70,229,0.25)] dark:border-white/10 dark:from-indigo-600/40 dark:via-slate-900 dark:to-slate-950 dark:text-white dark:shadow-[0_40px_120px_-60px_rgba(79,70,229,0.9)]"
     >
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -left-32 top-16 h-72 w-72 rounded-full bg-indigo-300/40 blur-3xl dark:bg-indigo-500/30" />
@@ -130,6 +130,7 @@ export function SettingsHero({
                 size="lg"
                 className="bg-indigo-600 text-white hover:bg-indigo-500 dark:bg-white dark:text-slate-900 dark:hover:bg-white/90"
                 disabled={isLoading || disableLogin}
+                data-onboarding="auth-button"
               >
                 <LogIn className="mr-2 h-4 w-4" />
                 Authenticate with AniList
@@ -166,13 +167,16 @@ export function SettingsHero({
               <CheckCircle2 className="h-4 w-4 text-emerald-500 dark:text-emerald-300" />
               <span className="line-clamp-1">{statusMessage}</span>
               {isLoading && onCancelAuth && (
-                <button
+                <Button
                   type="button"
                   onClick={onCancelAuth}
-                  className="rounded-full border border-rose-200 bg-rose-100 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-rose-700 transition hover:bg-rose-200 dark:border-white/20 dark:bg-rose-400/20 dark:text-rose-100 dark:hover:bg-rose-400/30"
+                  size="sm"
+                  variant="outline"
+                  aria-label="Cancel authentication"
+                  className="h-auto border-rose-200 bg-rose-100 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-rose-700 hover:bg-rose-200 dark:border-white/20 dark:bg-rose-400/20 dark:text-rose-100 dark:hover:bg-rose-400/30"
                 >
                   Cancel
-                </button>
+                </Button>
               )}
               {onClearStatus && (
                 <button
@@ -188,7 +192,7 @@ export function SettingsHero({
         </div>
 
         <div className="relative w-full max-w-md">
-          <div className="absolute inset-0 rounded-3xl bg-white/60 blur-2xl dark:bg-gradient-to-br dark:from-white/20 dark:via-white/5 dark:to-white/0" />
+          <div className="dark:bg-linear-to-br absolute inset-0 rounded-3xl bg-white/60 blur-2xl dark:from-white/20 dark:via-white/5 dark:to-white/0" />
           <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white/80 p-6 shadow-xl backdrop-blur-xl dark:border-white/15 dark:bg-slate-950/60">
             <div
               className={cn(

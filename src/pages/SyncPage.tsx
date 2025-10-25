@@ -9,6 +9,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useAuthState } from "../hooks/useAuth";
 import { useSynchronization } from "../hooks/useSynchronization";
 import { useRateLimit } from "../contexts/RateLimitContext";
+import { useOnboarding } from "../contexts/OnboardingContext";
 import {
   UserMediaList,
   MangaMatchResult,
@@ -97,6 +98,7 @@ export function SyncPage() {
   const [state, actions] = useSynchronization();
   const [viewMode, setViewMode] = useState<ViewMode>("preview");
   const { rateLimitState, setRateLimit } = useRateLimit();
+  const { completeStep } = useOnboarding();
 
   // Authentication and validation states
   const [authError, setAuthError] = useState(false);
@@ -533,6 +535,7 @@ export function SyncPage() {
    * @source
    */
   const handleSyncComplete = () => {
+    completeStep("sync");
     setViewMode("results");
   };
 
@@ -1285,6 +1288,7 @@ export function SyncPage() {
                   onClick={handleStartSync}
                   disabled={entriesWithChanges.length === 0 || libraryLoading}
                   className="bg-linear-to-r group relative w-full overflow-hidden rounded-md from-blue-500 via-indigo-500 to-purple-500 px-6 py-2 font-semibold text-white shadow-lg transition hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+                  data-onboarding="sync-button"
                 >
                   <span className="absolute inset-0 bg-white/20 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                   <span className="relative flex items-center justify-center gap-2">

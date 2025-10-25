@@ -271,6 +271,48 @@ export const storage = {
   },
 
   /**
+   * Asynchronously stores a value to electron-store first, then syncs to localStorage.
+   *
+   * This is the authoritative async write method that ensures electron-store is updated first
+   * (the source of truth) before updating localStorage and cache. Use this for critical
+   * persisted state like onboarding flags.
+   *
+   * @param key - The storage key.
+   * @param value - The value to store.
+   * @returns A promise that resolves when the write is complete.
+   * @source
+   */
+  setItemAsync: async (key: string, value: string): Promise<void> => {
+    if (!globalThis.electronStore) {
+      // Fallback to sync method if no electron store
+      console.debug(
+        `[Storage] 🔍 No electron-store available, using sync setItem for ${key}`,
+      );
+      storage.setItem(key, value);
+      return;
+    }
+
+    try {
+      console.debug(
+        `[Storage] 🔍 Async setting item: ${key} (${value.length} bytes)`,
+      );
+
+      // Write to electron-store first (authoritative source)
+      await globalThis.electronStore.setItem(key, value);
+
+      // Update cache
+      storageCache[key] = value;
+
+      // Sync to localStorage
+      localStorage.setItem(key, value);
+
+      console.debug(`[Storage] ✅ Async set complete: ${key}`);
+    } catch (error) {
+      console.error(`[Storage] ❌ Error async setting item ${key}:`, error);
+      throw error;
+    }
+  },
+  /**
    * Asynchronously retrieves a value from storage, preferring electron-store if available.
    *
    * Checks electron-store first (authoritative source), falls back to localStorage,
@@ -312,6 +354,47 @@ export const storage = {
     return localStorage.getItem(key);
   },
 };
+
+/**
+ * Ensures onboarding-specific keys are initialized with default values if missing.
+ *
+ * Sets ONBOARDING_COMPLETED to "false" and ONBOARDING_STEPS_COMPLETED to "[]"
+ * if they don't exist, preventing the onboarding overlay from being unexpectedly
+ * re-triggered due to missing initialization.
+ *
+ * @internal
+ * @source
+ */
+async function ensureOnboardingKeysInitialized(): Promise<void> {
+  try {
+    // Check if ONBOARDING_COMPLETED exists, if not set it to "false"
+    const completedExists = await storage.getItemAsync(
+      STORAGE_KEYS.ONBOARDING_COMPLETED,
+    );
+    if (completedExists === null) {
+      console.debug(
+        "[Storage] 🔧 Initializing ONBOARDING_COMPLETED to 'false'",
+      );
+      await storage.setItemAsync(STORAGE_KEYS.ONBOARDING_COMPLETED, "false");
+    }
+
+    // Check if ONBOARDING_STEPS_COMPLETED exists, if not set it to "[]"
+    const stepsExist = await storage.getItemAsync(
+      STORAGE_KEYS.ONBOARDING_STEPS_COMPLETED,
+    );
+    if (stepsExist === null) {
+      console.debug(
+        "[Storage] 🔧 Initializing ONBOARDING_STEPS_COMPLETED to '[]'",
+      );
+      await storage.setItemAsync(STORAGE_KEYS.ONBOARDING_STEPS_COMPLETED, "[]");
+    }
+  } catch (error) {
+    console.error(
+      "[Storage] ⚠️ Failed to ensure onboarding keys initialized:",
+      error,
+    );
+  }
+}
 
 /**
  * Initializes storage by syncing electron-store to localStorage on app startup.
@@ -362,6 +445,9 @@ export async function initializeStorage(): Promise<void> {
     console.info(
       `[Storage] ✅ Synced ${syncCount} keys from electron-store to localStorage`,
     );
+
+    // Ensure onboarding keys are properly initialized
+    await ensureOnboardingKeysInitialized();
   } catch (error) {
     console.error("[Storage] ❌ Storage initialization failed:", error);
   }
@@ -386,6 +472,7 @@ export const STORAGE_KEYS = {
   ANILIST_SEARCH_CACHE: "anilist_search_cache",
   UPDATE_DISMISSED_VERSIONS: "update_dismissed_versions",
   ONBOARDING_COMPLETED: "onboarding_completed",
+  ONBOARDING_STEPS_COMPLETED: "onboarding_steps_completed",
   BACKUP_HISTORY: "backup_history",
   AUTO_BACKUP_ENABLED: "auto_backup_enabled",
   SYNC_HISTORY: "sync_history",
@@ -962,12 +1049,17 @@ export function isAniListIdIgnored(anilistId: number): boolean {
 }
 
 /**
- * Checks if the onboarding wizard has been completed
- * @returns {boolean} True if onboarding has been completed, false otherwise
+ * Checks if the onboarding wizard has been completed (async version for authoritative consistency).
+ *
+ * Uses async getItemAsync() to fetch from the authoritative electron-store source first,
+ * ensuring consistency across storage layers. Only the exact string "true" is considered true.
+ *
+ * @returns {Promise<boolean>} Promise that resolves to true if onboarding has been completed, false otherwise
+ * @source
  */
-export function isOnboardingCompleted(): boolean {
+export async function isOnboardingCompleted(): Promise<boolean> {
   try {
-    const value = storage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED);
+    const value = await storage.getItemAsync(STORAGE_KEYS.ONBOARDING_COMPLETED);
     return value === "true";
   } catch (error) {
     console.error(
@@ -979,12 +1071,23 @@ export function isOnboardingCompleted(): boolean {
 }
 
 /**
- * Sets the onboarding completion status
+ * Sets the onboarding completion status (async version for authoritative persistence).
+ *
+ * Uses async setItemAsync() to ensure electron-store (authoritative source) is updated first,
+ * then syncs to localStorage for consistency across storage layers.
+ *
  * @param {boolean} completed - Whether the onboarding has been completed
+ * @returns {Promise<void>} Promise that resolves when the write is complete
+ * @source
  */
-export function setOnboardingCompleted(completed: boolean): void {
+export async function setOnboardingCompleted(
+  completed: boolean,
+): Promise<void> {
   try {
-    storage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETED, String(completed));
+    await storage.setItemAsync(
+      STORAGE_KEYS.ONBOARDING_COMPLETED,
+      String(completed),
+    );
   } catch (error) {
     console.error(
       "[Storage] Error setting onboarding completion status",

@@ -168,7 +168,7 @@ function checkAlternativeTitleMatch(
 
     if (altEnglishScore === 100) {
       return {
-        confidence: 95,
+        confidence: 100,
         isExactMatch: true,
         matchedField: "alt_to_english",
       };
@@ -185,7 +185,7 @@ function checkAlternativeTitleMatch(
 
     if (altRomajiScore === 100) {
       return {
-        confidence: 95,
+        confidence: 100,
         isExactMatch: true,
         matchedField: "alt_to_romaji",
       };
@@ -381,7 +381,7 @@ export function findBestMatches(
       anilistMatches: [],
       status: "pending",
       selectedMatch: undefined,
-      matchDate: new Date(),
+      matchDate: new Date().toISOString(),
     };
   }
 
@@ -395,7 +395,7 @@ export function findBestMatches(
       })),
       status: "matched",
       selectedMatch: topMatches[0].manga,
-      matchDate: new Date(),
+      matchDate: new Date().toISOString(),
     };
   }
 
@@ -414,7 +414,7 @@ export function findBestMatches(
       })),
       status: "matched",
       selectedMatch: topMatches[0].manga,
-      matchDate: new Date(),
+      matchDate: new Date().toISOString(),
     };
   }
 
@@ -428,7 +428,7 @@ export function findBestMatches(
     })),
     status: "pending",
     selectedMatch: undefined,
-    matchDate: new Date(),
+    matchDate: new Date().toISOString(),
   };
 }
 

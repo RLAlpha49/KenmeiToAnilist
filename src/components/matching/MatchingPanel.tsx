@@ -80,6 +80,7 @@ export function MatchingPanel({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ delay: 0.25, duration: 0.3 }}
+      data-onboarding="match-list"
     >
       <div className="relative flex-1 overflow-hidden rounded-3xl border border-white/40 bg-white/70 shadow-2xl shadow-slate-900/5 backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/70">
         <div className="pointer-events-none absolute -top-24 left-8 h-64 w-64 rounded-full bg-sky-400/15 blur-3xl" />

@@ -4,8 +4,6 @@
  * @description Matching page component for the Kenmei to AniList sync tool. Handles manga matching, review, rematch, and sync preparation.
  */
 
-// TODO: Header should align buttons to next line at a sooner width.
-
 import React, {
   useState,
   useEffect,
@@ -28,6 +26,7 @@ import { MangaMatchResult } from "../api/anilist/types";
 import { useMatchingProcess } from "../hooks/useMatchingProcess";
 import { usePendingManga } from "../hooks/usePendingManga";
 import { useMatchHandlers } from "../hooks/useMatchHandlers";
+import { useOnboarding } from "../contexts/OnboardingContext";
 import { clearCacheForTitles } from "../api/matching/search-service";
 import { useRateLimit } from "../contexts/RateLimitContext";
 import { UndoRedoManager } from "../utils/undoRedo";
@@ -115,6 +114,7 @@ export function MatchingPage() {
   const { authState } = useAuthState();
   const { rateLimitState } = useRateLimit();
   const { recordEvent } = useDebugActions();
+  const { completeStep } = useOnboarding();
 
   // State for batch selection
   const [selectedMatchIds, setSelectedMatchIds] = useState<Set<number>>(
@@ -135,6 +135,12 @@ export function MatchingPage() {
   const [searchTarget, setSearchTarget] = useState<KenmeiManga | undefined>(
     undefined,
   );
+  // Ref to track search target for React Compiler compatibility in useMatchHandlers
+  const searchTargetRef = useRef<KenmeiManga | undefined>(undefined);
+
+  useEffect(() => {
+    searchTargetRef.current = searchTarget;
+  }, [searchTarget]);
 
   // Add state for status filtering and rematching
   const [selectedStatuses, setSelectedStatuses] = useState<StatusFilterOptions>(
@@ -191,7 +197,7 @@ export function MatchingPage() {
             ...m,
             status: "pending" as const,
             selectedMatch: undefined,
-            matchDate: new Date(),
+            matchDate: new Date().toISOString(),
           }
         : m,
     );
@@ -260,6 +266,7 @@ export function MatchingPage() {
   const matchHandlers = useMatchHandlers(
     matchResults,
     setMatchResults,
+    searchTargetRef,
     setSearchTarget,
     setIsSearchOpen,
     matchingProcess.setBypassCache,
@@ -1181,7 +1188,7 @@ export function MatchingPage() {
                 ...match,
                 status: "pending" as const,
                 selectedMatch: undefined, // Clear any previously selected match
-                matchDate: new Date(),
+                matchDate: new Date().toISOString(),
               };
             }
             // Otherwise, keep it as is
@@ -1305,6 +1312,7 @@ export function MatchingPage() {
       return;
     }
 
+    completeStep("matching");
     navigate({ to: getSyncPath() });
   };
 

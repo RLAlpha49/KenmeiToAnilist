@@ -163,7 +163,7 @@ export function MatchingPageHeader({
               {rateLimitIsRateLimited && (
                 <Badge className="flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-100/60 px-3 py-1 text-amber-700 shadow-sm dark:border-amber-400/40 dark:bg-amber-500/10 dark:text-amber-200">
                   <AlertTriangle className="h-3.5 w-3.5" />
-                  AniList rate limit active
+                  Rate limited
                 </Badge>
               )}
               {pendingBacklog > 0 && (
@@ -198,7 +198,7 @@ export function MatchingPageHeader({
           </div>
         </div>
 
-  <div className="relative z-10 mt-6 flex flex-col gap-4">
+        <div className="relative z-10 mt-6 flex flex-col gap-4">
           <div className="w-full">
             <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               <span>Review progress</span>
@@ -235,6 +235,7 @@ export function MatchingPageHeader({
                             disabled={!canUndo}
                             onClick={handleUndo}
                             aria-label="Undo last action (Ctrl+Z)"
+                            aria-keyshortcuts="Control+Z"
                             className="rounded-xl border border-slate-300/70 bg-white/70 text-slate-700 hover:border-slate-400/80 hover:bg-white/90 disabled:pointer-events-none disabled:opacity-50 dark:border-slate-700/70 dark:bg-slate-900/60 dark:text-slate-200 dark:hover:border-slate-600/70 dark:hover:bg-slate-900"
                           >
                             <Undo2 className="h-4 w-4" />
@@ -251,6 +252,7 @@ export function MatchingPageHeader({
                             disabled={!canRedo}
                             onClick={handleRedo}
                             aria-label="Redo last action (Ctrl+Shift+Z)"
+                            aria-keyshortcuts="Control+Shift+Z"
                             className="rounded-xl border border-slate-300/70 bg-white/70 text-slate-700 hover:border-slate-400/80 hover:bg-white/90 disabled:pointer-events-none disabled:opacity-50 dark:border-slate-700/70 dark:bg-slate-900/60 dark:text-slate-200 dark:hover:border-slate-600/70 dark:hover:bg-slate-900"
                           >
                             <Redo2 className="h-4 w-4" />
@@ -270,9 +272,7 @@ export function MatchingPageHeader({
                       matches={matchResults}
                       variant="outline"
                       size="default"
-                      disabled={
-                        matchingProcessIsLoading || rateLimitIsRateLimited
-                      }
+                      disabled={matchingProcessIsLoading}
                     />
                     <div className="h-8 w-px bg-slate-300/50 dark:bg-slate-600/50" />
                   </>
@@ -282,7 +282,7 @@ export function MatchingPageHeader({
                   <Button
                     variant="outline"
                     onClick={handleSetAllMatchedToPending}
-                    className="group flex md:grow-0 grow items-center justify-center gap-2 rounded-2xl border border-slate-300/70 bg-white/70 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400/80 hover:bg-white/90 hover:text-slate-900 dark:border-slate-700/70 dark:bg-slate-900/60 dark:text-slate-200 dark:hover:border-slate-600/70 dark:hover:bg-slate-900"
+                    className="group flex grow items-center justify-center gap-2 rounded-2xl border border-slate-300/70 bg-white/70 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400/80 hover:bg-white/90 hover:text-slate-900 md:grow-0 dark:border-slate-700/70 dark:bg-slate-900/60 dark:text-slate-200 dark:hover:border-slate-600/70 dark:hover:bg-slate-900"
                   >
                     <RotateCcw className="h-4 w-4" />
                     Reset matched to pending
