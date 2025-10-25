@@ -5,10 +5,17 @@
  */
 
 import Papa from "papaparse";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { SyncReport } from "../api/anilist/sync-service";
 import { MangaMatchResult, AniListManga } from "../api/anilist/types";
 import { storage, STORAGE_KEYS } from "./storage";
+
+/**
+ * UTF-8 BOM (Byte Order Mark) for Excel compatibility.
+ * Ensures proper encoding detection on Windows when opening CSV files in Excel.
+ * @internal
+ */
+const UTF8_BOM = "\ufeff";
 
 /**
  * Generates a timestamp string suitable for use in filenames.
@@ -104,6 +111,7 @@ export function exportToJson(
   const blob = new Blob([json], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
+  let appended = false;
 
   try {
     // Generate timestamped filename
@@ -114,12 +122,15 @@ export function exportToJson(
     link.href = url;
     link.download = filename;
     document.body.appendChild(link);
+    appended = true;
     link.click();
 
     return filename;
   } finally {
     // Ensure cleanup always runs
-    link.remove();
+    if (appended) {
+      link.remove();
+    }
     URL.revokeObjectURL(url);
   }
 }
@@ -164,6 +175,7 @@ type FlattenableMatchResult = {
 /**
  * Extracts AniListManga data from match data.
  * Handles both MangaMatch (with confidence) and minimal selectedMatch objects.
+ * Returns undefined if the data doesn't contain a valid AniListManga object.
  */
 function extractAniListData(matchForData: unknown): AniListManga | undefined {
   if (!matchForData) return undefined;
@@ -176,12 +188,14 @@ function extractAniListData(matchForData: unknown): AniListManga | undefined {
   }
 
   // Check if it's the minimal selectedMatch (has format/genres but no id)
+  // This shape should NOT be treated as AniListManga data
   if ("format" in obj && "genres" in obj && !("id" in obj)) {
     return undefined;
   }
 
   // Check if it's already an AniListManga (has id)
-  if ("id" in obj) {
+  // Only treat as AniListManga if it has an id field
+  if ("id" in obj && obj.id !== undefined) {
     return obj as unknown as AniListManga;
   }
 
@@ -212,7 +226,7 @@ export function flattenMatchResult(
       ? (matchForData.confidence ?? 0)
       : 0;
 
-  // Extract AniListManga data safely
+  // Extract AniListManga data safely - handles shapes without id/title fields
   const anilistData = extractAniListData(matchForData);
 
   return {
@@ -237,20 +251,22 @@ export function flattenMatchResult(
         : (match.matchDate ?? ""),
     confidence,
 
-    // AniList data
+    // AniList data - explicitly set to empty strings when no AniList data available
+    // This ensures selectedMatch shapes without id/title don't incorrectly populate these fields
     anilistId: anilistData?.id ?? null,
     anilistTitleRomaji:
       typeof anilistData?.title === "object"
-        ? (anilistData.title.romaji ?? kenmei.title)
-        : (anilistData?.title ?? kenmei.title),
+        ? (anilistData.title.romaji ?? "")
+        : (anilistData?.title ?? ""),
     anilistTitleEnglish:
       typeof anilistData?.title === "object"
-        ? (anilistData.title.english ?? kenmei.title)
-        : (anilistData?.title ?? kenmei.title),
+        ? (anilistData.title.english ?? "")
+        : (anilistData?.title ?? ""),
     anilistTitleNative:
       typeof anilistData?.title === "object"
-        ? (anilistData.title.native ?? kenmei.title)
-        : (anilistData?.title ?? kenmei.title),
+        ? (anilistData.title.native ?? "")
+        : (anilistData?.title ?? ""),
+    // Do not use format/genres from selectedMatch; only from anilistData
     format: anilistData?.format ?? "",
     totalChapters: anilistData?.chapters ?? null,
     totalVolumes: anilistData?.volumes ?? null,
@@ -261,7 +277,69 @@ export function flattenMatchResult(
 }
 
 /**
+ * Checks if a match passes all filter criteria.
+ *
+ * This is a shared helper used by both the UI preview (ExportMatchesButton) and the actual export function.
+ * Using this shared helper ensures preview count and export results are always in sync.
+ *
+ * @param match - The match to check.
+ * @param statusFilters - Selected status filters (matched, manual, pending, skipped).
+ * @param confidenceThreshold - Minimum confidence threshold (null or number).
+ * @param includeUnmatched - Whether to include entries without matches.
+ * @param unmatchedOnly - Whether to export only unmatched entries.
+ * @returns True if the match passes all applied filters.
+ * @internal
+ */
+export function matchPassesFilter(
+  match: MangaMatchResult,
+  statusFilters: Set<string> | string[],
+  confidenceThreshold: number | null,
+  includeUnmatched: boolean,
+  unmatchedOnly: boolean,
+): boolean {
+  const statusFilterSet =
+    statusFilters instanceof Set ? statusFilters : new Set(statusFilters);
+
+  // Check status filter
+  if (!statusFilterSet.has(match.status)) {
+    return false;
+  }
+
+  // Check confidence threshold
+  if (confidenceThreshold !== null && confidenceThreshold > 0) {
+    const highestConfidence =
+      match.anilistMatches && match.anilistMatches.length > 0
+        ? Math.max(...match.anilistMatches.map((m) => m.confidence))
+        : 0;
+    if (highestConfidence < confidenceThreshold) {
+      return false;
+    }
+  }
+
+  // Check unmatchedOnly filter (takes precedence over includeUnmatched)
+  if (unmatchedOnly) {
+    const isUnmatched =
+      !match.selectedMatch &&
+      (!match.anilistMatches || match.anilistMatches.length === 0);
+    return isUnmatched;
+  }
+
+  // Check includeUnmatched filter
+  if (!includeUnmatched) {
+    const isMatched = !!(
+      match.selectedMatch ||
+      (match.anilistMatches && match.anilistMatches.length > 0)
+    );
+    return isMatched;
+  }
+
+  return true;
+}
+
+/**
  * Filters match results based on provided criteria.
+ *
+ * Uses the shared matchPassesFilter helper to ensure consistency with UI preview counts.
  *
  * @param matches - Array of match results to filter.
  * @param filters - Filter options to apply.
@@ -272,61 +350,30 @@ export function filterMatchResults(
   matches: MangaMatchResult[],
   filters: ExportFilterOptions,
 ): MangaMatchResult[] {
-  let filtered = [...matches];
+  // Convert filter options to matchPassesFilter parameters
+  const statusFilters = new Set(
+    filters.statusFilter || ["matched", "manual", "pending", "skipped"],
+  );
+  const confidenceThreshold = filters.confidenceThreshold ?? null;
+  const includeUnmatched = filters.includeUnmatched ?? true;
+  const unmatchedOnly = filters.unmatchedOnly ?? false;
 
-  // Apply status filter
-  if (filters.statusFilter && filters.statusFilter.length > 0) {
-    filtered = filtered.filter((match) =>
-      filters.statusFilter!.includes(
-        match.status as "matched" | "manual" | "pending" | "skipped",
-      ),
-    );
-  }
-
-  // Apply confidence threshold
-  if (
-    filters.confidenceThreshold !== undefined &&
-    filters.confidenceThreshold > 0
-  ) {
-    filtered = filtered.filter((match) => {
-      const highestConfidenceMatch =
-        match.anilistMatches && match.anilistMatches.length > 0
-          ? match.anilistMatches.reduce(
-              (prev, current) =>
-                current.confidence > prev.confidence ? current : prev,
-              match.anilistMatches[0],
-            )
-          : null;
-      return (
-        highestConfidenceMatch &&
-        highestConfidenceMatch.confidence >= filters.confidenceThreshold!
-      );
-    });
-  }
-
-  // Apply unmatchedOnly filter (takes precedence over includeUnmatched)
-  if (filters.unmatchedOnly === true) {
-    filtered = filtered.filter(
-      (match) =>
-        !match.selectedMatch &&
-        (!match.anilistMatches || match.anilistMatches.length === 0),
-    );
-  } else if (filters.includeUnmatched === false) {
-    // Apply unmatched filter only if unmatchedOnly is not set
-    filtered = filtered.filter(
-      (match) =>
-        match.selectedMatch ||
-        (match.anilistMatches && match.anilistMatches.length > 0),
-    );
-  }
-
-  return filtered;
+  return matches.filter((match) =>
+    matchPassesFilter(
+      match,
+      statusFilters,
+      confidenceThreshold,
+      includeUnmatched,
+      unmatchedOnly,
+    ),
+  );
 }
 
 /**
  * Exports data to CSV format and triggers browser download.
  *
  * Includes UTF-8 BOM prefix to improve Excel compatibility on Windows.
+ * The BOM ensures proper encoding detection when opening CSV files in Excel.
  *
  * @param data - Array of objects to export.
  * @param baseFilename - Base filename without extension or timestamp.
@@ -345,10 +392,10 @@ export function exportToCSV(
   });
 
   // Create blob with UTF-8 BOM prefix for better Excel compatibility
-  const bom = "\ufeff";
-  const blob = new Blob([bom, csv], { type: "text/csv;charset=utf-8;" });
+  const blob = new Blob([UTF8_BOM, csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
+  let appended = false;
 
   try {
     // Generate timestamped filename
@@ -359,12 +406,15 @@ export function exportToCSV(
     link.href = url;
     link.download = filename;
     document.body.appendChild(link);
+    appended = true;
     link.click();
 
     return filename;
   } finally {
     // Ensure cleanup always runs
-    link.remove();
+    if (appended) {
+      link.remove();
+    }
     URL.revokeObjectURL(url);
   }
 }
@@ -375,24 +425,35 @@ export function exportToCSV(
  * @param data - Array of objects to export.
  * @param baseFilename - Base filename without extension or timestamp.
  * @param sheetName - Name for the worksheet (default: "Sheet1").
- * @returns The full filename used for download.
+ * @returns Promise resolving to the filename used for download.
  * @throws Will throw if Excel generation fails.
  * @source
  */
-export function exportToExcel(
+export async function exportToExcel(
   data: Record<string, unknown>[],
   baseFilename: string,
   sheetName: string = "Sheet1",
-): string {
+): Promise<string> {
   // Create workbook and worksheet
-  const workbook = XLSX.utils.book_new();
-  const worksheet = XLSX.utils.json_to_sheet(data);
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet(sheetName);
 
-  // Add worksheet to workbook
-  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  // Set up columns from first data object
+  if (data.length > 0) {
+    const headers = Object.keys(data[0]);
+    worksheet.columns = headers.map((header) => ({
+      header,
+      key: header,
+    }));
+  }
+
+  // Add data rows
+  for (const row of data) {
+    worksheet.addRow(row);
+  }
 
   // Generate binary
-  const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+  const excelBuffer = await workbook.xlsx.writeBuffer();
 
   // Create blob and download link
   const blob = new Blob([excelBuffer], {
@@ -400,6 +461,7 @@ export function exportToExcel(
   });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
+  let appended = false;
 
   try {
     // Generate timestamped filename
@@ -410,12 +472,15 @@ export function exportToExcel(
     link.href = url;
     link.download = filename;
     document.body.appendChild(link);
+    appended = true;
     link.click();
 
     return filename;
   } finally {
     // Ensure cleanup always runs
-    link.remove();
+    if (appended) {
+      link.remove();
+    }
     URL.revokeObjectURL(url);
   }
 }
@@ -426,23 +491,23 @@ export function exportToExcel(
  * @param matches - Array of match results to export.
  * @param format - Export format (json, csv, or excel).
  * @param filters - Optional filters to apply before export.
- * @returns The filename of the exported file.
+ * @returns Promise resolving to the filename of the exported file.
  * @throws Will throw if export fails.
  * @example
  * ```typescript
  * // Export matched items only as CSV
- * const filename = exportMatchResults(matches, 'csv', {
+ * const filename = await exportMatchResults(matches, 'csv', {
  *   statusFilter: ['matched'],
  *   confidenceThreshold: 75
  * });
  * ```
  * @source
  */
-export function exportMatchResults(
+export async function exportMatchResults(
   matches: MangaMatchResult[],
   format: ExportFormat,
   filters?: ExportFilterOptions,
-): string {
+): Promise<string> {
   console.info(
     `[Export] 📤 Exporting ${matches.length} match results as ${format}`,
   );
@@ -470,7 +535,7 @@ export function exportMatchResults(
     }
     case "excel": {
       const flattened = filteredMatches.map(flattenMatchResult);
-      filename = exportToExcel(
+      filename = await exportToExcel(
         flattened as unknown as Record<string, unknown>[],
         "match-results",
         "Match Results",

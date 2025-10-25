@@ -42,7 +42,7 @@ import {
 import { motion } from "framer-motion";
 import appIcon from "../../assets/k2a-icon-512x512.png";
 import { useDebugState, useDebugActions } from "../../contexts/DebugContext";
-import { DebugMenu } from "../debug/DebugMenu";
+import { DebugMenu } from "../debug/DebugMenu.lazy";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/utils/tailwind";
 

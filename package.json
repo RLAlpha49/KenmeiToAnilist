@@ -22,7 +22,8 @@
     "release:minor": "standard-version --release-as minor",
     "release:patch": "standard-version --release-as patch",
     "start": "electron-forge start",
-    "update": "ncu -u -x typedoc,typedoc-*,@typedoc/*"
+    "update": "ncu -u -x typedoc,typedoc-*,@typedoc/*",
+    "analyze:bundle": "cross-env ANALYZE=true vite build --config config/vite.renderer.config.mts"
   },
   "author": "Alex Pettigrew <alexpettigrew29@gmail.com>",
   "license": "MIT",
@@ -30,6 +31,7 @@
     "@commitlint/cli": "^20.1.0",
     "@commitlint/config-conventional": "^20.0.0",
     "@electron-forge/cli": "^7.10.2",
+    "cross-env": "^10.1.0",
     "@electron-forge/maker-deb": "^7.10.2",
     "@electron-forge/maker-dmg": "^7.10.2",
     "@electron-forge/maker-squirrel": "^7.10.2",
@@ -60,6 +62,7 @@
     "husky": "^9.1.7",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.7.1",
+    "rollup-plugin-visualizer": "^6.0.5",
     "standard-version": "^9.5.0",
     "typedoc": "^0.27.0",
     "typedoc-plugin-extras": "^4.0.0",
@@ -113,7 +116,7 @@
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4.1.16",
     "tailwindcss-animate": "^1.0.7",
-    "xlsx": "^0.18.5",
+    "exceljs": "^4.4.0",
     "recharts": "^3.3.0"
   }
 }

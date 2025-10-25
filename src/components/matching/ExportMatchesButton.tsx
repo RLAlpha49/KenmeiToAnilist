@@ -20,6 +20,7 @@ import {
   exportMatchResults,
   ExportFormat,
   ExportFilterOptions,
+  matchPassesFilter,
 } from "../../utils/exportUtils";
 import { Button } from "../ui/button";
 import {
@@ -56,60 +57,10 @@ export interface ExportMatchesButtonProps {
 type MatchStatusType = "matched" | "manual" | "pending" | "skipped";
 
 /**
- * Checks if a match passes all filter criteria.
- *
- * @param match - The match result to check.
- * @param statusFilters - Selected status filters.
- * @param confidenceThreshold - Minimum confidence threshold.
- * @param includeUnmatched - Whether to include unmatched entries.
- * @param unmatchedOnly - Whether to export only unmatched entries.
- * @returns True if the match passes all filters.
- */
-function matchPassesFilters(
-  match: MangaMatchResult,
-  statusFilters: Set<MatchStatusType>,
-  confidenceThreshold: number | null,
-  includeUnmatched: boolean,
-  unmatchedOnly: boolean,
-): boolean {
-  // Check status filter
-  if (!statusFilters.has(match.status as MatchStatusType)) {
-    return false;
-  }
-
-  // Check confidence threshold
-  if (confidenceThreshold !== null) {
-    const highestConfidence =
-      match.anilistMatches && match.anilistMatches.length > 0
-        ? Math.max(...match.anilistMatches.map((m) => m.confidence))
-        : 0;
-    if (highestConfidence < confidenceThreshold) {
-      return false;
-    }
-  }
-
-  // Check unmatchedOnly filter (takes precedence over includeUnmatched)
-  if (unmatchedOnly) {
-    const isUnmatched =
-      !match.selectedMatch &&
-      (!match.anilistMatches || match.anilistMatches.length === 0);
-    return isUnmatched;
-  }
-
-  // Check includeUnmatched filter
-  if (!includeUnmatched) {
-    const isMatched = !!(
-      match.selectedMatch ||
-      (match.anilistMatches && match.anilistMatches.length > 0)
-    );
-    return isMatched;
-  }
-
-  return true;
-}
-
-/**
  * Export button component with format and filter options for match results.
+ *
+ * Uses the shared matchPassesFilter helper from exportUtils to ensure
+ * the preview count always matches the actual export count.
  * @source
  */
 const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
@@ -145,10 +96,11 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
     return counts;
   }, [matches]);
 
-  // Calculate filtered count
+  // Calculate filtered count using the shared helper
+  // This ensures the preview count matches the actual export count
   const filteredCount = useMemo(() => {
     return matches.filter((match) =>
-      matchPassesFilters(
+      matchPassesFilter(
         match,
         statusFilters,
         confidenceThreshold,
@@ -164,7 +116,7 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
     unmatchedOnly,
   ]);
 
-  const handleExport = useCallback(() => {
+  const handleExport = useCallback(async () => {
     try {
       const filters: ExportFilterOptions = {
         statusFilter:
@@ -174,7 +126,11 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
         unmatchedOnly: unmatchedOnly || undefined,
       };
 
-      const filename = exportMatchResults(matches, selectedFormat, filters);
+      const filename = await exportMatchResults(
+        matches,
+        selectedFormat,
+        filters,
+      );
       toast.success(`Exported ${filteredCount} matches to ${filename}`);
       setDropdownOpen(false);
     } catch (error) {
@@ -340,7 +296,7 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
           checked={unmatchedOnly}
           onCheckedChange={(checked) => {
             setUnmatchedOnly(checked);
-            // When unmatchedOnly is enabled, disable includeUnmatched to avoid conflicts
+            // When unmatchedOnly is enabled, includeUnmatched is forced to true and its control is disabled
             if (checked) {
               setIncludeUnmatched(true);
             }

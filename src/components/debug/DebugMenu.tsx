@@ -41,7 +41,7 @@ interface DebugPanelDefinition {
  * Props for the DebugMenu component.
  * @source
  */
-interface DebugMenuProps {
+export interface DebugMenuProps {
   isOpen: boolean;
   onClose: () => void;
 }
@@ -188,9 +188,9 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
         }
       }}
     >
-      <DialogContent className="border-border/60 bg-background/95 max-h-[80vh] grid-rows-[auto,1fr] overflow-hidden border p-0 shadow-2xl backdrop-blur-xl md:max-w-[95vw] lg:!max-w-5xl">
+      <DialogContent className="border-border/60 bg-background/95 lg:max-w-5xl! max-h-[80vh] grid-rows-[auto,1fr] overflow-hidden border p-0 shadow-2xl backdrop-blur-xl md:max-w-[95vw]">
         <DialogHeader className="relative overflow-hidden px-8 pb-4 pt-8">
-          <div className="from-primary/10 absolute inset-0 h-full w-full bg-gradient-to-br via-purple-500/10 to-transparent" />
+          <div className="from-primary/10 bg-linear-to-br absolute inset-0 h-full w-full via-purple-500/10 to-transparent" />
           <div className="bg-primary/15 absolute right-10 top-8 h-32 w-32 rounded-full blur-3xl" />
           <div className="relative z-10 flex flex-col gap-3">
             <DialogTitle className="flex items-center gap-3 text-2xl font-semibold">
@@ -247,19 +247,19 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
                             value={panel.id}
                             className={cn(
                               "group w-full flex-none justify-start gap-3 rounded-xl border px-3 py-3 text-left text-sm transition-all",
-                              "h-auto min-h-[3.25rem]",
+                              "min-h-13 h-auto",
                               // default card appearance
                               "bg-background/90 border-border/40",
                               // active state: stronger background, border, subtle shadow and left accent
-                              "data-[state=active]:!bg-background/30 data-[state=active]:!border-primary/40 data-[state=active]:!text-primary data-[state=active]:!shadow-md",
-                              "hover:!border-primary/30 hover:!bg-primary/5",
+                              "data-[state=active]:bg-background/30! data-[state=active]:border-primary/40! data-[state=active]:text-primary! data-[state=active]:shadow-md!",
+                              "hover:border-primary/30! hover:bg-primary/5!",
                               // Ensure text can wrap instead of overflowing
-                              "min-w-0 whitespace-normal break-words",
+                              "wrap-break-word min-w-0 whitespace-normal",
                             )}
                             style={{ position: "relative" }}
                           >
                             <div className="flex items-start gap-3">
-                              <div className="flex-shrink-0">{panel.icon}</div>
+                              <div className="shrink-0">{panel.icon}</div>
                               <div className="min-w-0 flex-1 space-y-1">
                                 <div className="font-semibold leading-tight">
                                   {panel.label}
@@ -278,7 +278,7 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
 
                 {/* Content column */}
                 <div className="border-border/80 bg-background/95 relative flex-1 overflow-hidden rounded-2xl border shadow-inner md:min-h-[40vh]">
-                  <div className="from-primary/10 absolute inset-x-12 top-0 h-24 rounded-b-full bg-gradient-to-b to-transparent blur-3xl" />
+                  <div className="from-primary/10 bg-linear-to-b absolute inset-x-12 top-0 h-24 rounded-b-full to-transparent blur-3xl" />
                   <div className="relative h-full min-h-0 overflow-y-auto p-4">
                     {panels.map((panel) => (
                       <TabsContent

@@ -16,7 +16,7 @@ import { ConfidenceBadge } from "./ConfidenceBadge";
 import { createKenmeiUrl } from "./createKenmeiUrl";
 import MatchActions from "./MatchActions";
 import { useDebug } from "../../../contexts/DebugContext";
-import { ConfidenceTestExporter } from "../../debug/ConfidenceTestExporter";
+import { ConfidenceTestExporter } from "../../debug/ConfidenceTestExporter.lazy";
 import {
   formatMediaListStatus,
   getStatusBadgeColor,

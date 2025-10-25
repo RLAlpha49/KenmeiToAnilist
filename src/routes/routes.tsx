@@ -7,11 +7,25 @@
 import { createRoute } from "@tanstack/react-router";
 import { RootRoute } from "./__root";
 import { HomePage } from "../pages/HomePage";
-import { ImportPage } from "../pages/ImportPage";
-import { SettingsPage } from "../pages/SettingsPage";
 import { MatchingPage } from "../pages/MatchingPage";
 import { SyncPage } from "../pages/SyncPage";
-import { StatisticsPage } from "../pages/StatisticsPage";
+
+import { lazy } from "react";
+
+// Lazy load infrequently accessed pages
+const SettingsPage = lazy(() =>
+  import("../pages/SettingsPage").then((m) => ({ default: m.SettingsPage })),
+);
+
+const StatisticsPage = lazy(() =>
+  import("../pages/StatisticsPage").then((m) => ({
+    default: m.StatisticsPage,
+  })),
+);
+
+const ImportPage = lazy(() =>
+  import("../pages/ImportPage").then((m) => ({ default: m.ImportPage })),
+);
 
 // Steps to add a new route:
 // 1. Create a new page component in the '../pages/' directory (e.g., NewPage.tsx)

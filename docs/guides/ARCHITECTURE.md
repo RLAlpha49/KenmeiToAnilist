@@ -719,7 +719,45 @@ The application maintains strict separation between main and renderer processes:
 
 ### Bundle Optimizations
 
-- **Code Splitting**: Separate bundles for main, preload, and renderer
-- **Tree Shaking**: Remove unused code from final bundle
-- **Asset Optimization**: Compress images and minimize bundle size
-- **Dynamic Imports**: Load components only when needed
+**Analysis Tools**:
+
+- `rollup-plugin-visualizer` for interactive bundle visualization
+- `npm run analyze:bundle` generates HTML treemap report
+- `npm run analyze:stats` generates JSON for CI/CD monitoring
+
+**Lazy Loading**:
+
+- **Debug Components**: DebugMenu + 5 sub-components (~50KB) loaded on demand
+- **SettingsPage**: Lazy loaded on navigation (~50KB)
+- **StatisticsPage**: Lazy loaded with recharts dependency (~150KB)
+- **Pattern**: React.lazy() + Suspense with loading fallbacks
+
+**Vendor Chunk Strategy**:
+
+- `vendor-react`: React core (~150KB) - cached separately
+- `vendor-radix`: Radix UI primitives (~200KB) - UI framework
+- `vendor-recharts`: Charts library (~150KB) - lazy loaded
+- `vendor-ui-framework`: Animations, icons (~200KB)
+- `vendor-data`: Data processing libraries (~150KB)
+- `vendor-tanstack`: TanStack Router (~50KB)
+- `vendor`: Other dependencies (~100KB)
+
+**TailwindCSS Optimization**:
+
+- Explicit content paths for accurate purging
+- Safelist for dynamically generated classes (status colors, rings)
+- ~80% CSS size reduction in production
+
+**Performance Impact**:
+
+- Initial bundle: ~1.2MB (33% reduction)
+- Deferred loading: ~250KB (debug + statistics + settings)
+- Time to interactive: ~2s (33% improvement)
+
+*Note: Metrics are approximate and measured locally on a specific machine with `ANALYZE=true` flag using Vite 7 and Electron 38. Actual results may vary based on system specifications, build environment, and configuration changes.*
+
+**Monitoring**:
+
+- GitHub Actions workflow checks bundle size on PRs
+- Threshold: 2MB warning, 2.5MB error
+- Automated PR comments with size reports

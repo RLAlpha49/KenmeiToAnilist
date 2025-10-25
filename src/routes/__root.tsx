@@ -4,7 +4,7 @@
  * @description Root route and layout for the application, providing the base layout and outlet for child routes.
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, Suspense } from "react";
 import BaseLayout from "../components/layout/BaseLayout";
 import {
   Outlet,
@@ -22,6 +22,7 @@ import {
   getMatchConfig,
 } from "../utils/storage";
 import { toast } from "sonner";
+import { PageLoadingFallback } from "../components/ui/loading-fallback";
 
 /**
  * The root route for the application, providing the base layout and outlet for all child routes.
@@ -185,8 +186,11 @@ export function Root() {
   ]);
 
   return (
-    <BaseLayout onOpenShortcutsPanel={handleToggleShortcutsPanel}>
-      <Outlet />
+    <BaseLayout>
+      <Suspense fallback={<PageLoadingFallback />}>
+        <Outlet />
+      </Suspense>
+
       <ShortcutsPanel
         isOpen={isShortcutsPanelOpen}
         onClose={() => setIsShortcutsPanelOpen(false)}
