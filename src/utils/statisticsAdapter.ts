@@ -55,14 +55,14 @@ export function extractKenmeiManga(raw: unknown): KenmeiManga | null {
   return {
     id: obj.id,
     title: obj.title,
-    status: String(obj.status ?? ""),
+    status: typeof obj.status === "string" ? obj.status : "",
     score: typeof obj.score === "number" ? obj.score : 0,
     chapters_read:
       typeof obj.chapters_read === "number" ? obj.chapters_read : 0,
     volumes_read: typeof obj.volumes_read === "number" ? obj.volumes_read : 0,
-    notes: String(obj.notes ?? ""),
-    created_at: String(obj.created_at ?? ""),
-    updated_at: String(obj.updated_at ?? ""),
+    notes: typeof obj.notes === "string" ? obj.notes : "",
+    created_at: typeof obj.created_at === "string" ? obj.created_at : "",
+    updated_at: typeof obj.updated_at === "string" ? obj.updated_at : "",
     last_read_at:
       typeof obj.last_read_at === "string" ? obj.last_read_at : undefined,
   };
@@ -93,8 +93,8 @@ export function buildSelectedMatch(
 
   const obj = raw as Record<string, unknown>;
   const format =
-    obj.format && String(obj.format).trim() !== ""
-      ? String(obj.format)
+    typeof obj.format === "string" && obj.format.trim() !== ""
+      ? obj.format
       : undefined;
   const genres = Array.isArray(obj.genres)
     ? obj.genres.filter((g) => typeof g === "string")
@@ -115,7 +115,7 @@ export function buildSelectedMatch(
  * @source
  */
 export function parseStatus(raw: unknown): MatchStatus {
-  const statusRaw = String(raw ?? "pending").toLowerCase();
+  const statusRaw = typeof raw === "string" ? raw.toLowerCase() : "pending";
   const validStatuses: MatchStatus[] = [
     "pending",
     "matched",
