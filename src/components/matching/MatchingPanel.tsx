@@ -28,8 +28,16 @@ import type { KenmeiManga } from "../../api/kenmei/types";
 interface Props {
   matches: MangaMatchResult[];
   onManualSearch: (manga: KenmeiManga) => void;
-  onAcceptMatch: (match: MangaMatchResult) => void;
-  onRejectMatch: (match: MangaMatchResult) => void;
+  onAcceptMatch: (
+    match:
+      | MangaMatchResult
+      | { isBatchOperation: boolean; matches: MangaMatchResult[] },
+  ) => void;
+  onRejectMatch: (
+    match:
+      | MangaMatchResult
+      | { isBatchOperation: boolean; matches: MangaMatchResult[] },
+  ) => void;
   onSelectAlternative: (
     match: MangaMatchResult,
     alternativeIndex: number,

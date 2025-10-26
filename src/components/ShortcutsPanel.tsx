@@ -4,7 +4,7 @@
  * @description Modal dialog component for displaying and searching keyboard shortcuts.
  */
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Dialog,
@@ -20,9 +20,11 @@ import {
   Keyboard,
   Search,
   Navigation,
-  RefreshCw,
+  Sparkles,
   Bug,
-  HelpCircle,
+  Type,
+  ArrowUpDown,
+  LucideIcon,
 } from "lucide-react";
 import {
   SHORTCUTS,
@@ -41,27 +43,138 @@ interface ShortcutsPanelProps {
   onClose: () => void;
 }
 
-const categoryIcons = {
+/**
+ * Exhaustive mapping of category icons with specific, distinct icons for each category.
+ * Type-checked as Record<ShortcutCategory, LucideIcon> to ensure all categories are present.
+ * @source
+ */
+const categoryIcons: Record<ShortcutCategory, LucideIcon> = {
   [ShortcutCategory.NAVIGATION]: Navigation,
-  [ShortcutCategory.MATCHING]: RefreshCw,
-  [ShortcutCategory.SYNC]: RefreshCw,
+  [ShortcutCategory.MATCHING]: Type,
+  [ShortcutCategory.SYNC]: ArrowUpDown,
   [ShortcutCategory.DEBUG]: Bug,
-  [ShortcutCategory.GENERAL]: HelpCircle,
+  [ShortcutCategory.GENERAL]: Sparkles,
 };
 
 /**
- * Renders a keyboard shortcuts reference panel as a modal dialog.
- * Displays shortcuts organized by category with search functionality.
- * Allows users to discover and reference all available keyboard shortcuts.
- * @param props - Component props.
- * @returns The rendered shortcuts panel dialog.
- * @source
+ * Presentational card for a single shortcut.
  */
+export const ShortcutCard = ({
+  shortcutItem,
+}: {
+  shortcutItem: (typeof SHORTCUTS)[0];
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.2 }}
+    className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3 hover:bg-white/10"
+  >
+    <div className="flex flex-col gap-1">
+      <p className="text-foreground text-sm font-medium">
+        {shortcutItem.description}
+      </p>
+      {shortcutItem.scope && shortcutItem.scope !== "global" && (
+        <Badge variant="outline" className="w-fit text-xs">
+          {shortcutItem.scope}
+        </Badge>
+      )}
+    </div>
+    <div className="flex flex-wrap gap-2">
+      {/* Primary key combo */}
+      <div className="flex gap-1">
+        {formatShortcutKey(shortcutItem.keys)
+          .split("+")
+          .map((key) => (
+            <kbd
+              key={`${key}-primary`}
+              className="rounded border border-white/20 bg-white/10 px-2 py-1 font-mono text-xs font-semibold text-white/80"
+            >
+              {key}
+            </kbd>
+          ))}
+      </div>
+      {/* Alternative key combos */}
+      {shortcutItem.altKeys && shortcutItem.altKeys.length > 0 && (
+        <>
+          <span className="text-muted-foreground text-xs">/</span>
+          {shortcutItem.altKeys.map((altKey) => (
+            <div
+              key={`${formatShortcutKey(altKey)}-alt`}
+              className="flex gap-1"
+            >
+              {formatShortcutKey(altKey)
+                .split("+")
+                .map((key) => (
+                  <kbd
+                    key={`${key}-alt-${formatShortcutKey(altKey)}`}
+                    className="rounded border border-white/20 bg-white/10 px-2 py-1 font-mono text-xs font-semibold text-white/80"
+                  >
+                    {key}
+                  </kbd>
+                ))}
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  </motion.div>
+);
+
+/**
+ * Section that displays all shortcuts for a given category.
+ */
+export const ShortcutCategorySection = ({
+  category,
+  categoryShortcuts,
+}: {
+  category: ShortcutCategory;
+  categoryShortcuts: (typeof SHORTCUTS)[0][];
+}) => {
+  const Icon = categoryIcons[category];
+
+  if (categoryShortcuts.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Icon className="h-4 w-4" />
+        <h3 className="text-foreground text-sm font-semibold">{category}</h3>
+        <Badge variant="secondary" className="ml-auto text-xs">
+          {categoryShortcuts.length}
+        </Badge>
+      </div>
+      <div className="space-y-2 pl-6">
+        {categoryShortcuts.map((shortcut) => (
+          <ShortcutCard key={shortcut.id} shortcutItem={shortcut} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export function ShortcutsPanel({
   isOpen,
   onClose,
 }: Readonly<ShortcutsPanelProps>) {
   const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Move focus to search input when panel opens
+  useEffect(() => {
+    if (isOpen && searchInputRef.current) {
+      // Defer focus to next tick to ensure dialog is fully rendered
+      const timer = setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  // Memoize categories array to avoid recomputation on every render
+  const allCategories = useMemo(() => Object.values(ShortcutCategory), []);
 
   // Filter shortcuts based on search query
   const filteredShortcuts = useMemo(() => {
@@ -88,93 +201,13 @@ export function ShortcutsPanel({
   // Check if any shortcuts match current search
   const hasResults = filteredShortcuts.length > 0;
 
-  const ShortcutCard = ({
-    shortcutItem,
-  }: {
-    shortcutItem: (typeof SHORTCUTS)[0];
-  }) => (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-      className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3 hover:bg-white/10"
-    >
-      <div className="flex flex-col gap-1">
-        <p className="text-foreground text-sm font-medium">
-          {shortcutItem.description}
-        </p>
-        {shortcutItem.scope && shortcutItem.scope !== "global" && (
-          <Badge variant="outline" className="w-fit text-xs">
-            {shortcutItem.scope}
-          </Badge>
-        )}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {/* Primary key combo */}
-        <div className="flex gap-1">
-          {formatShortcutKey(shortcutItem.keys)
-            .split("+")
-            .map((key) => (
-              <kbd
-                key={`${key}-primary`}
-                className="rounded border border-white/20 bg-white/10 px-2 py-1 font-mono text-xs font-semibold text-white/80"
-              >
-                {key}
-              </kbd>
-            ))}
-        </div>
-        {/* Alternative key combos */}
-        {shortcutItem.altKeys && shortcutItem.altKeys.length > 0 && (
-          <>
-            <span className="text-muted-foreground text-xs">/</span>
-            {shortcutItem.altKeys.map((altKey, altIdx) => (
-              <div key={`${altIdx}-alt`} className="flex gap-1">
-                {formatShortcutKey(altKey)
-                  .split("+")
-                  .map((key) => (
-                    <kbd
-                      key={`${key}-alt-${altIdx}`}
-                      className="rounded border border-white/20 bg-white/10 px-2 py-1 font-mono text-xs font-semibold text-white/80"
-                    >
-                      {key}
-                    </kbd>
-                  ))}
-              </div>
-            ))}
-          </>
-        )}
-      </div>
-    </motion.div>
-  );
-
-  const ShortcutCategorySection = ({
-    category,
-  }: {
-    category: ShortcutCategory;
-  }) => {
-    const categoryShortcuts = getFilteredByCategory(category);
-    const Icon = categoryIcons[category];
-
-    if (categoryShortcuts.length === 0) {
-      return null;
+  // Handle Escape key to close the panel when focus is within it
+  const handleEscapeKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      onClose();
     }
-
-    return (
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Icon className="h-4 w-4" />
-          <h3 className="text-foreground text-sm font-semibold">{category}</h3>
-          <Badge variant="secondary" className="ml-auto text-xs">
-            {categoryShortcuts.length}
-          </Badge>
-        </div>
-        <div className="space-y-2 pl-6">
-          {categoryShortcuts.map((shortcut) => (
-            <ShortcutCard key={shortcut.id} shortcutItem={shortcut} />
-          ))}
-        </div>
-      </div>
-    );
   };
 
   return (
@@ -186,7 +219,10 @@ export function ShortcutsPanel({
             if (!open) onClose();
           }}
         >
-          <DialogContent className="max-h-[80vh] max-w-3xl overflow-hidden rounded-2xl border-white/10 bg-slate-950/90 p-6 shadow-2xl backdrop-blur-xl">
+          <DialogContent
+            className="max-h-[80vh] max-w-3xl overflow-hidden rounded-2xl border-white/10 bg-slate-950/90 p-6 shadow-2xl backdrop-blur-xl"
+            onKeyDown={handleEscapeKeyDown}
+          >
             <DialogHeader>
               <div className="flex items-center gap-3">
                 <div className="rounded-full bg-blue-500/20 p-2">
@@ -207,12 +243,14 @@ export function ShortcutsPanel({
             <div className="relative">
               <Search className="text-muted-foreground absolute left-3 top-3 h-4 w-4" />
               <Input
+                ref={searchInputRef}
                 placeholder="Search shortcuts by name or key..."
                 className="border-white/10 bg-white/5 pl-10 focus:bg-white/10"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 aria-label="Search shortcuts"
                 aria-controls="shortcuts-list"
+                autoFocus
               />
             </div>
 
@@ -249,12 +287,13 @@ export function ShortcutsPanel({
                         ))}
                       </div>
                     ) : (
-                      // Show organized by category
+                      // Show organized by category using memoized categories
                       <>
-                        {Object.values(ShortcutCategory).map((category) => (
+                        {allCategories.map((category) => (
                           <ShortcutCategorySection
                             key={category}
                             category={category}
+                            categoryShortcuts={getFilteredByCategory(category)}
                           />
                         ))}
                       </>

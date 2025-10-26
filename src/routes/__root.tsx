@@ -97,18 +97,28 @@ export function Root() {
     }
   }, []);
 
-  // Handles modal close
+  // Handles modal close - scoped to shortcuts panel only when open
   const handleCloseModal = useCallback(() => {
-    // Only close modals when shortcuts panel is open
+    // Only close shortcuts panel with Escape when it's the active dialog
+    // This prevents interfering with nested Radix modals or page-level Escape handling
     if (isShortcutsPanelOpen) {
       setIsShortcutsPanelOpen(false);
     }
-    // Otherwise let Radix Dialog handle Escape naturally
+    // Other modal closing is handled by their respective components or Radix Dialog
   }, [isShortcutsPanelOpen]);
 
   // Global keyboard shortcuts listener
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Special case: Handle Escape to close ShortcutsPanel only when it's open
+      // This must be done before other shortcut processing to avoid conflicts
+      if (event.key === "Escape" && isShortcutsPanelOpen) {
+        event.preventDefault();
+        event.stopPropagation();
+        handleCloseModal();
+        return;
+      }
+
       // Skip if focus is in input or textarea (allow native keyboard handling)
       if (
         event.target instanceof HTMLInputElement ||
@@ -117,58 +127,56 @@ export function Root() {
         return;
       }
 
-      // Check each shortcut for a match
-      for (const shortcut of SHORTCUTS) {
-        if (matchesShortcut(event, shortcut)) {
-          // Skip page-scoped shortcuts unless on the correct route
-          if (
-            shortcut.scope === "matching-page" &&
-            location.pathname !== "/review"
-          ) {
-            continue;
-          }
+      const dispatchShortcutAction = (action: string): boolean => {
+        if (action.startsWith("navigate:")) {
+          handleNavigationShortcut(action);
+          return true;
+        }
 
-          // Let page-level handlers take precedence for undo/redo
-          if (shortcut.action === "undo" || shortcut.action === "redo") {
-            return;
-          }
-
-          // For close:modal, only prevent default if we're actually handling it
-          let isHandled = false;
-
-          // Dispatch action handlers
-          if (shortcut.action.startsWith("navigate:")) {
-            handleNavigationShortcut(shortcut.action);
-            isHandled = true;
-          } else if (shortcut.action === "focus:search") {
+        switch (action) {
+          case "focus:search":
             handleSearchFocus();
-            isHandled = true;
-          } else if (shortcut.action === "save:config") {
+            return true;
+          case "save:config":
             handleContextSave();
-            isHandled = true;
-          } else if (shortcut.action === "toggle:debug") {
-            // Ensure debug mode is enabled and open the debug menu
+            return true;
+          case "toggle:debug":
             setDebugEnabled(true);
             openDebugMenu();
-            isHandled = true;
-          } else if (shortcut.action === "toggle:shortcuts-panel") {
+            return true;
+          case "toggle:shortcuts-panel":
             handleToggleShortcutsPanel();
-            isHandled = true;
-          } else if (shortcut.action === "close:modal") {
-            // Only handle if shortcuts panel is open
-            if (isShortcutsPanelOpen) {
-              handleCloseModal();
-              isHandled = true;
-            }
-          }
-
-          if (isHandled) {
-            event.preventDefault();
-          }
-
-          // Only process one shortcut per keystroke
-          break;
+            return true;
+          default:
+            return false;
         }
+      };
+
+      // Check each shortcut for a match
+      for (const shortcut of SHORTCUTS) {
+        if (!matchesShortcut(event, shortcut)) continue;
+
+        // Skip page-scoped shortcuts unless on the correct route
+        if (
+          shortcut.scope === "matching-page" &&
+          location.pathname !== "/review"
+        ) {
+          continue;
+        }
+
+        // Let page-level handlers take precedence for undo/redo
+        // These are intentionally not prevented here; the page must handle preventDefault()
+        if (shortcut.action === "undo" || shortcut.action === "redo") return;
+
+        const handled = dispatchShortcutAction(shortcut.action);
+        if (handled) {
+          event.preventDefault();
+          // Stop propagation to prevent duplicate toggles and avoid interfering with nested modals
+          event.stopPropagation();
+        }
+
+        // Only process one shortcut per keystroke
+        break;
       }
     };
 

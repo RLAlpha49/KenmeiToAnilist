@@ -71,6 +71,16 @@ export function useAutoUpdater() {
   const checkForUpdates = useCallback(
     async (allowPrerelease = false) => {
       try {
+        if (!globalThis.electronUpdater?.checkForUpdates) {
+          const msg = "Auto-updater not available in this environment";
+          console.warn(`[useAutoUpdater] ${msg}`);
+          setError(msg);
+          toast.warning("Update checking not available", {
+            description: "Auto-update is not supported in this environment",
+          });
+          return;
+        }
+
         setError(null);
         const result = await globalThis.electronUpdater.checkForUpdates({
           allowPrerelease,
@@ -116,6 +126,16 @@ export function useAutoUpdater() {
    */
   const downloadUpdate = useCallback(async () => {
     try {
+      if (!globalThis.electronUpdater?.downloadUpdate) {
+        const msg = "Download not available";
+        console.warn(`[useAutoUpdater] ${msg}`);
+        setError(msg);
+        toast.error("Download failed", {
+          description: "Update download is not supported in this environment",
+        });
+        return;
+      }
+
       setError(null);
       setIsDownloading(true);
       await globalThis.electronUpdater.downloadUpdate();
@@ -134,6 +154,18 @@ export function useAutoUpdater() {
    */
   const installUpdate = useCallback(async () => {
     try {
+      // Defensive guard: check if electronUpdater is available
+      if (!globalThis.electronUpdater?.installUpdate) {
+        const msg = "Installation not available";
+        console.warn(`[useAutoUpdater] ${msg}`);
+        setError(msg);
+        toast.error("Installation failed", {
+          description:
+            "Update installation is not supported in this environment",
+        });
+        return;
+      }
+
       setError(null);
       await globalThis.electronUpdater.installUpdate();
     } catch (err) {
@@ -162,7 +194,14 @@ export function useAutoUpdater() {
 
   // Set up event listeners
   useEffect(() => {
-    const unsubscribeAvailable = globalThis.electronUpdater.onUpdateAvailable(
+    if (!globalThis.electronUpdater) {
+      console.warn(
+        "[useAutoUpdater] electronUpdater not available, skipping event subscriptions",
+      );
+      return;
+    }
+
+    const unsubscribeAvailable = globalThis.electronUpdater.onUpdateAvailable?.(
       (info) => {
         if (!isVersionDismissed(info.version)) {
           setUpdateAvailable(true);
@@ -174,14 +213,14 @@ export function useAutoUpdater() {
       },
     );
 
-    const unsubscribeProgress = globalThis.electronUpdater.onDownloadProgress(
+    const unsubscribeProgress = globalThis.electronUpdater.onDownloadProgress?.(
       (progress) => {
         setDownloadProgress(progress.percent);
       },
     );
 
-    const unsubscribeDownloaded = globalThis.electronUpdater.onUpdateDownloaded(
-      (info) => {
+    const unsubscribeDownloaded =
+      globalThis.electronUpdater.onUpdateDownloaded?.((info) => {
         setIsDownloading(false);
         setIsDownloaded(true);
         toast.success(`Update downloaded: v${info.version}`, {
@@ -189,27 +228,28 @@ export function useAutoUpdater() {
           action: {
             label: "Install Now",
             onClick: () => {
-              void installUpdate();
+              installUpdate();
             },
           },
+        });
+      });
+
+    const unsubscribeError = globalThis.electronUpdater.onUpdateError?.(
+      (err) => {
+        setError(err.message);
+        setIsDownloading(false);
+        toast.error("Update error", {
+          description: err.message,
         });
       },
     );
 
-    const unsubscribeError = globalThis.electronUpdater.onUpdateError((err) => {
-      setError(err.message);
-      setIsDownloading(false);
-      toast.error("Update error", {
-        description: err.message,
-      });
-    });
-
     // Clean up subscriptions on unmount
     return () => {
-      unsubscribeAvailable();
-      unsubscribeProgress();
-      unsubscribeDownloaded();
-      unsubscribeError();
+      unsubscribeAvailable?.();
+      unsubscribeProgress?.();
+      unsubscribeDownloaded?.();
+      unsubscribeError?.();
     };
   }, [isVersionDismissed, installUpdate]);
 

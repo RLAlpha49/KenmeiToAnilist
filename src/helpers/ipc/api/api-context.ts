@@ -6,6 +6,7 @@
 
 import { contextBridge, ipcRenderer } from "electron";
 import type { MangaSource } from "../../../api/manga-sources/types";
+import type { ShellOperationResult } from "../types";
 
 /**
  * Cache control options for AniList requests.
@@ -55,7 +56,7 @@ export function exposeApiContext() {
           ipcRenderer.invoke("mangaSource:getMangaDetail", source, slug),
       },
       shell: {
-        openExternal: (url: string) =>
+        openExternal: (url: string): Promise<ShellOperationResult> =>
           ipcRenderer.invoke("shell:openExternal", url),
       },
     });

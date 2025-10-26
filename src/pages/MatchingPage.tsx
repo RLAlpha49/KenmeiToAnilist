@@ -453,6 +453,7 @@ export function MatchingPage() {
       // Escape to clear selection
       if (e.key === "Escape" && selectedMatchIds.size > 0) {
         e.preventDefault();
+        e.stopPropagation();
         handleClearSelection();
       }
     };

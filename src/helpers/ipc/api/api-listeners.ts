@@ -6,9 +6,11 @@
 
 import { ipcMain, shell } from "electron";
 import fetch, { Response } from "node-fetch";
+import { createHash } from "node:crypto";
 import { getAppVersionElectron } from "../../../utils/app-version";
 import { withGroupAsync } from "../../../utils/logging";
 import { AniListRequest } from "./api-context";
+import type { ShellOperationResult } from "../types";
 import { SAFE_REQUESTS_PER_MINUTE } from "../../../config/anilist";
 import type { MangaSource } from "../../../api/manga-sources/types";
 
@@ -31,6 +33,7 @@ const CACHE_EXPIRATION = 30 * 60 * 1000; // 30 minutes
 const API_RATE_LIMIT = SAFE_REQUESTS_PER_MINUTE; // Safe headroom below AniList's 60 req/min
 const REQUEST_INTERVAL = (60 * 1000) / API_RATE_LIMIT; // milliseconds between requests
 const MAX_RETRY_ATTEMPTS = 5; // Maximum number of retry attempts for rate limited requests
+const MAX_BACKOFF_MS = 60000; // 60 seconds maximum backoff to prevent long queue starvation
 
 /**
  * Simple promise-based mutex for serializing state updates.
@@ -94,8 +97,13 @@ class RequestQueue {
     execute: () => Promise<Record<string, unknown>>,
   ): Promise<Record<string, unknown>> {
     return new Promise((resolve, reject) => {
+      const wasEmpty = this.queue.length === 0;
       this.queue.push({ execute, resolve, reject });
-      this.processQueue().catch(reject);
+
+      // If queue was empty and not processing, schedule processing
+      if (wasEmpty && !this.processing) {
+        this.processQueue().catch(reject);
+      }
     });
   }
 
@@ -114,7 +122,22 @@ class RequestQueue {
   }
 
   /**
+   * Get current queue size for diagnostics.
+   */
+  size(): number {
+    return this.queue.length;
+  }
+
+  /**
+   * Check if queue is currently processing.
+   */
+  isProcessing(): boolean {
+    return this.processing;
+  }
+
+  /**
    * Process the queue with proper rate limiting and spacing.
+   * Micro-batches requests to prevent starvation under continuous enqueue.
    */
   private async processQueue(): Promise<void> {
     if (this.processing || this.queue.length === 0) {
@@ -125,13 +148,16 @@ class RequestQueue {
     try {
       this.processing = true;
 
+      const MAX_ITERATION_TIME_MS = 250; // Target max 250ms per iteration to allow other tasks
+      const iterationStartTime = Date.now();
+
       while (this.queue.length > 0) {
         // Check if rate limited and wait if needed
         const now = Date.now();
         if (now < this.rateLimitResetTime) {
           const waitTime = this.rateLimitResetTime - now;
           console.warn(
-            `[ApiIPC] Rate limited, waiting ${Math.round(waitTime / 1000)}s before processing queue`,
+            `[ApiIPC] Rate limited, waiting ${Math.round(waitTime / 1000)}s before processing queue (queue length: ${this.queue.length})`,
           );
           await new Promise((resolve) => setTimeout(resolve, waitTime));
         }
@@ -157,6 +183,25 @@ class RequestQueue {
         } catch (error) {
           item.reject(error);
         }
+
+        // Yield if iteration time exceeded to prevent blocking other tasks
+        const elapsedTime = Date.now() - iterationStartTime;
+        if (elapsedTime > MAX_ITERATION_TIME_MS && this.queue.length > 0) {
+          console.debug(
+            `[ApiIPC] Iteration time exceeded (${elapsedTime}ms), yielding (remaining: ${this.queue.length})`,
+          );
+          // Schedule next batch with a small delay (10ms) for micro-batching
+          setTimeout(() => this.processQueue(), 10);
+          return;
+        }
+      }
+
+      // After loop, if new items arrived during processing, schedule next run
+      if (this.queue.length > 0) {
+        console.debug(
+          `[ApiIPC] Queue has ${this.queue.length} remaining items, scheduling next batch`,
+        );
+        setTimeout(() => this.processQueue(), 10);
       }
     } finally {
       this.processing = false;
@@ -167,9 +212,6 @@ class RequestQueue {
 
 // Global request queue instance
 const requestQueue = new RequestQueue();
-
-// Rate limiting state (only used by rate limit response handling)
-let isRateLimited = false;
 
 /**
  * Simple in-memory cache for API responses.
@@ -190,6 +232,24 @@ interface Cache<T> {
 const searchCache: Cache<Record<string, unknown>> = {};
 
 /**
+ * Index mapping normalized search terms to their hashed cache keys.
+ * Allows precise clearing of specific search queries without substring matching.
+ * @internal
+ */
+const searchTermIndex = new Map<string, Set<string>>();
+
+/**
+ * Normalize a search term for indexing purposes.
+ * @internal
+ */
+function normalizeSearchTerm(term: unknown): string {
+  if (typeof term === "string") {
+    return term.toLowerCase().trim();
+  }
+  return "";
+}
+
+/**
  * Sleep for the specified number of milliseconds.
  *
  * @param ms - The number of milliseconds to sleep.
@@ -201,20 +261,20 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Handle rate limit checking and waiting.
+ * Consults the request queue's reset time to determine if waiting is needed.
  * @internal
  */
 async function handleRateLimit(): Promise<void> {
-  if (!isRateLimited) return;
-
   const now = Date.now();
-  if (now < requestQueue["rateLimitResetTime"]) {
-    const waitTime = requestQueue["rateLimitResetTime"] - now;
+  const resetTime = requestQueue.getRateLimitResetTime();
+
+  if (now < resetTime) {
+    const waitTime = resetTime - now;
     console.warn(
       `[ApiIPC] Rate limited, waiting ${Math.round(waitTime / 1000)}s before retrying`,
     );
     await sleep(waitTime);
   }
-  isRateLimited = false;
 }
 
 /**
@@ -224,22 +284,35 @@ async function handleRateLimit(): Promise<void> {
 function getSearchTermFromVariables(
   variables: Record<string, unknown> | undefined,
 ): string {
-  if (!variables || variables.search === "undefined") {
-    return "request";
-  }
+  if (!variables) return "request";
 
   const search = variables.search;
-  if (typeof search === "string") {
-    return search;
-  }
 
-  if (
-    search !== null &&
-    typeof search === "object" &&
-    "toString" in search &&
-    typeof search.toString === "function"
-  ) {
-    return search.toString();
+  // Primitive values
+  if (typeof search === "string") return search;
+  if (typeof search === "number" || typeof search === "boolean")
+    return String(search);
+  if (search == null) return "request";
+
+  // Objects/arrays: try to extract a human-friendly field first
+  if (typeof search === "object") {
+    try {
+      const s = search as Record<string, unknown>;
+      if (typeof s.query === "string") return s.query;
+      if (typeof s.title === "string") return s.title;
+      if (typeof s.name === "string") return s.name;
+
+      // Fallback to JSON with safe truncation
+      const json = JSON.stringify(search);
+      return json.length > 200 ? `${json.slice(0, 200)}…` : json;
+    } catch (err) {
+      // If JSON serialization fails, log at debug level and fall back
+      console.debug(
+        "[ApiIPC] Failed to stringify search variable for logging:",
+        err,
+      );
+      return "request";
+    }
   }
 
   return String(search);
@@ -247,6 +320,7 @@ function getSearchTermFromVariables(
 
 /**
  * Handle 429 rate limit response with retry logic.
+ * Uses exponential backoff capped at MAX_BACKOFF_MS with random jitter (±10%) to reduce queue starvation.
  * @internal
  */
 async function handleRateLimitResponse(
@@ -270,7 +344,6 @@ async function handleRateLimitResponse(
     throw error;
   }
 
-  isRateLimited = true;
   const retryAfter = response.headers.get("Retry-After");
   let waitTime: number;
 
@@ -280,9 +353,17 @@ async function handleRateLimitResponse(
       `[ApiIPC] Rate limited with Retry-After header: ${retryAfter}s`,
     );
   } else {
-    waitTime = 5000 * Math.pow(2, retryCount);
+    // Exponential backoff capped at MAX_BACKOFF_MS
+    const baseBackoff = 5000 * Math.pow(2, retryCount);
+    waitTime = Math.min(baseBackoff, MAX_BACKOFF_MS);
+
+    // Add jitter (±10%) to reduce thundering herd
+    const jitterPercent = 0.1;
+    const jitterAmount = waitTime * jitterPercent * (Math.random() * 2 - 1);
+    waitTime = Math.max(1000, waitTime + jitterAmount);
+
     console.warn(
-      `[ApiIPC] Rate limited, using exponential backoff: ${waitTime / 1000}s`,
+      `[ApiIPC] Rate limited, using exponential backoff (capped): ${waitTime / 1000}s`,
     );
   }
 
@@ -292,7 +373,7 @@ async function handleRateLimitResponse(
 
   const searchTerm = getSearchTermFromVariables(variables);
   console.warn(
-    `[ApiIPC] Rate limited for "${searchTerm}", waiting ${Math.round(waitTime / 1000)}s before retry #${retryCount + 1}`,
+    `[ApiIPC] Rate limited for "${searchTerm}", waiting ${Math.round(waitTime / 1000)}s before retry #${retryCount + 1} (queue length: ${requestQueue.size()})`,
   );
   await sleep(waitTime);
 
@@ -301,6 +382,7 @@ async function handleRateLimitResponse(
 
 /**
  * Handle server error response with retry logic.
+ * Uses exponential backoff capped at MAX_BACKOFF_MS with jitter to prevent queue starvation.
  * @internal
  */
 async function handleServerError(
@@ -323,7 +405,15 @@ async function handleServerError(
     throw error;
   }
 
-  const waitTime = 3000 * Math.pow(2, retryCount);
+  // Exponential backoff capped at MAX_BACKOFF_MS
+  const baseBackoff = 3000 * Math.pow(2, retryCount);
+  let waitTime = Math.min(baseBackoff, MAX_BACKOFF_MS);
+
+  // Add jitter (±10%) to reduce thundering herd
+  const jitterPercent = 0.1;
+  const jitterAmount = waitTime * jitterPercent * (Math.random() * 2 - 1);
+  waitTime = Math.max(1000, waitTime + jitterAmount);
+
   const searchTerm = getSearchTermFromVariables(variables);
   console.warn(
     `[ApiIPC] Server error ${response.status} for "${searchTerm}", waiting ${Math.round(waitTime / 1000)}s before retry #${retryCount + 1}`,
@@ -456,11 +546,12 @@ async function requestAniList(
 }
 
 /**
- * Generate a cache key from search parameters.
+ * Generate a cache key from search parameters using stable SHA-1 hash.
+ * Uses full query and variables to avoid collisions across large queries.
  *
  * @param query - The GraphQL query string.
  * @param variables - The variables for the query.
- * @returns The generated cache key string.
+ * @returns The generated cache key string (SHA-1 hex digest).
  * @internal
  * @source
  */
@@ -468,7 +559,10 @@ function generateCacheKey(
   query: string,
   variables: Record<string, unknown> = {},
 ): string {
-  return `${query.slice(0, 50)}_${JSON.stringify(variables)}`;
+  // Create a stable hash of full query and variables
+  const cacheInput = JSON.stringify({ query, variables });
+  const hash = createHash("sha1").update(cacheInput).digest("hex");
+  return `cache_${hash}`;
 }
 
 /**
@@ -498,7 +592,7 @@ export function setupAniListAPI() {
   ipcMain.handle("anilist:request", async (_, payload: AniListRequest) => {
     const { query, variables, token, cacheControl } = payload;
     const bypassCache = cacheControl?.bypassCache ?? false;
-    const searchTerm = variables?.search || "query";
+    const searchTerm = getSearchTermFromVariables(variables);
     return withGroupAsync(
       `[ApiIPC] AniList Request: ${searchTerm}`,
       async () => {
@@ -539,6 +633,14 @@ export function setupAniListAPI() {
               data: response,
               timestamp: Date.now(),
             };
+            // Register the cache key in the search term index for precise clearing
+            const normalizedTerm = normalizeSearchTerm(variables?.search);
+            if (normalizedTerm) {
+              if (!searchTermIndex.has(normalizedTerm)) {
+                searchTermIndex.set(normalizedTerm, new Set());
+              }
+              searchTermIndex.get(normalizedTerm)?.add(cacheKey);
+            }
           }
 
           return {
@@ -557,61 +659,85 @@ export function setupAniListAPI() {
   });
 
   // Handle opening external links in the default browser
-  ipcMain.handle("shell:openExternal", async (_, url) => {
-    try {
-      console.debug(`[ApiIPC] Opening external URL in default browser: ${url}`);
-
-      // Validate URL using WHATWG URL parser
-      let parsedUrl: URL;
+  ipcMain.handle(
+    "shell:openExternal",
+    async (_, url): Promise<ShellOperationResult> => {
       try {
-        parsedUrl = new URL(url);
-      } catch {
-        console.warn(`[ApiIPC] Invalid URL format: ${url}`);
-        return {
-          success: false,
-          error: "Invalid URL format",
-        };
-      }
-
-      // Enforce http: or https: schemes only
-      if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
-        console.warn(
-          `[ApiIPC] Rejected URL with non-HTTP(S) scheme: ${parsedUrl.protocol}//${parsedUrl.hostname}`,
+        console.debug(
+          `[ApiIPC] Opening external URL in default browser: ${url}`,
         );
+
+        // Validate URL using WHATWG URL parser
+        let parsedUrl: URL;
+        try {
+          parsedUrl = new URL(url);
+        } catch {
+          console.warn(`[ApiIPC] Invalid URL format: ${url}`);
+          return {
+            success: false,
+            error: "Invalid URL format",
+          };
+        }
+
+        // Enforce http: or https: schemes only
+        if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+          console.warn(
+            `[ApiIPC] Rejected URL with non-HTTP(S) scheme: ${parsedUrl.protocol}//${parsedUrl.hostname}`,
+          );
+          return {
+            success: false,
+            error: "Invalid URL scheme. Only http: and https: are allowed",
+          };
+        }
+
+        console.debug(
+          `[ApiIPC] URL validated successfully: ${parsedUrl.hostname}`,
+        );
+        await shell.openExternal(url);
+        return { success: true };
+      } catch (error) {
+        console.error("[ApiIPC] Error opening external URL:", error);
+        // Normalize error to string to avoid leaking raw Error objects
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         return {
           success: false,
-          error: "Invalid URL scheme. Only http: and https: are allowed",
+          error: errorMessage,
         };
       }
-
-      console.debug(
-        `[ApiIPC] URL validated successfully: ${parsedUrl.hostname}`,
-      );
-      await shell.openExternal(url);
-      return { success: true };
-    } catch (error) {
-      console.error("[ApiIPC] Error opening external URL:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      };
-    }
-  });
+    },
+  );
 
   // Clear search cache
   ipcMain.handle("anilist:clearCache", (_, searchQuery) => {
     if (searchQuery) {
-      // Clear specific cache entries
-      for (const key of Object.keys(searchCache)) {
-        if (key.includes(searchQuery)) {
+      // Clear specific cache entries using the search term index for precision
+      const normalizedTerm = normalizeSearchTerm(searchQuery);
+      const keysToDelete = searchTermIndex.get(normalizedTerm);
+
+      if (keysToDelete) {
+        for (const key of keysToDelete) {
           delete searchCache[key];
         }
+        searchTermIndex.delete(normalizedTerm);
+        console.debug(
+          `[ApiIPC] Cleared ${keysToDelete.size} cache entries for: "${normalizedTerm}"`,
+        );
+      } else {
+        console.debug(
+          `[ApiIPC] No cache entries found for: "${normalizedTerm}"`,
+        );
       }
     } else {
       // Clear all cache
+      const totalEntries = Object.keys(searchCache).length;
       for (const key of Object.keys(searchCache)) {
         delete searchCache[key];
       }
+      searchTermIndex.clear();
+      console.debug(
+        `[ApiIPC] Cleared all cache entries (${totalEntries} total)`,
+      );
     }
 
     return { success: true };
@@ -621,10 +747,12 @@ export function setupAniListAPI() {
   ipcMain.handle("anilist:getRateLimitStatus", () => {
     const now = Date.now();
     const resetTime = requestQueue.getRateLimitResetTime();
+    const isCurrentlyRateLimited = now < resetTime;
+
     return {
-      isRateLimited,
-      retryAfter: isRateLimited ? resetTime : null,
-      timeRemaining: isRateLimited ? Math.max(0, resetTime - now) : 0,
+      isRateLimited: isCurrentlyRateLimited,
+      retryAfter: isCurrentlyRateLimited ? resetTime : null,
+      timeRemaining: isCurrentlyRateLimited ? Math.max(0, resetTime - now) : 0,
     };
   });
 

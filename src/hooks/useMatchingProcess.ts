@@ -328,6 +328,96 @@ export const useMatchingProcess = ({
   );
 
   /**
+   * Create automatic backup if enabled and this is a fresh matching session.
+   */
+  const maybeCreateAutomaticBackup = useCallback(
+    async (isFreshSession: boolean) => {
+      if (
+        !isFreshSession ||
+        storage.getItem(STORAGE_KEYS.AUTO_BACKUP_ENABLED) !== "true"
+      ) {
+        return;
+      }
+
+      try {
+        console.info(
+          "[Matching] 📦 Creating automatic backup before matching...",
+        );
+        await createBackup();
+        Sentry.addBreadcrumb({
+          category: "backup",
+          message: "Automatic backup created before matching",
+          level: "info",
+        });
+      } catch (backupError) {
+        console.warn(
+          "[Matching] ⚠️ Automatic backup failed (non-blocking):",
+          backupError,
+        );
+        Sentry.addBreadcrumb({
+          category: "backup",
+          message: "Automatic backup failed before matching",
+          level: "warning",
+          data: {
+            error:
+              backupError instanceof Error
+                ? backupError.message
+                : String(backupError),
+          },
+        });
+      }
+    },
+    [],
+  );
+
+  /**
+   * Factory to create the progress callback passed into batchMatchManga.
+   */
+  const createBatchProgressCallback = useCallback(
+    (
+      onProgress: (c: number, t: number, title?: string) => void,
+      abortController: AbortController,
+    ) => {
+      return (current: number, total: number, currentTitle?: string) => {
+        if (cancelMatchingRef.current) {
+          abortController.abort();
+          throw new Error("Matching process was cancelled by user");
+        }
+        onProgress(current, total, currentTitle);
+        // Add breadcrumb for progress milestones (every 10%)
+        const progressPercent = (current / total) * 100;
+        if (progressPercent % 10 < 1) {
+          Sentry.addBreadcrumb({
+            category: "matching",
+            message: `Matching progress: ${Math.floor(progressPercent)}%`,
+            level: "info",
+            data: {
+              current,
+              total,
+            },
+          });
+        }
+      };
+    },
+    [],
+  );
+
+  /**
+   * Create the cancellation predicate function expected by batchMatchManga.
+   */
+  const createCancellationPredicate = useCallback(
+    (abortController: AbortController) => {
+      return () => {
+        if (cancelMatchingRef.current) {
+          abortController.abort();
+        }
+        return cancelMatchingRef.current;
+      };
+    },
+    [],
+  );
+
+  /**
    * Handles and formats matching process errors, providing user-friendly error messages.
    * Distinguishes between network, authentication, rate limit, and server errors.
    * @param err - The error object caught during matching operations.
@@ -470,46 +560,7 @@ export const useMatchingProcess = ({
       globalThis.activeAbortController = abortController;
 
       // Create automatic backup before matching if enabled and this is a fresh session
-      if (
-        isFreshSession &&
-        storage.getItem(STORAGE_KEYS.AUTO_BACKUP_ENABLED) === "true"
-      ) {
-        try {
-          console.info(
-            "[Matching] 📦 Creating automatic backup before matching...",
-          );
-          await createBackup();
-          Sentry.addBreadcrumb({
-            category: "backup",
-            message: "Automatic backup created before matching",
-            level: "info",
-          });
-        } catch (backupError) {
-          console.warn(
-            "[Matching] ⚠️ Automatic backup failed (non-blocking):",
-            backupError,
-          );
-          Sentry.addBreadcrumb({
-            category: "backup",
-            message: "Automatic backup failed before matching",
-            level: "warning",
-            data: {
-              error:
-                backupError instanceof Error
-                  ? backupError.message
-                  : String(backupError),
-            },
-          });
-        }
-      }
-
-      // Cancellation check used inside batch
-      const checkCancellation = () => {
-        if (cancelMatchingRef.current) {
-          abortController.abort();
-          throw new Error("Matching process was cancelled by user");
-        }
-      };
+      await maybeCreateAutomaticBackup(isFreshSession);
 
       try {
         // Add breadcrumb for matching start
@@ -533,6 +584,11 @@ export const useMatchingProcess = ({
         setInitialStatusMessage(cacheStatus, withKnownIds);
 
         const onProgress = createProgressHandler(withKnownIds);
+        const progressCallback = createBatchProgressCallback(
+          onProgress,
+          abortController,
+        );
+        const cancelPredicate = createCancellationPredicate(abortController);
 
         const results = await batchMatchManga(
           mangaList,
@@ -548,29 +604,8 @@ export const useMatchingProcess = ({
             },
             bypassCache: forceSearch,
           },
-          (current, total, currentTitle) => {
-            checkCancellation();
-            onProgress(current, total, currentTitle);
-            // Add breadcrumb for progress milestones (every 10%)
-            const progressPercent = (current / total) * 100;
-            if (progressPercent % 10 < 1) {
-              Sentry.addBreadcrumb({
-                category: "matching",
-                message: `Matching progress: ${Math.floor(progressPercent)}%`,
-                level: "info",
-                data: {
-                  current,
-                  total,
-                },
-              });
-            }
-          },
-          () => {
-            if (cancelMatchingRef.current) {
-              abortController.abort();
-            }
-            return cancelMatchingRef.current;
-          },
+          progressCallback,
+          cancelPredicate,
           abortController.signal,
         );
 
@@ -663,17 +698,19 @@ export const useMatchingProcess = ({
    * @source
    */
   const handleResumeMatching = useCallback(
-    (
+    async (
       matchResults: MangaMatchResult[],
       setMatchResults: React.Dispatch<React.SetStateAction<MangaMatchResult[]>>,
     ) => {
       // Always clear error state first
       setError(null);
 
-      // Get the full manga list from local storage to find all unprocessed manga
+      // Get the full manga list from electron-store (authoritative source) to find all unprocessed manga
       try {
-        // Fix: Use the correct storage key KENMEI_DATA instead of KENMEI_MANGA
-        const kenmeiDataJson = storage.getItem(STORAGE_KEYS.KENMEI_DATA);
+        // Use getItemAsync to prefer electron-store when available and keep localStorage in sync
+        const kenmeiDataJson = await storage.getItemAsync(
+          STORAGE_KEYS.KENMEI_DATA,
+        );
 
         if (kenmeiDataJson) {
           const kenmeiData = JSON.parse(kenmeiDataJson);

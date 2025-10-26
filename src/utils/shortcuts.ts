@@ -184,14 +184,6 @@ export const SHORTCUTS: Shortcut[] = [
     action: "toggle:shortcuts-panel",
     scope: "global",
   },
-  {
-    id: "general-close",
-    category: ShortcutCategory.GENERAL,
-    keys: { key: "Escape" },
-    description: "Close modals and dialogs",
-    action: "close:modal",
-    scope: "global",
-  },
 ];
 
 /**
@@ -224,7 +216,8 @@ export function formatShortcutKey(key: ShortcutKey): string {
 /**
  * Checks if a keyboard event matches a specific shortcut definition.
  * Handles both primary and alternative key combinations.
- * Ignores case sensitivity for letter keys and handles platform-specific modifiers.
+ * Enforces exact modifier matching: only specified modifiers are required, and unspecified modifiers must be absent
+ * (with an exception for Shift when the defined key is a symbol that requires Shift on some layouts).
  * @param {KeyboardEvent} event - The keyboard event to check
  * @param {Shortcut} shortcut - The shortcut definition to match against
  * @returns {boolean} True if the event matches the shortcut
@@ -235,31 +228,53 @@ export function matchesShortcut(
   shortcut: Shortcut,
 ): boolean {
   const checkKey = (keyDef: ShortcutKey): boolean => {
-    const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
-    const keyLower = event.key.toLowerCase();
+    // Normalize the keys for comparison (case-insensitive for letters)
+    const eventKeyLower = event.key.toLowerCase();
     const defKeyLower = keyDef.key.toLowerCase();
 
-    // Check key match
-    if (keyLower !== defKeyLower) {
+    // Check key match - handle special characters and letters
+    if (eventKeyLower !== defKeyLower) {
       return false;
     }
 
-    // Check modifiers - permissive approach: allow extra modifiers if needed to produce the key
-    const hasCtrlOrMeta = event.ctrlKey || event.metaKey;
-    const needsCtrl = keyDef.ctrl || (keyDef.meta && isMac);
+    // Compute expected modifier set from the definition
+    const expectedCtrl = keyDef.ctrl === true;
+    const expectedMeta = keyDef.meta === true;
+    const expectedShift = keyDef.shift === true;
+    const expectedAlt = keyDef.alt === true;
 
-    // Require Ctrl/Cmd only if specified; don't forbid extra modifiers
-    if (needsCtrl && !hasCtrlOrMeta) {
+    // On Mac, Cmd is treated equivalently to Ctrl
+    const hasCtrl = event.ctrlKey;
+    const hasMeta = event.metaKey;
+    const expectedCtrlOrMeta = expectedCtrl || expectedMeta;
+    const hasCtrlOrMeta = hasCtrl || hasMeta;
+
+    // Require Ctrl/Cmd only if specified
+    if (expectedCtrlOrMeta && !hasCtrlOrMeta) {
+      return false;
+    }
+    // Forbid Ctrl/Cmd if not specified
+    if (!expectedCtrlOrMeta && hasCtrlOrMeta) {
       return false;
     }
 
-    // Shift: require only if specified
-    if (keyDef.shift && !event.shiftKey) {
+    // Require Shift only if specified
+    if (expectedShift && !event.shiftKey) {
+      return false;
+    }
+    // Exception: allow Shift for symbol keys that may require it on some layouts
+    // (e.g., '?' is Shift+/ on US layouts)
+    const isSymbolKey = /[!@#$%^&*()_+=[\]{};:'",.<>?/\\|`~-]/.test(keyDef.key);
+    if (!expectedShift && event.shiftKey && !isSymbolKey) {
       return false;
     }
 
-    // Alt: require only if specified
-    if (keyDef.alt && !event.altKey) {
+    // Require Alt only if specified
+    if (expectedAlt && !event.altKey) {
+      return false;
+    }
+    // Forbid Alt if not specified
+    if (!expectedAlt && event.altKey) {
       return false;
     }
 

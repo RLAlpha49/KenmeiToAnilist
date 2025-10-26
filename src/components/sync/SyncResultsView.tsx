@@ -51,7 +51,7 @@ const SyncResultsView: React.FC<SyncResultsViewProps> = ({
   const formattedTime = new Intl.DateTimeFormat("en-US", {
     dateStyle: "medium",
     timeStyle: "medium",
-  }).format(report.timestamp);
+  }).format(new Date(report.timestamp));
 
   // Calculate success percentage
   const successRate =

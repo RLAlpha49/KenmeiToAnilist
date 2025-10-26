@@ -78,7 +78,7 @@ const cloneEntries = (entries: AniListMediaEntry[]): AniListMediaEntry[] =>
  */
 const toPersistedReport = (report: SyncReport): PersistedSyncReport => ({
   ...report,
-  timestamp: report.timestamp.toISOString(),
+  timestamp: report.timestamp,
 });
 
 /**
@@ -91,9 +91,10 @@ const fromPersistedReport = (
   report: PersistedSyncReport | null,
 ): SyncReport | null => {
   if (!report) return null;
+  // Persisted report stores ISO timestamp string; SyncReport expects ISO string as well
   return {
     ...report,
-    timestamp: new Date(report.timestamp),
+    timestamp: report.timestamp,
   };
 };
 
@@ -425,7 +426,7 @@ async function runRegularBatch(
       failedUpdates: 0,
       skippedEntries: 0,
       errors: [],
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
     };
   }
   return await syncMangaBatch(
@@ -702,7 +703,7 @@ async function runIncrementalEntries(
       finalCounters.skippedUpdates,
     skippedEntries: finalCounters.skippedUpdates,
     errors,
-    timestamp: new Date(),
+    timestamp: new Date().toISOString(),
   };
 }
 
@@ -1015,6 +1016,109 @@ export function useSynchronization(): [
     emitSyncSnapshot();
   };
 
+  /**
+   * If automatic backups are enabled and this is a fresh sync, attempt to create one.
+   * Errors are non-blocking and will be recorded to Sentry/breadcrumbs.
+   */
+  const performAutomaticBackupIfNeeded = async (isResume: boolean) => {
+    if (isResume) return;
+    if (storage.getItem(STORAGE_KEYS.AUTO_BACKUP_ENABLED) !== "true") return;
+
+    try {
+      console.info(
+        "[Synchronization] 📦 Creating automatic backup before sync...",
+      );
+      await createBackup();
+      Sentry.addBreadcrumb({
+        category: "backup",
+        message: "Automatic backup created before sync",
+        level: "info",
+      });
+    } catch (backupError) {
+      console.warn(
+        "[Synchronization] ⚠️ Automatic backup failed (non-blocking):",
+        backupError,
+      );
+      Sentry.addBreadcrumb({
+        category: "backup",
+        message: "Automatic backup failed before sync",
+        level: "warning",
+        data: {
+          error:
+            backupError instanceof Error
+              ? backupError.message
+              : String(backupError),
+        },
+      });
+    }
+  };
+
+  /**
+   * Initialize controller, ids, refs and initial progress state for a sync run.
+   */
+  const initializeSyncRun = (
+    entries: AniListMediaEntry[],
+    displayOrderMediaIds?: number[],
+  ) => {
+    const abortController = new AbortController();
+    const uniqueMediaIds =
+      displayOrderMediaIds && displayOrderMediaIds.length > 0
+        ? displayOrderMediaIds
+        : Array.from(new Set(entries.map((e) => e.mediaId)));
+
+    uniqueMediaIdsRef.current = [...uniqueMediaIds];
+    initialEntriesRef.current = cloneEntries(entries);
+
+    const initialProgress: SyncProgress = {
+      total: uniqueMediaIds.length,
+      completed: 0,
+      successful: 0,
+      failed: 0,
+      skipped: 0,
+      currentEntry: null,
+      currentStep: null,
+      totalSteps: null,
+      rateLimited: false,
+      retryAfter: null,
+    };
+
+    setState((prev) => ({
+      ...prev,
+      isActive: true,
+      error: null,
+      abortController,
+      progress: initialProgress,
+      isPaused: false,
+      resumeAvailable: false,
+      resumeMetadata: null,
+    }));
+
+    updateSnapshotFromProgress(initialProgress, initialEntriesRef.current);
+
+    return { abortController, uniqueMediaIds, initialProgress };
+  };
+
+  /**
+   * Run the core sync execution and return the resulting report and last progress.
+   */
+  const runSyncExecution = async (
+    entries: AniListMediaEntry[],
+    token: string,
+    abortController: AbortController,
+    uniqueMediaIds: number[],
+  ) => {
+    const executed = await executeSyncModeImpl(
+      entries,
+      token,
+      abortController,
+      uniqueMediaIds,
+      setState,
+      updateSnapshotFromProgress,
+      initialEntriesRef,
+    );
+    return executed;
+  };
+
   const clearResumeSnapshot = () => {
     resumeSnapshotRef.current = null;
     initialEntriesRef.current = [];
@@ -1128,15 +1232,11 @@ export function useSynchronization(): [
         `[Synchronization] ${isResume ? "▶️ Resuming" : "🚀 Starting"} sync for ${entries.length} entries`,
       );
 
-      // Add breadcrumb for sync start
       Sentry.addBreadcrumb({
         category: "sync",
         message: `Sync ${isResume ? "resumed" : "started"}`,
         level: "info",
-        data: {
-          entryCount: entries.length,
-          isResume,
-        },
+        data: { entryCount: entries.length, isResume },
       });
 
       recordEvent({
@@ -1159,104 +1259,35 @@ export function useSynchronization(): [
 
       pauseRequestedRef.current = false;
 
-      // Create automatic backup before sync if enabled
-      if (
-        !isResume &&
-        storage.getItem(STORAGE_KEYS.AUTO_BACKUP_ENABLED) === "true"
-      ) {
-        try {
-          console.info(
-            "[Synchronization] 📦 Creating automatic backup before sync...",
-          );
-          await createBackup();
-          Sentry.addBreadcrumb({
-            category: "backup",
-            message: "Automatic backup created before sync",
-            level: "info",
-          });
-        } catch (backupError) {
-          console.warn(
-            "[Synchronization] ⚠️ Automatic backup failed (non-blocking):",
-            backupError,
-          );
-          Sentry.addBreadcrumb({
-            category: "backup",
-            message: "Automatic backup failed before sync",
-            level: "warning",
-            data: {
-              error:
-                backupError instanceof Error
-                  ? backupError.message
-                  : String(backupError),
-            },
-          });
-        }
-      }
+      // Try to create a backup if configured (non-blocking)
+      await performAutomaticBackupIfNeeded(isResume);
 
       // Main orchestration
       try {
-        // Initialize controller, ids, progress
-        const abortController = new AbortController();
-        const uniqueMediaIds =
-          displayOrderMediaIds && displayOrderMediaIds.length > 0
-            ? displayOrderMediaIds
-            : Array.from(new Set(entries.map((e) => e.mediaId)));
-        uniqueMediaIdsRef.current = [...uniqueMediaIds];
-        initialEntriesRef.current = cloneEntries(entries);
+        const { abortController, uniqueMediaIds } = initializeSyncRun(
+          entries,
+          displayOrderMediaIds,
+        );
 
-        const initialProgress: SyncProgress = {
-          total: uniqueMediaIds.length,
-          completed: 0,
-          successful: 0,
-          failed: 0,
-          skipped: 0,
-          currentEntry: null,
-          currentStep: null,
-          totalSteps: null,
-          rateLimited: false,
-          retryAfter: null,
-        };
-
-        setState((prev) => ({
-          ...prev,
-          isActive: true,
-          error: null,
-          abortController,
-          progress: initialProgress,
-          isPaused: false,
-          resumeAvailable: false,
-          resumeMetadata: null,
-        }));
-
-        updateSnapshotFromProgress(initialProgress, initialEntriesRef.current);
-
-        // Execute sync mode
-        const executed = await executeSyncModeImpl(
+        const executed = await runSyncExecution(
           entries,
           token,
           abortController,
           uniqueMediaIds,
-          setState,
-          updateSnapshotFromProgress,
-          initialEntriesRef,
         );
 
         const syncReport = executed.syncReport;
         const lastReportedProgress = executed.lastReportedProgress;
 
-        // If pause was requested, persist partial report and snapshot
         if (pauseRequestedRef.current) {
           console.info(
             "[Synchronization] ⏸️ Pausing sync and saving state for resume...",
           );
-          // Add breadcrumb for sync pause
           Sentry.addBreadcrumb({
             category: "sync",
             message: "Sync paused by user",
             level: "info",
-            data: {
-              progress: lastReportedProgress,
-            },
+            data: { progress: lastReportedProgress },
           });
           handlePausedSync(
             existingReportFragment,
@@ -1271,7 +1302,6 @@ export function useSynchronization(): [
           return;
         }
 
-        // Finalize the sync operation
         console.debug("[Synchronization] 🔍 Finalizing sync operation...");
         finalizeSyncOperation(
           existingReportFragment,
@@ -1282,7 +1312,6 @@ export function useSynchronization(): [
         );
 
         const finalReport = mergeReports(existingReportFragment, syncReport);
-        // Add breadcrumb for sync completion
         Sentry.addBreadcrumb({
           category: "sync",
           message: "Sync completed",
@@ -1294,7 +1323,6 @@ export function useSynchronization(): [
             totalEntries: finalReport.totalEntries,
           },
         });
-        // Add sync context to Sentry
         Sentry.setContext("sync", {
           totalEntries: finalReport.totalEntries,
           successfulUpdates: finalReport.successfulUpdates,

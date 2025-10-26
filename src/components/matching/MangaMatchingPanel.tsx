@@ -47,7 +47,7 @@ import { AlternativeSearchSettingsCard } from "./MangaMatchingPanel/AlternativeS
  * @property matches - The list of manga match results to review and manage.
  * @property onManualSearch - Optional callback to trigger a manual search for a Kenmei manga.
  * @property onAcceptMatch - Optional callback to accept a match result.
- * @property onRejectMatch - Optional callback to reject a match result.
+ * @property onRejectMatch - Optional callback to reject a match result or batch of matches.
  * @property onSelectAlternative - Optional callback to select an alternative match.
  * @property onResetToPending - Optional callback to reset a match to pending status.
  * @property isLoadingInitial - Optional flag to show skeleton loaders during initial load.
@@ -61,8 +61,16 @@ import { AlternativeSearchSettingsCard } from "./MangaMatchingPanel/AlternativeS
 export interface MangaMatchingPanelProps {
   matches: MangaMatchResult[];
   onManualSearch?: (kenmeiManga: KenmeiManga) => void;
-  onAcceptMatch?: (match: MangaMatchResult) => void;
-  onRejectMatch?: (match: MangaMatchResult) => void;
+  onAcceptMatch?: (
+    match:
+      | MangaMatchResult
+      | { isBatchOperation: boolean; matches: MangaMatchResult[] },
+  ) => void;
+  onRejectMatch?: (
+    match:
+      | MangaMatchResult
+      | { isBatchOperation: boolean; matches: MangaMatchResult[] },
+  ) => void;
   onSelectAlternative?: (
     match: MangaMatchResult,
     alternativeIndex: number,
@@ -222,13 +230,36 @@ export function MangaMatchingPanel({
   );
 
   // Handler for opening external links in the default browser
-  const handleOpenExternal = (url: string) => (e: React.MouseEvent) => {
+  const handleOpenExternal = (url: string) => async (e: React.MouseEvent) => {
     e.preventDefault();
-    if (globalThis.electronAPI?.shell?.openExternal) {
-      globalThis.electronAPI.shell.openExternal(url);
-    } else {
+    try {
+      // Defensive guard: check if electronAPI is available
+      if (!globalThis.electronAPI?.shell?.openExternal) {
+        console.warn(
+          "[MangaMatchingPanel] electronAPI.shell.openExternal not available, falling back to window.open",
+        );
+        globalThis.open?.(url, "_blank", "noopener,noreferrer");
+        return;
+      }
+
+      const result = (await globalThis.electronAPI.shell.openExternal(url)) as
+        | { success: boolean; error?: string }
+        | undefined;
+
+      if (!result?.success) {
+        // error is now guaranteed to be string (or undefined)
+        const errorMessage = result?.error || "Unknown error";
+        console.error(
+          "[MangaMatchingPanel] Failed to open external URL:",
+          errorMessage,
+        );
+        // Fallback to regular link behavior if opening failed
+        globalThis.open?.(url, "_blank", "noopener,noreferrer");
+      }
+    } catch (error) {
+      console.error("[MangaMatchingPanel] Error opening external URL:", error);
       // Fallback to regular link behavior if not in Electron
-      globalThis.open(url, "_blank", "noopener,noreferrer");
+      globalThis.open?.(url, "_blank", "noopener,noreferrer");
     }
   };
 
@@ -559,7 +590,7 @@ export function MangaMatchingPanel({
 
     // Skip all matches at once if possible
     if (pendingWithNoMatches.length > 0 && onRejectMatch) {
-      // Create a single batched update by using a custom handler
+      // Create a modified list with skipped status for the batch
       const batchedReject = matches.map((match) => {
         // Only modify the matches that need to be skipped
         if (
@@ -578,15 +609,8 @@ export function MangaMatchingPanel({
         return match;
       });
 
-      // Pass the full array with modifications to the parent
-      // Special flag to indicate this is a batch operation
-      const batchOperation = {
-        isBatchOperation: true,
-        matches: batchedReject,
-      };
-
-      // @ts-expect-error - We're adding a special property for the batch handler to recognize
-      onRejectMatch(batchOperation);
+      // Pass the batch operation using isBatchOperation flag
+      onRejectMatch({ isBatchOperation: true, matches: batchedReject });
 
       // Short delay to ensure state updates have time to process
       setTimeout(() => {
@@ -651,7 +675,6 @@ export function MangaMatchingPanel({
         matches: batchedAccept,
       };
 
-      // @ts-expect-error - We're adding a special property for the batch handler to recognize
       onAcceptMatch(batchOperation);
 
       // Short delay to ensure state updates have time to process
@@ -776,6 +799,12 @@ export function MangaMatchingPanel({
   // Count matched manga for bulk reset label
   const matchedCount = matches.filter((m) => m.status === "matched").length;
 
+  // Batch selection descriptive text
+  let batchSelectionText = "Select multiple matches for batch operations";
+  if (selectedMatchIds && selectedMatchIds.size > 0) {
+    batchSelectionText = `${selectedMatchIds.size} match${selectedMatchIds.size === 1 ? "" : "es"} selected`;
+  }
+
   return (
     <div
       className="flex flex-col space-y-4"
@@ -824,9 +853,7 @@ export function MangaMatchingPanel({
                   Batch Selection
                 </CardTitle>
                 <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                  {selectedMatchIds && selectedMatchIds.size > 0
-                    ? `${selectedMatchIds.size} match${selectedMatchIds.size === 1 ? "" : "es"} selected`
-                    : "Select multiple matches for batch operations"}
+                  {batchSelectionText}
                 </p>
               </div>
               <div className="flex gap-2">
@@ -1031,106 +1058,121 @@ export function MangaMatchingPanel({
 
       {/* Match list */}
       <div className="space-y-6" aria-live="polite">
-        {isLoadingInitial && matches.length === 0 ? (
-          <motion.div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <motion.div
-                key={`skeleton-card-${index + 1}`}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, delay: index * 0.05 }}
-              >
-                <SkeletonCard />
+        {(() => {
+          let matchListContent: React.ReactNode;
+          if (isLoadingInitial && matches.length === 0) {
+            matchListContent = (
+              <motion.div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <motion.div
+                    key={`skeleton-card-${index + 1}`}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2, delay: index * 0.05 }}
+                  >
+                    <SkeletonCard />
+                  </motion.div>
+                ))}
               </motion.div>
-            ))}
-          </motion.div>
-        ) : currentMatches.length > 0 ? (
-          <AnimatePresence mode="popLayout">
-            {currentMatches.map((match, index) => {
-              // Generate a unique key using index as fallback when ID is undefined
-              const uniqueKey = match.kenmeiManga.id
-                ? `${match.kenmeiManga.id}-${match.status}`
-                : `index-${index}-${match.status}-${match.kenmeiManga.title?.replaceAll(" ", "_") || "unknown"}`;
+            );
+          } else if (currentMatches.length > 0) {
+            matchListContent = (
+              <AnimatePresence mode="popLayout">
+                {currentMatches.map((match, index) => {
+                  // Generate a unique key using index as fallback when ID is undefined
+                  const uniqueKey = match.kenmeiManga.id
+                    ? `${match.kenmeiManga.id}-${match.status}`
+                    : `index-${index}-${match.status}-${match.kenmeiManga.title?.replaceAll(" ", "_") || "unknown"}`;
 
-              // Extract border color class for clarity
-              let borderColorClass = "";
-              if (match.status === "matched") {
-                borderColorClass =
-                  "border-emerald-300/70 dark:border-emerald-500/60";
-              } else if (match.status === "manual") {
-                borderColorClass = "border-sky-300/70 dark:border-sky-500/60";
-              } else if (match.status === "skipped") {
-                borderColorClass = "border-rose-300/70 dark:border-rose-500/60";
-              } else {
-                borderColorClass =
-                  "border-slate-200/80 dark:border-slate-700/70";
-              }
-
-              // Extract status color for the indicator
-              let statusBgColorClass = "";
-              if (match.status === "matched") {
-                statusBgColorClass =
-                  "bg-gradient-to-b from-emerald-400 to-emerald-600";
-              } else if (match.status === "manual") {
-                statusBgColorClass = "bg-gradient-to-b from-sky-400 to-sky-600";
-              } else if (match.status === "skipped") {
-                statusBgColorClass =
-                  "bg-gradient-to-b from-rose-400 to-rose-600";
-              } else {
-                statusBgColorClass =
-                  "bg-gradient-to-b from-slate-300 to-slate-500";
-              }
-
-              let glowClass = "";
-              if (match.status === "matched") {
-                glowClass =
-                  "hover:shadow-emerald-500/30 hover:ring-emerald-400/60";
-              } else if (match.status === "manual") {
-                glowClass = "hover:shadow-sky-500/30 hover:ring-sky-400/60";
-              } else if (match.status === "skipped") {
-                glowClass = "hover:shadow-rose-500/25 hover:ring-rose-400/60";
-              } else {
-                glowClass = "hover:shadow-slate-500/20 hover:ring-slate-300/60";
-              }
-
-              return (
-                <MatchCard
-                  key={uniqueKey}
-                  match={match}
-                  uniqueKey={uniqueKey}
-                  borderColorClass={borderColorClass}
-                  statusBgColorClass={statusBgColorClass}
-                  glowClass={glowClass}
-                  formatStatusText={formatStatusText}
-                  handleOpenExternal={handleOpenExternal}
-                  handleKeyDown={handleKeyDown}
-                  isAdultContent={isAdultContent}
-                  shouldBlurImage={shouldBlurImage}
-                  toggleImageBlur={toggleImageBlur}
-                  onManualSearch={onManualSearch}
-                  onAcceptMatch={onAcceptMatch}
-                  onRejectMatch={onRejectMatch}
-                  onSelectAlternative={onSelectAlternative}
-                  onResetToPending={onResetToPending}
-                  isSelected={isMatchSelected(match.kenmeiManga.id)}
-                  onToggleSelection={
-                    onToggleSelection
-                      ? () => onToggleSelection(match.kenmeiManga.id)
-                      : undefined
+                  // Extract border color class for clarity
+                  let borderColorClass = "";
+                  if (match.status === "matched") {
+                    borderColorClass =
+                      "border-emerald-300/70 dark:border-emerald-500/60";
+                  } else if (match.status === "manual") {
+                    borderColorClass =
+                      "border-sky-300/70 dark:border-sky-500/60";
+                  } else if (match.status === "skipped") {
+                    borderColorClass =
+                      "border-rose-300/70 dark:border-rose-500/60";
+                  } else {
+                    borderColorClass =
+                      "border-slate-200/80 dark:border-slate-700/70";
                   }
-                />
-              );
-            })}
-          </AnimatePresence>
-        ) : (
-          <div className="flex flex-col items-center justify-center rounded-lg border border-gray-200 bg-white p-8 text-center dark:border-gray-700 dark:bg-gray-800">
-            <p className="text-gray-600 dark:text-gray-400">
-              {searchTerm
-                ? `No manga matches found for "${searchTerm}" with the current filters.`
-                : "No manga matches found with the current filters."}
-            </p>
-          </div>
-        )}
+
+                  // Extract status color for the indicator
+                  let statusBgColorClass = "";
+                  if (match.status === "matched") {
+                    statusBgColorClass =
+                      "bg-gradient-to-b from-emerald-400 to-emerald-600";
+                  } else if (match.status === "manual") {
+                    statusBgColorClass =
+                      "bg-gradient-to-b from-sky-400 to-sky-600";
+                  } else if (match.status === "skipped") {
+                    statusBgColorClass =
+                      "bg-gradient-to-b from-rose-400 to-rose-600";
+                  } else {
+                    statusBgColorClass =
+                      "bg-gradient-to-b from-slate-300 to-slate-500";
+                  }
+
+                  let glowClass = "";
+                  if (match.status === "matched") {
+                    glowClass =
+                      "hover:shadow-emerald-500/30 hover:ring-emerald-400/60";
+                  } else if (match.status === "manual") {
+                    glowClass = "hover:shadow-sky-500/30 hover:ring-sky-400/60";
+                  } else if (match.status === "skipped") {
+                    glowClass =
+                      "hover:shadow-rose-500/25 hover:ring-rose-400/60";
+                  } else {
+                    glowClass =
+                      "hover:shadow-slate-500/20 hover:ring-slate-300/60";
+                  }
+
+                  return (
+                    <MatchCard
+                      key={uniqueKey}
+                      match={match}
+                      uniqueKey={uniqueKey}
+                      borderColorClass={borderColorClass}
+                      statusBgColorClass={statusBgColorClass}
+                      glowClass={glowClass}
+                      formatStatusText={formatStatusText}
+                      handleOpenExternal={handleOpenExternal}
+                      handleKeyDown={handleKeyDown}
+                      isAdultContent={isAdultContent}
+                      shouldBlurImage={shouldBlurImage}
+                      toggleImageBlur={toggleImageBlur}
+                      onManualSearch={onManualSearch}
+                      onAcceptMatch={onAcceptMatch}
+                      onRejectMatch={onRejectMatch}
+                      onSelectAlternative={onSelectAlternative}
+                      onResetToPending={onResetToPending}
+                      isSelected={isMatchSelected(match.kenmeiManga.id)}
+                      onToggleSelection={
+                        onToggleSelection
+                          ? () => onToggleSelection(match.kenmeiManga.id)
+                          : undefined
+                      }
+                    />
+                  );
+                })}
+              </AnimatePresence>
+            );
+          } else {
+            matchListContent = (
+              <div className="flex flex-col items-center justify-center rounded-lg border border-gray-200 bg-white p-8 text-center dark:border-gray-700 dark:bg-gray-800">
+                <p className="text-gray-600 dark:text-gray-400">
+                  {searchTerm
+                    ? `No manga matches found for "${searchTerm}" with the current filters.`
+                    : "No manga matches found with the current filters."}
+                </p>
+              </div>
+            );
+          }
+          return matchListContent;
+        })()}
       </div>
 
       {/* Pagination */}
