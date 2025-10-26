@@ -157,15 +157,53 @@ The matching interface includes built-in undo/redo functionality to help you exp
 
 **Tip**: Use undo/redo to safely try different match selections. If you're not sure about a choice, you can always undo and try something else!
 
-## 🎨 Custom Matching Rules
+## 🎨 Custom Matching Rules (Advanced)
 
-Define custom rules to automatically skip or accept manga during the matching process.
+> **⚠️ Advanced Feature**: Custom matching rules require knowledge of regular expressions (regex). Incorrect patterns can skip desired manga or cause performance issues. Only use this feature if you're comfortable with regex syntax.
+
+Define custom rules to automatically skip or accept manga based on specific metadata fields (titles, genres, tags, authors, format, country, source, description, publishing status).
 
 ### Accessing Custom Rules
 
 1. Navigate to Settings page
 2. Click the "Matching" tab
-3. Scroll to "Custom Matching Rules" section
+3. Scroll to "Advanced: Custom Matching Rules" section (closed by default for safety)
+4. Click to expand the advanced section
+
+### Selecting Target Fields
+
+Choose which metadata fields the regex pattern should check:
+
+**Text Fields**:
+
+- **Titles**: All title variants (romaji, english, native, synonyms, alternative titles) - Default
+- **Author/Staff**: Author names and staff credits (story, art, original creator)
+- **Description/Notes**: Manga description and your personal notes
+
+**Metadata**:
+
+- **Genres**: Genre tags (Action, Romance, Fantasy, etc.)
+- **Tags**: Detailed tags with categories (Overpowered MC, Time Travel, etc.)
+- **Format**: Publication format (Manga, Light Novel, One-Shot, Manhwa, Manhua)
+
+**Content Info**:
+
+- **Country of Origin**: Country code (JP, KR, CN, etc.)
+- **Source Material**: Original source (Original, Manga, Light Novel, etc.)
+- **Publishing Status**: Current publishing status (Finished, Publishing, etc.)
+
+**Multiple Field Selection**:
+
+- Select multiple fields to check pattern against all selected metadata
+- Pattern matches if it matches ANY of the selected fields
+- Example: Select "Titles" + "Genres" to match manga with "action" in title OR genres
+
+**Field-Specific Examples**:
+
+- **Genres**: Pattern `action|adventure` matches manga with Action or Adventure genres
+- **Author**: Pattern `^oda` matches manga by authors starting with "Oda"
+- **Format**: Pattern `^(NOVEL|ONE_SHOT)$` matches Light Novels and One-Shots
+- **Tags**: Pattern `isekai|reincarnation` matches manga with those tag themes
 
 ### Rule Types
 
@@ -189,25 +227,95 @@ Define custom rules to automatically skip or accept manga during the matching pr
 
 1. Click "Add Rule" button in Skip Rules or Accept Rules section
 2. Enter a description (e.g., "Skip anthologies")
-3. Enter regex pattern (e.g., `anthology`)
-4. Toggle case-sensitive if needed (default: case-insensitive)
-5. Toggle enabled (default: enabled)
-6. Click "Save Rule"
+3. Select target fields (which metadata to check)
+4. Enter regex pattern (e.g., `anthology`)
+5. Toggle case-sensitive if needed (default: case-insensitive)
+6. Toggle enabled (default: enabled)
+7. Review the Regex Pattern Guide (expanded section) for safe patterns
+8. Click "Save Rule"
 
-### Regex Pattern Tips
+### Comprehensive Regex Pattern Guide
 
-- **Simple text**: `anthology` matches any title containing "anthology"
-- **Start anchor**: `^one shot` matches titles starting with "one shot"
-- **End anchor**: `anthology$` matches titles ending with "anthology"
-- **Word boundary**: `\bvol\b` matches "vol" as whole word
-- **Alternation**: `(manga|manhwa|manhua)` matches any of the options
-- **Case-insensitive by default** (toggle for case-sensitive)
+**Basic Syntax**:
+
+- **Literal text**: `anthology` - matches the word "anthology" anywhere
+- **Start anchor**: `^one shot` - matches text starting with "one shot"
+- **End anchor**: `anthology$` - matches text ending with "anthology"
+- **Both anchors**: `^exact match$` - matches only "exact match"
+- **Word boundary**: `\bvol\b` - matches "vol" as a complete word
+- **Any character**: `.` - matches any single character (use sparingly)
+- **Escape special chars**: `\.`, `\*`, `\+`, `\?` - match literal . * + ?
+
+**Quantifiers** (repetition):
+
+- **Zero or one**: `colou?r` - matches "color" or "colour"
+- **Zero or more**: `\d*` - matches zero or more digits (use with caution)
+- **One or more**: `\d+` - matches one or more digits
+- **Exact count**: `\d{4}` - matches exactly 4 digits
+- **Range**: `\d{2,4}` - matches 2 to 4 digits
+- **Bounded repeats**: Always prefer `{min,max}` over `*` or `+` for safety
+
+**Character Classes**:
+
+- **Digits**: `\d` or `[0-9]` - matches any digit
+- **Word characters**: `\w` or `[a-zA-Z0-9_]` - matches letters, digits, underscore
+- **Whitespace**: `\s` - matches space, tab, newline
+- **Custom class**: `[abc]` - matches a, b, or c
+- **Negated class**: `[^abc]` - matches anything except a, b, or c
+- **Range**: `[a-z]`, `[A-Z]`, `[0-9]`
+
+**Grouping and Alternation**:
+
+- **Alternation**: `manga|manhwa|manhua` - matches any of the options
+- **Grouping**: `(one|two) shot` - matches "one shot" or "two shot"
+- **Non-capturing**: `(?:pattern)` - group without capturing (better performance)
+
+**✅ Safe Pattern Examples**:
+
+- `^one.?shot$` - matches "one shot" or "one-shot" (bounded)
+- `\b(vol|volume)\s*\d{1,3}\b` - matches "vol 1" to "volume 999" (bounded)
+- `^[a-z]{3,50}$` - matches 3-50 lowercase letters (bounded)
+- `anthology|collection` - simple alternation (no quantifiers)
+- `^official.*translation$` - anchored with specific start/end
+
+**❌ Dangerous Patterns to Avoid**:
+
+- `(a+)+` - **Nested quantifiers** cause exponential backtracking (ReDoS)
+- `(a|aa)+` - **Overlapping alternations** cause exponential backtracking
+- `^(.*a)*$` - **Catastrophic backtracking** with nested quantifiers
+- `.*` - **Unbounded wildcard** matches everything (too broad)
+- `.{1,10000}` - **Very large bounds** can cause performance issues
+- `(foo|fo)+bar` - **Overlapping prefix** in alternation causes backtracking
+
+**Security Warning - ReDoS**:
+
+> **⚠️ Regular Expression Denial of Service (ReDoS)**: Certain regex patterns can cause catastrophic backtracking, making the application freeze or crash when matching against long strings. The application validates patterns to detect these issues, but always test your patterns thoroughly.
+>
+> **Learn more**: [OWASP ReDoS Guide](https://owasp.org/www-community/attacks/Regular_expression_Denial_of_Service_-_ReDoS)
+
+**Best Practices**:
+
+1. **Start simple**: Use literal text first, add complexity only if needed
+2. **Use anchors**: `^` and `$` make patterns more specific and faster
+3. **Prefer bounds**: Use `{min,max}` instead of `*` or `+` when possible
+4. **Test thoroughly**: Use the "Test Pattern" feature with various inputs
+5. **Avoid nesting**: Never nest quantifiers like `(a+)+` or `(.*)*`
+6. **Be specific**: `\d{4}` is better than `\d+` if you expect 4 digits
+7. **Check performance**: Complex patterns on long strings can be slow
+
+**External Resources**:
+
+- [MDN RegExp Guide](https://developer.mozilla.org/docs/Web/JavaScript/Guide/Regular_expressions) - Complete JavaScript regex tutorial
+- [MDN RegExp Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/RegExp) - Full API reference
+- [Regex101](https://regex101.com) - Interactive regex tester (use JavaScript flavor)
+- [RegExr](https://regexr.com) - Another excellent regex testing tool
 
 ### Testing Patterns
 
-- Use the "Test Pattern" button to verify your regex
-- Enter sample titles to see if pattern matches
+- Use the "Test Pattern" section in the add/edit dialog to verify your regex
+- Enter sample titles or metadata to see if pattern matches
 - Fix validation errors before saving
+- Review pattern complexity warnings for dangerous patterns
 
 ### Managing Rules
 
@@ -219,7 +327,8 @@ Define custom rules to automatically skip or accept manga during the matching pr
 
 - **Skip rules** run during automatic matching (not manual search)
 - **Accept rules** boost confidence scores to ensure inclusion
-- Rules check all title variants: romaji, english, native, synonyms, alternative titles
+- Rules check selected metadata fields (configurable per rule)
+- Pattern matches if it matches ANY of the selected fields
 - Multiple rules can match the same manga (first match wins)
 - Custom rules run after system rules (light novels, hardcoded blacklist)
 
@@ -228,8 +337,10 @@ Define custom rules to automatically skip or accept manga during the matching pr
 - Custom rules only apply to automatic matching
 - Manual searches ignore skip rules (all results shown)
 - Invalid regex patterns are highlighted and cannot be saved
+- ReDoS-vulnerable patterns trigger warnings (can still be saved)
 - Disabled rules are stored but not evaluated
 - Rules persist across app restarts
+- Existing rules default to checking "titles" field for backward compatibility
 
 ### Examples
 

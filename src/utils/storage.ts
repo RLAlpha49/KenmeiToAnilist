@@ -554,12 +554,80 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
  *
  * @source
  */
+
+/**
+ * Target metadata fields for custom matching rules.
+ *
+ * @remarks
+ * Determines which metadata fields a custom rule pattern should check:
+ * - `titles`: All title variants (romaji, english, native, synonyms, alternative_titles)
+ * - `author`: Author/staff names (filtered by Story, Art, Original Creator roles)
+ * - `genres`: Genre array (Action, Romance, Fantasy, etc.)
+ * - `tags`: Tag names and categories (Overpowered MC, Time Travel, etc.)
+ * - `format`: Publication format (MANGA, NOVEL, ONE_SHOT, MANHWA, MANHUA)
+ * - `country`: Country of origin (JP, KR, CN, etc.)
+ * - `source`: Source material (ORIGINAL, MANGA, LIGHT_NOVEL, etc.)
+ * - `description`: Description text and notes (HTML stripped from description)
+ * - `status`: Publishing status (FINISHED, PUBLISHING, etc.)
+ *
+ * @example
+ * ```typescript
+ * const targets: CustomRuleTarget[] = ['titles', 'genres'];
+ * // Pattern will check both title fields and genres
+ * ```
+ *
+ * @source
+ */
+export type CustomRuleTarget =
+  | "titles" // All title variants (romaji, english, native, synonyms, alternative_titles)
+  | "author" // Author/staff names
+  | "genres" // Genre array
+  | "tags" // Tag names and categories
+  | "format" // Manga format (MANGA, NOVEL, ONE_SHOT, etc.)
+  | "country" // Country of origin
+  | "source" // Source material (ORIGINAL, MANGA, LIGHT_NOVEL, etc.)
+  | "description" // Description text and notes
+  | "status"; // Publishing status
+
+/**
+ * Custom matching rule for filtering manga based on regex patterns.
+ *
+ * @property id - Unique identifier for the rule
+ * @property pattern - Regular expression pattern to match against
+ * @property description - Human-readable description of what the rule does
+ * @property enabled - Whether the rule is currently active
+ * @property caseSensitive - Whether pattern matching should be case-sensitive
+ * @property targetFields - Which metadata fields to check (defaults to ['titles'] for backward compatibility)
+ * @property createdAt - ISO timestamp when the rule was created
+ *
+ * @remarks
+ * The `targetFields` array determines which metadata fields the pattern checks.
+ * Pattern matches if it matches ANY of the selected fields.
+ * Array fields (genres, tags, synonyms) are flattened to strings for matching.
+ * Missing fields are treated as non-match (not error).
+ *
+ * @example
+ * ```typescript
+ * const skipRule: CustomRule = {
+ *   id: "rule-123",
+ *   pattern: "isekai|reincarnation",
+ *   description: "Skip isekai manga",
+ *   enabled: true,
+ *   caseSensitive: false,
+ *   targetFields: ['genres', 'tags'], // Check genres and tags, not titles
+ *   createdAt: "2025-10-25T12:00:00.000Z"
+ * };
+ * ```
+ *
+ * @source
+ */
 export type CustomRule = {
   id: string;
   pattern: string;
   description: string;
   enabled: boolean;
   caseSensitive: boolean;
+  targetFields: CustomRuleTarget[];
   createdAt: string;
 };
 
@@ -978,6 +1046,18 @@ export function getMatchConfig(): MatchConfig {
       return DEFAULT_MATCH_CONFIG;
     }
     const parsed = JSON.parse(config);
+
+    // Migrate custom rules before returning if they exist
+    if (parsed.customRules) {
+      const skipRules = Array.isArray(parsed.customRules.skipRules)
+        ? parsed.customRules.skipRules.map(migrateCustomRule)
+        : [];
+      const acceptRules = Array.isArray(parsed.customRules.acceptRules)
+        ? parsed.customRules.acceptRules.map(migrateCustomRule)
+        : [];
+      parsed.customRules = { skipRules, acceptRules };
+    }
+
     // Merge with defaults to ensure new fields like customRules are always populated
     return { ...DEFAULT_MATCH_CONFIG, ...parsed };
   } catch (error) {
@@ -990,12 +1070,134 @@ export function getMatchConfig(): MatchConfig {
 }
 
 /**
- * Validates a custom matching rule.
+ * Checks for basic validation errors in a custom rule.
  *
- * Checks that the regex pattern is valid and all required fields are present.
+ * @param rule - The custom rule to check
+ * @returns Error message if invalid, undefined if valid
+ */
+function checkBasicValidation(rule: CustomRule): string | undefined {
+  if (!rule.pattern || rule.pattern.trim() === "") {
+    return "Pattern cannot be empty";
+  }
+  if (!rule.description || rule.description.trim() === "") {
+    return "Description cannot be empty";
+  }
+  if (
+    !rule.targetFields ||
+    !Array.isArray(rule.targetFields) ||
+    rule.targetFields.length === 0
+  ) {
+    return "At least one target field must be selected";
+  }
+  return undefined;
+}
+
+/**
+ * Validates target fields are all valid CustomRuleTarget values.
  *
- * @param rule - The custom rule to validate.
- * @returns Validation result with error message if invalid.
+ * @param targetFields - The target fields to validate
+ * @returns Error message if invalid fields found, undefined if all valid
+ */
+function validateTargetFields(
+  targetFields: CustomRuleTarget[],
+): string | undefined {
+  const validTargets = new Set<CustomRuleTarget>([
+    "titles",
+    "author",
+    "genres",
+    "tags",
+    "format",
+    "country",
+    "source",
+    "description",
+    "status",
+  ]);
+  const invalidFields = targetFields.filter(
+    (field) => !validTargets.has(field),
+  );
+  if (invalidFields.length > 0) {
+    return `Invalid target field(s): ${invalidFields.join(", ")}`;
+  }
+  return undefined;
+}
+
+/**
+ * Checks if pattern contains ReDoS-vulnerable constructs.
+ *
+ * @param pattern - The regex pattern to check
+ * @returns Warning message if vulnerable, undefined if safe
+ */
+function checkRedosVulnerabilities(pattern: string): string | undefined {
+  const redosWarning =
+    "⚠️ This pattern may cause performance issues (ReDoS vulnerability). Consider simplifying: avoid nested quantifiers like (a+)+, overlapping alternations like (a|aa)+, or catastrophic patterns like (.*a)*. See regex documentation for safer alternatives.";
+
+  // Detect nested quantifiers: (a+)+, (\w*)*, etc.
+  if (/(\w+[+*?]|\([^)]+\)[+*?])[+*?]/.test(pattern)) {
+    return redosWarning;
+  }
+
+  // Detect overlapping alternations: (a|aa)+, (ab|a)*, etc.
+  if (/\([^|]+\|[^|]+\)[+*]/.test(pattern)) {
+    return redosWarning;
+  }
+
+  // Detect catastrophic dot-star: ^(.*...)*, (.*a)*, etc.
+  if (/\^?\(\.\*[^)]*\)[+*]/.test(pattern)) {
+    return redosWarning;
+  }
+
+  return undefined;
+}
+
+/**
+ * Checks for overly broad or complex patterns.
+ *
+ * @param pattern - The regex pattern to check
+ * @returns Warning message if problematic, undefined if acceptable
+ */
+function checkBroadPatterns(pattern: string): string | undefined {
+  const broadPatterns = [
+    /^(\.\*|\^?\.\*\$?|\(\.\*\))$/, // .* or ^.*$ or (.*)
+    /^\(\|.*\|?\)$/, // (|...) empty alternations
+    /^\|/, // starts with |
+  ];
+
+  for (const broadPattern of broadPatterns) {
+    if (broadPattern.test(pattern)) {
+      return `⚠️ This pattern matches almost everything. It will ${
+        pattern === ".*" || pattern === "^.*$"
+          ? "likely match all manga titles"
+          : "match very broad sets of titles"
+      }. Make sure this is intentional.`;
+    }
+  }
+
+  // Check for unbounded repeats without anchors
+  if (/^[^$]*[+*].*[+*]/.test(pattern) && !/[\^$]/.test(pattern)) {
+    return "⚠️ Pattern has multiple unbounded repeats without anchors. Consider using ^ or $ to make it more specific, or use bounded quantifiers like {1,100}.";
+  }
+
+  // Check for very long patterns
+  if (pattern.length > 200) {
+    return "⚠️ This pattern is very long (>200 characters) and may be difficult to maintain. Consider breaking it into multiple simpler rules.";
+  }
+
+  return undefined;
+}
+
+/**
+ * Validates a custom matching rule for correctness and safety.
+ *
+ * @param rule - The custom rule to validate
+ * @returns Validation result with error or warning messages
+ *
+ * @remarks
+ * Performs comprehensive validation including:
+ * - Pattern and description non-empty checks
+ * - Regex syntax validation
+ * - ReDoS vulnerability detection (nested quantifiers, overlapping alternations)
+ * - Overly broad pattern detection
+ * - Target fields validation
  *
  * @example
  * ```typescript
@@ -1005,6 +1207,7 @@ export function getMatchConfig(): MatchConfig {
  *   description: "Skip anthologies",
  *   enabled: true,
  *   caseSensitive: false,
+ *   targetFields: ['titles'],
  *   createdAt: new Date().toISOString()
  * };
  * const result = validateCustomRule(rule);
@@ -1020,17 +1223,19 @@ export function validateCustomRule(rule: CustomRule): {
   error?: string;
   warning?: string;
 } {
-  // Check pattern is not empty
-  if (!rule.pattern || rule.pattern.trim() === "") {
-    return { valid: false, error: "Pattern cannot be empty" };
+  // Check basic validation
+  const basicError = checkBasicValidation(rule);
+  if (basicError) {
+    return { valid: false, error: basicError };
   }
 
-  // Check description is not empty
-  if (!rule.description || rule.description.trim() === "") {
-    return { valid: false, error: "Description cannot be empty" };
+  // Validate target fields
+  const targetFieldsError = validateTargetFields(rule.targetFields);
+  if (targetFieldsError) {
+    return { valid: false, error: targetFieldsError };
   }
 
-  // Validate regex pattern with Unicode flag (u) and case-insensitive flag (i) if needed
+  // Validate regex pattern syntax
   try {
     new RegExp(rule.pattern, rule.caseSensitive ? "u" : "ui");
   } catch (error) {
@@ -1040,30 +1245,59 @@ export function validateCustomRule(rule: CustomRule): {
     };
   }
 
-  // Check for potentially problematic broad patterns
+  // Check for ReDoS vulnerabilities
   const trimmedPattern = rule.pattern.trim();
+  const redosWarning = checkRedosVulnerabilities(trimmedPattern);
+  if (redosWarning) {
+    return { valid: true, warning: redosWarning };
+  }
 
-  // Patterns that match almost anything
-  const broadPatterns = [
-    /^(\.\*|\^?\.\*\$?|\(\.\*\))$/, // .* or ^.*$ or (.*)
-    /^\(\|.*\|?\)$/, // (|...) empty alternations
-    /^\|/, // starts with |
-  ];
-
-  for (const broadPattern of broadPatterns) {
-    if (broadPattern.test(trimmedPattern)) {
-      return {
-        valid: true,
-        warning: `⚠️ This pattern matches almost everything. It will ${
-          rule.pattern === ".*" || rule.pattern === "^.*$"
-            ? "likely match all manga titles"
-            : "match very broad sets of titles"
-        }. Make sure this is intentional.`,
-      };
-    }
+  // Check for broad patterns
+  const broadWarning = checkBroadPatterns(trimmedPattern);
+  if (broadWarning) {
+    return { valid: true, warning: broadWarning };
   }
 
   return { valid: true };
+}
+
+/**
+ * Migrates a custom rule from older format to current format.
+ *
+ * @param rule - Partial custom rule (may be missing targetFields)
+ * @returns Complete custom rule with all required properties
+ *
+ * @remarks
+ * Ensures backward compatibility by defaulting `targetFields` to `['titles']`
+ * if the property is missing. This allows existing rules created before the
+ * metadata field selection feature to continue working without modification.
+ *
+ * @example
+ * ```typescript
+ * const oldRule = { id: "1", pattern: "test", ... }; // no targetFields
+ * const migratedRule = migrateCustomRule(oldRule);
+ * // migratedRule.targetFields === ['titles']
+ * ```
+ *
+ * @source
+ */
+export function migrateCustomRule(rule: Partial<CustomRule>): CustomRule {
+  // Generate a stable ID if missing
+  const id =
+    rule.id || `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+  return {
+    id,
+    pattern: rule.pattern || "",
+    description: rule.description || "",
+    enabled: rule.enabled ?? true,
+    caseSensitive: rule.caseSensitive ?? false,
+    targetFields:
+      rule.targetFields && rule.targetFields.length > 0
+        ? rule.targetFields
+        : ["titles"],
+    createdAt: rule.createdAt || new Date().toISOString(),
+  };
 }
 
 /**

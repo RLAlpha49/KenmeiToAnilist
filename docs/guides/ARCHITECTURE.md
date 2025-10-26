@@ -517,6 +517,224 @@ The application uses OAuth 2.0 for secure AniList authentication:
 8. App navigates to authenticated state
 ```
 
+### Custom Matching Rules with Metadata Field Selection
+
+Custom matching rules enable advanced users to define regex-based patterns for automatically filtering and prioritizing manga during the matching process.
+
+#### Architecture Overview
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                    Custom Rule Evaluation                   │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  1. Load Rule Configuration (targetFields + pattern)       │
+│  2. Extract Metadata by Target Field Type                  │
+│  3. Test Pattern Against Extracted Values                  │
+│  4. Apply to Skip Rules OR Accept Rules                    │
+│  5. Return Match Status for Filtering                      │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Type System
+
+```typescript
+// CustomRuleTarget - 9 metadata field types
+type CustomRuleTarget = 
+  | 'titles'       // All title variants (romaji, english, native, synonyms)
+  | 'author'       // Author names and staff credits
+  | 'genres'       // Genre tags (Action, Romance, Fantasy, etc.)
+  | 'tags'         // Detailed tags with categories
+  | 'format'       // Publication format (Manga, Light Novel, One-Shot, etc.)
+  | 'country'      // Country of origin (JP, KR, CN, etc.)
+  | 'source'       // Original source material (Manga, Light Novel, etc.)
+  | 'description'  // Manga description and notes
+  | 'status';      // Publishing status (Finished, Publishing, etc.)
+
+interface CustomRule {
+  id: string;                          // Unique identifier
+  pattern: string;                     // Regex pattern
+  description: string;                 // User-friendly label
+  enabled: boolean;                    // Active state
+  caseSensitive: boolean;              // Case matching
+  targetFields: CustomRuleTarget[];    // Fields to check (required)
+  createdAt: string;                   // ISO timestamp
+}
+```
+
+#### Validation Pipeline
+
+Rule validation includes multiple safety checks:
+
+```typescript
+// 1. Basic Validation
+- Empty pattern detection
+- Target fields requirement (at least one)
+
+// 2. Regex Syntax Validation  
+- Valid JavaScript RegExp syntax
+- Compile-time error catching
+
+// 3. ReDoS Detection
+- Nested quantifiers: (a+)+
+- Overlapping alternations: (a|aa)+
+- Catastrophic patterns: ^(.*a)*$
+
+// 4. Broad Pattern Detection
+- Unbounded wildcards: .*
+- Anchored wildcards: ^.*$
+- Empty alternations: |
+
+// 5. Complexity Warning
+- Patterns >200 characters flagged
+- Warnings (not errors) help users optimize
+```
+
+#### Metadata Extraction
+
+Each field type has specialized extraction logic:
+
+```typescript
+extractMetadataValues(targetField: CustomRuleTarget, manga, kenmeiManga) {
+  case 'titles':
+    // Returns: [romaji, english, native, synonyms, alternative_titles, ...]
+    // Source: AniList title variants + Kenmei alternative titles
+    
+  case 'author':
+    // Returns: [primary_author, staff_names, ...]
+    // Source: AniList author list + staff credits
+    
+  case 'genres':
+    // Returns: [genre1, genre2, ...]
+    // Source: AniList genres array (capitalized tags)
+    
+  case 'tags':
+    // Returns: [tag1_name, tag2_name, ...]
+    // Source: AniList tags array with categories
+    
+  case 'format':
+    // Returns: [format_value]
+    // Source: AniList format field (Manga, Light Novel, etc.)
+    
+  case 'country':
+    // Returns: [country_code]
+    // Source: AniList country of origin (JP, KR, CN, etc.)
+    
+  case 'source':
+    // Returns: [source_type]
+    // Source: AniList source field (Manga, Light Novel, etc.)
+    
+  case 'description':
+    // Returns: [manga_description, user_notes]
+    // Source: AniList description + Kenmei notes
+    
+  case 'status':
+    // Returns: [status_value]
+    // Source: AniList publishing status (Finished, Publishing, etc.)
+}
+```
+
+#### Evaluation Flow in Matching Pipeline
+
+```text
+System Rules (Light Novels, Hardcoded)
+          ↓
+Custom Skip Rules (user-defined exclusions)
+  ├─ For each skip rule:
+  │  ├─ Extract metadata for targetFields
+  │  ├─ Test pattern against each field (OR logic)
+  │  └─ Skip manga if pattern matches
+  ↓
+Automatic Matching & Scoring
+  ├─ Enhanced similarity algorithms
+  ├─ Confidence scoring
+  └─ Manual search interface
+  ↓
+Custom Accept Rules (user-defined prioritization)
+  ├─ For each accept rule:
+  │  ├─ Extract metadata for targetFields
+  │  ├─ Test pattern against each field (OR logic)
+  │  └─ Boost confidence if pattern matches
+  ↓
+Inclusion Threshold Checks
+  ├─ Minimum confidence threshold
+  └─ Rate limit and batch processing
+```
+
+#### Integration Points
+
+**Skip Rules** (`src/api/matching/filtering/skip-rules.ts`):
+
+- Checks custom skip rules after system rules
+- Extracts metadata based on rule targetFields
+- Short-circuit evaluation (first match skips manga)
+
+**Acceptance Rules** (`src/api/matching/filtering/inclusion-rules.ts`):
+
+- Checks custom accept rules before threshold
+- Boosts confidence score if pattern matches
+- Multiple rules can apply to same manga
+
+**Batching** (`src/api/matching/batching/results.ts`):
+
+- Applies custom rules during batch compilation
+- Passes AniList and Kenmei manga data to rule engine
+
+**Result Compilation** (`src/api/matching/result-processing.ts`):
+
+- Tracks which rule caused skip/accept
+- Logs matched rule for debugging
+
+#### UI Components
+
+**MetadataFieldSelector** (`src/components/settings/MetadataFieldSelector.tsx`):
+
+- Displays 9 fields grouped by category (Text Fields, Metadata, Content Info)
+- Bulk actions: Select All, Clear All, Reset to Default
+- Requires at least one field selected
+- Accessible with proper ARIA labels and fieldset/legend
+
+**RegexDocumentation** (`src/components/settings/RegexDocumentation.tsx`):
+
+- Always visible: ReDoS warning with OWASP link
+- Always visible: Safe and dangerous pattern examples
+- Collapsible: Comprehensive regex syntax guide
+- External resources: MDN, regex101, regexr
+
+**CustomRulesManager** (`src/components/settings/CustomRulesManager.tsx`):
+
+- Wrapped in Collapsible with "Advanced" designation
+- Warning alert for non-experienced users
+- Add/edit/delete dialogs with metadata field selector
+- Regex documentation integrated in dialog
+- Table showing existing rules with target fields
+
+#### Performance Considerations
+
+- **Metadata Extraction**: O(n) where n = length of field data
+- **Pattern Evaluation**: O(m) where m = pattern complexity (ReDoS-limited)
+- **Rule Iteration**: O(r) where r = number of rules
+- **Overall**: O(r * m) with early termination on skip match
+- **Typical Overhead**: ~1ms per manga with 10 rules
+
+#### Security Considerations
+
+- **ReDoS Vulnerability Detection**: Prevents catastrophic backtracking
+  - Pattern Validation: Strict regex syntax checking before save
+  - Runtime Protection: Per-value length capped at 10,000 characters to prevent catastrophic backtracking
+  - Cache Eviction: Regex cache limited to 1,000 entries (FIFO eviction) to prevent unbounded growth
+  - User Warnings: Displays warnings for potentially dangerous patterns that users can acknowledge
+  
+- **Pattern Validation**: Strict regex syntax checking before save
+  - Field Validation: Only allows defined CustomRuleTarget values
+  - Safe Defaults: Rules default to 'titles' field if not specified
+  - Migration: Backward compatibility helper for existing rules
+
+- **Field Validation**: Only allows defined CustomRuleTarget values
+- **User Choice**: Warnings for dangerous patterns (user-confirmable)
+- **Backward Compatibility**: Migration helper for existing rules
+
 ## 🔄 Application Workflow
 
 ### Complete User Journey
@@ -552,6 +770,10 @@ graph TD
    - Manual search and selection interface
    - Results persistence with user modifications
    - Custom matching rules for automated filtering and prioritization
+     - **Metadata Field Selection**: Rules can target specific fields (titles, author, genres, tags, format, country, source, description, status)
+     - **Pattern Matching**: Regex-based patterns evaluated against selected metadata
+     - **ReDoS Detection**: Validation to prevent Regular Expression Denial of Service vulnerabilities
+     - **Flexible Targeting**: Each rule independently selects which metadata to check (OR logic across fields)
 
 3. **Synchronization Phase**
    - User library fetching with rate limit handling

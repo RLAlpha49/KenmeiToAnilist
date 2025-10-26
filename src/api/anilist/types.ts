@@ -54,12 +54,12 @@ export interface AniListManga {
   };
   staff?: {
     edges: {
+      role: string;
       node: {
         id: number;
         name: {
           full: string;
         };
-        role: string;
       };
     }[];
   };

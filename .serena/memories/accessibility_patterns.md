@@ -79,6 +79,185 @@ This document provides accessibility patterns and best practices for the KenmeiT
 </Dialog>
 ```
 
+### Advanced User Sections Pattern
+
+**Purpose**: Hide complex or power-user features by default, make them discoverable but clearly marked.
+
+**Implementation** (`src/components/settings/CustomRulesManager.tsx`):
+
+```tsx
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { ShieldAlert, ChevronDown } from "lucide-react";
+
+export function CustomRulesManager() {
+  return (
+    <Collapsible defaultOpen={false}>
+      <CollapsibleTrigger className="group flex items-center gap-2">
+        <ShieldAlert className="h-5 w-5" />
+        <span>Advanced: Custom Matching Rules</span>
+        <Badge variant="secondary">Advanced</Badge>
+        <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+      </CollapsibleTrigger>
+
+      <CollapsibleContent>
+        <Alert className="mb-4 border-amber-200 bg-amber-50">
+          <AlertDescription className="text-amber-900">
+            ⚠️ <strong>Advanced Feature:</strong> Custom matching rules require knowledge of regular
+            expressions. Incorrect patterns can skip desired manga or cause performance issues.
+            <a
+              href="https://developer.mozilla.org/docs/Web/JavaScript/Guide/Regular_expressions"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-2 text-amber-700 underline"
+            >
+              Learn regex
+            </a>
+          </AlertDescription>
+        </Alert>
+
+        {/* Rest of component content */}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+```
+
+**Accessibility Features**:
+
+- **`defaultOpen={false}`** - Hidden by default, no surprise cognitive load
+- **Semantic button trigger** - Full keyboard support (Enter/Space to toggle)
+- **Visual indicator** - ChevronDown icon rotates to show state
+- **Badge label** - "Advanced" clearly marks feature tier
+- **Icon** - ShieldAlert conveys safety/caution without text
+- **Warning Alert** - `<Alert>` with role="alert" announces importance
+- **External link** - Opens in new tab with `rel="noopener noreferrer"` for security
+- **ARIA-compliant** - Radix UI Collapsible handles all ARIA attributes
+
+**Best Practices**:
+
+1. **Always mark as Advanced** - Use badge and warning alert
+2. **Default to hidden** - Use `defaultOpen={false}`
+3. **Explain why** - Include warning message with context
+4. **Provide documentation link** - External resource for learning
+5. **Keyboard accessible** - Full navigation without mouse
+6. **Icon + text** - Don't rely on icon alone
+7. **Clear hierarchy** - Advanced features below main features
+
+### Metadata Field Selector Pattern
+
+**Purpose**: Allow users to select which data fields should be checked against a pattern.
+
+**Implementation** (`src/components/settings/MetadataFieldSelector.tsx`):
+
+```tsx
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+
+interface MetadataFieldSelectorProps {
+  selectedFields: CustomRuleTarget[];
+  onFieldsChange: (fields: CustomRuleTarget[]) => void;
+  disabled?: boolean;
+}
+
+export const MetadataFieldSelector = memo(function MetadataFieldSelector({
+  selectedFields,
+  onFieldsChange,
+  disabled = false,
+}: MetadataFieldSelectorProps) {
+  // Field definitions with labels, descriptions, and categories
+  const METADATA_FIELDS = {
+    titles: { label: "Titles", category: "Text Fields", description: "All title variants" },
+    author: {
+      label: "Author/Staff",
+      category: "Text Fields",
+      description: "Author names and credits",
+    },
+    // ... more fields
+  };
+
+  return (
+    <fieldset disabled={disabled}>
+      <legend className="mb-3 font-semibold">Target Metadata Fields</legend>
+
+      <div className="mb-4 grid grid-cols-2 gap-4">
+        {/* Grouped by category */}
+        {categories.map((category) => (
+          <div key={category}>
+            <div className="mb-2 text-sm font-medium text-gray-600">{category}</div>
+            {fields.map((field) => (
+              <div key={field} className="mb-2 flex items-center space-x-2">
+                <Checkbox
+                  id={field}
+                  checked={selectedFields.includes(field)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      onFieldsChange([...selectedFields, field]);
+                    } else {
+                      onFieldsChange(selectedFields.filter((f) => f !== field));
+                    }
+                  }}
+                  aria-describedby={`${field}-description`}
+                />
+                <Label htmlFor={field} className="cursor-pointer font-normal">
+                  {METADATA_FIELDS[field].label}
+                </Label>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {/* Validation feedback */}
+      {selectedFields.length === 0 && (
+        <div role="alert" aria-live="assertive" className="mb-3 text-sm text-red-600">
+          Please select at least one field
+        </div>
+      )}
+
+      {/* Bulk actions */}
+      <div className="flex gap-2">
+        <Button onClick={selectAll} variant="outline" size="sm">
+          Select All
+        </Button>
+        <Button onClick={clearAll} variant="outline" size="sm">
+          Clear All
+        </Button>
+        <Button onClick={resetDefault} variant="outline" size="sm">
+          Reset to Default
+        </Button>
+      </div>
+
+      {/* Field count badge */}
+      <Badge className="mt-3">{selectedFields.length} field(s) selected</Badge>
+    </fieldset>
+  );
+});
+```
+
+**Accessibility Features**:
+
+- **`<fieldset>` + `<legend>`** - Semantic grouping of related checkboxes
+- **`htmlFor` on labels** - Click target area enlarged, screen reader linked
+- **`aria-describedby`** - Tooltips/descriptions linked to form controls
+- **`role="alert"`** - Validation errors announced immediately
+- **`aria-live="assertive"`** - Error messages interrupt other screen reader output
+- **Semantic grouping** - Related fields organized by category
+- **Bulk actions** - Clear, Restore, Select All for power users
+- **Visual feedback** - Badge shows count of selected fields
+- **Grid layout** - 2-column responsive layout
+
+**Best Practices**:
+
+1. **Group by category** - Organize fields logically (Text Fields, Metadata, Content Info)
+2. **Require minimum** - Force at least one field selected
+3. **Provide bulk actions** - Select All, Clear All, Reset to Default
+4. **Show feedback** - Badge with count, error message if none selected
+5. **Use fieldset/legend** - Semantic HTML for field groups
+6. **Descriptive labels** - Include category and field purpose
+
 ### Live Regions
 
 **Polite Announcements:**
@@ -230,6 +409,10 @@ useEffect(() => {
 5. **Don't use positive tabindex**
    - ❌ `tabindex="1"`
    - ✅ Use natural DOM order or `tabindex="0"`
+
+6. **Don't hide advanced features without warning**
+   - ❌ Collapsible without "Advanced" designation
+   - ✅ Clear badge, warning alert, documentation links
 
 ## Resources
 

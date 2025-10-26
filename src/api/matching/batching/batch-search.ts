@@ -19,10 +19,10 @@ import { CancelledError } from "@/utils/errorHandling";
 import { ANILIST_RATE_LIMIT_PER_MINUTE } from "@/config/anilist";
 
 /**
- * Batch size for parallel manga searches (15 = AniList 60 req/min limit).
+ * Batch size for parallel manga searches (10 = AniList 60 req/min limit).
  * @source
  */
-const BATCH_SIZE = 15;
+const BATCH_SIZE = 10;
 
 /**
  * AniList API rate limit: 60 requests per minute (from centralized config).
@@ -47,7 +47,7 @@ const MIN_BATCH_DELAY_MS = 500;
  * Maximum delay between batches (milliseconds) to prevent excessive waiting.
  * @source
  */
-const MAX_BATCH_DELAY_MS = 5000;
+const MAX_BATCH_DELAY_MS = 2000;
 
 /**
  * Calculate adaptive inter-batch delay based on request count and rate limit budget.

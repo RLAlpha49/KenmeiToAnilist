@@ -13,14 +13,24 @@ import {
   X,
   AlertTriangle,
   Info,
+  ShieldAlert,
+  ChevronDown,
+  ExternalLink,
+  BookOpen,
 } from "lucide-react";
 
-import type { CustomRule, CustomRulesConfig } from "@/utils/storage";
+import type {
+  CustomRule,
+  CustomRulesConfig,
+  CustomRuleTarget,
+} from "@/utils/storage";
 import {
   getMatchConfig,
   saveMatchConfig,
   validateCustomRule,
+  migrateCustomRule,
 } from "@/utils/storage";
+import { clearRegexCache } from "@/api/matching/filtering";
 import { debounce } from "@/utils/debounce";
 import { useDebugActions } from "@/contexts/DebugContext";
 
@@ -29,7 +39,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Dialog,
   DialogContent,
@@ -56,6 +71,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { MetadataFieldSelector } from "./MetadataFieldSelector";
+import { RegexDocumentation } from "./RegexDocumentation";
 
 /**
  * Form data for creating/editing custom rules
@@ -65,6 +87,7 @@ interface RuleFormData {
   description: string;
   caseSensitive: boolean;
   enabled: boolean;
+  targetFields: CustomRuleTarget[];
 }
 
 /**
@@ -78,12 +101,18 @@ function CustomRulesManagerComponent(): React.JSX.Element {
 
   const [rules, setRules] = useState<CustomRulesConfig>(() => {
     const config = getMatchConfig();
-    return (
-      config.customRules || {
-        skipRules: [],
-        acceptRules: [],
-      }
-    );
+    const customRules = config.customRules || {
+      skipRules: [],
+      acceptRules: [],
+    };
+
+    // Migrate existing rules to include targetFields if missing
+    return {
+      skipRules: customRules.skipRules.map((rule) => migrateCustomRule(rule)),
+      acceptRules: customRules.acceptRules.map((rule) =>
+        migrateCustomRule(rule),
+      ),
+    };
   });
 
   const [isAddingRule, setIsAddingRule] = useState<"skip" | "accept" | null>(
@@ -108,6 +137,7 @@ function CustomRulesManagerComponent(): React.JSX.Element {
     description: "",
     caseSensitive: false,
     enabled: true,
+    targetFields: ["titles"],
   });
 
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -116,9 +146,6 @@ function CustomRulesManagerComponent(): React.JSX.Element {
     matches: boolean;
     reason?: string;
   } | null>(null);
-  const [validationWarning, setValidationWarning] = useState<string | null>(
-    null,
-  );
 
   // Keep a ref to the cleanup function for debounced validation
   const debouncedValidateRef = React.useRef<
@@ -251,9 +278,9 @@ function CustomRulesManagerComponent(): React.JSX.Element {
       description: "",
       caseSensitive: false,
       enabled: true,
+      targetFields: ["titles"],
     });
     setValidationError(null);
-    setValidationWarning(null);
   }, []);
 
   /**
@@ -267,9 +294,9 @@ function CustomRulesManagerComponent(): React.JSX.Element {
         description: rule.description,
         caseSensitive: rule.caseSensitive,
         enabled: rule.enabled,
+        targetFields: rule.targetFields,
       });
       setValidationError(null);
-      setValidationWarning(null);
     },
     [],
   );
@@ -342,6 +369,7 @@ function CustomRulesManagerComponent(): React.JSX.Element {
       description: ruleForm.description,
       enabled: ruleForm.enabled,
       caseSensitive: ruleForm.caseSensitive,
+      targetFields: ruleForm.targetFields,
       createdAt: editingRule?.rule.createdAt || new Date().toISOString(),
     };
 
@@ -389,6 +417,9 @@ function CustomRulesManagerComponent(): React.JSX.Element {
       saveMatchConfig({ ...matchConfig, customRules: updatedRules });
       setRules(updatedRules);
 
+      // Clear regex cache to ensure new/updated rules use fresh compiled patterns
+      clearRegexCache();
+
       toast.success(
         editingRule
           ? "Custom rule updated successfully"
@@ -416,6 +447,7 @@ function CustomRulesManagerComponent(): React.JSX.Element {
         description: "",
         caseSensitive: false,
         enabled: true,
+        targetFields: ["titles"],
       });
       setValidationError(null);
       setWarningConfirmPending(null);
@@ -445,6 +477,9 @@ function CustomRulesManagerComponent(): React.JSX.Element {
 
     saveMatchConfig({ ...matchConfig, customRules: updatedRules });
     setRules(updatedRules);
+
+    // Clear regex cache to ensure stale patterns are removed
+    clearRegexCache();
 
     toast.success("Custom rule deleted");
 
@@ -543,6 +578,7 @@ function CustomRulesManagerComponent(): React.JSX.Element {
                 <TableRow>
                   <TableHead>Description</TableHead>
                   <TableHead>Pattern</TableHead>
+                  <TableHead className="w-48">Target Fields</TableHead>
                   <TableHead className="w-32">Case Sensitive</TableHead>
                   <TableHead className="w-24">Enabled</TableHead>
                   <TableHead className="w-24">Actions</TableHead>
@@ -558,6 +594,39 @@ function CustomRulesManagerComponent(): React.JSX.Element {
                       <code className="bg-muted rounded px-2 py-1 font-mono text-xs">
                         {rule.pattern}
                       </code>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {rule.targetFields.slice(0, 3).map((field) => (
+                          <Badge
+                            key={field}
+                            variant="outline"
+                            className="text-xs"
+                          >
+                            {field}
+                          </Badge>
+                        ))}
+                        {rule.targetFields.length > 3 && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge
+                                variant="secondary"
+                                className="cursor-help text-xs"
+                              >
+                                +{rule.targetFields.length - 3} more
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent side="left" className="max-w-sm">
+                              <p className="mb-1 text-sm font-semibold">
+                                All target fields:
+                              </p>
+                              <p className="text-xs">
+                                {rule.targetFields.join(", ")}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -608,28 +677,77 @@ function CustomRulesManagerComponent(): React.JSX.Element {
   );
 
   return (
-    <div className="bg-muted/40 space-y-6 rounded-xl border p-4">
-      <div>
-        <h2 className="text-xl font-semibold">Custom Matching Rules</h2>
-        <p className="text-muted-foreground text-sm">
-          Define regex patterns to automatically skip or accept manga during
-          matching
-        </p>
-      </div>
+    <Collapsible defaultOpen={false} className="space-y-4">
+      <CollapsibleTrigger asChild>
+        <Button
+          variant="outline"
+          className="bg-muted/40 hover:bg-muted/60 w-full justify-between border-2"
+        >
+          <span className="flex items-center gap-2">
+            <ShieldAlert className="h-5 w-5 text-amber-500" />
+            <span className="text-base font-semibold">
+              Advanced: Custom Matching Rules
+            </span>
+            <Badge variant="destructive" className="ml-2">
+              For Advanced Users
+            </Badge>
+          </span>
+          <ChevronDown className="h-4 w-4" />
+        </Button>
+      </CollapsibleTrigger>
 
-      {renderRuleSection(
-        "Skip Rules",
-        "Automatically exclude manga from matching results",
-        "skip",
-        rules.skipRules,
-      )}
+      <CollapsibleContent className="space-y-4">
+        {/* Advanced User Warning */}
+        <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950">
+          <ShieldAlert className="h-4 w-4 text-amber-600" />
+          <AlertTitle className="text-amber-900 dark:text-amber-100">
+            Advanced Feature - Use with Caution
+          </AlertTitle>
+          <AlertDescription className="space-y-2 text-amber-800 dark:text-amber-200">
+            <p>
+              Custom matching rules use regular expressions (regex) to filter
+              manga. Incorrect patterns can skip desired manga or cause
+              performance issues. Only use this feature if you understand regex
+              syntax and matching behavior.
+            </p>
+            <p className="text-xs">
+              <a
+                href="https://developer.mozilla.org/docs/Web/JavaScript/Guide/Regular_expressions"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 underline hover:text-amber-900 dark:hover:text-amber-100"
+              >
+                Learn about regex patterns
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </p>
+          </AlertDescription>
+        </Alert>
 
-      {renderRuleSection(
-        "Accept Rules",
-        "Automatically boost confidence for matching results",
-        "accept",
-        rules.acceptRules,
-      )}
+        <div className="bg-muted/40 space-y-6 rounded-xl border p-4">
+          <div>
+            <h2 className="text-xl font-semibold">Custom Matching Rules</h2>
+            <p className="text-muted-foreground text-sm">
+              Define regex patterns to automatically skip or accept manga during
+              matching
+            </p>
+          </div>
+
+          {renderRuleSection(
+            "Skip Rules",
+            "Automatically exclude manga from matching results",
+            "skip",
+            rules.skipRules,
+          )}
+
+          {renderRuleSection(
+            "Accept Rules",
+            "Automatically boost confidence for matching results",
+            "accept",
+            rules.acceptRules,
+          )}
+        </div>
+      </CollapsibleContent>
 
       {/* Add/Edit Rule Dialog */}
       <Dialog
@@ -639,11 +757,10 @@ function CustomRulesManagerComponent(): React.JSX.Element {
             setIsAddingRule(null);
             setEditingRule(null);
             setValidationError(null);
-            setValidationWarning(null);
           }
         }}
       >
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-[700px]">
           <DialogHeader>
             <DialogTitle>
               {(() => {
@@ -653,13 +770,14 @@ function CustomRulesManagerComponent(): React.JSX.Element {
               })()}
             </DialogTitle>
             <DialogDescription>
-              Define a regex pattern to match against manga titles. Rules check
-              all title variants (romaji, english, native, synonyms, alternative
-              titles).
+              Define a regex pattern to match against selected metadata fields.
+              A match occurs if the pattern matches ANY of the selected fields.
+              Supported fields: titles, author, genres, tags, format, country of
+              origin, source, description, and status.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="flex-1 space-y-4 overflow-y-auto pr-4">
             <div className="space-y-2">
               <label htmlFor="description" className="text-sm font-medium">
                 Description
@@ -681,6 +799,14 @@ function CustomRulesManagerComponent(): React.JSX.Element {
               </p>
             </div>
 
+            {/* Metadata Field Selector */}
+            <MetadataFieldSelector
+              selectedFields={ruleForm.targetFields}
+              onChange={(fields) =>
+                setRuleForm((prev) => ({ ...prev, targetFields: fields }))
+              }
+            />
+
             <div className="space-y-2">
               <label htmlFor="pattern" className="text-sm font-medium">
                 Pattern (Regex)
@@ -699,12 +825,6 @@ function CustomRulesManagerComponent(): React.JSX.Element {
                   {validationError}
                 </div>
               )}
-              {validationWarning && (
-                <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-500">
-                  <AlertTriangle className="h-3 w-3" />
-                  {validationWarning}
-                </div>
-              )}
               <p className="text-muted-foreground text-xs">
                 Examples:{" "}
                 <code className="bg-muted rounded px-1">anthology</code>,{" "}
@@ -719,6 +839,26 @@ function CustomRulesManagerComponent(): React.JSX.Element {
                 patterns are combined with the case-insensitive flag (i).
               </p>
             </div>
+
+            {/* Regex Documentation */}
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-between"
+                  type="button"
+                >
+                  <span className="flex items-center gap-2">
+                    <BookOpen className="h-4 w-4" />
+                    Regex Pattern Guide
+                  </span>
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2">
+                <RegexDocumentation />
+              </CollapsibleContent>
+            </Collapsible>
 
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div className="space-y-0.5">
@@ -814,7 +954,7 @@ function CustomRulesManagerComponent(): React.JSX.Element {
             </Alert>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="mt-4 shrink-0 border-t pt-4">
             <Button
               variant="outline"
               onClick={() => {
@@ -828,7 +968,16 @@ function CustomRulesManagerComponent(): React.JSX.Element {
             </Button>
             <Button
               onClick={handleSaveRule}
-              disabled={!!validationError || !ruleForm.description.trim()}
+              disabled={
+                !!validationError ||
+                !ruleForm.description.trim() ||
+                ruleForm.targetFields.length === 0
+              }
+              aria-disabled={
+                !!validationError ||
+                !ruleForm.description.trim() ||
+                ruleForm.targetFields.length === 0
+              }
             >
               <Check className="mr-2 h-4 w-4" />
               Save Rule
@@ -893,7 +1042,7 @@ function CustomRulesManagerComponent(): React.JSX.Element {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </Collapsible>
   );
 }
 

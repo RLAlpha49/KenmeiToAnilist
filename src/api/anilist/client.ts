@@ -744,6 +744,25 @@ export async function batchSearchManga(
         status
         chapters
         volumes
+        description
+        genres
+        tags {
+          id
+          name
+          category
+        }
+        countryOfOrigin
+        source
+        staff {
+          edges {
+            role
+            node {
+              name {
+                full
+              }
+            }
+          }
+        }
         coverImage {
           large
           medium
@@ -1547,7 +1566,7 @@ function processMediaListCollectionChunk(
  */
 export const __test__ = {
   initializeSearchCache,
-  persistSearchCache,
+  persistSearchCache: persistSearchCache as unknown,
   persistSearchCacheImmediate,
   generateCacheKey,
   isCacheValid,

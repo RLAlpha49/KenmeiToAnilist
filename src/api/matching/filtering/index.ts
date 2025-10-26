@@ -22,6 +22,7 @@ export {
   shouldSkipByCustomRules,
   shouldAcceptByCustomRules,
   getCustomRuleMatchInfo,
+  clearRegexCache,
 } from "./custom-rules";
 
 export {

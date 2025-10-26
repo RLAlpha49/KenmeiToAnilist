@@ -79,6 +79,25 @@ query ($search: String, $page: Int, $perPage: Int) {
       status
       chapters
       volumes
+      description
+      genres
+      tags {
+        id
+        name
+        category
+      }
+      countryOfOrigin
+      source
+      staff {
+        edges {
+          role
+          node {
+            name {
+              full
+            }
+          }
+        }
+      }
       coverImage {
         large
         medium
@@ -123,6 +142,25 @@ query ($search: String, $page: Int, $perPage: Int) {
       status
       chapters
       volumes
+      description
+      genres
+      tags {
+        id
+        name
+        category
+      }
+      countryOfOrigin
+      source
+      staff {
+        edges {
+          role
+          node {
+            name {
+              full
+            }
+          }
+        }
+      }
       coverImage {
         large
         medium
@@ -159,6 +197,25 @@ query ($id: Int) {
     status
     chapters
     volumes
+    description
+    genres
+    tags {
+      id
+      name
+      category
+    }
+    countryOfOrigin
+    source
+    staff {
+      edges {
+        role
+        node {
+          name {
+            full
+          }
+        }
+      }
+    }
     coverImage {
       large
       medium
@@ -202,6 +259,25 @@ query ($ids: [Int]) {
       status
       chapters
       volumes
+      description
+      genres
+      tags {
+        id
+        name
+        category
+      }
+      countryOfOrigin
+      source
+      staff {
+        edges {
+          role
+          node {
+            name {
+              full
+            }
+          }
+        }
+      }
       coverImage {
         large
         medium
