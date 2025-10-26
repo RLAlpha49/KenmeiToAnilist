@@ -411,7 +411,7 @@ export function MangaMatchingPanel({
         return;
       }
 
-      const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+      const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
       const modifier = isMac ? e.metaKey : e.ctrlKey;
 
       // Ctrl/Cmd+A to select all visible items on current page

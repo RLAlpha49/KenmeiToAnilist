@@ -410,7 +410,7 @@ export function MatchingPage() {
         return;
       }
 
-      const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+      const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
       const modifier = isMac ? e.metaKey : e.ctrlKey;
 
       // Ctrl/Cmd+Z for undo

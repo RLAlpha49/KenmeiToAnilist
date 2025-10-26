@@ -203,7 +203,7 @@ export const SHORTCUTS: Shortcut[] = [
  */
 export function formatShortcutKey(key: ShortcutKey): string {
   const parts: string[] = [];
-  const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+  const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
 
   if (key.ctrl || key.meta) {
     parts.push(isMac ? "Cmd" : "Ctrl");
@@ -235,7 +235,7 @@ export function matchesShortcut(
   shortcut: Shortcut,
 ): boolean {
   const checkKey = (keyDef: ShortcutKey): boolean => {
-    const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+    const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
     const keyLower = event.key.toLowerCase();
     const defKeyLower = keyDef.key.toLowerCase();
 
