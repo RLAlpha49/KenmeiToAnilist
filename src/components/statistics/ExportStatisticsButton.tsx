@@ -1,7 +1,7 @@
 /**
  * @packageDocumentation
  * @module ExportStatisticsButton
- * @description Dropdown button that exports statistics data in JSON, CSV, or Excel formats with selectable sections.
+ * @description Dropdown button that exports statistics data in JSON, CSV formats with selectable sections.
  */
 
 import React, { useCallback, useMemo, useState } from "react";
@@ -22,7 +22,6 @@ import {
   flattenMatchResult,
   exportToJson,
   exportToCSV,
-  exportToExcel,
 } from "@/utils/exportUtils";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,7 +36,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 
-export type StatisticsExportFormat = "json" | "csv" | "excel";
+export type StatisticsExportFormat = "json" | "csv";
 
 /**
  * Minimal match result shape for export operations.
@@ -249,10 +248,7 @@ export function ExportStatisticsButton({
       }
 
       const tabularData = rows as unknown as Record<string, unknown>[];
-      const file =
-        format === "csv"
-          ? exportToCSV(tabularData, "statistics")
-          : exportToExcel(tabularData, "statistics", "Statistics");
+      const file = exportToCSV(tabularData, "statistics");
 
       toast.success(`Statistics exported to ${file}`);
       setOpen(false);
@@ -300,13 +296,6 @@ export function ExportStatisticsButton({
               aria-hidden="true"
             />
             CSV
-          </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="excel">
-            <FileSpreadsheet
-              className="mr-2 h-4 w-4 text-purple-500"
-              aria-hidden="true"
-            />
-            Excel (.xlsx)
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
 

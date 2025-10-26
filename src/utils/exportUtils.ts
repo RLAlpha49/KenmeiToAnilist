@@ -1,11 +1,10 @@
 /**
  * @packageDocumentation
  * @module exportUtils
- * @description Utility functions for exporting data to JSON, CSV, and Excel files, including match results and sync reports.
+ * @description Utility functions for exporting data to JSON, CSV files, including match results and sync reports.
  */
 
 import Papa from "papaparse";
-import ExcelJS from "exceljs";
 import { SyncReport } from "../api/anilist/sync-service";
 import { MangaMatchResult, AniListManga } from "../api/anilist/types";
 import { storage, STORAGE_KEYS } from "./storage";
@@ -35,7 +34,7 @@ export function generateExportTimestamp(): string {
  * Export format options.
  * @source
  */
-export type ExportFormat = "json" | "csv" | "excel";
+export type ExportFormat = "json" | "csv";
 
 /**
  * Options for filtering data during export.
@@ -53,7 +52,7 @@ export interface ExportFilterOptions {
 }
 
 /**
- * Flattened representation of match result for CSV/Excel export.
+ * Flattened representation of match result for CSV export.
  * @source
  */
 export interface FlattenedMatchResult {
@@ -135,13 +134,6 @@ export function exportToJson(
   }
 }
 
-/**
- * Flattens a nested MangaMatchResult into a single-level object for CSV/Excel export.
- *
- * @param match - The match result to flatten.
- * @returns Flattened representation with all key fields at the top level.
- * @source
- */
 /**
  * Minimal match result acceptable for flattening.
  * Compatible with both MangaMatchResult and statistics-normalized results.
@@ -420,76 +412,10 @@ export function exportToCSV(
 }
 
 /**
- * Exports data to Excel (.xlsx) format and triggers browser download.
- *
- * @param data - Array of objects to export.
- * @param baseFilename - Base filename without extension or timestamp.
- * @param sheetName - Name for the worksheet (default: "Sheet1").
- * @returns Promise resolving to the filename used for download.
- * @throws Will throw if Excel generation fails.
- * @source
- */
-export async function exportToExcel(
-  data: Record<string, unknown>[],
-  baseFilename: string,
-  sheetName: string = "Sheet1",
-): Promise<string> {
-  // Create workbook and worksheet
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet(sheetName);
-
-  // Set up columns from first data object
-  if (data.length > 0) {
-    const headers = Object.keys(data[0]);
-    worksheet.columns = headers.map((header) => ({
-      header,
-      key: header,
-    }));
-  }
-
-  // Add data rows
-  for (const row of data) {
-    worksheet.addRow(row);
-  }
-
-  // Generate binary
-  const excelBuffer = await workbook.xlsx.writeBuffer();
-
-  // Create blob and download link
-  const blob = new Blob([excelBuffer], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  let appended = false;
-
-  try {
-    // Generate timestamped filename
-    const timestamp = generateExportTimestamp();
-    const filename = `${baseFilename}-${timestamp}.xlsx`;
-
-    // Trigger download
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    appended = true;
-    link.click();
-
-    return filename;
-  } finally {
-    // Ensure cleanup always runs
-    if (appended) {
-      link.remove();
-    }
-    URL.revokeObjectURL(url);
-  }
-}
-
-/**
  * Exports match results in the specified format with optional filtering.
  *
  * @param matches - Array of match results to export.
- * @param format - Export format (json, csv, or excel).
+ * @param format - Export format (json, csv).
  * @param filters - Optional filters to apply before export.
  * @returns Promise resolving to the filename of the exported file.
  * @throws Will throw if export fails.
@@ -530,15 +456,6 @@ export async function exportMatchResults(
       filename = exportToCSV(
         flattened as unknown as Record<string, unknown>[],
         "match-results",
-      );
-      break;
-    }
-    case "excel": {
-      const flattened = filteredMatches.map(flattenMatchResult);
-      filename = await exportToExcel(
-        flattened as unknown as Record<string, unknown>[],
-        "match-results",
-        "Match Results",
       );
       break;
     }

@@ -114,7 +114,6 @@ export default defineConfig(() => ({
             "natural",
             "string-similarity",
             "fastest-levenshtein",
-            "exceljs",
           ];
           if (
             dataLibs.some((pkg) => normalizedId.includes(`node_modules/${pkg}`))

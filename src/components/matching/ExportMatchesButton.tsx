@@ -193,10 +193,6 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
             <FileSpreadsheet className="mr-2 h-4 w-4 text-emerald-500" />
             CSV
           </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="excel">
-            <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" />
-            Excel (.xlsx)
-          </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
 
         <DropdownMenuSeparator />
@@ -251,7 +247,7 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
         <DropdownMenuSeparator />
 
         {/* Confidence Filter */}
-        {(selectedFormat === "csv" || selectedFormat === "excel") && (
+        {selectedFormat === "csv" && (
           <>
             <DropdownMenuLabel>Confidence Level</DropdownMenuLabel>
             <DropdownMenuRadioGroup
