@@ -548,7 +548,8 @@ export interface SyncReport {
     mediaId: number;
     error: string;
   }[];
-  timestamp: Date;
+  /** ISO 8601 timestamp string of when the sync was performed */
+  timestamp: string;
 }
 
 /**
@@ -1241,7 +1242,7 @@ function generateSyncReport(
     failedUpdates: progress.failed,
     skippedEntries: progress.skipped,
     errors,
-    timestamp: new Date(),
+    timestamp: new Date().toISOString(),
   };
 
   // Save sync statistics

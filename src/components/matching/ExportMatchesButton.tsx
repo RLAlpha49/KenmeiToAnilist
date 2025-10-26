@@ -57,6 +57,21 @@ export interface ExportMatchesButtonProps {
 type MatchStatusType = "matched" | "manual" | "pending" | "skipped";
 
 /**
+ * Get aria-describedby value for export button based on filter state.
+ * @param statusFiltersSize Number of selected statuses
+ * @param filteredCount Number of matches after filtering
+ * @returns aria-describedby ID or undefined
+ */
+function getExportDescription(
+  statusFiltersSize: number,
+  filteredCount: number,
+): string | undefined {
+  if (statusFiltersSize === 0) return "export-no-status-description";
+  if (filteredCount === 0) return "export-no-results-description";
+  return undefined;
+}
+
+/**
  * Export button component with format and filter options for match results.
  *
  * Uses the shared matchPassesFilter helper from exportUtils to ensure
@@ -169,7 +184,7 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
           aria-label="Export match results with filters"
           className="gap-2"
         >
-          <Download className="h-4 w-4" />
+          <Download className="h-4 w-4" aria-hidden="true" />
           <span>Export Matches</span>
           {matches.length > 0 && (
             <span className="bg-primary/10 ml-1 rounded px-1.5 py-0.5 text-xs font-medium">
@@ -179,6 +194,16 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
+        {/* Status Filters Help Text */}
+        {statusFilters.size === 0 && (
+          <>
+            <div className="text-muted-foreground px-2 py-1.5 text-xs">
+              ⚠️ Select at least one status to export
+            </div>
+            <DropdownMenuSeparator />
+          </>
+        )}
+
         {/* Format Selection */}
         <DropdownMenuLabel>Export Format</DropdownMenuLabel>
         <DropdownMenuRadioGroup
@@ -186,11 +211,17 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
           onValueChange={(value) => setSelectedFormat(value as ExportFormat)}
         >
           <DropdownMenuRadioItem value="json">
-            <FileJson className="mr-2 h-4 w-4 text-blue-500" />
+            <FileJson
+              className="mr-2 h-4 w-4 text-blue-500"
+              aria-hidden="true"
+            />
             JSON
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="csv">
-            <FileSpreadsheet className="mr-2 h-4 w-4 text-emerald-500" />
+            <FileSpreadsheet
+              className="mr-2 h-4 w-4 text-emerald-500"
+              aria-hidden="true"
+            />
             CSV
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
@@ -204,7 +235,10 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
           onCheckedChange={() => toggleStatusFilter("matched")}
           onSelect={(e) => e.preventDefault()}
         >
-          <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-500" />
+          <CheckCircle2
+            className="mr-2 h-4 w-4 text-emerald-500"
+            aria-hidden="true"
+          />
           Matched
           <span className="text-muted-foreground ml-auto text-xs">
             {statusCounts.matched}
@@ -215,7 +249,7 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
           onCheckedChange={() => toggleStatusFilter("manual")}
           onSelect={(e) => e.preventDefault()}
         >
-          <Wand2 className="mr-2 h-4 w-4 text-sky-500" />
+          <Wand2 className="mr-2 h-4 w-4 text-sky-500" aria-hidden="true" />
           Manual
           <span className="text-muted-foreground ml-auto text-xs">
             {statusCounts.manual}
@@ -226,7 +260,7 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
           onCheckedChange={() => toggleStatusFilter("pending")}
           onSelect={(e) => e.preventDefault()}
         >
-          <Clock3 className="mr-2 h-4 w-4 text-amber-500" />
+          <Clock3 className="mr-2 h-4 w-4 text-amber-500" aria-hidden="true" />
           Pending
           <span className="text-muted-foreground ml-auto text-xs">
             {statusCounts.pending}
@@ -237,7 +271,7 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
           onCheckedChange={() => toggleStatusFilter("skipped")}
           onSelect={(e) => e.preventDefault()}
         >
-          <XCircle className="mr-2 h-4 w-4 text-rose-500" />
+          <XCircle className="mr-2 h-4 w-4 text-rose-500" aria-hidden="true" />
           Skipped
           <span className="text-muted-foreground ml-auto text-xs">
             {statusCounts.skipped}
@@ -314,12 +348,36 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
         <DropdownMenuSeparator />
 
         {/* Export Action */}
+        {statusFilters.size === 0 && (
+          <output
+            id="export-no-status-description"
+            className="block px-2 py-1.5 text-xs text-amber-600 dark:text-amber-500"
+            aria-live="polite"
+          >
+            Select at least one status to enable export
+          </output>
+        )}
+
+        {filteredCount === 0 && statusFilters.size > 0 && (
+          <output
+            id="export-no-results-description"
+            className="block px-2 py-1.5 text-xs text-amber-600 dark:text-amber-500"
+            aria-live="polite"
+          >
+            No matches match the current filters
+          </output>
+        )}
+
         <DropdownMenuItem
           onClick={handleExport}
           disabled={statusFilters.size === 0 || filteredCount === 0}
           className="bg-primary/5 text-primary hover:bg-primary/10 cursor-pointer font-medium"
+          aria-describedby={getExportDescription(
+            statusFilters.size,
+            filteredCount,
+          )}
         >
-          <Download className="mr-2 h-4 w-4" />
+          <Download className="mr-2 h-4 w-4" aria-hidden="true" />
           Export {filteredCount} matches
         </DropdownMenuItem>
       </DropdownMenuContent>

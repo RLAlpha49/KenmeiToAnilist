@@ -129,3 +129,54 @@ export interface MatchHandlersProps {
   ) => void;
   onResetToPending: (match: MangaMatchResult) => void;
 }
+
+/**
+ * Shared minimal match result type for export operations.
+ *
+ * This type defines the minimal shape needed by `flattenMatchResult()` for CSV/JSON exports.
+ * Compatible with both `MangaMatchResult` and statistics-normalized results.
+ * Used across `exportUtils.ts` and `ExportStatisticsButton.tsx` to ensure type safety.
+ *
+ * @property kenmeiManga - Kenmei manga metadata
+ * @property anilistMatches - Optional array of AniList match candidates with confidence scores
+ * @property selectedMatch - Optional manually selected match (may contain format/genres without full AniList data)
+ * @property status - Current match status (matched, manual, pending, skipped)
+ * @property matchDate - Optional ISO 8601 date string of when the match was made
+ * @source
+ */
+export type MatchForExport = {
+  readonly kenmeiManga: {
+    id: string | number;
+    title: string;
+    status?: string;
+    score?: number;
+    chapters_read?: number;
+    volumes_read?: number;
+    author?: string;
+    notes?: string;
+    created_at?: string;
+    updated_at?: string;
+    last_read_at?: string;
+  };
+  readonly anilistMatches?: Array<{
+    confidence?: number;
+    manga?: {
+      id: number;
+      title?: {
+        romaji?: string;
+        english?: string | null;
+        native?: string | null;
+      };
+      format?: string;
+      chapters?: number;
+      volumes?: number;
+      genres?: string[];
+    };
+  }>;
+  readonly selectedMatch?: {
+    readonly format?: string;
+    readonly genres?: string[];
+  };
+  readonly status: string;
+  readonly matchDate?: Date | string;
+};

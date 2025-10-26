@@ -15,9 +15,9 @@ import {
   ListChecks,
 } from "lucide-react";
 import { toast } from "sonner";
-import type { ImportStats, KenmeiManga } from "@/utils/storage";
-import type { MangaMatch, MatchStatus } from "@/api/anilist/types";
+import type { ImportStats } from "@/utils/storage";
 import type { SyncStats } from "@/types/sync";
+import type { MatchForExport } from "@/utils/exportUtils";
 import {
   flattenMatchResult,
   exportToJson,
@@ -38,27 +38,13 @@ import {
 
 export type StatisticsExportFormat = "json" | "csv";
 
-/**
- * Minimal match result shape for export operations.
- */
-type MinimalMatchResult = {
-  readonly kenmeiManga: KenmeiManga;
-  readonly anilistMatches?: MangaMatch[];
-  readonly selectedMatch?: {
-    readonly format?: string;
-    readonly genres?: string[];
-  };
-  readonly status: MatchStatus;
-  readonly matchDate?: Date;
-};
-
 interface ExportStatisticsButtonProps {
   /** Import statistics to include in the export payload. */
   readonly importStats: ImportStats | null;
   /** Sync statistics to include in the export payload. */
   readonly syncStats: SyncStats | null;
   /** Match results used for match-focused exports. */
-  readonly matchResults: Array<MinimalMatchResult>;
+  readonly matchResults: Array<MatchForExport>;
   /** Optional flag to disable the button. */
   readonly disabled?: boolean;
   /** Optional button size override. */
@@ -144,7 +130,7 @@ function buildSummaryRows(
   return rows;
 }
 
-function buildMatchRows(matches: Array<MinimalMatchResult>): ExportRow[] {
+function buildMatchRows(matches: Array<MatchForExport>): ExportRow[] {
   return matches.map((match) => {
     const flattened = flattenMatchResult(match);
     return {

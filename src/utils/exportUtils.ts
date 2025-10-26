@@ -8,6 +8,7 @@ import Papa from "papaparse";
 import { SyncReport } from "../api/anilist/sync-service";
 import { MangaMatchResult, AniListManga } from "../api/anilist/types";
 import { storage, STORAGE_KEYS } from "./storage";
+import type { MatchForExport } from "../types/matching";
 
 /**
  * UTF-8 BOM (Byte Order Mark) for Excel compatibility.
@@ -28,6 +29,32 @@ const UTF8_BOM = "\ufeff";
  */
 export function generateExportTimestamp(): string {
   return new Date().toISOString().replaceAll(":", "-").replaceAll(".", "-");
+}
+
+/**
+ * Sanitizes a base filename for safe export to the filesystem.
+ * Removes path separators, control characters, and other problematic characters.
+ * Preserves alphanumerics, hyphens, and underscores.
+ *
+ * @param baseFilename - The base filename to sanitize (without extension)
+ * @returns Sanitized filename safe for filesystem use
+ * @internal
+ */
+function sanitizeFilename(baseFilename: string): string {
+  // Remove path separators and problematic characters
+  // eslint-disable-next-line no-useless-escape
+  const sanitized = baseFilename.replaceAll(/[\\/:\*\?"<>\|]/g, "");
+  // Remove control characters (code points 0-31)
+  const sanitizedChars = sanitized
+    .split("")
+    .filter((c) => {
+      const codePoint = c.codePointAt(0);
+      return codePoint !== undefined && codePoint >= 32;
+    })
+    .join("");
+  // Trim whitespace and enforce minimum length
+  const trimmed = sanitizedChars.trim();
+  return trimmed || "export";
 }
 
 /**
@@ -92,10 +119,13 @@ export interface FlattenedMatchResult {
  * a file download. Automatically appends a timestamp to the filename.
  * Supports both objects and arrays for flexible data export.
  *
+ * Sanitizes the base filename to remove unsafe characters before composition.
+ *
  * @param data - The data to export (object or array that will be stringified to pretty-printed JSON).
- * @param baseFilename - The base filename without extension or timestamp.
+ * @param baseFilename - The base filename without extension or timestamp. Will be sanitized to remove unsafe characters.
  * @returns The full filename that was used for download (including timestamp and extension).
  * @throws Will throw if JSON stringification fails (e.g., circular references).
+ * @throws Will throw if document.body is unavailable (non-DOM/Electron renderer context).
  * @internal
  * @source
  */
@@ -113,13 +143,24 @@ export function exportToJson(
   let appended = false;
 
   try {
-    // Generate timestamped filename
+    // Sanitize and generate timestamped filename
+    const sanitized = sanitizeFilename(baseFilename);
     const timestamp = generateExportTimestamp();
-    const filename = `${baseFilename}-${timestamp}.json`;
+    const filename = `${sanitized}-${timestamp}.json`;
 
     // Trigger download
     link.href = url;
     link.download = filename;
+
+    // Guard against non-DOM contexts where document.body is unavailable
+    if (!document.body) {
+      throw new Error(
+        "Cannot export: document.body is unavailable. " +
+          "This export utility requires the Electron renderer process with access to DOM APIs. " +
+          "Ensure this function is called from a React component in the renderer process.",
+      );
+    }
+
     document.body.appendChild(link);
     appended = true;
     link.click();
@@ -135,39 +176,64 @@ export function exportToJson(
 }
 
 /**
- * Minimal match result acceptable for flattening.
- * Compatible with both MangaMatchResult and statistics-normalized results.
- * @source
+ * Shared minimal match result for flattening operations.
+ * @internal
  */
-type FlattenableMatchResult = {
-  readonly kenmeiManga: {
-    id: string | number;
-    title: string;
-    status?: string;
-    score?: number;
-    chapters_read?: number;
-    volumes_read?: number;
-    notes?: string;
-    created_at?: string;
-    updated_at?: string;
-    last_read_at?: string;
-  };
-  readonly anilistMatches?: Array<{
-    confidence?: number;
-    manga?: AniListManga;
-  }>;
-  readonly selectedMatch?: {
-    format?: string;
-    genres?: string[];
-  };
-  readonly status: string;
-  readonly matchDate?: Date;
-};
+type FlattenableMatchResult = MatchForExport;
 
 /**
- * Extracts AniListManga data from match data.
- * Handles both MangaMatch (with confidence) and minimal selectedMatch objects.
+ * Normalizes matchDate to an ISO 8601 string representation for consistent export output.
+ * Converts Date objects to ISO strings, or returns string values directly.
+ * Returns an empty string if the value is undefined.
+ *
+ * This function ensures that all exported dates are in canonical ISO 8601 format,
+ * regardless of the input source. All callers should pass Date objects (not strings)
+ * to ensure consistent normalization.
+ *
+ * @param matchDate - The match date to normalize (Date, string, or undefined)
+ * @returns ISO 8601 string (e.g., "2025-10-26T15:30:45.123Z"), or empty string if undefined
+ * @internal
+ */
+function normalizeMatchDate(matchDate: Date | string | undefined): string {
+  if (matchDate instanceof Date) {
+    return matchDate.toISOString();
+  }
+  if (typeof matchDate === "string") {
+    return matchDate;
+  }
+  return "";
+}
+
+/**
+ * Validates that a title is either a string or an object with at least one string-valued key.
+ * Ensures title object keys (romaji, english, native) contain string values when present.
+ * @param title - The title to validate
+ * @returns True if title is a string or an object with at least one string-valued key
+ * @internal
+ */
+function isValidTitle(title: unknown): boolean {
+  if (typeof title === "string") {
+    return true;
+  }
+  if (typeof title === "object" && title !== null) {
+    const titleObj = title as Record<string, unknown>;
+    // Check if at least one required key is present with a string value
+    return (
+      typeof titleObj.romaji === "string" ||
+      typeof titleObj.english === "string" ||
+      typeof titleObj.native === "string"
+    );
+  }
+  return false;
+}
+
+/**
+ * Extracts AniListManga data from match data with strict validation.
+ * Ensures the object has required fields with proper types before treating as AniListManga.
  * Returns undefined if the data doesn't contain a valid AniListManga object.
+ * @param matchForData - The object to validate as AniListManga
+ * @returns Valid AniListManga object or undefined if validation fails
+ * @internal
  */
 function extractAniListData(matchForData: unknown): AniListManga | undefined {
   if (!matchForData) return undefined;
@@ -185,13 +251,27 @@ function extractAniListData(matchForData: unknown): AniListManga | undefined {
     return undefined;
   }
 
-  // Check if it's already an AniListManga (has id)
-  // Only treat as AniListManga if it has an id field
-  if ("id" in obj && obj.id !== undefined) {
-    return obj as unknown as AniListManga;
+  // Strict validation for AniListManga-like objects
+  if (!("id" in obj) || obj.id === undefined) {
+    return undefined;
   }
 
-  return undefined;
+  // Validate id is a number
+  if (typeof obj.id !== "number") {
+    return undefined;
+  }
+
+  // Validate title if present
+  if ("title" in obj && !isValidTitle(obj.title)) {
+    return undefined;
+  }
+
+  // Validate format is a string if present
+  if ("format" in obj && typeof obj.format !== "string") {
+    return undefined;
+  }
+
+  return obj as unknown as AniListManga;
 }
 
 export function flattenMatchResult(
@@ -221,6 +301,21 @@ export function flattenMatchResult(
   // Extract AniListManga data safely - handles shapes without id/title fields
   const anilistData = extractAniListData(matchForData);
 
+  // Fallback to selectedMatch format/genres when anilistData is unavailable
+  // Use these fields only when AniList data is not present (no id/title from AniList)
+  const selectedMatchFormat =
+    anilistData === undefined ? match.selectedMatch?.format : undefined;
+  const selectedMatchGenres =
+    anilistData === undefined ? match.selectedMatch?.genres : undefined;
+
+  // Normalize genres array to semicolon-separated string
+  let genresString = "";
+  if (Array.isArray(anilistData?.genres)) {
+    genresString = anilistData.genres.join("; ");
+  } else if (Array.isArray(selectedMatchGenres)) {
+    genresString = selectedMatchGenres.join("; ");
+  }
+
   return {
     // Kenmei data
     kenmeiId: Number(kenmei.id),
@@ -237,10 +332,7 @@ export function flattenMatchResult(
 
     // Match data
     matchStatus: match.status,
-    matchDate:
-      match.matchDate instanceof Date
-        ? match.matchDate.toISOString()
-        : (match.matchDate ?? ""),
+    matchDate: normalizeMatchDate(match.matchDate),
     confidence,
 
     // AniList data - explicitly set to empty strings when no AniList data available
@@ -258,13 +350,12 @@ export function flattenMatchResult(
       typeof anilistData?.title === "object"
         ? (anilistData.title.native ?? "")
         : (anilistData?.title ?? ""),
-    // Do not use format/genres from selectedMatch; only from anilistData
-    format: anilistData?.format ?? "",
+    // Prefer AniList data format, fall back to selectedMatch format when no AniList data
+    format: anilistData?.format ?? selectedMatchFormat ?? "",
     totalChapters: anilistData?.chapters ?? null,
     totalVolumes: anilistData?.volumes ?? null,
-    genres: Array.isArray(anilistData?.genres)
-      ? anilistData.genres.join("; ")
-      : "",
+    // Prefer AniList data genres, fall back to selectedMatch genres when no AniList data
+    genres: genresString,
   };
 }
 
@@ -301,7 +392,7 @@ export function matchPassesFilter(
   if (confidenceThreshold !== null && confidenceThreshold > 0) {
     const highestConfidence =
       match.anilistMatches && match.anilistMatches.length > 0
-        ? Math.max(...match.anilistMatches.map((m) => m.confidence))
+        ? Math.max(...match.anilistMatches.map((m) => m.confidence ?? 0))
         : 0;
     if (highestConfidence < confidenceThreshold) {
       return false;
@@ -332,6 +423,7 @@ export function matchPassesFilter(
  * Filters match results based on provided criteria.
  *
  * Uses the shared matchPassesFilter helper to ensure consistency with UI preview counts.
+ * Enforces filter precedence: unmatchedOnly takes priority and forces includeUnmatched=true internally.
  *
  * @param matches - Array of match results to filter.
  * @param filters - Filter options to apply.
@@ -347,8 +439,13 @@ export function filterMatchResults(
     filters.statusFilter || ["matched", "manual", "pending", "skipped"],
   );
   const confidenceThreshold = filters.confidenceThreshold ?? null;
-  const includeUnmatched = filters.includeUnmatched ?? true;
+
+  // Enforce filter semantics: unmatchedOnly forces includeUnmatched=true
+  // This prevents UI mismatches where unmatchedOnly=true but includeUnmatched=false
   const unmatchedOnly = filters.unmatchedOnly ?? false;
+  const includeUnmatched = unmatchedOnly
+    ? true
+    : (filters.includeUnmatched ?? true);
 
   return matches.filter((match) =>
     matchPassesFilter(
@@ -364,13 +461,17 @@ export function filterMatchResults(
 /**
  * Exports data to CSV format and triggers browser download.
  *
- * Includes UTF-8 BOM prefix to improve Excel compatibility on Windows.
- * The BOM ensures proper encoding detection when opening CSV files in Excel.
+ * Includes UTF-8 BOM (Byte Order Mark) prefix to improve Excel compatibility on Windows.
+ * The BOM ensures proper encoding detection when opening CSV files in Excel, particularly
+ * on Windows systems where Excel may misinterpret non-ASCII characters without it.
+ *
+ * Sanitizes the base filename to remove unsafe characters before composition.
  *
  * @param data - Array of objects to export.
- * @param baseFilename - Base filename without extension or timestamp.
- * @returns The full filename used for download.
+ * @param baseFilename - Base filename without extension or timestamp. Will be sanitized to remove unsafe characters.
+ * @returns The full filename used for download (including timestamp and extension).
  * @throws Will throw if CSV generation fails.
+ * @throws Will throw if document.body is unavailable (non-DOM/Electron renderer context).
  * @source
  */
 export function exportToCSV(
@@ -390,13 +491,24 @@ export function exportToCSV(
   let appended = false;
 
   try {
-    // Generate timestamped filename
+    // Sanitize and generate timestamped filename
+    const sanitized = sanitizeFilename(baseFilename);
     const timestamp = generateExportTimestamp();
-    const filename = `${baseFilename}-${timestamp}.csv`;
+    const filename = `${sanitized}-${timestamp}.csv`;
 
     // Trigger download
     link.href = url;
     link.download = filename;
+
+    // Guard against non-DOM contexts where document.body is unavailable
+    if (!document.body) {
+      throw new Error(
+        "Cannot export: document.body is unavailable. " +
+          "This export utility requires the Electron renderer process with access to DOM APIs. " +
+          "Ensure this function is called from a React component in the renderer process.",
+      );
+    }
+
     document.body.appendChild(link);
     appended = true;
     link.click();
@@ -537,20 +649,56 @@ export function exportSyncReport(report: SyncReport): void {
  * Saves a sync report to storage for later reference.
  *
  * Persists the report using the storage abstraction and maintains a history of up to 10 most recent reports.
+ * Validates JSON parsing to prevent corruption of stored history. Filters history to include only valid
+ * SyncReport objects and caps error arrays to prevent unbounded growth.
  *
- * @param report - The sync report to save.
+ * @param report - The sync report to save. timestamp should be ISO 8601 string.
  * @source
  */
 export function saveSyncReportToHistory(report: SyncReport): void {
   try {
     // Get existing history from storage
     const existingHistoryJson = storage.getItem(STORAGE_KEYS.SYNC_HISTORY);
-    const existingHistory: SyncReport[] = existingHistoryJson
-      ? JSON.parse(existingHistoryJson)
-      : [];
+
+    // Parse existing history with fallback to empty array on invalid JSON
+    let existingHistory: SyncReport[] = [];
+    if (existingHistoryJson) {
+      try {
+        const parsed = JSON.parse(existingHistoryJson);
+        // Ensure parsed value is an array
+        if (Array.isArray(parsed)) {
+          // Filter to include only valid SyncReport objects with required fields
+          existingHistory = parsed.filter(
+            (item): item is SyncReport =>
+              typeof item === "object" &&
+              item !== null &&
+              "timestamp" in item &&
+              "totalEntries" in item &&
+              "successfulUpdates" in item &&
+              "failedUpdates" in item,
+          );
+        }
+      } catch {
+        // If JSON parsing fails, log and reset to empty array
+        console.warn(
+          "[Export] Failed to parse existing sync history, starting fresh",
+        );
+        existingHistory = [];
+      }
+    }
+
+    // Create validated report with capped errors array (max 200 entries to bound size)
+    const validatedReport: SyncReport = {
+      timestamp: report.timestamp,
+      totalEntries: report.totalEntries,
+      successfulUpdates: report.successfulUpdates,
+      failedUpdates: report.failedUpdates,
+      skippedEntries: report.skippedEntries,
+      errors: report.errors.slice(0, 200),
+    };
 
     // Add new report to history (limit to most recent 10)
-    const updatedHistory = [report, ...existingHistory].slice(0, 10);
+    const updatedHistory = [validatedReport, ...existingHistory].slice(0, 10);
 
     // Save back to storage
     storage.setItem(STORAGE_KEYS.SYNC_HISTORY, JSON.stringify(updatedHistory));
@@ -560,3 +708,11 @@ export function saveSyncReportToHistory(report: SyncReport): void {
     console.error("[Export] Failed to save sync report to history:", error);
   }
 }
+
+/**
+ * Backward compatibility re-export of MatchForExport from types/matching.ts.
+ * Use MatchForExport from types/matching.ts for new code.
+ * @deprecated Use MatchForExport from @/types/matching instead
+ * @source
+ */
+export type { MatchForExport } from "../types/matching";
