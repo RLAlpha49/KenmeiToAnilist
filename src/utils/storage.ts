@@ -471,6 +471,7 @@ export const STORAGE_KEYS = {
   ACTIVE_SYNC_SNAPSHOT: "active_sync_snapshot",
   ANILIST_SEARCH_CACHE: "anilist_search_cache",
   UPDATE_DISMISSED_VERSIONS: "update_dismissed_versions",
+  UPDATE_CHANNEL: "update_channel",
   ONBOARDING_COMPLETED: "onboarding_completed",
   ONBOARDING_STEPS_COMPLETED: "onboarding_steps_completed",
   BACKUP_HISTORY: "backup_history",

@@ -463,6 +463,39 @@ export function SettingsPage() {
     setBackupHistory(getBackupHistory());
   }, []);
 
+  // Load update channel preference from storage on mount
+  useEffect(() => {
+    try {
+      const savedChannel = storage.getItem(STORAGE_KEYS.UPDATE_CHANNEL);
+      if (savedChannel === "beta" || savedChannel === "stable") {
+        setUpdateChannel(savedChannel);
+        console.debug(
+          `[Settings] ✅ Loaded update channel preference: ${savedChannel}`,
+        );
+      }
+    } catch (err) {
+      console.error(
+        "[Settings] ❌ Failed to load update channel preference:",
+        err,
+      );
+    }
+  }, []);
+
+  // Save update channel preference to storage whenever it changes
+  useEffect(() => {
+    try {
+      storage.setItem(STORAGE_KEYS.UPDATE_CHANNEL, updateChannel);
+      console.debug(
+        `[Settings] 💾 Saved update channel preference: ${updateChannel}`,
+      );
+    } catch (err) {
+      console.error(
+        "[Settings] ❌ Failed to save update channel preference:",
+        err,
+      );
+    }
+  }, [updateChannel]);
+
   /**
    * Initiates AniList OAuth login flow with either custom or default credentials.
    * @source

@@ -53,7 +53,6 @@ export default defineConfig(() => ({
     rollupOptions: {
       output: {
         // Chunk strategy:
-        // - vendor-react: React core (~150KB) - cached separately
         // - vendor-radix: Radix UI primitives (~200KB) - UI framework
         // - vendor-recharts: Charts library (~150KB) - lazy loaded with StatisticsPage
         // - vendor-ui-framework: Animations, icons, utilities (~200KB)
@@ -66,13 +65,13 @@ export default defineConfig(() => ({
           // Normalize path separators to forward slashes for consistent matching across OS
           const normalizedId = normalizePath(id);
 
-          // React core - separate chunk for better caching
-          if (
-            normalizedId.includes("node_modules/react/") ||
-            normalizedId.includes("node_modules/react-dom/")
-          ) {
-            return "vendor-react";
-          }
+          // React core - This causes renderer to fail to load, so keep in main bundle
+          // if (
+          //   normalizedId.includes("node_modules/react/") ||
+          //   normalizedId.includes("node_modules/react-dom/")
+          // ) {
+          //   return "vendor-react";
+          // }
 
           // Radix UI - large UI framework
           if (normalizedId.includes("node_modules/@radix-ui/")) {

@@ -6,7 +6,7 @@
 
 /// <reference types="@electron-forge/plugin-vite/forge-vite-env" />
 
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 import registerListeners from "./helpers/ipc/listeners-register";
 import squirrelStartup from "electron-squirrel-startup";
 import path from "node:path";
@@ -15,6 +15,7 @@ import {
   installExtension,
   REACT_DEVELOPER_TOOLS,
 } from "electron-devtools-installer";
+import Store from "electron-store";
 import * as Sentry from "@sentry/electron/main";
 import "dotenv/config";
 import {
@@ -54,6 +55,13 @@ autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = false;
 autoUpdater.logger = console;
 
+// Configure feed URL for GitHub releases
+autoUpdater.setFeedURL({
+  provider: "github",
+  owner: "RLAlpha49",
+  repo: "KenmeiToAnilist",
+});
+
 // Set up auto-updater event listeners for logging
 autoUpdater.on("checking-for-update", () => {
   if (!isProduction) {
@@ -90,6 +98,39 @@ if (!isProduction) {
 }
 endGroup();
 // --- End Sentry Initialization ---
+
+// Initialize electron-store for storing cross-process preferences
+// Provide a narrow typed facade so we avoid using `any` and satisfy eslint/typechecks
+const store = new Store() as unknown as {
+  get: (key: string) => unknown;
+  set: (key: string, value: unknown) => void;
+};
+
+// Ensure auto-updater respects persisted preference at startup
+try {
+  const savedChannel = (store.get("update_channel") as string) || "stable";
+  autoUpdater.allowPrerelease = savedChannel === "beta";
+  console.debug(
+    `[Main] 🔍 Auto-updater initialized allowPrerelease=${autoUpdater.allowPrerelease}`,
+  );
+} catch (err) {
+  console.debug("[Main] 🔍 Could not read update_channel from store:", err);
+}
+
+// IPC: allow renderer to update the chosen update channel immediately
+ipcMain.handle("updates:set-channel", (_event, channel: "stable" | "beta") => {
+  try {
+    store.set("update_channel", channel);
+    autoUpdater.allowPrerelease = channel === "beta";
+    console.info(
+      `[Main] ✅ Update channel set to ${channel} (allowPrerelease=${autoUpdater.allowPrerelease})`,
+    );
+    return { success: true };
+  } catch (err) {
+    console.error("[Main] ❌ Failed to set update channel:", err);
+    return { success: false, error: String(err) };
+  }
+});
 
 // Handle Windows Squirrel events
 if (process.platform === "win32") {
@@ -368,7 +409,16 @@ app
           console.info("[Main] 🔍 Performing initial update check...");
           await autoUpdater.checkForUpdates();
         } catch (error) {
-          console.error("[Main] ❌ Initial update check failed:", error);
+          // Silently ignore update check errors in dev/non-packaged environments
+          // In production, these are already logged by the autoUpdater error handler
+          if (process.env.NODE_ENV === "production" && app.isPackaged) {
+            console.error("[Main] ❌ Initial update check failed:", error);
+          } else {
+            console.debug(
+              "[Main] 🔍 Update check failed (non-packaged environment):",
+              error instanceof Error ? error.message : String(error),
+            );
+          }
         }
       });
     }, 10000);
@@ -381,7 +431,15 @@ app
             console.info("[Main] 🔍 Performing periodic update check...");
             await autoUpdater.checkForUpdates();
           } catch (error) {
-            console.error("[Main] ❌ Periodic update check failed:", error);
+            // Silently ignore periodic update check errors
+            if (process.env.NODE_ENV === "production" && app.isPackaged) {
+              console.error("[Main] ❌ Periodic update check failed:", error);
+            } else {
+              console.debug(
+                "[Main] 🔍 Periodic update check failed (non-packaged):",
+                error instanceof Error ? error.message : String(error),
+              );
+            }
           }
         });
       },
