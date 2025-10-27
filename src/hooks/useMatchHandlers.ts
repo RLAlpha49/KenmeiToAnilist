@@ -674,7 +674,26 @@ export const useMatchHandlers = (
           },
         });
 
-        // For batch operations, create individual commands wrapped in a BatchCommand
+        // Build the unified updated results once to avoid duplication
+        const updatedResults = matchResults.map((m) => {
+          const isInBatch = match.matches.some(
+            (bm) => bm.kenmeiManga.id === m.kenmeiManga.id,
+          );
+          if (isInBatch) {
+            const originalMainMatch = m.anilistMatches?.length
+              ? m.anilistMatches[0].manga
+              : undefined;
+            return {
+              ...m,
+              status: "pending" as const,
+              selectedMatch: originalMainMatch,
+              matchDate: new Date().toISOString(),
+            };
+          }
+          return m;
+        });
+
+        // For batch operations, create individual commands wrapped in a BatchCommand when undo/redo is available
         if (undoRedoManager) {
           const commands = match.matches.map((m) => {
             // Find the current state of this match in matchResults
@@ -683,17 +702,18 @@ export const useMatchHandlers = (
             );
             const currentMatch = currentIdx >= 0 ? matchResults[currentIdx] : m;
 
-            // Create the reset state matching single operation logic
-            const originalMainMatch = currentMatch.anilistMatches?.length
-              ? currentMatch.anilistMatches[0].manga
-              : undefined;
-
-            const resetMatch = {
-              ...currentMatch,
-              status: "pending" as const,
-              selectedMatch: originalMainMatch,
-              matchDate: new Date().toISOString(),
-            };
+            // Use the precomputed updatedResults when possible, otherwise build a reset match
+            const resetMatch =
+              currentIdx >= 0
+                ? updatedResults[currentIdx]
+                : {
+                    ...currentMatch,
+                    status: "pending" as const,
+                    selectedMatch: currentMatch.anilistMatches?.length
+                      ? currentMatch.anilistMatches[0].manga
+                      : undefined,
+                    matchDate: new Date().toISOString(),
+                  };
 
             return new ResetToPendingCommand(
               Math.max(currentIdx, 0),
@@ -702,48 +722,14 @@ export const useMatchHandlers = (
               applyCommandPatch,
             );
           });
+
           const batchCommand = new BatchCommand(commands, "Batch reset");
           undoRedoManager.executeCommand(batchCommand);
 
-          // Update matchResults to trigger state update for UI re-render
-          const updatedResults = matchResults.map((m) => {
-            const isInBatch = match.matches.some(
-              (bm) => bm.kenmeiManga.id === m.kenmeiManga.id,
-            );
-            if (isInBatch) {
-              const originalMainMatch = m.anilistMatches?.length
-                ? m.anilistMatches[0].manga
-                : undefined;
-              return {
-                ...m,
-                status: "pending" as const,
-                selectedMatch: originalMainMatch,
-                matchDate: new Date().toISOString(),
-              };
-            }
-            return m;
-          });
+          // Apply the unified updated results to trigger state update and persistence
           updateMatchResults(updatedResults);
         } else {
-          // Fallback: build full updated results by mapping over all matchResults with inclusion check
-          // This ensures all changes are persisted, not just the subset being reset
-          const updatedResults = matchResults.map((m) => {
-            const isInBatch = match.matches.some(
-              (bm) => bm.kenmeiManga.id === m.kenmeiManga.id,
-            );
-            if (isInBatch) {
-              const originalMainMatch = m.anilistMatches?.length
-                ? m.anilistMatches[0].manga
-                : undefined;
-              return {
-                ...m,
-                status: "pending" as const,
-                selectedMatch: originalMainMatch,
-                matchDate: new Date().toISOString(),
-              };
-            }
-            return m;
-          });
+          // Fallback: apply the unified updated results directly
           updateMatchResults(updatedResults);
         }
 

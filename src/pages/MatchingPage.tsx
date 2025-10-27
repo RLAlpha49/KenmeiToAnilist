@@ -912,6 +912,45 @@ export function MatchingPage() {
     };
   }, [navigate, matchingProcess, pendingMangaState]);
 
+  const renderPageShell = (
+    content: React.ReactNode,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    headerPropsOverride: Record<string, any> = {},
+  ) => {
+    const defaultHeaderProps = {
+      headerVariants,
+      matchResultsLength: 0,
+      showRematchOptions: false,
+      setShowRematchOptions: () => {},
+      handleSetAllMatchedToPending: () => {},
+      matchingProcessIsLoading: false,
+      rateLimitIsRateLimited: false,
+      statusSummary: matchStatusSummary,
+      pendingBacklog: 0,
+      handleUndo: () => {},
+      handleRedo: () => {},
+      canUndo: false,
+      canRedo: false,
+      matchResults: [],
+    };
+
+    const headerProps = { ...defaultHeaderProps, ...headerPropsOverride };
+
+    return (
+      <div className="relative flex h-full w-full flex-1">
+        <motion.div
+          className="container mx-auto flex h-full max-w-full flex-col px-4 py-6 md:px-6"
+          variants={pageVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <MatchingPageHeader {...headerProps} />
+          {content}
+        </motion.div>
+      </div>
+    );
+  };
+
   // Add an effect to sync with the global process state while the page is mounted
   useEffect(() => {
     // Skip if we're not in the middle of a process
@@ -1495,84 +1534,34 @@ export function MatchingPage() {
 
   // Check for authentication error first - show before skeleton loading
   if (matchingProcess.error?.includes("Authentication Required")) {
-    return (
-      <div className="relative flex h-full w-full flex-1">
-        <motion.div
-          className="container mx-auto flex h-full max-w-full flex-col px-4 py-6 md:px-6"
-          variants={pageVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          <MatchingPageHeader
-            headerVariants={headerVariants}
-            matchResultsLength={0}
-            showRematchOptions={false}
-            setShowRematchOptions={() => {}}
-            handleSetAllMatchedToPending={() => {}}
-            matchingProcessIsLoading={false}
-            rateLimitIsRateLimited={false}
-            statusSummary={matchStatusSummary}
-            pendingBacklog={0}
-            handleUndo={() => {}}
-            handleRedo={() => {}}
-            canUndo={false}
-            canRedo={false}
-            matchResults={[]}
-          />
-          <motion.div
-            className="relative flex flex-1 items-center justify-center"
-            variants={contentVariants}
-          >
-            <AuthRequiredCard
-              onGoToSettings={() => navigate({ to: "/settings" })}
-            />
-          </motion.div>
-        </motion.div>
-      </div>
+    return renderPageShell(
+      <motion.div
+        className="relative flex flex-1 items-center justify-center"
+        variants={contentVariants}
+      >
+        <AuthRequiredCard
+          onGoToSettings={() => navigate({ to: "/settings" })}
+        />
+      </motion.div>,
     );
   }
 
   // Loading state
   if (isInitialLoad && matchResults.length === 0) {
-    return (
-      <div className="relative flex h-full w-full flex-1">
-        <motion.div
-          className="container mx-auto flex h-full max-w-full flex-col px-4 py-6 md:px-6"
-          variants={pageVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          <MatchingPageHeader
-            headerVariants={headerVariants}
-            matchResultsLength={0}
-            showRematchOptions={false}
-            setShowRematchOptions={() => {}}
-            handleSetAllMatchedToPending={() => {}}
-            matchingProcessIsLoading={false}
-            rateLimitIsRateLimited={false}
-            statusSummary={matchStatusSummary}
-            pendingBacklog={0}
-            handleUndo={() => {}}
-            handleRedo={() => {}}
-            canUndo={false}
-            canRedo={false}
-            matchResults={[]}
-          />
+    return renderPageShell(
+      <motion.div
+        className="relative grid flex-1 grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
+        variants={contentVariants}
+      >
+        {Array.from({ length: 6 }).map((_, index) => (
           <motion.div
-            className="relative grid flex-1 grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
-            variants={contentVariants}
+            key={`skeleton-card-${index + 1}`}
+            variants={itemVariants}
           >
-            {Array.from({ length: 6 }).map((_, index) => (
-              <motion.div
-                key={`skeleton-card-${index + 1}`}
-                variants={itemVariants}
-              >
-                <SkeletonCard />
-              </motion.div>
-            ))}
+            <SkeletonCard />
           </motion.div>
-        </motion.div>
-      </div>
+        ))}
+      </motion.div>,
     );
   }
 

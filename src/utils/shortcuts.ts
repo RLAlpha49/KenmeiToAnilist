@@ -56,103 +56,109 @@ interface Shortcut {
 
 /**
  * Comprehensive registry of all application keyboard shortcuts.
- * Organized by category and sorted by key combination for easy lookup.
- * Serves as the single source of truth for all keyboard shortcuts.
+ * Organized by category.
  * @source
  */
-export const SHORTCUTS: Shortcut[] = [
-  // Navigation shortcuts
+
+const makeShortcut = (
+  base: Pick<Shortcut, "id" | "category" | "keys" | "description" | "action"> &
+    Partial<Pick<Shortcut, "altKeys" | "scope">>,
+): Shortcut => ({
+  scope: "global",
+  ...base,
+});
+
+/* Navigation shortcuts */
+const NAV_ITEMS: Array<{
+  id: string;
+  key: string;
+  description: string;
+  action: string;
+}> = [
   {
     id: "nav-home",
-    category: ShortcutCategory.NAVIGATION,
-    keys: { key: "1", ctrl: true },
+    key: "1",
     description: "Navigate to Home",
     action: "navigate:home",
-    scope: "global",
   },
   {
     id: "nav-import",
-    category: ShortcutCategory.NAVIGATION,
-    keys: { key: "2", ctrl: true },
+    key: "2",
     description: "Navigate to Import",
     action: "navigate:import",
-    scope: "global",
   },
   {
     id: "nav-review",
-    category: ShortcutCategory.NAVIGATION,
-    keys: { key: "3", ctrl: true },
+    key: "3",
     description: "Navigate to Review / Matching",
     action: "navigate:review",
-    scope: "global",
   },
   {
     id: "nav-sync",
-    category: ShortcutCategory.NAVIGATION,
-    keys: { key: "4", ctrl: true },
+    key: "4",
     description: "Navigate to Sync",
     action: "navigate:sync",
-    scope: "global",
   },
   {
     id: "nav-statistics",
-    category: ShortcutCategory.NAVIGATION,
-    keys: { key: "5", ctrl: true },
+    key: "5",
     description: "Navigate to Statistics",
     action: "navigate:statistics",
-    scope: "global",
   },
   {
     id: "nav-settings",
-    category: ShortcutCategory.NAVIGATION,
-    keys: { key: "6", ctrl: true },
+    key: "6",
     description: "Navigate to Settings",
     action: "navigate:settings",
-    scope: "global",
   },
+];
 
-  // Matching page shortcuts
-  {
+const NAV_SHORTCUTS: Shortcut[] = NAV_ITEMS.map((item) =>
+  makeShortcut({
+    id: item.id,
+    category: ShortcutCategory.NAVIGATION,
+    keys: { key: item.key, ctrl: true },
+    description: item.description,
+    action: item.action,
+    scope: "global",
+  }),
+);
+
+/* Matching page shortcuts */
+const MATCHING_SHORTCUTS: Shortcut[] = [
+  makeShortcut({
     id: "match-search",
     category: ShortcutCategory.MATCHING,
     keys: { key: "f", ctrl: true },
     description: "Focus search input",
     action: "focus:search",
     scope: "matching-page",
-  },
-  {
-    id: "settings-search",
-    category: ShortcutCategory.GENERAL,
-    keys: { key: "f", ctrl: true },
-    description: "Focus settings search input",
-    action: "focus:settings-search",
-    scope: "settings-page",
-  },
-  {
+  }),
+  makeShortcut({
     id: "match-select-all",
     category: ShortcutCategory.MATCHING,
     keys: { key: "a", ctrl: true },
     description: "Select all visible matches",
     action: "select-all:matches",
     scope: "matching-page",
-  },
-  {
+  }),
+  makeShortcut({
     id: "match-clear-selection",
     category: ShortcutCategory.MATCHING,
     keys: { key: "Escape" },
     description: "Clear current selection",
     action: "clear-selection",
     scope: "matching-page",
-  },
-  {
+  }),
+  makeShortcut({
     id: "match-undo",
     category: ShortcutCategory.MATCHING,
     keys: { key: "z", ctrl: true },
     description: "Undo last action",
     action: "undo",
     scope: "matching-page",
-  },
-  {
+  }),
+  makeShortcut({
     id: "match-redo",
     category: ShortcutCategory.MATCHING,
     keys: { key: "z", ctrl: true, shift: true },
@@ -160,30 +166,46 @@ export const SHORTCUTS: Shortcut[] = [
     description: "Redo last action",
     action: "redo",
     scope: "matching-page",
-  },
+  }),
+];
 
-  // Sync shortcuts
-  {
+/* Settings search */
+const SETTINGS_SHORTCUT: Shortcut = makeShortcut({
+  id: "settings-search",
+  category: ShortcutCategory.GENERAL,
+  keys: { key: "f", ctrl: true },
+  description: "Focus settings search input",
+  action: "focus:settings-search",
+  scope: "settings-page",
+});
+
+/* Sync shortcuts */
+const SYNC_SHORTCUTS: Shortcut[] = [
+  makeShortcut({
     id: "sync-save",
     category: ShortcutCategory.SYNC,
     keys: { key: "s", ctrl: true },
     description: "Save configuration",
     action: "save:config",
     scope: "context-aware",
-  },
+  }),
+];
 
-  // Debug shortcuts
-  {
+/* Debug shortcuts */
+const DEBUG_SHORTCUTS: Shortcut[] = [
+  makeShortcut({
     id: "debug-menu",
     category: ShortcutCategory.DEBUG,
     keys: { key: "d", ctrl: true, shift: true },
     description: "Open/Toggle debug menu",
     action: "toggle:debug",
     scope: "global",
-  },
+  }),
+];
 
-  // General shortcuts
-  {
+/* General shortcuts */
+const GENERAL_SHORTCUTS: Shortcut[] = [
+  makeShortcut({
     id: "general-shortcuts",
     category: ShortcutCategory.GENERAL,
     keys: { key: "?" },
@@ -191,7 +213,17 @@ export const SHORTCUTS: Shortcut[] = [
     description: "Open shortcuts panel",
     action: "toggle:shortcuts-panel",
     scope: "global",
-  },
+  }),
+];
+
+/* Combined registry */
+export const SHORTCUTS: Shortcut[] = [
+  ...NAV_SHORTCUTS,
+  ...MATCHING_SHORTCUTS,
+  SETTINGS_SHORTCUT,
+  ...SYNC_SHORTCUTS,
+  ...DEBUG_SHORTCUTS,
+  ...GENERAL_SHORTCUTS,
 ];
 
 /**

@@ -221,161 +221,157 @@ export function SettingsPage() {
   };
 
   // Create searchable settings sections index
-  const settingsSections = useMemo<SettingsSection[]>(
-    () => [
-      // Matching tab sections
-      {
-        id: "matching-one-shots",
-        title: "Ignore one shots in automatic matching",
-        description: "Skip one-shot manga during automatic matching",
-        tab: "matching",
-        keywords: ["skip", "filter", "one-shot", "exclude"],
-      },
-      {
-        id: "matching-adult-content",
-        title: "Ignore adult content in automatic matching",
-        description: "Skip adult content manga during automatic matching",
-        tab: "matching",
-        keywords: ["nsfw", "adult", "18+", "filter", "ignore"],
-      },
-      {
-        id: "matching-blur-adult",
-        title: "Blur adult content images",
-        description: "Blur cover images marked as adult content",
-        tab: "matching",
-        keywords: ["privacy", "nsfw", "blur", "hide", "censor"],
-      },
-      {
-        id: "matching-comick",
-        title: "Enable Comick alternative search",
-        description: "Use Comick as a fallback search source",
-        tab: "matching",
-        keywords: ["fallback", "alternative", "source", "comick"],
-      },
-      {
-        id: "matching-mangadex",
-        title: "Enable MangaDex alternative search",
-        description: "Use MangaDex as a fallback search source",
-        tab: "matching",
-        keywords: ["fallback", "alternative", "source", "mangadex"],
-      },
-      {
-        id: "matching-custom-rules",
-        title: "Custom Matching Rules",
-        description:
-          "Define regex patterns to automatically skip or accept manga",
-        tab: "matching",
-        keywords: ["advanced", "regex", "filter", "pattern", "custom"],
-      },
-      // Sync tab sections
-      {
-        id: "sync-auto-pause",
-        title: "Auto-pause inactive manga",
-        description:
-          "Automatically pause and pause sync for manga not updated within the threshold period",
-        tab: "sync",
-        keywords: [
-          "inactive",
-          "pause",
-          "automatic",
-          "timeout",
-          "threshold",
-          "sync",
-        ],
-      },
-      {
-        id: "sync-status-priority",
-        title: "Status priority toggles",
-        description:
-          "Control which source takes priority: AniList or Kenmei data during sync",
-        tab: "sync",
-        keywords: [
-          "reading",
-          "completed",
-          "dropped",
-          "priority",
-          "status",
-          "anilist",
-          "kenmei",
-          "source",
-        ],
-      },
-      {
-        id: "sync-privacy",
-        title: "Privacy settings",
-        description:
-          "Set AniList entries as private to control visibility and sharing of your synced manga",
-        tab: "sync",
-        keywords: [
-          "private",
-          "public",
-          "visibility",
-          "privacy",
-          "sharing",
-          "anilist",
-        ],
-      },
-      // Data tab sections
-      {
-        id: "data-cache",
-        title: "Cache Management",
-        description:
-          "Select which cached data types to clear and reset. Cache types include authentication, settings, sync, and more",
-        tab: "data",
-        keywords: [
-          "clear",
-          "reset",
-          "storage",
-          "cache",
-          "authentication",
-          "settings",
-          "sync",
-          "manga",
-          "search",
-          "temp",
-        ],
-      },
-      {
-        id: "data-backup",
-        title: "Backup & Restore",
-        description:
-          "Export and save all Kenmei data as backups, or import and restore from previously created backup files",
-        tab: "data",
-        keywords: [
-          "export",
-          "import",
-          "backup",
-          "restore",
-          "save",
-          "download",
-          "upload",
-          "history",
-        ],
-      },
-      {
-        id: "data-debug",
-        title: "Debug Tools",
-        description:
-          "Enable debug features including logs, logger, storage inspection, state inspection, IPC monitoring, and confidence testing",
-        tab: "data",
-        keywords: [
-          "developer",
-          "debug",
-          "logs",
-          "logger",
-          "tools",
-          "storage",
-          "state",
-          "ipc",
-          "confidence",
-          "test",
-          "redact",
-          "event",
-        ],
-      },
-    ],
-    [],
-  );
+  const settingsSections = useMemo<SettingsSection[]>(() => {
+    type SectionDef = Omit<SettingsSection, "tab">;
+
+    const grouped: Record<string, SectionDef[]> = {
+      matching: [
+        {
+          id: "matching-one-shots",
+          title: "Ignore one shots in automatic matching",
+          description: "Skip one-shot manga during automatic matching",
+          keywords: ["skip", "filter", "one-shot", "exclude"],
+        },
+        {
+          id: "matching-adult-content",
+          title: "Ignore adult content in automatic matching",
+          description: "Skip adult content manga during automatic matching",
+          keywords: ["nsfw", "adult", "18+", "filter", "ignore"],
+        },
+        {
+          id: "matching-blur-adult",
+          title: "Blur adult content images",
+          description: "Blur cover images marked as adult content",
+          keywords: ["privacy", "nsfw", "blur", "hide", "censor"],
+        },
+        {
+          id: "matching-comick",
+          title: "Enable Comick alternative search",
+          description: "Use Comick as a fallback search source",
+          keywords: ["fallback", "alternative", "source", "comick"],
+        },
+        {
+          id: "matching-mangadex",
+          title: "Enable MangaDex alternative search",
+          description: "Use MangaDex as a fallback search source",
+          keywords: ["fallback", "alternative", "source", "mangadex"],
+        },
+        {
+          id: "matching-custom-rules",
+          title: "Custom Matching Rules",
+          description:
+            "Define regex patterns to automatically skip or accept manga",
+          keywords: ["advanced", "regex", "filter", "pattern", "custom"],
+        },
+      ],
+      sync: [
+        {
+          id: "sync-auto-pause",
+          title: "Auto-pause inactive manga",
+          description:
+            "Automatically pause and pause sync for manga not updated within the threshold period",
+          keywords: [
+            "inactive",
+            "pause",
+            "automatic",
+            "timeout",
+            "threshold",
+            "sync",
+          ],
+        },
+        {
+          id: "sync-status-priority",
+          title: "Status priority toggles",
+          description:
+            "Control which source takes priority: AniList or Kenmei data during sync",
+          keywords: [
+            "reading",
+            "completed",
+            "dropped",
+            "priority",
+            "status",
+            "anilist",
+            "kenmei",
+            "source",
+          ],
+        },
+        {
+          id: "sync-privacy",
+          title: "Privacy settings",
+          description:
+            "Set AniList entries as private to control visibility and sharing of your synced manga",
+          keywords: [
+            "private",
+            "public",
+            "visibility",
+            "privacy",
+            "sharing",
+            "anilist",
+          ],
+        },
+      ],
+      data: [
+        {
+          id: "data-cache",
+          title: "Cache Management",
+          description:
+            "Select which cached data types to clear and reset. Cache types include authentication, settings, sync, and more",
+          keywords: [
+            "clear",
+            "reset",
+            "storage",
+            "cache",
+            "authentication",
+            "settings",
+            "sync",
+            "manga",
+            "search",
+            "temp",
+          ],
+        },
+        {
+          id: "data-backup",
+          title: "Backup & Restore",
+          description:
+            "Export and save all Kenmei data as backups, or import and restore from previously created backup files",
+          keywords: [
+            "export",
+            "import",
+            "backup",
+            "restore",
+            "save",
+            "download",
+            "upload",
+            "history",
+          ],
+        },
+        {
+          id: "data-debug",
+          title: "Debug Tools",
+          description:
+            "Enable debug features including logs, logger, storage inspection, state inspection, IPC monitoring, and confidence testing",
+          keywords: [
+            "developer",
+            "debug",
+            "logs",
+            "logger",
+            "tools",
+            "storage",
+            "state",
+            "ipc",
+            "confidence",
+            "test",
+            "redact",
+            "event",
+          ],
+        },
+      ],
+    };
+
+    return Object.entries(grouped).flatMap(([tab, items]) =>
+      items.map((it) => ({ ...it, tab: tab as SettingsSection["tab"] })),
+    );
+  }, []);
 
   // Initialize Fuse.js for fuzzy search
   const fuse = useMemo(() => {

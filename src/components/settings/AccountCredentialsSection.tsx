@@ -193,7 +193,7 @@ export function AccountCredentialsSection({
               rel="noopener noreferrer"
             >
               AniList Developer Settings
-            </a>
+            </a>{" "}
             . Use the redirect URI exactly as specified above.
           </p>
           {!customCredentialStatus.complete && (
