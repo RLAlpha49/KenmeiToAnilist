@@ -1,0 +1,407 @@
+/**
+ * @packageDocumentation
+ * @module SettingsTabsContainer
+ * @description Container component for settings tabs with search functionality.
+ */
+
+import React from "react";
+import { motion } from "framer-motion";
+import { Search, RefreshCw, Database } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { MatchingSettingsTab } from "./MatchingSettingsTab";
+import { SyncSettingsTab } from "./SyncSettingsTab";
+import { DataManagementTab } from "./DataManagementTab";
+import { MatchingSettingsSection } from "./MatchingSettingsSection";
+import { SyncAutoPauseSection } from "./SyncAutoPauseSection";
+import { SyncStatusPrioritySection } from "./SyncStatusPrioritySection";
+import { SyncPrivacySection } from "./SyncPrivacySection";
+import { CacheManagementSection } from "./CacheManagementSection";
+import { BackupRestoreSection } from "./BackupRestoreSection";
+import { DebugToolsSection } from "./DebugToolsSection";
+import type { MatchConfig, SyncConfig } from "@/utils/storage";
+import type { BackupHistoryEntry } from "@/utils/backup";
+
+interface SettingsSearchResult {
+  section: {
+    id: string;
+    title: string;
+    tab: string;
+    description?: string;
+    keywords?: string[];
+  };
+  score: number;
+}
+
+interface CachesToClear {
+  auth: boolean;
+  settings: boolean;
+  sync: boolean;
+  import: boolean;
+  review: boolean;
+  manga: boolean;
+  search: boolean;
+  other: boolean;
+}
+
+interface SettingsTabsContainerProps {
+  searchQuery: string;
+  searchResults: SettingsSearchResult[];
+  highlightedSectionId: string | null;
+  matchConfig: MatchConfig;
+  syncConfig: SyncConfig;
+  useCustomThreshold: boolean;
+  cachesToClear: CachesToClear;
+  isClearing: boolean;
+  cacheCleared: boolean;
+  backupHistory: BackupHistoryEntry[];
+  isCreatingBackup: boolean;
+  isRestoringBackup: boolean;
+  autoBackupEnabled: boolean;
+  selectedBackupFile: File | null;
+  backupValidationError: string | null;
+  showBackupHistory: boolean;
+  isDebugEnabled: boolean;
+  storageDebuggerEnabled: boolean;
+  logViewerEnabled: boolean;
+  logRedactionEnabled: boolean;
+  stateInspectorEnabled: boolean;
+  ipcViewerEnabled: boolean;
+  eventLoggerEnabled: boolean;
+  confidenceTestExporterEnabled: boolean;
+  onMatchConfigChange: (config: MatchConfig, field: string) => void;
+  onSyncConfigChange: (config: SyncConfig, field: string) => void;
+  onCustomThresholdToggle: (value: boolean) => void;
+  setSyncConfig: (config: SyncConfig) => void;
+  onCachesToClearChange: (caches: CachesToClear) => void;
+  onClearCaches: () => void;
+  onCreateBackup: () => void;
+  onRestoreBackup: () => void;
+  onToggleAutoBackup: (enabled: boolean) => void;
+  onFileSelect: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onToggleBackupHistory: (show: boolean) => void;
+  setBackupHistory: (history: BackupHistoryEntry[]) => void;
+  onToggleDebug: () => void;
+  onStorageDebuggerChange: (enabled: boolean) => void;
+  onLogViewerChange: (enabled: boolean) => void;
+  onLogRedactionChange: (enabled: boolean) => void;
+  onStateInspectorChange: (enabled: boolean) => void;
+  onIpcViewerChange: (enabled: boolean) => void;
+  onEventLoggerChange: (enabled: boolean) => void;
+  onConfidenceTestExporterChange: (enabled: boolean) => void;
+}
+
+/**
+ * Settings tabs container component.
+ * Orchestrates rendering of three main tabs (Matching, Sync, Data) and search results view.
+ *
+ * @source
+ */
+export function SettingsTabsContainer({
+  searchQuery,
+  searchResults,
+  highlightedSectionId,
+  matchConfig,
+  syncConfig,
+  useCustomThreshold,
+  cachesToClear,
+  isClearing,
+  cacheCleared,
+  backupHistory,
+  isCreatingBackup,
+  isRestoringBackup,
+  autoBackupEnabled,
+  selectedBackupFile,
+  backupValidationError,
+  showBackupHistory,
+  isDebugEnabled,
+  storageDebuggerEnabled,
+  logViewerEnabled,
+  logRedactionEnabled,
+  stateInspectorEnabled,
+  ipcViewerEnabled,
+  eventLoggerEnabled,
+  confidenceTestExporterEnabled,
+  onMatchConfigChange,
+  onSyncConfigChange,
+  onCustomThresholdToggle,
+  setSyncConfig,
+  onCachesToClearChange,
+  onClearCaches,
+  onCreateBackup,
+  onRestoreBackup,
+  onToggleAutoBackup,
+  onFileSelect,
+  onToggleBackupHistory,
+  setBackupHistory,
+  onToggleDebug,
+  onStorageDebuggerChange,
+  onLogViewerChange,
+  onLogRedactionChange,
+  onStateInspectorChange,
+  onIpcViewerChange,
+  onEventLoggerChange,
+  onConfidenceTestExporterChange,
+}: Readonly<SettingsTabsContainerProps>) {
+  // Render no results message
+  const renderNoResults = () => (
+    <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-12 text-center dark:border-slate-600 dark:bg-slate-900/30">
+      <Search className="mx-auto h-12 w-12 text-slate-400 dark:text-slate-600" />
+      <p className="mt-4 text-sm font-medium text-slate-600 dark:text-slate-400">
+        No settings found matching &quot;{searchQuery}&quot;
+      </p>
+      <p className="mt-2 text-xs text-slate-500 dark:text-slate-500">
+        Try adjusting your search terms or browse all settings by clearing the
+        search.
+      </p>
+    </div>
+  );
+
+  // Render search results view - only matching subsections
+  const renderSearchResults = () => (
+    <div className="space-y-6">
+      <div className="text-sm text-slate-600 dark:text-slate-400">
+        <span className="font-medium text-slate-900 dark:text-white">
+          {searchResults.length}
+        </span>{" "}
+        setting{searchResults.length === 1 ? "" : "s"} found
+      </div>
+      {/* Matching results */}
+      {searchResults.some((r) => r.section.tab === "matching") && (
+        <div className="space-y-6 border-b border-slate-200 pb-6 dark:border-white/10">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            Matching
+          </h3>
+          {searchResults
+            .filter((r) => r.section.tab === "matching")
+            .map((result) => (
+              <React.Fragment key={result.section.id}>
+                <MatchingSettingsSection
+                  sectionId={result.section.id}
+                  matchConfig={matchConfig}
+                  searchQuery={searchQuery}
+                  highlightedSectionId={highlightedSectionId}
+                  onMatchConfigChange={onMatchConfigChange}
+                />
+              </React.Fragment>
+            ))}
+        </div>
+      )}
+      {/* Sync results - only matching subsections */}
+      {searchResults.some((r) => r.section.tab === "sync") && (
+        <div className="space-y-6 border-b border-slate-200 pb-6 dark:border-white/10">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            Sync
+          </h3>
+          {searchResults.some((r) => r.section.id === "sync-auto-pause") && (
+            <SyncAutoPauseSection
+              syncConfig={syncConfig}
+              useCustomThreshold={useCustomThreshold}
+              searchQuery={searchQuery}
+              highlightedSectionId={highlightedSectionId}
+              onSyncConfigChange={onSyncConfigChange}
+              onCustomThresholdToggle={onCustomThresholdToggle}
+              setSyncConfig={setSyncConfig}
+            />
+          )}
+          {searchResults.some(
+            (r) => r.section.id === "sync-status-priority",
+          ) && (
+            <SyncStatusPrioritySection
+              syncConfig={syncConfig}
+              searchQuery={searchQuery}
+              highlightedSectionId={highlightedSectionId}
+              onSyncConfigChange={onSyncConfigChange}
+              setSyncConfig={setSyncConfig}
+            />
+          )}
+          {searchResults.some((r) => r.section.id === "sync-privacy") && (
+            <SyncPrivacySection
+              syncConfig={syncConfig}
+              searchQuery={searchQuery}
+              highlightedSectionId={highlightedSectionId}
+              onSyncConfigChange={onSyncConfigChange}
+              setSyncConfig={setSyncConfig}
+            />
+          )}
+        </div>
+      )}
+      {/* Data results - only matching subsections */}
+      {searchResults.some((r) => r.section.tab === "data") && (
+        <div className="space-y-6">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            Data
+          </h3>
+          {searchResults.some((r) => r.section.id === "data-cache") && (
+            <CacheManagementSection
+              cachesToClear={cachesToClear}
+              isClearing={isClearing}
+              cacheCleared={cacheCleared}
+              searchQuery={searchQuery}
+              highlightedSectionId={highlightedSectionId}
+              onCachesToClearChange={onCachesToClearChange}
+              onClearCaches={onClearCaches}
+            />
+          )}
+          {searchResults.some((r) => r.section.id === "data-backup") && (
+            <BackupRestoreSection
+              backupHistory={backupHistory}
+              isCreatingBackup={isCreatingBackup}
+              isRestoringBackup={isRestoringBackup}
+              autoBackupEnabled={autoBackupEnabled}
+              selectedBackupFile={selectedBackupFile}
+              backupValidationError={backupValidationError}
+              showBackupHistory={showBackupHistory}
+              searchQuery={searchQuery}
+              highlightedSectionId={highlightedSectionId}
+              onCreateBackup={onCreateBackup}
+              onRestoreBackup={onRestoreBackup}
+              onToggleAutoBackup={onToggleAutoBackup}
+              onFileSelect={onFileSelect}
+              onToggleBackupHistory={onToggleBackupHistory}
+              setBackupHistory={setBackupHistory}
+            />
+          )}
+          {searchResults.some((r) => r.section.id === "data-debug") && (
+            <DebugToolsSection
+              isDebugEnabled={isDebugEnabled}
+              storageDebuggerEnabled={storageDebuggerEnabled}
+              logViewerEnabled={logViewerEnabled}
+              logRedactionEnabled={logRedactionEnabled}
+              stateInspectorEnabled={stateInspectorEnabled}
+              ipcViewerEnabled={ipcViewerEnabled}
+              eventLoggerEnabled={eventLoggerEnabled}
+              confidenceTestExporterEnabled={confidenceTestExporterEnabled}
+              searchQuery={searchQuery}
+              highlightedSectionId={highlightedSectionId}
+              onToggleDebug={onToggleDebug}
+              onStorageDebuggerChange={onStorageDebuggerChange}
+              onLogViewerChange={onLogViewerChange}
+              onLogRedactionChange={onLogRedactionChange}
+              onStateInspectorChange={onStateInspectorChange}
+              onIpcViewerChange={onIpcViewerChange}
+              onEventLoggerChange={onEventLoggerChange}
+              onConfidenceTestExporterChange={onConfidenceTestExporterChange}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  // Render normal tabs view
+  const renderNormalTabs = () => (
+    <Tabs defaultValue="matching" className="space-y-6">
+      <TabsList className="flex w-full flex-col gap-2 rounded-2xl border border-slate-200 bg-white/80 p-5 text-sm text-slate-600 backdrop-blur md:flex-row md:items-center md:justify-start md:gap-3 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+        <TabsTrigger
+          value="matching"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent px-5 py-3.5 font-medium text-slate-600 transition hover:border-slate-200 hover:text-slate-900 data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg dark:hover:border-white/20 dark:hover:text-white dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-white/20 dark:data-[state=active]:text-white"
+        >
+          <Search className="h-4 w-4" />
+          Matching
+        </TabsTrigger>
+        <TabsTrigger
+          value="sync"
+          data-onboarding="sync-tab"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent px-5 py-3.5 font-medium text-slate-600 transition hover:border-slate-200 hover:text-slate-900 data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg dark:hover:border-white/20 dark:hover:text-white dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-white/20 dark:data-[state=active]:text-white"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Sync
+        </TabsTrigger>
+        <TabsTrigger
+          value="data"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent px-5 py-3.5 font-medium text-slate-600 transition hover:border-slate-200 hover:text-slate-900 data-[state=active]:border-slate-200 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg dark:hover:border-white/20 dark:hover:text-white dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-white/20 dark:data-[state=active]:text-white"
+        >
+          <Database className="h-4 w-4" />
+          Data
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent
+        value="matching"
+        className="space-y-6"
+        data-onboarding="settings-form"
+      >
+        <MatchingSettingsTab
+          matchConfig={matchConfig}
+          searchQuery={searchQuery}
+          highlightedSectionId={highlightedSectionId}
+          onMatchConfigChange={onMatchConfigChange}
+        />
+      </TabsContent>
+
+      <TabsContent value="sync" className="space-y-6">
+        <SyncSettingsTab
+          syncConfig={syncConfig}
+          useCustomThreshold={useCustomThreshold}
+          searchQuery={searchQuery}
+          highlightedSectionId={highlightedSectionId}
+          onSyncConfigChange={onSyncConfigChange}
+          onCustomThresholdToggle={onCustomThresholdToggle}
+          setSyncConfig={setSyncConfig}
+        />
+      </TabsContent>
+
+      <TabsContent value="data" className="space-y-6">
+        <DataManagementTab
+          cachesToClear={cachesToClear}
+          isClearing={isClearing}
+          cacheCleared={cacheCleared}
+          backupHistory={backupHistory}
+          isCreatingBackup={isCreatingBackup}
+          isRestoringBackup={isRestoringBackup}
+          autoBackupEnabled={autoBackupEnabled}
+          selectedBackupFile={selectedBackupFile}
+          backupValidationError={backupValidationError}
+          showBackupHistory={showBackupHistory}
+          isDebugEnabled={isDebugEnabled}
+          storageDebuggerEnabled={storageDebuggerEnabled}
+          logViewerEnabled={logViewerEnabled}
+          logRedactionEnabled={logRedactionEnabled}
+          stateInspectorEnabled={stateInspectorEnabled}
+          ipcViewerEnabled={ipcViewerEnabled}
+          eventLoggerEnabled={eventLoggerEnabled}
+          confidenceTestExporterEnabled={confidenceTestExporterEnabled}
+          searchQuery={searchQuery}
+          highlightedSectionId={highlightedSectionId}
+          onCachesToClearChange={onCachesToClearChange}
+          onClearCaches={onClearCaches}
+          onCreateBackup={onCreateBackup}
+          onRestoreBackup={onRestoreBackup}
+          onToggleAutoBackup={onToggleAutoBackup}
+          onFileSelect={onFileSelect}
+          onToggleBackupHistory={onToggleBackupHistory}
+          setBackupHistory={setBackupHistory}
+          onToggleDebug={onToggleDebug}
+          onStorageDebuggerChange={onStorageDebuggerChange}
+          onLogViewerChange={onLogViewerChange}
+          onLogRedactionChange={onLogRedactionChange}
+          onStateInspectorChange={onStateInspectorChange}
+          onIpcViewerChange={onIpcViewerChange}
+          onEventLoggerChange={onEventLoggerChange}
+          onConfidenceTestExporterChange={onConfidenceTestExporterChange}
+        />
+      </TabsContent>
+    </Tabs>
+  );
+
+  // Determine which view to render
+  let content;
+  if (searchQuery && searchResults.length === 0) {
+    content = renderNoResults();
+  } else if (searchQuery && searchResults.length > 0) {
+    content = renderSearchResults();
+  } else {
+    content = renderNormalTabs();
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.2 }}
+      className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/80 p-6 shadow-[0_40px_90px_-60px_rgba(15,23,42,0.15)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/40 dark:shadow-[0_40px_90px_-60px_rgba(15,23,42,0.9)]"
+    >
+      {content}
+    </motion.div>
+  );
+}

@@ -87,15 +87,25 @@ export function Root() {
     }
   }, [location.pathname]);
 
-  // Handles search focus
+  // Handles search focus with data attribute selector
   const handleSearchFocus = useCallback(() => {
-    const searchInput = document.querySelector(
+    // Try to find search input with data attribute first (for page-specific search)
+    let searchInput = document.querySelector(
       "[data-search-input]",
     ) as HTMLInputElement;
+
+    // If not found with general selector, try the specific settings search input
+    if (!searchInput && location.pathname === "/settings") {
+      searchInput = document.querySelector(
+        "[data-search-input='settings']",
+      ) as HTMLInputElement;
+    }
+
     if (searchInput) {
       searchInput.focus();
+      searchInput.select();
     }
-  }, []);
+  }, [location.pathname]);
 
   // Handles modal close - scoped to shortcuts panel only when open
   const handleCloseModal = useCallback(() => {
@@ -109,6 +119,26 @@ export function Root() {
 
   // Global keyboard shortcuts listener
   useEffect(() => {
+    const isShortcutInScope = (shortcut: (typeof SHORTCUTS)[0]): boolean => {
+      // Skip page-scoped shortcuts unless on the correct route
+      if (
+        shortcut.scope === "matching-page" &&
+        location.pathname !== "/review"
+      ) {
+        return false;
+      }
+
+      // Skip settings-page scoped shortcuts unless on settings route
+      if (
+        shortcut.scope === "settings-page" &&
+        location.pathname !== "/settings"
+      ) {
+        return false;
+      }
+
+      return true;
+    };
+
     const handleKeyDown = (event: KeyboardEvent) => {
       // Special case: Handle Escape to close ShortcutsPanel only when it's open
       // This must be done before other shortcut processing to avoid conflicts
@@ -137,6 +167,19 @@ export function Root() {
           case "focus:search":
             handleSearchFocus();
             return true;
+          case "focus:settings-search":
+            // Focus the settings search input using the data attribute
+            if (location.pathname === "/settings") {
+              const settingsSearchInput = document.querySelector(
+                "[data-search-input='settings']",
+              ) as HTMLInputElement;
+              if (settingsSearchInput) {
+                settingsSearchInput.focus();
+                settingsSearchInput.select();
+                return true;
+              }
+            }
+            return false;
           case "save:config":
             handleContextSave();
             return true;
@@ -156,11 +199,8 @@ export function Root() {
       for (const shortcut of SHORTCUTS) {
         if (!matchesShortcut(event, shortcut)) continue;
 
-        // Skip page-scoped shortcuts unless on the correct route
-        if (
-          shortcut.scope === "matching-page" &&
-          location.pathname !== "/review"
-        ) {
+        // Skip if shortcut is not in current scope
+        if (!isShortcutInScope(shortcut)) {
           continue;
         }
 

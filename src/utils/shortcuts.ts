@@ -121,6 +121,14 @@ export const SHORTCUTS: Shortcut[] = [
     scope: "matching-page",
   },
   {
+    id: "settings-search",
+    category: ShortcutCategory.GENERAL,
+    keys: { key: "f", ctrl: true },
+    description: "Focus settings search input",
+    action: "focus:settings-search",
+    scope: "settings-page",
+  },
+  {
     id: "match-select-all",
     category: ShortcutCategory.MATCHING,
     keys: { key: "a", ctrl: true },
