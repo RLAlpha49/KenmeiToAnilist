@@ -83,6 +83,7 @@ import { ChangesSummary } from "../components/sync/ChangesSummary";
 import { ViewControls } from "../components/sync/ViewControls";
 import { SkeletonCard, SkeletonList } from "../components/ui/skeleton";
 import EmptyState from "../components/ui/empty-state";
+import { SyncResumeNotification } from "../components/sync/SyncResumeNotification";
 
 /**
  * Sync page component for the Kenmei to AniList sync tool.
@@ -597,6 +598,36 @@ export function SyncPage() {
   };
 
   /**
+   * Resumes sync from the last checkpoint.
+   * @source
+   */
+  const handleResumeSync = () => {
+    if (!state.resumeAvailable) {
+      console.warn("[SyncPage] ⚠️ No resume checkpoint available");
+      return;
+    }
+
+    const remainingCount = state.resumeMetadata?.remainingMediaIds.length || 0;
+    console.info(
+      `[SyncPage] ▶️ Resuming sync from checkpoint (${remainingCount} entries remaining)`,
+    );
+
+    actions.resumeSync(allEntriesToSync, token);
+    setViewMode("sync");
+  };
+
+  /**
+   * Discards the sync checkpoint and clears resume state.
+   * @source
+   */
+  const handleDiscardCheckpoint = () => {
+    console.info("[SyncPage] 🗑️ Discarding sync checkpoint");
+    actions.reset();
+    // Show toast notification (if toast system is available)
+    console.log("Sync checkpoint discarded. Starting fresh.");
+  };
+
+  /**
    * Renders a badge indicating manga status change from Kenmei to AniList.
    * @param statusWillChange - Whether the status will be updated.
    * @param userEntry - Current AniList entry for the manga.
@@ -1090,6 +1121,20 @@ export function SyncPage() {
         variants={staggerContainerVariants}
       >
         <motion.div variants={cardVariants} className="space-y-6">
+          {/* Resume notification for interrupted syncs */}
+          {state.resumeAvailable && state.resumeMetadata && (
+            <SyncResumeNotification
+              remainingCount={state.resumeMetadata.remainingMediaIds.length}
+              totalCount={
+                state.progress?.total ||
+                state.resumeMetadata.remainingMediaIds.length
+              }
+              lastSyncTime={state.resumeMetadata.timestamp}
+              onResume={handleResumeSync}
+              onDiscard={handleDiscardCheckpoint}
+            />
+          )}
+
           <motion.section
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1286,9 +1331,18 @@ export function SyncPage() {
                 </Button>
                 <Button
                   onClick={handleStartSync}
-                  disabled={entriesWithChanges.length === 0 || libraryLoading}
+                  disabled={
+                    entriesWithChanges.length === 0 ||
+                    libraryLoading ||
+                    state.resumeAvailable
+                  }
                   className="bg-linear-to-r group relative w-full overflow-hidden rounded-md from-blue-500 via-indigo-500 to-purple-500 px-6 py-2 font-semibold text-white shadow-lg transition hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
                   data-onboarding="sync-button"
+                  title={
+                    state.resumeAvailable
+                      ? "Resume or discard the interrupted sync first"
+                      : undefined
+                  }
                 >
                   <span className="absolute inset-0 bg-white/20 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                   <span className="relative flex items-center justify-center gap-2">

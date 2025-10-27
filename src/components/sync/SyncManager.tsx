@@ -129,7 +129,9 @@ const StatusAlerts: React.FC<{
   autoStart: boolean;
   syncState?: {
     error?: string | null;
+    progress?: SyncProgress | null;
     resumeMetadata?: {
+      remainingMediaIds: number[];
       timestamp: number;
     } | null;
   };
@@ -212,6 +214,12 @@ const StatusAlerts: React.FC<{
     const pausedAt = syncState?.resumeMetadata?.timestamp
       ? new Date(syncState.resumeMetadata.timestamp).toLocaleTimeString()
       : null;
+    const remainingCount =
+      syncState?.resumeMetadata?.remainingMediaIds.length || 0;
+    const completedCount = syncState?.progress?.completed || 0;
+    const totalCount = syncState?.progress?.total || remainingCount;
+    const percentage =
+      totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
     return (
       <Alert className="mb-4 border-amber-200/70 bg-amber-50/80 backdrop-blur-md dark:border-amber-800/60 dark:bg-amber-900/30">
@@ -230,6 +238,14 @@ const StatusAlerts: React.FC<{
                 <span className="ml-1 inline-block text-xs text-amber-600/70 dark:text-amber-300/70">
                   Paused at {pausedAt}
                 </span>
+              )}
+              {remainingCount > 0 && (
+                <div className="mt-2 text-xs text-amber-600/70 dark:text-amber-300/70">
+                  <div>{remainingCount} entries remaining</div>
+                  <div>
+                    Checkpoint: {percentage}% complete before interruption
+                  </div>
+                </div>
               )}
             </AlertDescription>
           </div>

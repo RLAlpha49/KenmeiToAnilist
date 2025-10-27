@@ -1479,3 +1479,114 @@ export function resetOnboarding(): void {
     console.error("[Storage] Error resetting onboarding status", error);
   }
 }
+
+/**
+ * Validates a sync snapshot object for completeness and correctness.
+ * @param snapshot - The snapshot object to validate.
+ * @returns Validation result with status and optional reason.
+ * @example
+ * const result = validateSyncSnapshot(parsed);
+ * if (!result.valid) {
+ *   console.error("Invalid snapshot:", result.reason);
+ * }
+ */
+export function validateSyncSnapshot(snapshot: unknown): {
+  valid: boolean;
+  reason?: string;
+} {
+  if (!snapshot || typeof snapshot !== "object") {
+    return { valid: false, reason: "Snapshot is not an object" };
+  }
+
+  const snap = snapshot as Record<string, unknown>;
+
+  if (!Array.isArray(snap.entries)) {
+    return { valid: false, reason: "Missing or invalid entries array" };
+  }
+
+  if (!Array.isArray(snap.uniqueMediaIds)) {
+    return { valid: false, reason: "Missing or invalid uniqueMediaIds array" };
+  }
+
+  if (!Array.isArray(snap.remainingMediaIds)) {
+    return {
+      valid: false,
+      reason: "Missing or invalid remainingMediaIds array",
+    };
+  }
+
+  if (snap.remainingMediaIds.length === 0) {
+    return { valid: false, reason: "No remaining entries in snapshot" };
+  }
+
+  if (!snap.progress || typeof snap.progress !== "object") {
+    return { valid: false, reason: "Missing or invalid progress object" };
+  }
+
+  if (typeof snap.timestamp !== "number") {
+    return { valid: false, reason: "Missing or invalid timestamp" };
+  }
+
+  if (snap.timestamp > Date.now()) {
+    return { valid: false, reason: "Timestamp is in the future" };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Checks if a sync snapshot is stale based on its timestamp.
+ * @param timestamp - The snapshot timestamp in milliseconds.
+ * @param maxAgeHours - Maximum age in hours before considering stale (default 24 hours).
+ * @returns True if the snapshot is stale, false otherwise.
+ * @example
+ * if (isSyncSnapshotStale(snapshot.timestamp)) {
+ *   console.warn("Snapshot is older than 24 hours");
+ * }
+ */
+export function isSyncSnapshotStale(
+  timestamp: number,
+  maxAgeHours: number = 24,
+): boolean {
+  const ageInHours = (Date.now() - timestamp) / (1000 * 60 * 60);
+  return ageInHours > maxAgeHours;
+}
+
+/**
+ * Cleans up stale sync snapshots from storage.
+ * Removes snapshots that are older than the maximum age or invalid.
+ * @example
+ * cleanupStaleSyncSnapshot(); // Remove stale snapshots on app start
+ */
+export function cleanupStaleSyncSnapshot(): void {
+  try {
+    const storedSnapshot = storage.getItem(STORAGE_KEYS.ACTIVE_SYNC_SNAPSHOT);
+    if (!storedSnapshot) {
+      return;
+    }
+
+    const parsed = JSON.parse(storedSnapshot);
+    const validation = validateSyncSnapshot(parsed);
+
+    if (!validation.valid) {
+      console.warn(
+        `[Storage] Removing invalid sync snapshot: ${validation.reason}`,
+      );
+      storage.removeItem(STORAGE_KEYS.ACTIVE_SYNC_SNAPSHOT);
+      return;
+    }
+
+    if (isSyncSnapshotStale(parsed.timestamp)) {
+      const ageHours = Math.round(
+        (Date.now() - parsed.timestamp) / (1000 * 60 * 60),
+      );
+      console.warn(
+        `[Storage] Removing stale sync snapshot (${ageHours} hours old)`,
+      );
+      storage.removeItem(STORAGE_KEYS.ACTIVE_SYNC_SNAPSHOT);
+    }
+  } catch (error) {
+    console.error("[Storage] Error cleaning up sync snapshot:", error);
+    storage.removeItem(STORAGE_KEYS.ACTIVE_SYNC_SNAPSHOT);
+  }
+}

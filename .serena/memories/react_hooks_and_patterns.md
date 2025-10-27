@@ -183,6 +183,7 @@ handleAcceptMatch(createBatchOperation(selectedMatches));
 - Batch operations use the existing `{ isBatchOperation: true, matches: MangaMatchResult[] }` pattern
 - Handlers automatically create `BatchCommand` instances for undo/redo
 - Example:
+
   ```typescript
   const selectedMatches = matchResults.filter((m) => selectedIds.has(m.kenmeiManga.id));
   handleAcceptMatch({ isBatchOperation: true, matches: selectedMatches });

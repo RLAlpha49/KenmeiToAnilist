@@ -17,7 +17,12 @@ import {
   exportSyncReport,
   saveSyncReportToHistory,
 } from "../utils/exportUtils";
-import { storage, STORAGE_KEYS } from "../utils/storage";
+import {
+  storage,
+  STORAGE_KEYS,
+  validateSyncSnapshot,
+  isSyncSnapshotStale,
+} from "../utils/storage";
 import { captureError, ErrorType } from "../utils/errorHandling";
 import {
   useDebugActions,
@@ -139,14 +144,24 @@ async function executeSyncModeImpl(
   entries: AniListMediaEntry[],
   token: string,
   abortController: AbortController,
-  uniqueMediaIds: number[],
-  setState: React.Dispatch<React.SetStateAction<SynchronizationState>>,
-  updateSnapshotFromProgress: (
-    progress: SyncProgress | null,
-    entriesForRun: AniListMediaEntry[],
-  ) => void,
-  initialEntriesRef: { current: AniListMediaEntry[] },
+  options: {
+    uniqueMediaIds: number[];
+    setState: React.Dispatch<React.SetStateAction<SynchronizationState>>;
+    updateSnapshotFromProgress: (
+      progress: SyncProgress | null,
+      entriesForRun: AniListMediaEntry[],
+    ) => void;
+    initialEntriesRef: { current: AniListMediaEntry[] };
+    resumeSnapshotRef: { current: SyncResumeSnapshot | null };
+  },
 ): Promise<{ syncReport: SyncReport; lastReportedProgress: SyncProgress }> {
+  const {
+    uniqueMediaIds,
+    setState,
+    updateSnapshotFromProgress,
+    initialEntriesRef,
+    resumeSnapshotRef,
+  } = options;
   let lastReportedProgress: SyncProgress = {
     total: uniqueMediaIds.length,
     completed: 0,
@@ -183,6 +198,7 @@ async function executeSyncModeImpl(
         setState((prev) => ({ ...prev, progress: normalized }));
         updateSnapshotFromProgress(normalized, initialEntriesRef.current);
       },
+      resumeSnapshotRef,
     );
     return { syncReport, lastReportedProgress };
   }
@@ -231,6 +247,7 @@ async function executeSyncModeImpl(
       setState((prev) => ({ ...prev, progress }));
       updateSnapshotFromProgress(progress, initialEntriesRef.current);
     },
+    resumeSnapshotRef,
   );
 
   // Then incremental entries sequentially
@@ -243,6 +260,7 @@ async function executeSyncModeImpl(
     setState,
     updateSnapshotFromProgress,
     initialEntriesRef,
+    resumeSnapshotRef,
     onProgressUpdate: () => {
       /* no-op: runIncrementalEntries updates state directly */
     },
@@ -279,6 +297,59 @@ const saveSnapshotToStorage = (snapshot: SyncResumeSnapshot | null): void => {
       error,
     );
   }
+};
+
+/**
+ * Appends a batch result to the snapshot's report fragment and persists to storage.
+ * Merges per-media results into the persisted sync report.
+ * @param resumeSnapshotRef - Reference to the current resume snapshot.
+ * @param mediaId - The media ID that was processed.
+ * @param success - Whether the batch was successful.
+ * @param error - Optional error message if the batch failed.
+ * @source
+ */
+const appendBatchResultToSnapshot = (
+  resumeSnapshotRef: { current: SyncResumeSnapshot | null },
+  mediaId: number,
+  success: boolean,
+  error?: string,
+): void => {
+  if (!resumeSnapshotRef.current) {
+    console.debug("[Synchronization] 🔍 No snapshot to append batch result to");
+    return;
+  }
+
+  const snapshot = resumeSnapshotRef.current;
+
+  // Get current fragment or create new report
+  const currentFragment = snapshot.reportFragment
+    ? fromPersistedReport(snapshot.reportFragment)
+    : {
+        totalEntries: 0,
+        successfulUpdates: 0,
+        failedUpdates: 0,
+        skippedEntries: 0,
+        errors: [],
+        timestamp: new Date().toISOString(),
+      };
+
+  // Create a single-entry report for this batch result
+  const batchReport: SyncReport = {
+    totalEntries: 1,
+    successfulUpdates: success ? 1 : 0,
+    failedUpdates: success ? 0 : 1,
+    skippedEntries: 0,
+    errors: error ? [{ mediaId, error }] : [],
+    timestamp: new Date().toISOString(),
+  };
+
+  // Merge the batch result into the fragment
+  const mergedFragment = mergeReports(currentFragment, batchReport);
+
+  // Update snapshot and persist
+  snapshot.reportFragment = toPersistedReport(mergedFragment);
+  snapshot.timestamp = Date.now();
+  saveSnapshotToStorage(snapshot);
 };
 
 /**
@@ -409,6 +480,7 @@ interface SynchronizationState {
  * @param abortSignal - Signal for cancelling the batch operation.
  * @param uniqueIds - Unique media IDs for progress normalization.
  * @param onProgressUpdate - Callback for progress updates.
+ * @param resumeSnapshotRef - Reference to the current resume snapshot for persisting batch results.
  * @returns Promise resolving to the batch sync report.
  * @source
  */
@@ -418,6 +490,7 @@ async function runRegularBatch(
   abortSignal: AbortSignal,
   uniqueIds: number[],
   onProgressUpdate: (p: SyncProgress) => void,
+  resumeSnapshotRef: { current: SyncResumeSnapshot | null },
 ): Promise<SyncReport> {
   if (batchEntries.length === 0) {
     return {
@@ -441,6 +514,16 @@ async function runRegularBatch(
     },
     abortSignal,
     uniqueIds,
+    (progress, batchResult) => {
+      // Batch completion - persist checkpoint with batch result
+      // Append batch result to snapshot's report fragment
+      appendBatchResultToSnapshot(
+        resumeSnapshotRef,
+        batchResult.mediaId,
+        batchResult.success,
+        batchResult.error,
+      );
+    },
   );
 }
 
@@ -462,6 +545,7 @@ interface IncrementalSyncContext {
   ) => void;
   initialEntriesRef: { current: AniListMediaEntry[] };
   onProgressUpdate: (p: SyncProgress) => void;
+  resumeSnapshotRef: { current: SyncResumeSnapshot | null };
 }
 
 /**
@@ -538,8 +622,11 @@ function finalizeSyncOperation(
   const finalReport = mergeReports(existingReportFragment, syncReport);
 
   if (!pauseRequested) {
-    saveSyncReportToHistory(finalReport);
-    clearResumeSnapshot();
+    try {
+      saveSyncReportToHistory(finalReport);
+    } finally {
+      clearResumeSnapshot();
+    }
   }
 
   setState((prev) => ({
@@ -573,6 +660,7 @@ async function runIncrementalEntries(
     updateSnapshotFromProgress,
     initialEntriesRef,
     onProgressUpdate,
+    resumeSnapshotRef,
   } = context;
   const progressUpdater = createProgressUpdater(
     uniqueIds,
@@ -613,6 +701,16 @@ async function runIncrementalEntries(
         },
         abortSignal,
         uniqueIds,
+        (progress, batchResult) => {
+          // Batch completion - persist checkpoint with batch result
+          // Append batch result to snapshot's report fragment
+          appendBatchResultToSnapshot(
+            resumeSnapshotRef,
+            batchResult.mediaId,
+            batchResult.success,
+            batchResult.error,
+          );
+        },
       );
 
       if (abortSignal.aborted) {
@@ -955,10 +1053,8 @@ export function useSynchronization(): [
       return;
     }
 
-    const pendingEntries = cloneEntries(
-      entriesForRun.filter((entry) =>
-        remainingMediaIds.includes(entry.mediaId),
-      ),
+    const pendingEntries = entriesForRun.filter((entry) =>
+      remainingMediaIds.includes(entry.mediaId),
     );
 
     if (progress.currentEntry) {
@@ -981,7 +1077,7 @@ export function useSynchronization(): [
     }
 
     const snapshot: SyncResumeSnapshot = {
-      entries: pendingEntries,
+      entries: cloneEntries(pendingEntries),
       uniqueMediaIds: [...uniqueMediaIds],
       completedMediaIds,
       remainingMediaIds,
@@ -1002,8 +1098,9 @@ export function useSynchronization(): [
     };
 
     resumeSnapshotRef.current = snapshot;
-    initialEntriesRef.current = pendingEntries;
-    saveSnapshotToStorage(snapshot);
+    initialEntriesRef.current = cloneEntries(pendingEntries);
+    // NOTE: Snapshot persistence deferred to batch completion callback (appendBatchResultToSnapshot)
+    // to reduce redundant storage writes. Snapshot is updated in memory here but only persisted on batch boundary.
     setState((prev) => ({
       ...prev,
       resumeAvailable: true,
@@ -1094,6 +1191,7 @@ export function useSynchronization(): [
     }));
 
     updateSnapshotFromProgress(initialProgress, initialEntriesRef.current);
+    saveSnapshotToStorage(resumeSnapshotRef.current);
 
     return { abortController, uniqueMediaIds, initialProgress };
   };
@@ -1111,10 +1209,13 @@ export function useSynchronization(): [
       entries,
       token,
       abortController,
-      uniqueMediaIds,
-      setState,
-      updateSnapshotFromProgress,
-      initialEntriesRef,
+      {
+        uniqueMediaIds,
+        setState,
+        updateSnapshotFromProgress,
+        initialEntriesRef,
+        resumeSnapshotRef,
+      },
     );
     return executed;
   };
@@ -1148,9 +1249,21 @@ export function useSynchronization(): [
     try {
       const parsed: SyncResumeSnapshot = JSON.parse(storedSnapshot);
 
-      if (!parsed?.remainingMediaIds?.length) {
-        console.debug(
-          "[Synchronization] 🔍 Snapshot has no remaining entries, removing...",
+      // Validate snapshot structure using centralized validation
+      const validation = validateSyncSnapshot(parsed);
+      if (!validation.valid) {
+        console.warn(
+          "[Synchronization] ⚠️ Snapshot validation failed: " +
+            (validation.reason || "unknown reason"),
+        );
+        storage.removeItem(STORAGE_KEYS.ACTIVE_SYNC_SNAPSHOT);
+        return;
+      }
+
+      // Check if snapshot is stale using centralized staleness check
+      if (isSyncSnapshotStale(parsed.timestamp)) {
+        console.warn(
+          `[Synchronization] ⚠️ Snapshot is stale (${Math.round((Date.now() - parsed.timestamp) / (60 * 60 * 1000))} hours old), removing...`,
         );
         storage.removeItem(STORAGE_KEYS.ACTIVE_SYNC_SNAPSHOT);
         return;

@@ -1276,6 +1276,8 @@ function generateSyncReport(
  * @param onProgress - Optional callback for progress updates.
  * @param abortSignal - Optional abort signal to cancel the sync.
  * @param displayOrderMediaIds - Optional array of media IDs to control sync order.
+ * @param onBatchComplete - Optional callback fired after each media ID completes (batch boundary).
+ *   Called with current progress state and last batch result to enable checkpoint persistence.
  * @returns A promise resolving to a SyncReport object.
  * @source
  */
@@ -1285,6 +1287,10 @@ export async function syncMangaBatch(
   onProgress?: (progress: SyncProgress) => void,
   abortSignal?: AbortSignal,
   displayOrderMediaIds?: number[],
+  onBatchComplete?: (
+    progress: SyncProgress,
+    batchResult: { mediaId: number; success: boolean; error?: string },
+  ) => void,
 ): Promise<SyncReport> {
   return withGroupAsync(
     `[AniListSync] Batch Sync (${entries.length} entries)`,
@@ -1364,6 +1370,18 @@ export async function syncMangaBatch(
         progress.currentStep = null;
 
         if (onProgress) onProgress({ ...progress });
+
+        // Persist checkpoint after each batch (media ID) completes
+        if (onBatchComplete) {
+          onBatchComplete(
+            { ...progress },
+            {
+              mediaId: mediaIdNum,
+              success: result.success,
+              error: result.error,
+            },
+          );
+        }
       }
 
       return generateSyncReport(entries, progress, errors);
@@ -1379,6 +1397,7 @@ export async function syncMangaBatch(
  * @param token - The user's authentication token.
  * @param onProgress - Optional callback for progress updates.
  * @param abortSignal - Optional abort signal to cancel the retry.
+ * @param onBatchComplete - Optional callback fired after each media ID completes.
  * @returns A promise resolving to a SyncReport object.
  * @source
  */
@@ -1388,6 +1407,10 @@ export async function retryFailedUpdates(
   token: string,
   onProgress?: (progress: SyncProgress) => void,
   abortSignal?: AbortSignal,
+  onBatchComplete?: (
+    progress: SyncProgress,
+    batchResult: { mediaId: number; success: boolean; error?: string },
+  ) => void,
 ): Promise<SyncReport> {
   // Filter entries to only include previously failed ones
   const entriesToRetry = entries.filter((entry) =>
@@ -1422,5 +1445,12 @@ export async function retryFailedUpdates(
   }
 
   // Run the sync with only the failed entries
-  return syncMangaBatch(entriesToRetry, token, onProgress, abortSignal);
+  return syncMangaBatch(
+    entriesToRetry,
+    token,
+    onProgress,
+    abortSignal,
+    undefined,
+    onBatchComplete,
+  );
 }
