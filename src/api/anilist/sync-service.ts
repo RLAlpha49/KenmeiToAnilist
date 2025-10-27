@@ -1269,6 +1269,79 @@ function generateSyncReport(
 }
 
 /**
+ * Helper to process a single media ID within the batch sync.
+ */
+async function processMediaIdInBatch(
+  mediaIdNum: number,
+  context: {
+    entriesByMediaId: Record<number, AniListMediaEntry[]>;
+    token: string;
+    apiCallsCompleted: { count: number };
+    progress: SyncProgress;
+    onProgress?: (progress: SyncProgress) => void;
+    abortSignal?: AbortSignal;
+    onBatchComplete?: (
+      progress: SyncProgress,
+      batchResult: { mediaId: number; success: boolean; error?: string },
+    ) => void;
+    errors?: { mediaId: number; error: string }[];
+  },
+): Promise<void> {
+  const mediaEntries = context.entriesByMediaId[mediaIdNum];
+
+  if (!mediaEntries || mediaEntries.length === 0) {
+    console.debug(
+      `[AniListSync] ⏭️ Skipping media ${mediaIdNum} — no entries in current batch`,
+    );
+    return;
+  }
+
+  if (context.abortSignal?.aborted) {
+    console.info("[AniListSync] ⏹️ Sync operation aborted by user");
+    return;
+  }
+
+  const result = await processMediaEntries(
+    mediaIdNum,
+    context.entriesByMediaId,
+    context.token,
+    context.apiCallsCompleted,
+    context.progress,
+    context.onProgress,
+    context.abortSignal,
+  );
+
+  // Update progress counters
+  context.progress.completed++;
+
+  if (result.success) {
+    context.progress.successful++;
+  } else {
+    context.progress.failed++;
+    if (result.error && context.errors) {
+      context.errors.push({ mediaId: mediaIdNum, error: result.error });
+    }
+  }
+
+  // Clear current entry info
+  context.progress.currentEntry = null;
+  context.progress.currentStep = null;
+
+  if (context.onProgress) context.onProgress({ ...context.progress });
+
+  // Persist checkpoint after each batch (media ID) completes
+  if (context.onBatchComplete)
+    context.onBatchComplete(
+      { ...context.progress },
+      {
+        mediaId: mediaIdNum,
+        success: result.success,
+        error: result.error,
+      },
+    );
+}
+
+/**
  * Process a batch of manga updates with rate limiting and progress tracking.
  *
  * @param entries - Array of AniList media entries to sync.
@@ -1327,61 +1400,19 @@ export async function syncMangaBatch(
 
       // Process each media ID in order
       for (const mediaIdNum of userOrderMediaIds) {
-        const mediaEntries = entriesByMediaId[mediaIdNum];
-
-        if (!mediaEntries || mediaEntries.length === 0) {
-          console.debug(
-            `[AniListSync] ⏭️ Skipping media ${mediaIdNum} — no entries in current batch`,
-          );
-          continue;
-        }
-
-        if (abortSignal?.aborted) {
-          console.info("[AniListSync] ⏹️ Sync operation aborted by user");
-          break;
-        }
-
-        const result = await processMediaEntries(
-          mediaIdNum,
+        await processMediaIdInBatch(mediaIdNum, {
           entriesByMediaId,
           token,
           apiCallsCompleted,
           progress,
           onProgress,
           abortSignal,
-        );
+          onBatchComplete,
+          errors,
+        });
 
-        // Update progress counters
-        progress.completed++;
-
-        if (result.success) {
-          progress.successful++;
-        } else {
-          progress.failed++;
-          if (result.error)
-            errors.push({
-              mediaId: mediaIdNum,
-              error: result.error,
-            });
-        }
-
-        // Clear current entry info
-        progress.currentEntry = null;
-        progress.currentStep = null;
-
-        if (onProgress) onProgress({ ...progress });
-
-        // Persist checkpoint after each batch (media ID) completes
-        if (onBatchComplete) {
-          onBatchComplete(
-            { ...progress },
-            {
-              mediaId: mediaIdNum,
-              success: result.success,
-              error: result.error,
-            },
-          );
-        }
+        // If the caller aborted during processing, exit early
+        if (abortSignal?.aborted) break;
       }
 
       return generateSyncReport(entries, progress, errors);

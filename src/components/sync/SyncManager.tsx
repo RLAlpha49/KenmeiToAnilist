@@ -143,7 +143,8 @@ const StatusAlerts: React.FC<{
   autoStart,
   syncState,
 }) => {
-  if (status === "idle" && !autoStart) {
+  const renderIdle = () => {
+    if (autoStart) return null;
     return (
       <div className="mb-6 text-center">
         <div className="relative overflow-hidden rounded-3xl border border-blue-200/70 bg-blue-50/70 p-6 shadow-sm dark:border-blue-800/60 dark:bg-blue-900/30">
@@ -186,31 +187,29 @@ const StatusAlerts: React.FC<{
         </div>
       </div>
     );
-  }
+  };
 
-  if (status === "syncing") {
-    return (
-      <Alert className="mb-4 border-blue-200/70 bg-blue-50/80 backdrop-blur-md dark:border-blue-800/60 dark:bg-blue-900/30">
-        <div className="flex gap-3">
-          <div className="bg-linear-to-br flex h-10 w-20 shrink-0 items-center justify-center rounded-full from-blue-500 to-indigo-500 text-white shadow">
-            <RefreshCw className="h-5 w-10 animate-spin" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <AlertTitle className="text-blue-800 dark:text-blue-200">
-              Synchronization in progress
-            </AlertTitle>
-            <AlertDescription className="mt-1 text-sm text-blue-700/80 dark:text-blue-200/80">
-              {incrementalSync
-                ? "Applying incremental updates to trigger AniList activity merges. Larger entries may take an extra moment."
-                : "Updating your AniList library with the latest Kenmei data. Sit tight — this won't take long."}
-            </AlertDescription>
-          </div>
+  const renderSyncing = () => (
+    <Alert className="mb-4 border-blue-200/70 bg-blue-50/80 backdrop-blur-md dark:border-blue-800/60 dark:bg-blue-900/30">
+      <div className="flex gap-3">
+        <div className="bg-linear-to-br flex h-10 w-20 shrink-0 items-center justify-center rounded-full from-blue-500 to-indigo-500 text-white shadow">
+          <RefreshCw className="h-5 w-10 animate-spin" />
         </div>
-      </Alert>
-    );
-  }
+        <div className="min-w-0 flex-1">
+          <AlertTitle className="text-blue-800 dark:text-blue-200">
+            Synchronization in progress
+          </AlertTitle>
+          <AlertDescription className="mt-1 text-sm text-blue-700/80 dark:text-blue-200/80">
+            {incrementalSync
+              ? "Applying incremental updates to trigger AniList activity merges. Larger entries may take an extra moment."
+              : "Updating your AniList library with the latest Kenmei data. Sit tight — this won't take long."}
+          </AlertDescription>
+        </div>
+      </div>
+    </Alert>
+  );
 
-  if (status === "paused") {
+  const renderPaused = () => {
     const pausedAt = syncState?.resumeMetadata?.timestamp
       ? new Date(syncState.resumeMetadata.timestamp).toLocaleTimeString()
       : null;
@@ -252,53 +251,57 @@ const StatusAlerts: React.FC<{
         </div>
       </Alert>
     );
-  }
+  };
 
-  if (status === "completed") {
-    return (
-      <Alert className="mb-4 border-emerald-200/70 bg-emerald-50/80 backdrop-blur-md dark:border-emerald-800/50 dark:bg-emerald-900/20">
-        <div className="flex gap-3">
-          <div className="bg-linear-to-br flex h-10 w-20 shrink-0 items-center justify-center rounded-full from-emerald-500 to-teal-500 text-white shadow">
-            <CheckCircle className="h-5 w-10" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <AlertTitle className="text-emerald-800 dark:text-emerald-200">
-              Synchronization complete
-            </AlertTitle>
-            <AlertDescription className="mt-1 text-sm text-emerald-700/80 dark:text-emerald-200/80">
-              All entries are now up to date on AniList. Review the summary
-              below or head back to your dashboard.
-            </AlertDescription>
-          </div>
+  const renderCompleted = () => (
+    <Alert className="mb-4 border-emerald-200/70 bg-emerald-50/80 backdrop-blur-md dark:border-emerald-800/50 dark:bg-emerald-900/20">
+      <div className="flex gap-3">
+        <div className="bg-linear-to-br flex h-10 w-20 shrink-0 items-center justify-center rounded-full from-emerald-500 to-teal-500 text-white shadow">
+          <CheckCircle className="h-5 w-10" />
         </div>
-      </Alert>
-    );
-  }
-
-  if (status === "failed") {
-    return (
-      <Alert className="mb-4 border-rose-200/70 bg-rose-50/80 backdrop-blur-md dark:border-rose-900/60 dark:bg-rose-950/30">
-        <div className="flex gap-3">
-          <div className="bg-linear-to-br flex h-10 w-20 shrink-0 items-center justify-center rounded-full from-rose-500 to-red-500 text-white shadow">
-            <ShieldAlert className="h-5 w-10" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <AlertTitle className="text-rose-800 dark:text-rose-200">
-              Synchronization interrupted
-            </AlertTitle>
-            <AlertDescription className="mt-1 text-sm text-rose-700/80 dark:text-rose-200/80">
-              {syncState?.error?.includes("cancelled")
-                ? "You stopped this sync. Resume when you're ready — no further entries were processed."
-                : syncState?.error ||
-                  "A few entries didn't make it through. Review the errors below or retry the failed updates."}
-            </AlertDescription>
-          </div>
+        <div className="min-w-0 flex-1">
+          <AlertTitle className="text-emerald-800 dark:text-emerald-200">
+            Synchronization complete
+          </AlertTitle>
+          <AlertDescription className="mt-1 text-sm text-emerald-700/80 dark:text-emerald-200/80">
+            All entries are now up to date on AniList. Review the summary below
+            or head back to your dashboard.
+          </AlertDescription>
         </div>
-      </Alert>
-    );
-  }
+      </div>
+    </Alert>
+  );
 
-  return null;
+  const renderFailed = () => (
+    <Alert className="mb-4 border-rose-200/70 bg-rose-50/80 backdrop-blur-md dark:border-rose-900/60 dark:bg-rose-950/30">
+      <div className="flex gap-3">
+        <div className="bg-linear-to-br flex h-10 w-20 shrink-0 items-center justify-center rounded-full from-rose-500 to-red-500 text-white shadow">
+          <ShieldAlert className="h-5 w-10" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <AlertTitle className="text-rose-800 dark:text-rose-200">
+            Synchronization interrupted
+          </AlertTitle>
+          <AlertDescription className="mt-1 text-sm text-rose-700/80 dark:text-rose-200/80">
+            {syncState?.error?.includes("cancelled")
+              ? "You stopped this sync. Resume when you're ready — no further entries were processed."
+              : syncState?.error ||
+                "A few entries didn't make it through. Review the errors below or retry the failed updates."}
+          </AlertDescription>
+        </div>
+      </div>
+    </Alert>
+  );
+
+  const renderers: Record<string, () => React.ReactElement | null> = {
+    idle: renderIdle,
+    syncing: renderSyncing,
+    paused: renderPaused,
+    completed: renderCompleted,
+    failed: renderFailed,
+  };
+
+  return renderers[status] ? renderers[status]() : null;
 };
 
 // Helper component for current entry display
