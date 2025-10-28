@@ -44,7 +44,11 @@ interface Props {
     autoAccept?: boolean,
     directAccept?: boolean,
   ) => void;
-  onResetToPending: (match: MangaMatchResult) => void;
+  onResetToPending: (
+    match:
+      | MangaMatchResult
+      | { isBatchOperation: boolean; matches: MangaMatchResult[] },
+  ) => void;
   searchQuery: string;
   onProceedToSync: () => void;
   onBackToImport: () => void;

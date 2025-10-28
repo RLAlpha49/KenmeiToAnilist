@@ -38,6 +38,16 @@ import { RematchOptions } from "../components/matching/RematchOptions";
 import { CacheClearingNotification } from "../components/matching/CacheClearingNotification";
 import { SearchModal } from "../components/matching/SearchModal";
 import { BatchSelectionToolbar } from "../components/matching/BatchSelectionToolbar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../components/ui/alert-dialog";
 import InitializationCard from "../components/matching/InitializationCard";
 import AuthRequiredCard from "../components/matching/AuthRequiredCard";
 import { AnimatePresence, motion } from "framer-motion";
@@ -120,6 +130,14 @@ export function MatchingPage() {
   const [selectedMatchIds, setSelectedMatchIds] = useState<Set<number>>(
     new Set(),
   );
+
+  // State for batch operation confirmations and progress
+  const [showBatchRejectDialog, setShowBatchRejectDialog] = useState(false);
+  const [showBatchResetDialog, setShowBatchResetDialog] = useState(false);
+  const [batchOperationProgress, setBatchOperationProgress] = useState<{
+    current: number;
+    total: number;
+  } | null>(null);
 
   // State for manga data
   const [manga, setManga] = useState<KenmeiManga[]>([]);
@@ -299,38 +317,108 @@ export function MatchingPage() {
       selectedMatchIds.has(match.kenmeiManga.id),
     );
     if (selectedMatches.length > 0) {
+      // Set progress tracking (simulated: 0% -> 50% -> 100%)
+      setBatchOperationProgress({ current: 0, total: selectedMatches.length });
+
+      // Execute the operation
       matchHandlers.handleAcceptMatch({
         isBatchOperation: true,
         matches: selectedMatches,
       });
-      handleClearSelection();
+
+      // Complete progress
+      setBatchOperationProgress({
+        current: selectedMatches.length,
+        total: selectedMatches.length,
+      });
+
+      // Show success toast
+      toast.success(`Accepted ${selectedMatches.length} matches`, {
+        description: "You can undo this action with Ctrl+Z",
+      });
+
+      // Clear progress and selection after a short delay
+      setTimeout(() => {
+        setBatchOperationProgress(null);
+        handleClearSelection();
+      }, 500);
     }
   }, [matchResults, selectedMatchIds, matchHandlers, handleClearSelection]);
 
   const handleBatchReject = useCallback(() => {
+    setShowBatchRejectDialog(true);
+  }, []);
+
+  const confirmBatchReject = useCallback(() => {
     const selectedMatches = matchResults.filter((match) =>
       selectedMatchIds.has(match.kenmeiManga.id),
     );
     if (selectedMatches.length > 0) {
+      // Set progress tracking
+      setBatchOperationProgress({ current: 0, total: selectedMatches.length });
+
+      // Execute the operation
       matchHandlers.handleRejectMatch({
         isBatchOperation: true,
         matches: selectedMatches,
       });
-      handleClearSelection();
+
+      // Complete progress
+      setBatchOperationProgress({
+        current: selectedMatches.length,
+        total: selectedMatches.length,
+      });
+
+      // Show success toast
+      toast.success(`Rejected ${selectedMatches.length} matches`, {
+        description: "You can undo this action with Ctrl+Z",
+      });
+
+      // Clear progress and selection after a short delay
+      setTimeout(() => {
+        setBatchOperationProgress(null);
+        handleClearSelection();
+      }, 500);
     }
+    setShowBatchRejectDialog(false);
   }, [matchResults, selectedMatchIds, matchHandlers, handleClearSelection]);
 
   const handleBatchReset = useCallback(() => {
+    setShowBatchResetDialog(true);
+  }, []);
+
+  const confirmBatchReset = useCallback(() => {
     const selectedMatches = matchResults.filter((match) =>
       selectedMatchIds.has(match.kenmeiManga.id),
     );
     if (selectedMatches.length > 0) {
+      // Set progress tracking
+      setBatchOperationProgress({ current: 0, total: selectedMatches.length });
+
+      // Execute the operation
       matchHandlers.handleResetToPending({
         isBatchOperation: true,
         matches: selectedMatches,
       });
-      handleClearSelection();
+
+      // Complete progress
+      setBatchOperationProgress({
+        current: selectedMatches.length,
+        total: selectedMatches.length,
+      });
+
+      // Show success toast
+      toast.success(`Reset ${selectedMatches.length} matches to pending`, {
+        description: "You can undo this action with Ctrl+Z",
+      });
+
+      // Clear progress and selection after a short delay
+      setTimeout(() => {
+        setBatchOperationProgress(null);
+        handleClearSelection();
+      }, 500);
     }
+    setShowBatchResetDialog(false);
   }, [matchResults, selectedMatchIds, matchHandlers, handleClearSelection]);
 
   // Add a ref to track if we've already done initialization
@@ -1692,6 +1780,7 @@ export function MatchingPage() {
                   onReject={handleBatchReject}
                   onReset={handleBatchReset}
                   onClearSelection={handleClearSelection}
+                  isProcessing={batchOperationProgress !== null}
                 />
               )}
 
@@ -1748,6 +1837,58 @@ export function MatchingPage() {
           }}
           onSelectMatch={matchHandlers.handleSelectSearchMatch}
         />
+
+        {/* Batch Reject Confirmation Dialog */}
+        <AlertDialog
+          open={showBatchRejectDialog}
+          onOpenChange={setShowBatchRejectDialog}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Reject Selected Matches?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will reject {selectedMatchIds.size} selected matches. You
+                can undo this action with Ctrl+Z.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmBatchReject}
+                className="bg-rose-600 hover:bg-rose-700 focus:ring-rose-600"
+              >
+                Confirm Reject
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Batch Reset Confirmation Dialog */}
+        <AlertDialog
+          open={showBatchResetDialog}
+          onOpenChange={setShowBatchResetDialog}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                Reset Selected Matches to Pending?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This will reset {selectedMatchIds.size} matches to pending
+                status. You can undo this action with Ctrl+Z.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmBatchReset}
+                className="bg-orange-600 hover:bg-orange-700 focus:ring-orange-600"
+              >
+                Confirm Reset
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Cache Clearing Notification */}
         {matchingProcess.isCacheClearing && (

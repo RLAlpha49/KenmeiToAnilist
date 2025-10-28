@@ -77,7 +77,11 @@ export interface MangaMatchingPanelProps {
     autoAccept?: boolean,
     directAccept?: boolean,
   ) => void;
-  onResetToPending?: (match: MangaMatchResult) => void;
+  onResetToPending?: (
+    match:
+      | MangaMatchResult
+      | { isBatchOperation: boolean; matches: MangaMatchResult[] },
+  ) => void;
   searchQuery?: string;
   onSetMatchedToPending?: () => void;
   disableSetMatchedToPending?: boolean;
@@ -590,27 +594,8 @@ export function MangaMatchingPanel({
 
     // Skip all matches at once if possible
     if (pendingWithNoMatches.length > 0 && onRejectMatch) {
-      // Create a modified list with skipped status for the batch
-      const batchedReject = matches.map((match) => {
-        // Only modify the matches that need to be skipped
-        if (
-          match.status === "pending" &&
-          (!match.anilistMatches || match.anilistMatches.length === 0)
-        ) {
-          // Return a modified version with skipped status
-          return {
-            ...match,
-            status: "skipped" as const,
-            selectedMatch: undefined,
-            matchDate: new Date().toISOString(),
-          };
-        }
-        // Return the original for all other matches
-        return match;
-      });
-
-      // Pass the batch operation using isBatchOperation flag
-      onRejectMatch({ isBatchOperation: true, matches: batchedReject });
+      // Pass only the affected matches to the handler
+      onRejectMatch({ isBatchOperation: true, matches: pendingWithNoMatches });
 
       // Short delay to ensure state updates have time to process
       setTimeout(() => {
@@ -648,34 +633,8 @@ export function MangaMatchingPanel({
 
     // Accept all matches at once if possible
     if (pendingWithMatches.length > 0 && onAcceptMatch) {
-      // Create a single batched update
-      const batchedAccept = matches.map((match) => {
-        // Only modify the matches that need to be accepted
-        if (
-          match.status === "pending" &&
-          match.anilistMatches &&
-          match.anilistMatches.length > 0
-        ) {
-          // Return a modified version with matched status
-          return {
-            ...match,
-            status: "matched" as const,
-            selectedMatch: match.anilistMatches[0].manga,
-            matchDate: new Date().toISOString(),
-          };
-        }
-        // Return the original for all other matches
-        return match;
-      });
-
-      // Pass the full array with modifications to the parent
-      // Special flag to indicate this is a batch operation
-      const batchOperation = {
-        isBatchOperation: true,
-        matches: batchedAccept,
-      };
-
-      onAcceptMatch(batchOperation);
+      // Pass only the affected matches to the handler
+      onAcceptMatch({ isBatchOperation: true, matches: pendingWithMatches });
 
       // Short delay to ensure state updates have time to process
       setTimeout(() => {
@@ -755,31 +714,8 @@ export function MangaMatchingPanel({
 
     // Reset all these manga to pending status
     if (skippedManga.length > 0 && onResetToPending) {
-      // Create a batched update by modifying the matches
-      const batchedReset = matches.map((match) => {
-        // Only modify the matches that are skipped
-        if (match.status === "skipped") {
-          // Return a modified version with pending status
-          return {
-            ...match,
-            status: "pending" as const,
-            selectedMatch: undefined,
-            matchDate: new Date().toISOString(),
-          };
-        }
-        // Return the original for all other matches
-        return match;
-      });
-
-      // Pass the full array with modifications to the parent
-      // Special flag to indicate this is a batch operation
-      const batchOperation = {
-        isBatchOperation: true,
-        matches: batchedReset,
-      };
-
-      // @ts-expect-error - We're adding a special property for the batch handler to recognize
-      onResetToPending(batchOperation);
+      // Pass only the affected matches to the handler
+      onResetToPending({ isBatchOperation: true, matches: skippedManga });
 
       // Short delay to ensure state updates have time to process
       setTimeout(() => {
