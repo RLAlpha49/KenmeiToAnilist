@@ -477,6 +477,7 @@ export const STORAGE_KEYS = {
   BACKUP_HISTORY: "backup_history",
   AUTO_BACKUP_ENABLED: "auto_backup_enabled",
   SYNC_HISTORY: "sync_history",
+  BACKUP_SCHEDULE_CONFIG: "backup_schedule_config",
 };
 
 /**
@@ -657,6 +658,57 @@ export type MatchConfig = {
   enableComickSearch: boolean;
   enableMangaDexSearch: boolean;
   customRules?: CustomRulesConfig;
+};
+
+/**
+ * Backup schedule intervals.
+ *
+ * @source
+ */
+export type BackupInterval = "daily" | "weekly" | "monthly" | "disabled";
+
+/**
+ * Configuration for automatic backup scheduling.
+ *
+ * @property enabled - Whether automatic backups are enabled
+ * @property interval - How often to create backups
+ * @property lastBackupTimestamp - Unix timestamp of the last scheduled backup
+ * @property nextBackupTimestamp - Unix timestamp of the next scheduled backup
+ * @property maxBackupCount - Maximum number of backups to keep
+ * @property maxBackupSizeMB - Maximum total backup size in megabytes
+ * @property backupLocation - Full path to directory where backups are saved
+ * @property autoBackupBeforeSync - Whether to auto-backup before sync operations
+ * @property autoBackupBeforeMatch - Whether to auto-backup before match operations
+ *
+ * @source
+ */
+export interface BackupScheduleConfig {
+  enabled: boolean;
+  interval: BackupInterval;
+  lastBackupTimestamp: number | null;
+  nextBackupTimestamp: number | null;
+  maxBackupCount: number;
+  maxBackupSizeMB: number;
+  backupLocation: string;
+  autoBackupBeforeSync: boolean;
+  autoBackupBeforeMatch: boolean;
+}
+
+/**
+ * The default backup schedule configuration.
+ *
+ * @source
+ */
+export const DEFAULT_BACKUP_SCHEDULE_CONFIG: BackupScheduleConfig = {
+  enabled: false,
+  interval: "weekly",
+  lastBackupTimestamp: null,
+  nextBackupTimestamp: null,
+  maxBackupCount: 10,
+  maxBackupSizeMB: 100,
+  backupLocation: "",
+  autoBackupBeforeSync: false,
+  autoBackupBeforeMatch: false,
 };
 
 /**
@@ -1067,6 +1119,51 @@ export function getMatchConfig(): MatchConfig {
       error,
     );
     return DEFAULT_MATCH_CONFIG;
+  }
+}
+
+/**
+ * Saves backup schedule configuration to storage.
+ *
+ * Persists user's backup schedule preferences across sessions.
+ *
+ * @param config - The backup schedule configuration to save.
+ * @source
+ */
+export function saveBackupScheduleConfig(config: BackupScheduleConfig): void {
+  try {
+    storage.setItem(
+      STORAGE_KEYS.BACKUP_SCHEDULE_CONFIG,
+      JSON.stringify(config),
+    );
+  } catch (error) {
+    console.error(
+      "[Storage] Error saving backup schedule config to storage",
+      error,
+    );
+  }
+}
+
+/**
+ * Retrieves backup schedule configuration from storage.
+ *
+ * Falls back to default configuration if not found or on error.
+ *
+ * @returns The saved backup schedule configuration or default if not found.
+ * @source
+ */
+export function getBackupScheduleConfig(): BackupScheduleConfig {
+  try {
+    const config = storage.getItem(STORAGE_KEYS.BACKUP_SCHEDULE_CONFIG);
+    return config
+      ? { ...DEFAULT_BACKUP_SCHEDULE_CONFIG, ...JSON.parse(config) }
+      : DEFAULT_BACKUP_SCHEDULE_CONFIG;
+  } catch (error) {
+    console.error(
+      "[Storage] Error retrieving backup schedule config from storage",
+      error,
+    );
+    return DEFAULT_BACKUP_SCHEDULE_CONFIG;
   }
 }
 

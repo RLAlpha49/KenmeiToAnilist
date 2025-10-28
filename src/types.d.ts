@@ -17,6 +17,11 @@ import type { TokenExchangeParams } from "./types/api";
 import type { IpcLogEntry } from "./types/debug";
 import type { AniListRequest } from "./helpers/ipc/api/api-context";
 import type { MangaSource } from "./api/manga-sources/types";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { BackupScheduleConfig } from "./utils/storage";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { BackupHistoryEntry } from "./utils/backup";
+import type { ElectronBackupApi } from "./helpers/ipc/backup/backup-context";
 
 /**
  * Theme mode control interface.
@@ -54,6 +59,14 @@ interface ElectronIpcDebugBridge {
     isEnabled: () => boolean;
   };
 }
+
+/**
+ * Backup schedule management interface for the renderer process.
+ * Type-safe reference to electronBackup context exposed by preload script.
+ * @see backup-context.ts for implementation
+ * @source
+ */
+type ElectronBackup = ElectronBackupApi;
 
 /**
  * Auto-updater interface for application updates.
@@ -264,6 +277,7 @@ declare global {
 
     electronDebug?: ElectronIpcDebugBridge;
     electronUpdater: ElectronUpdater;
+    electronBackup: ElectronBackup;
 
     // Custom application state properties
     matchingProcessState?: MatchingProcessState;
@@ -273,9 +287,9 @@ declare global {
   // Define extensions to globalThis
   namespace globalThis {
     // eslint-disable-next-line no-var
-    var themeMode: ThemeModeContext;
+    var themeMode: Window["themeMode"];
     // eslint-disable-next-line no-var
-    var electronWindow: ElectronWindow;
+    var electronWindow: Window["electronWindow"];
     // eslint-disable-next-line no-var
     var electronAPI: Window["electronAPI"];
     // eslint-disable-next-line no-var
@@ -283,11 +297,13 @@ declare global {
     // eslint-disable-next-line no-var
     var electronDebug: Window["electronDebug"] | undefined;
     // eslint-disable-next-line no-var
-    var electronUpdater: ElectronUpdater;
+    var electronUpdater: Window["electronUpdater"];
+    // eslint-disable-next-line no-var
+    var electronBackup: Window["electronBackup"];
     // eslint-disable-next-line no-var
     var matchingProcessState: MatchingProcessState | undefined;
     // eslint-disable-next-line no-var
-    var activeAbortController: AbortController | undefined;
+    var activeAbortController: Window["activeAbortController"] | undefined;
     // eslint-disable-next-line no-var
     var electronStore: Window["electronAPI"]["electronStore"];
   }

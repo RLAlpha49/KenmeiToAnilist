@@ -463,7 +463,7 @@ Backups preserve your complete application data in a single file, allowing you t
 
 1. Navigate to **Settings → Data Management**
 2. Click **"Create Backup Now"** button
-3. A backup file (`kenmei-backup-TIMESTAMP.json`) will download to your Downloads folder
+3. A backup file (`backup-TIMESTAMP.json`) will download to your Downloads folder
 4. Store the file in a safe location
 
 **Automatic Backups:**
@@ -480,6 +480,11 @@ Enable automatic backups to create backup files before each sync or matching ope
 Restore a backup to return your application data to a previous state.
 
 **⚠️ Warning**: Restoring a backup will **overwrite all current application data**. Create a backup first if needed.
+
+**Restore Behavior:**
+
+- **Match Results**: When restoring, match result entries are merged with existing data (newer and unprocessed results are preserved)
+- **Other Data**: All other data (import history, settings, sync config) is completely replaced with the backup version
 
 **To Restore a Backup:**
 

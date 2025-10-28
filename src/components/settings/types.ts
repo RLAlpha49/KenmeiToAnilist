@@ -1,4 +1,4 @@
-import type { BackupHistoryEntry } from "@/utils/backup";
+import type { BackupScheduleConfig } from "@/utils/storage";
 
 export interface CachesToClear {
   auth: boolean;
@@ -15,13 +15,8 @@ export interface DataManagementProps {
   cachesToClear: CachesToClear;
   isClearing: boolean;
   cacheCleared: boolean;
-  backupHistory: BackupHistoryEntry[];
-  isCreatingBackup: boolean;
-  isRestoringBackup: boolean;
-  autoBackupEnabled: boolean;
   selectedBackupFile: File | null;
   backupValidationError: string | null;
-  showBackupHistory: boolean;
   isDebugEnabled: boolean;
   storageDebuggerEnabled: boolean;
   logViewerEnabled: boolean;
@@ -34,12 +29,16 @@ export interface DataManagementProps {
   highlightedSectionId: string | null;
   onCachesToClearChange: (caches: CachesToClear) => void;
   onClearCaches: () => void;
-  onCreateBackup: () => void;
   onRestoreBackup: () => void;
-  onToggleAutoBackup: (enabled: boolean) => void;
+  onRestoreBackupFile?: (file: File) => void;
   onFileSelect: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  onToggleBackupHistory: (show: boolean) => void;
-  setBackupHistory: (history: BackupHistoryEntry[]) => void;
+  scheduleConfig: BackupScheduleConfig;
+  nextScheduledBackup: number | null;
+  lastScheduledBackup: number | null;
+  isTriggeringBackup: boolean;
+  isRestoringBackup: boolean;
+  onScheduleConfigChange: (config: BackupScheduleConfig) => void;
+  onTriggerBackup: () => void;
   onToggleDebug: () => void;
   onStorageDebuggerChange: (enabled: boolean) => void;
   onLogViewerChange: (enabled: boolean) => void;

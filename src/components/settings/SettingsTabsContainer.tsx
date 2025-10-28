@@ -18,7 +18,11 @@ import { SyncPrivacySection } from "./SyncPrivacySection";
 import { CacheManagementSection } from "./CacheManagementSection";
 import { BackupRestoreSection } from "./BackupRestoreSection";
 import { DebugToolsSection } from "./DebugToolsSection";
-import type { MatchConfig, SyncConfig } from "@/utils/storage";
+import type {
+  MatchConfig,
+  SyncConfig,
+  BackupScheduleConfig,
+} from "@/utils/storage";
 import type { DataManagementProps } from "./types";
 
 interface SettingsSearchResult {
@@ -41,6 +45,13 @@ interface SettingsTabsContainerProps extends DataManagementProps {
   onSyncConfigChange: (config: SyncConfig, field: string) => void;
   onCustomThresholdToggle: (value: boolean) => void;
   setSyncConfig: (config: SyncConfig) => void;
+  scheduleConfig: BackupScheduleConfig;
+  nextScheduledBackup: number | null;
+  lastScheduledBackup: number | null;
+  isTriggeringBackup: boolean;
+  onScheduleConfigChange: (config: BackupScheduleConfig) => void;
+  onTriggerBackup: () => void;
+  onRestoreBackupFile?: (file: File) => void;
 }
 
 /**
@@ -59,13 +70,9 @@ export function SettingsTabsContainer({
   cachesToClear,
   isClearing,
   cacheCleared,
-  backupHistory,
-  isCreatingBackup,
   isRestoringBackup,
-  autoBackupEnabled,
   selectedBackupFile,
   backupValidationError,
-  showBackupHistory,
   isDebugEnabled,
   storageDebuggerEnabled,
   logViewerEnabled,
@@ -80,12 +87,15 @@ export function SettingsTabsContainer({
   setSyncConfig,
   onCachesToClearChange,
   onClearCaches,
-  onCreateBackup,
   onRestoreBackup,
-  onToggleAutoBackup,
+  onRestoreBackupFile,
   onFileSelect,
-  onToggleBackupHistory,
-  setBackupHistory,
+  scheduleConfig,
+  nextScheduledBackup,
+  lastScheduledBackup,
+  isTriggeringBackup,
+  onScheduleConfigChange,
+  onTriggerBackup,
   onToggleDebug,
   onStorageDebuggerChange,
   onLogViewerChange,
@@ -112,12 +122,6 @@ export function SettingsTabsContainer({
   // Render search results view - only matching subsections
   const renderSearchResults = () => (
     <div className="space-y-6">
-      <div className="text-sm text-slate-600 dark:text-slate-400">
-        <span className="font-medium text-slate-900 dark:text-white">
-          {searchResults.length}
-        </span>{" "}
-        setting{searchResults.length === 1 ? "" : "s"} found
-      </div>
       {/* Matching results */}
       {searchResults.some((r) => r.section.tab === "matching") && (
         <div className="space-y-6 border-b border-slate-200 pb-6 dark:border-white/10">
@@ -197,21 +201,20 @@ export function SettingsTabsContainer({
           )}
           {searchResults.some((r) => r.section.id === "data-backup") && (
             <BackupRestoreSection
-              backupHistory={backupHistory}
-              isCreatingBackup={isCreatingBackup}
-              isRestoringBackup={isRestoringBackup}
-              autoBackupEnabled={autoBackupEnabled}
-              selectedBackupFile={selectedBackupFile}
-              backupValidationError={backupValidationError}
-              showBackupHistory={showBackupHistory}
               searchQuery={searchQuery}
               highlightedSectionId={highlightedSectionId}
-              onCreateBackup={onCreateBackup}
+              scheduleConfig={scheduleConfig}
+              nextScheduledBackup={nextScheduledBackup}
+              lastScheduledBackup={lastScheduledBackup}
+              isTriggeringBackup={isTriggeringBackup}
+              isRestoringBackup={isRestoringBackup}
+              selectedBackupFile={selectedBackupFile}
+              backupValidationError={backupValidationError}
+              onScheduleConfigChange={onScheduleConfigChange}
+              onTriggerBackup={onTriggerBackup}
               onRestoreBackup={onRestoreBackup}
-              onToggleAutoBackup={onToggleAutoBackup}
+              onRestoreBackupFile={onRestoreBackupFile}
               onFileSelect={onFileSelect}
-              onToggleBackupHistory={onToggleBackupHistory}
-              setBackupHistory={setBackupHistory}
             />
           )}
           {searchResults.some((r) => r.section.id === "data-debug") && (
@@ -299,13 +302,9 @@ export function SettingsTabsContainer({
           cachesToClear={cachesToClear}
           isClearing={isClearing}
           cacheCleared={cacheCleared}
-          backupHistory={backupHistory}
-          isCreatingBackup={isCreatingBackup}
           isRestoringBackup={isRestoringBackup}
-          autoBackupEnabled={autoBackupEnabled}
           selectedBackupFile={selectedBackupFile}
           backupValidationError={backupValidationError}
-          showBackupHistory={showBackupHistory}
           isDebugEnabled={isDebugEnabled}
           storageDebuggerEnabled={storageDebuggerEnabled}
           logViewerEnabled={logViewerEnabled}
@@ -316,14 +315,17 @@ export function SettingsTabsContainer({
           confidenceTestExporterEnabled={confidenceTestExporterEnabled}
           searchQuery={searchQuery}
           highlightedSectionId={highlightedSectionId}
+          scheduleConfig={scheduleConfig}
+          nextScheduledBackup={nextScheduledBackup}
+          lastScheduledBackup={lastScheduledBackup}
+          isTriggeringBackup={isTriggeringBackup}
           onCachesToClearChange={onCachesToClearChange}
           onClearCaches={onClearCaches}
-          onCreateBackup={onCreateBackup}
           onRestoreBackup={onRestoreBackup}
-          onToggleAutoBackup={onToggleAutoBackup}
+          onRestoreBackupFile={onRestoreBackupFile}
           onFileSelect={onFileSelect}
-          onToggleBackupHistory={onToggleBackupHistory}
-          setBackupHistory={setBackupHistory}
+          onScheduleConfigChange={onScheduleConfigChange}
+          onTriggerBackup={onTriggerBackup}
           onToggleDebug={onToggleDebug}
           onStorageDebuggerChange={onStorageDebuggerChange}
           onLogViewerChange={onLogViewerChange}

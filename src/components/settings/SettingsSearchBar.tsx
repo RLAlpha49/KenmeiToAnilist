@@ -58,12 +58,6 @@ export function SettingsSearchBar({
           <X className="h-5 w-5" />
         </button>
       )}
-      {searchQuery && searchResults.length > 0 && (
-        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-          Found {searchResults.length} result
-          {searchResults.length === 1 ? "" : "s"}
-        </p>
-      )}
       {searchQuery && searchResults.length === 0 && (
         <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
           No results found

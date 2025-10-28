@@ -31,15 +31,12 @@ import {
   saveMatchConfig,
   MatchConfig,
   storage,
+  BackupScheduleConfig,
+  DEFAULT_BACKUP_SCHEDULE_CONFIG,
 } from "../utils/storage";
-import {
-  createBackup,
-  getBackupHistory,
-  restoreBackup,
-  importBackupFromFile,
-  BackupHistoryEntry,
-} from "../utils/backup";
+import { restoreBackup, importBackupFromFile } from "../utils/backup";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 import { getAppVersionStatus, AppVersionStatus } from "../utils/app-version";
 import { SettingsHero } from "../components/settings/SettingsHero";
 import { SettingsSearchBar } from "../components/settings/SettingsSearchBar";
@@ -152,19 +149,25 @@ export function SettingsPage() {
   const [updateError, setUpdateError] = useState<string | null>(null);
 
   // Backup management state
-  const [backupHistory, setBackupHistory] = useState<BackupHistoryEntry[]>([]);
-  const [isCreatingBackup, setIsCreatingBackup] = useState(false);
   const [isRestoringBackup, setIsRestoringBackup] = useState(false);
-  const [autoBackupEnabled, setAutoBackupEnabled] = useState(
-    storage.getItem(STORAGE_KEYS.AUTO_BACKUP_ENABLED) === "true",
-  );
   const [selectedBackupFile, setSelectedBackupFile] = useState<File | null>(
     null,
   );
   const [backupValidationError, setBackupValidationError] = useState<
     string | null
   >(null);
-  const [showBackupHistory, setShowBackupHistory] = useState(false);
+
+  // Backup schedule state
+  const [scheduleConfig, setScheduleConfig] = useState<BackupScheduleConfig>(
+    DEFAULT_BACKUP_SCHEDULE_CONFIG,
+  );
+  const [nextScheduledBackup, setNextScheduledBackup] = useState<number | null>(
+    null,
+  );
+  const [lastScheduledBackup, setLastScheduledBackup] = useState<number | null>(
+    null,
+  );
+  const [isTriggeringBackup, setIsTriggeringBackup] = useState(false);
 
   // Settings search state
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -667,9 +670,70 @@ export function SettingsPage() {
     };
   }, []);
 
-  // Load backup history on mount
+  // Load backup schedule config on mount
   useEffect(() => {
-    setBackupHistory(getBackupHistory());
+    const loadScheduleConfig = async () => {
+      try {
+        console.debug("[Settings] Loading backup schedule config...");
+        const config = await globalThis.electronBackup?.getScheduleConfig?.();
+        if (config) {
+          setScheduleConfig(config);
+        }
+        const status = await globalThis.electronBackup?.getBackupStatus?.();
+        if (status) {
+          setLastScheduledBackup(status.lastBackup);
+          setNextScheduledBackup(status.nextBackup);
+        }
+        console.info("[Settings] ✅ Backup schedule config loaded");
+      } catch (error) {
+        console.error(
+          "[Settings] ❌ Failed to load backup schedule config:",
+          error,
+        );
+      }
+    };
+    loadScheduleConfig();
+  }, []);
+
+  // Listen for backup events
+  useEffect(() => {
+    const cleanupComplete = globalThis.electronBackup?.onBackupComplete?.(
+      (data: { backupId: string; timestamp: number }) => {
+        console.info("[Settings] Scheduled backup completed:", data.backupId);
+        toast.success("Scheduled backup completed", {
+          description: `Backup created at ${new Date(data.timestamp).toLocaleString()}`,
+        });
+        setLastScheduledBackup(data.timestamp);
+        // Refresh status to get next backup time
+        globalThis.electronBackup?.getBackupStatus?.().then(
+          (
+            status:
+              | {
+                  isRunning: boolean;
+                  lastBackup: number | null;
+                  nextBackup: number | null;
+                }
+              | undefined,
+          ) => {
+            setNextScheduledBackup(status?.nextBackup ?? null);
+          },
+        );
+      },
+    );
+
+    const cleanupError = globalThis.electronBackup?.onBackupError?.(
+      (error: string) => {
+        console.error("[Settings] Scheduled backup failed:", error);
+        toast.error("Scheduled backup failed", {
+          description: error,
+        });
+      },
+    );
+
+    return () => {
+      cleanupComplete?.();
+      cleanupError?.();
+    };
   }, []);
 
   // Load update channel preference from storage on mount
@@ -987,46 +1051,6 @@ export function SettingsPage() {
   };
 
   /**
-   * Creates a backup of all application data and triggers download.
-   * Updates backup history and shows success message.
-   * @source
-   */
-  const handleCreateBackup = async () => {
-    try {
-      console.info("[Settings] 📦 Starting backup creation...");
-      setIsCreatingBackup(true);
-      setBackupValidationError(null);
-
-      const backupId = await createBackup();
-
-      // Update backup history
-      setBackupHistory(getBackupHistory());
-
-      console.info("[Settings] ✅ Backup created successfully:", backupId);
-
-      // Show success message (using browser toast or similar)
-      recordEvent({
-        type: "backup.created",
-        message: "Application data backup created successfully",
-        level: "info",
-        metadata: { backupId },
-      });
-    } catch (err) {
-      console.error("[Settings] ❌ Failed to create backup:", err);
-      const message =
-        err instanceof Error ? err.message : "Failed to create backup";
-      setBackupValidationError(message);
-      recordEvent({
-        type: "backup.error",
-        message: `Backup creation failed: ${message}`,
-        level: "error",
-      });
-    } finally {
-      setIsCreatingBackup(false);
-    }
-  };
-
-  /**
    * Handles import of backup file from user selection.
    * Validates and prompts for restore mode (Replace vs Merge) before restoring.
    * @source
@@ -1120,21 +1144,158 @@ export function SettingsPage() {
   };
 
   /**
-   * Toggles automatic backup setting.
+   * Handles restoring a backup file directly from the backup list.
+   * @param file - The backup file to restore from
    * @source
    */
-  const handleToggleAutoBackup = (enabled: boolean) => {
-    setAutoBackupEnabled(enabled);
-    storage.setItem(
-      STORAGE_KEYS.AUTO_BACKUP_ENABLED,
-      enabled ? "true" : "false",
-    );
-    console.info("[Settings] 🔄 Auto-backup toggled:", enabled);
-    recordEvent({
-      type: "backup.auto-backup-toggled",
-      message: `Auto-backup ${enabled ? "enabled" : "disabled"}`,
-      level: "info",
-    });
+  const handleRestoreBackupFile = async (file: File) => {
+    try {
+      console.info("[Settings] 📥 Restoring backup from list file:", file.name);
+      setIsRestoringBackup(true);
+      setBackupValidationError(null);
+
+      // Import and validate backup
+      const backupData = await importBackupFromFile(file);
+
+      // Show merge vs replace dialog
+      const useMergeMode = globalThis.confirm(
+        "How would you like to restore match results?\n\n" +
+          "🔄 MERGE (OK): Combine existing matches with backup matches\n" +
+          "   • Preserves your current match selections\n" +
+          "   • Only MATCH_RESULTS are merged, other data is replaced\n\n" +
+          "🔁 REPLACE (Cancel): Completely overwrite all data\n" +
+          "   • Discards current data entirely\n" +
+          "   • Fully reverts to backup state\n\n" +
+          "Choose MERGE (OK) to preserve existing matches, or REPLACE (Cancel) to completely restore the backup.",
+      );
+
+      console.info(
+        "[Settings] 📋 Restore mode selected:",
+        useMergeMode ? "Merge" : "Replace",
+      );
+
+      // Restore backup with selected mode
+      const result = await restoreBackup(backupData, { merge: useMergeMode });
+
+      if (result.success) {
+        console.info(
+          "[Settings] ✅ Backup restored successfully (mode:",
+          useMergeMode ? "Merge" : "Replace",
+          ")",
+        );
+        recordEvent({
+          type: "backup.restored",
+          message: `Application data restored from backup (${useMergeMode ? "Merge" : "Replace"} mode)`,
+          level: "info",
+          metadata: { mergeMode: useMergeMode },
+        });
+
+        // Clear file selection
+        setSelectedBackupFile(null);
+
+        // Reload page to refresh all data
+        setTimeout(() => {
+          globalThis.location.reload();
+        }, 1000);
+      } else {
+        throw new Error(result.errors.join("; "));
+      }
+    } catch (err) {
+      console.error("[Settings] ❌ Failed to restore backup from list:", err);
+      const message =
+        err instanceof Error ? err.message : "Failed to restore backup";
+      setBackupValidationError(message);
+      recordEvent({
+        type: "backup.error",
+        message: `Backup restore failed: ${message}`,
+        level: "error",
+      });
+    } finally {
+      setIsRestoringBackup(false);
+    }
+  };
+
+  /**
+   * Handles changes to backup schedule configuration.
+   * @source
+   */
+  const handleScheduleConfigChange = async (
+    newConfig: BackupScheduleConfig,
+  ) => {
+    // Save previous config for potential revert
+    const previousConfig = scheduleConfig;
+
+    try {
+      setScheduleConfig(newConfig);
+      const result =
+        await globalThis.electronBackup?.setScheduleConfig?.(newConfig);
+
+      if (!result?.success) {
+        // Revert to previous config if update failed
+        setScheduleConfig(previousConfig);
+        const errorMessage = result?.error || "Unknown error";
+        console.error(
+          "[Settings] Failed to update backup schedule:",
+          errorMessage,
+        );
+        toast.error("Failed to update backup schedule", {
+          description: errorMessage,
+        });
+        return;
+      }
+
+      console.info("[Settings] Backup schedule config updated:", newConfig);
+      recordEvent({
+        type: "backup.schedule-updated",
+        message: `Backup schedule ${newConfig.enabled ? "enabled" : "disabled"} (${newConfig.interval})`,
+        level: "info",
+        metadata: { config: newConfig },
+      });
+      // Refresh status to get updated next backup time
+      const status = await globalThis.electronBackup?.getBackupStatus?.();
+      if (status) {
+        setNextScheduledBackup(status.nextBackup);
+      }
+    } catch (error) {
+      // Revert to previous config on exception
+      setScheduleConfig(previousConfig);
+      console.error("[Settings] Exception updating backup schedule:", error);
+      toast.error("Failed to update backup schedule", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  };
+
+  /**
+   * Handles manual trigger of a scheduled backup.
+   * @source
+   */
+  const handleTriggerScheduledBackup = async () => {
+    try {
+      setIsTriggeringBackup(true);
+      console.info("[Settings] Manually triggering scheduled backup...");
+      const result = await globalThis.electronBackup?.triggerBackup?.();
+      if (result?.success) {
+        toast.success("Backup created successfully", {
+          description: `Backup ID: ${result.backupId}`,
+        });
+        // Refresh backup status from main process
+        const status = await globalThis.electronBackup?.getBackupStatus?.();
+        if (status) {
+          setLastScheduledBackup(status.lastBackup);
+          setNextScheduledBackup(status.nextBackup);
+        }
+      } else {
+        throw new Error(result?.error || "Unknown error");
+      }
+    } catch (error) {
+      console.error("[Settings] Failed to trigger backup:", error);
+      toast.error("Failed to create backup", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    } finally {
+      setIsTriggeringBackup(false);
+    }
   };
 
   /**
@@ -1472,13 +1633,9 @@ export function SettingsPage() {
         cachesToClear={cachesToClear}
         isClearing={isClearing}
         cacheCleared={cacheCleared}
-        backupHistory={backupHistory}
-        isCreatingBackup={isCreatingBackup}
         isRestoringBackup={isRestoringBackup}
-        autoBackupEnabled={autoBackupEnabled}
         selectedBackupFile={selectedBackupFile}
         backupValidationError={backupValidationError}
-        showBackupHistory={showBackupHistory}
         isDebugEnabled={isDebugEnabled}
         storageDebuggerEnabled={storageDebuggerEnabled}
         logViewerEnabled={logViewerEnabled}
@@ -1493,12 +1650,15 @@ export function SettingsPage() {
         setSyncConfig={setSyncConfig}
         onCachesToClearChange={setCachesToClear}
         onClearCaches={handleClearCache}
-        onCreateBackup={handleCreateBackup}
         onRestoreBackup={handleImportBackup}
-        onToggleAutoBackup={handleToggleAutoBackup}
+        onRestoreBackupFile={handleRestoreBackupFile}
         onFileSelect={handleFileSelect}
-        onToggleBackupHistory={(show) => setShowBackupHistory(show)}
-        setBackupHistory={setBackupHistory}
+        scheduleConfig={scheduleConfig}
+        nextScheduledBackup={nextScheduledBackup}
+        lastScheduledBackup={lastScheduledBackup}
+        isTriggeringBackup={isTriggeringBackup}
+        onScheduleConfigChange={handleScheduleConfigChange}
+        onTriggerBackup={handleTriggerScheduledBackup}
         onToggleDebug={toggleDebug}
         onStorageDebuggerChange={setStorageDebuggerEnabled}
         onLogViewerChange={setLogViewerEnabled}

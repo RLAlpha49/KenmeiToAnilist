@@ -218,7 +218,6 @@ export default function useMyFeature() {
 ### Step 5: Test Usage
 
 - [ ] Document expected props/context
-- [ ] Add JSDoc @example if behavior is non-obvious
 - [ ] Test hook in development
 
 ---

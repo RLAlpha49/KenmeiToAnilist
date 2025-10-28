@@ -59,6 +59,8 @@ export interface BackupHistoryEntry {
   dataKeys: string[];
   /** Size of backup in bytes */
   size: number;
+  /** Filename where backup is stored (for consistent reconciliation) */
+  filename?: string;
 }
 
 /**
@@ -166,7 +168,7 @@ export async function createBackup(): Promise<string> {
         try {
           exportToJson(
             backupData as unknown as Record<string, unknown>,
-            "kenmei-backup",
+            "backup",
           );
           resolve(undefined);
         } catch (error) {
@@ -226,7 +228,10 @@ export function getBackupHistory(): BackupHistoryEntry[] {
  * @internal Used internally by createBackup.
  * @source
  */
-export function addBackupToHistory(entry: BackupHistoryEntry): void {
+export function addBackupToHistory(
+  entry: BackupHistoryEntry,
+  maxRetention?: number,
+): void {
   try {
     let history = getBackupHistory();
 
@@ -234,7 +239,9 @@ export function addBackupToHistory(entry: BackupHistoryEntry): void {
     history = [entry, ...history];
 
     // Maintain history limit by removing oldest entries
-    history = history.slice(0, MAX_BACKUP_HISTORY);
+    // Use provided maxRetention if available, otherwise use the constant
+    const limit = maxRetention ?? MAX_BACKUP_HISTORY;
+    history = history.slice(0, limit);
 
     // Save to storage
     storage.setItem(STORAGE_KEYS.BACKUP_HISTORY, JSON.stringify(history));
@@ -606,10 +613,12 @@ export async function importBackupFromFile(file: File): Promise<BackupData> {
   try {
     console.log("[Backup] Reading backup file:", file.name);
 
-    // Check file size
+    // Check file size against the limit
     if (file.size > MAX_BACKUP_FILE_SIZE) {
-      console.warn(
-        `[Backup] Backup file is large (${(file.size / 1024 / 1024).toFixed(2)} MB), this may take a moment to process`,
+      const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+      const limitMB = (MAX_BACKUP_FILE_SIZE / 1024 / 1024).toFixed(0);
+      throw new Error(
+        `Backup file is too large (${sizeMB} MB). Maximum recommended size is ${limitMB} MB.`,
       );
     } else if (file.size > 5 * 1024 * 1024) {
       console.info(
@@ -648,5 +657,178 @@ export async function importBackupFromFile(file: File): Promise<BackupData> {
     }`;
     console.error("[Backup]", message);
     throw new Error(message);
+  }
+}
+
+/**
+ * Creates backup data without writing to disk or triggering browser download.
+ * Used for scheduled backups that write directly to the app data directory.
+ * The caller (IPC handler) is responsible for writing the returned data to disk.
+ * @returns Object containing backup data, ID, and metadata.
+ * @throws {Error} If backup creation fails.
+ * @source
+ */
+export async function createBackupSilent(): Promise<{
+  data: BackupData;
+  backupId: string;
+  size: number;
+}> {
+  try {
+    console.log("[Backup] Creating silent backup data...");
+
+    // Collect all backupable data (same as createBackup)
+    const backupData: BackupData = {
+      metadata: {
+        timestamp: new Date().toISOString(),
+        appVersion: getAppVersion(),
+        cacheVersion: CURRENT_CACHE_VERSION,
+        backupVersion: BACKUP_VERSION,
+        dataKeys: [...BACKUPABLE_KEYS],
+      },
+      data: {},
+    };
+
+    // Gather data for each backupable key
+    for (const key of BACKUPABLE_KEYS) {
+      try {
+        const value = await storage.getItemAsync(key);
+        if (value !== null) {
+          backupData.data[key] = value;
+        }
+      } catch (e) {
+        console.warn(
+          `[Backup] Failed to read key ${key} from storage async getter:`,
+          e,
+        );
+        // Fallback to synchronous getter
+        const fallback = storage.getItem(key);
+        if (fallback !== null) {
+          backupData.data[key] = fallback;
+        }
+      }
+    }
+
+    // Generate backup ID
+    const backupId = `backup_${Date.now()}`;
+
+    // Calculate backup size
+    const backupSize = JSON.stringify(backupData).length;
+    console.log(
+      `[Backup] Silent backup size: ${(backupSize / 1024 / 1024).toFixed(2)} MB`,
+    );
+
+    console.log("[Backup] Silent backup data created successfully:", backupId);
+    return { data: backupData, backupId, size: backupSize };
+  } catch (error) {
+    console.error("[Backup] Failed to create silent backup:", error);
+    throw new Error(
+      `Failed to create silent backup: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+/**
+ * Creates a backup from raw data object (used by main process).
+ * This is designed for the main process which doesn't have access to the renderer's storage object.
+ * @param dataMap - Map of storage keys to their values
+ * @param appVersion - The application version to include in metadata (optional, defaults to current version)
+ * @returns Backup data object with metadata
+ * @internal
+ */
+export function createBackupFromData(
+  dataMap: Record<string, string>,
+  appVersion?: string,
+): {
+  data: BackupData;
+  backupId: string;
+  size: number;
+} {
+  try {
+    console.log("[Backup] Creating backup from raw data...");
+
+    const backupData: BackupData = {
+      metadata: {
+        timestamp: new Date().toISOString(),
+        appVersion: appVersion || getAppVersion(),
+        cacheVersion: CURRENT_CACHE_VERSION,
+        backupVersion: BACKUP_VERSION,
+        dataKeys: [...BACKUPABLE_KEYS],
+      },
+      data: {},
+    };
+
+    // Add provided data to backup
+    for (const key of BACKUPABLE_KEYS) {
+      if (dataMap[key]) {
+        backupData.data[key] = dataMap[key];
+      }
+    }
+
+    // Generate backup ID
+    const backupId = `backup_${Date.now()}`;
+
+    // Calculate backup size
+    const backupSize = JSON.stringify(backupData).length;
+    console.log(
+      `[Backup] Backup from data size: ${(backupSize / 1024 / 1024).toFixed(2)} MB`,
+    );
+
+    console.log("[Backup] Backup from data created successfully:", backupId);
+    return { data: backupData, backupId, size: backupSize };
+  } catch (error) {
+    console.error("[Backup] Failed to create backup from data:", error);
+    throw new Error(
+      `Failed to create backup from data: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+/**
+ * Rotates backups according to retention policy.
+ * @deprecated This function is no longer used - rotation is handled in backup-listeners.ts
+ * @internal
+ * @source
+ */
+export async function rotateBackups(): Promise<void> {
+  // Deprecated function kept for backward compatibility
+  // Actual rotation is now handled in backup-listeners.ts via performRotation()
+  console.warn(
+    "[Backup] rotateBackups() is deprecated. Rotation is now handled in the main process backup scheduler.",
+  );
+}
+
+/**
+ * Reconciles backup history with actual files on disk.
+ * Removes history entries for backups that no longer exist on disk.
+ * Called after deleting backups during rotation.
+ * @param backupFilenames - Array of remaining backup filenames (e.g., ["backup-123.json"])
+ * @internal
+ * @source
+ */
+export function reconcileBackupHistory(backupFilenames: string[]): void {
+  try {
+    let history = getBackupHistory();
+    const originalCount = history.length;
+
+    // Filter history to only include backups that exist on disk
+    // Extract IDs from filenames: "backup-1234.json" -> "backup_1234"
+    const existingIds = new Set(
+      backupFilenames.map((filename) => {
+        const regex = /backup-(\d+)\.json/;
+        const match = regex.exec(filename);
+        return match ? `backup_${match[1]}` : null;
+      }),
+    );
+
+    history = history.filter((entry) => existingIds.has(entry.id));
+
+    if (history.length < originalCount) {
+      console.log(
+        `[Backup] Reconciled history: removed ${originalCount - history.length} entries for deleted backups`,
+      );
+      storage.setItem(STORAGE_KEYS.BACKUP_HISTORY, JSON.stringify(history));
+    }
+  } catch (error) {
+    console.error("[Backup] Failed to reconcile backup history:", error);
   }
 }

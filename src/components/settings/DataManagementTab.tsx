@@ -36,13 +36,8 @@ export function DataManagementTab({
   cachesToClear,
   isClearing,
   cacheCleared,
-  backupHistory,
-  isCreatingBackup,
-  isRestoringBackup,
-  autoBackupEnabled,
   selectedBackupFile,
   backupValidationError,
-  showBackupHistory,
   isDebugEnabled,
   storageDebuggerEnabled,
   logViewerEnabled,
@@ -53,14 +48,18 @@ export function DataManagementTab({
   confidenceTestExporterEnabled,
   searchQuery,
   highlightedSectionId,
+  scheduleConfig,
+  nextScheduledBackup,
+  lastScheduledBackup,
+  isTriggeringBackup,
+  isRestoringBackup,
   onCachesToClearChange,
   onClearCaches,
-  onCreateBackup,
   onRestoreBackup,
-  onToggleAutoBackup,
+  onRestoreBackupFile,
   onFileSelect,
-  onToggleBackupHistory,
-  setBackupHistory,
+  onScheduleConfigChange,
+  onTriggerBackup,
   onToggleDebug,
   onStorageDebuggerChange,
   onLogViewerChange,
@@ -110,21 +109,20 @@ export function DataManagementTab({
             contentClassName="space-y-4"
           >
             <BackupRestoreSection
-              backupHistory={backupHistory}
-              isCreatingBackup={isCreatingBackup}
-              isRestoringBackup={isRestoringBackup}
-              autoBackupEnabled={autoBackupEnabled}
-              selectedBackupFile={selectedBackupFile}
-              backupValidationError={backupValidationError}
-              showBackupHistory={showBackupHistory}
               searchQuery={searchQuery}
               highlightedSectionId={highlightedSectionId}
-              onCreateBackup={onCreateBackup}
+              scheduleConfig={scheduleConfig}
+              nextScheduledBackup={nextScheduledBackup}
+              lastScheduledBackup={lastScheduledBackup}
+              isTriggeringBackup={isTriggeringBackup}
+              isRestoringBackup={isRestoringBackup}
+              selectedBackupFile={selectedBackupFile}
+              backupValidationError={backupValidationError}
+              onScheduleConfigChange={onScheduleConfigChange}
+              onTriggerBackup={onTriggerBackup}
               onRestoreBackup={onRestoreBackup}
-              onToggleAutoBackup={onToggleAutoBackup}
+              onRestoreBackupFile={onRestoreBackupFile}
               onFileSelect={onFileSelect}
-              onToggleBackupHistory={onToggleBackupHistory}
-              setBackupHistory={setBackupHistory}
             />
           </SettingsSectionShell>
         </div>
