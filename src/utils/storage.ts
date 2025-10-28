@@ -3,6 +3,9 @@
  * @module storage
  * @description Storage utilities for Kenmei data, sync configuration, and match results. Provides abstraction over localStorage and electron-store for persistence and migration.
  */
+import type { AdvancedMatchFilters } from "../types/matchingFilters";
+import { DEFAULT_ADVANCED_FILTERS } from "../types/matchingFilters";
+
 declare global {
   interface Window {
     electronStore: {
@@ -467,6 +470,7 @@ export const STORAGE_KEYS = {
   SYNC_CONFIG: "sync_config",
   SYNC_STATS: "sync_stats",
   MATCH_CONFIG: "match_config",
+  MATCH_FILTERS: "match_filters",
   IGNORED_DUPLICATES: "ignored_duplicates",
   ACTIVE_SYNC_SNAPSHOT: "active_sync_snapshot",
   ANILIST_SEARCH_CACHE: "anilist_search_cache",
@@ -1119,6 +1123,74 @@ export function getMatchConfig(): MatchConfig {
       error,
     );
     return DEFAULT_MATCH_CONFIG;
+  }
+}
+
+/**
+ * Retrieves saved advanced match filters from storage.
+ * Returns default filters if none are saved.
+ * Validates and clamps all values to acceptable ranges.
+ * @returns The advanced match filters configuration.
+ * @source
+ */
+export function getMatchFilters(): AdvancedMatchFilters {
+  try {
+    const saved = storage.getItem(STORAGE_KEYS.MATCH_FILTERS);
+    if (!saved) {
+      return DEFAULT_ADVANCED_FILTERS;
+    }
+
+    const parsed = JSON.parse(saved);
+
+    // Validate and sanitize confidence values
+    let minConfidence = 0;
+    let maxConfidence = 100;
+
+    if (typeof parsed.confidence?.min === "number") {
+      minConfidence = Math.max(0, Math.min(100, parsed.confidence.min));
+    }
+    if (typeof parsed.confidence?.max === "number") {
+      maxConfidence = Math.max(0, Math.min(100, parsed.confidence.max));
+    }
+
+    // Ensure min <= max
+    if (minConfidence > maxConfidence) {
+      [minConfidence, maxConfidence] = [maxConfidence, minConfidence];
+    }
+
+    // Validate and sanitize array fields
+    const validateStringArray = (value: unknown): string[] => {
+      if (!Array.isArray(value)) return [];
+      return value.filter((item): item is string => typeof item === "string");
+    };
+
+    const formats = validateStringArray(parsed.formats);
+    const genres = validateStringArray(parsed.genres);
+    const publicationStatuses = validateStringArray(parsed.publicationStatuses);
+
+    return {
+      confidence: { min: minConfidence, max: maxConfidence },
+      formats,
+      genres,
+      publicationStatuses,
+    };
+  } catch (error) {
+    console.error("[Storage] Failed to load match filters:", error);
+    return DEFAULT_ADVANCED_FILTERS;
+  }
+}
+
+/**
+ * Saves advanced match filters to storage.
+ * @param filters - The advanced match filters to save.
+ * @source
+ */
+export function saveMatchFilters(filters: AdvancedMatchFilters): void {
+  try {
+    storage.setItem(STORAGE_KEYS.MATCH_FILTERS, JSON.stringify(filters));
+    console.debug("[Storage] Saved match filters:", filters);
+  } catch (error) {
+    console.error("[Storage] Failed to save match filters:", error);
   }
 }
 

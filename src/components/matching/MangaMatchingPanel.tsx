@@ -3,7 +3,13 @@
  * @module MangaMatchingPanel
  * @description React component for reviewing, filtering, sorting, and managing manga match results, including manual search, acceptance, rejection, and alternative selection.
  */
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import { KenmeiManga } from "../../api/kenmei/types";
 import { MangaMatchResult, AniListManga } from "../../api/anilist/types";
 import {
@@ -20,7 +26,24 @@ import {
 import { cn } from "@/utils/tailwind";
 
 // Import storage utilities
-import { getMatchConfig, saveMatchConfig } from "../../utils/storage";
+import {
+  getMatchConfig,
+  saveMatchConfig,
+  getMatchFilters,
+  saveMatchFilters,
+} from "../../utils/storage";
+
+// Import filtering utilities
+import {
+  filterByAdvancedCriteria,
+  extractUniqueGenres,
+  extractUniqueFormats,
+  extractUniqueStatuses,
+} from "../sync/filtering";
+import {
+  DEFAULT_ADVANCED_FILTERS,
+  type AdvancedMatchFilters,
+} from "../../types/matchingFilters";
 
 // Import shadcn UI components
 import {
@@ -40,6 +63,8 @@ import {
   type StatusFiltersState,
 } from "./MangaMatchingPanel/MatchFilterControls";
 import { AlternativeSearchSettingsCard } from "./MangaMatchingPanel/AlternativeSearchSettingsCard";
+import { AdvancedFilterPanel } from "./AdvancedFilterPanel";
+import { FilterChips } from "./FilterChips";
 
 /**
  * Props for the MangaMatchingPanel component.
@@ -122,6 +147,9 @@ export function MangaMatchingPanel({
     skipped: true,
   });
   const [searchTerm, setSearchTerm] = useState("");
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedMatchFilters>(
+    DEFAULT_ADVANCED_FILTERS,
+  );
   const searchInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const lastExternalSearchQuery = useRef<string | undefined>(undefined);
@@ -163,6 +191,24 @@ export function MangaMatchingPanel({
     };
     loadBlurSettings();
   }, []);
+
+  // Load advanced filters from storage
+  useEffect(() => {
+    const loadAdvancedFilters = () => {
+      const savedFilters = getMatchFilters();
+      setAdvancedFilters(savedFilters);
+    };
+    loadAdvancedFilters();
+  }, []);
+
+  // Save advanced filters to storage (debounced)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      saveMatchFilters(advancedFilters);
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [advancedFilters]);
 
   // Helper functions for adult content handling
   const isAdultContent = (manga: AniListManga | undefined | null) => {
@@ -267,6 +313,54 @@ export function MangaMatchingPanel({
     }
   };
 
+  // Handler for advanced filter changes
+  const handleAdvancedFiltersChange = useCallback(
+    (newFilters: AdvancedMatchFilters) => {
+      setAdvancedFilters(newFilters);
+      // Reset to first page when filters change
+      setCurrentPage(1);
+    },
+    [],
+  );
+
+  // Handler for removing individual filters
+  const handleRemoveFilter = useCallback(
+    (
+      filterType: "confidence" | "format" | "genre" | "status",
+      value?: string,
+    ) => {
+      setAdvancedFilters((prev) => {
+        switch (filterType) {
+          case "confidence":
+            return { ...prev, confidence: { min: 0, max: 100 } };
+          case "format":
+            return {
+              ...prev,
+              formats: prev.formats.filter((f) => f !== value),
+            };
+          case "genre":
+            return { ...prev, genres: prev.genres.filter((g) => g !== value) };
+          case "status":
+            return {
+              ...prev,
+              publicationStatuses: prev.publicationStatuses.filter(
+                (s) => s !== value,
+              ),
+            };
+          default:
+            return prev;
+        }
+      });
+    },
+    [],
+  );
+
+  // Handler for clearing all advanced filters
+  const handleClearAllFilters = useCallback(() => {
+    setAdvancedFilters(DEFAULT_ADVANCED_FILTERS);
+    setCurrentPage(1);
+  }, []);
+
   // Process matches to filter out Light Novels from alternatives
   const processedMatches = matches.map((match) => {
     // Ensure manga has an ID - if missing, generate one based on title
@@ -313,33 +407,56 @@ export function MangaMatchingPanel({
     };
   });
 
-  // Filter and search matches
-  const filteredMatches = processedMatches.filter((match) => {
-    // Sanity check - skip entries with no ID
-    if (match.kenmeiManga.id === undefined) return false;
+  // Extract unique values for filter options
+  const availableGenres = useMemo(
+    () => extractUniqueGenres(processedMatches),
+    [processedMatches],
+  );
+  const availableFormats = useMemo(
+    () => extractUniqueFormats(processedMatches),
+    [processedMatches],
+  );
+  const availableStatuses = useMemo(
+    () => extractUniqueStatuses(processedMatches),
+    [processedMatches],
+  );
 
-    // Apply status filters
-    const statusMatch =
-      (match.status === "matched" && statusFilters.matched) ||
-      (match.status === "pending" && statusFilters.pending) ||
-      (match.status === "manual" && statusFilters.manual) ||
-      (match.status === "skipped" && statusFilters.skipped);
+  // Apply filters in order: status → advanced → search
+  const filteredMatches = useMemo(() => {
+    // First apply status filters
+    let filtered: MangaMatchResult[] = processedMatches.filter((match) => {
+      if (match.kenmeiManga.id === undefined) return false;
 
-    // Then apply search term if any
-    const searchMatch =
-      !searchTerm ||
-      match.kenmeiManga.title
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      match.selectedMatch?.title?.english
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      match.selectedMatch?.title?.romaji
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase());
+      const statusMatch =
+        (match.status === "matched" && statusFilters.matched) ||
+        (match.status === "pending" && statusFilters.pending) ||
+        (match.status === "manual" && statusFilters.manual) ||
+        (match.status === "skipped" && statusFilters.skipped);
 
-    return statusMatch && searchMatch;
-  });
+      return statusMatch;
+    });
+
+    // Then apply advanced filters
+    filtered = filterByAdvancedCriteria(filtered, advancedFilters);
+
+    // Finally apply search term
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (match) =>
+          match.kenmeiManga.title
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          match.selectedMatch?.title?.english
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          match.selectedMatch?.title?.romaji
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()),
+      );
+    }
+
+    return filtered;
+  }, [processedMatches, statusFilters, advancedFilters, searchTerm]);
 
   // Sort the filtered matches
   const sortedMatches = [...filteredMatches].sort((a, b) => {
@@ -418,7 +535,7 @@ export function MangaMatchingPanel({
     if (currentPage > totalPages) {
       setCurrentPage(Math.max(1, totalPages));
     }
-  }, [statusFilters, searchTerm, totalPages, currentPage]);
+  }, [statusFilters, advancedFilters, searchTerm, totalPages, currentPage]);
 
   // Focus search input when pressing Ctrl+F
   useEffect(() => {
@@ -777,6 +894,23 @@ export function MangaMatchingPanel({
         statusFilters={statusFilters}
         setStatusFilters={setStatusFilters}
         matchStats={matchStats}
+      />
+
+      {/* Advanced Filter Panel */}
+      <AdvancedFilterPanel
+        filters={advancedFilters}
+        onFiltersChange={handleAdvancedFiltersChange}
+        availableGenres={availableGenres}
+        availableFormats={availableFormats}
+        availableStatuses={availableStatuses}
+        matchCount={filteredMatches.length}
+      />
+
+      {/* Active Filter Chips */}
+      <FilterChips
+        filters={advancedFilters}
+        onRemoveFilter={handleRemoveFilter}
+        onClearAll={handleClearAllFilters}
       />
 
       {/* Batch Selection Controls */}

@@ -8,6 +8,7 @@ import { MangaMatchResult, UserMediaList } from "../../api/anilist/types";
 import { SyncConfig } from "../../utils/storage";
 import { getEffectiveStatus } from "./sync-utils";
 import { FilterOptions, SortOption } from "./types";
+import { AdvancedMatchFilters } from "../../types/matchingFilters";
 
 /**
  * Apply filters to manga matches based on status, changes, and library membership.
@@ -45,9 +46,7 @@ export function filterMangaMatches(
     const userEntry = userLibrary[anilist.id];
 
     const isCompletedAndPreserved =
-      userEntry &&
-      userEntry.status === "COMPLETED" &&
-      syncConfig.preserveCompletedStatus;
+      userEntry?.status === "COMPLETED" && syncConfig.preserveCompletedStatus;
 
     if (isCompletedAndPreserved) {
       return filters.changes !== "with-changes";
@@ -97,9 +96,7 @@ function getChangeCount(
   const kenmei = match.kenmeiManga;
   const userEntry = userLibrary[anilist.id];
   const isCompleted =
-    userEntry &&
-    userEntry.status === "COMPLETED" &&
-    syncConfig.preserveCompletedStatus;
+    userEntry?.status === "COMPLETED" && syncConfig.preserveCompletedStatus;
 
   if (isCompleted) return 0;
   if (!userEntry) return 3; // New entry, all fields will change
@@ -181,4 +178,131 @@ export function sortMangaMatches(
     // Apply sort direction
     return sortOption.direction === "asc" ? comparison : -comparison;
   });
+}
+
+/**
+ * Filter manga matches by advanced criteria (confidence, format, genres, publication status).
+ * @param matches - Array of manga match results to filter.
+ * @param filters - Advanced filter options to apply.
+ * @returns Filtered array of manga matches.
+ */
+export function filterByAdvancedCriteria(
+  matches: MangaMatchResult[],
+  filters: AdvancedMatchFilters,
+): MangaMatchResult[] {
+  return matches.filter((match) => {
+    // Get the match data (prefer selectedMatch, fallback to first anilistMatch)
+    const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
+
+    // Compute confidence: use selectedMatch if available, else highest from alternatives, else 0
+    let confidence = 0;
+    if (match.selectedMatch && match.anilistMatches) {
+      const selectedEntry = match.anilistMatches.find(
+        (m) => m.manga?.id === match.selectedMatch?.id,
+      );
+      confidence = selectedEntry?.confidence ?? 0;
+    } else if (match.anilistMatches?.length) {
+      confidence = match.anilistMatches[0].confidence ?? 0;
+    }
+
+    // Filter by confidence
+    if (
+      confidence < filters.confidence.min ||
+      confidence > filters.confidence.max
+    ) {
+      return false;
+    }
+
+    // Filter by format: if no matchData and filters require formats, reject
+    if (filters.formats.length > 0) {
+      if (!matchData?.format || !filters.formats.includes(matchData.format)) {
+        return false;
+      }
+    }
+
+    // Filter by genres (match if ANY selected genre is present): if no data and filters require genres, reject
+    if (filters.genres.length > 0) {
+      const genres = matchData?.genres || [];
+      const hasMatchingGenre = filters.genres.some((filterGenre) =>
+        genres.includes(filterGenre),
+      );
+      if (!hasMatchingGenre) {
+        return false;
+      }
+    }
+
+    // Filter by publication status: if no data and filters require status, reject
+    if (filters.publicationStatuses.length > 0) {
+      if (
+        !matchData?.status ||
+        !filters.publicationStatuses.includes(matchData.status)
+      ) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+}
+
+/**
+ * Extract unique genres from manga match results for filter options.
+ * @param matches - Array of manga match results.
+ * @returns Sorted array of unique genre strings.
+ */
+export function extractUniqueGenres(matches: MangaMatchResult[]): string[] {
+  const genreSet = new Set<string>();
+
+  for (const match of matches) {
+    const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
+    const genres = matchData?.genres || [];
+
+    for (const genre of genres) {
+      if (genre?.trim()) {
+        genreSet.add(genre.trim());
+      }
+    }
+  }
+
+  return Array.from(genreSet).sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Extract unique formats from manga match results for filter options.
+ * @param matches - Array of manga match results.
+ * @returns Array of unique format strings.
+ */
+export function extractUniqueFormats(matches: MangaMatchResult[]): string[] {
+  const formatSet = new Set<string>();
+
+  for (const match of matches) {
+    const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
+    const format = matchData?.format;
+
+    if (format) {
+      formatSet.add(format);
+    }
+  }
+
+  return Array.from(formatSet).sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Extract unique publication statuses from manga match results for filter options.
+ * @param matches - Array of manga match results.
+ * @returns Array of unique status strings.
+ */
+export function extractUniqueStatuses(matches: MangaMatchResult[]): string[] {
+  const statusSet = new Set<string>();
+
+  for (const match of matches) {
+    const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
+    const status = matchData?.status;
+
+    if (status) {
+      statusSet.add(status);
+    }
+  }
+
+  return Array.from(statusSet).sort((a, b) => a.localeCompare(b));
 }
