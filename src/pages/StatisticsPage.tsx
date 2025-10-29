@@ -23,6 +23,10 @@ import {
   SyncMetricsChart,
   FormatDistributionChart,
   ChaptersReadDistributionChart,
+  ReadingTrendsChart,
+  ReadingHabitsChart,
+  ReadingVelocityChart,
+  TimeRangeSelector,
 } from "@/components/statistics";
 import type { SyncStats } from "@/types/sync";
 import { ExportStatisticsButton } from "@/components/statistics/ExportStatisticsButton";
@@ -32,12 +36,15 @@ import {
   storage,
   STORAGE_KEYS,
   type ImportStats,
+  getReadingHistory,
+  type ReadingHistory,
 } from "@/utils/storage";
 import { formatRelativeTime } from "@/utils/timeUtils";
 import {
   normalizeMatchResults,
   parseSyncStats,
   type NormalizedMatchForStats,
+  type TimeRange,
 } from "@/utils/statisticsAdapter";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -83,6 +90,10 @@ export function StatisticsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
+  const [readingHistory, setReadingHistory] = useState<ReadingHistory | null>(
+    null,
+  );
+  const [selectedTimeRange, setSelectedTimeRange] = useState<TimeRange>("30d");
 
   const loadStatistics = useCallback(async () => {
     try {
@@ -96,6 +107,9 @@ export function StatisticsPage() {
       const syncRaw = await storage.getItemAsync(STORAGE_KEYS.SYNC_STATS);
       const parsedSync = parseSyncStats(syncRaw);
       setSyncStats(parsedSync);
+
+      const history = getReadingHistory();
+      setReadingHistory(history);
 
       setLastRefreshedAt(new Date().toISOString());
     } catch (error) {
@@ -134,6 +148,11 @@ export function StatisticsPage() {
     toast.success("Statistics refreshed");
   }, [isRefreshing, loadStatistics]);
 
+  const handleTimeRangeChange = useCallback((range: TimeRange) => {
+    setSelectedTimeRange(range);
+    console.debug(`[Statistics] Time range changed to: ${range}`);
+  }, []);
+
   const heroMetrics = useMemo(() => {
     const totalImported = importStats?.total ?? 0;
     const matchedCount = matchResults.filter((match) =>
@@ -154,11 +173,22 @@ export function StatisticsPage() {
     const hasImport = (importStats?.total ?? 0) > 0;
     const hasMatches = matchResults.length > 0;
     const hasSync = !!(syncStats && syncStats.totalSyncs > 0);
-    return hasImport || hasMatches || hasSync;
-  }, [importStats, matchResults, syncStats]);
+    const hasHistory = !!(readingHistory && readingHistory.entries.length > 0);
+    return hasImport || hasMatches || hasSync || hasHistory;
+  }, [importStats, matchResults, syncStats, readingHistory]);
 
   const skeletonKeys = useMemo(
-    () => ["status", "format", "sync", "timeline", "genres", "chapters"],
+    () => [
+      "status",
+      "format",
+      "sync",
+      "timeline",
+      "genres",
+      "chapters",
+      "trends",
+      "velocity",
+      "habits",
+    ],
     [],
   );
 
@@ -207,6 +237,48 @@ export function StatisticsPage() {
         {/* Row 5: Sync Metrics (Horizontal) */}
         <motion.div variants={itemVariants}>
           <SyncMetricsChart syncStats={syncStats} />
+        </motion.div>
+
+        {/* Row 6: Reading Trends */}
+        <motion.div variants={itemVariants}>
+          <ReadingTrendsChart
+            history={
+              readingHistory || {
+                entries: [],
+                lastUpdated: Date.now(),
+                version: 1,
+              }
+            }
+            timeRange={selectedTimeRange}
+          />
+        </motion.div>
+
+        {/* Row 7: Reading Velocity */}
+        <motion.div variants={itemVariants}>
+          <ReadingVelocityChart
+            history={
+              readingHistory || {
+                entries: [],
+                lastUpdated: Date.now(),
+                version: 1,
+              }
+            }
+            timeRange={selectedTimeRange}
+          />
+        </motion.div>
+
+        {/* Row 8: Reading Habits */}
+        <motion.div variants={itemVariants}>
+          <ReadingHabitsChart
+            history={
+              readingHistory || {
+                entries: [],
+                lastUpdated: Date.now(),
+                version: 1,
+              }
+            }
+            timeRange={selectedTimeRange}
+          />
         </motion.div>
       </motion.section>
     );
@@ -309,6 +381,12 @@ export function StatisticsPage() {
                 matchResults={matchResults}
                 disabled={!hasAnyData}
               />
+              {hasAnyData && (
+                <TimeRangeSelector
+                  value={selectedTimeRange}
+                  onChange={handleTimeRangeChange}
+                />
+              )}
             </div>
           </div>
         </motion.div>

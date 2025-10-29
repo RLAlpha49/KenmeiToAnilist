@@ -22,6 +22,9 @@ import {
   STORAGE_KEYS,
   validateSyncSnapshot,
   isSyncSnapshotStale,
+  recordReadingHistory,
+  getSavedMatchResults,
+  type ReadingHistoryEntry,
 } from "../utils/storage";
 import { captureError, ErrorType } from "../utils/errorHandling";
 import {
@@ -1151,6 +1154,57 @@ export function useSynchronization(): [
   };
 
   /**
+   * Records reading history snapshots after successful sync.
+   * Captures current chapter progress for all synced manga.
+   */
+  const recordSyncHistory = () => {
+    try {
+      const matchResults = getSavedMatchResults();
+      if (!matchResults || matchResults.length === 0) return;
+
+      const now = Date.now();
+      const historyEntries: ReadingHistoryEntry[] = [];
+
+      for (const match of matchResults) {
+        // Only record for matched/manual entries with chapter progress
+        if (!["matched", "manual"].includes(match.status ?? "")) continue;
+        if (!match.kenmeiManga?.chapters_read) continue;
+        if (match.kenmeiManga.chapters_read <= 0) continue;
+
+        // Prefer reading time from kenmeiManga.last_read_at if available
+        let timestamp = now;
+        if (match.kenmeiManga.last_read_at) {
+          const readTime = new Date(match.kenmeiManga.last_read_at).getTime();
+          if (!Number.isNaN(readTime)) {
+            timestamp = readTime;
+          }
+        }
+
+        historyEntries.push({
+          timestamp,
+          mangaId: match.kenmeiManga.id,
+          title: match.kenmeiManga.title,
+          chaptersRead: match.kenmeiManga.chapters_read,
+          status: match.kenmeiManga.status || "unknown",
+          anilistId: match.selectedMatch?.id,
+        });
+      }
+
+      if (historyEntries.length > 0) {
+        recordReadingHistory(historyEntries);
+        console.info(
+          `[Synchronization] 📊 Recorded reading history: ${historyEntries.length} entries`,
+        );
+      }
+    } catch (error) {
+      console.warn(
+        "[Synchronization] ⚠️ Failed to record reading history (non-blocking):",
+        error,
+      );
+    }
+  };
+
+  /**
    * Initialize controller, ids, refs and initial progress state for a sync run.
    */
   const initializeSyncRun = (
@@ -1425,6 +1479,12 @@ export function useSynchronization(): [
         );
 
         const finalReport = mergeReports(existingReportFragment, syncReport);
+
+        // Record reading history snapshot after successful sync
+        if (finalReport.successfulUpdates > 0) {
+          recordSyncHistory();
+        }
+
         Sentry.addBreadcrumb({
           category: "sync",
           message: "Sync completed",

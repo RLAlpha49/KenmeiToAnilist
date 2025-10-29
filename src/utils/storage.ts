@@ -482,6 +482,7 @@ export const STORAGE_KEYS = {
   AUTO_BACKUP_ENABLED: "auto_backup_enabled",
   SYNC_HISTORY: "sync_history",
   BACKUP_SCHEDULE_CONFIG: "backup_schedule_config",
+  READING_HISTORY: "reading_history",
 };
 
 /**
@@ -714,6 +715,42 @@ export const DEFAULT_BACKUP_SCHEDULE_CONFIG: BackupScheduleConfig = {
   autoBackupBeforeSync: false,
   autoBackupBeforeMatch: false,
 };
+
+/**
+ * Single reading history entry capturing manga progress at a point in time.
+ * Used for trend analysis and velocity calculations.
+ */
+export interface ReadingHistoryEntry {
+  timestamp: number; // Unix timestamp in milliseconds
+  mangaId: string | number; // Kenmei manga ID
+  title: string; // Manga title for display
+  chaptersRead: number; // Chapters read at this timestamp
+  status: string; // Reading status (reading, completed, etc.)
+  anilistId?: number; // Optional AniList media ID if matched
+}
+
+/**
+ * Reading history storage structure with metadata.
+ */
+export interface ReadingHistory {
+  entries: ReadingHistoryEntry[];
+  lastUpdated: number; // Unix timestamp of last update
+  version: number; // Schema version for future migrations
+}
+
+/**
+ * Default reading history structure.
+ */
+export const DEFAULT_READING_HISTORY: ReadingHistory = {
+  entries: [],
+  lastUpdated: Date.now(),
+  version: 1,
+};
+
+/**
+ * Maximum number of history entries to retain (365 days worth).
+ */
+export const MAX_READING_HISTORY_ENTRIES = 365;
 
 /**
  * The default match configuration.
@@ -1213,6 +1250,149 @@ export function saveBackupScheduleConfig(config: BackupScheduleConfig): void {
       "[Storage] Error saving backup schedule config to storage",
       error,
     );
+  }
+}
+
+/**
+ * Retrieves reading history from storage.
+ * Returns default empty history if none exists.
+ */
+export function getReadingHistory(): ReadingHistory {
+  try {
+    const stored = storage.getItem(STORAGE_KEYS.READING_HISTORY);
+    if (!stored) {
+      return DEFAULT_READING_HISTORY;
+    }
+
+    const parsed = JSON.parse(stored) as ReadingHistory;
+
+    // Validate structure
+    if (
+      !Array.isArray(parsed.entries) ||
+      typeof parsed.lastUpdated !== "number" ||
+      typeof parsed.version !== "number"
+    ) {
+      console.warn(
+        "[Storage] Invalid reading history structure, using defaults",
+      );
+      return DEFAULT_READING_HISTORY;
+    }
+
+    return parsed;
+  } catch (error) {
+    console.error("[Storage] Failed to load reading history:", error);
+    return DEFAULT_READING_HISTORY;
+  }
+}
+
+/**
+ * Saves reading history to storage.
+ */
+export function saveReadingHistory(history: ReadingHistory): void {
+  try {
+    storage.setItem(STORAGE_KEYS.READING_HISTORY, JSON.stringify(history));
+    console.debug(
+      "[Storage] Saved reading history:",
+      history.entries.length,
+      "entries",
+    );
+  } catch (error) {
+    console.error("[Storage] Failed to save reading history:", error);
+  }
+}
+
+/**
+ * Helper to get local date string from timestamp for consistent dedup and habit computation.
+ * Uses local timezone to avoid day boundary mismatches.
+ * @param timestamp - Unix timestamp in milliseconds.
+ * @returns Local date string in YYYY-MM-DD format.
+ * @source
+ */
+export function getLocalDateString(timestamp: number): string {
+  const date = new Date(timestamp);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Records a reading history snapshot for manga entries.
+ * Deduplicates entries from the same day (local time) for the same manga.
+ * Enforces maximum entries per manga to distribute retention fairly.
+ */
+export function recordReadingHistory(entries: ReadingHistoryEntry[]): void {
+  if (!entries.length) return;
+
+  const history = getReadingHistory();
+  const now = Date.now();
+
+  // Create a map of existing entries by mangaId and date for deduplication (using local date)
+  const existingMap = new Map<string, ReadingHistoryEntry>();
+  for (const entry of history.entries) {
+    const entryDate = getLocalDateString(entry.timestamp);
+    const key = `${entry.mangaId}_${entryDate}`;
+    existingMap.set(key, entry);
+  }
+
+  // Add or update entries
+  for (const entry of entries) {
+    const entryDate = getLocalDateString(entry.timestamp);
+    const key = `${entry.mangaId}_${entryDate}`;
+
+    // Only update if chapters changed or it's a new entry
+    const existing = existingMap.get(key);
+    if (!existing || existing.chaptersRead !== entry.chaptersRead) {
+      existingMap.set(key, entry);
+    }
+  }
+
+  // Convert back to array and sort by timestamp (newest first)
+  let allEntries = Array.from(existingMap.values()).sort(
+    (a, b) => b.timestamp - a.timestamp,
+  );
+
+  // Enforce maximum entries limit per manga to avoid disproportionate truncation
+  const entriesByManga = new Map<string | number, ReadingHistoryEntry[]>();
+  for (const entry of allEntries) {
+    if (!entriesByManga.has(entry.mangaId)) {
+      entriesByManga.set(entry.mangaId, []);
+    }
+    entriesByManga.get(entry.mangaId)!.push(entry);
+  }
+
+  // Trim each manga's history to max entries, keeping newest
+  const maxPerManga = 365;
+  const trimmedEntries: ReadingHistoryEntry[] = [];
+  for (const mangaEntries of entriesByManga.values()) {
+    if (mangaEntries.length > maxPerManga) {
+      trimmedEntries.push(...mangaEntries.slice(0, maxPerManga));
+    } else {
+      trimmedEntries.push(...mangaEntries);
+    }
+  }
+
+  // Sort final list by timestamp (newest first)
+  trimmedEntries.sort((a, b) => b.timestamp - a.timestamp);
+
+  const updatedHistory: ReadingHistory = {
+    entries: trimmedEntries,
+    lastUpdated: now,
+    version: 1,
+  };
+
+  saveReadingHistory(updatedHistory);
+}
+
+/**
+ * Clears all reading history from storage.
+ */
+export function clearReadingHistory(): void {
+  try {
+    storage.removeItem(STORAGE_KEYS.READING_HISTORY);
+    console.info("[Storage] Cleared reading history");
+  } catch (error) {
+    console.error("[Storage] Failed to clear reading history:", error);
   }
 }
 

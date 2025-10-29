@@ -62,8 +62,8 @@ export function Footer() {
   return (
     <TooltipProvider>
       <footer className="border-border bg-background/80 relative border-t px-4 py-6 text-xs backdrop-blur-xl">
-        <div className="pointer-events-none absolute inset-x-0 top-[-120px] h-60 w-full bg-gradient-to-b from-blue-500/10 via-purple-500/10 to-transparent blur-3xl" />
-        <div className="container relative z-[1] mx-auto flex flex-col items-center justify-between gap-6 md:flex-row">
+        <div className="bg-linear-to-b pointer-events-none absolute inset-x-0 top-[-120px] h-60 w-full from-blue-500/10 via-purple-500/10 to-transparent blur-3xl" />
+        <div className="z-1 container relative mx-auto flex flex-col items-center justify-between gap-6 md:flex-row">
           <div className="flex items-center gap-3">
             <motion.div
               className="h-8 w-8"
@@ -76,7 +76,7 @@ export function Footer() {
                 Sync tool
               </span>
               <div className="flex items-center gap-2 text-sm font-semibold">
-                <span className="bg-gradient-to-r from-blue-500 via-purple-500 to-fuchsia-500 bg-clip-text text-transparent">
+                <span className="bg-linear-to-r from-blue-500 via-purple-500 to-fuchsia-500 bg-clip-text text-transparent">
                   Kenmei → AniList
                 </span>
                 <Badge

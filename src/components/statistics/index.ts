@@ -10,3 +10,7 @@ export { MatchProgressChart } from "./MatchProgressChart";
 export { SyncMetricsChart } from "./SyncMetricsChart";
 export { FormatDistributionChart } from "./FormatDistributionChart";
 export { ChaptersReadDistributionChart } from "./ChaptersReadDistributionChart";
+export { ReadingTrendsChart } from "./ReadingTrendsChart";
+export { ReadingHabitsChart } from "./ReadingHabitsChart";
+export { ReadingVelocityChart } from "./ReadingVelocityChart";
+export { TimeRangeSelector } from "./TimeRangeSelector";

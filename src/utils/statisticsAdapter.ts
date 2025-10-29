@@ -8,6 +8,13 @@
 import type { KenmeiManga } from "@/utils/storage";
 import type { MangaMatch, MatchStatus } from "@/api/anilist/types";
 import type { SyncStats } from "@/types/sync";
+import type { ReadingHistory, ReadingHistoryEntry } from "./storage";
+import { getLocalDateString } from "./storage";
+
+/**
+ * Time range options for filtering statistics.
+ */
+export type TimeRange = "7d" | "30d" | "90d" | "all";
 
 /**
  * Minimal representation of a selected match for statistics visualization.
@@ -214,4 +221,277 @@ export function parseSyncStats(raw: string | null): SyncStats | null {
     console.error("[Statistics] ❌ Failed to parse sync stats", error);
     return null;
   }
+}
+
+/**
+ * Filters reading history entries by time range.
+ * @param history - Complete reading history.
+ * @param timeRange - Time range to filter by.
+ * @returns Filtered entries within the time range.
+ */
+export function filterHistoryByTimeRange(
+  history: ReadingHistory,
+  timeRange: TimeRange,
+): ReadingHistoryEntry[] {
+  if (timeRange === "all") {
+    return history.entries;
+  }
+
+  const now = Date.now();
+  const ranges = {
+    "7d": 7 * 24 * 60 * 60 * 1000,
+    "30d": 30 * 24 * 60 * 60 * 1000,
+    "90d": 90 * 24 * 60 * 60 * 1000,
+  };
+
+  const cutoff = now - ranges[timeRange];
+  return history.entries.filter((entry) => entry.timestamp >= cutoff);
+}
+
+/**
+ * Establishes baseline chapters for each manga from the latest snapshot before the range cutoff.
+ * Prevents inflating first in-range day deltas.
+ * @param history - Complete reading history.
+ * @param cutoffTimestamp - Cutoff time in milliseconds.
+ * @returns Map of mangaId to baseline chapters.
+ */
+function getPreRangeBaseline(
+  history: ReadingHistory,
+  cutoffTimestamp: number,
+): Map<string | number, number> {
+  const baseline = new Map<string | number, number>();
+
+  // Find most recent snapshot for each manga with timestamp < cutoff
+  for (const entry of history.entries) {
+    if (entry.timestamp < cutoffTimestamp) {
+      // Only update if this is newer than current baseline (entries are sorted newest first)
+      const current = baseline.get(entry.mangaId);
+      if (current === undefined) {
+        baseline.set(entry.mangaId, entry.chaptersRead);
+      }
+    }
+  }
+
+  return baseline;
+}
+
+/**
+ * Computes daily reading trends (chapters read per day).
+ * Establishes per-manga baseline from pre-range history to avoid inflated first-day deltas.
+ * @param history - Reading history data.
+ * @param timeRange - Time range to analyze.
+ * @returns Array of daily reading data points.
+ */
+export function computeReadingTrends(
+  history: ReadingHistory,
+  timeRange: TimeRange,
+): Array<{ date: string; chapters: number; count: number }> {
+  const filtered = filterHistoryByTimeRange(history, timeRange);
+  if (!filtered.length) return [];
+
+  // Establish baseline from pre-range history
+  const now = Date.now();
+  const ranges = {
+    "7d": 7 * 24 * 60 * 60 * 1000,
+    "30d": 30 * 24 * 60 * 60 * 1000,
+    "90d": 90 * 24 * 60 * 60 * 1000,
+  };
+  const cutoff = timeRange === "all" ? 0 : now - ranges[timeRange];
+  const preRangeBaseline =
+    timeRange === "all" ? new Map() : getPreRangeBaseline(history, cutoff);
+
+  // Group by date and calculate chapters read per day
+  const dailyMap = new Map<string, { chapters: number; count: number }>();
+
+  // Sort by timestamp to calculate deltas
+  const sorted = [...filtered].sort((a, b) => a.timestamp - b.timestamp);
+
+  // Track previous chapters per manga, seeded with pre-range baseline
+  const previousChapters = new Map<string | number, number>(preRangeBaseline);
+
+  for (const entry of sorted) {
+    const date = getLocalDateString(entry.timestamp);
+    const prev = previousChapters.get(entry.mangaId) ?? 0;
+    const delta = Math.max(0, entry.chaptersRead - prev);
+
+    const existing = dailyMap.get(date) ?? { chapters: 0, count: 0 };
+    dailyMap.set(date, {
+      chapters: existing.chapters + delta,
+      count: existing.count + (delta > 0 ? 1 : 0),
+    });
+
+    previousChapters.set(entry.mangaId, entry.chaptersRead);
+  }
+
+  // Convert to array and sort by date
+  return Array.from(dailyMap.entries())
+    .map(([date, data]) => ({ date, ...data }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
+ * Computes reading velocity metrics (average chapters per time period).
+ * Establishes per-manga baseline from pre-range history to avoid inflated first-day deltas.
+ * @param history - Reading history data.
+ * @param timeRange - Time range to analyze.
+ * @returns Velocity metrics object.
+ */
+export function computeReadingVelocity(
+  history: ReadingHistory,
+  timeRange: TimeRange,
+): {
+  perDay: number;
+  perWeek: number;
+  perMonth: number;
+  totalChapters: number;
+  activeDays: number;
+} {
+  const filtered = filterHistoryByTimeRange(history, timeRange);
+  if (!filtered.length) {
+    return {
+      perDay: 0,
+      perWeek: 0,
+      perMonth: 0,
+      totalChapters: 0,
+      activeDays: 0,
+    };
+  }
+
+  // Establish baseline from pre-range history
+  const now = Date.now();
+  const ranges = {
+    "7d": 7 * 24 * 60 * 60 * 1000,
+    "30d": 30 * 24 * 60 * 60 * 1000,
+    "90d": 90 * 24 * 60 * 60 * 1000,
+  };
+  const cutoff = timeRange === "all" ? 0 : now - ranges[timeRange];
+  const preRangeBaseline =
+    timeRange === "all" ? new Map() : getPreRangeBaseline(history, cutoff);
+
+  // Calculate total chapters read (sum of deltas)
+  const sorted = [...filtered].sort((a, b) => a.timestamp - b.timestamp);
+  const previousChapters = new Map<string | number, number>(preRangeBaseline);
+  let totalChapters = 0;
+  const activeDates = new Set<string>();
+
+  for (const entry of sorted) {
+    const prev = previousChapters.get(entry.mangaId) ?? 0;
+    const delta = Math.max(0, entry.chaptersRead - prev);
+    if (delta > 0) {
+      totalChapters += delta;
+      const date = getLocalDateString(entry.timestamp);
+      activeDates.add(date);
+    }
+    previousChapters.set(entry.mangaId, entry.chaptersRead);
+  }
+
+  const activeDays = activeDates.size;
+
+  const perDay = activeDays > 0 ? totalChapters / activeDays : 0;
+  const perWeek = perDay * 7;
+  const perMonth = perDay * 30;
+
+  return {
+    perDay: Math.round(perDay * 10) / 10,
+    perWeek: Math.round(perWeek * 10) / 10,
+    perMonth: Math.round(perMonth * 10) / 10,
+    totalChapters,
+    activeDays,
+  };
+}
+
+/**
+ * Computes reading habit patterns (day of week, time of day).
+ * Establishes per-manga baseline from pre-range history to avoid inflated deltas.
+ * @param history - Reading history data.
+ * @param timeRange - Time range to analyze.
+ * @returns Habit pattern data.
+ */
+export function computeReadingHabits(
+  history: ReadingHistory,
+  timeRange: TimeRange,
+): {
+  byDayOfWeek: Array<{ day: string; chapters: number }>;
+  byTimeOfDay: Array<{ hour: string; chapters: number }>;
+  peakDay: string | null;
+  peakHour: string | null;
+} {
+  const filtered = filterHistoryByTimeRange(history, timeRange);
+  if (!filtered.length) {
+    return {
+      byDayOfWeek: [],
+      byTimeOfDay: [],
+      peakDay: null,
+      peakHour: null,
+    };
+  }
+
+  // Establish baseline from pre-range history
+  const now = Date.now();
+  const ranges = {
+    "7d": 7 * 24 * 60 * 60 * 1000,
+    "30d": 30 * 24 * 60 * 60 * 1000,
+    "90d": 90 * 24 * 60 * 60 * 1000,
+  };
+  const cutoff = timeRange === "all" ? 0 : now - ranges[timeRange];
+  const preRangeBaseline =
+    timeRange === "all" ? new Map() : getPreRangeBaseline(history, cutoff);
+
+  const dayNames = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
+  const dayMap = new Map<number, number>();
+  const hourMap = new Map<number, number>();
+
+  // Calculate deltas and group by day/hour
+  const sorted = [...filtered].sort((a, b) => a.timestamp - b.timestamp);
+  const previousChapters = new Map<string | number, number>(preRangeBaseline);
+
+  for (const entry of sorted) {
+    const prev = previousChapters.get(entry.mangaId) ?? 0;
+    const delta = Math.max(0, entry.chaptersRead - prev);
+
+    if (delta > 0) {
+      const date = new Date(entry.timestamp);
+      const dayOfWeek = date.getDay();
+      const hour = date.getHours();
+
+      dayMap.set(dayOfWeek, (dayMap.get(dayOfWeek) ?? 0) + delta);
+      hourMap.set(hour, (hourMap.get(hour) ?? 0) + delta);
+    }
+
+    previousChapters.set(entry.mangaId, entry.chaptersRead);
+  }
+
+  // Convert to arrays
+  const byDayOfWeek = Array.from({ length: 7 }, (_, i) => ({
+    day: dayNames[i],
+    chapters: dayMap.get(i) ?? 0,
+  }));
+
+  const byTimeOfDay = Array.from({ length: 24 }, (_, i) => ({
+    hour: `${i.toString().padStart(2, "0")}:00`,
+    chapters: hourMap.get(i) ?? 0,
+  }));
+
+  // Find peaks
+  const maxDay = Math.max(...byDayOfWeek.map((d) => d.chapters));
+  const maxHour = Math.max(...byTimeOfDay.map((h) => h.chapters));
+
+  const peakDay = byDayOfWeek.find((d) => d.chapters === maxDay)?.day ?? null;
+  const peakHour =
+    byTimeOfDay.find((h) => h.chapters === maxHour)?.hour ?? null;
+
+  return {
+    byDayOfWeek,
+    byTimeOfDay,
+    peakDay,
+    peakHour,
+  };
 }
