@@ -8,6 +8,12 @@ export default defineConfig({
       "@": path.resolve(__dirname, "../src"),
     },
   },
+  define: {
+    "process.env.NODE_ENV": JSON.stringify(
+      process.env.NODE_ENV || "production",
+    ),
+    "process.env.SENTRY_DSN": JSON.stringify(process.env.SENTRY_DSN || ""),
+  },
   plugins: [
     viteStaticCopy({
       targets: [
