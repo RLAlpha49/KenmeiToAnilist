@@ -65,6 +65,12 @@ import {
 import { AlternativeSearchSettingsCard } from "./MangaMatchingPanel/AlternativeSearchSettingsCard";
 import { AdvancedFilterPanel } from "./AdvancedFilterPanel";
 import { FilterChips } from "./FilterChips";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Button } from "../ui/button";
 
 /**
  * Props for the MangaMatchingPanel component.
@@ -168,16 +174,20 @@ export function MangaMatchingPanel({
     useState(false);
   const [isResettingMatchedToPending] = useState(false);
 
-  // Add state for adult content settings and blur management
+  // State for collapsible sections
+  const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
+  const [isBulkActionsOpen, setIsBulkActionsOpen] = useState(false);
+
+  // State for adult content settings and blur management
   const [blurAdultContent, setBlurAdultContent] = useState(true);
   const [unblurredImages, setUnblurredImages] = useState<Set<string>>(
     new Set(),
   );
 
-  // Add state for Comick search setting (disabled - Comick temporarily unavailable)
+  // State for Comick search setting (disabled - Comick temporarily unavailable)
   // eslint-disable-next-line
   const [enableComickSearch, setEnableComickSearch] = useState(false);
-  // Add state for MangaDex search setting
+  // State for MangaDex search setting
   const [enableMangaDexSearch, setEnableMangaDexSearch] = useState(true);
 
   // Load blur settings from match config
@@ -864,6 +874,7 @@ export function MangaMatchingPanel({
       ref={containerRef}
       tabIndex={-1} // Make div focusable but not in tab order
     >
+      {/* PRIMARY CONTROLS - Always visible, grouped for proximity */}
       <MatchStatisticsCard
         matchStats={matchStats}
         noMatchesCount={noMatchesCount}
@@ -872,48 +883,292 @@ export function MangaMatchingPanel({
         searchInputRef={searchInputRef}
       />
 
-      <MatchBulkActions
-        emptyMatchesCount={emptyMatchesCount}
-        onSkipEmptyMatches={handleSkipEmptyMatches}
-        isSkippingEmptyMatches={isSkippingEmptyMatches}
-        noMatchesCount={noMatchesCount}
-        onReSearchNoMatches={handleReSearchNoMatches}
-        isReSearchingNoMatches={isReSearchingNoMatches}
-        skippedMangaCount={skippedMangaCount}
-        onResetSkippedToPending={handleResetSkippedToPending}
-        isResettingSkippedToPending={isResettingSkippedToPending}
-        pendingMatchesCount={pendingMatchesCount}
-        onAcceptAllPendingMatches={handleAcceptAllPendingMatches}
-        isAcceptingAllMatches={isAcceptingAllMatches}
-        onSetMatchedToPending={onSetMatchedToPending}
-        isResettingMatchedToPending={isResettingMatchedToPending}
-        matchedCount={matchedCount}
-      />
+      {/* PRIMARY CONTROLS - Filters & Sort (side by side on larger screens) */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Status Filters */}
+        <div className="h-full">
+          <MatchFilterControls
+            statusFilters={statusFilters}
+            setStatusFilters={setStatusFilters}
+            matchStats={matchStats}
+          />
+        </div>
 
-      <MatchFilterControls
-        statusFilters={statusFilters}
-        setStatusFilters={setStatusFilters}
-        matchStats={matchStats}
-      />
+        <div>
+          <Card className="relative h-full overflow-hidden rounded-3xl border border-white/40 bg-white/75 shadow-xl shadow-slate-900/5 backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/70">
+            <div className="pointer-events-none absolute -left-16 top-0 h-48 w-48 rounded-full bg-indigo-400/15 blur-3xl" />
+            <div className="pointer-events-none absolute -right-20 bottom-0 h-56 w-56 rounded-full bg-blue-400/15 blur-3xl" />
+            <CardHeader className="relative z-10 min-h-[70px] border-b border-white/40 pb-4 dark:border-slate-800/60">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-1 items-center gap-3">
+                  <div className="flex min-h-9 min-w-9 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-500">
+                    <ArrowUpDown className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base font-semibold text-slate-900 dark:text-white">
+                      Sort Priorities
+                    </CardTitle>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Tap a mode to focus your review queue.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="relative z-10 p-5">
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  {
+                    field: "title" as const,
+                    label: "Title",
+                    helper: "Alphabetical",
+                    icon: Type,
+                    accent: "from-slate-400/20 via-slate-500/10 to-transparent",
+                  },
+                  {
+                    field: "status" as const,
+                    label: "Status",
+                    helper: "By workflow",
+                    icon: ListFilter,
+                    accent:
+                      "from-emerald-400/20 via-emerald-500/10 to-transparent",
+                  },
+                  {
+                    field: "confidence" as const,
+                    label: "Confidence",
+                    helper: "Highest first",
+                    icon: Sparkles,
+                    accent:
+                      "from-violet-400/20 via-violet-500/10 to-transparent",
+                  },
+                  {
+                    field: "chapters_read" as const,
+                    label: "Chapters Read",
+                    helper: "Deep progress",
+                    icon: BookOpen,
+                    accent: "from-amber-400/20 via-amber-500/10 to-transparent",
+                  },
+                ].map(({ field, label, helper, icon: Icon, accent }) => {
+                  const isActive = sortOption.field === field;
+                  let directionLabel: string;
+                  if (isActive) {
+                    directionLabel =
+                      sortOption.direction === "asc"
+                        ? "Ascending"
+                        : "Descending";
+                  } else {
+                    directionLabel = "Tap";
+                  }
 
-      {/* Advanced Filter Panel */}
-      <AdvancedFilterPanel
-        filters={advancedFilters}
-        onFiltersChange={handleAdvancedFiltersChange}
-        availableGenres={availableGenres}
-        availableFormats={availableFormats}
-        availableStatuses={availableStatuses}
-        matchCount={filteredMatches.length}
-      />
+                  return (
+                    <button
+                      key={field}
+                      type="button"
+                      onClick={() => handleSortChange(field)}
+                      className={cn(
+                        "group relative overflow-hidden rounded-2xl border border-white/40 bg-white/65 p-3 text-left shadow-md transition-all hover:-translate-y-0.5 hover:border-white/60 hover:bg-white/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 dark:border-slate-800/60 dark:bg-slate-900/65 dark:hover:border-slate-700",
+                        isActive &&
+                          "ring-offset-background ring-2 ring-indigo-400 ring-offset-2",
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "bg-linear-to-br absolute inset-0 opacity-40 transition-opacity duration-300 group-hover:opacity-70",
+                          accent,
+                        )}
+                      />
+                      <div className="relative flex flex-col gap-2">
+                        <div className="flex items-center justify-between gap-1">
+                          <div className="flex min-w-0 items-center gap-1.5">
+                            <span
+                              className={cn(
+                                "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/50 bg-white/70 text-slate-600 dark:border-slate-700 dark:bg-slate-900/70",
+                                isActive &&
+                                  "border-indigo-400/50 text-indigo-500",
+                              )}
+                            >
+                              <Icon className="h-3.5 w-3.5" />
+                            </span>
+                            <span className="truncate text-xs font-semibold text-slate-900 dark:text-white">
+                              {label}
+                            </span>
+                          </div>
+                          <Badge
+                            variant="secondary"
+                            className="flex shrink-0 items-center gap-0.5 rounded-full border border-white/40 bg-white/60 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300"
+                          >
+                            {directionLabel}
+                            {renderSortIndicator(field)}
+                          </Badge>
+                        </div>
+                        <p className="truncate text-[10px] text-slate-500 dark:text-slate-400">
+                          {helper}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
-      {/* Active Filter Chips */}
+      {/* ADVANCED CONTROLS - Collapsible for progressive disclosure */}
+      <Collapsible
+        open={isAdvancedFiltersOpen}
+        onOpenChange={setIsAdvancedFiltersOpen}
+      >
+        <Card className="relative overflow-hidden rounded-3xl border border-white/40 bg-white/75 shadow-xl shadow-slate-900/5 backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/70">
+          <CardHeader className="relative z-10 transition-colors">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-500/10 text-violet-500">
+                  <ListFilter className="h-4 w-4" />
+                </div>
+                <div className="text-left">
+                  <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-white">
+                    Advanced Filters & Settings
+                    <Badge
+                      variant="secondary"
+                      className="rounded-full bg-violet-500/10 px-2 py-0.5 text-xs text-violet-600 dark:text-violet-300"
+                    >
+                      Advanced
+                    </Badge>
+                  </CardTitle>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Fine-tune your results with additional criteria
+                  </p>
+                </div>
+              </div>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <ChevronRight
+                    className={cn(
+                      "h-4 w-4 transform transition-transform",
+                      isAdvancedFiltersOpen && "rotate-90",
+                    )}
+                  />
+                </Button>
+              </CollapsibleTrigger>
+            </div>
+          </CardHeader>
+
+          <CollapsibleContent>
+            <CardContent className="relative z-10 space-y-4 pb-5">
+              {/* Advanced Filter Panel */}
+              <AdvancedFilterPanel
+                filters={advancedFilters}
+                onFiltersChange={handleAdvancedFiltersChange}
+                availableGenres={availableGenres}
+                availableFormats={availableFormats}
+                availableStatuses={availableStatuses}
+                matchCount={filteredMatches.length}
+              />
+
+              {/* Alternative Search Settings */}
+              <AlternativeSearchSettingsCard
+                enableMangaDexSearch={enableMangaDexSearch}
+                onComickSearchToggle={handleComickSearchToggle}
+                onMangaDexSearchToggle={handleMangaDexSearchToggle}
+              />
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
+
+      {/* Active Filter Chips - Show what's currently filtering */}
       <FilterChips
         filters={advancedFilters}
         onRemoveFilter={handleRemoveFilter}
         onClearAll={handleClearAllFilters}
       />
 
-      {/* Batch Selection Controls */}
+      {/* BULK ACTIONS - Collapsible, only show when there are items to act on */}
+      {(emptyMatchesCount > 0 ||
+        noMatchesCount > 0 ||
+        skippedMangaCount > 0 ||
+        matchedCount > 0 ||
+        pendingMatchesCount > 0) && (
+        <Collapsible
+          open={isBulkActionsOpen}
+          onOpenChange={setIsBulkActionsOpen}
+        >
+          <Card className="relative overflow-hidden rounded-3xl border border-white/40 bg-white/75 shadow-xl shadow-slate-900/5 backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/70">
+            <CardHeader className="relative z-10 transition-colors">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/10 text-amber-500">
+                    <Sparkles className="h-4 w-4" />
+                  </div>
+                  <div className="text-left">
+                    <CardTitle className="text-base font-semibold text-slate-900 dark:text-white">
+                      Bulk Operations
+                    </CardTitle>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Perform actions on multiple items at once
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {(emptyMatchesCount > 0 ||
+                    noMatchesCount > 0 ||
+                    skippedMangaCount > 0 ||
+                    matchedCount > 0 ||
+                    pendingMatchesCount > 0) && (
+                    <Badge className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs text-amber-600 dark:text-amber-300">
+                      {
+                        [
+                          emptyMatchesCount,
+                          noMatchesCount,
+                          skippedMangaCount,
+                          matchedCount,
+                          pendingMatchesCount,
+                        ].filter((c) => c > 0).length
+                      }{" "}
+                      actions available
+                    </Badge>
+                  )}
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <ChevronRight
+                        className={cn(
+                          "h-4 w-4 transform transition-transform",
+                          isBulkActionsOpen && "rotate-90",
+                        )}
+                      />
+                    </Button>
+                  </CollapsibleTrigger>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CollapsibleContent>
+              <CardContent className="relative z-10 pb-5">
+                <MatchBulkActions
+                  emptyMatchesCount={emptyMatchesCount}
+                  onSkipEmptyMatches={handleSkipEmptyMatches}
+                  isSkippingEmptyMatches={isSkippingEmptyMatches}
+                  noMatchesCount={noMatchesCount}
+                  onReSearchNoMatches={handleReSearchNoMatches}
+                  isReSearchingNoMatches={isReSearchingNoMatches}
+                  skippedMangaCount={skippedMangaCount}
+                  onResetSkippedToPending={handleResetSkippedToPending}
+                  isResettingSkippedToPending={isResettingSkippedToPending}
+                  pendingMatchesCount={pendingMatchesCount}
+                  onAcceptAllPendingMatches={handleAcceptAllPendingMatches}
+                  isAcceptingAllMatches={isAcceptingAllMatches}
+                  onSetMatchedToPending={onSetMatchedToPending}
+                  isResettingMatchedToPending={isResettingMatchedToPending}
+                  matchedCount={matchedCount}
+                />
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+      )}
+
+      {/* Batch Selection Controls - Contextual, only when feature is available */}
       {onSelectAll && (
         <Card className="relative mb-4 overflow-hidden rounded-3xl border border-white/40 bg-white/75 shadow-xl shadow-slate-900/5 backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/70">
           <CardHeader className="relative z-10">
@@ -960,129 +1215,8 @@ export function MangaMatchingPanel({
         </Card>
       )}
 
-      <AlternativeSearchSettingsCard
-        enableMangaDexSearch={enableMangaDexSearch}
-        onComickSearchToggle={handleComickSearchToggle}
-        onMangaDexSearchToggle={handleMangaDexSearchToggle}
-      />
-
-      {/* Sort options */}
-      <Card className="relative mb-4 overflow-hidden rounded-3xl border border-white/40 bg-white/75 shadow-xl shadow-slate-900/5 backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/70">
-        <div className="pointer-events-none absolute -left-16 top-0 h-48 w-48 rounded-full bg-indigo-400/15 blur-3xl" />
-        <div className="pointer-events-none absolute -right-20 bottom-0 h-56 w-56 rounded-full bg-blue-400/15 blur-3xl" />
-        <CardHeader className="relative z-10 flex flex-col gap-2 border-b border-white/40 pb-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800/60">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-500">
-              <ArrowUpDown className="h-4 w-4" />
-            </div>
-            <div>
-              <CardTitle className="text-base font-semibold text-slate-900 dark:text-white">
-                Sort Priorities
-              </CardTitle>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Tap a mode to focus your review queue. Tap again to flip
-                direction.
-              </p>
-            </div>
-          </div>
-          <Badge className="rounded-full border border-white/40 bg-white/40 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300">
-            {sortOption.field.toUpperCase()} ·{" "}
-            {sortOption.direction === "asc" ? "Ascending" : "Descending"}
-          </Badge>
-        </CardHeader>
-        <CardContent className="relative z-10 p-5">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {[
-              {
-                field: "title" as const,
-                label: "Title",
-                helper: "Alphabetical preview",
-                icon: Type,
-                accent: "from-slate-400/20 via-slate-500/10 to-transparent",
-              },
-              {
-                field: "status" as const,
-                label: "Status",
-                helper: "Group by review workflow",
-                icon: ListFilter,
-                accent: "from-emerald-400/20 via-emerald-500/10 to-transparent",
-              },
-              {
-                field: "confidence" as const,
-                label: "Confidence",
-                helper: "Highest certainty first",
-                icon: Sparkles,
-                accent: "from-violet-400/20 via-violet-500/10 to-transparent",
-              },
-              {
-                field: "chapters_read" as const,
-                label: "Chapters Read",
-                helper: "Prioritize deep progress",
-                icon: BookOpen,
-                accent: "from-amber-400/20 via-amber-500/10 to-transparent",
-              },
-            ].map(({ field, label, helper, icon: Icon, accent }) => {
-              const isActive = sortOption.field === field;
-              let directionLabel: string;
-              if (isActive) {
-                directionLabel =
-                  sortOption.direction === "asc" ? "Ascending" : "Descending";
-              } else {
-                directionLabel = "Tap to sort";
-              }
-
-              return (
-                <button
-                  key={field}
-                  type="button"
-                  onClick={() => handleSortChange(field)}
-                  className={cn(
-                    "group relative overflow-hidden rounded-2xl border border-white/40 bg-white/65 p-4 text-left shadow-md transition-all hover:-translate-y-0.5 hover:border-white/60 hover:bg-white/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 dark:border-slate-800/60 dark:bg-slate-900/65 dark:hover:border-slate-700",
-                    isActive &&
-                      "ring-offset-background ring-2 ring-indigo-400 ring-offset-2",
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "bg-linear-to-br absolute inset-0 opacity-40 transition-opacity duration-300 group-hover:opacity-70",
-                      accent,
-                    )}
-                  />
-                  <div className="relative flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={cn(
-                            "flex h-9 w-9 items-center justify-center rounded-full border border-white/50 bg-white/70 text-slate-600 dark:border-slate-700 dark:bg-slate-900/70",
-                            isActive && "border-indigo-400/50 text-indigo-500",
-                          )}
-                        >
-                          <Icon className="h-4 w-4" />
-                        </span>
-                        <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                          {label}
-                        </span>
-                      </div>
-                      <Badge
-                        variant="secondary"
-                        className="flex items-center gap-1 rounded-full border border-white/40 bg-white/60 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300"
-                      >
-                        {directionLabel}
-                        {renderSortIndicator(field)}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {helper}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Confidence accuracy notice */}
+      {/* CONTENT AREA */}
+      {/* Confidence accuracy notice - moved closer to cards */}
       <div className="relative mb-4 overflow-hidden rounded-3xl border border-amber-400/40 bg-amber-50/80 p-5 shadow-xl shadow-amber-500/10 backdrop-blur dark:border-amber-500/30 dark:bg-amber-900/25">
         <div className="pointer-events-none absolute -top-20 left-10 h-48 w-48 rounded-full bg-amber-400/25 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-16 right-8 h-40 w-40 rounded-full bg-red-400/15 blur-3xl" />

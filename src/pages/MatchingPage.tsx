@@ -1010,7 +1010,6 @@ export function MatchingPage() {
       matchResultsLength: 0,
       showRematchOptions: false,
       setShowRematchOptions: () => {},
-      handleSetAllMatchedToPending: () => {},
       matchingProcessIsLoading: false,
       rateLimitIsRateLimited: false,
       statusSummary: matchStatusSummary,
@@ -1681,7 +1680,6 @@ export function MatchingPage() {
           matchResultsLength={matchResults.length}
           showRematchOptions={showRematchOptions}
           setShowRematchOptions={setShowRematchOptions}
-          handleSetAllMatchedToPending={handleSetAllMatchedToPending}
           matchingProcessIsLoading={matchingProcess.isLoading}
           rateLimitIsRateLimited={rateLimitState.isRateLimited}
           statusSummary={matchStatusSummary}

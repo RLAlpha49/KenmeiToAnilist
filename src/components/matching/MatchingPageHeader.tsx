@@ -45,7 +45,6 @@ type HighlightStat = {
  * @property matchResultsLength - Total number of matches to process.
  * @property showRematchOptions - Whether to display rematch options panel.
  * @property setShowRematchOptions - Callback to toggle rematch options visibility.
- * @property handleSetAllMatchedToPending - Callback to reset all matched items to pending.
  * @property matchingProcessIsLoading - Whether the matching process is running.
  * @property rateLimitIsRateLimited - Whether AniList rate limit is active.
  * @property statusSummary - Statistics summary with match counts and completion percent.
@@ -61,7 +60,6 @@ interface Props {
   matchResultsLength: number;
   showRematchOptions: boolean;
   setShowRematchOptions: (v: boolean) => void;
-  handleSetAllMatchedToPending: () => void;
   matchingProcessIsLoading: boolean;
   rateLimitIsRateLimited: boolean;
   statusSummary: {
@@ -96,7 +94,6 @@ export function MatchingPageHeader({
   matchResultsLength,
   showRematchOptions,
   setShowRematchOptions,
-  handleSetAllMatchedToPending,
   matchingProcessIsLoading,
   rateLimitIsRateLimited,
   statusSummary,
@@ -220,83 +217,101 @@ export function MatchingPageHeader({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.25 }}
-              className="flex w-full flex-col gap-2"
+              className="flex w-full flex-col gap-3"
             >
-              <div className="flex w-full flex-col gap-2 md:flex-row md:items-center md:justify-end md:gap-3">
-                {/* Undo/Redo buttons */}
-                {(canUndo || canRedo) && (
-                  <TooltipProvider>
-                    <div className="flex items-center gap-1">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            disabled={!canUndo}
-                            onClick={handleUndo}
-                            aria-label="Undo last action (Ctrl+Z)"
-                            aria-keyshortcuts="Control+Z"
-                            className="rounded-xl border border-slate-300/70 bg-white/70 text-slate-700 hover:border-slate-400/80 hover:bg-white/90 disabled:pointer-events-none disabled:opacity-50 dark:border-slate-700/70 dark:bg-slate-900/60 dark:text-slate-200 dark:hover:border-slate-600/70 dark:hover:bg-slate-900"
-                          >
-                            <Undo2 className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Undo (Ctrl+Z)</TooltipContent>
-                      </Tooltip>
+              {/* Primary Action Row - Most prominent */}
+              <div className="flex w-full flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
+                <Button
+                  onClick={() => setShowRematchOptions(!showRematchOptions)}
+                  variant="default"
+                  size="lg"
+                  className="bg-linear-to-r group relative rounded-2xl from-indigo-500 via-sky-500 to-blue-500 px-6 py-3 text-base font-semibold shadow-lg transition-all hover:scale-[1.02] hover:from-indigo-600 hover:via-sky-600 hover:to-blue-600 hover:shadow-xl active:scale-[0.98]"
+                  aria-label={
+                    showRematchOptions
+                      ? "Hide rematch options panel"
+                      : "Open fresh search options to clear cache and rematch"
+                  }
+                >
+                  <Sparkles className="mr-2 h-5 w-5" aria-hidden="true" />
+                  {showRematchOptions
+                    ? "Hide Rematch Options"
+                    : "Fresh Search (Clear Cache)"}
+                </Button>
+              </div>
 
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            disabled={!canRedo}
-                            onClick={handleRedo}
-                            aria-label="Redo last action (Ctrl+Shift+Z)"
-                            aria-keyshortcuts="Control+Shift+Z"
-                            className="rounded-xl border border-slate-300/70 bg-white/70 text-slate-700 hover:border-slate-400/80 hover:bg-white/90 disabled:pointer-events-none disabled:opacity-50 dark:border-slate-700/70 dark:bg-slate-900/60 dark:text-slate-200 dark:hover:border-slate-600/70 dark:hover:bg-slate-900"
-                          >
-                            <Redo2 className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Redo (Ctrl+Shift+Z)</TooltipContent>
-                      </Tooltip>
-                    </div>
-                    <div className="h-8 w-px bg-slate-300/50 dark:bg-slate-600/50" />
-                  </TooltipProvider>
-                )}
+              {/* Secondary Actions Row - Grouped logically */}
+              <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                {/* Left group: History controls */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {(canUndo || canRedo) && (
+                    <TooltipProvider>
+                      <fieldset
+                        className="flex items-center gap-1 rounded-xl border border-slate-300/70 bg-white/50 p-1 shadow-sm dark:border-slate-700/70 dark:bg-slate-900/50"
+                        aria-label="History controls"
+                      >
+                        <legend className="sr-only">History controls</legend>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={!canUndo}
+                              onClick={handleUndo}
+                              aria-label="Undo last action"
+                              aria-keyshortcuts="Control+Z"
+                              className="h-9 rounded-lg px-3 hover:bg-white/80 disabled:pointer-events-none disabled:opacity-40 dark:hover:bg-slate-800/80"
+                            >
+                              <Undo2 className="h-4 w-4" aria-hidden="true" />
+                              <span className="ml-1.5 text-xs font-medium">
+                                Undo
+                              </span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">
+                            Undo (Ctrl+Z)
+                          </TooltipContent>
+                        </Tooltip>
 
-                {/* Export Button */}
-                {matchResultsLength > 0 && (
-                  <>
+                        <div className="h-6 w-px bg-slate-300/50 dark:bg-slate-600/50" />
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={!canRedo}
+                              onClick={handleRedo}
+                              aria-label="Redo last action"
+                              aria-keyshortcuts="Control+Shift+Z"
+                              className="h-9 rounded-lg px-3 hover:bg-white/80 disabled:pointer-events-none disabled:opacity-40 dark:hover:bg-slate-800/80"
+                            >
+                              <Redo2 className="h-4 w-4" aria-hidden="true" />
+                              <span className="ml-1.5 text-xs font-medium">
+                                Redo
+                              </span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">
+                            Redo (Ctrl+Shift+Z)
+                          </TooltipContent>
+                        </Tooltip>
+                      </fieldset>
+                    </TooltipProvider>
+                  )}
+                </div>
+
+                {/* Right group: Data and matching controls */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Export Button - Data action */}
+                  {matchResultsLength > 0 && (
                     <ExportMatchesButton
                       matches={matchResults}
                       variant="outline"
                       size="default"
                       disabled={matchingProcessIsLoading}
                     />
-                    <div className="h-8 w-px bg-slate-300/50 dark:bg-slate-600/50" />
-                  </>
-                )}
-
-                {matched > 0 && (
-                  <Button
-                    variant="outline"
-                    onClick={handleSetAllMatchedToPending}
-                    className="group flex grow items-center justify-center gap-2 rounded-2xl border border-slate-300/70 bg-white/70 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400/80 hover:bg-white/90 hover:text-slate-900 md:grow-0 dark:border-slate-700/70 dark:bg-slate-900/60 dark:text-slate-200 dark:hover:border-slate-600/70 dark:hover:bg-slate-900"
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                    Reset matched to pending
-                  </Button>
-                )}
-                <Button
-                  onClick={() => setShowRematchOptions(!showRematchOptions)}
-                  variant="default"
-                  className="bg-linear-to-r grow rounded-2xl from-indigo-500 via-sky-500 to-blue-500 text-sm font-semibold shadow-lg hover:from-indigo-600 hover:via-sky-600 hover:to-blue-600 md:grow-0"
-                >
-                  {showRematchOptions
-                    ? "Hide Rematch Options"
-                    : "Fresh Search (Clear Cache)"}
-                </Button>
+                  )}
+                </div>
               </div>
             </motion.div>
           )}

@@ -1,12 +1,11 @@
 import React, { useState, useMemo } from "react";
 import {
   SlidersHorizontal,
-  ChevronDown,
-  ChevronUp,
   Target,
   AlertCircle,
   Book,
   TrendingUp,
+  ChevronRight,
 } from "lucide-react";
 import {
   Card,
@@ -220,11 +219,9 @@ export function AdvancedFilterPanel({
               {/* Collapse toggle */}
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  {isOpen ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
+                  <ChevronRight
+                    className={`h-4 w-4 transform transition-transform ${isOpen ? "rotate-90" : ""}`}
+                  />
                   <span className="sr-only">Toggle advanced filters</span>
                 </Button>
               </CollapsibleTrigger>
