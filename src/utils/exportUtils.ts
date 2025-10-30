@@ -9,6 +9,7 @@ import { SyncReport } from "../api/anilist/sync-service";
 import { MangaMatchResult, AniListManga } from "../api/anilist/types";
 import { storage, STORAGE_KEYS } from "./storage";
 import type { MatchForExport } from "../types/matching";
+import { getAppVersion } from "./app-version";
 
 /**
  * UTF-8 BOM (Byte Order Mark) for Excel compatibility.
@@ -29,6 +30,44 @@ const UTF8_BOM = "\ufeff";
  */
 export function generateExportTimestamp(): string {
   return new Date().toISOString().replaceAll(":", "-").replaceAll(".", "-");
+}
+
+/**
+ * Builds export metadata object with timestamp, version, and filter info.
+ * @param format - Export format being used
+ * @param totalEntries - Number of entries being exported
+ * @param filters - Optional filter options applied
+ * @param sections - Optional sections included (for statistics)
+ * @returns Complete metadata object
+ * @internal
+ */
+export function buildExportMetadata(
+  format: ExportFormat,
+  totalEntries: number,
+  filters?: ExportFilterOptions,
+  sections?: string[],
+): ExportMetadata {
+  const metadata: ExportMetadata = {
+    exportedAt: new Date().toISOString(),
+    appVersion: getAppVersion(),
+    format,
+    totalEntries,
+  };
+
+  if (filters) {
+    metadata.filters = {
+      statusFilter: filters.statusFilter,
+      confidenceThreshold: filters.confidenceThreshold,
+      includeUnmatched: filters.includeUnmatched,
+      unmatchedOnly: filters.unmatchedOnly,
+    };
+  }
+
+  if (sections) {
+    metadata.sections = sections;
+  }
+
+  return metadata;
 }
 
 /**
@@ -61,7 +100,7 @@ function sanitizeFilename(baseFilename: string): string {
  * Export format options.
  * @source
  */
-export type ExportFormat = "json" | "csv";
+export type ExportFormat = "json" | "csv" | "markdown";
 
 /**
  * Options for filtering data during export.
@@ -76,6 +115,24 @@ export interface ExportFilterOptions {
   includeUnmatched?: boolean;
   /** Only export unmatched entries (no selectedMatch and no anilistMatches) */
   unmatchedOnly?: boolean;
+}
+
+/**
+ * Metadata included in all exports.
+ * @source
+ */
+export interface ExportMetadata {
+  exportedAt: string; // ISO 8601 timestamp
+  appVersion: string; // App version (e.g., "3.0.0")
+  format: ExportFormat;
+  filters?: {
+    statusFilter?: ("matched" | "manual" | "pending" | "skipped")[]; // Applied status filters
+    confidenceThreshold?: number; // Minimum confidence
+    includeUnmatched?: boolean;
+    unmatchedOnly?: boolean;
+  };
+  sections?: string[]; // For statistics exports
+  totalEntries: number; // Count of exported items
 }
 
 /**
@@ -459,6 +516,78 @@ export function filterMatchResults(
 }
 
 /**
+ * Escapes pipe characters and newlines in Markdown table cells.
+ * @param value - Value to escape
+ * @returns Escaped string safe for Markdown tables
+ * @internal
+ */
+function escapeMarkdownCell(value: string | number | null): string {
+  if (value === null || value === undefined) return "-";
+  const str = String(value);
+  return str
+    .replaceAll("|", String.raw`\|`) // Escape pipes
+    .replaceAll("\n", " ") // Replace newlines with spaces
+    .replaceAll("\r", "") // Remove carriage returns
+    .trim();
+}
+
+/**
+ * Truncates long strings for Markdown table readability.
+ * @param value - Value to truncate
+ * @param maxLength - Maximum length (default 50)
+ * @returns Truncated string with ellipsis if needed
+ * @internal
+ */
+function truncateForMarkdown(value: string, maxLength = 50): string {
+  if (value.length <= maxLength) return value;
+  return value.substring(0, maxLength - 3) + "...";
+}
+
+/**
+ * Formats metadata as Markdown header section.
+ * @param metadata - Export metadata object
+ * @returns Formatted Markdown string
+ * @internal
+ */
+function formatMetadataHeader(metadata: ExportMetadata): string {
+  let header = "# Export Metadata\n\n";
+  header += `- **Exported**: ${metadata.exportedAt}\n`;
+  header += `- **App Version**: v${metadata.appVersion}\n`;
+  header += `- **Format**: ${metadata.format}\n`;
+
+  if (metadata.filters) {
+    const filters = [];
+    if (metadata.filters.statusFilter?.length) {
+      filters.push(`Status: ${metadata.filters.statusFilter.join(", ")}`);
+    }
+    if (metadata.filters.confidenceThreshold) {
+      filters.push(`Confidence ≥${metadata.filters.confidenceThreshold}%`);
+    }
+    if (metadata.filters.unmatchedOnly) {
+      filters.push("Unmatched only");
+    } else if (metadata.filters.includeUnmatched !== undefined) {
+      filters.push(
+        metadata.filters.includeUnmatched
+          ? "Including unmatched"
+          : "Excluding unmatched",
+      );
+    }
+    if (filters.length > 0) {
+      header += `- **Filters Applied**: ${filters.join(", ")}\n`;
+    }
+  }
+
+  if (metadata.sections?.length) {
+    header += `- **Sections**: ${metadata.sections.join(", ")}\n`;
+  }
+
+  header += `- **Total Entries**: ${metadata.totalEntries}\n\n`;
+  header += "---\n\n";
+
+  return header;
+}
+
+/**
  * Exports data to CSV format and triggers browser download.
  *
  * Includes UTF-8 BOM (Byte Order Mark) prefix to improve Excel compatibility on Windows.
@@ -524,10 +653,144 @@ export function exportToCSV(
 }
 
 /**
+ * Formats array of objects as Markdown table.
+ * @param data - Array of objects with consistent keys
+ * @returns Formatted Markdown table string
+ * @internal
+ */
+function formatMarkdownTable(data: Record<string, unknown>[]): string {
+  if (data.length === 0) return "";
+
+  // Get column headers from first object
+  const headers = Object.keys(data[0]);
+
+  // Build header row
+  let table =
+    "| " + headers.map((h) => escapeMarkdownCell(h)).join(" | ") + " |\n";
+
+  // Build separator row (left-align all columns)
+  table += "| " + headers.map(() => "---").join(" | ") + " |\n";
+
+  // Build data rows
+  for (const row of data) {
+    const cells = headers.map((header) => {
+      const value = row[header];
+      const escaped = escapeMarkdownCell(value as string | number | null);
+      // Truncate long values for readability
+      return truncateForMarkdown(escaped, 50);
+    });
+    table += "| " + cells.join(" | ") + " |\n";
+  }
+
+  return table + "\n";
+}
+
+/**
+ * Formats object with sections as Markdown with multiple tables.
+ * @param data - Object with section keys and data values
+ * @returns Formatted Markdown string with sections
+ * @internal
+ */
+function formatMarkdownSections(data: Record<string, unknown>): string {
+  let markdown = "";
+
+  for (const [section, value] of Object.entries(data)) {
+    // Skip metadata fields
+    if (section === "generatedAt") continue;
+
+    markdown += `## ${section}\n\n`;
+
+    if (Array.isArray(value)) {
+      markdown += formatMarkdownTable(value as Record<string, unknown>[]);
+    } else if (typeof value === "object" && value !== null) {
+      // Format as key-value pairs
+      for (const [key, val] of Object.entries(value)) {
+        markdown += `- **${key}**: ${escapeMarkdownCell(val as string | number)}\n`;
+      }
+      markdown += "\n";
+    } else {
+      markdown += `${escapeMarkdownCell(value as string | number)}\n\n`;
+    }
+  }
+
+  return markdown;
+}
+
+/**
+ * Exports data to Markdown format and triggers browser download.
+ *
+ * Creates formatted Markdown tables with metadata header.
+ * Handles both flat data (for tables) and nested objects (for sections).
+ *
+ * @param data - Array of objects to export as table, or object with sections
+ * @param baseFilename - Base filename without extension or timestamp
+ * @param metadata - Export metadata to include in header
+ * @returns The full filename used for download
+ * @throws Will throw if Markdown generation fails
+ * @throws Will throw if document.body is unavailable
+ * @source
+ */
+export function exportToMarkdown(
+  data: Record<string, unknown>[] | Record<string, unknown>,
+  baseFilename: string,
+  metadata: ExportMetadata,
+): string {
+  let markdown = formatMetadataHeader(metadata);
+
+  // Handle array data (table format)
+  if (Array.isArray(data)) {
+    if (data.length === 0) {
+      markdown += "*No data to export*\n";
+    } else {
+      markdown += formatMarkdownTable(data);
+    }
+  }
+  // Handle object data (sections format)
+  else {
+    markdown += formatMarkdownSections(data);
+  }
+
+  // Create blob and download
+  const blob = new Blob([markdown], {
+    type: "text/markdown;charset=utf-8",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  let appended = false;
+
+  try {
+    const sanitized = sanitizeFilename(baseFilename);
+    const timestamp = generateExportTimestamp();
+    const filename = `${sanitized}-${timestamp}.md`;
+
+    link.href = url;
+    link.download = filename;
+
+    if (!document.body) {
+      throw new Error(
+        "Cannot export: document.body is unavailable. " +
+          "This export utility requires the Electron renderer process with access to DOM APIs.",
+      );
+    }
+
+    document.body.appendChild(link);
+    appended = true;
+    link.click();
+
+    return filename;
+  } finally {
+    if (appended) {
+      link.remove();
+    }
+    URL.revokeObjectURL(url);
+  }
+}
+
+/**
  * Exports match results in the specified format with optional filtering.
  *
  * @param matches - Array of match results to export.
- * @param format - Export format (json, csv).
+ * @param format - Export format (json, csv, markdown).
  * @param filters - Optional filters to apply before export.
  * @returns Promise resolving to the filename of the exported file.
  * @throws Will throw if export fails.
@@ -557,17 +820,44 @@ export async function exportMatchResults(
 
   console.info(`[Export] 🔍 Filtered to ${filteredMatches.length} matches`);
 
+  const metadata = buildExportMetadata(format, filteredMatches.length, filters);
+
   let filename: string;
 
   switch (format) {
-    case "json":
-      filename = exportToJson(filteredMatches, "match-results");
+    case "json": {
+      const payload = {
+        metadata,
+        matches: filteredMatches,
+      };
+      filename = exportToJson(
+        payload as unknown as Record<string, unknown>,
+        "match-results",
+      );
       break;
+    }
     case "csv": {
       const flattened = filteredMatches.map(flattenMatchResult);
+      // Add metadata as comment rows at top of CSV
+      const withMetadata = [
+        { comment: `Exported: ${metadata.exportedAt}` },
+        { comment: `App Version: v${metadata.appVersion}` },
+        { comment: `Total Entries: ${metadata.totalEntries}` },
+        { comment: "" }, // Empty row separator
+        ...flattened,
+      ];
       filename = exportToCSV(
+        withMetadata as unknown as Record<string, unknown>[],
+        "match-results",
+      );
+      break;
+    }
+    case "markdown": {
+      const flattened = filteredMatches.map(flattenMatchResult);
+      filename = exportToMarkdown(
         flattened as unknown as Record<string, unknown>[],
         "match-results",
+        metadata,
       );
       break;
     }

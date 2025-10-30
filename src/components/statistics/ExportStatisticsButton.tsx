@@ -9,6 +9,7 @@ import {
   Download,
   FileJson,
   FileSpreadsheet,
+  FileText,
   BarChart3,
   BarChart2,
   Activity,
@@ -22,6 +23,8 @@ import {
   flattenMatchResult,
   exportToJson,
   exportToCSV,
+  exportToMarkdown,
+  buildExportMetadata,
 } from "@/utils/exportUtils";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,7 +39,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 
-export type StatisticsExportFormat = "json" | "csv";
+export type StatisticsExportFormat = "json" | "csv" | "markdown";
 
 interface ExportStatisticsButtonProps {
   /** Import statistics to include in the export payload. */
@@ -184,7 +187,15 @@ export function ExportStatisticsButton({
   }, []);
 
   const buildJsonPayload = useCallback(() => {
+    const metadata = buildExportMetadata(
+      "json",
+      matchResults.length,
+      undefined,
+      Array.from(sections),
+    );
+
     const payload: Record<string, unknown> = {
+      metadata,
       generatedAt: new Date().toISOString(),
     };
 
@@ -218,9 +229,42 @@ export function ExportStatisticsButton({
     }
 
     try {
+      const sectionArray = Array.from(sections);
+      const totalEntries = matchResults.length;
+
       if (format === "json") {
         const payload = buildJsonPayload();
         const file = exportToJson(payload, "statistics");
+        toast.success(`Statistics exported to ${file}`);
+        setOpen(false);
+        return;
+      }
+
+      if (format === "markdown") {
+        const metadata = buildExportMetadata(
+          "markdown",
+          totalEntries,
+          undefined,
+          sectionArray,
+        );
+
+        // Build structured data for markdown sections
+        const markdownData: Record<string, unknown> = {};
+
+        if (sections.has("import") && importStats) {
+          markdownData.importStats = importStats;
+        }
+
+        if (sections.has("sync") && syncStats) {
+          markdownData.syncStats = syncStats;
+        }
+
+        if (sections.has("matches") && matchResults.length > 0) {
+          const flattened = matchResults.map(flattenMatchResult);
+          markdownData.matchResults = flattened;
+        }
+
+        const file = exportToMarkdown(markdownData, "statistics", metadata);
         toast.success(`Statistics exported to ${file}`);
         setOpen(false);
         return;
@@ -233,7 +277,23 @@ export function ExportStatisticsButton({
         return;
       }
 
-      const tabularData = rows as unknown as Record<string, unknown>[];
+      // Add metadata to CSV
+      const metadata = buildExportMetadata(
+        "csv",
+        totalEntries,
+        undefined,
+        sectionArray,
+      );
+
+      const withMetadata = [
+        { comment: `Exported: ${metadata.exportedAt}` },
+        { comment: `App Version: v${metadata.appVersion}` },
+        { comment: `Sections: ${sectionArray.join(", ")}` },
+        { comment: "" },
+        ...rows,
+      ];
+
+      const tabularData = withMetadata as unknown as Record<string, unknown>[];
       const file = exportToCSV(tabularData, "statistics");
 
       toast.success(`Statistics exported to ${file}`);
@@ -242,7 +302,15 @@ export function ExportStatisticsButton({
       console.error("[ExportStatistics] ❌ Export failed", error);
       toast.error("Failed to export statistics");
     }
-  }, [sections, format, buildJsonPayload, buildTabularRows]);
+  }, [
+    sections,
+    format,
+    buildJsonPayload,
+    buildTabularRows,
+    matchResults,
+    importStats,
+    syncStats,
+  ]);
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -282,6 +350,13 @@ export function ExportStatisticsButton({
               aria-hidden="true"
             />
             CSV
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="markdown">
+            <FileText
+              className="mr-2 h-4 w-4 text-purple-500"
+              aria-hidden="true"
+            />
+            Markdown
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
 

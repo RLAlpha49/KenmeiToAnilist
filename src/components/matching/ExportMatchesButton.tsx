@@ -9,6 +9,7 @@ import {
   Download,
   FileJson,
   FileSpreadsheet,
+  FileText,
   CheckCircle2,
   Wand2,
   Clock3,
@@ -223,6 +224,13 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
               aria-hidden="true"
             />
             CSV
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="markdown">
+            <FileText
+              className="mr-2 h-4 w-4 text-purple-500"
+              aria-hidden="true"
+            />
+            Markdown
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
 
