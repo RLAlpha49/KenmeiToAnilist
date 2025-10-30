@@ -4,7 +4,7 @@
  * @description Debug panel for reviewing application and user action events.
  */
 
-import React, { useId, useMemo, useState } from "react";
+import React, { useId, useMemo, useState, useEffect } from "react";
 import { toast } from "sonner";
 import {
   ChevronDown,
@@ -482,6 +482,30 @@ export function EventLogger(): React.ReactElement {
   const [searchTerm, setSearchTerm] = useState("");
   const [visibleCount, setVisibleCount] = useState(DEFAULT_VISIBLE_COUNT);
   const searchInputId = useId();
+
+  // Listen for custom events from PerformanceMonitor to set filter
+  useEffect(() => {
+    const handleSetFilter = (event: CustomEvent) => {
+      const detail = event.detail as { types?: string[] } | undefined;
+      if (detail?.types) {
+        setActiveTypes(detail.types);
+        setSearchTerm(""); // Clear search to focus on type filter
+        setVisibleCount(DEFAULT_VISIBLE_COUNT);
+      }
+    };
+
+    globalThis.addEventListener(
+      "debug:events:set-filter" as unknown as string,
+      handleSetFilter as EventListener,
+    );
+
+    return () => {
+      globalThis.removeEventListener(
+        "debug:events:set-filter" as unknown as string,
+        handleSetFilter as EventListener,
+      );
+    };
+  }, []);
 
   const availableTypes = useMemo(() => {
     const unique = new Set<string>();

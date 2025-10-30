@@ -7,6 +7,15 @@
 import { KenmeiManga } from "../kenmei/types";
 
 /**
+ * API provider identifiers for telemetry and performance monitoring.
+ * Used consistently across the application for event dispatch and metric collection.
+ * @source
+ */
+export enum ApiProvider {
+  ANILIST = "anilist",
+}
+
+/**
  * Valid media list status values for AniList collection entries.
  * @source
  */

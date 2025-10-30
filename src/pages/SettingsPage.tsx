@@ -79,6 +79,7 @@ export function SettingsPage() {
     ipcViewerEnabled,
     eventLoggerEnabled,
     confidenceTestExporterEnabled,
+    performanceMonitorEnabled,
   } = useDebugState();
 
   const {
@@ -90,6 +91,7 @@ export function SettingsPage() {
     setIpcViewerEnabled,
     setEventLoggerEnabled,
     setConfidenceTestExporterEnabled,
+    setPerformanceMonitorEnabled,
     recordEvent,
   } = useDebugActions();
 
@@ -1644,6 +1646,7 @@ export function SettingsPage() {
         ipcViewerEnabled={ipcViewerEnabled}
         eventLoggerEnabled={eventLoggerEnabled}
         confidenceTestExporterEnabled={confidenceTestExporterEnabled}
+        performanceMonitorEnabled={performanceMonitorEnabled}
         onMatchConfigChange={saveMatchConfigWithEvent}
         onSyncConfigChange={saveSyncConfigWithEvent}
         onCustomThresholdToggle={setUseCustomThreshold}
@@ -1667,6 +1670,7 @@ export function SettingsPage() {
         onIpcViewerChange={setIpcViewerEnabled}
         onEventLoggerChange={setEventLoggerEnabled}
         onConfidenceTestExporterChange={setConfidenceTestExporterEnabled}
+        onPerformanceMonitorChange={setPerformanceMonitorEnabled}
       />
       <UpdateManagementSection
         updateChannel={updateChannel}

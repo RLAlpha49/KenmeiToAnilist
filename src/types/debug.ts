@@ -96,3 +96,122 @@ export interface DebugEventEntry extends DebugEventRecord {
   id: string;
   timestamp: string;
 }
+
+/**
+ * Represents a single API request latency sample with context.
+ *
+ * @property duration - Request duration in milliseconds.
+ * @property provider - API provider (e.g., "anilist", "mal").
+ * @property endpoint - API endpoint or operation name (e.g., "search_manga").
+ * @source
+ */
+export interface ApiLatencySample {
+  duration: number;
+  provider: string;
+  endpoint?: string;
+}
+
+/**
+ * API performance metrics tracking request latency and success rates.
+ * @source
+ */
+export interface ApiPerformanceMetrics {
+  totalRequests: number;
+  successfulRequests: number;
+  failedRequests: number;
+  averageLatency: number; // milliseconds
+  minLatency: number; // milliseconds
+  maxLatency: number; // milliseconds
+  recentLatencies: number[]; // Last 100 requests for trend visualization
+  recentSamples: ApiLatencySample[]; // Last 100 requests with context
+  errorRate: number; // percentage (0-100)
+}
+
+/**
+ * Cache performance metrics tracking hit rates and efficiency.
+ * @source
+ */
+export interface CachePerformanceMetrics {
+  hits: number;
+  misses: number;
+  hitRate: number; // percentage (0-100)
+  totalSize: number; // number of cached entries
+  inMemorySize: number;
+  localStorageSize: number;
+}
+
+/**
+ * Matching process performance metrics tracking speed and throughput.
+ * @source
+ */
+export interface MatchingPerformanceMetrics {
+  totalMatched: number;
+  averageSpeed: number; // titles per minute
+  currentSpeed: number; // real-time speed (titles per minute)
+  totalDuration: number; // milliseconds
+  lastUpdateTimestamp: number;
+}
+
+/**
+ * Memory usage metrics from Electron process APIs.
+ * @source
+ */
+export interface MemoryMetrics {
+  private: number;
+  shared: number;
+  heap: number;
+  timestamp: number;
+}
+
+/**
+ * Complete performance metrics snapshot.
+ * @source
+ */
+export interface PerformanceMetrics {
+  api: ApiPerformanceMetrics;
+  cache: CachePerformanceMetrics;
+  matching: MatchingPerformanceMetrics;
+  memory: {
+    current: MemoryMetrics | null;
+    history: MemoryMetrics[]; // Last 50 samples for trend chart
+  };
+  sessionStartTime: number; // When metrics collection started
+}
+
+/**
+ * Default/initial performance metrics state.
+ * @source
+ */
+export const DEFAULT_PERFORMANCE_METRICS: PerformanceMetrics = {
+  api: {
+    totalRequests: 0,
+    successfulRequests: 0,
+    failedRequests: 0,
+    averageLatency: 0,
+    minLatency: Infinity,
+    maxLatency: 0,
+    recentLatencies: [],
+    recentSamples: [],
+    errorRate: 0,
+  },
+  cache: {
+    hits: 0,
+    misses: 0,
+    hitRate: 0,
+    totalSize: 0,
+    inMemorySize: 0,
+    localStorageSize: 0,
+  },
+  matching: {
+    totalMatched: 0,
+    averageSpeed: 0,
+    currentSpeed: 0,
+    totalDuration: 0,
+    lastUpdateTimestamp: 0,
+  },
+  memory: {
+    current: null,
+    history: [],
+  },
+  sessionStartTime: Date.now(),
+};

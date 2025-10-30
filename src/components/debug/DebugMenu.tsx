@@ -12,12 +12,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
-import { Braces, Bug, ScrollText, Radio, ActivitySquare } from "lucide-react";
+import {
+  Braces,
+  Bug,
+  ScrollText,
+  Radio,
+  ActivitySquare,
+  Gauge,
+} from "lucide-react";
 import { StorageDebugger } from "./StorageDebugger";
 import { LogViewer } from "./LogViewer";
 import { StateInspector } from "./StateInspector";
 import { IpcViewer } from "./IpcViewer";
 import { EventLogger } from "./EventLogger";
+import { PerformanceMonitor } from "./PerformanceMonitor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Badge } from "../ui/badge";
 import { useDebugState } from "../../contexts/DebugContext";
@@ -61,7 +69,10 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
     stateInspectorEnabled,
     ipcViewerEnabled,
     eventLoggerEnabled,
+    performanceMonitorEnabled,
   } = useDebugState();
+
+  const [activePanel, setActivePanel] = useState<string>("");
 
   const panels = useMemo(() => {
     const entries: DebugPanelDefinition[] = [];
@@ -155,6 +166,21 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
       });
     }
 
+    if (performanceMonitorEnabled) {
+      entries.push({
+        id: "performance",
+        label: "Performance Monitor",
+        description:
+          "Real-time monitoring of API latency, cache efficiency, matching speed, and memory usage.",
+        icon: (
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-rose-500/10 text-rose-500">
+            <Gauge className="h-5 w-5" />
+          </div>
+        ),
+        element: <PerformanceMonitor />,
+      });
+    }
+
     return entries;
   }, [
     ipcViewerEnabled,
@@ -162,9 +188,9 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
     logViewerEnabled,
     stateInspectorEnabled,
     storageDebuggerEnabled,
+    performanceMonitorEnabled,
+    setActivePanel,
   ]);
-
-  const [activePanel, setActivePanel] = useState<string>(panels[0]?.id ?? "");
 
   useEffect(() => {
     if (!panels.length) {
@@ -175,7 +201,7 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
     if (!panels.some((panel) => panel.id === activePanel)) {
       setActivePanel(panels[0].id);
     }
-  }, [panels, activePanel]);
+  }, [panels, activePanel, setActivePanel]);
 
   const hasPanels = panels.length > 0;
 
@@ -244,6 +270,7 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
                         {panels.map((panel) => (
                           <TabsTrigger
                             key={panel.id}
+                            id={`panel-${panel.id}`}
                             value={panel.id}
                             className={cn(
                               "group w-full flex-none justify-start gap-3 rounded-xl border px-3 py-3 text-left text-sm transition-all",
@@ -285,6 +312,7 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
                         key={panel.id}
                         value={panel.id}
                         className="h-full"
+                        aria-labelledby={`panel-${panel.id}`}
                       >
                         <div className="flex h-full min-h-[600px] flex-col">
                           {panel.element}

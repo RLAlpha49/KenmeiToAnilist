@@ -25,6 +25,7 @@ export interface DataManagementProps {
   ipcViewerEnabled: boolean;
   eventLoggerEnabled: boolean;
   confidenceTestExporterEnabled: boolean;
+  performanceMonitorEnabled: boolean;
   searchQuery: string;
   highlightedSectionId: string | null;
   onCachesToClearChange: (caches: CachesToClear) => void;
@@ -47,4 +48,5 @@ export interface DataManagementProps {
   onIpcViewerChange: (enabled: boolean) => void;
   onEventLoggerChange: (enabled: boolean) => void;
   onConfidenceTestExporterChange: (enabled: boolean) => void;
+  onPerformanceMonitorChange: (enabled: boolean) => void;
 }

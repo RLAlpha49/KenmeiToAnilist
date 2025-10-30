@@ -9,6 +9,7 @@ import {
   AniListResponse,
   SearchResult,
   UserMediaList,
+  ApiProvider,
 } from "./types";
 import {
   SEARCH_MANGA,
@@ -226,6 +227,7 @@ async function handleElectronRequest<T>(
   bypassCache?: boolean,
   abortSignal?: AbortSignal,
 ): Promise<AniListResponse<T>> {
+  const startTime = performance.now();
   let succeeded = false;
   try {
     // Use the correct call format for the main process with typed AniListRequest payload
@@ -250,10 +252,45 @@ async function handleElectronRequest<T>(
     );
     throw error;
   } finally {
+    const duration = performance.now() - startTime;
     if (typeof globalThis.dispatchEvent === "function") {
+      // Extract operation name or root field from query for better diagnostics
+      let endpoint = "unknown";
+
+      // First try to extract named operation (e.g., "query BatchSearchManga { ... }")
+      const operationRegex = /(?:query|mutation)\s+(\w+)/i;
+      const operationMatch = operationRegex.exec(query);
+      if (operationMatch?.[1]) {
+        endpoint = operationMatch[1];
+      } else {
+        // Fallback: extract first root field after the opening brace
+        // Handles queries like: query ($vars) { Page(...) } or query { Viewer {...} }
+        const fieldRegex = /(?:query|mutation)\s*(?:\([^)]*\))?\s*\{\s*(\w+)/i;
+        const fieldMatch = fieldRegex.exec(query);
+        if (fieldMatch?.[1]) {
+          const rootField = fieldMatch[1];
+          // Map root fields to meaningful operation names
+          const operationMap: Record<string, string> = {
+            Viewer: "GetViewer",
+            MediaListCollection: "GetUserMangaList",
+            Page: "SearchManga", // Could be search or batch get
+            Media: "GetMangaById",
+            SaveMediaListEntry: "UpdateMangaEntry",
+            DeleteMediaListEntry: "DeleteMangaEntry",
+          };
+          endpoint = operationMap[rootField] || rootField;
+        }
+      }
+
       globalThis.dispatchEvent(
         new CustomEvent("anilist:request:completed", {
-          detail: { succeeded },
+          detail: {
+            duration,
+            succeeded,
+            requestId,
+            provider: ApiProvider.ANILIST,
+            endpoint,
+          },
         }),
       );
     }
@@ -342,6 +379,8 @@ async function handleBrowserRequest<T>(
   requestId: string,
   options: RequestInit,
 ): Promise<AniListResponse<T>> {
+  const startTime = performance.now();
+  let succeeded = false;
   try {
     const response = await fetch("https://graphql.anilist.co", options);
 
@@ -359,6 +398,7 @@ async function handleBrowserRequest<T>(
       );
     }
 
+    succeeded = true;
     return jsonResponse as AniListResponse<T>;
   } catch (error) {
     console.error(
@@ -366,6 +406,58 @@ async function handleBrowserRequest<T>(
       error,
     );
     throw error;
+  } finally {
+    const duration = performance.now() - startTime;
+    if (typeof globalThis.dispatchEvent === "function") {
+      // Extract operation name from request body for better diagnostics
+      let endpoint = "unknown";
+      if (options.body && typeof options.body === "string") {
+        try {
+          const body = JSON.parse(options.body);
+          const query = body.query || "";
+
+          // First try to extract named operation (e.g., "query BatchSearchManga { ... }")
+          const operationRegex = /(?:query|mutation)\s+(\w+)/i;
+          const operationMatch = operationRegex.exec(query);
+          if (operationMatch?.[1]) {
+            endpoint = operationMatch[1];
+          } else {
+            // Fallback: extract first root field after the opening brace
+            // Handles queries like: query ($vars) { Page(...) } or query { Viewer {...} }
+            const fieldRegex =
+              /(?:query|mutation)\s*(?:\([^)]*\))?\s*\{\s*(\w+)/i;
+            const fieldMatch = fieldRegex.exec(query);
+            if (fieldMatch?.[1]) {
+              const rootField = fieldMatch[1];
+              // Map root fields to meaningful operation names
+              const operationMap: Record<string, string> = {
+                Viewer: "GetViewer",
+                MediaListCollection: "GetUserMangaList",
+                Page: "SearchManga", // Could be search or batch get
+                Media: "GetMangaById",
+                SaveMediaListEntry: "UpdateMangaEntry",
+                DeleteMediaListEntry: "DeleteMangaEntry",
+              };
+              endpoint = operationMap[rootField] || rootField;
+            }
+          }
+        } catch {
+          // Silently fail, use default endpoint
+        }
+      }
+
+      globalThis.dispatchEvent(
+        new CustomEvent("anilist:request:completed", {
+          detail: {
+            duration,
+            succeeded,
+            requestId,
+            provider: ApiProvider.ANILIST,
+            endpoint,
+          },
+        }),
+      );
+    }
   }
 }
 

@@ -74,6 +74,9 @@ export const useMatchingProcess = ({
   // Add a state to track if component is initializing
   const [isInitializing, setIsInitializing] = useState(true);
 
+  // Track matching start time for performance monitoring
+  const matchingStartTimeRef = useRef<number>(0);
+
   // Time estimate
   const {
     timeEstimate,
@@ -171,6 +174,20 @@ export const useMatchingProcess = ({
         updateGlobalState({
           progress: { current, total, currentTitle: currentTitle || "" },
         });
+
+        // Track matching speed for performance monitoring
+        if (matchingStartTimeRef.current > 0) {
+          const elapsedMs = Date.now() - matchingStartTimeRef.current;
+
+          // Dispatch performance event
+          if (typeof globalThis.dispatchEvent === "function") {
+            globalThis.dispatchEvent(
+              new CustomEvent("matching:progress-update", {
+                detail: { current, total, elapsedMs },
+              }),
+            );
+          }
+        }
 
         if (manualPauseActive) {
           let shouldUpdateStatus = false;
@@ -556,6 +573,9 @@ export const useMatchingProcess = ({
       };
       notifyMatchingState(true);
 
+      // Initialize matching start time for performance monitoring
+      matchingStartTimeRef.current = Date.now();
+
       const abortController = new AbortController();
       globalThis.activeAbortController = abortController;
 
@@ -673,6 +693,7 @@ export const useMatchingProcess = ({
           globalThis.matchingProcessState.isRunning = false;
         }
         notifyMatchingState(false);
+        matchingStartTimeRef.current = 0; // Reset matching start time on completion
       }
     },
     [

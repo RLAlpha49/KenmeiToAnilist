@@ -81,6 +81,7 @@ export function SettingsTabsContainer({
   ipcViewerEnabled,
   eventLoggerEnabled,
   confidenceTestExporterEnabled,
+  performanceMonitorEnabled,
   onMatchConfigChange,
   onSyncConfigChange,
   onCustomThresholdToggle,
@@ -104,6 +105,7 @@ export function SettingsTabsContainer({
   onIpcViewerChange,
   onEventLoggerChange,
   onConfidenceTestExporterChange,
+  onPerformanceMonitorChange,
 }: Readonly<SettingsTabsContainerProps>) {
   // Render no results message
   const renderNoResults = () => (
@@ -227,6 +229,7 @@ export function SettingsTabsContainer({
               ipcViewerEnabled={ipcViewerEnabled}
               eventLoggerEnabled={eventLoggerEnabled}
               confidenceTestExporterEnabled={confidenceTestExporterEnabled}
+              performanceMonitorEnabled={performanceMonitorEnabled}
               searchQuery={searchQuery}
               highlightedSectionId={highlightedSectionId}
               onToggleDebug={onToggleDebug}
@@ -237,6 +240,7 @@ export function SettingsTabsContainer({
               onIpcViewerChange={onIpcViewerChange}
               onEventLoggerChange={onEventLoggerChange}
               onConfidenceTestExporterChange={onConfidenceTestExporterChange}
+              onPerformanceMonitorChange={onPerformanceMonitorChange}
             />
           )}
         </div>
@@ -313,6 +317,7 @@ export function SettingsTabsContainer({
           ipcViewerEnabled={ipcViewerEnabled}
           eventLoggerEnabled={eventLoggerEnabled}
           confidenceTestExporterEnabled={confidenceTestExporterEnabled}
+          performanceMonitorEnabled={performanceMonitorEnabled}
           searchQuery={searchQuery}
           highlightedSectionId={highlightedSectionId}
           scheduleConfig={scheduleConfig}
@@ -334,6 +339,7 @@ export function SettingsTabsContainer({
           onIpcViewerChange={onIpcViewerChange}
           onEventLoggerChange={onEventLoggerChange}
           onConfidenceTestExporterChange={onConfidenceTestExporterChange}
+          onPerformanceMonitorChange={onPerformanceMonitorChange}
         />
       </TabsContent>
     </Tabs>

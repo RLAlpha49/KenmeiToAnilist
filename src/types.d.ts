@@ -14,14 +14,10 @@ declare const MAIN_WINDOW_VITE_NAME: string;
 
 import type { APICredentials, TokenExchangeResponse } from "./types/auth";
 import type { TokenExchangeParams } from "./types/api";
-import type { IpcLogEntry } from "./types/debug";
 import type { AniListRequest } from "./helpers/ipc/api/api-context";
 import type { MangaSource } from "./api/manga-sources/types";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { BackupScheduleConfig } from "./utils/storage";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { BackupHistoryEntry } from "./utils/backup";
 import type { ElectronBackupApi } from "./helpers/ipc/backup/backup-context";
+import type { ElectronIpcDebugBridge } from "./helpers/ipc/debug/debug-context";
 
 /**
  * Theme mode control interface.
@@ -43,21 +39,6 @@ interface ElectronWindow {
   minimize: () => Promise<void>;
   maximize: () => Promise<void>;
   close: () => Promise<void>;
-}
-
-/**
- * IPC debugging bridge for monitoring Electron IPC communication.
- * @source
- */
-interface ElectronIpcDebugBridge {
-  ipc: {
-    maxEntries: number;
-    getEvents: () => IpcLogEntry[];
-    subscribe: (callback: (entries: IpcLogEntry[]) => void) => () => void;
-    clear: () => void;
-    setEnabled: (value: boolean) => void;
-    isEnabled: () => boolean;
-  };
 }
 
 /**

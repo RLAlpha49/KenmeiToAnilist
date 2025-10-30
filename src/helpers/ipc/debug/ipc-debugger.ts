@@ -82,11 +82,71 @@ const summarise = (value: unknown): string => {
   }
 };
 
-const createPayload = (value: unknown): IpcLogPayload => {
+/**
+ * Redacts sensitive data from payloads for security.
+ * Masks common secrets like Authorization headers, tokens, and client secrets.
+ * @param value - The value to potentially redact
+ * @returns Redacted copy of value
+ */
+const redactSensitiveData = (value: unknown): unknown => {
+  if (typeof value === "string") {
+    // Mask tokens, auth headers, API keys, etc.
+    const sensitivePatterns = [
+      /Bearer\s+[\w\-.]+/gi,
+      /Authorization:\s*[\w\-.]+/gi,
+      /token["s:=]+[\w\-.]+/gi,
+      /secret["s:=]+[\w\-.]+/gi,
+      /password["s:=]+[\w\-.]+/gi,
+      /api[_-]?key["s:=]+[\w\-.]+/gi,
+    ];
+    let redacted = value;
+    for (const pattern of sensitivePatterns) {
+      redacted = redacted.replace(pattern, "[REDACTED]");
+    }
+    return redacted;
+  }
+
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    !(value instanceof Error)
+  ) {
+    const obj = value as Record<string, unknown>;
+    const redacted: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(obj)) {
+      const lowerKey = key.toLowerCase();
+      if (
+        lowerKey.includes("token") ||
+        lowerKey.includes("auth") ||
+        lowerKey.includes("secret") ||
+        lowerKey.includes("password") ||
+        lowerKey.includes("key")
+      ) {
+        redacted[key] = "[REDACTED]";
+      } else {
+        redacted[key] = redactSensitiveData(val);
+      }
+    }
+    return redacted;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => redactSensitiveData(item));
+  }
+
+  return value;
+};
+
+const createPayload = (
+  value: unknown,
+  redact: boolean = false,
+): IpcLogPayload => {
   const raw = safeClone(value);
+  const processedRaw = redact ? redactSensitiveData(raw) : raw;
   return {
-    raw,
-    preview: summarise(raw),
+    raw: processedRaw,
+    preview: summarise(processedRaw),
   };
 };
 
@@ -352,5 +412,6 @@ export function setupIpcDebugging(): void {
       },
       isEnabled: () => enabled,
     },
+    getMemoryStats: () => ipcRenderer.invoke("debug:get-memory-stats"),
   });
 }

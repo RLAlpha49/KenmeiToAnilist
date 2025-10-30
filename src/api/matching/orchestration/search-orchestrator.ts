@@ -60,9 +60,19 @@ export async function searchMangaByTitle(
     // Pass kenmeiManga to ensure cached results respect custom rules when context exists
     const cachedResult = processCachedResults(title, cacheKey, kenmeiManga);
     if (cachedResult) {
+      // Dispatch cache hit event for performance tracking
+      if (typeof globalThis.dispatchEvent === "function") {
+        globalThis.dispatchEvent(
+          new CustomEvent("matching:cache-hit", {
+            detail: { title, cacheKey },
+          }),
+        );
+      }
       return cachedResult;
     }
-  } else if (searchConfig.exactMatchingOnly) {
+  }
+
+  if (searchConfig.exactMatchingOnly) {
     console.debug(
       `[MangaSearchService] 🔍 MANUAL SEARCH: Ensuring exact matching is correctly configured`,
     );
@@ -72,6 +82,15 @@ export async function searchMangaByTitle(
   // Execute the search
   const searchQuery = title;
   await acquireRateLimit();
+
+  // Dispatch cache miss event for performance tracking
+  if (typeof globalThis.dispatchEvent === "function") {
+    globalThis.dispatchEvent(
+      new CustomEvent("matching:cache-miss", {
+        detail: { title, cacheKey },
+      }),
+    );
+  }
 
   const { results, lastPageInfo } = await executeSearchLoop(
     searchQuery,

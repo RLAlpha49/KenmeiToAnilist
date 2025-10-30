@@ -140,7 +140,7 @@ export abstract class BaseMangaSourceClient<
    * Handles headers, error checking, and JSON parsing.
    * @param url - The full API URL to request.
    * @returns Promise resolving to the parsed JSON response.
-   * @throws {Error} If the HTTP response is not ok.
+   * @throws {Error} If the HTTP response is not ok or request times out.
    * @source
    */
   // eslint-disable-next-line
@@ -159,11 +159,66 @@ export abstract class BaseMangaSourceClient<
       `[MangaSourceBase] 🌐 ${this.config.name}: Making request to ${url}`,
     );
 
-    const response = await fetch(url, { method: "GET", headers });
+    const startTime = performance.now();
+    let succeeded = false;
 
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    // Apply request timeout (default 30 seconds)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-    return response.json();
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers,
+        signal: controller.signal,
+      });
+
+      if (!response.ok)
+        throw new Error(`HTTP error! status: ${response.status}`);
+
+      succeeded = true;
+      return response.json();
+    } finally {
+      clearTimeout(timeoutId);
+      const duration = performance.now() - startTime;
+
+      // Dispatch performance event for monitoring
+      if (typeof globalThis.dispatchEvent === "function") {
+        // Extract endpoint from URL path
+        const urlPath = new URL(url, "http://base").pathname;
+        const pathSegments = urlPath.split("/").filter(Boolean);
+
+        // Use a meaningful endpoint name:
+        // - If path looks like /resource/{id}, use 'resource'
+        // - If path is a UUID, use the previous segment (if available)
+        // - Otherwise use the last segment
+        let endpoint = pathSegments.at(-1) || "request";
+        const lastSegment = pathSegments.at(-1) || "";
+
+        // Check if last segment is a UUID pattern
+        const isUuid =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+            lastSegment,
+          );
+
+        // If last segment is a UUID or looks like an ID, use previous segment
+        const isMongoId = /^[a-f0-9]{24}$/.test(lastSegment);
+        if (isUuid || /^\d+$/.test(lastSegment) || isMongoId) {
+          endpoint = pathSegments.at(-2) || lastSegment || "request";
+        }
+
+        globalThis.dispatchEvent(
+          new CustomEvent("api:request:completed", {
+            detail: {
+              duration,
+              succeeded,
+              provider: this.config.source,
+              endpoint,
+            },
+          }),
+        );
+      }
+    }
   }
 
   /**

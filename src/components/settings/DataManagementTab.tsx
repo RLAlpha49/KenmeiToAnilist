@@ -46,6 +46,7 @@ export function DataManagementTab({
   ipcViewerEnabled,
   eventLoggerEnabled,
   confidenceTestExporterEnabled,
+  performanceMonitorEnabled,
   searchQuery,
   highlightedSectionId,
   scheduleConfig,
@@ -68,6 +69,7 @@ export function DataManagementTab({
   onIpcViewerChange,
   onEventLoggerChange,
   onConfidenceTestExporterChange,
+  onPerformanceMonitorChange,
 }: Readonly<DataManagementProps>) {
   return (
     <>
@@ -153,6 +155,7 @@ export function DataManagementTab({
               ipcViewerEnabled={ipcViewerEnabled}
               eventLoggerEnabled={eventLoggerEnabled}
               confidenceTestExporterEnabled={confidenceTestExporterEnabled}
+              performanceMonitorEnabled={performanceMonitorEnabled}
               searchQuery={searchQuery}
               highlightedSectionId={highlightedSectionId}
               onToggleDebug={onToggleDebug}
@@ -163,6 +166,7 @@ export function DataManagementTab({
               onIpcViewerChange={onIpcViewerChange}
               onEventLoggerChange={onEventLoggerChange}
               onConfidenceTestExporterChange={onConfidenceTestExporterChange}
+              onPerformanceMonitorChange={onPerformanceMonitorChange}
             />
           </SettingsSectionShell>
         </div>

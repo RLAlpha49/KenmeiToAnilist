@@ -4,7 +4,7 @@
  * @description Debug panel for inspecting IPC traffic between renderer and main processes.
  */
 
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import { useDebugActions, useDebugState } from "../../contexts/DebugContext";
 import { ScrollArea } from "../ui/scroll-area";
@@ -14,6 +14,7 @@ import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
 import { cn } from "@/utils/tailwind";
 import { Copy, Search, Trash2, Filter } from "lucide-react";
+import { sanitizeForDebug } from "@/utils/debugSanitizer";
 import type { IpcLogEntry } from "@/types/debug";
 
 /** Direction options for IPC message filtering. @source */
@@ -143,28 +144,34 @@ function highlight(text: string, query: string): React.ReactNode {
 /**
  * Formats a payload value as a readable string.
  * Handles primitives, objects, errors, and unserializable values.
+ * Optionally redacts sensitive data.
  * @param value - The payload value to format
+ * @param redact - Whether to redact sensitive data
  * @returns Formatted string representation
  * @source
  */
-function formatPayload(value: unknown): string {
-  if (value === undefined) return "undefined";
-  if (value === null) return "null";
-  if (typeof value === "string") return value;
+function formatPayload(value: unknown, redact: boolean = false): string {
+  const processed = redact
+    ? sanitizeForDebug(value, { redactSensitive: true })
+    : value;
+
+  if (processed === undefined) return "undefined";
+  if (processed === null) return "null";
+  if (typeof processed === "string") return processed;
   if (
-    typeof value === "number" ||
-    typeof value === "boolean" ||
-    typeof value === "bigint"
+    typeof processed === "number" ||
+    typeof processed === "boolean" ||
+    typeof processed === "bigint"
   ) {
-    return String(value);
+    return String(processed);
   }
-  if (value instanceof Error) {
-    return `${value.name}: ${value.message}`;
+  if (processed instanceof Error) {
+    return `${processed.name}: ${processed.message}`;
   }
   try {
-    return JSON.stringify(value, null, 2);
+    return JSON.stringify(processed, null, 2);
   } catch (error) {
-    const asString = Object.prototype.toString.call(value);
+    const asString = Object.prototype.toString.call(processed);
     if (error) {
       return `${asString} (unserialisable)`;
     }
@@ -235,7 +242,7 @@ function matchesChannel(entry: IpcLogEntry, channelFilter: string): boolean {
  * @source
  */
 export function IpcViewer(): React.ReactElement {
-  const { ipcEvents, maxIpcEntries } = useDebugState();
+  const { ipcEvents, maxIpcEntries, logRedactionEnabled } = useDebugState();
   const { clearIpcEvents } = useDebugActions();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -245,6 +252,29 @@ export function IpcViewer(): React.ReactElement {
   >(DEFAULT_DIRECTION_FILTER);
   const DEFAULT_WINDOW = 100;
   const [visibleCount, setVisibleCount] = useState<number>(DEFAULT_WINDOW);
+
+  // Listen for custom events from PerformanceMonitor to set filter
+  useEffect(() => {
+    const handleSetFilter = (event: CustomEvent) => {
+      const detail = event.detail as { channel?: string } | undefined;
+      if (detail?.channel) {
+        setChannelFilter(detail.channel);
+        setVisibleCount(DEFAULT_WINDOW);
+      }
+    };
+
+    globalThis.addEventListener(
+      "debug:ipc:set-filter" as unknown as string,
+      handleSetFilter as EventListener,
+    );
+
+    return () => {
+      globalThis.removeEventListener(
+        "debug:ipc:set-filter" as unknown as string,
+        handleSetFilter as EventListener,
+      );
+    };
+  }, []);
 
   const filteredEntries = useMemo(() => {
     return ipcEvents.filter(
@@ -280,7 +310,10 @@ export function IpcViewer(): React.ReactElement {
 
   const handleCopy = async (entry: IpcLogEntry) => {
     try {
-      await navigator.clipboard.writeText(JSON.stringify(entry, null, 2));
+      const sanitized = logRedactionEnabled
+        ? sanitizeForDebug(entry, { redactSensitive: true })
+        : entry;
+      await navigator.clipboard.writeText(JSON.stringify(sanitized, null, 2));
       toast.success("Entry copied to clipboard");
     } catch (error) {
       toast.error("Unable to copy entry");
@@ -431,6 +464,7 @@ export function IpcViewer(): React.ReactElement {
                   entry={entry}
                   onCopy={onCopy}
                   searchTerm={searchTerm}
+                  logRedactionEnabled={logRedactionEnabled}
                 />
               ))}
             </>
@@ -449,6 +483,7 @@ type IpcEntryProps = {
   entry: IpcLogEntry;
   onCopy: (entry: IpcLogEntry) => void;
   searchTerm: string;
+  logRedactionEnabled: boolean;
 };
 
 /**
@@ -461,12 +496,14 @@ const IpcEntry = React.memo(function IpcEntry({
   entry,
   onCopy,
   searchTerm,
+  logRedactionEnabled,
 }: IpcEntryProps) {
   const directionMeta = DIRECTION_META[entry.direction as DirectionFilter];
   const transportMeta = TRANSPORT_META[entry.transport];
   const statusMeta = entry.status ? STATUS_META[entry.status] : null;
   const durationLabel = formatDuration(entry.durationMs);
   const [expanded, setExpanded] = useState(false);
+  const [showJsonViewer, setShowJsonViewer] = useState(false);
   const payloadRaw = entry.payload?.raw;
 
   // Detect invoke calls that send no payload (common pattern: invoke with empty array)
@@ -479,8 +516,26 @@ const IpcEntry = React.memo(function IpcEntry({
         payloadRaw !== null &&
         Object.keys(payloadRaw).length === 0));
 
+  // Check if payload parses as valid JSON
+  const canShowJsonViewer = useMemo(() => {
+    if (isInvokeWithNoPayload) return false;
+    if (!payloadRaw) return false;
+    try {
+      if (typeof payloadRaw === "string") {
+        JSON.parse(payloadRaw);
+        return true;
+      }
+      JSON.stringify(payloadRaw);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [payloadRaw, isInvokeWithNoPayload]);
+
   // For received messages, null is a valid response value (e.g., store:getItem when key doesn't exist)
-  const raw = entry.payload ? formatPayload(payloadRaw) : "(no payload)";
+  const raw = entry.payload
+    ? formatPayload(payloadRaw, logRedactionEnabled)
+    : "(no payload)";
   const isTooLong = raw.length > PREVIEW_MAX_CHARS;
   let previewText: string;
   if (isInvokeWithNoPayload) {
@@ -543,7 +598,7 @@ const IpcEntry = React.memo(function IpcEntry({
       </div>
 
       <div className="mt-3 space-y-2 text-sm">
-        <div className="bg-muted/10 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded p-2 font-mono text-[13px] leading-relaxed">
+        <div className="bg-muted/10 wrap-break-word max-h-48 overflow-auto whitespace-pre-wrap rounded p-2 font-mono text-[13px] leading-relaxed">
           {highlight(previewText, searchTerm)}
         </div>
         {isTooLong && (
@@ -559,6 +614,28 @@ const IpcEntry = React.memo(function IpcEntry({
               Payload length: {raw.length.toLocaleString()}
             </div>
           </div>
+        )}
+        {canShowJsonViewer && (
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowJsonViewer((v) => !v)}
+            >
+              {showJsonViewer ? "Hide JSON" : "View JSON"}
+            </Button>
+          </div>
+        )}
+        {showJsonViewer && canShowJsonViewer && (
+          <pre className="bg-muted/20 max-h-64 overflow-auto rounded p-2 text-xs">
+            {JSON.stringify(
+              logRedactionEnabled
+                ? sanitizeForDebug(payloadRaw, { redactSensitive: true })
+                : payloadRaw,
+              null,
+              2,
+            )}
+          </pre>
         )}
         {entry.error && (
           <div className="text-xs text-red-500">Error: {entry.error}</div>

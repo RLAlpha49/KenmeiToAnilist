@@ -21,6 +21,7 @@ import {
   setLogRedactionEnabled as setCollectorLogRedactionEnabled,
 } from "../utils/logging";
 import { exportToJson } from "../utils/exportUtils";
+import { ApiProvider } from "@/api/anilist/types";
 import {
   getSyncConfig,
   saveSyncConfig,
@@ -33,7 +34,11 @@ import type {
   DebugEventEntry,
   DebugEventRecord,
   IpcLogEntry,
+  PerformanceMetrics,
+  MemoryMetrics,
+  ApiLatencySample,
 } from "@/types/debug";
+import { DEFAULT_PERFORMANCE_METRICS } from "@/types/debug";
 
 /**
  * The shape of the debug context value provided to consumers.
@@ -58,6 +63,8 @@ interface DebugStateContextValue {
   ipcViewerEnabled: boolean;
   eventLoggerEnabled: boolean;
   confidenceTestExporterEnabled: boolean;
+  performanceMonitorEnabled: boolean;
+  performanceMetrics: PerformanceMetrics;
   eventLogEntries: DebugEventEntry[];
   maxEventLogEntries: number;
   ipcEvents: IpcLogEntry[];
@@ -91,6 +98,24 @@ interface DebugActionsContextValue {
   toggleEventLogger: () => void;
   setConfidenceTestExporterEnabled: (enabled: boolean) => void;
   toggleConfidenceTestExporter: () => void;
+  setPerformanceMonitorEnabled: (enabled: boolean) => void;
+  togglePerformanceMonitor: () => void;
+  recordApiLatency: (
+    duration: number,
+    success: boolean,
+    correlationId?: string,
+    provider?: string,
+    endpoint?: string,
+  ) => void;
+  recordCacheAccess: (hit: boolean) => void;
+  recordMatchingProgress: (
+    current: number,
+    total: number,
+    elapsedMs: number,
+  ) => void;
+  updateMemoryStats: (stats: MemoryMetrics) => void;
+  resetPerformanceMetrics: () => void;
+  exportPerformanceReport: () => void;
   recordEvent: (entry: DebugEventRecord, options?: RecordEventOptions) => void;
   clearEventLog: () => void;
   clearIpcEvents: () => void;
@@ -123,6 +148,7 @@ type DebugFeatureToggles = {
   redactLogs: boolean;
   eventLogger: boolean;
   confidenceTestExporter: boolean;
+  performanceMonitor: boolean;
 };
 
 // Default all features to off for production
@@ -134,6 +160,7 @@ const DEFAULT_FEATURE_TOGGLES: DebugFeatureToggles = {
   redactLogs: true,
   eventLogger: false,
   confidenceTestExporter: false,
+  performanceMonitor: false,
 };
 
 interface RecordEventOptions {
@@ -267,6 +294,9 @@ export function DebugProvider({
   const stateSourcesRef = useRef(
     new Map<string, StateInspectorSourceInternal>(),
   );
+  const [performanceMetrics, setPerformanceMetrics] =
+    useState<PerformanceMetrics>(DEFAULT_PERFORMANCE_METRICS);
+  const memoryPollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const storageDebuggerEnabled = featureToggles.storageDebugger;
   const logViewerEnabled = featureToggles.logViewer;
@@ -274,6 +304,7 @@ export function DebugProvider({
   const stateInspectorEnabled = featureToggles.stateInspector;
   const ipcViewerEnabled = featureToggles.ipcViewer;
   const eventLoggerEnabled = featureToggles.eventLogger;
+  const performanceMonitorEnabled = featureToggles.performanceMonitor;
 
   useEffect(() => {
     // Only install the console interceptor when BOTH debug mode AND the log viewer feature are enabled.
@@ -632,6 +663,236 @@ export function DebugProvider({
     setConfidenceTestExporterEnabled(!featureToggles.confidenceTestExporter);
   }, [featureToggles.confidenceTestExporter, setConfidenceTestExporterEnabled]);
 
+  const setPerformanceMonitorEnabled = useCallback(
+    (enabled: boolean) => {
+      persistFeatureToggles((prev) => ({
+        ...prev,
+        performanceMonitor: enabled,
+      }));
+      recordEvent(
+        {
+          type: "debug.performance-monitor",
+          message: enabled
+            ? "Performance monitor enabled"
+            : "Performance monitor disabled",
+          level: enabled ? "info" : "warn",
+          metadata: { enabled },
+        },
+        { force: true },
+      );
+    },
+    [persistFeatureToggles, recordEvent],
+  );
+
+  const togglePerformanceMonitor = useCallback(() => {
+    setPerformanceMonitorEnabled(!featureToggles.performanceMonitor);
+  }, [featureToggles.performanceMonitor, setPerformanceMonitorEnabled]);
+
+  const recordApiLatency = useCallback(
+    (
+      duration: number,
+      success: boolean,
+      correlationId?: string,
+      provider?: string,
+      endpoint?: string,
+    ) => {
+      if (!featureToggles.performanceMonitor) return;
+
+      // Validate duration: ignore non-finite values, clamp at 0
+      if (!Number.isFinite(duration) || duration < 0) {
+        console.warn("[DebugContext] Invalid API latency duration:", duration);
+        return;
+      }
+
+      setPerformanceMetrics((prev) => {
+        // Validate array before adding duration
+        if (!Array.isArray(prev.api.recentLatencies)) {
+          console.warn("[DebugContext] recentLatencies is not an array");
+          return prev;
+        }
+
+        const newTotal = prev.api.totalRequests + 1;
+        const newSuccessful = success
+          ? prev.api.successfulRequests + 1
+          : prev.api.successfulRequests;
+        const newFailed = success
+          ? prev.api.failedRequests
+          : prev.api.failedRequests + 1;
+
+        // Update latencies array (keep last 100), filtering out non-finite values
+        const newLatencies = [
+          ...prev.api.recentLatencies.filter(Number.isFinite),
+          duration,
+        ].slice(-100);
+
+        // Update samples array with provider and endpoint context
+        const newSamples: ApiLatencySample[] = [
+          ...prev.api.recentSamples,
+          {
+            duration,
+            provider: provider || ApiProvider.ANILIST,
+            endpoint,
+          },
+        ].slice(-100);
+
+        // Calculate new average safely
+        const newAverage =
+          newLatencies.length > 0
+            ? newLatencies.reduce((sum, val) => sum + val, 0) /
+              newLatencies.length
+            : 0;
+
+        // Use finite sentinel for min latency to avoid Infinity
+        const currentMin =
+          Number.isFinite(prev.api.minLatency) && prev.api.minLatency < Infinity
+            ? prev.api.minLatency
+            : Number.MAX_SAFE_INTEGER;
+
+        return {
+          ...prev,
+          api: {
+            totalRequests: newTotal,
+            successfulRequests: newSuccessful,
+            failedRequests: newFailed,
+            averageLatency: Math.round(newAverage * 100) / 100,
+            minLatency: Math.min(currentMin, duration),
+            maxLatency: Math.max(prev.api.maxLatency, duration),
+            recentLatencies: newLatencies,
+            recentSamples: newSamples,
+            errorRate: (newFailed / newTotal) * 100,
+          },
+        };
+      });
+
+      // Record high latency as debug event
+      if (duration > 2000) {
+        recordEvent({
+          type: "performance.api-latency",
+          message: `High API latency detected: ${duration.toFixed(0)}ms`,
+          level: "warn",
+          metadata: { duration, correlationId, provider, endpoint },
+        });
+      }
+    },
+    [featureToggles.performanceMonitor, recordEvent],
+  );
+
+  const recordCacheAccess = useCallback(
+    (hit: boolean) => {
+      if (!featureToggles.performanceMonitor) return;
+
+      setPerformanceMetrics((prev) => {
+        const newHits = hit ? prev.cache.hits + 1 : prev.cache.hits;
+        const newMisses = hit ? prev.cache.misses : prev.cache.misses + 1;
+        const total = newHits + newMisses;
+
+        return {
+          ...prev,
+          cache: {
+            ...prev.cache,
+            hits: newHits,
+            misses: newMisses,
+            hitRate: total > 0 ? (newHits / total) * 100 : 0,
+          },
+        };
+      });
+    },
+    [featureToggles.performanceMonitor],
+  );
+
+  const recordMatchingProgress = useCallback(
+    (current: number, total: number, elapsedMs: number) => {
+      if (!featureToggles.performanceMonitor) return;
+
+      setPerformanceMetrics((prev) => {
+        const speed = elapsedMs > 0 ? (current / elapsedMs) * 60000 : 0; // titles per minute
+
+        return {
+          ...prev,
+          matching: {
+            totalMatched: current,
+            averageSpeed: Math.round(speed * 10) / 10,
+            currentSpeed: Math.round(speed * 10) / 10,
+            totalDuration: elapsedMs,
+            lastUpdateTimestamp: Date.now(),
+          },
+        };
+      });
+    },
+    [featureToggles.performanceMonitor],
+  );
+
+  const updateMemoryStats = useCallback(
+    (stats: MemoryMetrics) => {
+      if (!featureToggles.performanceMonitor) return;
+
+      setPerformanceMetrics((prev) => {
+        const newHistory = [...prev.memory.history, stats].slice(-50); // Keep last 50 samples
+
+        return {
+          ...prev,
+          memory: {
+            current: stats,
+            history: newHistory,
+          },
+        };
+      });
+
+      // Warn if memory usage is high (>500MB private)
+      if (stats.private > 512000) {
+        recordEvent({
+          type: "performance.memory-high",
+          message: `High memory usage: ${(stats.private / 1024).toFixed(0)}MB`,
+          level: "warn",
+          metadata: { private: stats.private, heap: stats.heap },
+        });
+      }
+    },
+    [featureToggles.performanceMonitor, recordEvent],
+  );
+
+  const resetPerformanceMetrics = useCallback(() => {
+    setPerformanceMetrics(DEFAULT_PERFORMANCE_METRICS);
+    recordEvent({
+      type: "debug.performance-monitor",
+      message: "Performance metrics reset",
+      level: "info",
+    });
+  }, [recordEvent]);
+
+  const exportPerformanceReport = useCallback(() => {
+    try {
+      const sessionDuration = Date.now() - performanceMetrics.sessionStartTime;
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        appVersion: import.meta.env.VITE_APP_VERSION || "unknown",
+        sessionDuration,
+        metrics: performanceMetrics,
+      };
+
+      exportToJson(payload, "kenmei-performance-report");
+      recordEvent({
+        type: "debug.performance-monitor",
+        message: "Performance report exported",
+        level: "info",
+        metadata: { sessionDuration },
+      });
+    } catch (error) {
+      console.error("Failed to export performance report:", error);
+      recordEvent(
+        {
+          type: "debug.performance-monitor",
+          message: "Failed to export performance report",
+          level: "error",
+          metadata: {
+            error: error instanceof Error ? error.message : String(error),
+          },
+        },
+        { force: true },
+      );
+    }
+  }, [performanceMetrics, recordEvent]);
+
   // Debug menu open/close state
   const openDebugMenu = useCallback(() => setDebugMenuOpen(true), []);
   const closeDebugMenu = useCallback(() => setDebugMenuOpen(false), []);
@@ -889,6 +1150,145 @@ export function DebugProvider({
     }
   }, [recordEvent]);
 
+  // Poll memory stats when performance monitor is enabled
+  useEffect(() => {
+    if (!isDebugEnabled || !featureToggles.performanceMonitor) {
+      if (memoryPollingIntervalRef.current) {
+        clearInterval(memoryPollingIntervalRef.current);
+        memoryPollingIntervalRef.current = null;
+      }
+      return;
+    }
+
+    const pollMemory = async () => {
+      try {
+        if (globalThis.electronDebug?.getMemoryStats) {
+          const stats = await globalThis.electronDebug.getMemoryStats();
+          updateMemoryStats(stats);
+        }
+      } catch (error) {
+        console.error("Failed to poll memory stats:", error);
+      }
+    };
+
+    // Poll immediately, then every 2.5 seconds
+    pollMemory();
+    memoryPollingIntervalRef.current = setInterval(pollMemory, 2500);
+
+    return () => {
+      if (memoryPollingIntervalRef.current) {
+        clearInterval(memoryPollingIntervalRef.current);
+        memoryPollingIntervalRef.current = null;
+      }
+    };
+  }, [isDebugEnabled, featureToggles.performanceMonitor, updateMemoryStats]);
+
+  // Listen for API performance events
+  useEffect(() => {
+    if (!isDebugEnabled || !featureToggles.performanceMonitor) return;
+
+    const handleApiPerformance = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        duration: number;
+        succeeded: boolean;
+        requestId?: string;
+        provider?: string;
+        endpoint?: string;
+      }>;
+      const { duration, succeeded, requestId, provider, endpoint } =
+        customEvent.detail;
+      recordApiLatency(duration, succeeded, requestId, provider, endpoint);
+    };
+
+    globalThis.addEventListener(
+      "anilist:request:performance",
+      handleApiPerformance,
+    );
+    globalThis.addEventListener(
+      "anilist:request:completed",
+      handleApiPerformance,
+    );
+
+    // Listen for generic API requests (from manga sources, etc.)
+    const handleGenericApiRequest = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        duration: number;
+        succeeded: boolean;
+        provider?: string;
+        endpoint?: string;
+      }>;
+      const { duration, succeeded, provider, endpoint } = customEvent.detail;
+      recordApiLatency(duration, succeeded, undefined, provider, endpoint);
+    };
+
+    globalThis.addEventListener(
+      "api:request:completed",
+      handleGenericApiRequest,
+    );
+
+    return () => {
+      globalThis.removeEventListener(
+        "anilist:request:performance",
+        handleApiPerformance,
+      );
+      globalThis.removeEventListener(
+        "anilist:request:completed",
+        handleApiPerformance,
+      );
+      globalThis.removeEventListener(
+        "api:request:completed",
+        handleGenericApiRequest,
+      );
+    };
+  }, [isDebugEnabled, featureToggles.performanceMonitor, recordApiLatency]);
+
+  // Listen for cache hit/miss events
+  useEffect(() => {
+    if (!isDebugEnabled || !featureToggles.performanceMonitor) return;
+
+    const handleCacheHit = () => recordCacheAccess(true);
+    const handleCacheMiss = () => recordCacheAccess(false);
+
+    globalThis.addEventListener("matching:cache-hit", handleCacheHit);
+    globalThis.addEventListener("matching:cache-miss", handleCacheMiss);
+
+    return () => {
+      globalThis.removeEventListener("matching:cache-hit", handleCacheHit);
+      globalThis.removeEventListener("matching:cache-miss", handleCacheMiss);
+    };
+  }, [isDebugEnabled, featureToggles.performanceMonitor, recordCacheAccess]);
+
+  // Listen for matching progress events
+  useEffect(() => {
+    if (!isDebugEnabled || !featureToggles.performanceMonitor) return;
+
+    const handleMatchingProgress = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        current: number;
+        total: number;
+        elapsedMs: number;
+      }>;
+      const { current, total, elapsedMs } = customEvent.detail;
+      recordMatchingProgress(current, total, elapsedMs);
+    };
+
+    globalThis.addEventListener(
+      "matching:progress-update",
+      handleMatchingProgress,
+    );
+
+    return () => {
+      globalThis.removeEventListener(
+        "matching:progress-update",
+        handleMatchingProgress,
+      );
+    };
+  }, [
+    isDebugEnabled,
+    featureToggles.performanceMonitor,
+    recordMatchingProgress,
+  ]);
+
   const stateContextValue = React.useMemo<DebugStateContextValue>(
     () => ({
       isDebugEnabled,
@@ -901,6 +1301,8 @@ export function DebugProvider({
       ipcViewerEnabled,
       eventLoggerEnabled,
       confidenceTestExporterEnabled: featureToggles.confidenceTestExporter,
+      performanceMonitorEnabled,
+      performanceMetrics,
       eventLogEntries,
       maxEventLogEntries: MAX_EVENT_LOG_ENTRIES,
       ipcEvents,
@@ -913,6 +1315,8 @@ export function DebugProvider({
       eventLogEntries,
       eventLoggerEnabled,
       featureToggles.confidenceTestExporter,
+      performanceMonitorEnabled,
+      performanceMetrics,
       ipcEvents,
       ipcViewerEnabled,
       isDebugEnabled,
@@ -950,6 +1354,14 @@ export function DebugProvider({
       toggleEventLogger,
       setConfidenceTestExporterEnabled,
       toggleConfidenceTestExporter,
+      setPerformanceMonitorEnabled,
+      togglePerformanceMonitor,
+      recordApiLatency,
+      recordCacheAccess,
+      recordMatchingProgress,
+      updateMemoryStats,
+      resetPerformanceMetrics,
+      exportPerformanceReport,
       recordEvent,
       clearEventLog,
       clearIpcEvents,
@@ -962,15 +1374,21 @@ export function DebugProvider({
       clearIpcEvents,
       clearLogs,
       exportLogs,
+      exportPerformanceReport,
+      recordApiLatency,
+      recordCacheAccess,
       recordEvent,
+      recordMatchingProgress,
       refreshStateInspectorSource,
       registerStateInspector,
+      resetPerformanceMetrics,
       setConfidenceTestExporterEnabled,
       setDebugEnabled,
       setEventLoggerEnabled,
       setIpcViewerEnabled,
       setLogRedactionEnabled,
       setLogViewerEnabled,
+      setPerformanceMonitorEnabled,
       setStateInspectorEnabled,
       setStorageDebuggerEnabled,
       toggleConfidenceTestExporter,
@@ -979,8 +1397,10 @@ export function DebugProvider({
       toggleIpcViewer,
       toggleLogRedaction,
       toggleLogViewer,
+      togglePerformanceMonitor,
       toggleStateInspector,
       toggleStorageDebugger,
+      updateMemoryStats,
     ],
   );
 

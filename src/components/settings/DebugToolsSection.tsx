@@ -20,6 +20,7 @@ interface DebugToolsSectionProps {
   ipcViewerEnabled: boolean;
   eventLoggerEnabled: boolean;
   confidenceTestExporterEnabled: boolean;
+  performanceMonitorEnabled: boolean;
   searchQuery: string;
   highlightedSectionId: string | null;
   onToggleDebug: () => void;
@@ -30,6 +31,7 @@ interface DebugToolsSectionProps {
   onIpcViewerChange: (enabled: boolean) => void;
   onEventLoggerChange: (enabled: boolean) => void;
   onConfidenceTestExporterChange: (enabled: boolean) => void;
+  onPerformanceMonitorChange: (enabled: boolean) => void;
 }
 
 /**
@@ -57,6 +59,7 @@ export function DebugToolsSection({
   ipcViewerEnabled,
   eventLoggerEnabled,
   confidenceTestExporterEnabled,
+  performanceMonitorEnabled,
   searchQuery,
   highlightedSectionId,
   onToggleDebug,
@@ -67,6 +70,7 @@ export function DebugToolsSection({
   onIpcViewerChange,
   onEventLoggerChange,
   onConfidenceTestExporterChange,
+  onPerformanceMonitorChange,
 }: Readonly<DebugToolsSectionProps>) {
   return (
     <motion.div
@@ -223,6 +227,17 @@ export function DebugToolsSection({
                 label: "Enable",
                 footer:
                   "When enabled, debug buttons appear next to confidence scores on match cards. Generate and copy test commands for troubleshooting.",
+              },
+              {
+                id: "performance-monitor-enabled",
+                title: "Performance monitor",
+                description:
+                  "Real-time monitoring of API latency, cache hit rates, matching speed, and memory usage with interactive charts.",
+                checked: performanceMonitorEnabled,
+                onChange: (v) => onPerformanceMonitorChange(Boolean(v)),
+                label: "Enable panel",
+                footer:
+                  "When enabled, a dedicated Performance Monitor panel appears in the debug center showing live performance metrics and trends.",
               },
             ];
 
