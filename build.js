@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+/* eslint-env node */
+/* eslint-disable @typescript-eslint/no-require-imports */
 
 /**
  * Build script that loads .env file and then runs electron-forge make

@@ -1348,7 +1348,7 @@ export function recordReadingHistory(entries: ReadingHistoryEntry[]): void {
   }
 
   // Convert back to array and sort by timestamp (newest first)
-  let allEntries = Array.from(existingMap.values()).sort(
+  const allEntries = Array.from(existingMap.values()).sort(
     (a, b) => b.timestamp - a.timestamp,
   );
 
