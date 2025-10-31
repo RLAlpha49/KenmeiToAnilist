@@ -4,12 +4,21 @@
  * @description Utility functions for exporting data to JSON, CSV files, including match results and sync reports.
  */
 
-import Papa from "papaparse";
 import { SyncReport } from "../api/anilist/sync-service";
 import { MangaMatchResult, AniListManga } from "../api/anilist/types";
 import { storage, STORAGE_KEYS } from "./storage";
 import type { MatchForExport } from "../types/matching";
 import { getAppVersion } from "./app-version";
+
+/**
+ * Dynamically imports papaparse library for CSV operations.
+ * Lazy loads the library only when CSV export is needed.
+ * @returns Promise resolving to Papa module
+ * @internal
+ */
+async function loadPapaparse(): Promise<typeof import("papaparse")> {
+  return await import("papaparse");
+}
 
 /**
  * UTF-8 BOM (Byte Order Mark) for Excel compatibility.
@@ -603,10 +612,13 @@ function formatMetadataHeader(metadata: ExportMetadata): string {
  * @throws Will throw if document.body is unavailable (non-DOM/Electron renderer context).
  * @source
  */
-export function exportToCSV(
+export async function exportToCSV(
   data: Record<string, unknown>[],
   baseFilename: string,
-): string {
+): Promise<string> {
+  // Lazy load papaparse only when CSV export is needed
+  const Papa = await loadPapaparse();
+
   // Convert to CSV using papaparse
   const csv = Papa.unparse(data, {
     header: true,
@@ -846,7 +858,7 @@ export async function exportMatchResults(
         { comment: "" }, // Empty row separator
         ...flattened,
       ];
-      filename = exportToCSV(
+      filename = await exportToCSV(
         withMetadata as unknown as Record<string, unknown>[],
         "match-results",
       );

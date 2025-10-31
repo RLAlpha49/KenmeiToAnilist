@@ -56,7 +56,8 @@ export default defineConfig(() => ({
         // - vendor-radix: Radix UI primitives (~200KB) - UI framework
         // - vendor-recharts: Charts library (~150KB) - lazy loaded with StatisticsPage
         // - vendor-ui-framework: Animations, icons, utilities (~200KB)
-        // - vendor-data: Data processing libraries (~150KB)
+        // - vendor-data: Matching libraries (~110KB) - string-similarity, fastest-levenshtein
+        // - vendor-export: CSV export library (~40KB) - lazy loaded
         // - vendor-sentry: Error tracking (~50KB) - loaded separately for monitoring
         // - vendor-tanstack: TanStack Router (~50KB)
         // - vendor: Other dependencies (~100KB)
@@ -65,7 +66,7 @@ export default defineConfig(() => ({
           // Normalize path separators to forward slashes for consistent matching across OS
           const normalizedId = normalizePath(id);
 
-          // React core - This causes renderer to fail to load, so keep in main bundle
+          // This causes renderer to fail to load, so keep in main bundle
           // if (
           //   normalizedId.includes("node_modules/react/") ||
           //   normalizedId.includes("node_modules/react-dom/")
@@ -91,6 +92,11 @@ export default defineConfig(() => ({
             return "vendor-sentry";
           }
 
+          // Export utilities - lazy loaded on demand
+          if (normalizedId.includes("node_modules/papaparse")) {
+            return "vendor-export";
+          }
+
           // Animation and UI utilities
           const uiFrameworkPkgs = [
             "framer-motion",
@@ -109,12 +115,7 @@ export default defineConfig(() => ({
           }
 
           // Data processing libraries
-          const dataLibs = [
-            "papaparse",
-            "natural",
-            "string-similarity",
-            "fastest-levenshtein",
-          ];
+          const dataLibs = ["string-similarity", "fastest-levenshtein"];
           if (
             dataLibs.some((pkg) => normalizedId.includes(`node_modules/${pkg}`))
           ) {

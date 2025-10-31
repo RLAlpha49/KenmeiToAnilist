@@ -222,7 +222,7 @@ export function ExportStatisticsButton({
     return rows;
   }, [importStats, syncStats, sections, matchResults]);
 
-  const handleExport = useCallback(() => {
+  const handleExport = useCallback(async () => {
     if (sections.size === 0) {
       toast.error("Select at least one dataset to export");
       return;
@@ -294,7 +294,7 @@ export function ExportStatisticsButton({
       ];
 
       const tabularData = withMetadata as unknown as Record<string, unknown>[];
-      const file = exportToCSV(tabularData, "statistics");
+      const file = await exportToCSV(tabularData, "statistics");
 
       toast.success(`Statistics exported to ${file}`);
       setOpen(false);
