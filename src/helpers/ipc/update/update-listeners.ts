@@ -6,9 +6,11 @@
  * @module update-listeners
  */
 
-import { ipcMain, BrowserWindow } from "electron";
+import { BrowserWindow } from "electron";
+import { secureHandle } from "../listeners-register";
 import { autoUpdater } from "electron-updater";
 import type { UpdateInfo, ProgressInfo } from "electron-updater";
+import Store from "electron-store";
 import {
   UPDATE_CHECK_CHANNEL,
   UPDATE_DOWNLOAD_CHANNEL,
@@ -20,6 +22,11 @@ import {
   type CheckForUpdatesPayload,
 } from "./update-channels";
 import { withGroupAsync } from "../../../utils/logging";
+
+const store = new Store() as unknown as {
+  get: (key: string) => unknown;
+  set: (key: string, value: unknown) => void;
+};
 
 /**
  * Type alias for release notes, which can be a string, an array of note objects, or undefined.
@@ -58,11 +65,9 @@ function normalizeReleaseNotes(releaseNotes: ReleaseNotes): string {
 }
 
 /**
- * Adds IPC event listeners for auto-update operations.
- * Registers handlers for update checking, downloading, and installation.
- * Sets up event forwarding from autoUpdater to the renderer process.
+ * Set up IPC event listeners for auto-update functionality
  *
- * @param mainWindow - The main browser window for sending update events
+ * @param mainWindow - The main application window for security validation
  */
 export function addUpdateEventListeners(mainWindow: BrowserWindow): void {
   // Configure autoUpdater to not download automatically
@@ -70,14 +75,39 @@ export function addUpdateEventListeners(mainWindow: BrowserWindow): void {
   autoUpdater.autoInstallOnAppQuit = false;
 
   /**
+   * Handle update channel selection from renderer
+   * Persists the selected channel and sets autoUpdater.allowPrerelease accordingly
+   */
+  secureHandle(
+    "updates:set-channel",
+    (_event: Electron.IpcMainInvokeEvent, channel: "stable" | "beta") => {
+      try {
+        store.set("update_channel", channel);
+        autoUpdater.allowPrerelease = channel === "beta";
+        console.info(
+          `[Update Listeners] ✅ Update channel set to ${channel} (allowPrerelease=${autoUpdater.allowPrerelease})`,
+        );
+        return { success: true };
+      } catch (err) {
+        console.error(
+          "[Update Listeners] ❌ Failed to set update channel:",
+          err,
+        );
+        return { success: false, error: String(err) };
+      }
+    },
+    mainWindow,
+  );
+
+  /**
    * Handle update check requests from renderer
    * Checks for available updates and returns update information
    * Respects allowPrerelease option to include beta releases
    */
-  ipcMain.handle(
+  secureHandle(
     UPDATE_CHECK_CHANNEL,
     async (
-      _event,
+      _event: Electron.IpcMainInvokeEvent,
       payload?: CheckForUpdatesPayload,
     ): Promise<{
       updateAvailable: boolean;
@@ -128,45 +158,59 @@ export function addUpdateEventListeners(mainWindow: BrowserWindow): void {
         },
       );
     },
+    mainWindow,
   );
 
   /**
    * Handle update download requests from renderer
    * Initiates download of the available update
    */
-  ipcMain.handle(UPDATE_DOWNLOAD_CHANNEL, async (): Promise<void> => {
-    return await withGroupAsync(
-      "[Update Listeners] Starting update download",
-      async () => {
-        try {
-          await autoUpdater.downloadUpdate();
-          console.log("[Update Listeners] Update download started");
-        } catch (error) {
-          console.error("[Update Listeners] Error downloading update:", error);
-          throw error;
-        }
-      },
-    );
-  });
+  secureHandle(
+    UPDATE_DOWNLOAD_CHANNEL,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async (_event: Electron.IpcMainInvokeEvent): Promise<void> => {
+      return await withGroupAsync(
+        "[Update Listeners] Starting update download",
+        async () => {
+          try {
+            await autoUpdater.downloadUpdate();
+            console.log("[Update Listeners] Update download started");
+          } catch (error) {
+            console.error(
+              "[Update Listeners] Error downloading update:",
+              error,
+            );
+            throw error;
+          }
+        },
+      );
+    },
+    mainWindow,
+  );
 
   /**
    * Handle update installation requests from renderer
    * Quits the application and installs the downloaded update
    */
-  ipcMain.handle(UPDATE_INSTALL_CHANNEL, async (): Promise<void> => {
-    return await withGroupAsync(
-      "[Update Listeners] Installing update",
-      async () => {
-        try {
-          console.log("[Update Listeners] Quitting and installing update");
-          autoUpdater.quitAndInstall(false, true);
-        } catch (error) {
-          console.error("[Update Listeners] Error installing update:", error);
-          throw error;
-        }
-      },
-    );
-  });
+  secureHandle(
+    UPDATE_INSTALL_CHANNEL,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async (_event: Electron.IpcMainInvokeEvent): Promise<void> => {
+      return await withGroupAsync(
+        "[Update Listeners] Installing update",
+        async () => {
+          try {
+            console.log("[Update Listeners] Quitting and installing update");
+            autoUpdater.quitAndInstall(false, true);
+          } catch (error) {
+            console.error("[Update Listeners] Error installing update:", error);
+            throw error;
+          }
+        },
+      );
+    },
+    mainWindow,
+  );
 
   /**
    * Forward update-available event to renderer

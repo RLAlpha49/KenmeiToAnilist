@@ -4,7 +4,8 @@
  * @description Registers IPC event listeners for AniList API requests, token exchange, cache, and shell actions in the Electron main process.
  */
 
-import { ipcMain, shell } from "electron";
+import { BrowserWindow, shell } from "electron";
+import { secureHandle } from "../listeners-register";
 import fetch, { Response } from "node-fetch";
 import { createHash } from "node:crypto";
 import { getAppVersionElectron } from "../../../utils/app-version";
@@ -585,83 +586,91 @@ function isCacheValid<T>(cache: Cache<T>, key: string): boolean {
 /**
  * Setup IPC handlers for AniList API requests, token exchange, cache, and shell actions.
  *
+ * @param mainWindow - The main application window for security validation
  * @source
  */
-export function setupAniListAPI() {
+export function setupAniListAPI(mainWindow: BrowserWindow) {
   // Handle graphQL requests
-  ipcMain.handle("anilist:request", async (_, payload: AniListRequest) => {
-    const { query, variables, token, cacheControl } = payload;
-    const bypassCache = cacheControl?.bypassCache ?? false;
-    const searchTerm = getSearchTermFromVariables(variables);
-    return withGroupAsync(
-      `[ApiIPC] AniList Request: ${searchTerm}`,
-      async () => {
-        try {
-          console.debug(
-            "[ApiIPC] Handling AniList API request in main process",
-          );
-
-          // Check if it's a search request and if we should use cache
-          const isSearchQuery = query.includes("Page(") && variables?.search;
-
-          if (isSearchQuery && !bypassCache) {
-            const cacheKey = generateCacheKey(query, variables);
-
-            if (isCacheValid(searchCache, cacheKey)) {
-              console.debug(
-                `[ApiIPC] Using cached search results for: ${variables.search}`,
-              );
-              return {
-                success: true,
-                data: searchCache[cacheKey].data,
-              };
-            }
-          }
-
-          if (isSearchQuery && bypassCache) {
+  secureHandle(
+    "anilist:request",
+    async (_event: Electron.IpcMainInvokeEvent, payload: AniListRequest) => {
+      const { query, variables, token, cacheControl } = payload;
+      const bypassCache = cacheControl?.bypassCache ?? false;
+      const searchTerm = getSearchTermFromVariables(variables);
+      return withGroupAsync(
+        `[ApiIPC] AniList Request: ${searchTerm}`,
+        async () => {
+          try {
             console.debug(
-              `[ApiIPC] Bypassing cache for search: ${variables.search}`,
+              "[ApiIPC] Handling AniList API request in main process",
             );
-          }
 
-          const response = await requestAniList(query, variables, token);
+            // Check if it's a search request and if we should use cache
+            const isSearchQuery = query.includes("Page(") && variables?.search;
 
-          // Cache search results only if not bypassing cache
-          if (isSearchQuery && response.data && !bypassCache) {
-            const cacheKey = generateCacheKey(query, variables);
-            searchCache[cacheKey] = {
-              data: response,
-              timestamp: Date.now(),
-            };
-            // Register the cache key in the search term index for precise clearing
-            const normalizedTerm = normalizeSearchTerm(variables?.search);
-            if (normalizedTerm) {
-              if (!searchTermIndex.has(normalizedTerm)) {
-                searchTermIndex.set(normalizedTerm, new Set());
+            if (isSearchQuery && !bypassCache) {
+              const cacheKey = generateCacheKey(query, variables);
+
+              if (isCacheValid(searchCache, cacheKey)) {
+                console.debug(
+                  `[ApiIPC] Using cached search results for: ${variables.search}`,
+                );
+                return {
+                  success: true,
+                  data: searchCache[cacheKey].data,
+                };
               }
-              searchTermIndex.get(normalizedTerm)?.add(cacheKey);
             }
-          }
 
-          return {
-            success: true,
-            data: response,
-          };
-        } catch (error) {
-          console.error("[ApiIPC] Error in anilist:request:", error);
-          return {
-            success: false,
-            error,
-          };
-        }
-      },
-    );
-  });
+            if (isSearchQuery && bypassCache) {
+              console.debug(
+                `[ApiIPC] Bypassing cache for search: ${variables.search}`,
+              );
+            }
+
+            const response = await requestAniList(query, variables, token);
+
+            // Cache search results only if not bypassing cache
+            if (isSearchQuery && response.data && !bypassCache) {
+              const cacheKey = generateCacheKey(query, variables);
+              searchCache[cacheKey] = {
+                data: response,
+                timestamp: Date.now(),
+              };
+              // Register the cache key in the search term index for precise clearing
+              const normalizedTerm = normalizeSearchTerm(variables?.search);
+              if (normalizedTerm) {
+                if (!searchTermIndex.has(normalizedTerm)) {
+                  searchTermIndex.set(normalizedTerm, new Set());
+                }
+                searchTermIndex.get(normalizedTerm)?.add(cacheKey);
+              }
+            }
+
+            return {
+              success: true,
+              data: response,
+            };
+          } catch (error) {
+            console.error("[ApiIPC] Error in anilist:request:", error);
+            return {
+              success: false,
+              error,
+            };
+          }
+        },
+      );
+    },
+    mainWindow,
+  );
 
   // Handle opening external links in the default browser
-  ipcMain.handle(
+  secureHandle(
     "shell:openExternal",
-    async (_, url): Promise<ShellOperationResult> => {
+    async (
+      _event: Electron.IpcMainInvokeEvent,
+      url: string,
+    ): Promise<ShellOperationResult> => {
       try {
         console.debug(
           `[ApiIPC] Opening external URL in default browser: ${url}`,
@@ -706,60 +715,77 @@ export function setupAniListAPI() {
         };
       }
     },
+    mainWindow,
   );
 
   // Clear search cache
-  ipcMain.handle("anilist:clearCache", (_, searchQuery) => {
-    if (searchQuery) {
-      // Clear specific cache entries using the search term index for precision
-      const normalizedTerm = normalizeSearchTerm(searchQuery);
-      const keysToDelete = searchTermIndex.get(normalizedTerm);
+  secureHandle(
+    "anilist:clearCache",
+    (_event: Electron.IpcMainInvokeEvent, searchQuery: string) => {
+      if (searchQuery) {
+        // Clear specific cache entries using the search term index for precision
+        const normalizedTerm = normalizeSearchTerm(searchQuery);
+        const keysToDelete = searchTermIndex.get(normalizedTerm);
 
-      if (keysToDelete) {
-        for (const key of keysToDelete) {
+        if (keysToDelete) {
+          for (const key of keysToDelete) {
+            delete searchCache[key];
+          }
+          searchTermIndex.delete(normalizedTerm);
+          console.debug(
+            `[ApiIPC] Cleared ${keysToDelete.size} cache entries for: "${normalizedTerm}"`,
+          );
+        } else {
+          console.debug(
+            `[ApiIPC] No cache entries found for: "${normalizedTerm}"`,
+          );
+        }
+      } else {
+        // Clear all cache
+        const totalEntries = Object.keys(searchCache).length;
+        for (const key of Object.keys(searchCache)) {
           delete searchCache[key];
         }
-        searchTermIndex.delete(normalizedTerm);
+        searchTermIndex.clear();
         console.debug(
-          `[ApiIPC] Cleared ${keysToDelete.size} cache entries for: "${normalizedTerm}"`,
-        );
-      } else {
-        console.debug(
-          `[ApiIPC] No cache entries found for: "${normalizedTerm}"`,
+          `[ApiIPC] Cleared all cache entries (${totalEntries} total)`,
         );
       }
-    } else {
-      // Clear all cache
-      const totalEntries = Object.keys(searchCache).length;
-      for (const key of Object.keys(searchCache)) {
-        delete searchCache[key];
-      }
-      searchTermIndex.clear();
-      console.debug(
-        `[ApiIPC] Cleared all cache entries (${totalEntries} total)`,
-      );
-    }
 
-    return { success: true };
-  });
+      return { success: true };
+    },
+    mainWindow,
+  );
 
   // Get rate limit status from main process
-  ipcMain.handle("anilist:getRateLimitStatus", () => {
-    const now = Date.now();
-    const resetTime = requestQueue.getRateLimitResetTime();
-    const isCurrentlyRateLimited = now < resetTime;
+  secureHandle(
+    "anilist:getRateLimitStatus",
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    (_event: Electron.IpcMainInvokeEvent) => {
+      const now = Date.now();
+      const resetTime = requestQueue.getRateLimitResetTime();
+      const isCurrentlyRateLimited = now < resetTime;
 
-    return {
-      isRateLimited: isCurrentlyRateLimited,
-      retryAfter: isCurrentlyRateLimited ? resetTime : null,
-      timeRemaining: isCurrentlyRateLimited ? Math.max(0, resetTime - now) : 0,
-    };
-  });
+      return {
+        isRateLimited: isCurrentlyRateLimited,
+        retryAfter: isCurrentlyRateLimited ? resetTime : null,
+        timeRemaining: isCurrentlyRateLimited
+          ? Math.max(0, resetTime - now)
+          : 0,
+      };
+    },
+    mainWindow,
+  );
 
   // Manga source API handlers (generic)
-  ipcMain.handle(
+  secureHandle(
     "mangaSource:search",
-    async (_, source: MangaSource, query: string, limit: number = 10) => {
+    async (
+      _event: Electron.IpcMainInvokeEvent,
+      source: MangaSource,
+      query: string,
+      limit: number = 10,
+    ) => {
       return withGroupAsync(
         `[ApiIPC] ${source} Search: "${query}"`,
         async () => {
@@ -793,11 +819,16 @@ export function setupAniListAPI() {
         },
       );
     },
+    mainWindow,
   );
 
-  ipcMain.handle(
+  secureHandle(
     "mangaSource:getMangaDetail",
-    async (_, source: MangaSource, slug: string) => {
+    async (
+      _event: Electron.IpcMainInvokeEvent,
+      source: MangaSource,
+      slug: string,
+    ) => {
       return withGroupAsync(
         `[ApiIPC] ${source} Detail: "${slug}"`,
         async () => {
@@ -827,5 +858,6 @@ export function setupAniListAPI() {
         },
       );
     },
+    mainWindow,
   );
 }

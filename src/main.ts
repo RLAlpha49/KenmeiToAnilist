@@ -6,7 +6,7 @@
 
 /// <reference types="@electron-forge/plugin-vite/forge-vite-env" />
 
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, session } from "electron";
 import registerListeners from "./helpers/ipc/listeners-register";
 import squirrelStartup from "electron-squirrel-startup";
 import path from "node:path";
@@ -117,20 +117,90 @@ try {
   console.debug("[Main] 🔍 Could not read update_channel from store:", err);
 }
 
-// IPC: allow renderer to update the chosen update channel immediately
-ipcMain.handle("updates:set-channel", (_event, channel: "stable" | "beta") => {
-  try {
-    store.set("update_channel", channel);
-    autoUpdater.allowPrerelease = channel === "beta";
-    console.info(
-      `[Main] ✅ Update channel set to ${channel} (allowPrerelease=${autoUpdater.allowPrerelease})`,
+/**
+ * Configures Content Security Policy headers for all web requests.
+ * Complements the CSP meta tag in index.html with additional security.
+ * In development (app not packaged), relaxes connect-src to allow WebSocket and Vite dev server.
+ * @remarks Called during app initialization to set up security headers.
+ * @source
+ */
+function configureSecurityHeaders() {
+  return withGroup(`[Main] Configure Security Headers`, () => {
+    console.info("[Main] 🔒 Setting up Content Security Policy headers...");
+
+    // Determine if we're in development mode
+    const isDevMode = !app.isPackaged;
+
+    // Set CSP headers for all requests
+    // Reference: docs/guides/SECURITY.md for CSP policy source of truth
+    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+      // Build CSP directives based on environment
+      const connectSrcDirectives = isDevMode
+        ? "connect-src 'self' https://graphql.anilist.co https://api.mangadex.org https://api.comick.fun https://api.github.com ws: http://localhost:*;"
+        : "connect-src 'self' https://graphql.anilist.co https://api.mangadex.org https://api.comick.fun https://api.github.com;";
+
+      // Allow inline scripts in development (Vite HMR injects small inline scripts).
+      // Production remains strict (no 'unsafe-inline').
+      const scriptSrcDirective = isDevMode
+        ? "script-src 'self' 'unsafe-inline';"
+        : "script-src 'self';";
+
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          "Content-Security-Policy": [
+            "default-src 'self';",
+            scriptSrcDirective,
+            "style-src 'self' 'unsafe-inline';",
+            "img-src 'self' data: https:;",
+            "font-src 'self' data:;",
+            connectSrcDirectives,
+            "object-src 'none';",
+            "base-uri 'self';",
+            "form-action 'none';",
+            "frame-ancestors 'none';",
+            "upgrade-insecure-requests;",
+          ].join(" "),
+        },
+      });
+    });
+
+    if (isDevMode) {
+      console.info(
+        "[Main] ℹ️ CSP configured in development mode (WebSocket + Vite dev server allowed)",
+      );
+    } else {
+      console.info("[Main] ✅ CSP headers configured for production");
+    }
+  });
+}
+
+/**
+ * Configures permission handlers to deny all external permission requests.
+ * Prevents the app from requesting camera, microphone, geolocation, etc.
+ * @remarks Called during app initialization before windows are created.
+ * @source
+ */
+function configurePermissionHandlers() {
+  return withGroup(`[Main] Configure Permission Handlers`, () => {
+    console.info("[Main] 🔒 Setting up permission handlers...");
+
+    // Deny all permission requests (camera, microphone, geolocation, etc.)
+    session.defaultSession.setPermissionRequestHandler(
+      (webContents, permission, callback) => {
+        console.warn(
+          `[Main] ⚠️ Permission request denied: ${permission} from ${webContents.getURL()}`,
+        );
+        callback(false); // Deny all permissions
+      },
     );
-    return { success: true };
-  } catch (err) {
-    console.error("[Main] ❌ Failed to set update channel:", err);
-    return { success: false, error: String(err) };
-  }
-});
+
+    // Additional permission check handler for finer control
+    session.defaultSession.setPermissionCheckHandler(() => false);
+
+    console.info("[Main] ✅ Permission handlers configured");
+  });
+}
 
 // Handle Windows Squirrel events
 if (process.platform === "win32") {
@@ -229,6 +299,7 @@ function createSplashScreen() {
       alwaysOnTop: true,
       resizable: false,
       webPreferences: {
+        sandbox: true,
         contextIsolation: true,
         nodeIntegration: false,
       },
@@ -279,6 +350,7 @@ function createWindow() {
       height: 800,
       show: false, // Don't show until ready
       webPreferences: {
+        sandbox: true,
         devTools: inDevelopment || enableDevTools,
         contextIsolation: true,
         nodeIntegration: false,
@@ -396,6 +468,13 @@ app
   .then(() => {
     return withGroupAsync(`[Main] App Startup Sequence`, async () => {
       console.info("[Main] ✅ App ready event received");
+
+      // Configure security before creating windows
+      // In production (app.isPackaged), configure full CSP headers
+      // In development, CSP is still applied but allows WebSocket and Vite dev server
+      configureSecurityHeaders();
+      configurePermissionHandlers();
+
       createSplashScreen();
       return createWindow();
     });
@@ -471,4 +550,6 @@ export {
   createSplashScreen,
   closeSplashScreen,
   installExtensions,
+  configureSecurityHeaders,
+  configurePermissionHandlers,
 };

@@ -4,7 +4,8 @@
  * @description Registers IPC event listeners for interacting with the Electron store (get, set, remove, clear) in the main process.
  */
 
-import { ipcMain } from "electron";
+import { BrowserWindow } from "electron";
+import { secureHandle } from "../listeners-register";
 import Store from "electron-store";
 
 /**
@@ -39,49 +40,67 @@ const store = new Store<StoreSchema>() as unknown as ElectronStoreInterface;
 /**
  * Registers IPC event listeners for interacting with the Electron store (get, set, remove, clear).
  *
+ * @param mainWindow - The main application window for security validation
  * @source
  */
-export function setupStoreIPC() {
+export function setupStoreIPC(mainWindow: BrowserWindow) {
   // Handle getting an item from the store
-  ipcMain.handle("store:getItem", (_, key: string) => {
-    try {
-      return store.get(key) || null;
-    } catch (error) {
-      console.error(`Error getting item from store: ${key}`, error);
-      return null;
-    }
-  });
+  secureHandle(
+    "store:getItem",
+    (_event: Electron.IpcMainInvokeEvent, key: string) => {
+      try {
+        return store.get(key) || null;
+      } catch (error) {
+        console.error(`Error getting item from store: ${key}`, error);
+        return null;
+      }
+    },
+    mainWindow,
+  );
 
   // Handle setting an item in the store
-  ipcMain.handle("store:setItem", (_, key: string, value: string) => {
-    try {
-      store.set(key, value);
-      return true;
-    } catch (error) {
-      console.error(`Error setting item in store: ${key}`, error);
-      return false;
-    }
-  });
+  secureHandle(
+    "store:setItem",
+    (_event: Electron.IpcMainInvokeEvent, key: string, value: string) => {
+      try {
+        store.set(key, value);
+        return true;
+      } catch (error) {
+        console.error(`Error setting item in store: ${key}`, error);
+        return false;
+      }
+    },
+    mainWindow,
+  );
 
   // Handle removing an item from the store
-  ipcMain.handle("store:removeItem", (_, key: string) => {
-    try {
-      store.delete(key);
-      return true;
-    } catch (error) {
-      console.error(`Error removing item from store: ${key}`, error);
-      return false;
-    }
-  });
+  secureHandle(
+    "store:removeItem",
+    (_event: Electron.IpcMainInvokeEvent, key: string) => {
+      try {
+        store.delete(key);
+        return true;
+      } catch (error) {
+        console.error(`Error removing item from store: ${key}`, error);
+        return false;
+      }
+    },
+    mainWindow,
+  );
 
   // Handle clearing the store
-  ipcMain.handle("store:clear", () => {
-    try {
-      store.clear();
-      return true;
-    } catch (error) {
-      console.error("Error clearing store", error);
-      return false;
-    }
-  });
+  secureHandle(
+    "store:clear",
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    (_event: Electron.IpcMainInvokeEvent) => {
+      try {
+        store.clear();
+        return true;
+      } catch (error) {
+        console.error("Error clearing store", error);
+        return false;
+      }
+    },
+    mainWindow,
+  );
 }

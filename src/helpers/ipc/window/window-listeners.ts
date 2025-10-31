@@ -4,7 +4,8 @@
  * @description Registers IPC event listeners for window actions (minimize, maximize, close) in the Electron main process.
  */
 
-import { BrowserWindow, ipcMain } from "electron";
+import { BrowserWindow } from "electron";
+import { secureHandle } from "../listeners-register";
 import {
   WIN_CLOSE_CHANNEL,
   WIN_MAXIMIZE_CHANNEL,
@@ -18,17 +19,31 @@ import {
  * @source
  */
 export function addWindowEventListeners(mainWindow: BrowserWindow) {
-  ipcMain.handle(WIN_MINIMIZE_CHANNEL, () => {
-    mainWindow.minimize();
-  });
-  ipcMain.handle(WIN_MAXIMIZE_CHANNEL, () => {
-    if (mainWindow.isMaximized()) {
-      mainWindow.unmaximize();
-    } else {
-      mainWindow.maximize();
-    }
-  });
-  ipcMain.handle(WIN_CLOSE_CHANNEL, () => {
-    mainWindow.close();
-  });
+  secureHandle(
+    WIN_MINIMIZE_CHANNEL,
+    () => {
+      mainWindow.minimize();
+    },
+    mainWindow,
+  );
+
+  secureHandle(
+    WIN_MAXIMIZE_CHANNEL,
+    () => {
+      if (mainWindow.isMaximized()) {
+        mainWindow.unmaximize();
+      } else {
+        mainWindow.maximize();
+      }
+    },
+    mainWindow,
+  );
+
+  secureHandle(
+    WIN_CLOSE_CHANNEL,
+    () => {
+      mainWindow.close();
+    },
+    mainWindow,
+  );
 }

@@ -4,7 +4,8 @@
  * @description Registers IPC event listeners for authentication-related actions (OAuth, credentials, token exchange) in the Electron main process.
  */
 
-import { BrowserWindow, ipcMain, shell } from "electron";
+import { BrowserWindow, shell } from "electron";
+import { secureHandle } from "../listeners-register";
 import { URL } from "node:url";
 import * as http from "node:http";
 import fetch from "node-fetch";
@@ -225,20 +226,199 @@ function formatTokenExchangeError(lastError: unknown): string {
 }
 
 /**
+ * Validates an OAuth URL before opening it in the browser.
+ * Ensures the URL is from AniList and uses HTTPS.
+ *
+ * @param url - The OAuth URL to validate
+ * @returns Validation result with success flag and optional error message
+ * @internal
+ * @source
+ */
+/**
+ * Validates the OAuth URL protocol is HTTPS.
+ */
+function validateOAuthProtocol(url: URL): { valid: boolean; error?: string } {
+  if (url.protocol !== "https:") {
+    return {
+      valid: false,
+      error: `Invalid OAuth URL protocol: ${url.protocol}. Only HTTPS is allowed.`,
+    };
+  }
+  return { valid: true };
+}
+
+/**
+ * Validates the OAuth URL domain is anilist.co.
+ */
+function validateOAuthDomain(url: URL): { valid: boolean; error?: string } {
+  if (!url.hostname.endsWith("anilist.co")) {
+    return {
+      valid: false,
+      error: `Invalid OAuth URL domain: ${url.hostname}. Only anilist.co is allowed.`,
+    };
+  }
+  return { valid: true };
+}
+
+/**
+ * Validates the OAuth URL path is the authorize endpoint.
+ */
+function validateOAuthPath(url: URL): { valid: boolean; error?: string } {
+  if (!url.pathname.startsWith("/api/v2/oauth/authorize")) {
+    return {
+      valid: false,
+      error: `Invalid OAuth URL path: ${url.pathname}. Expected /api/v2/oauth/authorize.`,
+    };
+  }
+  return { valid: true };
+}
+
+/**
+ * Validates required OAuth parameters are present.
+ */
+function validateOAuthParams(url: URL): { valid: boolean; error?: string } {
+  const requiredParams = ["client_id", "response_type"];
+  for (const param of requiredParams) {
+    if (!url.searchParams.has(param)) {
+      return {
+        valid: false,
+        error: `Missing required OAuth parameter: ${param}`,
+      };
+    }
+  }
+  return { valid: true };
+}
+
+/**
+ * Validates redirect_uri parameter if provided.
+ */
+function validateRedirectUri(
+  url: URL,
+  expectedRedirectUri: string,
+): { valid: boolean; error?: string } {
+  const urlRedirectUri = url.searchParams.get("redirect_uri");
+  if (!urlRedirectUri) {
+    return {
+      valid: false,
+      error: `Missing redirect_uri parameter in OAuth URL`,
+    };
+  }
+
+  try {
+    const redirectUrl = new URL(urlRedirectUri);
+    const expectedUrl = new URL(expectedRedirectUri);
+
+    // Must match protocol and hostname
+    if (
+      redirectUrl.protocol !== expectedUrl.protocol ||
+      redirectUrl.hostname !== expectedUrl.hostname
+    ) {
+      return {
+        valid: false,
+        error: `redirect_uri origin mismatch. Expected ${expectedUrl.origin}, got ${redirectUrl.origin}`,
+      };
+    }
+
+    // Must be localhost or 127.0.0.1
+    if (
+      redirectUrl.hostname !== "localhost" &&
+      redirectUrl.hostname !== "127.0.0.1"
+    ) {
+      return {
+        valid: false,
+        error: `redirect_uri must use localhost. Got: ${redirectUrl.hostname}`,
+      };
+    }
+
+    if (!redirectUrl.port) {
+      return {
+        valid: false,
+        error: `redirect_uri must include a port number`,
+      };
+    }
+
+    return { valid: true };
+  } catch (error) {
+    return {
+      valid: false,
+      error: `Invalid redirect_uri URL: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
+function validateOAuthUrl(
+  url: string,
+  redirectUri?: string,
+): { valid: boolean; error?: string } {
+  try {
+    const parsedUrl = new URL(url);
+
+    // Validate protocol
+    const protocolCheck = validateOAuthProtocol(parsedUrl);
+    if (!protocolCheck.valid) return protocolCheck;
+
+    // Validate domain
+    const domainCheck = validateOAuthDomain(parsedUrl);
+    if (!domainCheck.valid) return domainCheck;
+
+    // Validate path
+    const pathCheck = validateOAuthPath(parsedUrl);
+    if (!pathCheck.valid) return pathCheck;
+
+    // Validate required params
+    const paramsCheck = validateOAuthParams(parsedUrl);
+    if (!paramsCheck.valid) return paramsCheck;
+
+    // Validate redirect_uri if provided
+    if (redirectUri) {
+      const redirectCheck = validateRedirectUri(parsedUrl, redirectUri);
+      if (!redirectCheck.valid) return redirectCheck;
+    }
+
+    return { valid: true };
+  } catch (error) {
+    return {
+      valid: false,
+      error: `Invalid OAuth URL format: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
+/**
  * Add event listeners for authentication-related IPC events
  * @param mainWindow The main application window
  */
 export function addAuthEventListeners(mainWindow: BrowserWindow) {
   // Open the OAuth window when requested by the renderer
-  ipcMain.handle(
+  secureHandle(
     "auth:openOAuthWindow",
-    async (_, oauthUrl: string, redirectUri: string) => {
+    async (event, oauthUrl: string, redirectUri: string) => {
       return withGroupAsync(
         `[AuthIPC] OAuth Flow: ${redirectUri}`,
         async () => {
           try {
             // Reset cancellation flag
             authCancelled = false;
+
+            // Validate OAuth URL and parameters EARLY before allocating any resources
+            const validation = validateOAuthUrl(oauthUrl, redirectUri);
+            if (!validation.valid) {
+              console.error(
+                `[AuthIPC] ❌ OAuth URL validation failed: ${validation.error}`,
+              );
+              mainWindow.webContents.send(
+                "auth:status",
+                `Security error: ${validation.error}`,
+              );
+              return {
+                success: false,
+                error: validation.error,
+              };
+            }
+
+            console.info(
+              `[AuthIPC] ✅ OAuth URL validated: ${new URL(oauthUrl).hostname}`,
+            );
 
             // Extract redirect URI parts
             const redirectUrl = new URL(redirectUri);
@@ -329,153 +509,179 @@ export function addAuthEventListeners(mainWindow: BrowserWindow) {
         },
       );
     },
+    mainWindow,
   );
 
   // Handle storing and retrieving API credentials
-  ipcMain.handle("auth:storeCredentials", async (_, credentials) => {
-    try {
-      console.debug(
-        "[AuthIPC] Storing credentials for source:",
-        credentials?.source,
-      );
-      // Store the credentials in memory
-      if (credentials?.source) {
-        storedCredentials[credentials.source] = credentials;
+  secureHandle(
+    "auth:storeCredentials",
+    async (event, credentials: AuthCredentials) => {
+      try {
+        console.debug(
+          "[AuthIPC] Storing credentials for source:",
+          credentials?.source,
+        );
+        // Store the credentials in memory
+        if (credentials?.source) {
+          storedCredentials[credentials.source] = credentials;
+        }
+        return { success: true };
+      } catch (error: unknown) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        console.error("[AuthIPC] Failed to store credentials:", error);
+        return { success: false, error: errorMessage };
       }
-      return { success: true };
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      console.error("[AuthIPC] Failed to store credentials:", error);
-      return { success: false, error: errorMessage };
-    }
-  });
+    },
+    mainWindow,
+  );
 
   // Get stored credentials
-  ipcMain.handle("auth:getCredentials", async (_, source) => {
-    try {
-      console.debug("[AuthIPC] Retrieving credentials for source:", source);
-      const credentials = storedCredentials[source];
+  secureHandle(
+    "auth:getCredentials",
+    async (event, source: string) => {
+      try {
+        console.debug("[AuthIPC] Retrieving credentials for source:", source);
+        const credentials = storedCredentials[source];
 
-      if (!credentials) {
+        if (!credentials) {
+          return {
+            success: false,
+            error: `No credentials found for source: ${source}`,
+          };
+        }
+
         return {
-          success: false,
-          error: `No credentials found for source: ${source}`,
+          success: true,
+          credentials,
         };
+      } catch (error: unknown) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        console.error("[AuthIPC] Failed to retrieve credentials:", error);
+        return { success: false, error: errorMessage };
       }
-
-      return {
-        success: true,
-        credentials,
-      };
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      console.error("[AuthIPC] Failed to retrieve credentials:", error);
-      return { success: false, error: errorMessage };
-    }
-  });
+    },
+    mainWindow,
+  );
 
   // Add a way to manually cancel auth
-  ipcMain.handle("auth:cancel", () => {
-    authCancelled = true;
-    authReject?.(new Error("Authentication cancelled by user"));
-    cleanupAuthServer();
-    return { success: true };
-  });
+  secureHandle(
+    "auth:cancel",
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    (event) => {
+      authCancelled = true;
+      authReject?.(new Error("Authentication cancelled by user"));
+      cleanupAuthServer();
+      return { success: true };
+    },
+    mainWindow,
+  );
 
   // Add a handler to exchange auth code for token in the main process
   // This avoids network issues that can happen in the renderer process
-  ipcMain.handle("auth:exchangeToken", async (_, params) => {
-    return withGroupAsync(
-      `[AuthIPC] Token Exchange (${params.clientId.substring(0, 8)}...)`,
-      async () => {
-        try {
-          const { clientId, clientSecret, redirectUri, code } = params;
-
-          // Validate parameters
-          const validation = validateTokenExchangeParams({
-            clientId,
-            clientSecret,
-            redirectUri,
-            code,
-          });
-          if (!validation.isValid) {
-            return { success: false, error: validation.error };
-          }
-
-          console.info("[AuthIPC] Exchanging token in main process:", {
-            clientIdLength: clientId.length,
-            redirectUri,
-            codeLength: code.length,
-          });
-
-          // Maximum number of retry attempts
-          const MAX_RETRIES = 3;
-          let retries = 0;
-          let lastError = null;
-
-          while (retries < MAX_RETRIES) {
-            try {
-              console.debug(
-                `[AuthIPC] Token exchange attempt ${retries + 1}/${MAX_RETRIES}`,
-              );
-
-              // Add delay between retries
-              if (retries > 0) {
-                const delay = retries * 1000; // 1s, 2s, 3s
-                console.debug(`[AuthIPC] Waiting ${delay}ms before retry...`);
-                await new Promise((resolve) => setTimeout(resolve, delay));
-              }
-
-              const result = await performTokenExchange({
-                clientId,
-                clientSecret,
-                redirectUri,
-                code,
-              });
-              if (result.success) {
-                return { success: true, token: result.token };
-              }
-
-              throw new Error(result.error);
-            } catch (error) {
-              lastError = error;
-              console.error(
-                `[AuthIPC] Token exchange attempt ${retries + 1} failed:`,
-                error,
-              );
-
-              if (!isNetworkError(error)) {
-                // Don't retry for non-network errors
-                break;
-              }
-
-              retries++;
-            }
-          }
-
-          // If we reach here, all retries failed
-          console.error(
-            "[AuthIPC] All token exchange attempts failed:",
-            lastError,
-          );
-          return {
-            success: false,
-            error: formatTokenExchangeError(lastError),
-          };
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
-          console.error(
-            "[AuthIPC] Token exchange handler error:",
-            errorMessage,
-          );
-          return { success: false, error: errorMessage };
-        }
+  secureHandle(
+    "auth:exchangeToken",
+    async (
+      _event,
+      params: {
+        code: string;
+        clientId: string;
+        clientSecret: string;
+        redirectUri: string;
       },
-    );
-  });
+    ) => {
+      return withGroupAsync(
+        `[AuthIPC] Token Exchange (${params.clientId.substring(0, 8)}...)`,
+        async () => {
+          try {
+            const { clientId, clientSecret, redirectUri, code } = params;
+
+            // Validate parameters
+            const validation = validateTokenExchangeParams({
+              clientId,
+              clientSecret,
+              redirectUri,
+              code,
+            });
+            if (!validation.isValid) {
+              return { success: false, error: validation.error };
+            }
+
+            console.info("[AuthIPC] Exchanging token in main process:", {
+              clientIdLength: clientId.length,
+              redirectUri,
+              codeLength: code.length,
+            });
+
+            // Maximum number of retry attempts
+            const MAX_RETRIES = 3;
+            let retries = 0;
+            let lastError = null;
+
+            while (retries < MAX_RETRIES) {
+              try {
+                console.debug(
+                  `[AuthIPC] Token exchange attempt ${retries + 1}/${MAX_RETRIES}`,
+                );
+
+                // Add delay between retries
+                if (retries > 0) {
+                  const delay = retries * 1000; // 1s, 2s, 3s
+                  console.debug(`[AuthIPC] Waiting ${delay}ms before retry...`);
+                  await new Promise((resolve) => setTimeout(resolve, delay));
+                }
+
+                const result = await performTokenExchange({
+                  clientId,
+                  clientSecret,
+                  redirectUri,
+                  code,
+                });
+                if (result.success) {
+                  return { success: true, token: result.token };
+                }
+
+                throw new Error(result.error);
+              } catch (error) {
+                lastError = error;
+                console.error(
+                  `[AuthIPC] Token exchange attempt ${retries + 1} failed:`,
+                  error,
+                );
+
+                if (!isNetworkError(error)) {
+                  // Don't retry for non-network errors
+                  break;
+                }
+
+                retries++;
+              }
+            }
+
+            // If we reach here, all retries failed
+            console.error(
+              "[AuthIPC] All token exchange attempts failed:",
+              lastError,
+            );
+            return {
+              success: false,
+              error: formatTokenExchangeError(lastError),
+            };
+          } catch (error) {
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
+            console.error(
+              "[AuthIPC] Token exchange handler error:",
+              errorMessage,
+            );
+            return { success: false, error: errorMessage };
+          }
+        },
+      );
+    },
+    mainWindow,
+  );
 }
 
 /**

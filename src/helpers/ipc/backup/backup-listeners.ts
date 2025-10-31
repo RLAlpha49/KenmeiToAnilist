@@ -4,7 +4,8 @@
  * @description Registers IPC event listeners for backup-related actions (schedule config, trigger backup, notifications) in the Electron main process.
  */
 
-import { BrowserWindow, app, ipcMain, shell } from "electron";
+import { BrowserWindow, app, shell } from "electron";
+import { secureHandle } from "../listeners-register";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import Store from "electron-store";
@@ -396,10 +397,122 @@ async function performBackupWithMutex(
 }
 
 /**
- * Performs backup logic shared by immediate and scheduled backups.
- * Ensures directory, reads store keys, builds dataMap, writes file, updates history, runs rotation,
- * updates config timestamps, and emits events.
- *
+ * Collects backupable data from electron-store.
+ */
+function collectBackupData(): Record<string, string> {
+  const backupableKeys = [
+    "kenmei_data",
+    "import_stats",
+    "match_results",
+    "pending_manga",
+    "cache_version",
+    "sync_config",
+    "sync_stats",
+    "match_config",
+    "ignored_duplicates",
+    "anilist_search_cache",
+    "onboarding_completed",
+  ];
+
+  const dataMap: Record<string, string> = {};
+  for (const key of backupableKeys) {
+    const value = store.get(key);
+    if (value !== undefined) {
+      dataMap[key] = typeof value === "string" ? value : JSON.stringify(value);
+    }
+  }
+  return dataMap;
+}
+
+/**
+ * Writes backup to file and records in history.
+ */
+async function writeBackupAndRecordHistory(
+  backupDir: string,
+  data: unknown,
+  backupId: string,
+  size: number,
+  appVersion: string,
+  config: BackupScheduleConfig,
+  mainWindow: BrowserWindow | null,
+): Promise<void> {
+  const timestamp = Date.now();
+  const backupPath = path.join(
+    backupDir,
+    `backup-${timestamp}-${backupId}.json`,
+  );
+
+  await fs.writeFile(backupPath, JSON.stringify(data, null, 2));
+  console.log(`[BackupIPC] Backup created: ${backupPath}`);
+
+  // Extract metadata safely with type guards
+  const metadata = (data as Record<string, unknown>).metadata as Record<
+    string,
+    unknown
+  >;
+  const dataKeys = Array.isArray(metadata.dataKeys) ? metadata.dataKeys : [];
+
+  const historyEntry: BackupHistoryEntry = {
+    id: backupId,
+    timestamp,
+    appVersion,
+    dataKeys: dataKeys as string[],
+    size,
+    filename: `backup-${timestamp}-${backupId}.json`,
+  };
+  addBackupToStoredHistory(historyEntry, config.maxBackupCount, mainWindow);
+}
+
+/**
+ * Updates backup schedule config and calculates next run time.
+ */
+function updateBackupScheduleConfig(
+  config: BackupScheduleConfig,
+  timestamp: number,
+): void {
+  const intervalMs = calculateIntervalMs(config.interval);
+  const nextBackupTimestamp = timestamp + intervalMs;
+
+  const updatedConfig: BackupScheduleConfig = {
+    ...config,
+    lastBackupTimestamp: timestamp,
+    nextBackupTimestamp,
+  };
+  saveStoredBackupScheduleConfig(updatedConfig);
+}
+
+/**
+ * Notifies renderer of backup completion.
+ */
+function notifyBackupComplete(
+  mainWindow: BrowserWindow | null,
+  backupId: string,
+  timestamp: number,
+): void {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(BACKUP_CHANNELS.ON_BACKUP_COMPLETE, {
+      backupId,
+      timestamp,
+    });
+  }
+}
+
+/**
+ * Handles backup errors and notifies renderer.
+ */
+function handleBackupError(
+  mainWindow: BrowserWindow | null,
+  error: unknown,
+): string {
+  const errorMessage = error instanceof Error ? error.message : "Unknown error";
+  console.error("[BackupIPC] Error during backup:", error);
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(BACKUP_CHANNELS.ON_BACKUP_ERROR, errorMessage);
+  }
+  return errorMessage;
+}
+
+/**
  * @param mainWindow - The Electron main window for sending notifications
  * @param config - Current backup schedule configuration
  * @param mode - Either 'immediate' or 'scheduled' for logging purposes
@@ -428,96 +541,45 @@ async function performBackup(
     await fs.mkdir(backupDir, { recursive: true });
 
     // Collect all backupable data from electron-store
-    const backupableKeys = [
-      "kenmei_data",
-      "import_stats",
-      "match_results",
-      "pending_manga",
-      "cache_version",
-      "sync_config",
-      "sync_stats",
-      "match_config",
-      "ignored_duplicates",
-      "anilist_search_cache",
-      "onboarding_completed",
-    ];
-
-    const dataMap: Record<string, string> = {};
-    for (const key of backupableKeys) {
-      const value = store.get(key);
-      if (value !== undefined) {
-        dataMap[key] =
-          typeof value === "string" ? value : JSON.stringify(value);
-      }
-    }
+    const dataMap = collectBackupData();
 
     // Get the app version from Electron
     const appVersion = app.getVersion();
     const { data, backupId, size } = createBackupFromData(dataMap, appVersion);
 
     const timestamp = Date.now();
-    // Include the backup ID in the filename for consistent reconciliation
-    const backupPath = path.join(
+
+    // Write backup to file and record in history
+    await writeBackupAndRecordHistory(
       backupDir,
-      `backup-${timestamp}-${backupId}.json`,
-    );
-
-    await fs.writeFile(backupPath, JSON.stringify(data, null, 2));
-    console.log(
-      `[BackupIPC] ${logMode.charAt(0).toUpperCase() + logMode.slice(1)} backup created:`,
-      backupPath,
-    );
-
-    const historyEntry: BackupHistoryEntry = {
-      id: backupId,
-      timestamp,
-      appVersion: data.metadata.appVersion,
-      dataKeys: data.metadata.dataKeys,
+      data as unknown,
+      backupId,
       size,
-      filename: `backup-${timestamp}-${backupId}.json`,
-    };
-    addBackupToStoredHistory(historyEntry, config.maxBackupCount, mainWindow);
+      appVersion,
+      config,
+      mainWindow,
+    );
 
     await performRotation(backupDir, config, mainWindow);
 
-    const intervalMs = calculateIntervalMs(config.interval);
-    const nextBackupTimestamp = timestamp + intervalMs;
-
-    const updatedConfig: BackupScheduleConfig = {
-      ...config,
-      lastBackupTimestamp: timestamp,
-      nextBackupTimestamp,
-    };
-    saveStoredBackupScheduleConfig(updatedConfig);
+    // Update schedule config with next run time
+    updateBackupScheduleConfig(config, timestamp);
 
     if (mode === "scheduled") {
+      const intervalMs = calculateIntervalMs(config.interval);
+      const nextBackupTimestamp = timestamp + intervalMs;
       console.log(
         "[BackupIPC] Updated config with next run at:",
         new Date(nextBackupTimestamp).toISOString(),
       );
     }
 
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send(BACKUP_CHANNELS.ON_BACKUP_COMPLETE, {
-        backupId,
-        timestamp,
-      });
-      if (mode === "scheduled") {
-        console.log("[BackupIPC] Sent backup completion notification");
-      }
-    }
+    // Notify renderer of successful backup
+    notifyBackupComplete(mainWindow, backupId, timestamp);
 
     return { success: true, backupId };
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    console.error("[BackupIPC] Error during backup:", error);
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send(
-        BACKUP_CHANNELS.ON_BACKUP_ERROR,
-        errorMessage,
-      );
-    }
+    const errorMessage = handleBackupError(mainWindow, error);
     return { success: false, error: errorMessage };
   }
 }
@@ -1000,95 +1062,91 @@ async function deleteBackupFile(
  * @source
  */
 export function setupBackupIPC(mainWindow: BrowserWindow): void {
-  // Remove any existing handlers for idempotency - ensures safe re-registration on macOS reactivation
-  const channels = [
-    BACKUP_CHANNELS.GET_SCHEDULE_CONFIG,
-    BACKUP_CHANNELS.SET_SCHEDULE_CONFIG,
-    BACKUP_CHANNELS.GET_BACKUP_LOCATION,
-    BACKUP_CHANNELS.SET_BACKUP_LOCATION,
-    BACKUP_CHANNELS.OPEN_BACKUP_LOCATION,
-    BACKUP_CHANNELS.LIST_LOCAL_BACKUPS,
-    BACKUP_CHANNELS.READ_LOCAL_BACKUP,
-    BACKUP_CHANNELS.RESTORE_LOCAL_BACKUP,
-    BACKUP_CHANNELS.DELETE_BACKUP,
-    BACKUP_CHANNELS.TRIGGER_BACKUP,
-    BACKUP_CHANNELS.CREATE_NOW,
-    BACKUP_CHANNELS.GET_BACKUP_STATUS,
-    BACKUP_CHANNELS.GET_BACKUP_HISTORY,
-    BACKUP_CHANNELS.CLEAR_HISTORY,
-  ];
-
-  for (const channel of channels) {
-    try {
-      ipcMain.removeHandler(channel);
-      console.debug(`[BackupIPC] Removed existing handler for ${channel}`);
-    } catch {
-      // Handler may not exist on first registration - this is expected
-    }
-  }
+  // Note: We no longer use ipcMain.removeHandler since we're using secureHandle
+  // which registers handlers directly without prior cleanup needed
 
   console.log("[BackupIPC] Setting up backup IPC handlers...");
 
-  ipcMain.handle(BACKUP_CHANNELS.GET_SCHEDULE_CONFIG, () => {
-    try {
-      const config = getStoredBackupScheduleConfig();
-      console.debug("[BackupIPC] Returning backup schedule config");
-      return config;
-    } catch (error) {
-      console.error("[BackupIPC] Error getting backup schedule config:", error);
-      return DEFAULT_BACKUP_SCHEDULE_CONFIG;
-    }
-  });
-
-  ipcMain.handle(BACKUP_CHANNELS.SET_SCHEDULE_CONFIG, (_, config: unknown) => {
-    try {
-      const validation = validateScheduleConfig(config);
-      if (!validation.valid) {
-        console.warn(
-          "[BackupIPC] Invalid schedule config rejected:",
-          validation.error,
+  secureHandle(
+    BACKUP_CHANNELS.GET_SCHEDULE_CONFIG,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    (_event: Electron.IpcMainInvokeEvent) => {
+      try {
+        const config = getStoredBackupScheduleConfig();
+        console.debug("[BackupIPC] Returning backup schedule config");
+        return config;
+      } catch (error) {
+        console.error(
+          "[BackupIPC] Error getting backup schedule config:",
+          error,
         );
-        return { success: false, error: validation.error };
+        return DEFAULT_BACKUP_SCHEDULE_CONFIG;
       }
+    },
+    mainWindow,
+  );
 
-      let validatedConfig = validation.validated!;
-      // Ensure backup location is initialized
-      validatedConfig = ensureBackupLocationInitialized(validatedConfig);
+  secureHandle(
+    BACKUP_CHANNELS.SET_SCHEDULE_CONFIG,
+    (_event: Electron.IpcMainInvokeEvent, config: unknown) => {
+      try {
+        const validation = validateScheduleConfig(config);
+        if (!validation.valid) {
+          console.warn(
+            "[BackupIPC] Invalid schedule config rejected:",
+            validation.error,
+          );
+          return { success: false, error: validation.error };
+        }
 
-      console.debug("[BackupIPC] Setting backup schedule config");
+        let validatedConfig = validation.validated!;
+        // Ensure backup location is initialized
+        validatedConfig = ensureBackupLocationInitialized(validatedConfig);
 
-      saveStoredBackupScheduleConfig(validatedConfig);
-      updateScheduler(mainWindow, validatedConfig);
-      emitStatusChanged(mainWindow);
+        console.debug("[BackupIPC] Setting backup schedule config");
 
-      return { success: true };
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      console.error("[BackupIPC] Error setting backup schedule config:", error);
-      return { success: false, error: errorMessage };
-    }
-  });
+        saveStoredBackupScheduleConfig(validatedConfig);
+        updateScheduler(mainWindow, validatedConfig);
+        emitStatusChanged(mainWindow);
 
-  ipcMain.handle(BACKUP_CHANNELS.GET_BACKUP_LOCATION, () => {
-    try {
-      const config = getStoredBackupScheduleConfig();
-      const location = ensureBackupLocationInitialized(config).backupLocation;
+        return { success: true };
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        console.error(
+          "[BackupIPC] Error setting backup schedule config:",
+          error,
+        );
+        return { success: false, error: errorMessage };
+      }
+    },
+    mainWindow,
+  );
 
-      console.debug("[BackupIPC] Returning backup location");
+  secureHandle(
+    BACKUP_CHANNELS.GET_BACKUP_LOCATION,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    (_event: Electron.IpcMainInvokeEvent) => {
+      try {
+        const config = getStoredBackupScheduleConfig();
+        const location = ensureBackupLocationInitialized(config).backupLocation;
 
-      return { success: true, data: location };
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      console.error("[BackupIPC] Error getting backup location:", error);
-      return { success: false, error: errorMessage };
-    }
-  });
+        console.debug("[BackupIPC] Returning backup location");
 
-  ipcMain.handle(
+        return { success: true, data: location };
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        console.error("[BackupIPC] Error getting backup location:", error);
+        return { success: false, error: errorMessage };
+      }
+    },
+    mainWindow,
+  );
+
+  secureHandle(
     BACKUP_CHANNELS.SET_BACKUP_LOCATION,
-    (_, location: unknown) => {
+    (_event: Electron.IpcMainInvokeEvent, location: unknown) => {
       try {
         // Input validation: ensure location is a string
         if (typeof location !== "string") {
@@ -1134,58 +1192,69 @@ export function setupBackupIPC(mainWindow: BrowserWindow): void {
         return { success: false, error: errorMessage, code: "UNKNOWN_ERROR" };
       }
     },
+    mainWindow,
   );
 
-  ipcMain.handle(BACKUP_CHANNELS.OPEN_BACKUP_LOCATION, async () => {
-    try {
-      const config = getStoredBackupScheduleConfig();
-      const location = ensureBackupLocationInitialized(config).backupLocation;
+  secureHandle(
+    BACKUP_CHANNELS.OPEN_BACKUP_LOCATION,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async (_event: Electron.IpcMainInvokeEvent) => {
+      try {
+        const config = getStoredBackupScheduleConfig();
+        const location = ensureBackupLocationInitialized(config).backupLocation;
 
-      console.debug("[BackupIPC] Opening backup location");
+        console.debug("[BackupIPC] Opening backup location");
 
-      await fs.mkdir(location, { recursive: true });
-      await shell.openPath(location);
+        await fs.mkdir(location, { recursive: true });
+        await shell.openPath(location);
 
-      return { success: true };
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      console.error("[BackupIPC] Error opening backup location:", error);
-      return { success: false, error: errorMessage };
-    }
-  });
-
-  ipcMain.handle(BACKUP_CHANNELS.LIST_LOCAL_BACKUPS, async () => {
-    try {
-      const config = getStoredBackupScheduleConfig();
-      const location = ensureBackupLocationInitialized(config).backupLocation;
-
-      // Input validation: ensure location is valid after initialization
-      const [isValid, errorMsg] = validateBackupLocationPath(location);
-      if (!isValid) {
-        console.warn(
-          "[BackupIPC] LIST_LOCAL_BACKUPS: Invalid backup location:",
-          errorMsg,
-        );
-        return { success: false, error: errorMsg };
+        return { success: true };
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        console.error("[BackupIPC] Error opening backup location:", error);
+        return { success: false, error: errorMessage };
       }
+    },
+    mainWindow,
+  );
 
-      console.debug("[BackupIPC] Listing backups");
+  secureHandle(
+    BACKUP_CHANNELS.LIST_LOCAL_BACKUPS,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async (_event: Electron.IpcMainInvokeEvent) => {
+      try {
+        const config = getStoredBackupScheduleConfig();
+        const location = ensureBackupLocationInitialized(config).backupLocation;
 
-      const backups = await listBackupsInLocation(location);
+        // Input validation: ensure location is valid after initialization
+        const [isValid, errorMsg] = validateBackupLocationPath(location);
+        if (!isValid) {
+          console.warn(
+            "[BackupIPC] LIST_LOCAL_BACKUPS: Invalid backup location:",
+            errorMsg,
+          );
+          return { success: false, error: errorMsg };
+        }
 
-      return { success: true, data: backups };
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      console.error("[BackupIPC] Error listing local backups:", error);
-      return { success: false, error: errorMessage };
-    }
-  });
+        console.debug("[BackupIPC] Listing backups");
 
-  ipcMain.handle(
+        const backups = await listBackupsInLocation(location);
+
+        return { success: true, data: backups };
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        console.error("[BackupIPC] Error listing local backups:", error);
+        return { success: false, error: errorMessage };
+      }
+    },
+    mainWindow,
+  );
+
+  secureHandle(
     BACKUP_CHANNELS.DELETE_BACKUP,
-    async (_, filename: unknown) => {
+    async (_event: Electron.IpcMainInvokeEvent, filename: unknown) => {
       try {
         // Input validation: ensure filename is a string
         if (typeof filename !== "string") {
@@ -1257,80 +1326,106 @@ export function setupBackupIPC(mainWindow: BrowserWindow): void {
         return { success: false, error: errorMessage };
       }
     },
+    mainWindow,
   );
 
-  ipcMain.handle(BACKUP_CHANNELS.TRIGGER_BACKUP, async () => {
-    console.log("[BackupIPC] Manual backup trigger requested");
-    return createImmediateBackup(mainWindow);
-  });
+  secureHandle(
+    BACKUP_CHANNELS.TRIGGER_BACKUP,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async (_event: Electron.IpcMainInvokeEvent) => {
+      console.log("[BackupIPC] Manual backup trigger requested");
+      return createImmediateBackup(mainWindow);
+    },
+    mainWindow,
+  );
 
   // CREATE_NOW is semantically equivalent to TRIGGER_BACKUP - both create an immediate backup
-  ipcMain.handle(BACKUP_CHANNELS.CREATE_NOW, async () => {
-    console.log("[BackupIPC] Immediate backup creation requested");
-    return createImmediateBackup(mainWindow);
-  });
+  secureHandle(
+    BACKUP_CHANNELS.CREATE_NOW,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async (_event: Electron.IpcMainInvokeEvent) => {
+      console.log("[BackupIPC] Immediate backup creation requested");
+      return createImmediateBackup(mainWindow);
+    },
+    mainWindow,
+  );
 
-  ipcMain.handle(BACKUP_CHANNELS.GET_BACKUP_STATUS, () => {
-    try {
-      const config = getStoredBackupScheduleConfig();
-      return {
-        isRunning: schedulerState.isRunning,
-        lastBackup: config.lastBackupTimestamp,
-        nextBackup: config.nextBackupTimestamp,
-      };
-    } catch (error) {
-      console.error("[BackupIPC] Error getting backup status:", error);
-      return {
-        isRunning: false,
-        lastBackup: null,
-        nextBackup: null,
-      };
-    }
-  });
-
-  ipcMain.handle(BACKUP_CHANNELS.GET_BACKUP_HISTORY, () => {
-    try {
-      const history = getStoredBackupHistory();
-      console.debug(
-        "[BackupIPC] Returning backup history with",
-        history.length,
-        "entries",
-      );
-      return history;
-    } catch (error) {
-      console.error("[BackupIPC] Error getting backup history:", error);
-      return [];
-    }
-  });
-
-  ipcMain.handle(BACKUP_CHANNELS.CLEAR_HISTORY, () => {
-    try {
-      console.log("[BackupIPC] Clearing backup history...");
-      store.delete(MAIN_PROCESS_STORAGE_KEYS.BACKUP_HISTORY);
-      console.log("[BackupIPC] Backup history cleared");
-
-      // Notify renderer that history was updated
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send(BACKUP_CHANNELS.ON_HISTORY_UPDATED);
-        console.debug(
-          "[BackupIPC] Sent ON_HISTORY_UPDATED notification to renderer",
-        );
+  secureHandle(
+    BACKUP_CHANNELS.GET_BACKUP_STATUS,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    (_event: Electron.IpcMainInvokeEvent) => {
+      try {
+        const config = getStoredBackupScheduleConfig();
+        return {
+          isRunning: schedulerState.isRunning,
+          lastBackup: config.lastBackupTimestamp,
+          nextBackup: config.nextBackupTimestamp,
+        };
+      } catch (error) {
+        console.error("[BackupIPC] Error getting backup status:", error);
+        return {
+          isRunning: false,
+          lastBackup: null,
+          nextBackup: null,
+        };
       }
+    },
+    mainWindow,
+  );
 
-      return { success: true };
-    } catch (error) {
-      console.error("[BackupIPC] Error clearing backup history:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  });
+  secureHandle(
+    BACKUP_CHANNELS.GET_BACKUP_HISTORY,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    (_event: Electron.IpcMainInvokeEvent) => {
+      try {
+        const history = getStoredBackupHistory();
+        console.debug(
+          "[BackupIPC] Returning backup history with",
+          history.length,
+          "entries",
+        );
+        return history;
+      } catch (error) {
+        console.error("[BackupIPC] Error getting backup history:", error);
+        return [];
+      }
+    },
+    mainWindow,
+  );
+
+  secureHandle(
+    BACKUP_CHANNELS.CLEAR_HISTORY,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    (_event: Electron.IpcMainInvokeEvent) => {
+      try {
+        console.log("[BackupIPC] Clearing backup history...");
+        store.delete(MAIN_PROCESS_STORAGE_KEYS.BACKUP_HISTORY);
+        console.log("[BackupIPC] Backup history cleared");
+
+        // Notify renderer that history was updated
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send(BACKUP_CHANNELS.ON_HISTORY_UPDATED);
+          console.debug(
+            "[BackupIPC] Sent ON_HISTORY_UPDATED notification to renderer",
+          );
+        }
+
+        return { success: true };
+      } catch (error) {
+        console.error("[BackupIPC] Error clearing backup history:", error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        };
+      }
+    },
+    mainWindow,
+  );
 
   // Read a specific backup file's contents and return as text
-  ipcMain.handle(
+  secureHandle(
     BACKUP_CHANNELS.READ_LOCAL_BACKUP,
-    async (_event, filename: unknown) => {
+    async (_event: Electron.IpcMainInvokeEvent, filename: unknown) => {
       try {
         // Input validation: ensure filename is a string
         if (typeof filename !== "string") {
@@ -1399,12 +1494,17 @@ export function setupBackupIPC(mainWindow: BrowserWindow): void {
         return { success: false, error: errorMessage };
       }
     },
+    mainWindow,
   );
 
   // Restore from a local backup file
-  ipcMain.handle(
+  secureHandle(
     BACKUP_CHANNELS.RESTORE_LOCAL_BACKUP,
-    async (_event, filename: unknown, options: unknown) => {
+    async (
+      _event: Electron.IpcMainInvokeEvent,
+      filename: unknown,
+      options: unknown,
+    ) => {
       try {
         // Input validation: ensure filename is a string
         if (typeof filename !== "string") {
@@ -1492,6 +1592,7 @@ export function setupBackupIPC(mainWindow: BrowserWindow): void {
         return { success: false, errors: [errorMessage] };
       }
     },
+    mainWindow,
   );
 
   try {

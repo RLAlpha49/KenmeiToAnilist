@@ -1,12 +1,12 @@
-import type { AniListManga } from "../../anilist/types";
-import type { BaseMangaEntry, BaseMangaDetail } from "../types";
-import { MangaSource } from "../types";
-
 /**
  * @packageDocumentation
  * @module comick-types
  * @description Comick API response type definitions for manga search and details.
  */
+
+import type { AniListManga } from "../../anilist/types";
+import type { BaseMangaEntry, BaseMangaDetail } from "../types";
+import { MangaSource } from "../types";
 
 /**
  * Represents a Comick manga entry from the search API.

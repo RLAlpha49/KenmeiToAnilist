@@ -3,7 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <title>Kenmei to Anilist</title>
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self';" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        script-src 'self';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data: https:;
+        font-src 'self' data:;
+        connect-src 'self' https://graphql.anilist.co https://api.mangadex.org https://api.comick.fun https://api.github.com;
+        object-src 'none';
+        base-uri 'self';
+        form-action 'none';
+        upgrade-insecure-requests;
+      "
+    />
     <link rel="stylesheet" href="/src/styles/global.css" />
   </head>
   <body>

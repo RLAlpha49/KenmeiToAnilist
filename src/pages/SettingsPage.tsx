@@ -6,6 +6,7 @@
 
 // TODO: Sections under the tabs should be collapsible to improve readability and reduce cognitive load. This will allow users to focus on specific settings without being overwhelmed by the full list of options.
 // TODO: Confidence test exporter setting should be outside the debug menu section but still under the debug tools section.
+// TODO: Setting for matching preferences do not get updated. It does not show the feedback right away that the setting has changed.
 
 import React, {
   useState,
