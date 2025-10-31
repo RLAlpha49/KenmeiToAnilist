@@ -4,9 +4,10 @@
  * @description Matching page component for the Kenmei to AniList sync tool. Handles manga matching, review, rematch, and sync preparation.
  */
 
-// TODO: Fix: When unpausing it gets stuck displaying "Waiting for anilist" even though it already resumed.
 // TODO: Fix: When rate limit is hit for anilist during matching, the matching process does not resume after the wait period.
 // TODO: When canceling a matching process, the unsearched manga should not be reset to pending if they had a different prior status (e.g. skipped).
+// TODO: When doing bulk operations (accept/reject/reset), the entries are being return to match results individually causing the app to hang until all entries are processed.
+// TODO: Text for sonner should be truncated at some point to prevent excessively long descriptions from breaking the UI. Consider adding a character limit and ellipsis for long descriptions.
 
 import React, {
   useState,

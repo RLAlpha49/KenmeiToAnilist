@@ -105,6 +105,8 @@ export const useMatchingProcess = ({
     null,
   );
 
+  const wasManuallyPausedBeforeRateLimit = useRef<boolean>(false);
+
   useEffect(() => {
     progressRef.current = progress;
   }, [progress]);
@@ -281,9 +283,34 @@ export const useMatchingProcess = ({
         setMatchResults(merged as MangaMatchResult[]);
         storage.setItem(STORAGE_KEYS.MATCH_RESULTS, JSON.stringify(merged));
 
+        // Load the full manga list from storage to calculate pending manga
+        // This ensures that manga not in the current batch (e.g., during rematch operations)
+        // retain their status instead of being reset to pending
+        let fullMangaList = originalList;
+        try {
+          const kenmeiDataStr = await storage.getItemAsync(
+            STORAGE_KEYS.KENMEI_DATA,
+          );
+          if (kenmeiDataStr) {
+            const kenmeiData = JSON.parse(kenmeiDataStr);
+            if (kenmeiData?.manga && Array.isArray(kenmeiData.manga)) {
+              fullMangaList = kenmeiData.manga;
+              console.debug(
+                `[MatchingProcess] Using full manga list (${fullMangaList.length} manga) for pending calculation`,
+              );
+            }
+          }
+        } catch (error_) {
+          console.warn(
+            "[MatchingProcess] Failed to load full manga list from storage, falling back to originalList:",
+            error_,
+          );
+          // Fall back to originalList if storage load fails
+        }
+
         const remaining = calculatePendingManga(
           merged as MangaMatchResult[],
-          originalList,
+          fullMangaList,
         );
         if (remaining.length > 0) {
           savePendingManga(remaining);
@@ -876,6 +903,7 @@ export const useMatchingProcess = ({
       setManualMatchingPause(false);
       setIsManuallyPaused(false);
       setIsRateLimitPaused(false);
+      wasManuallyPausedBeforeRateLimit.current = false;
       resumeTimeTracking();
       setIsCancelling(true);
       cancelMatchingRef.current = true;
@@ -967,6 +995,8 @@ export const useMatchingProcess = ({
       return;
     }
 
+    wasManuallyPausedBeforeRateLimit.current = true;
+
     setIsPauseTransitioning(true);
     setStatusMessage("Pausing matching...");
     setDetailMessage("Finishing the current manga before pausing.");
@@ -1044,6 +1074,8 @@ export const useMatchingProcess = ({
   // Handles entering rate limit state
   const handleEnterRateLimit = useCallback(
     (detail: string) => {
+      wasManuallyPausedBeforeRateLimit.current = isManuallyPaused;
+
       setIsRateLimitPaused(true);
       setStatusMessage("AniList rate limit reached");
       setDetailMessage(detail);
@@ -1056,7 +1088,7 @@ export const useMatchingProcess = ({
         globalThis.matchingProcessState.lastUpdated = Date.now();
       }
     },
-    [pauseTimeTracking],
+    [isManuallyPaused, pauseTimeTracking],
   );
 
   // Handles updating rate limit detail
@@ -1072,23 +1104,33 @@ export const useMatchingProcess = ({
   const handleExitRateLimit = useCallback(() => {
     setIsRateLimitPaused(false);
     resumeTimeTracking();
-    if (!isManuallyPaused) {
+
+    if (!wasManuallyPausedBeforeRateLimit.current) {
       setManualMatchingPause(false);
     }
-    const detail = isManuallyPaused
+
+    const wasManuallyPausedBeforeRL = wasManuallyPausedBeforeRateLimit.current;
+    wasManuallyPausedBeforeRateLimit.current = false;
+
+    const detail = wasManuallyPausedBeforeRL
       ? "Matching remains paused. Resume when you're ready to continue."
       : "Back to matching remaining manga. We'll continue processing the queue.";
-    const status = isManuallyPaused
+    const status = wasManuallyPausedBeforeRL
       ? "Matching paused"
       : "Resuming matching...";
     setStatusMessage(status);
     setDetailMessage(detail);
-    if (globalThis.matchingProcessState) {
+
+    if (globalThis.matchingProcessState && globalThis.matchingProcessState.isRunning && !wasManuallyPausedBeforeRL) {
+      globalThis.matchingProcessState.statusMessage = "Resuming matching...";
+      globalThis.matchingProcessState.detailMessage = "Back to matching remaining manga. We'll continue processing the queue.";
+      globalThis.matchingProcessState.lastUpdated = Date.now();
+    } else if (globalThis.matchingProcessState) {
       globalThis.matchingProcessState.statusMessage = status;
       globalThis.matchingProcessState.detailMessage = detail;
       globalThis.matchingProcessState.lastUpdated = Date.now();
     }
-  }, [resumeTimeTracking, isManuallyPaused]);
+  }, [resumeTimeTracking]);
 
   useEffect(() => {
     if (
@@ -1160,6 +1202,12 @@ export const useMatchingProcess = ({
       schedulePauseFinalization();
     }
   }, [isPauseTransitioning, isManuallyPaused, schedulePauseFinalization]);
+
+  useEffect(() => {
+    return () => {
+      wasManuallyPausedBeforeRateLimit.current = false;
+    };
+  }, []);
 
   return {
     isLoading,

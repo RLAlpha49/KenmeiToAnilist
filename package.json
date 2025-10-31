@@ -15,6 +15,7 @@
     "format:write": "prettier --write .",
     "lint": "eslint -c config/eslint.config.mjs .",
     "make": "node build.js",
+    "typecheck": "tsc --noEmit",
     "make:dev": "cross-env NODE_ENV=development electron-forge make",
     "precommit": "npm run format:write && npm run lint",
     "release": "standard-version",

@@ -4,6 +4,9 @@
  * @description Settings page component for the Kenmei to AniList sync tool. Handles authentication, sync preferences, data management, and cache clearing.
  */
 
+// TODO: Sections under the tabs should be collapsible to improve readability and reduce cognitive load. This will allow users to focus on specific settings without being overwhelmed by the full list of options.
+// TODO: Confidence test exporter setting should be outside the debug menu section but still under the debug tools section.
+
 import React, {
   useState,
   useEffect,

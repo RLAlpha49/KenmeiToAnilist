@@ -4,6 +4,8 @@
  * @description Real-time performance monitoring dashboard showing API latency and memory usage.
  */
 
+// TODO: UI hitches when updating the API latency chart.
+
 import React, { useMemo } from "react";
 import {
   LineChart,

@@ -127,6 +127,7 @@ export function RateLimitProvider({
 
   // Function to clear rate limit state
   const clearRateLimit = useCallback(() => {
+    console.debug("[RateLimitContext] Clearing rate limit state");
     setRateLimitState({
       isRateLimited: false,
       retryAfter: null,

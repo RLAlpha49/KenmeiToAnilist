@@ -4,6 +4,8 @@
  * @description Application header component with logo, navigation, theme toggle, and window controls.
  */
 
+// TODO: Shortcut panel does not open with the button but works with the keybind.
+
 import React from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import { getPathname } from "@/utils/getPathname";
