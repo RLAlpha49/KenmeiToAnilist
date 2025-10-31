@@ -11,7 +11,6 @@ import {
   UserCircle,
 } from "lucide-react";
 import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
 import { cn } from "../../utils/tailwind";
 
 /**
@@ -47,8 +46,6 @@ interface SettingsHeroProps {
   credentialSourceLabel: string;
   /** Label for token expiration time. */
   expiresLabel?: string;
-  /** Label for the current version/release channel. */
-  versionLabel?: string;
   /** Optional children to render below the main content. */
   children?: React.ReactNode;
 }
@@ -75,7 +72,6 @@ export function SettingsHero({
   onCancelAuth,
   credentialSourceLabel,
   expiresLabel,
-  versionLabel,
   children,
 }: Readonly<SettingsHeroProps>) {
   // Determine styling based on authentication status
@@ -98,10 +94,6 @@ export function SettingsHero({
 
       <div className="relative flex flex-col gap-10 p-8 md:flex-row md:items-center md:justify-between md:p-10">
         <div className="space-y-6">
-          <Badge className="bg-indigo-100 text-indigo-700 backdrop-blur-sm dark:bg-white/10 dark:text-white">
-            Control Center
-          </Badge>
-
           <div className="space-y-3">
             <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl dark:text-white">
               Tune your Kenmei → AniList experience
@@ -253,16 +245,6 @@ export function SettingsHero({
                     {credentialSourceLabel}
                   </dd>
                 </div>
-                {versionLabel && (
-                  <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white/70 px-3 py-2 dark:border-white/10 dark:bg-white/5">
-                    <dt className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                      <BookOpen className="h-4 w-4" /> Release channel
-                    </dt>
-                    <dd className="font-medium text-slate-900 dark:text-white">
-                      {versionLabel}
-                    </dd>
-                  </div>
-                )}
               </dl>
             </div>
           </div>

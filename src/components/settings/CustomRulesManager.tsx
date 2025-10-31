@@ -3,6 +3,8 @@
  * @module components/settings/CustomRulesManager
  */
 
+// TODO: Add experimental note and that this has not been thoroughly tested and may not work as expected.
+
 import React, { useState, useCallback } from "react";
 import { toast } from "sonner";
 import {

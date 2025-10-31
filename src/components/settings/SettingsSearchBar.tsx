@@ -38,7 +38,7 @@ export function SettingsSearchBar({
       transition={{ duration: 0.3 }}
       className="relative"
     >
-      <Search className="absolute left-4 top-3 h-5 w-5 text-slate-400 dark:text-slate-500" />
+      <Search className="absolute left-4 top-2 h-5 w-5 text-slate-400 dark:text-slate-500" />
       <Input
         ref={searchInputRef}
         type="text"
@@ -52,7 +52,7 @@ export function SettingsSearchBar({
       {searchQuery && (
         <button
           onClick={() => onSearchChange("")}
-          className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+          className="absolute right-4 top-2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
           aria-label="Clear search"
         >
           <X className="h-5 w-5" />

@@ -40,13 +40,11 @@ import {
 import { restoreBackup, importBackupFromFile } from "../utils/backup";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { getAppVersionStatus, AppVersionStatus } from "../utils/app-version";
 import { SettingsHero } from "../components/settings/SettingsHero";
 import { SettingsSearchBar } from "../components/settings/SettingsSearchBar";
 import { AccountCredentialsSection } from "../components/settings/AccountCredentialsSection";
 import { SettingsTabsContainer } from "../components/settings/SettingsTabsContainer";
 import { UpdateManagementSection } from "@/components/settings/UpdateManagementSection";
-import { ApplicationInsightsSection } from "@/components/settings/ApplicationInsightsSection";
 
 /**
  * Settings page component for the Kenmei to AniList sync tool.
@@ -136,10 +134,6 @@ export function SettingsPage() {
       ![1, 7, 14, 30, 60, 90, 180, 365].includes(
         Number(syncConfig.autoPauseThreshold),
       ),
-  );
-  // Version status state
-  const [versionStatus, setVersionStatus] = useState<AppVersionStatus | null>(
-    null,
   );
   // Update Check State
   const [updateChannel, setUpdateChannel] = useState<"stable" | "beta">(
@@ -663,17 +657,6 @@ export function SettingsPage() {
       }
     }
   }, [customCredentials]);
-
-  // Version status useEffect
-  useEffect(() => {
-    let mounted = true;
-    getAppVersionStatus().then((status) => {
-      if (mounted) setVersionStatus(status);
-    });
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   // Load backup schedule config on mount
   useEffect(() => {
@@ -1349,82 +1332,6 @@ export function SettingsPage() {
   };
 
   /**
-   * Retrieves the last sync metadata from localStorage.
-   * Returns formatted timestamp and summary of the last sync operation.
-   * @returns Object containing label, hint, and sync summary information.
-   * @source
-   */
-  const readLastSyncMetadata = () => {
-    if (globalThis.window === undefined || !globalThis.localStorage) {
-      return {
-        label: "Unavailable",
-        hint: "Sync history will appear after your first run.",
-      };
-    }
-
-    try {
-      const historyRaw = globalThis.localStorage.getItem(
-        "anilist_sync_history",
-      );
-      if (!historyRaw) {
-        return {
-          label: "Never",
-          hint: "No syncs have been recorded yet.",
-        };
-      }
-
-      const history = JSON.parse(historyRaw);
-      if (!Array.isArray(history) || history.length === 0) {
-        return {
-          label: "Never",
-          hint: "Run a sync to capture your first history entry.",
-        };
-      }
-
-      const latest = history[0];
-      const timestamp = latest?.timestamp ? new Date(latest.timestamp) : null;
-      const formattedDate =
-        timestamp && !Number.isNaN(timestamp.valueOf())
-          ? timestamp.toLocaleString(undefined, {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-          : "Recently";
-
-      const summaryBits: string[] = [];
-      if (typeof latest?.successfulUpdates === "number") {
-        summaryBits.push(`${latest.successfulUpdates} successful`);
-      }
-      if (
-        typeof latest?.failedUpdates === "number" &&
-        latest.failedUpdates > 0
-      ) {
-        summaryBits.push(`${latest.failedUpdates} failed`);
-      }
-      if (typeof latest?.totalEntries === "number") {
-        summaryBits.push(`${latest.totalEntries} total`);
-      }
-
-      return {
-        label: formattedDate,
-        hint:
-          summaryBits.length > 0
-            ? summaryBits.join(" • ")
-            : "Latest sync details captured locally.",
-      };
-    } catch (err) {
-      console.error("[Settings] Error parsing sync history:", err);
-      return {
-        label: "Never",
-        hint: "Sync history could not be parsed.",
-      };
-    }
-  };
-
-  /**
    * Check for updates using electron-updater IPC.
    * Uses the configured update channel preference.
    * @source
@@ -1533,19 +1440,6 @@ export function SettingsPage() {
     [useCustomCredentials],
   );
 
-  const versionLabel = useMemo(() => {
-    if (!versionStatus) return undefined;
-    if (versionStatus.status === "stable") return "Stable channel";
-    if (versionStatus.status === "beta") return "Beta channel";
-    if (versionStatus.status === "development") return "Development";
-    return undefined;
-  }, [versionStatus]);
-
-  const lastSyncMetadata = useMemo(
-    () => readLastSyncMetadata(),
-    [cacheCleared, authState.isAuthenticated],
-  );
-
   return (
     <motion.div
       className="relative mx-auto max-w-[1200px] space-y-8 px-4 pb-12 pt-6 md:px-6"
@@ -1569,7 +1463,6 @@ export function SettingsPage() {
         onCancelAuth={handleCancelAuth}
         credentialSourceLabel={credentialSourceLabel}
         expiresLabel={expiresLabel}
-        versionLabel={versionLabel}
       >
         <AccountCredentialsSection
           authState={authState}
@@ -1584,8 +1477,6 @@ export function SettingsPage() {
           onRedirectUriChange={setRedirectUri}
           defaultCredentialStatus={defaultCredentialStatus}
           customCredentialStatus={customCredentialStatus}
-          credentialSourceLabel={credentialSourceLabel}
-          expiresLabel={expiresLabel}
         />
       </SettingsHero>
 
@@ -1689,15 +1580,6 @@ export function SettingsPage() {
         onDownloadUpdate={handleDownloadUpdate}
         onInstallUpdate={handleInstallUpdate}
         onOpenExternal={handleOpenExternal}
-      />
-      <ApplicationInsightsSection
-        versionStatus={versionStatus}
-        authState={authState}
-        lastSyncMetadata={lastSyncMetadata}
-        credentialSourceLabel={credentialSourceLabel}
-        useCustomCredentials={useCustomCredentials}
-        expiresLabel={expiresLabel}
-        highlightedSectionId={highlightedSectionId}
       />
     </motion.div>
   );

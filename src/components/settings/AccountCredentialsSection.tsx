@@ -6,7 +6,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Clock, Key, ShieldCheck, AlertTriangle } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -22,8 +22,6 @@ interface AccountCredentialsSectionProps {
   redirectUri: string;
   defaultCredentialStatus: { hasCredentials: boolean; missing: string[] };
   customCredentialStatus: { complete: boolean; missing: string[] };
-  credentialSourceLabel: string;
-  expiresLabel: string | undefined;
   onToggleCustomCredentials: (value: boolean) => void;
   onClientIdChange: (value: string) => void;
   onClientSecretChange: (value: string) => void;
@@ -45,8 +43,6 @@ export function AccountCredentialsSection({
   redirectUri,
   defaultCredentialStatus,
   customCredentialStatus,
-  credentialSourceLabel,
-  expiresLabel,
   onToggleCustomCredentials,
   onClientIdChange,
   onClientSecretChange,
@@ -207,23 +203,6 @@ export function AccountCredentialsSection({
           )}
         </div>
       )}
-
-      <div className="mt-6 flex flex-wrap items-center gap-3 text-xs text-slate-600 dark:text-slate-200/80">
-        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-700 dark:border-white/15 dark:bg-white/10 dark:text-slate-200/80">
-          <Clock className="h-3 w-3" />
-          {authState.isAuthenticated && expiresLabel
-            ? `Expires in ${expiresLabel}`
-            : "Not authenticated"}
-        </span>
-        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-700 dark:border-white/15 dark:bg-white/10 dark:text-slate-200/80">
-          <Key className="h-3 w-3" />
-          {credentialSourceLabel}
-        </span>
-        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-700 dark:border-white/15 dark:bg-white/10 dark:text-slate-200/80">
-          <ShieldCheck className="h-3 w-3" />
-          Stored locally only
-        </span>
-      </div>
     </motion.div>
   );
 }

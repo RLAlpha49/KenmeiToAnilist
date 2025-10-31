@@ -1121,9 +1121,14 @@ export const useMatchingProcess = ({
     setStatusMessage(status);
     setDetailMessage(detail);
 
-    if (globalThis.matchingProcessState && globalThis.matchingProcessState.isRunning && !wasManuallyPausedBeforeRL) {
+    if (
+      globalThis.matchingProcessState &&
+      globalThis.matchingProcessState.isRunning &&
+      !wasManuallyPausedBeforeRL
+    ) {
       globalThis.matchingProcessState.statusMessage = "Resuming matching...";
-      globalThis.matchingProcessState.detailMessage = "Back to matching remaining manga. We'll continue processing the queue.";
+      globalThis.matchingProcessState.detailMessage =
+        "Back to matching remaining manga. We'll continue processing the queue.";
       globalThis.matchingProcessState.lastUpdated = Date.now();
     } else if (globalThis.matchingProcessState) {
       globalThis.matchingProcessState.statusMessage = status;
