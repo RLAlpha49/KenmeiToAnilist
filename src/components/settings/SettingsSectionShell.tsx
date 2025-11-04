@@ -61,14 +61,14 @@ export function SettingsSectionShell({
     >
       <Card
         className={cn(
-          "overflow-hidden border border-slate-200 bg-white/85 !pt-0 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.15)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/40 dark:shadow-[0_30px_80px_-50px_rgba(15,23,42,0.9)]",
+          "pt-0! overflow-hidden border border-slate-200 bg-white/85 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.15)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/40 dark:shadow-[0_30px_80px_-50px_rgba(15,23,42,0.9)]",
           className,
         )}
       >
         <CardHeader
           className={cn(
-            "relative overflow-hidden border-b border-slate-200 !py-4 px-6 dark:border-white/10",
-            "bg-gradient-to-r",
+            "py-4! relative overflow-hidden border-b border-slate-200 px-6 dark:border-white/10",
+            "bg-linear-to-r",
             accent,
           )}
         >

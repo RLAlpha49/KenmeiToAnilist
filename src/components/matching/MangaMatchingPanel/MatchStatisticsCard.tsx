@@ -112,7 +112,7 @@ function MatchStatisticsCardComponent({
                 accent,
               )}
             >
-              <div className="absolute inset-0 bg-gradient-to-br opacity-40 transition-opacity duration-300 group-hover:opacity-70" />
+              <div className="bg-linear-to-br absolute inset-0 opacity-40 transition-opacity duration-300 group-hover:opacity-70" />
               <div className="relative flex flex-col gap-3">
                 <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   <span>{label}</span>
@@ -131,7 +131,7 @@ function MatchStatisticsCardComponent({
           ))}
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,_2fr)_minmax(0,_1fr)]">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <div className="relative">
             <Search
               className={cn("absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2")}

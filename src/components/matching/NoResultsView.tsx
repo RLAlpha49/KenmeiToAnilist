@@ -65,7 +65,7 @@ export default function NoResultsView({ onGoToImport }: Readonly<Props>) {
           No manga data to match. Return to the import page to load your data.
         </p>
         <Button
-          className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+          className="bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
           onClick={onGoToImport}
         >
           Go to Import Page

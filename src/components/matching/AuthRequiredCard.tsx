@@ -29,8 +29,8 @@ export default function AuthRequiredCard({ onGoToSettings }: Readonly<Props>) {
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: 0.2, duration: 0.35, ease: "easeOut" }}
     >
-      <Card className="relative mx-auto w-full max-w-xl overflow-hidden border border-blue-200/70 bg-gradient-to-br from-slate-50/85 via-white/75 to-blue-50/70 shadow-xl shadow-blue-200/30 supports-[backdrop-filter]:backdrop-blur-md dark:border-blue-900/50 dark:from-slate-950/70 dark:via-slate-950/40 dark:to-blue-950/45">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.35)_0%,rgba(255,255,255,0)_70%)] opacity-80 dark:bg-[radial-gradient(circle_at_top,_rgba(96,165,250,0.25)_0%,rgba(15,23,42,0)_78%)]" />
+      <Card className="bg-linear-to-br supports-backdrop-filter:backdrop-blur-md relative mx-auto w-full max-w-xl overflow-hidden border border-blue-200/70 from-slate-50/85 via-white/75 to-blue-50/70 shadow-xl shadow-blue-200/30 dark:border-blue-900/50 dark:from-slate-950/70 dark:via-slate-950/40 dark:to-blue-950/45">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.35)_0%,rgba(255,255,255,0)_70%)] opacity-80 dark:bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.25)_0%,rgba(15,23,42,0)_78%)]" />
         <CardContent className="relative flex flex-col gap-5 p-7 text-left sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-1 items-start gap-4">
             <span className="dark:bg-blue-500/18 flex h-14 w-28 items-center justify-center rounded-2xl bg-blue-500/15 text-blue-600 shadow-inner shadow-blue-200/40 dark:text-blue-300">
@@ -49,10 +49,10 @@ export default function AuthRequiredCard({ onGoToSettings }: Readonly<Props>) {
               </p>
             </div>
           </div>
-          <div className="flex flex-shrink-0 flex-col items-stretch gap-3 sm:items-end">
+          <div className="flex shrink-0 flex-col items-stretch gap-3 sm:items-end">
             <Button
               onClick={onGoToSettings}
-              className="h-11 min-w-[12rem] gap-2 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-5 text-sm font-semibold uppercase tracking-[0.2em] text-white shadow-lg shadow-blue-400/40 transition hover:from-blue-600/90 hover:via-indigo-600/90 hover:to-purple-600/90"
+              className="bg-linear-to-r h-11 min-w-48 gap-2 rounded-full from-blue-600 via-indigo-600 to-purple-600 px-5 text-sm font-semibold uppercase tracking-[0.2em] text-white shadow-lg shadow-blue-400/40 transition hover:from-blue-600/90 hover:via-indigo-600/90 hover:to-purple-600/90"
             >
               <LogIn className="h-4 w-4" /> Launch settings
             </Button>

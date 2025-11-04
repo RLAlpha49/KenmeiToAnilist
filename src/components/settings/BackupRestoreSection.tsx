@@ -661,10 +661,10 @@ export function BackupRestoreSection({
             <p className="text-muted-foreground text-xs">
               {searchQuery
                 ? highlightText(
-                    `${localBackups.length} backup file${localBackups.length !== 1 ? "s" : ""} available`,
+                    `${localBackups.length} backup file${localBackups.length === 1 ? "" : "s"} available`,
                     searchQuery,
                   )
-                : `${localBackups.length} backup file${localBackups.length !== 1 ? "s" : ""} available`}
+                : `${localBackups.length} backup file${localBackups.length === 1 ? "" : "s"} available`}
             </p>
           </div>
           <Button

@@ -36,8 +36,7 @@ export function prepareAllEntriesToSync(
       const anilist = match.selectedMatch!;
       const userEntry = userLibrary[anilist.id];
       if (
-        userEntry &&
-        userEntry.status === "COMPLETED" &&
+        userEntry?.status === "COMPLETED" &&
         syncConfig.preserveCompletedStatus
       ) {
         return null;

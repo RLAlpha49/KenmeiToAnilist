@@ -102,7 +102,7 @@ export function ErrorStateDisplay({
     <div className="relative py-10">
       <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-center">
         <div
-          className={`h-60 w-60 rounded-full bg-gradient-to-br ${errorState.accent.glow} blur-3xl`}
+          className={`bg-linear-to-br h-60 w-60 rounded-full ${errorState.accent.glow} blur-3xl`}
         />
       </div>
       <motion.div
@@ -113,7 +113,7 @@ export function ErrorStateDisplay({
         <Card className="mx-auto w-full max-w-lg overflow-hidden border border-slate-200/60 bg-white/80 text-center shadow-xl backdrop-blur-xl dark:border-slate-800/60 dark:bg-slate-950/70">
           <CardContent className="space-y-6 py-10">
             <div
-              className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br ${errorState.accent.icon} text-white shadow-lg`}
+              className={`bg-linear-to-br mx-auto flex h-16 w-16 items-center justify-center rounded-full ${errorState.accent.icon} text-white shadow-lg`}
             >
               <AlertCircle className="h-8 w-8" />
             </div>
@@ -128,7 +128,7 @@ export function ErrorStateDisplay({
             <div className="flex justify-center">
               <Button
                 onClick={() => navigate({ to: errorState.primary.to })}
-                className={`group relative flex items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r ${errorState.accent.button} px-6 py-2 text-sm font-semibold text-white shadow-lg transition hover:shadow-xl`}
+                className={`bg-linear-to-r group relative flex items-center gap-2 overflow-hidden rounded-full ${errorState.accent.button} px-6 py-2 text-sm font-semibold text-white shadow-lg transition hover:shadow-xl`}
               >
                 {errorState.primary.label}
               </Button>

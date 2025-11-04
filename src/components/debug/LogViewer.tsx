@@ -565,10 +565,10 @@ function LogMessage({
 }: Readonly<LogMessageProps>) {
   return (
     <div className="flex items-center justify-between font-mono text-[13px] leading-relaxed">
-      <div className="min-w-0 whitespace-pre-wrap break-words pr-2">
+      <div className="wrap-break-word min-w-0 whitespace-pre-wrap pr-2">
         {highlight(entry.message || "(no message)", searchTerm)}
       </div>
-      <div className="text-muted-foreground flex flex-shrink-0 items-center justify-end gap-2 text-xs">
+      <div className="text-muted-foreground flex shrink-0 items-center justify-end gap-2 text-xs">
         <Button
           size="icon"
           variant="ghost"
@@ -606,7 +606,7 @@ function LogDetails({ entry, searchTerm }: Readonly<LogDetailsProps>) {
         {entry.details.map((detail, index) => (
           <pre
             key={`${entry.id}-detail-${index}`}
-            className="bg-background/80 whitespace-pre-wrap break-words rounded p-2 text-[11px]"
+            className="bg-background/80 wrap-break-word whitespace-pre-wrap rounded p-2 text-[11px]"
           >
             {highlight(detail, searchTerm)}
           </pre>
@@ -639,7 +639,7 @@ function TruncatedSource({
 
   return (
     <div className="text-muted-foreground mt-1 flex items-start gap-2 text-xs">
-      <div className="min-w-0 flex-1 whitespace-pre-wrap break-words">
+      <div className="wrap-break-word min-w-0 flex-1 whitespace-pre-wrap">
         {highlight(display, query)}
         {needsTruncate && !expanded && (
           <span className="text-muted-foreground">…</span>
@@ -650,7 +650,7 @@ function TruncatedSource({
           size="icon"
           variant="ghost"
           onClick={() => setExpanded((s) => !s)}
-          className="h-6 w-6 flex-shrink-0"
+          className="h-6 w-6 shrink-0"
           title={expanded ? "Collapse source" : "Expand source"}
         >
           {expanded ? "−" : "+"}

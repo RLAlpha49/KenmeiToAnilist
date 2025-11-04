@@ -143,7 +143,7 @@ export function LoadingView({
           transition={{ delay: 0.25, duration: 0.3 }}
         >
           {matchingProcess.error.includes("Authentication Required") ? (
-            <Card className="mx-auto w-full max-w-xl overflow-hidden border border-amber-300/60 bg-gradient-to-br from-amber-50/70 via-white/80 to-amber-100/70 text-center shadow-lg shadow-amber-100/60 dark:border-amber-500/40 dark:from-amber-900/30 dark:via-slate-950/40 dark:to-amber-900/20">
+            <Card className="bg-linear-to-br mx-auto w-full max-w-xl overflow-hidden border border-amber-300/60 from-amber-50/70 via-white/80 to-amber-100/70 text-center shadow-lg shadow-amber-100/60 dark:border-amber-500/40 dark:from-amber-900/30 dark:via-slate-950/40 dark:to-amber-900/20">
               <CardContent className="pb-5 pt-6">
                 <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/15 text-amber-600 dark:bg-amber-500/20 dark:text-amber-200">
                   <AlertCircle className="h-6 w-6" />
@@ -157,14 +157,14 @@ export function LoadingView({
                 </p>
                 <Button
                   onClick={() => navigate({ to: "/settings" })}
-                  className="mt-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-md hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700"
+                  className="bg-linear-to-r mt-4 from-blue-600 via-indigo-600 to-purple-600 text-white shadow-md hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700"
                 >
                   Go to Settings
                 </Button>
               </CardContent>
             </Card>
           ) : (
-            <Card className="mx-auto w-full max-w-xl overflow-hidden border border-rose-300/60 bg-gradient-to-br from-rose-50/70 via-white/80 to-rose-100/70 text-center shadow-lg shadow-rose-100/60 dark:border-rose-500/40 dark:from-rose-900/30 dark:via-slate-950/40 dark:to-rose-900/20">
+            <Card className="bg-linear-to-br mx-auto w-full max-w-xl overflow-hidden border border-rose-300/60 from-rose-50/70 via-white/80 to-rose-100/70 text-center shadow-lg shadow-rose-100/60 dark:border-rose-500/40 dark:from-rose-900/30 dark:via-slate-950/40 dark:to-rose-900/20">
               <CardContent className="pb-5 pt-6">
                 <h3 className="text-lg font-semibold text-rose-700 dark:text-rose-100">
                   {matchingProcess.error}
@@ -174,7 +174,7 @@ export function LoadingView({
                 </p>
                 <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
                   <Button
-                    className="bg-gradient-to-r from-rose-500 via-red-500 to-orange-500 text-white shadow-md hover:from-rose-600 hover:via-red-600 hover:to-orange-600"
+                    className="bg-linear-to-r from-rose-500 via-red-500 to-orange-500 text-white shadow-md hover:from-rose-600 hover:via-red-600 hover:to-orange-600"
                     onClick={() => onRetry()}
                   >
                     Retry

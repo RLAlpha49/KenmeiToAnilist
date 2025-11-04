@@ -140,9 +140,9 @@ export function ImportSummary({
 
   return (
     <Card className="bg-background overflow-hidden border-none shadow-md">
-      <CardHeader className="bg-gradient-to-r from-blue-500/10 to-indigo-500/10 pb-4">
+      <CardHeader className="bg-linear-to-r from-blue-500/10 to-indigo-500/10 pb-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-blue-500 to-indigo-500 text-white">
+          <div className="bg-linear-to-r flex h-8 w-8 items-center justify-center rounded-lg from-blue-500 to-indigo-500 text-white">
             <FilePlus className="h-4 w-4" />
           </div>
           <div>

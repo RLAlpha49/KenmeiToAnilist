@@ -172,7 +172,7 @@ export const ChangesSummary: React.FC<ChangesSummaryProps> = ({
           <div className="min-w-[180px] flex-1">
             <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800/60">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 transition-all duration-300"
+                className="bg-linear-to-r h-full rounded-full from-blue-500 via-indigo-500 to-purple-500 transition-all duration-300"
                 style={{ width: `${readinessRatio}%` }}
               />
             </div>
@@ -269,7 +269,7 @@ export const ChangesSummary: React.FC<ChangesSummaryProps> = ({
               className="relative overflow-hidden rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm backdrop-blur-sm transition hover:border-blue-200/60 hover:shadow-md dark:border-slate-800/60 dark:bg-slate-950/50 dark:hover:border-blue-900/50"
             >
               <div
-                className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${metric.accent} opacity-70`}
+                className={`bg-linear-to-br pointer-events-none absolute inset-0 ${metric.accent} opacity-70`}
               />
               <div className="relative flex items-start justify-between gap-3">
                 <div>

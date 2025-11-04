@@ -127,7 +127,7 @@ export function SyncConfigurationPanel({
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-3">
                     <div
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${option.accent} text-white shadow`}
+                      className={`bg-linear-to-br flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${option.accent} text-white shadow`}
                     >
                       <Icon className="h-5 w-5" />
                     </div>
@@ -157,7 +157,7 @@ export function SyncConfigurationPanel({
         <div className="rounded-2xl border border-amber-200/70 bg-amber-50/60 p-4 shadow-sm transition hover:border-amber-300/70 hover:shadow-md dark:border-amber-800/40 dark:bg-amber-900/20">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow">
+              <div className="bg-linear-to-br flex h-10 w-10 shrink-0 items-center justify-center rounded-full from-amber-500 to-orange-500 text-white shadow">
                 <Clock3 className="h-5 w-5" />
               </div>
               <div className="space-y-1">

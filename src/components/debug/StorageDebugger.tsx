@@ -484,7 +484,7 @@ export function StorageDebugger() {
 
     return (
       <Card className="border-border/60 bg-background/90 flex h-full max-h-[40vh] flex-col border pb-6 pt-0 shadow-md backdrop-blur-sm">
-        <CardHeader className="border-border/60 bg-muted/10 flex-shrink-0 border-b px-5 py-4">
+        <CardHeader className="border-border/60 bg-muted/10 shrink-0 border-b px-5 py-4">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-sm font-semibold">
               {icon}
@@ -700,11 +700,11 @@ export function StorageDebugger() {
   return (
     <>
       <div className="border-border/60 bg-background/95 relative mt-2 overflow-hidden rounded-3xl border shadow-xl backdrop-blur">
-        <div className="from-primary/10 pointer-events-none absolute inset-0 bg-gradient-to-br via-blue-500/10 to-transparent" />
+        <div className="from-primary/10 bg-linear-to-br pointer-events-none absolute inset-0 via-blue-500/10 to-transparent" />
         <div className="bg-primary/20 pointer-events-none absolute -right-24 top-1/2 h-96 w-96 -translate-y-1/2 rounded-full blur-[120px]" />
         <div className="relative z-10 flex flex-col gap-6 p-6 md:p-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="relative w-full sm:min-w-[240px]">
+            <div className="relative w-full sm:min-w-60">
               <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
               <Input
                 placeholder="Search by key or value…"
@@ -749,7 +749,7 @@ export function StorageDebugger() {
                 className="border-border/60 bg-background/90 relative overflow-hidden rounded-2xl border p-4 shadow-inner"
               >
                 <div
-                  className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${stat.accent}`}
+                  className={`bg-linear-to-br pointer-events-none absolute inset-0 ${stat.accent}`}
                 />
                 <div className="relative z-10 space-y-2">
                   <p className="text-muted-foreground text-xs uppercase tracking-wide">
@@ -854,7 +854,7 @@ export function StorageDebugger() {
       {/* Edit Item Dialog */}
       {editingItem && (
         <Dialog open={!!editingItem} onOpenChange={() => setEditingItem(null)}>
-          <DialogContent className="!max-w-2xl">
+          <DialogContent className="max-w-2xl!">
             <DialogHeader>
               <DialogTitle>Edit Storage Item</DialogTitle>
               <DialogDescription>
@@ -933,7 +933,7 @@ export function StorageDebugger() {
                           value: e.target.value,
                         })
                       }
-                      className="h-64 w-full max-w-xl resize-y overflow-auto whitespace-pre-wrap break-words font-mono"
+                      className="wrap-break-word h-64 w-full max-w-xl resize-y overflow-auto whitespace-pre-wrap font-mono"
                       style={{ resize: "none" }}
                       placeholder="Enter value (JSON or string)..."
                     />

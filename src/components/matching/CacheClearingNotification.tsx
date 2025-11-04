@@ -50,8 +50,8 @@ export const CacheClearingNotification: React.FC<
         transition={{ type: "spring", damping: 15 }}
         className="relative z-10 mx-auto w-full max-w-md px-4"
       >
-        <Card className="relative overflow-hidden rounded-3xl border border-blue-200/80 bg-gradient-to-br from-blue-50/90 via-white/85 to-slate-50/80 shadow-2xl shadow-blue-500/20 supports-[backdrop-filter]:backdrop-blur-xl dark:border-blue-900/60 dark:from-blue-950/70 dark:via-slate-950/50 dark:to-slate-900/60">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.3)_0%,rgba(59,130,246,0)_70%)] opacity-80 dark:bg-[radial-gradient(circle_at_top,_rgba(96,165,250,0.22)_0%,rgba(15,23,42,0)_75%)]" />
+        <Card className="border-bbg-linear-to-brdient-to-br supports-backdrop-filter:backdrop-blur-xl relative overflow-hidden rounded-3xl border from-blue-50/90 via-white/85 to-slate-50/80 shadow-2xl shadow-blue-500/20 dark:border-blue-900/60 dark:from-blue-950/70 dark:via-slate-950/50 dark:to-slate-900/60">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.3)_0%,rgba(59,130,246,0)_70%)] opacity-80 dark:bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.22)_0%,rgba(15,23,42,0)_75%)]" />
           <CardHeader className="relative pb-2 text-center">
             <div className="dark:bg-blue-500/18 mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/15 text-blue-600 shadow-inner shadow-blue-200/40 dark:text-blue-300">
               <Loader2 className="h-6 w-6 animate-spin" />
@@ -72,7 +72,7 @@ export const CacheClearingNotification: React.FC<
           <CardContent className="relative pb-7 text-center">
             <div className="relative h-2 w-full overflow-hidden rounded-full border border-blue-200/60 bg-white/70 shadow-inner shadow-blue-200/30 dark:border-blue-800/50 dark:bg-blue-950/40">
               <motion.div
-                className="absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"
+                className="bg-linear-to-r absolute inset-y-0 left-0 w-1/3 from-blue-500 via-indigo-500 to-purple-500"
                 initial={{ x: "-33%" }}
                 animate={{
                   x: ["-33%", "100%"],

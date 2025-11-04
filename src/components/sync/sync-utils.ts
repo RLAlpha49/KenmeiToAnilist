@@ -199,7 +199,7 @@ export function calculateSyncChanges(
   const scoreWillChange = determineScoreWillChange();
 
   const isNewEntry = !userEntry;
-  const isCompleted = !!(userEntry && userEntry.status === "COMPLETED");
+  const isCompleted = !!(userEntry?.status === "COMPLETED");
 
   const willSetPrivate = userEntry
     ? syncConfig.setPrivate && !userEntry.private

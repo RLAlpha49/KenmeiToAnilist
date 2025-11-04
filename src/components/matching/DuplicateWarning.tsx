@@ -58,8 +58,8 @@ function DuplicateWarningComponent({
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="relative mb-6 overflow-hidden rounded-3xl border border-amber-200/80 bg-gradient-to-br from-amber-50/90 via-amber-100/80 to-white/75 shadow-xl shadow-amber-200/40 supports-[backdrop-filter]:backdrop-blur-md dark:border-amber-900/60 dark:from-amber-950/65 dark:via-amber-950/45 dark:to-slate-950/50">
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-amber-200/25 via-transparent to-transparent opacity-80 dark:from-amber-900/25" />
+      <div className="border-ambbg-linear-to-brient-to-br supports-backdrop-filter:backdrop-blur-md relative mb-6 overflow-hidden rounded-3xl border from-amber-50/90 via-amber-100/80 to-white/75 shadow-xl shadow-amber-200/40 dark:border-amber-900/60 dark:from-amber-950/65 dark:via-amber-950/45 dark:to-slate-950/50">
+        <div className="bg-linear-to-br pointer-events-none absolute inset-0 from-amber-200/25 via-transparent to-transparent opacity-80 dark:from-amber-900/25" />
         <div className="relative flex flex-col gap-4 p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex flex-1 items-start gap-3">
@@ -95,9 +95,9 @@ function DuplicateWarningComponent({
             {duplicates.map((duplicate) => (
               <div
                 key={duplicate.anilistId}
-                className="relative overflow-hidden rounded-2xl border border-amber-200/70 bg-gradient-to-br from-amber-100/70 via-white/65 to-amber-50/60 p-4 shadow-sm shadow-amber-200/30 transition hover:-translate-y-0.5 hover:shadow-lg dark:border-amber-800/50 dark:from-amber-900/40 dark:via-amber-950/40 dark:to-amber-950/30"
+                className="bg-linear-to-br relative overflow-hidden rounded-2xl border border-amber-200/70 from-amber-100/70 via-white/65 to-amber-50/60 p-4 shadow-sm shadow-amber-200/30 transition hover:-translate-y-0.5 hover:shadow-lg dark:border-amber-800/50 dark:from-amber-900/40 dark:via-amber-950/40 dark:to-amber-950/30"
               >
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.25)_0%,rgba(255,255,255,0)_70%)] opacity-70 dark:bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.2)_0%,rgba(17,24,39,0)_75%)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(251,191,36,0.25)_0%,rgba(255,255,255,0)_70%)] opacity-70 dark:bg-[radial-gradient(circle_at_top,rgba(251,191,36,0.2)_0%,rgba(17,24,39,0)_75%)]" />
                 <div className="relative flex flex-col gap-4 pr-3 pt-2">
                   <div className="absolute right-3 top-3 z-20 flex gap-2">
                     <Button

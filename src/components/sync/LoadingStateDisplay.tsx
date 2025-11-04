@@ -76,7 +76,7 @@ export function LoadingStateDisplay({
     <div className="relative py-10">
       <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-center">
         <div
-          className={`h-56 w-56 rounded-full bg-gradient-to-br ${accent.glow} blur-3xl`}
+          className={`bg-linear-to-br h-56 w-56 rounded-full ${accent.glow} blur-3xl`}
         />
       </div>
       <motion.div
@@ -87,7 +87,7 @@ export function LoadingStateDisplay({
         <Card className="mx-auto w-full max-w-md overflow-hidden border border-slate-200/70 bg-white/80 text-center shadow-xl backdrop-blur-xl dark:border-slate-800/60 dark:bg-slate-950/60">
           <CardContent className="pb-8 pt-10">
             <div
-              className={`mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br ${accent.icon} text-white shadow-lg`}
+              className={`bg-linear-to-br mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full ${accent.icon} text-white shadow-lg`}
             >
               <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-white/70 border-t-transparent" />
             </div>
