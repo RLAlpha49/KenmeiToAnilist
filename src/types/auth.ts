@@ -91,6 +91,8 @@ export interface ViewerResponse {
  * @property error - The current authentication error message, if any.
  * @property statusMessage - The current status message, if any.
  * @property customCredentials - The current custom credentials, if any.
+ * @property isOnline - Whether the application currently has network connectivity. Updated via Navigator Online API and window online/offline events.
+ * @property wasOffline - Whether the application was offline at any point during this session. Useful for triggering retry logic after reconnection.
  * @source
  */
 export interface AuthStateContextValue {
@@ -99,10 +101,35 @@ export interface AuthStateContextValue {
   error: string | null;
   statusMessage: string | null;
   customCredentials: APICredentials | null;
+  isOnline: boolean;
+  wasOffline: boolean;
+}
+
+/**
+ * Represents a task queued for execution when the application comes online.
+ *
+ * @property taskId - Unique identifier for the task (used for deduplication).
+ * @property fn - Async function to execute when online.
+ * @property addedAt - Timestamp when the task was added.
+ * @property attempts - Number of attempts made to execute this task.
+ * @source
+ */
+export interface OfflineQueueTask {
+  taskId: string;
+  fn: () => Promise<void>;
+  addedAt: number;
+  attempts: number;
 }
 
 /**
  * Represents the action functions exposed through authentication context.
+ *
+ * **Note on Operation Queuing:**
+ * This layer implements operation queuing for critical auth-layer operations while offline.
+ * Operations are dequeued automatically when connectivity is restored. Failed operations
+ * at the sync/storage level are managed by useSynchronization hook (see storage.ts).
+ * When the app goes offline, sync operations fail with network errors, captured and
+ * persisted via addFailedSyncOperation() in the sync pipeline.
  *
  * @property login - Function to log in with credentials.
  * @property refreshToken - Function to refresh the authentication token.
@@ -110,6 +137,7 @@ export interface AuthStateContextValue {
  * @property cancelAuth - Function to cancel an in-progress authentication flow.
  * @property setCredentialSource - Function to set the credential source.
  * @property updateCustomCredentials - Function to update custom credentials.
+ * @property enqueueWhenOnline - Function to queue a task for execution when online (with deduplication).
  * @source
  */
 export interface AuthActionsContextValue {
@@ -123,6 +151,7 @@ export interface AuthActionsContextValue {
     clientSecret: string,
     redirectUri: string,
   ) => void;
+  enqueueWhenOnline: (taskId: string, fn: () => Promise<void>) => void;
 }
 
 /**

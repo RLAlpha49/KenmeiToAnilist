@@ -483,6 +483,7 @@ export const STORAGE_KEYS = {
   SYNC_HISTORY: "sync_history",
   BACKUP_SCHEDULE_CONFIG: "backup_schedule_config",
   READING_HISTORY: "reading_history",
+  FAILED_OPERATIONS: "failed_operations",
 };
 
 /**
@@ -728,6 +729,65 @@ export interface ReadingHistoryEntry {
   status: string; // Reading status (reading, completed, etc.)
   anilistId?: number; // Optional AniList media ID if matched
 }
+
+/**
+ * Enumeration of failed operation types.
+ */
+export enum FailedOperationType {
+  SYNC_UPDATE = "sync_update",
+  SYNC_DELETE = "sync_delete",
+  MATCH_SEARCH = "match_search",
+  AUTH_TOKEN_EXCHANGE = "auth_token_exchange",
+}
+
+/**
+ * Structure for a single failed operation with retry metadata.
+ */
+export interface FailedOperation {
+  id: string; // Unique identifier, timestamp-based
+  type: FailedOperationType;
+  timestamp: number; // When it failed
+  retryCount: number; // How many times retried
+  lastRetryTimestamp: number | null; // When last retry was attempted
+  error: string; // Error message
+  errorCode?: string; // Error code if available
+  payload: unknown; // Operation-specific data
+  context?: Record<string, unknown>; // Additional context
+  permanentlyFailed?: boolean; // True if max retries exceeded and should not be retried
+}
+
+/**
+ * Queue structure for managing failed operations.
+ */
+export interface FailedOperationsQueue {
+  operations: FailedOperation[];
+  lastUpdated: number;
+  version: number;
+}
+
+/**
+ * Default failed operations queue structure.
+ */
+export const DEFAULT_FAILED_OPERATIONS_QUEUE: FailedOperationsQueue = {
+  operations: [],
+  lastUpdated: Date.now(),
+  version: 1,
+};
+
+/**
+ * Maximum number of failed operations to store.
+ */
+export const MAX_FAILED_OPERATIONS = 100;
+
+/**
+ * Maximum number of retry attempts before giving up.
+ */
+export const MAX_RETRY_ATTEMPTS = 3;
+
+/**
+ * Number of days to keep failed operations before auto-removal.
+ */
+export const FAILED_OPERATION_EXPIRY_DAYS = 7;
 
 /**
  * Reading history storage structure with metadata.
@@ -1394,6 +1454,308 @@ export function clearReadingHistory(): void {
   } catch (error) {
     console.error("[Storage] Failed to clear reading history:", error);
   }
+}
+
+/**
+ * Retrieves failed operations queue from storage.
+ * Filters out expired operations (older than FAILED_OPERATION_EXPIRY_DAYS).
+ * Returns default empty queue if none exists.
+ */
+export function getFailedOperations(): FailedOperationsQueue {
+  try {
+    const stored = storage.getItem(STORAGE_KEYS.FAILED_OPERATIONS);
+    if (!stored) {
+      // Return a deep clone of DEFAULT_FAILED_OPERATIONS_QUEUE
+      // to avoid mutating the constant
+      return {
+        operations: [],
+        lastUpdated: Date.now(),
+        version: DEFAULT_FAILED_OPERATIONS_QUEUE.version,
+      };
+    }
+
+    const parsed = JSON.parse(stored) as FailedOperationsQueue;
+
+    // Validate structure
+    if (
+      !Array.isArray(parsed.operations) ||
+      typeof parsed.lastUpdated !== "number" ||
+      typeof parsed.version !== "number"
+    ) {
+      console.warn(
+        "[Storage] Invalid failed operations structure, using defaults",
+      );
+      // Return a fresh copy instead of the constant
+      return {
+        operations: [],
+        lastUpdated: Date.now(),
+        version: DEFAULT_FAILED_OPERATIONS_QUEUE.version,
+      };
+    }
+
+    // Filter out expired operations
+    const now = Date.now();
+    const expiryMs = FAILED_OPERATION_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+    const validOperations = parsed.operations.filter(
+      (op) => now - op.timestamp < expiryMs,
+    );
+
+    // If we filtered out any operations, save the updated queue
+    if (validOperations.length < parsed.operations.length) {
+      const updated: FailedOperationsQueue = {
+        operations: validOperations,
+        lastUpdated: now,
+        version: parsed.version,
+      };
+      storage.setItem(STORAGE_KEYS.FAILED_OPERATIONS, JSON.stringify(updated));
+      console.debug(
+        `[Storage] Removed ${parsed.operations.length - validOperations.length} expired operations`,
+      );
+      return updated;
+    }
+
+    return parsed;
+  } catch (error) {
+    console.error("[Storage] Failed to load failed operations:", error);
+    // Return a fresh copy instead of the constant
+    return {
+      operations: [],
+      lastUpdated: Date.now(),
+      version: DEFAULT_FAILED_OPERATIONS_QUEUE.version,
+    };
+  }
+}
+
+/**
+ * Adds a failed operation to the queue.
+ * Enforces MAX_FAILED_OPERATIONS limit by removing oldest on overflow.
+ */
+export function addFailedOperation(
+  operation: Omit<
+    FailedOperation,
+    "id" | "timestamp" | "retryCount" | "lastRetryTimestamp"
+  >,
+): FailedOperation {
+  try {
+    const queue = getFailedOperations();
+    const now = Date.now();
+
+    // Create full operation object
+    const fullOperation: FailedOperation = {
+      id: `${now}_${Math.random().toString(36).substring(2, 11)}`,
+      timestamp: now,
+      retryCount: 0,
+      lastRetryTimestamp: null,
+      ...operation,
+    };
+
+    // Add to queue
+    queue.operations.push(fullOperation);
+
+    // Enforce size limit (remove oldest if exceeded)
+    if (queue.operations.length > MAX_FAILED_OPERATIONS) {
+      const toRemove = queue.operations.length - MAX_FAILED_OPERATIONS;
+      queue.operations = queue.operations
+        .slice()
+        .sort((a, b) => a.timestamp - b.timestamp)
+        .slice(toRemove);
+      console.debug(
+        `[Storage] Removed ${toRemove} oldest failed operations to stay within limit`,
+      );
+    }
+
+    queue.lastUpdated = now;
+
+    // Save updated queue
+    storage.setItem(STORAGE_KEYS.FAILED_OPERATIONS, JSON.stringify(queue));
+    console.info(`[Storage] Added failed operation: ${fullOperation.id}`);
+
+    return fullOperation;
+  } catch (error) {
+    console.error("[Storage] Failed to add operation to queue:", error);
+    throw error;
+  }
+}
+
+/**
+ * Updates a failed operation in the queue.
+ */
+export function updateFailedOperation(
+  id: string,
+  updates: Partial<FailedOperation>,
+): FailedOperation | null {
+  try {
+    const queue = getFailedOperations();
+    const operation = queue.operations.find((op) => op.id === id);
+
+    if (!operation) {
+      console.warn(`[Storage] Failed operation not found: ${id}`);
+      return null;
+    }
+
+    // Apply updates
+    Object.assign(operation, updates);
+    queue.lastUpdated = Date.now();
+
+    // Save updated queue
+    storage.setItem(STORAGE_KEYS.FAILED_OPERATIONS, JSON.stringify(queue));
+    console.debug(`[Storage] Updated failed operation: ${id}`);
+
+    return operation;
+  } catch (error) {
+    console.error("[Storage] Failed to update operation:", error);
+    throw error;
+  }
+}
+
+/**
+ * Removes a failed operation from the queue.
+ */
+export function removeFailedOperation(id: string): boolean {
+  try {
+    const queue = getFailedOperations();
+    const initialLength = queue.operations.length;
+
+    queue.operations = queue.operations.filter((op) => op.id !== id);
+    queue.lastUpdated = Date.now();
+
+    // Save updated queue
+    storage.setItem(STORAGE_KEYS.FAILED_OPERATIONS, JSON.stringify(queue));
+
+    const removed = queue.operations.length < initialLength;
+    if (removed) {
+      console.info(`[Storage] Removed failed operation: ${id}`);
+    }
+
+    return removed;
+  } catch (error) {
+    console.error("[Storage] Failed to remove operation:", error);
+    throw error;
+  }
+}
+
+/**
+ * Clears all failed operations or only specific type.
+ */
+export function clearFailedOperations(type?: FailedOperationType): void {
+  try {
+    const queue = getFailedOperations();
+    const initialLength = queue.operations.length;
+
+    if (type) {
+      queue.operations = queue.operations.filter((op) => op.type !== type);
+      console.info(
+        `[Storage] Cleared ${initialLength - queue.operations.length} failed ${type} operations`,
+      );
+    } else {
+      queue.operations = [];
+      console.info("[Storage] Cleared all failed operations");
+    }
+
+    queue.lastUpdated = Date.now();
+    storage.setItem(STORAGE_KEYS.FAILED_OPERATIONS, JSON.stringify(queue));
+  } catch (error) {
+    console.error("[Storage] Failed to clear operations:", error);
+  }
+}
+
+/**
+ * Increments retry count for a failed operation.
+ * Updates lastRetryTimestamp to current time.
+ */
+export function incrementRetryCount(id: string): void {
+  try {
+    const queue = getFailedOperations();
+    const operation = queue.operations.find((op) => op.id === id);
+
+    if (operation) {
+      operation.retryCount += 1;
+      operation.lastRetryTimestamp = Date.now();
+
+      // Mark as permanently failed if max retries exceeded
+      if (operation.retryCount >= MAX_RETRY_ATTEMPTS) {
+        operation.permanentlyFailed = true;
+        console.debug(
+          `[Storage] Operation ${id} marked as permanently failed after ${MAX_RETRY_ATTEMPTS} retries`,
+        );
+      }
+
+      queue.lastUpdated = Date.now();
+
+      storage.setItem(STORAGE_KEYS.FAILED_OPERATIONS, JSON.stringify(queue));
+      console.debug(
+        `[Storage] Incremented retry count for operation ${id}: ${operation.retryCount}`,
+      );
+    }
+  } catch (error) {
+    console.error("[Storage] Failed to increment retry count:", error);
+  }
+}
+
+/**
+ * Data for a failed sync operation.
+ * Includes sync configuration to enable faithful retry of original intent.
+ */
+export interface FailedSyncOperationData {
+  mediaId: number;
+  title: string;
+  status: string;
+  progress: number;
+  score: number;
+  private?: boolean;
+  coverImage?: string | null;
+  error: string;
+  errorCode?: string;
+  // Sync configuration snapshot for faithful retry
+  previousValues?: {
+    status: string;
+    progress: number;
+    score: number;
+    private: boolean;
+  } | null;
+  syncMetadata?: {
+    useIncrementalSync: boolean;
+    targetProgress?: number;
+    progress?: number;
+    step?: number;
+  } | null;
+}
+
+export function addFailedSyncOperation(
+  data: FailedSyncOperationData,
+): FailedOperation {
+  const {
+    mediaId,
+    title,
+    status,
+    progress,
+    score,
+    private: isPrivate,
+    coverImage,
+    error,
+    errorCode,
+    previousValues,
+    syncMetadata,
+  } = data;
+  return addFailedOperation({
+    type: FailedOperationType.SYNC_UPDATE,
+    error,
+    errorCode,
+    payload: {
+      mediaId,
+      title,
+      status,
+      progress,
+      score,
+      private: isPrivate ?? false,
+      coverImage,
+      previousValues: previousValues ?? null,
+      syncMetadata: syncMetadata ?? null,
+    },
+    context: {
+      failedAt: new Date().toISOString(),
+    },
+  });
 }
 
 /**

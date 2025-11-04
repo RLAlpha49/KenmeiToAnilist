@@ -4,7 +4,7 @@
  * @description Sync page component for the Kenmei to AniList sync tool. Handles synchronization preview, configuration, execution, and results display.
  */
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuthState } from "../hooks/useAuth";
 import { useSynchronization } from "../hooks/useSynchronization";
@@ -22,6 +22,7 @@ import {
   getSyncConfig,
   saveSyncConfig,
   SyncConfig,
+  MAX_RETRY_ATTEMPTS,
 } from "../utils/storage";
 import { getUserMangaList } from "../api/anilist/client";
 import SyncManager from "../components/sync/SyncManager";
@@ -44,6 +45,8 @@ import {
   Layers,
   UserPlus,
   History,
+  RefreshCw,
+  Trash2,
 } from "lucide-react";
 import { exportSyncErrorLog } from "../utils/exportUtils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -94,12 +97,24 @@ import { SyncResumeNotification } from "../components/sync/SyncResumeNotificatio
  */
 export function SyncPage() {
   const navigate = useNavigate();
-  const { authState } = useAuthState();
+  const { authState, isOnline } = useAuthState();
   const token = authState.accessToken || "";
   const [state, actions] = useSynchronization();
+  const {
+    failedOperations,
+    isLoadingFailedOps,
+    retryFailedOperation,
+    retryAllFailedOperations,
+    clearFailedOperation,
+  } = actions;
   const [viewMode, setViewMode] = useState<ViewMode>("preview");
   const { rateLimitState, setRateLimit } = useRateLimit();
   const { completeStep } = useOnboarding();
+
+  // Retry state
+  const [retryingOperations, setRetryingOperations] = useState<Set<string>>(
+    new Set(),
+  );
 
   // Authentication and validation states
   const [authError, setAuthError] = useState(false);
@@ -239,6 +254,60 @@ export function SyncPage() {
     }
     setIsInitialMangaLoad(false);
   }, []);
+
+  // Auto-retry failed operations when app comes online
+  const isAutoRetryInProgressRef = useRef(false);
+
+  useEffect(() => {
+    const handleAppOnline = async () => {
+      // Gate: skip if auto-retry is already in progress
+      if (isAutoRetryInProgressRef.current) {
+        console.debug(
+          "[SyncPage] Auto-retry already in progress, skipping duplicate trigger",
+        );
+        return;
+      }
+
+      // Bail if sync is already active to avoid competing with active sync
+      if (state.isActive) {
+        console.info(
+          `[SyncPage] App came online, but sync is already active. Skipping auto-retry.`,
+        );
+        return;
+      }
+
+      if (failedOperations.length > 0) {
+        console.info(
+          `[SyncPage] App came online with ${failedOperations.length} failed operations, attempting retry`,
+        );
+
+        // Set gate to prevent concurrent retries during flapping connectivity
+        isAutoRetryInProgressRef.current = true;
+
+        try {
+          // Small delay to allow for other reconnection handlers to complete
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          const succeeded = await retryAllFailedOperations();
+          console.info(
+            `[SyncPage] Retried failed operations: ${succeeded} succeeded`,
+          );
+        } catch (err) {
+          console.error(
+            "[SyncPage] Error during auto-retry on reconnect:",
+            err,
+          );
+        } finally {
+          // Reset gate after completion
+          isAutoRetryInProgressRef.current = false;
+        }
+      }
+    };
+
+    globalThis.addEventListener("app:online", handleAppOnline);
+    return () => {
+      globalThis.removeEventListener("app:online", handleAppOnline);
+    };
+  }, [state.isActive, failedOperations.length, retryAllFailedOperations]);
 
   // Handle rate limit errors
   type ApiError = {
@@ -532,6 +601,20 @@ export function SyncPage() {
   };
 
   /**
+   * Generates title for the start sync button based on state.
+   * @source
+   */
+  const getStartSyncButtonTitle = () => {
+    if (isOnline === false) {
+      return "Cannot sync while offline";
+    }
+    if (state.resumeAvailable) {
+      return "Resume or discard the interrupted sync first";
+    }
+    return undefined;
+  };
+
+  /**
    * Handles completion of sync process and transitions to results view.
    * @source
    */
@@ -625,6 +708,48 @@ export function SyncPage() {
     actions.reset();
     // Show toast notification (if toast system is available)
     console.log("Sync checkpoint discarded. Starting fresh.");
+  };
+
+  /**
+   * Handles retrying a single failed operation.
+   */
+  const handleRetryOperation = async (operationId: string) => {
+    setRetryingOperations((prev) => new Set([...prev, operationId]));
+    try {
+      const success = await retryFailedOperation(operationId);
+      if (success) {
+        console.log("Operation succeeded");
+      } else {
+        console.log("Operation still failed");
+      }
+    } catch (error) {
+      console.error("Error retrying operation:", error);
+    } finally {
+      setRetryingOperations((prev) => {
+        const next = new Set(prev);
+        next.delete(operationId);
+        return next;
+      });
+    }
+  };
+
+  /**
+   * Handles retrying all failed operations.
+   */
+  const handleRetryAll = async () => {
+    try {
+      const succeeded = await retryAllFailedOperations();
+      console.log(`Retried all operations: ${succeeded} succeeded`);
+    } catch (error) {
+      console.error("Error retrying all operations:", error);
+    }
+  };
+
+  /**
+   * Handles clearing a failed operation.
+   */
+  const handleClearOperation = (operationId: string) => {
+    clearFailedOperation(operationId);
   };
 
   /**
@@ -1121,6 +1246,22 @@ export function SyncPage() {
         variants={staggerContainerVariants}
       >
         <motion.div variants={cardVariants} className="space-y-6">
+          {/* Offline indicator */}
+          {!isOnline && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800/60 dark:bg-amber-900/20 dark:text-amber-300">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 shrink-0" />
+                <div>
+                  <p className="font-medium">You are currently offline</p>
+                  <p className="text-xs text-amber-700 dark:text-amber-400">
+                    Sync operations will be queued and retried when your
+                    connection is restored.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Resume notification for interrupted syncs */}
           {state.resumeAvailable && state.resumeMetadata && (
             <SyncResumeNotification
@@ -1133,6 +1274,90 @@ export function SyncPage() {
               onResume={handleResumeSync}
               onDiscard={handleDiscardCheckpoint}
             />
+          )}
+
+          {/* Failed operations panel */}
+          {failedOperations.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45 }}
+              className="relative overflow-hidden rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/40 dark:bg-red-950/20"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                  <div>
+                    <h3 className="font-medium text-red-900 dark:text-red-300">
+                      Failed Operations ({failedOperations.length})
+                    </h3>
+                    <p className="text-xs text-red-700 dark:text-red-400">
+                      These operations failed and can be retried
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleRetryAll}
+                  disabled={isLoadingFailedOps}
+                  className="border-red-300 text-red-700 hover:bg-red-100 dark:border-red-700 dark:text-red-300 dark:hover:bg-red-900/30"
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Retry All
+                </Button>
+              </div>
+
+              <div className="mt-4 max-h-96 space-y-2 overflow-y-auto">
+                {failedOperations.map((op) => {
+                  const isRetrying = retryingOperations.has(op.id);
+                  const payload = op.payload as Record<string, unknown>;
+                  const canRetry = op.retryCount < MAX_RETRY_ATTEMPTS;
+
+                  return (
+                    <div
+                      key={op.id}
+                      className="flex items-start justify-between gap-3 rounded-md bg-white/50 p-3 text-sm dark:bg-slate-800/30"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-slate-900 dark:text-slate-100">
+                          {(payload.title as string) || "Unknown"}
+                        </p>
+                        <p className="truncate text-xs text-red-600 dark:text-red-400">
+                          {op.error}
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Retried {op.retryCount}/{MAX_RETRY_ATTEMPTS} times
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleRetryOperation(op.id)}
+                          disabled={isRetrying || !canRetry}
+                          className="h-8 w-8 p-0"
+                        >
+                          {isRetrying ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleClearOperation(op.id)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
           )}
 
           <motion.section
@@ -1334,15 +1559,12 @@ export function SyncPage() {
                   disabled={
                     entriesWithChanges.length === 0 ||
                     libraryLoading ||
-                    state.resumeAvailable
+                    state.resumeAvailable ||
+                    !isOnline
                   }
                   className="bg-linear-to-r group relative w-full overflow-hidden rounded-md from-blue-500 via-indigo-500 to-purple-500 px-6 py-2 font-semibold text-white shadow-lg transition hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
                   data-onboarding="sync-button"
-                  title={
-                    state.resumeAvailable
-                      ? "Resume or discard the interrupted sync first"
-                      : undefined
-                  }
+                  title={getStartSyncButtonTitle()}
                 >
                   <span className="absolute inset-0 bg-white/20 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                   <span className="relative flex items-center justify-center gap-2">

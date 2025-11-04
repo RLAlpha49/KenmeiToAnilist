@@ -9,11 +9,15 @@
  */
 
 /**
- * Request queue entry with a resolve callback.
+ * Request queue entry with retry support.
  * @source
  */
 export interface QueueEntry {
   resolve: (value: void) => void;
+  attempt?: number;
+  maxAttempts?: number;
+  nextEligibleAt?: number;
+  onRetryFailed?: (error: Error) => void;
 }
 
 /**

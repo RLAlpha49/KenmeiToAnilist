@@ -407,6 +407,63 @@ function is500ServerError(error: unknown, errorMessage: string): boolean {
  * @param operationId - Unique operation identifier for logging correlation.
  * @source
  */
+/**
+ * Infer recovery metadata for error reporting based on error message patterns.
+ */
+function inferRecoveryMetadata(errorMessage: string): {
+  recoveryAction: string;
+  recoveryMessage: string;
+  recoveryActionType: "retry" | "refresh-token" | "check-connection" | "wait";
+} {
+  const errorLower = errorMessage.toLowerCase();
+
+  if (
+    errorLower.includes("network") ||
+    errorLower.includes("fetch") ||
+    errorLower.includes("connection")
+  ) {
+    return {
+      recoveryAction: "Check Connection",
+      recoveryMessage: "Verify your internet connection and try again.",
+      recoveryActionType: "check-connection",
+    };
+  }
+
+  if (
+    errorLower.includes("unauthorized") ||
+    errorLower.includes("token") ||
+    errorLower.includes("auth")
+  ) {
+    return {
+      recoveryAction: "Refresh Token",
+      recoveryMessage: "Your session has expired. Please reauthenticate.",
+      recoveryActionType: "refresh-token",
+    };
+  }
+
+  if (errorLower.includes("rate") || errorLower.includes("429")) {
+    return {
+      recoveryAction: "Wait & Retry",
+      recoveryMessage: "Rate limit reached. Wait a moment before retrying.",
+      recoveryActionType: "wait",
+    };
+  }
+
+  if (errorLower.includes("timeout") || errorLower.includes("408")) {
+    return {
+      recoveryAction: "Retry Later",
+      recoveryMessage: "The request timed out. Try again in a moment.",
+      recoveryActionType: "wait",
+    };
+  }
+
+  return {
+    recoveryAction: "Retry",
+    recoveryMessage: "An unexpected error occurred. Please try again.",
+    recoveryActionType: "retry",
+  };
+}
+
 function logErrorDetails(
   error: unknown,
   entry: AniListMediaEntry,
@@ -547,6 +604,13 @@ export interface SyncReport {
   errors: {
     mediaId: number;
     error: string;
+    recoveryAction?: string; // Suggested action to recover (e.g., "Refresh Token", "Retry")
+    recoveryMessage?: string; // User-friendly message explaining the action
+    recoveryActionType?:
+      | "retry"
+      | "refresh-token"
+      | "check-connection"
+      | "wait";
   }[];
   /** ISO 8601 timestamp string of when the sync was performed */
   timestamp: string;
@@ -1319,7 +1383,17 @@ async function processMediaIdInBatch(
   } else {
     context.progress.failed++;
     if (result.error && context.errors) {
-      context.errors.push({ mediaId: mediaIdNum, error: result.error });
+      const metadata = inferRecoveryMetadata(result.error);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const errorEntry: any = {
+        mediaId: mediaIdNum,
+        error: result.error,
+        recoveryAction: metadata.recoveryAction,
+        recoveryMessage: metadata.recoveryMessage,
+        recoveryActionType: metadata.recoveryActionType,
+      };
+      context.errors.push(errorEntry);
     }
   }
 

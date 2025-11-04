@@ -11,7 +11,8 @@ import {
   SyncReport,
   SyncProgress,
 } from "../api/anilist/sync-service";
-import { AniListMediaEntry } from "../api/anilist/types";
+import { AniListMediaEntry, MediaListStatus } from "../api/anilist/types";
+import { acquireRateLimit } from "../api/matching/rate-limiting/queue-processor";
 import {
   exportSyncErrorLog,
   exportSyncReport,
@@ -24,6 +25,12 @@ import {
   isSyncSnapshotStale,
   recordReadingHistory,
   getSavedMatchResults,
+  addFailedSyncOperation,
+  getFailedOperations,
+  removeFailedOperation,
+  incrementRetryCount,
+  MAX_RETRY_ATTEMPTS,
+  FailedOperation,
   type ReadingHistoryEntry,
 } from "../utils/storage";
 import { captureError, ErrorType } from "../utils/errorHandling";
@@ -31,6 +38,7 @@ import {
   useDebugActions,
   StateInspectorHandle,
 } from "../contexts/DebugContext";
+import { useAuthState } from "./useAuth";
 import { createBackup } from "../utils/backup";
 
 /**
@@ -505,7 +513,7 @@ async function runRegularBatch(
       timestamp: new Date().toISOString(),
     };
   }
-  return await syncMangaBatch(
+  const batchResult = await syncMangaBatch(
     batchEntries,
     tokenArg,
     (progress) => {
@@ -517,17 +525,38 @@ async function runRegularBatch(
     },
     abortSignal,
     uniqueIds,
-    (progress, batchResult) => {
+    (progress, result) => {
       // Batch completion - persist checkpoint with batch result
       // Append batch result to snapshot's report fragment
       appendBatchResultToSnapshot(
         resumeSnapshotRef,
-        batchResult.mediaId,
-        batchResult.success,
-        batchResult.error,
+        result.mediaId,
+        result.success,
+        result.error,
       );
+
+      // Persist failed operations to storage if sync failed
+      if (!result.success && result.error) {
+        const entry = batchEntries.find((e) => e.mediaId === result.mediaId);
+        if (entry) {
+          addFailedSyncOperation({
+            mediaId: entry.mediaId,
+            title: entry.title ?? "(Untitled)",
+            status: entry.status,
+            progress: entry.progress,
+            score: entry.score,
+            private: entry.private,
+            coverImage: null,
+            previousValues: entry.previousValues,
+            syncMetadata: entry.syncMetadata,
+            error: result.error,
+          });
+        }
+      }
     },
   );
+
+  return batchResult;
 }
 
 /**
@@ -736,7 +765,24 @@ async function runIncrementalEntries(
       const overallProgress =
         counters.overallProgress + syncResult.totalEntries;
 
-      if (syncResult.errors.length) errors.push(...syncResult.errors);
+      if (syncResult.errors.length) {
+        errors.push(...syncResult.errors);
+        // Persist failed operations to storage
+        for (const error of syncResult.errors) {
+          addFailedSyncOperation({
+            mediaId: error.mediaId,
+            title: entry.title ?? "(Untitled)",
+            status: entry.status,
+            progress: entry.progress,
+            score: entry.score,
+            private: entry.private,
+            coverImage: null,
+            previousValues: entry.previousValues,
+            syncMetadata: entry.syncMetadata,
+            error: error.error,
+          });
+        }
+      }
 
       const finalized: SyncProgress = {
         ...progressUpdater.getLastProgress(),
@@ -778,6 +824,19 @@ async function runIncrementalEntries(
 
       if (err instanceof Error) {
         errors.push({ mediaId: entry.mediaId, error: err.message });
+        // Persist failed operation to storage
+        addFailedSyncOperation({
+          mediaId: entry.mediaId,
+          title: entry.title ?? "(Untitled)",
+          status: entry.status,
+          progress: entry.progress,
+          score: entry.score,
+          private: entry.private,
+          coverImage: null,
+          previousValues: entry.previousValues,
+          syncMetadata: entry.syncMetadata,
+          error: err.message,
+        });
       }
 
       const failedProgress: SyncProgress = {
@@ -837,6 +896,11 @@ interface SynchronizationActions {
   exportErrors: () => void;
   exportReport: () => void;
   reset: () => void;
+  failedOperations: FailedOperation[];
+  isLoadingFailedOps: boolean;
+  retryFailedOperation: (operationId: string) => Promise<boolean>;
+  retryAllFailedOperations: () => Promise<number>;
+  clearFailedOperation: (operationId: string) => void;
 }
 
 type DebuggableSynchronizationState = Omit<
@@ -898,6 +962,14 @@ export function useSynchronization(): [
     resumeAvailable: false,
     resumeMetadata: null,
   });
+  const [failedOperations, setFailedOperations] = useState<FailedOperation[]>(
+    [],
+  );
+  const [isLoadingFailedOps, setIsLoadingFailedOps] = useState(false);
+
+  // Get auth state for token in retry operations
+  const { authState, isOnline } = useAuthState();
+
   const resumeSnapshotRef = useRef<SyncResumeSnapshot | null>(null);
   const initialEntriesRef = useRef<AniListMediaEntry[]>([]);
   const uniqueMediaIdsRef = useRef<number[]>([]);
@@ -1288,6 +1360,51 @@ export function useSynchronization(): [
     emitSyncSnapshot();
   };
 
+  // Load failed operations on mount
+  useEffect(() => {
+    setIsLoadingFailedOps(true);
+    try {
+      const queue = getFailedOperations();
+      // Filter to only sync operations
+      const syncOps = queue.operations.filter(
+        (op) => op.type === "sync_update" || op.type === "sync_delete",
+      );
+      setFailedOperations(syncOps);
+      console.debug(
+        `[Synchronization] Loaded ${syncOps.length} failed operations`,
+      );
+    } catch (error) {
+      console.error(
+        "[Synchronization] Failed to load failed operations:",
+        error,
+      );
+    } finally {
+      setIsLoadingFailedOps(false);
+    }
+  }, []);
+
+  /**
+   * Helper function to refresh failed operations from storage.
+   * Call after sync operations to pick up newly persisted failures.
+   */
+  const refreshFailedOperations = useCallback(() => {
+    try {
+      const queue = getFailedOperations();
+      const syncOps = queue.operations.filter(
+        (op) => op.type === "sync_update" || op.type === "sync_delete",
+      );
+      setFailedOperations(syncOps);
+      console.debug(
+        `[Synchronization] Refreshed failed operations: ${syncOps.length} total`,
+      );
+    } catch (error) {
+      console.error(
+        "[Synchronization] Failed to refresh failed operations:",
+        error,
+      );
+    }
+  }, []);
+
   useEffect(() => {
     if (hasLoadedSnapshotRef.current) return;
     hasLoadedSnapshotRef.current = true;
@@ -1477,6 +1594,9 @@ export function useSynchronization(): [
           clearResumeSnapshot,
           setState,
         );
+
+        // Refresh failed operations state to reflect any newly persisted failures
+        refreshFailedOperations();
 
         const finalReport = mergeReports(existingReportFragment, syncReport);
 
@@ -1729,6 +1849,199 @@ export function useSynchronization(): [
     emitSyncSnapshot();
   }, [clearResumeSnapshot, emitSyncSnapshot]);
 
+  // Retry a single failed operation
+  const retryFailedOperation = useCallback(
+    async (operationId: string): Promise<boolean> => {
+      try {
+        // Check if online before attempting retry
+        if (!isOnline) {
+          console.warn(
+            "[Synchronization] Cannot retry operation: application is offline",
+          );
+          captureError(
+            ErrorType.NETWORK,
+            "Cannot retry: application is offline",
+            new Error("Offline during retry attempt"),
+            {
+              context: "retryFailedOperation",
+              operationId,
+            },
+          );
+          return false;
+        }
+
+        // Validate token is available
+        if (!authState?.accessToken) {
+          console.error(
+            "[Synchronization] Cannot retry operation: access token is missing or empty",
+          );
+          // Capture error for monitoring
+          captureError(
+            ErrorType.AUTHENTICATION,
+            "Cannot retry: access token unavailable",
+            new Error("Cannot retry: access token unavailable"),
+            {
+              context: "retryFailedOperation",
+              operationId,
+            },
+          );
+          return false;
+        }
+
+        const operation = failedOperations.find((op) => op.id === operationId);
+        if (!operation) {
+          console.warn(
+            `[Synchronization] Failed operation not found: ${operationId}`,
+          );
+          return false;
+        }
+
+        // Check if max retries exceeded
+        if (operation.retryCount >= MAX_RETRY_ATTEMPTS) {
+          console.warn(
+            `[Synchronization] Max retries exceeded for operation: ${operationId}`,
+          );
+          return false;
+        }
+
+        // Extract entry data from payload
+        const payload = operation.payload as Record<string, unknown>;
+
+        // Validate and cast status to MediaListStatus
+        const validStatuses: MediaListStatus[] = [
+          "CURRENT",
+          "PLANNING",
+          "COMPLETED",
+          "DROPPED",
+          "PAUSED",
+          "REPEATING",
+        ];
+        const statusString = (payload.status as string) || "";
+        const status = validStatuses.includes(statusString as MediaListStatus)
+          ? (statusString as MediaListStatus)
+          : "PLANNING";
+
+        const entry: AniListMediaEntry = {
+          mediaId: (payload.mediaId as number) || 0,
+          title: (payload.title as string) ?? "(Untitled)",
+          status,
+          progress: (payload.progress as number) || 0,
+          score: (payload.score as number) || 0,
+          private: (payload.private as boolean) ?? false,
+          previousValues:
+            (payload.previousValues as AniListMediaEntry["previousValues"]) ??
+            null,
+          syncMetadata:
+            (payload.syncMetadata as AniListMediaEntry["syncMetadata"]) ?? null,
+        };
+
+        // Increment retry count in storage
+        incrementRetryCount(operationId);
+
+        // Acquire rate-limit slot to ensure proper spacing
+        await acquireRateLimit();
+
+        // Create single-entry array and call sync logic with token
+        const batchResult = await syncMangaBatch(
+          [entry],
+          authState.accessToken,
+          () => {},
+        );
+
+        if (batchResult.successfulUpdates > 0) {
+          // Success - remove from failed operations
+          removeFailedOperation(operationId);
+          setFailedOperations((prev) =>
+            prev.filter((op) => op.id !== operationId),
+          );
+          console.info(
+            `[Synchronization] Successfully retried operation: ${operationId}`,
+          );
+          return true;
+        } else {
+          // Still failed - update in failed operations
+          console.debug(
+            `[Synchronization] Retry still failed for operation: ${operationId}`,
+          );
+          return false;
+        }
+      } catch (error) {
+        console.error("[Synchronization] Error retrying operation:", error);
+        return false;
+      }
+    },
+    [failedOperations, authState, isOnline],
+  );
+
+  // Retry all failed operations
+  const retryAllFailedOperations = useCallback(async (): Promise<number> => {
+    // Check if online before attempting retry
+    if (!isOnline) {
+      console.warn(
+        "[Synchronization] Cannot retry all operations: application is offline",
+      );
+      captureError(
+        ErrorType.NETWORK,
+        "Cannot retry all: application is offline",
+        new Error("Offline during retry attempt"),
+        {
+          context: "retryAllFailedOperations",
+        },
+      );
+      return 0;
+    }
+
+    // Validate token is available
+    if (!authState?.accessToken) {
+      console.error(
+        "[Synchronization] Cannot retry all operations: access token is missing or empty",
+      );
+      captureError(
+        ErrorType.AUTHENTICATION,
+        "Cannot retry all: access token unavailable",
+        new Error("Cannot retry all: access token unavailable"),
+        {
+          context: "retryAllFailedOperations",
+        },
+      );
+      return 0;
+    }
+
+    const results = {
+      succeeded: 0,
+      failed: 0,
+    };
+
+    for (const operation of failedOperations) {
+      // Skip operations that have already exceeded max retries
+      if (operation.retryCount >= MAX_RETRY_ATTEMPTS) {
+        continue;
+      }
+
+      const success = await retryFailedOperation(operation.id);
+      if (success) {
+        results.succeeded += 1;
+      } else {
+        results.failed += 1;
+      }
+    }
+
+    // Show summary toast
+    if (results.succeeded > 0 || results.failed > 0) {
+      console.info(
+        `[Synchronization] Retry all complete: ${results.succeeded} succeeded, ${results.failed} failed`,
+      );
+    }
+
+    return results.succeeded;
+  }, [failedOperations, retryFailedOperation, isOnline, authState]);
+
+  // Clear a failed operation
+  const clearFailedOperation = useCallback((operationId: string): void => {
+    removeFailedOperation(operationId);
+    setFailedOperations((prev) => prev.filter((op) => op.id !== operationId));
+  }, []);
+
   return [
     state,
     {
@@ -1739,6 +2052,11 @@ export function useSynchronization(): [
       exportErrors,
       exportReport,
       reset,
+      failedOperations,
+      isLoadingFailedOps,
+      retryFailedOperation,
+      retryAllFailedOperations,
+      clearFailedOperation,
     },
   ];
 }

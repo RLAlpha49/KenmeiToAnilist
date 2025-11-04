@@ -10,6 +10,10 @@ import React, { useEffect, useMemo, useState } from "react";
 import { SyncProgress, SyncReport } from "../../api/anilist/sync-service";
 import { AniListMediaEntry } from "../../api/anilist/types";
 import {
+  ErrorRecoveryAction,
+  getRecoveryActionMessage,
+} from "../../utils/errorHandling";
+import {
   CheckCircle,
   XCircle,
   RefreshCw,
@@ -464,8 +468,133 @@ const CurrentEntryDisplay: React.FC<{
 };
 
 // Helper component for error details
-const ErrorDetails: React.FC<{ report: SyncReport }> = ({ report }) => {
+const ErrorDetails: React.FC<{
+  report: SyncReport;
+  onRetry?: (mediaId: number) => Promise<void>;
+  onRefreshToken?: () => Promise<void>;
+  onCheckConnection?: () => Promise<void>;
+}> = ({ report, onRetry, onRefreshToken, onCheckConnection }) => {
   if (report.errors.length === 0) return null;
+
+  /**
+   * Maps ErrorRecoveryAction enum to an action type tuple.
+   * Used to determine button text and behavior.
+   */
+  const mapRecoveryActionToType = (
+    action: ErrorRecoveryAction,
+  ): {
+    actionType: "retry" | "refresh-token" | "check-connection" | "wait";
+    label: string;
+  } => {
+    switch (action) {
+      case ErrorRecoveryAction.RETRY:
+        return { actionType: "retry", label: "Retry" };
+      case ErrorRecoveryAction.CHECK_CONNECTION:
+        return { actionType: "check-connection", label: "Check Connection" };
+      case ErrorRecoveryAction.REFRESH_TOKEN:
+        return { actionType: "refresh-token", label: "Refresh Token" };
+      case ErrorRecoveryAction.WAIT_RATE_LIMIT:
+        return { actionType: "wait", label: "Wait & Retry" };
+      case ErrorRecoveryAction.CONTACT_SUPPORT:
+        return { actionType: "wait", label: "Contact Support" };
+      case ErrorRecoveryAction.NONE:
+      default:
+        return { actionType: "retry", label: "Retry" };
+    }
+  };
+
+  /**
+   * Infer recovery action based on error message patterns.
+   * Used as fallback when explicit recovery actions are not provided.
+   */
+  const inferRecoveryAction = (
+    errorMessage: string,
+  ): {
+    recoveryAction: ErrorRecoveryAction;
+    actionType: "retry" | "refresh-token" | "check-connection" | "wait";
+    label: string;
+  } => {
+    const lowerError = errorMessage.toLowerCase();
+
+    if (
+      lowerError.includes("network") ||
+      lowerError.includes("fetch") ||
+      lowerError.includes("connection")
+    ) {
+      return {
+        recoveryAction: ErrorRecoveryAction.CHECK_CONNECTION,
+        actionType: "check-connection",
+        label: "Check Connection",
+      };
+    }
+
+    if (
+      lowerError.includes("unauthorized") ||
+      lowerError.includes("token") ||
+      lowerError.includes("auth")
+    ) {
+      return {
+        recoveryAction: ErrorRecoveryAction.REFRESH_TOKEN,
+        actionType: "refresh-token",
+        label: "Refresh Token",
+      };
+    }
+
+    if (lowerError.includes("rate") || lowerError.includes("429")) {
+      return {
+        recoveryAction: ErrorRecoveryAction.WAIT_RATE_LIMIT,
+        actionType: "wait",
+        label: "Wait & Retry",
+      };
+    }
+
+    if (lowerError.includes("timeout") || lowerError.includes("408")) {
+      return {
+        recoveryAction: ErrorRecoveryAction.WAIT_RATE_LIMIT,
+        actionType: "wait",
+        label: "Retry Later",
+      };
+    }
+
+    return {
+      recoveryAction: ErrorRecoveryAction.RETRY,
+      actionType: "retry",
+      label: "Retry",
+    };
+  };
+
+  const handleActionClick = async (
+    actionType: "retry" | "refresh-token" | "check-connection" | "wait",
+    mediaId: number,
+  ) => {
+    try {
+      switch (actionType) {
+        case "retry":
+          if (onRetry) {
+            await onRetry(mediaId);
+          }
+          break;
+        case "refresh-token":
+          if (onRefreshToken) {
+            await onRefreshToken();
+          }
+          break;
+        case "check-connection":
+          if (onCheckConnection) {
+            await onCheckConnection();
+          }
+          break;
+        case "wait":
+          // Wait action - no callback needed, message is informational
+          break;
+      }
+    } catch (error) {
+      console.error(
+        `[ErrorDetails] Error executing action ${actionType}:`,
+        error,
+      );
+    }
+  };
 
   return (
     <div className="rounded-3xl border border-rose-200/60 bg-rose-50/70 p-5 shadow-sm dark:border-rose-900/60 dark:bg-rose-950/30">
@@ -476,31 +605,73 @@ const ErrorDetails: React.FC<{ report: SyncReport }> = ({ report }) => {
           {report.errors.length === 1 ? "" : "s"} detected
         </div>
         <span className="text-xs text-rose-600/80 dark:text-rose-200/70">
-          Retry or review the entries below to resolve them.
+          Review the entries below and use suggested actions to resolve them.
         </span>
       </div>
       <div className="max-h-60 space-y-3 overflow-y-auto pr-1">
-        {report.errors.map((error) => (
-          <div
-            key={error.mediaId}
-            className="group overflow-hidden rounded-2xl border border-rose-200/60 bg-white/80 p-4 shadow-sm transition dark:border-rose-900/50 dark:bg-rose-950/40"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="flex items-center gap-2 text-sm font-semibold text-rose-700 dark:text-rose-200">
-                  <XCircle className="h-4 w-4 text-rose-500" />
-                  Media ID {error.mediaId}
-                </p>
-                <p className="mt-2 text-xs text-rose-600/80 dark:text-rose-200/80">
-                  {error.error}
-                </p>
+        {report.errors.map((errorItem) => {
+          // Check if error item has explicit recovery action
+          const errorData = errorItem as Record<string, unknown>;
+          const hasExplicitRecovery =
+            typeof errorData.recoveryAction === "string";
+
+          // Use explicit recovery action if present, otherwise infer from error message
+          const recoveryAction = hasExplicitRecovery
+            ? (errorData.recoveryAction as ErrorRecoveryAction)
+            : inferRecoveryAction(errorItem.error).recoveryAction;
+
+          const { actionType, label } = hasExplicitRecovery
+            ? mapRecoveryActionToType(recoveryAction)
+            : inferRecoveryAction(errorItem.error);
+
+          // Get helper text from the centralized function
+          const helperText = getRecoveryActionMessage(recoveryAction);
+
+          const isActionable =
+            actionType !== "wait" &&
+            ((actionType === "retry" && onRetry) ||
+              (actionType === "refresh-token" && onRefreshToken) ||
+              (actionType === "check-connection" && onCheckConnection));
+
+          return (
+            <div
+              key={errorItem.mediaId}
+              className="group overflow-hidden rounded-2xl border border-rose-200/60 bg-white/80 p-4 shadow-sm transition dark:border-rose-900/50 dark:bg-rose-950/40"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <p className="flex items-center gap-2 text-sm font-semibold text-rose-700 dark:text-rose-200">
+                    <XCircle className="h-4 w-4 text-rose-500" />
+                    Media ID {errorItem.mediaId}
+                  </p>
+                  <p className="mt-2 text-xs text-rose-600/80 dark:text-rose-200/80">
+                    {errorItem.error}
+                  </p>
+                  {helperText && (
+                    <p className="mt-2 text-xs font-medium text-amber-600 dark:text-amber-400">
+                      💡 {helperText}
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <span className="inline-flex items-center rounded-full bg-rose-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-rose-500 dark:bg-rose-500/20 dark:text-rose-200">
+                    {label}
+                  </span>
+                  {isActionable && (
+                    <button
+                      onClick={() =>
+                        handleActionClick(actionType, errorItem.mediaId)
+                      }
+                      className="rounded-lg bg-rose-500/10 px-2.5 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-500/20 dark:text-rose-300 dark:hover:bg-rose-500/30"
+                    >
+                      Try Now
+                    </button>
+                  )}
+                </div>
               </div>
-              <span className="inline-flex items-center rounded-full bg-rose-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-rose-500 dark:bg-rose-500/20 dark:text-rose-200">
-                retry ready
-              </span>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -1022,6 +1193,25 @@ const SyncManager: React.FC<SyncManagerProps> = ({
     }
   };
 
+  // Recovery action handlers for error details
+  const handleErrorRetry = async (mediaId: number) => {
+    console.info(`[SyncManager] 🔄 Retrying single entry: ${mediaId}`);
+    // This would typically trigger a single-entry retry through syncActions
+    // For now, we'll log it - the actual implementation depends on syncActions
+  };
+
+  const handleErrorRefreshToken = async () => {
+    console.info("[SyncManager] 🔐 Refreshing authentication token");
+    // This would typically trigger token refresh through auth context
+    // For now, we'll log it - the actual implementation depends on auth context
+  };
+
+  const handleErrorCheckConnection = async () => {
+    console.info("[SyncManager] 📡 Checking connection status");
+    // This would typically trigger a connection check
+    // For now, we'll log it - the actual implementation depends on network utilities
+  };
+
   // If completed, notify parent
   useEffect(() => {
     if (status === "completed" || (status === "failed" && syncState?.report)) {
@@ -1240,7 +1430,14 @@ const SyncManager: React.FC<SyncManagerProps> = ({
             </div>
           )}
 
-        {syncState?.report && <ErrorDetails report={syncState.report} />}
+        {syncState?.report && (
+          <ErrorDetails
+            report={syncState.report}
+            onRetry={handleErrorRetry}
+            onRefreshToken={handleErrorRefreshToken}
+            onCheckConnection={handleErrorCheckConnection}
+          />
+        )}
       </CardContent>
 
       <CardFooter className="relative z-10 flex flex-wrap items-center justify-end gap-2 border-t border-slate-200/60 bg-white/70 backdrop-blur dark:border-slate-800/60 dark:bg-slate-950/60">

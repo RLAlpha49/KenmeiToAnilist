@@ -25,6 +25,7 @@ export interface AniListRequest {
   variables?: Record<string, unknown>;
   token?: string;
   cacheControl?: CacheControl;
+  noRetry?: boolean;
 }
 
 /**

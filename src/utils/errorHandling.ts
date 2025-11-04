@@ -36,6 +36,20 @@ export enum ErrorType {
 }
 
 /**
+ * Enumerates the recovery actions available for different error types.
+ *
+ * @source
+ */
+export enum ErrorRecoveryAction {
+  RETRY = "retry",
+  CHECK_CONNECTION = "check_connection",
+  REFRESH_TOKEN = "refresh_token",
+  WAIT_RATE_LIMIT = "wait_rate_limit",
+  CONTACT_SUPPORT = "contact_support",
+  NONE = "none",
+}
+
+/**
  * Structure for standardized application errors.
  *
  * @source
@@ -45,6 +59,8 @@ export interface AppError {
   message: string;
   originalError?: unknown;
   code?: string;
+  recoveryAction?: ErrorRecoveryAction;
+  recoveryMessage?: string;
 }
 
 /**
@@ -57,6 +73,8 @@ export interface AppError {
  * @param message - The error message.
  * @param originalError - The original error object, if any.
  * @param code - An optional error code for categorization.
+ * @param recoveryAction - An optional recovery action hint for the UI.
+ * @param recoveryMessage - An optional user-friendly recovery instruction message.
  * @returns The constructed AppError object.
  * @source
  */
@@ -65,6 +83,8 @@ export function createError(
   message: string,
   originalError?: unknown,
   code?: string,
+  recoveryAction?: ErrorRecoveryAction,
+  recoveryMessage?: string,
 ): AppError {
   console.debug(
     "[ErrorHandling] 🔍 Creating error: " +
@@ -79,6 +99,8 @@ export function createError(
     message,
     originalError,
     code,
+    recoveryAction,
+    recoveryMessage,
   };
 }
 
@@ -105,6 +127,8 @@ export function handleNetworkError(error: unknown): AppError {
       "Unable to connect to the server. Please check your internet connection.",
       error,
       "NETWORK_UNAVAILABLE",
+      ErrorRecoveryAction.CHECK_CONNECTION,
+      "Please check your internet connection and try again.",
     );
   }
 
@@ -126,6 +150,8 @@ export function handleNetworkError(error: unknown): AppError {
         "Authentication failed. Please log in again.",
         error,
         "AUTH_FAILED",
+        ErrorRecoveryAction.REFRESH_TOKEN,
+        "Your session has expired. Please log in again.",
       );
     }
 
@@ -135,15 +161,19 @@ export function handleNetworkError(error: unknown): AppError {
         "The requested resource was not found.",
         error,
         "NOT_FOUND",
+        ErrorRecoveryAction.NONE,
+        "The requested resource was not found.",
       );
     }
 
     if (status >= 500) {
       return createError(
         ErrorType.SERVER,
-        "The server encountered an error. Please try again later.",
+        "The server encountered an error. Please try again in a few moments.",
         error,
         "SERVER_ERROR",
+        ErrorRecoveryAction.RETRY,
+        "The server encountered an error. Please try again in a few moments.",
       );
     }
 
@@ -157,6 +187,8 @@ export function handleNetworkError(error: unknown): AppError {
       "The request timed out. Please try again.",
       error,
       "TIMEOUT",
+      ErrorRecoveryAction.RETRY,
+      "The request timed out. Please try again.",
     );
   }
 
@@ -167,6 +199,31 @@ export function handleNetworkError(error: unknown): AppError {
     error,
     "UNKNOWN_ERROR",
   );
+}
+
+/**
+ * Gets a user-friendly message for a recovery action.
+ *
+ * @param action - The recovery action to get a message for.
+ * @returns A user-friendly message describing what the user should do.
+ * @source
+ */
+export function getRecoveryActionMessage(action: ErrorRecoveryAction): string {
+  switch (action) {
+    case ErrorRecoveryAction.RETRY:
+      return "Tap 'Retry' to try this operation again";
+    case ErrorRecoveryAction.CHECK_CONNECTION:
+      return "Check your internet connection and try again";
+    case ErrorRecoveryAction.REFRESH_TOKEN:
+      return "Your session has expired. Please log in again.";
+    case ErrorRecoveryAction.WAIT_RATE_LIMIT:
+      return "Too many requests. Please wait a moment and try again.";
+    case ErrorRecoveryAction.CONTACT_SUPPORT:
+      return "Please contact support for assistance.";
+    case ErrorRecoveryAction.NONE:
+    default:
+      return "";
+  }
 }
 
 /**
@@ -271,6 +328,8 @@ export async function safeAsync<T>(
  * @param originalError - The original error object.
  * @param context - Optional metadata to include with the error (user info, breadcrumbs, etc.).
  * @param code - Optional error code for categorization.
+ * @param recoveryAction - Optional recovery action hint for the UI.
+ * @param recoveryMessage - Optional user-friendly recovery instruction message.
  * @returns The constructed AppError object.
  * @source
  */
@@ -280,8 +339,17 @@ export function captureError(
   originalError: unknown,
   context?: Record<string, unknown>,
   code?: string,
+  recoveryAction?: ErrorRecoveryAction,
+  recoveryMessage?: string,
 ): AppError {
-  const appError = createError(type, message, originalError, code);
+  const appError = createError(
+    type,
+    message,
+    originalError,
+    code,
+    recoveryAction,
+    recoveryMessage,
+  );
 
   // Only capture to Sentry in production or when SENTRY_DSN is configured
   if (
@@ -297,6 +365,7 @@ export function captureError(
           tags: {
             errorType: type,
             errorCode: code || "UNKNOWN",
+            recoveryAction: recoveryAction || "none",
           },
           contexts: context
             ? {

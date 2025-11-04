@@ -21,6 +21,8 @@ import {
 import { debounce } from "@/utils/debounce";
 import { withGroupAsync } from "@/utils/logging";
 import { storage, STORAGE_KEYS } from "@/utils/storage";
+import { calculateBackoff } from "@/utils/retry";
+import { isTransientError as checkIsTransientError } from "@/utils/network";
 
 /**
  * HTTP error with status information.
@@ -210,12 +212,17 @@ function buildRequestOptions(
 
 /**
  * Handles GraphQL requests via Electron IPC to the main process.
+ *
+ * The IPC call automatically includes retry logic (up to 5 attempts for transient errors).
+ * If we reach this point and the request fails, it means the IPC layer has already exhausted all retry attempts.
+ *
  * @param requestId - Unique identifier for tracking this request in logs.
  * @param query - The GraphQL query or mutation string.
  * @param variables - Optional variables for the query.
  * @param token - Optional authentication token.
  * @param bypassCache - Optional flag to bypass the main process cache.
  * @param abortSignal - Optional signal to abort the request.
+ * @param noRetry - If true, disable internal retry logic.
  * @returns Promise resolving to the API response.
  * @source
  */
@@ -226,6 +233,7 @@ async function handleElectronRequest<T>(
   token?: string,
   bypassCache?: boolean,
   abortSignal?: AbortSignal,
+  noRetry?: boolean,
 ): Promise<AniListResponse<T>> {
   const startTime = performance.now();
   let succeeded = false;
@@ -236,6 +244,7 @@ async function handleElectronRequest<T>(
       variables,
       token,
       cacheControl: { bypassCache },
+      noRetry,
     });
 
     // Check for abort before returning the response
@@ -375,90 +384,203 @@ async function processHttpError(
  * @returns Promise resolving to the API response.
  * @source
  */
+
+/**
+ * Extract operation endpoint name from GraphQL query for telemetry.
+ */
+function extractOperationEndpoint(options: RequestInit): string {
+  let endpoint = "unknown";
+  if (options.body && typeof options.body === "string") {
+    try {
+      const body = JSON.parse(options.body);
+      const query = body.query || "";
+      const operationRegex = /(?:query|mutation)\s+(\w+)/i;
+      const operationMatch = operationRegex.exec(query);
+      if (operationMatch?.[1]) {
+        endpoint = operationMatch[1];
+      } else {
+        const fieldRegex = /(?:query|mutation)\s*(?:\([^)]*\))?\s*\{\s*(\w+)/i;
+        const fieldMatch = fieldRegex.exec(query);
+        if (fieldMatch?.[1]) {
+          const operationMap: Record<string, string> = {
+            Viewer: "GetViewer",
+            MediaListCollection: "GetUserMangaList",
+            Page: "SearchManga",
+            Media: "GetMangaById",
+            SaveMediaListEntry: "UpdateMangaEntry",
+            DeleteMediaListEntry: "DeleteMangaEntry",
+          };
+          endpoint = operationMap[fieldMatch[1]] || fieldMatch[1];
+        }
+      }
+    } catch {
+      // Silently fail
+    }
+  }
+  return endpoint;
+}
+
+/**
+ * Get retry delay from Retry-After header if present, otherwise returns null.
+ */
+function getRetryAfterDelay(response: Response): number | null {
+  const retryAfter = response.headers.get("Retry-After");
+  if (!retryAfter) {
+    return null;
+  }
+  const seconds = Number.parseInt(retryAfter, 10);
+  if (!Number.isNaN(seconds)) {
+    return seconds * 1000;
+  }
+  const retryDate = new Date(retryAfter);
+  if (!Number.isNaN(retryDate.getTime())) {
+    return Math.max(0, retryDate.getTime() - Date.now());
+  }
+  return null;
+}
+
+/**
+ * Handle a successful browser response and dispatch telemetry event.
+ */
+function handleSuccessResponse<T>(
+  requestId: string,
+  jsonResponse: AniListResponse<T>,
+  options: RequestInit,
+  duration: number,
+): AniListResponse<T> {
+  // Check for GraphQL errors
+  if (jsonResponse.errors) {
+    console.error(
+      `[AniListClient] ⚠️ [${requestId}] GraphQL Errors:`,
+      jsonResponse.errors,
+    );
+  }
+
+  // Dispatch completion event
+  if (typeof globalThis.dispatchEvent === "function") {
+    const endpoint = extractOperationEndpoint(options);
+    globalThis.dispatchEvent(
+      new CustomEvent("anilist:request:completed", {
+        detail: {
+          duration,
+          succeeded: true,
+          requestId,
+          provider: ApiProvider.ANILIST,
+          endpoint,
+        },
+      }),
+    );
+  }
+
+  return jsonResponse;
+}
+
+/**
+ * Handle a failed browser response and dispatch telemetry event.
+ */
+function handleFailureResponse(
+  requestId: string,
+  options: RequestInit,
+  duration: number,
+  error: unknown,
+): never {
+  console.error(
+    `[AniListClient] ❌ [${requestId}] Error during AniList API request:`,
+    error,
+  );
+
+  if (typeof globalThis.dispatchEvent === "function") {
+    globalThis.dispatchEvent(
+      new CustomEvent("anilist:request:completed", {
+        detail: {
+          duration,
+          succeeded: false,
+          requestId,
+          provider: ApiProvider.ANILIST,
+          endpoint: extractOperationEndpoint(options),
+        },
+      }),
+    );
+  }
+
+  throw error;
+}
+
 async function handleBrowserRequest<T>(
   requestId: string,
   options: RequestInit,
 ): Promise<AniListResponse<T>> {
-  const startTime = performance.now();
-  let succeeded = false;
-  try {
-    const response = await fetch("https://graphql.anilist.co", options);
+  const MAX_RETRIES = 5;
 
-    if (!response.ok) {
-      await processHttpError(requestId, response);
-    }
+  let lastError: Error | null = null;
 
-    const jsonResponse = await response.json();
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const startTime = performance.now();
 
-    // Check for GraphQL errors
-    if (jsonResponse.errors) {
-      console.error(
-        `[AniListClient] ⚠️ [${requestId}] GraphQL Errors:`,
-        jsonResponse.errors,
-      );
-    }
+    try {
+      const response = await fetch("https://graphql.anilist.co", options);
 
-    succeeded = true;
-    return jsonResponse as AniListResponse<T>;
-  } catch (error) {
-    console.error(
-      `[AniListClient] ❌ [${requestId}] Error during AniList API request:`,
-      error,
-    );
-    throw error;
-  } finally {
-    const duration = performance.now() - startTime;
-    if (typeof globalThis.dispatchEvent === "function") {
-      // Extract operation name from request body for better diagnostics
-      let endpoint = "unknown";
-      if (options.body && typeof options.body === "string") {
-        try {
-          const body = JSON.parse(options.body);
-          const query = body.query || "";
+      // Handle transient errors with retry
+      if (
+        !response.ok &&
+        checkIsTransientError(response) &&
+        attempt < MAX_RETRIES
+      ) {
+        const retryAfterDelay = getRetryAfterDelay(response);
+        const delayMs = retryAfterDelay ?? calculateBackoff(attempt);
 
-          // First try to extract named operation (e.g., "query BatchSearchManga { ... }")
-          const operationRegex = /(?:query|mutation)\s+(\w+)/i;
-          const operationMatch = operationRegex.exec(query);
-          if (operationMatch?.[1]) {
-            endpoint = operationMatch[1];
-          } else {
-            // Fallback: extract first root field after the opening brace
-            // Handles queries like: query ($vars) { Page(...) } or query { Viewer {...} }
-            const fieldRegex =
-              /(?:query|mutation)\s*(?:\([^)]*\))?\s*\{\s*(\w+)/i;
-            const fieldMatch = fieldRegex.exec(query);
-            if (fieldMatch?.[1]) {
-              const rootField = fieldMatch[1];
-              // Map root fields to meaningful operation names
-              const operationMap: Record<string, string> = {
-                Viewer: "GetViewer",
-                MediaListCollection: "GetUserMangaList",
-                Page: "SearchManga", // Could be search or batch get
-                Media: "GetMangaById",
-                SaveMediaListEntry: "UpdateMangaEntry",
-                DeleteMediaListEntry: "DeleteMangaEntry",
-              };
-              endpoint = operationMap[rootField] || rootField;
-            }
-          }
-        } catch {
-          // Silently fail, use default endpoint
+        // Emit event for rate-limit coordination if 429
+        if (
+          response.status === 429 &&
+          typeof globalThis.dispatchEvent === "function"
+        ) {
+          globalThis.dispatchEvent(
+            new CustomEvent("ratelimit:retry-after", {
+              detail: {
+                retryAfterMs: delayMs,
+                retryAfterSeconds: Math.ceil(delayMs / 1000),
+              },
+            }),
+          );
         }
+
+        console.warn(
+          `[AniListClient] ⚠️ [${requestId}] Transient error (HTTP ${response.status}), retrying in ${delayMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})`,
+        );
+
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        continue;
       }
 
-      globalThis.dispatchEvent(
-        new CustomEvent("anilist:request:completed", {
-          detail: {
-            duration,
-            succeeded,
-            requestId,
-            provider: ApiProvider.ANILIST,
-            endpoint,
-          },
-        }),
-      );
+      // Unrecoverable HTTP error
+      if (!response.ok) {
+        await processHttpError(requestId, response);
+      }
+
+      const jsonResponse = await response.json();
+      const duration = performance.now() - startTime;
+      return handleSuccessResponse(requestId, jsonResponse, options, duration);
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      const duration = performance.now() - startTime;
+
+      // Retry transient errors unless last attempt
+      if (checkIsTransientError(error) && attempt < MAX_RETRIES) {
+        const delayMs = calculateBackoff(attempt);
+        console.warn(
+          `[AniListClient] ⚠️ [${requestId}] Network error, retrying in ${delayMs}ms (attempt ${attempt + 1}/${MAX_RETRIES}):`,
+          lastError.message,
+        );
+
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        continue;
+      }
+
+      handleFailureResponse(requestId, options, duration, error);
     }
   }
+
+  throw lastError || new Error("[AniListClient] Unknown error during request");
 }
 
 /**
@@ -466,12 +588,17 @@ async function handleBrowserRequest<T>(
  *
  * Supports dynamic mutations where variable declarations may change based on the variables object passed. Handles both browser and Electron environments.
  *
+ * @remarks
+ * Retry logic is handled automatically by the IPC layer for Electron environments. Transient errors (network failures, 5xx responses, rate limits) are automatically retried with exponential backoff. Maximum 5 retry attempts with jitter to prevent thundering herd. Rate limits are respected via retry-after headers.
+ *
  * @param query - The GraphQL query or mutation string.
  * @param variables - Optional variables for the query.
  * @param token - Optional authentication token.
  * @param abortSignal - Optional abort signal to cancel the request.
  * @param bypassCache - Optional flag to bypass cache.
+ * @param noRetry - If true, disable internal retry logic (external retry layer will handle retries).
  * @returns A promise resolving to an AniListResponse object.
+ * @see api-listeners.ts for retry implementation
  * @source
  */
 export async function request<T>(
@@ -480,6 +607,7 @@ export async function request<T>(
   token?: string,
   abortSignal?: AbortSignal,
   bypassCache?: boolean,
+  noRetry?: boolean,
 ): Promise<AniListResponse<T>> {
   // Generate a unique request ID for tracking this request in logs
   const requestId = Math.random().toString(36).substring(2, 8);
@@ -496,6 +624,7 @@ export async function request<T>(
       token,
       bypassCache,
       abortSignal,
+      noRetry,
     );
   } else {
     const options = buildRequestOptions(query, variables, token, abortSignal);
@@ -603,6 +732,7 @@ interface SearchQueryOptions {
   bypassCache?: boolean;
   page?: number;
   perPage?: number;
+  noRetry?: boolean;
 }
 
 /**
@@ -625,6 +755,7 @@ async function executeSearchQuery(
     bypassCache = false,
     page = 1,
     perPage = 50,
+    noRetry = false,
   } = options;
   // Check cache first
   if (!bypassCache && isCacheValid(searchCache, cacheKey)) {
@@ -643,7 +774,7 @@ async function executeSearchQuery(
     const response = await request<{
       data?: { Page: SearchResult<AniListManga>["Page"] };
       Page?: SearchResult<AniListManga>["Page"];
-    }>(query, variables, token, undefined, bypassCache);
+    }>(query, variables, token, undefined, bypassCache, noRetry);
 
     console.debug(`[AniListClient] 🔍 ${searchType} response:`, response);
 
@@ -744,6 +875,7 @@ async function executeSearchQuery(
  * @param perPage - Results per page.
  * @param token - Optional access token.
  * @param bypassCache - Optional parameter to bypass cache.
+ * @param noRetry - If true, disable internal retry logic.
  * @returns Promise resolving to search results.
  * @source
  */
@@ -753,6 +885,7 @@ export async function searchManga(
   perPage: number = 50,
   token?: string,
   bypassCache?: boolean,
+  noRetry?: boolean,
 ): Promise<SearchResult<AniListManga>> {
   const cacheKey = generateCacheKey(search, page, perPage);
   const variables = { search, page, perPage };
@@ -767,6 +900,7 @@ export async function searchManga(
     bypassCache,
     page,
     perPage,
+    noRetry,
   });
 }
 
@@ -774,7 +908,7 @@ export async function searchManga(
  * Batch search for multiple manga titles in a single GraphQL request.
  *
  * @param searches - Array of search queries with metadata.
- * @param options - Optional configuration including auth token, page size, and abort signal.
+ * @param options - Optional configuration including auth token, page size, abort signal, and noRetry flag.
  * @returns Promise resolving to map of search results keyed by alias.
  * @source
  */
@@ -784,6 +918,7 @@ export async function batchSearchManga(
     token?: string;
     perPage?: number;
     abortSignal?: AbortSignal;
+    noRetry?: boolean;
   } = {},
 ): Promise<
   Map<
@@ -802,7 +937,7 @@ export async function batchSearchManga(
         return new Map();
       }
 
-      const { token, perPage = 10, abortSignal } = options;
+      const { token, perPage = 10, abortSignal, noRetry } = options;
 
       console.info(
         `[AniListClient] 🚀 Batch searching ${searches.length} manga titles`,
@@ -893,6 +1028,7 @@ ${queryParts.join("\n")}
           token,
           abortSignal,
           true, // Bypass cache for batch requests
+          noRetry,
         );
 
         console.debug(`[AniListClient] 🔍 Batch search response:`, response);
@@ -980,6 +1116,7 @@ ${queryParts.join("\n")}
  * @param perPage - Results per page.
  * @param token - Optional access token.
  * @param bypassCache - Optional parameter to bypass cache.
+ * @param noRetry - If true, disable internal retry logic.
  * @returns Promise resolving to search results.
  * @source
  */
@@ -989,6 +1126,7 @@ export async function advancedSearchManga(
   perPage: number = 50,
   token?: string,
   bypassCache?: boolean,
+  noRetry?: boolean,
 ): Promise<SearchResult<AniListManga>> {
   const cacheKey = generateCacheKey(search, page, perPage);
   const variables = {
@@ -1007,6 +1145,7 @@ export async function advancedSearchManga(
     bypassCache,
     page,
     perPage,
+    noRetry,
   });
 }
 
@@ -1053,6 +1192,7 @@ export function clearSearchCache(searchQuery?: string): void {
  * @param ids - Array of AniList manga IDs.
  * @param token - Optional access token.
  * @param abortSignal - Optional abort signal to cancel the request.
+ * @param noRetry - If true, disable internal retry logic.
  * @returns Promise resolving to an array of AniListManga objects.
  * @source
  */
@@ -1060,6 +1200,7 @@ export async function getMangaByIds(
   ids: number[],
   token?: string,
   abortSignal?: AbortSignal,
+  noRetry?: boolean,
 ): Promise<AniListManga[]> {
   return withGroupAsync(
     `[AniListClient] Get Manga (${ids.length} IDs)`,
@@ -1073,7 +1214,7 @@ export async function getMangaByIds(
         const response = await request<{
           data?: { Page: { media: AniListManga[] } };
           Page?: { media: AniListManga[] };
-        }>(GET_MANGA_BY_IDS, { ids }, token, abortSignal);
+        }>(GET_MANGA_BY_IDS, { ids }, token, abortSignal, undefined, noRetry);
 
         // Validate response structure
         if (!response?.data) {
@@ -1193,12 +1334,14 @@ function checkRateLimitInMessage(errorObj: { message?: string }): Error | null {
  *
  * @param token - The user's access token.
  * @param abortSignal - Optional AbortSignal to cancel the request.
+ * @param noRetry - If true, disable internal retry logic.
  * @returns The user's manga list organized by status.
  * @source
  */
 export async function getUserMangaList(
   token: string,
   abortSignal?: AbortSignal,
+  noRetry?: boolean,
 ): Promise<UserMediaList> {
   return withGroupAsync(`[AniListClient] Get User Manga List`, async () => {
     if (!token) {
@@ -1218,7 +1361,12 @@ export async function getUserMangaList(
       }
 
       // Fetch all manga lists using multiple chunks if needed
-      return await fetchCompleteUserMediaList(viewerId, token, abortSignal);
+      return await fetchCompleteUserMediaList(
+        viewerId,
+        token,
+        abortSignal,
+        noRetry,
+      );
     } catch (error: unknown) {
       console.error(
         "[AniListClient] ❌ Error fetching user manga list:",
@@ -1484,6 +1632,7 @@ async function fetchAndProcessChunk(
   token: string,
   abortSignal: AbortSignal | undefined,
   mediaMap: UserMediaList,
+  noRetry?: boolean,
 ): Promise<number> {
   console.debug(
     `[AniListClient] 📥 Fetching chunk ${currentChunk} (${perChunk} entries per chunk)...`,
@@ -1494,6 +1643,8 @@ async function fetchAndProcessChunk(
     { userId, chunk: currentChunk, perChunk },
     token,
     abortSignal,
+    undefined,
+    noRetry,
   );
 
   // Extract media list collection, handling potential nested structure
@@ -1532,6 +1683,7 @@ async function fetchCompleteUserMediaList(
   userId: number,
   token: string,
   abortSignal?: AbortSignal,
+  noRetry?: boolean,
 ): Promise<UserMediaList> {
   return withGroupAsync(
     `[AniListClient] Fetch Complete User Media List`,
@@ -1553,6 +1705,7 @@ async function fetchCompleteUserMediaList(
               token,
               abortSignal,
               mediaMap,
+              noRetry,
             );
 
             totalEntriesProcessed += chunkEntryCount;

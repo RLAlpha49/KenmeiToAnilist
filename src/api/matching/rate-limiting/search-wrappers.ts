@@ -12,7 +12,6 @@ import type { AniListManga, SearchResult } from "@/api/anilist/types";
 import { searchManga, advancedSearchManga } from "@/api/anilist/client";
 import { waitWhileManuallyPaused } from "./manual-pause";
 import { acquireRateLimit } from "./queue-processor";
-import { sleep } from "./utils";
 
 /**
  * Options for search rate limiting.
@@ -27,8 +26,6 @@ export interface SearchRateLimitOptions {
   token?: string;
   /** Whether to acquire a rate limit slot before searching. */
   acquireLimit?: boolean;
-  /** Current retry attempt count (used internally). */
-  retryCount?: number;
   /** Whether to bypass the search cache. */
   bypassCache?: boolean;
 }
@@ -36,18 +33,19 @@ export interface SearchRateLimitOptions {
 /**
  * Performs a search with rate limiting and automatic retry logic.
  *
- * Acquires a rate limit slot, executes the search, and retries up to 3 times on failure
- * with exponential backoff. Respects manual pause states.
+ * Acquires a rate limit slot and executes the search. Transient errors are
+ * re-queued via the rate limit processor's retry mechanism. The processor drives
+ * all retries with exponential backoff, ensuring consistent spacing and no duplicate
+ * backoff sleeps.
  *
  * @param query - Search query string.
  * @param page - Page number for pagination (default: 1).
  * @param perPage - Results per page (default: 50).
  * @param token - Optional authentication token.
  * @param acquireLimit - Whether to acquire rate limit slot (default: true).
- * @param retryCount - Current retry attempt (default: 0).
  * @param bypassCache - Whether to bypass cache (default: false).
  * @returns Promise resolving to search results.
- * @throws Propagates search errors after exhausting retries.
+ * @throws Propagates search errors after exhausting retries via the queue processor.
  * @source
  */
 export async function searchWithRateLimit(
@@ -56,7 +54,6 @@ export async function searchWithRateLimit(
   perPage: number = 50,
   token?: string,
   acquireLimit: boolean = true,
-  retryCount: number = 0,
   bypassCache: boolean = false,
 ): Promise<SearchResult<AniListManga>> {
   await waitWhileManuallyPaused();
@@ -66,45 +63,22 @@ export async function searchWithRateLimit(
     await acquireRateLimit();
   }
 
-  try {
-    // Call the AniList client search function - this will handle caching in the client
-    return await searchManga(query, page, perPage, token, bypassCache);
-  } catch (error: unknown) {
-    // Retry logic for transient errors
-    if (retryCount < 3) {
-      console.warn(
-        `[MangaSearchService] Search error, retrying (${retryCount + 1}/3): ${query}`,
-      );
-      await sleep(1000 * (retryCount + 1)); // Exponential backoff
-
-      // Retry with incremented retry count
-      return searchWithRateLimit(
-        query,
-        page,
-        perPage,
-        token,
-        true,
-        retryCount + 1,
-        bypassCache,
-      );
-    }
-
-    // After all retries, propagate the error
-    throw error;
-  }
+  // Call the AniList client search function - this will handle caching in the client
+  return await searchManga(query, page, perPage, token, bypassCache);
 }
 
 /**
  * Performs an advanced search with rate limiting and automatic retry logic.
  *
- * Similar to searchWithRateLimit but accepts flexible options. Acquires a rate limit slot,
- * executes the search, and retries up to 3 times on failure with exponential backoff.
- * Respects manual pause states.
+ * Similar to searchWithRateLimit but accepts flexible options. Acquires a rate limit slot
+ * and executes the search. Transient errors are re-queued via the rate limit processor's retry
+ * mechanism. The processor drives all retries with exponential backoff, ensuring consistent
+ * spacing and no duplicate backoff sleeps.
  *
  * @param query - Search query string.
  * @param options - Additional search options including pagination and caching settings.
  * @returns Promise resolving to search results.
- * @throws Propagates search errors after exhausting retries.
+ * @throws Propagates search errors after exhausting retries via the queue processor.
  * @source
  */
 export async function advancedSearchWithRateLimit(
@@ -118,7 +92,6 @@ export async function advancedSearchWithRateLimit(
     perPage = 50,
     token,
     acquireLimit = true,
-    retryCount = 0,
     bypassCache = false,
   } = options;
 
@@ -127,27 +100,6 @@ export async function advancedSearchWithRateLimit(
     await acquireRateLimit();
   }
 
-  try {
-    // Call the AniList client search function - this will handle caching in the client
-    return await advancedSearchManga(query, page, perPage, token, bypassCache);
-  } catch (error: unknown) {
-    // Retry logic for transient errors
-    if (retryCount < 3) {
-      console.warn(
-        `[MangaSearchService] Advanced search error, retrying (${retryCount + 1}/3): ${query}`,
-      );
-      await sleep(1000 * (retryCount + 1)); // Exponential backoff
-      await waitWhileManuallyPaused();
-
-      // Retry with incremented retry count
-      return advancedSearchWithRateLimit(query, {
-        ...options,
-        acquireLimit: true,
-        retryCount: retryCount + 1,
-      });
-    }
-
-    // After all retries, propagate the error
-    throw error;
-  }
+  // Call the AniList client search function - this will handle caching in the client
+  return await advancedSearchManga(query, page, perPage, token, bypassCache);
 }

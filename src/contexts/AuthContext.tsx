@@ -21,10 +21,13 @@ import {
   ViewerResponse,
   AuthStateContextValue,
   AuthActionsContextValue,
+  OfflineQueueTask,
 } from "../types/auth";
 import { AuthActionsContext, AuthStateContext } from "./AuthContextDefinition";
 import { DEFAULT_ANILIST_CONFIG } from "../config/anilist";
 import { useDebugActions, StateInspectorHandle } from "./DebugContext";
+import { request } from "../api/anilist/client";
+import { GET_VIEWER } from "../api/anilist/queries";
 
 /**
  * Props for the AuthProvider component.
@@ -46,6 +49,8 @@ interface AuthDebugSnapshot {
   statusMessage: string | null;
   isBrowserAuthFlow: boolean;
   customCredentials: APICredentials | null;
+  isOnline: boolean;
+  wasOffline: boolean;
 }
 
 /**
@@ -86,6 +91,26 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
   const [customCredentials, setCustomCredentials] =
     useState<APICredentials | null>(null);
   const [isBrowserAuthFlow, setIsBrowserAuthFlow] = useState(false);
+  const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
+  const [wasOffline, setWasOffline] = useState<boolean>(false);
+  /**
+   * Offline request queue - holds requests made while offline to be replayed when connection restores.
+   * Current behavior: Queue is volatile and lost on app restart (stored in React state only).
+   *
+   * FUTURE OPTIMIZATION: For critical use cases, consider persisting this queue to storage:
+   * - Save to storage when tasks are added to the queue
+   * - Restore from storage on app startup
+   * - Clear from storage when tasks are successfully drained
+   * - This would allow recovery of pending requests across app restarts
+   *
+   * Trade-offs:
+   * - Persistence adds I/O overhead and increases storage usage
+   * - Volatility (current behavior) is simpler and suitable for most cases
+   * - Users can manually retry failed operations via "Retry" button if app crashes
+   *
+   * See: drainOfflineQueue() and queue addition logic in IPC listeners
+   */
+  const [offlineQueue, setOfflineQueue] = useState<OfflineQueueTask[]>([]);
   // Track a monotonic auth attempt id to prevent races (stale responses)
   const authAttemptRef = useRef(0);
   // Lock credential source during an active OAuth flow to avoid mismatches
@@ -102,6 +127,8 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     statusMessage,
     isBrowserAuthFlow,
     customCredentials,
+    isOnline,
+    wasOffline,
   }));
   getAuthSnapshotRef.current = () => ({
     authState,
@@ -110,6 +137,8 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     statusMessage,
     isBrowserAuthFlow,
     customCredentials,
+    isOnline,
+    wasOffline,
   });
 
   const applyAuthDebugSnapshot = useCallback(
@@ -120,6 +149,8 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
       setStatusMessage(snapshot.statusMessage);
       setIsBrowserAuthFlow(snapshot.isBrowserAuthFlow);
       setCustomCredentials(snapshot.customCredentials);
+      setIsOnline(snapshot.isOnline);
+      setWasOffline(snapshot.wasOffline);
       authSnapshotRef.current = snapshot;
     },
     [
@@ -129,6 +160,8 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
       setStatusMessage,
       setIsBrowserAuthFlow,
       setCustomCredentials,
+      setIsOnline,
+      setWasOffline,
     ],
   );
 
@@ -408,6 +441,33 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     return unsubscribe;
   }, [authState.credentialSource]);
 
+  // Set up network status monitoring
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      // Dispatch custom event for other components to react to
+      globalThis.dispatchEvent(new Event("app:online"));
+      // Show toast notification
+      toast.success("Connection restored");
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      setWasOffline(true);
+      // Dispatch custom event for other components to react to
+      globalThis.dispatchEvent(new Event("app:offline"));
+    };
+
+    globalThis.addEventListener("online", handleOnline);
+    globalThis.addEventListener("offline", handleOffline);
+
+    // Clean up event listeners on unmount
+    return () => {
+      globalThis.removeEventListener("online", handleOnline);
+      globalThis.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
   // Set up the status message listener
   useEffect(() => {
     // Only set up the listener if globalThis.electronAuth is available
@@ -543,6 +603,13 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
 
   const refreshToken = useCallback(async () => {
     try {
+      // Check if online before attempting to refresh token
+      if (!isOnline) {
+        throw new Error(
+          "Cannot refresh token while offline. Please check your internet connection.",
+        );
+      }
+
       // Add breadcrumb for token refresh
       Sentry.addBreadcrumb({
         category: "auth",
@@ -621,6 +688,13 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
   const login = useCallback(
     async (credentials: APICredentials) => {
       try {
+        // Check if online before attempting to authenticate
+        if (!isOnline) {
+          throw new Error(
+            "Cannot authenticate while offline. Please check your internet connection.",
+          );
+        }
+
         // Add breadcrumb for login initiation
         Sentry.addBreadcrumb({
           category: "auth",
@@ -872,8 +946,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     (clientId: string, clientSecret: string, redirectUri: string) => {
       // Only update if values have actually changed
       if (
-        !customCredentials ||
-        customCredentials.clientId !== clientId ||
+        customCredentials?.clientId !== clientId ||
         customCredentials.clientSecret !== clientSecret ||
         customCredentials.redirectUri !== redirectUri
       ) {
@@ -899,45 +972,146 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
   );
 
   /**
+   * Enqueue a task to be executed when the application comes online.
+   * If already online, executes immediately. If offline, stores the task with
+   * deduplication (newer task with same taskId replaces older one).
+   * @param taskId - Unique identifier for the task (used for deduplication).
+   * @param fn - Async function to execute when online.
+   * @source
+   */
+  const enqueueWhenOnline = useCallback(
+    (taskId: string, fn: () => Promise<void>) => {
+      if (isOnline) {
+        // Execute immediately if online
+        fn().catch((err) => {
+          console.error(`[AuthContext] Task ${taskId} failed:`, err);
+          captureError(
+            ErrorType.NETWORK,
+            `Failed to execute online task: ${taskId}`,
+            err,
+            { context: "enqueueWhenOnline", taskId },
+          );
+        });
+      } else {
+        // Queue for later execution - deduplication: remove any existing task with same ID
+        setOfflineQueue((prev) => {
+          const MAX_OFFLINE_QUEUE_LENGTH = 100;
+          const filtered = prev.filter((t) => t.taskId !== taskId);
+          let updated = [
+            ...filtered,
+            {
+              taskId,
+              fn,
+              addedAt: Date.now(),
+              attempts: 0,
+            },
+          ];
+
+          // Enforce max queue length by dropping oldest tasks if needed
+          if (updated.length > MAX_OFFLINE_QUEUE_LENGTH) {
+            const excess = updated.length - MAX_OFFLINE_QUEUE_LENGTH;
+            console.warn(
+              `[AuthContext] ⚠️ Offline queue exceeded max length (${updated.length}), dropping ${excess} oldest task(s)`,
+            );
+            updated = updated.slice(excess);
+          }
+
+          return updated;
+        });
+      }
+    },
+    [isOnline],
+  );
+
+  /**
+   * Drain the offline queue when connectivity is restored.
+   * Executes tasks sequentially with delay between them.
+   * @source
+   */
+  const drainOfflineQueue = useCallback(async () => {
+    if (offlineQueue.length === 0) return;
+
+    console.info(
+      `[AuthContext] Draining offline queue (${offlineQueue.length} tasks)`,
+    );
+
+    const tasks = [...offlineQueue];
+    setOfflineQueue([]);
+
+    for (let i = 0; i < tasks.length; i += 1) {
+      const task = tasks[i];
+      try {
+        await task.fn();
+        console.debug(`[AuthContext] Task ${task.taskId} completed`);
+      } catch (err) {
+        console.error(`[AuthContext] Task ${task.taskId} failed:`, err);
+        captureError(
+          ErrorType.NETWORK,
+          `Failed to execute queued task: ${task.taskId}`,
+          err,
+          {
+            context: "drainOfflineQueue",
+            taskId: task.taskId,
+            attempt: task.attempts + 1,
+          },
+        );
+      }
+
+      // Delay between tasks (except after last one)
+      if (i < tasks.length - 1) {
+        await sleep(150);
+      }
+    }
+  }, [offlineQueue]);
+
+  // Helper function for sleep
+  const sleep = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
+
+  // Drain offline queue when connectivity is restored
+  useEffect(() => {
+    if (isOnline && offlineQueue.length > 0) {
+      // Use a small delay to allow for any other online event handlers to complete
+      const timeoutId = setTimeout(() => {
+        drainOfflineQueue();
+      }, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isOnline, offlineQueue.length, drainOfflineQueue]);
+
+  /**
    * Fetches viewer profile data from AniList GraphQL API.
+   *
+   * Uses the centralized `request()` function from the AniList client, which provides:
+   * - Automatic retry with exponential backoff for transient errors
+   * - Rate limit handling and awareness
+   * - Consistent error handling across all API operations
+   *
    * @param accessToken - The OAuth access token.
    * @returns The viewer profile response.
-   * @throws If the API request fails.
+   * @throws If the API request fails after exhausting retries.
    * @source
    */
   const fetchUserProfile = async (
     accessToken: string,
   ): Promise<ViewerResponse> => {
-    const query = `
-      query {
-        Viewer {
-          id
-          name
-          avatar {
-            large
-            medium
-          }
-        }
-      }
-    `;
+    const response = await request<{
+      Viewer?: {
+        id: number;
+        name: string;
+        avatar?: {
+          medium?: string;
+          large?: string;
+        };
+      };
+    }>(GET_VIEWER, undefined, accessToken, undefined, false, false);
 
-    const response = await fetch("https://graphql.anilist.co", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: `Bearer ${accessToken}`,
+    return {
+      data: {
+        Viewer: response.data?.Viewer,
       },
-      body: JSON.stringify({ query }),
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `AniList API error: ${response.status} ${response.statusText}`,
-      );
-    }
-
-    return await response.json();
+      errors: response.errors,
+    };
   };
 
   // Memoize split context values to minimise downstream re-renders
@@ -948,8 +1122,18 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
       error,
       statusMessage,
       customCredentials,
+      isOnline,
+      wasOffline,
     }),
-    [authState, isLoading, error, statusMessage, customCredentials],
+    [
+      authState,
+      isLoading,
+      error,
+      statusMessage,
+      customCredentials,
+      isOnline,
+      wasOffline,
+    ],
   );
 
   const actionsContextValue = React.useMemo<AuthActionsContextValue>(
@@ -960,6 +1144,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
       cancelAuth,
       setCredentialSource,
       updateCustomCredentials,
+      enqueueWhenOnline,
     }),
     [
       login,
@@ -968,6 +1153,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
       cancelAuth,
       setCredentialSource,
       updateCustomCredentials,
+      enqueueWhenOnline,
     ],
   );
 
