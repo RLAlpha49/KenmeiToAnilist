@@ -602,6 +602,7 @@ export const useMatchingProcess = ({
         isManuallyPaused: false,
         isPauseTransitioning: false,
         lastUpdated: Date.now(),
+        wasRateLimitPaused: false,
       };
       notifyMatchingState(true);
 
@@ -723,6 +724,7 @@ export const useMatchingProcess = ({
         setFreshSearch(false);
         if (globalThis.matchingProcessState) {
           globalThis.matchingProcessState.isRunning = false;
+          globalThis.matchingProcessState.wasRateLimitPaused = false;
         }
         notifyMatchingState(false);
         matchingStartTimeRef.current = 0; // Reset matching start time on completion
@@ -923,6 +925,7 @@ export const useMatchingProcess = ({
         globalThis.matchingProcessState.statusMessage = "Cancelling process...";
         globalThis.matchingProcessState.detailMessage =
           "Immediately stopping all operations";
+        globalThis.matchingProcessState.wasRateLimitPaused = false;
       }
 
       // If we have an active abort controller, use it to abort immediately
@@ -1090,6 +1093,7 @@ export const useMatchingProcess = ({
         globalThis.matchingProcessState.statusMessage =
           "AniList rate limit reached";
         globalThis.matchingProcessState.detailMessage = detail;
+        globalThis.matchingProcessState.wasRateLimitPaused = true;
         globalThis.matchingProcessState.lastUpdated = Date.now();
       }
     },
@@ -1117,27 +1121,33 @@ export const useMatchingProcess = ({
     const wasManuallyPausedBeforeRL = wasManuallyPausedBeforeRateLimit.current;
     wasManuallyPausedBeforeRateLimit.current = false;
 
-    const detail = wasManuallyPausedBeforeRL
-      ? "Matching remains paused. Resume when you're ready to continue."
-      : "Back to matching remaining manga. We'll continue processing the queue.";
-    const status = wasManuallyPausedBeforeRL
-      ? "Matching paused"
-      : "Resuming matching...";
+    // Check if we should auto-resume after rate limit
+    const shouldAutoResume =
+      globalThis.matchingProcessState?.wasRateLimitPaused &&
+      globalThis.matchingProcessState?.isRunning &&
+      !wasManuallyPausedBeforeRL;
+
+    let detail: string;
+    let status: string;
+
+    if (wasManuallyPausedBeforeRL) {
+      status = "Matching paused";
+      detail = "Matching remains paused. Resume when you're ready to continue.";
+    } else if (shouldAutoResume) {
+      status = "Automatically resuming...";
+      detail = "Rate limit cleared. Automatically resuming matching...";
+    } else {
+      status = "Resuming matching...";
+      detail = "Back to matching remaining manga. We'll continue processing the queue.";
+    }
+
     setStatusMessage(status);
     setDetailMessage(detail);
 
-    if (
-      globalThis.matchingProcessState &&
-      globalThis.matchingProcessState.isRunning &&
-      !wasManuallyPausedBeforeRL
-    ) {
-      globalThis.matchingProcessState.statusMessage = "Resuming matching...";
-      globalThis.matchingProcessState.detailMessage =
-        "Back to matching remaining manga. We'll continue processing the queue.";
-      globalThis.matchingProcessState.lastUpdated = Date.now();
-    } else if (globalThis.matchingProcessState) {
+    if (globalThis.matchingProcessState) {
       globalThis.matchingProcessState.statusMessage = status;
       globalThis.matchingProcessState.detailMessage = detail;
+      globalThis.matchingProcessState.wasRateLimitPaused = false;
       globalThis.matchingProcessState.lastUpdated = Date.now();
     }
   }, [resumeTimeTracking]);

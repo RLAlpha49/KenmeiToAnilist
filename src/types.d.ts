@@ -213,6 +213,9 @@ interface MatchingProcessState {
   /** Whether the pause state is currently transitioning. @source */
   isPauseTransitioning?: boolean;
 
+  /** Whether the matching process was interrupted by a rate limit. @source */
+  wasRateLimitPaused?: boolean;
+
   /** Timestamp of the last state update (milliseconds). @source */
   lastUpdated: number;
 }

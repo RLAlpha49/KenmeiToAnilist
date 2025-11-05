@@ -9,7 +9,7 @@ import type { ComickSourceStorage, MangaDexSourceStorage } from "./types";
 import type { CustomRule } from "@/utils/storage";
 import { calculateConfidence } from "../scoring";
 import { getSourceInfo } from "../sources";
-import { getMatchConfig } from "@/utils/storage";
+import { getMatchConfig, getSavedMatchResults } from "@/utils/storage";
 import {
   shouldAcceptByCustomRules,
   ACCEPT_RULE_CONFIDENCE_FLOOR_EXACT,
@@ -186,6 +186,34 @@ export function compileMatchResults(
 ): MangaMatchResult[] {
   const results: MangaMatchResult[] = [];
 
+  // Load existing match results to preserve statuses
+  const existingResults = getSavedMatchResults() || [];
+  const existingById = new Map<string, MangaMatchResult>();
+  const existingByTitle = new Map<string, MangaMatchResult>();
+
+  for (const result of existingResults) {
+    if (result.kenmeiManga.id) {
+      existingById.set(String(result.kenmeiManga.id), result as MangaMatchResult);
+    }
+    existingByTitle.set(result.kenmeiManga.title.toLowerCase(), result as MangaMatchResult);
+  }
+
+  // Helper function to preserve status from existing result
+  const preserveExistingStatus = (
+    newResult: MangaMatchResult,
+    manga: KenmeiManga,
+  ): void => {
+    let existingResult =
+      manga.id ? existingById.get(String(manga.id)) : undefined;
+    existingResult ??= existingByTitle.get(manga.title.toLowerCase());
+
+    if (existingResult?.status && existingResult.status !== "pending") {
+      newResult.status = existingResult.status;
+      newResult.selectedMatch = existingResult.selectedMatch;
+      newResult.matchDate = existingResult.matchDate;
+    }
+  };
+
   // First fill in the results array to match the mangaList length
   for (let i = 0; i < mangaList.length; i++) {
     results[i] = {
@@ -228,12 +256,17 @@ export function compileMatchResults(
     // Create match result for this manga
     const comickSourceMap = cachedComickSources[i] || new Map();
     const mangaDexSourceMap = cachedMangaDexSources[i] || new Map();
-    results[i] = createMangaMatchResult(
+    const newResult = createMangaMatchResult(
       manga,
       potentialMatches,
       comickSourceMap,
       mangaDexSourceMap,
     );
+
+    // Preserve status from existing result if it's not "pending"
+    preserveExistingStatus(newResult, manga);
+
+    results[i] = newResult;
   }
 
   // Filter out any null entries (though there shouldn't be any)
@@ -257,6 +290,27 @@ export function handleCancellationResults(
 ): MangaMatchResult[] {
   const results: MangaMatchResult[] = [];
 
+  // Load existing match results to preserve statuses during cancellation
+  const existingResults = getSavedMatchResults() || [];
+  const existingById = new Map<string, MangaMatchResult>();
+  const existingByTitle = new Map<string, MangaMatchResult>();
+
+  for (const result of existingResults) {
+    if (result.kenmeiManga.id) {
+      existingById.set(String(result.kenmeiManga.id), result as MangaMatchResult);
+    }
+    existingByTitle.set(result.kenmeiManga.title.toLowerCase(), result as MangaMatchResult);
+  }
+
+  // Helper to get existing result by ID or title
+  const getExistingResult = (manga: KenmeiManga): MangaMatchResult | undefined => {
+    if (manga.id) {
+      const byId = existingById.get(String(manga.id));
+      if (byId) return byId;
+    }
+    return existingByTitle.get(manga.title.toLowerCase());
+  };
+
   // Process whatever results we have so far
   for (let i = 0; i < mangaList.length; i++) {
     if (cachedResults[i]) {
@@ -266,13 +320,23 @@ export function handleCancellationResults(
         confidence: calculateConfidence(manga.title, anilistManga),
       }));
 
-      results.push({
+      const newResult: MangaMatchResult = {
         kenmeiManga: manga,
         anilistMatches: potentialMatches,
         selectedMatch:
           potentialMatches.length > 0 ? potentialMatches[0].manga : undefined,
         status: "pending",
-      });
+      };
+
+      // Preserve status from existing result if it's not "pending"
+      const existingResult = getExistingResult(manga);
+      if (existingResult?.status && existingResult.status !== "pending") {
+        newResult.status = existingResult.status;
+        newResult.selectedMatch = existingResult.selectedMatch;
+        newResult.matchDate = existingResult.matchDate;
+      }
+
+      results.push(newResult);
     }
   }
 

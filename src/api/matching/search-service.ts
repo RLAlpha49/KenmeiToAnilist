@@ -12,6 +12,10 @@ import type {
   SearchServiceConfig,
   MangaSearchResponse,
 } from "./orchestration/types";
+import type {
+  ComickSourceStorage,
+  MangaDexSourceStorage,
+} from "./batching/types";
 import { DEFAULT_SEARCH_CONFIG } from "./orchestration/types";
 import { searchMangaByTitle as orchestratedSearch } from "./orchestration";
 import { syncWithClientCache, generateCacheKey, isCacheValid } from "./cache";
@@ -160,6 +164,11 @@ export async function batchMatchManga(
       // Create a set to track which manga have been reported in the progress
       const reportedIndices = new Set<number>();
 
+      // Declare cache variables in outer scope for access in catch block
+      let cachedResults: Record<number, AniListManga[]> = {};
+      let cachedComickSources: ComickSourceStorage = {};
+      let cachedMangaDexSources: MangaDexSourceStorage = {};
+
       // Function to check if the operation should be cancelled
       const checkCancellation = () => {
         // Check the abort signal first
@@ -195,13 +204,11 @@ export async function batchMatchManga(
         );
 
         // Categorize manga based on cache status
-        const {
-          cachedResults,
-          cachedComickSources,
-          cachedMangaDexSources,
-          uncachedManga,
-          knownMangaIds,
-        } = categorizeMangaForBatching(mangaList, searchConfig, updateProgress);
+        const result = categorizeMangaForBatching(mangaList, searchConfig, updateProgress);
+        cachedResults = result.cachedResults;
+        cachedComickSources = result.cachedComickSources;
+        cachedMangaDexSources = result.cachedMangaDexSources;
+        const { uncachedManga, knownMangaIds } = result;
 
         console.debug(
           `[MangaSearchService] 🔍 Categorization: ${Object.keys(cachedResults).length} cached, ${uncachedManga.length} uncached, ${knownMangaIds.length} known IDs`,
@@ -224,28 +231,75 @@ export async function batchMatchManga(
 
         // Process uncached manga using batched GraphQL queries
         // This significantly reduces API calls by grouping multiple searches
-        try {
-          await processBatchedUncachedManga(
-            { uncachedManga, mangaList, reportedIndices },
-            { token, searchConfig },
-            { abortSignal, checkCancellation },
-            { updateProgress },
-            { cachedResults, cachedComickSources, cachedMangaDexSources },
-          );
-        } catch (error) {
-          console.warn("[MangaSearchService] Processing cancelled:", error);
-
-          // If we got here due to cancellation, return the partial results we've managed to gather
-          if (error instanceof CancelledError) {
-            console.info(
-              `[MangaSearchService] Cancellation completed, returning partial results`,
+        let rateLimitRetryCount = 0;
+        const MAX_RATE_LIMIT_RETRIES = 3;
+        
+        while (true) {
+          try {
+            await processBatchedUncachedManga(
+              { uncachedManga, mangaList, reportedIndices },
+              { token, searchConfig },
+              { abortSignal, checkCancellation },
+              { updateProgress },
+              { cachedResults, cachedComickSources, cachedMangaDexSources },
             );
+            break; // Success, exit retry loop
+          } catch (error) {
+            // Check if this is a rate limit error (429)
+            const isRateLimitError =
+              (error && typeof error === "object" &&
+                ("isRateLimited" in error || "status" in error)) &&
+              ((error as any).isRateLimited === true || (error as any).status === 429);
 
-            return handleCancellationResults(mangaList, cachedResults);
+            if (isRateLimitError && rateLimitRetryCount < MAX_RATE_LIMIT_RETRIES) {
+              rateLimitRetryCount++;
+              const retryAfterSeconds = (error as any).retryAfter || 60;
+              console.warn(
+                `[MangaSearchService] ⏸️ Rate limited (429). Retry ${rateLimitRetryCount}/${MAX_RATE_LIMIT_RETRIES} after ${retryAfterSeconds}s`,
+              );
+
+              // Respect abort signal and shouldCancel before waiting
+              checkCancellation();
+
+              // Wait for the rate limit to clear or until wasRateLimitPaused flag is cleared
+              const waitUntil = Date.now() + (retryAfterSeconds * 1000);
+              while (Date.now() < waitUntil) {
+                // Check if we should cancel
+                if (shouldCancel?.()) {
+                  throw new CancelledError("Operation cancelled by user during rate limit wait");
+                }
+                if (abortSignal?.aborted) {
+                  throw new CancelledError("Operation aborted during rate limit wait");
+                }
+                // Check if rate limit has been cleared via global state
+                if (globalThis.matchingProcessState?.wasRateLimitPaused === false) {
+                  console.info(
+                    "[MangaSearchService] 🟢 Rate limit cleared, retrying batch processing",
+                  );
+                  break;
+                }
+                // Wait a short interval before checking again
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+              }
+
+              // Retry the operation
+              continue;
+            }
+
+            console.warn("[MangaSearchService] Processing cancelled:", error);
+
+            // If we got here due to cancellation, return the partial results we've managed to gather
+            if (error instanceof CancelledError) {
+              console.info(
+                `[MangaSearchService] Cancellation completed, returning partial results`,
+              );
+
+              return handleCancellationResults(mangaList, cachedResults);
+            }
+
+            // If it's a different kind of error or max retries exceeded, rethrow it
+            throw error;
           }
-
-          // If it's a different kind of error, rethrow it
-          throw error;
         }
 
         // Check for cancellation after the batch completes
@@ -289,8 +343,8 @@ export async function batchMatchManga(
             .catch(() => {
               // Silently ignore Sentry import errors
             });
-          // We don't have access to the variables in this scope, so return empty array
-          return [];
+          // Return partial results we've gathered so far
+          return handleCancellationResults(mangaList, cachedResults);
         }
 
         // For non-cancellation errors, capture to Sentry

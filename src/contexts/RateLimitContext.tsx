@@ -320,9 +320,12 @@ export function RateLimitProvider({
   useEffect(() => {
     if (rateLimitState.isRateLimited && rateLimitState.retryAfter) {
       // Create a dismissible persistent toast
+      const message =
+        rateLimitState.message ||
+        "Rate limit reached. Matching will automatically resume when cleared.";
       const id = toast.warning(
         <RateLimitToast
-          message={rateLimitState.message || "Rate limited by AniList API"}
+          message={message}
           retryAfter={rateLimitState.retryAfter}
           onComplete={clearRateLimit}
         />,

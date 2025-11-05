@@ -4,7 +4,6 @@
  * @description Matching page component for the Kenmei to AniList sync tool. Handles manga matching, review, rematch, and sync preparation.
  */
 
-// TODO: Fix: When rate limit is hit for anilist during matching, the matching process does not resume after the wait period.
 // TODO: When canceling a matching process, the unsearched manga should not be reset to pending if they had a different prior status (e.g. skipped).
 // TODO: When doing bulk operations (accept/reject/reset), the entries are being return to match results individually causing the app to hang until all entries are processed.
 // TODO: Text for sonner should be truncated at some point to prevent excessively long descriptions from breaking the UI. Consider adding a character limit and ellipsis for long descriptions.
@@ -1034,9 +1033,9 @@ export function MatchingPage() {
     const headerProps = { ...defaultHeaderProps, ...headerPropsOverride };
 
     return (
-      <div className="relative flex h-full w-full flex-1">
+      <div className="relative flex flex-1 w-full h-full">
         <motion.div
-          className="container mx-auto flex h-full max-w-full flex-col px-4 py-6 md:px-6"
+          className="container flex flex-col h-full max-w-full px-4 py-6 mx-auto md:px-6"
           variants={pageVariants}
           initial="hidden"
           animate="visible"
@@ -1633,7 +1632,7 @@ export function MatchingPage() {
   if (matchingProcess.error?.includes("Authentication Required")) {
     return renderPageShell(
       <motion.div
-        className="relative flex flex-1 items-center justify-center"
+        className="relative flex items-center justify-center flex-1"
         variants={contentVariants}
       >
         <AuthRequiredCard
@@ -1678,9 +1677,9 @@ export function MatchingPage() {
   }
 
   return (
-    <div className="relative flex h-full w-full flex-1">
+    <div className="relative flex flex-1 w-full h-full">
       <motion.div
-        className="container mx-auto flex h-full max-w-full flex-col px-4 py-6 md:px-6"
+        className="container flex flex-col h-full max-w-full px-4 py-6 mx-auto md:px-6"
         variants={pageVariants}
         initial="hidden"
         animate="visible"
@@ -1818,7 +1817,7 @@ export function MatchingPage() {
           ) : (
             <AnimatePresence>
               <EmptyState
-                icon={<FileSearch className="h-10 w-10" />}
+                icon={<FileSearch className="w-10 h-10" />}
                 title="No manga to match"
                 description="No manga data available. Import your Kenmei library to get started."
                 actionLabel="Go to Import"

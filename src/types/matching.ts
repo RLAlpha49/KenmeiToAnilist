@@ -34,6 +34,9 @@ declare global {
         estimatedRemainingSeconds: number;
       };
       lastUpdated: number;
+      isManuallyPaused?: boolean;
+      isPauseTransitioning?: boolean;
+      wasRateLimitPaused?: boolean;
     };
   }
 }
