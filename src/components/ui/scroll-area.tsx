@@ -1,8 +1,20 @@
+/**
+ * @packageDocumentation
+ * @module components/ui/scroll-area
+ * @description Scroll area component with scrollbar styling using Radix UI.
+ * @source
+ */
 import * as React from "react";
 import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area";
 
 import { cn } from "@/utils/tailwind";
 
+/**
+ * Scroll area container component with custom scrollbars.
+ * @param props - Standard scroll area props from Radix UI.
+ * @returns Scroll area container element.
+ * @source
+ */
 function ScrollArea({
   className,
   children,

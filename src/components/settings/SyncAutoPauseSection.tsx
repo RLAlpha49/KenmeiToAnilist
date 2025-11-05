@@ -13,19 +13,32 @@ import { highlightText } from "@/utils/textHighlight";
 import { cn } from "@/utils/tailwind";
 import type { SyncConfig } from "@/utils/storage";
 
+/**
+ * Props for SyncAutoPauseSection component.
+ * @source
+ */
 interface SyncAutoPauseSectionProps {
+  /** Current sync configuration. */
   syncConfig: SyncConfig;
+  /** Whether custom threshold is currently enabled. */
   useCustomThreshold: boolean;
+  /** Current search query. */
   searchQuery: string;
+  /** Currently highlighted section ID. */
   highlightedSectionId: string | null;
+  /** Callback when sync config changes. */
   onSyncConfigChange: (config: SyncConfig, field: string) => void;
+  /** Callback to toggle custom threshold. */
   onCustomThresholdToggle: (value: boolean) => void;
+  /** Callback to set entire sync config. */
   setSyncConfig: (config: SyncConfig) => void;
 }
 
 /**
  * Auto-pause inactive manga settings section.
- *
+ * Controls whether and when to automatically pause inactive manga during sync.
+ * @param props - Component props.
+ * @returns The rendered auto-pause settings section.
  * @source
  */
 export function SyncAutoPauseSection({

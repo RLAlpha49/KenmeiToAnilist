@@ -29,10 +29,7 @@ const UTF8_BOM = "\ufeff";
 
 /**
  * Generates a timestamp string suitable for use in filenames.
- *
- * Replaces colons and periods with hyphens to ensure compatibility with file systems.
- * Ensures safe and readable filenames across platforms.
- *
+ * Replaces colons and periods with hyphens for filesystem compatibility.
  * @returns ISO timestamp string formatted for filenames (e.g., `2025-10-17T14-30-45-123Z`).
  * @internal
  * @source
@@ -42,13 +39,14 @@ export function generateExportTimestamp(): string {
 }
 
 /**
- * Builds export metadata object with timestamp, version, and filter info.
- * @param format - Export format being used
- * @param totalEntries - Number of entries being exported
- * @param filters - Optional filter options applied
- * @param sections - Optional sections included (for statistics)
- * @returns Complete metadata object
+ * Builds export metadata object with timestamp, version, format, filters, and entry count.
+ * @param format - Export format being used.
+ * @param totalEntries - Number of entries being exported.
+ * @param filters - Optional filter options applied.
+ * @param sections - Optional sections included (for statistics).
+ * @returns Complete metadata object.
  * @internal
+ * @source
  */
 export function buildExportMetadata(
   format: ExportFormat,
@@ -83,9 +81,8 @@ export function buildExportMetadata(
  * Sanitizes a base filename for safe export to the filesystem.
  * Removes path separators, control characters, and other problematic characters.
  * Preserves alphanumerics, hyphens, and underscores.
- *
- * @param baseFilename - The base filename to sanitize (without extension)
- * @returns Sanitized filename safe for filesystem use
+ * @param baseFilename - The base filename to sanitize (without extension).
+ * @returns Sanitized filename safe for filesystem use.
  * @internal
  */
 function sanitizeFilename(baseFilename: string): string {
@@ -106,13 +103,13 @@ function sanitizeFilename(baseFilename: string): string {
 }
 
 /**
- * Export format options.
+ * Supported export format options: JSON, CSV, or Markdown.
  * @source
  */
 export type ExportFormat = "json" | "csv" | "markdown";
 
 /**
- * Options for filtering data during export.
+ * Options for filtering data during export operations.
  * @source
  */
 export interface ExportFilterOptions {
@@ -127,7 +124,7 @@ export interface ExportFilterOptions {
 }
 
 /**
- * Metadata included in all exports.
+ * Metadata included in all exports: timestamp, version, format, filter info, and entry count.
  * @source
  */
 export interface ExportMetadata {
@@ -145,7 +142,7 @@ export interface ExportMetadata {
 }
 
 /**
- * Flattened representation of match result for CSV export.
+ * Single-level representation of match result for CSV export; combines Kenmei, match, and AniList data.
  * @source
  */
 export interface FlattenedMatchResult {
@@ -179,19 +176,11 @@ export interface FlattenedMatchResult {
 }
 
 /**
- * Exports data as a JSON file and triggers browser download.
- *
- * Handles all the boilerplate of creating a blob, object URL, and anchor element for triggering
- * a file download. Automatically appends a timestamp to the filename.
- * Supports both objects and arrays for flexible data export.
- *
- * Sanitizes the base filename to remove unsafe characters before composition.
- *
- * @param data - The data to export (object or array that will be stringified to pretty-printed JSON).
- * @param baseFilename - The base filename without extension or timestamp. Will be sanitized to remove unsafe characters.
- * @returns The full filename that was used for download (including timestamp and extension).
- * @throws Will throw if JSON stringification fails (e.g., circular references).
- * @throws Will throw if document.body is unavailable (non-DOM/Electron renderer context).
+ * Exports data as JSON file with automatic timestamp and sanitized filename; triggers browser download.
+ * @param data - The data to export (object or array for JSON stringification).
+ * @param baseFilename - Base filename (without extension); will be sanitized for filesystem safety.
+ * @returns Full filename used for download (including timestamp and extension).
+ * @throws If JSON stringification fails or document.body unavailable.
  * @internal
  * @source
  */
@@ -340,6 +329,13 @@ function extractAniListData(matchForData: unknown): AniListManga | undefined {
   return obj as unknown as AniListManga;
 }
 
+/**
+ * Flattens a match result into a single-level structure suitable for CSV export.
+ * Selects best match data and normalizes dates/genres for tabular output.
+ * @param match - The match result to flatten.
+ * @returns Flattened result with all fields in a single-level object.
+ * @source
+ */
 export function flattenMatchResult(
   match: MangaMatchResult | FlattenableMatchResult,
 ): FlattenedMatchResult {
@@ -426,18 +422,15 @@ export function flattenMatchResult(
 }
 
 /**
- * Checks if a match passes all filter criteria.
- *
- * This is a shared helper used by both the UI preview (ExportMatchesButton) and the actual export function.
- * Using this shared helper ensures preview count and export results are always in sync.
- *
+ * Checks if a match passes all filter criteria; used by UI preview and export to keep results in sync.
  * @param match - The match to check.
  * @param statusFilters - Selected status filters (matched, manual, pending, skipped).
- * @param confidenceThreshold - Minimum confidence threshold (null or number).
- * @param includeUnmatched - Whether to include entries without matches.
- * @param unmatchedOnly - Whether to export only unmatched entries.
+ * @param confidenceThreshold - Minimum confidence threshold (null or 0-100).
+ * @param includeUnmatched - Include entries without matches.
+ * @param unmatchedOnly - Export only unmatched entries (takes precedence).
  * @returns True if the match passes all applied filters.
  * @internal
+ * @source
  */
 export function matchPassesFilter(
   match: MangaMatchResult,
@@ -486,13 +479,9 @@ export function matchPassesFilter(
 }
 
 /**
- * Filters match results based on provided criteria.
- *
- * Uses the shared matchPassesFilter helper to ensure consistency with UI preview counts.
- * Enforces filter precedence: unmatchedOnly takes priority and forces includeUnmatched=true internally.
- *
+ * Filters match results based on provided criteria using shared filter logic with UI preview.
  * @param matches - Array of match results to filter.
- * @param filters - Filter options to apply.
+ * @param filters - Filter options (status, confidence, includeUnmatched, unmatchedOnly).
  * @returns Filtered array of match results.
  * @source
  */
@@ -597,19 +586,11 @@ function formatMetadataHeader(metadata: ExportMetadata): string {
 }
 
 /**
- * Exports data to CSV format and triggers browser download.
- *
- * Includes UTF-8 BOM (Byte Order Mark) prefix to improve Excel compatibility on Windows.
- * The BOM ensures proper encoding detection when opening CSV files in Excel, particularly
- * on Windows systems where Excel may misinterpret non-ASCII characters without it.
- *
- * Sanitizes the base filename to remove unsafe characters before composition.
- *
+ * Exports data to CSV format with UTF-8 BOM for Excel compatibility; triggers browser download.
  * @param data - Array of objects to export.
- * @param baseFilename - Base filename without extension or timestamp. Will be sanitized to remove unsafe characters.
- * @returns The full filename used for download (including timestamp and extension).
- * @throws Will throw if CSV generation fails.
- * @throws Will throw if document.body is unavailable (non-DOM/Electron renderer context).
+ * @param baseFilename - Base filename (without extension); will be sanitized for filesystem safety.
+ * @returns Full filename used for download (including timestamp and extension).
+ * @throws If CSV generation fails or document.body unavailable.
  * @source
  */
 export async function exportToCSV(
@@ -729,17 +710,12 @@ function formatMarkdownSections(data: Record<string, unknown>): string {
 }
 
 /**
- * Exports data to Markdown format and triggers browser download.
- *
- * Creates formatted Markdown tables with metadata header.
- * Handles both flat data (for tables) and nested objects (for sections).
- *
- * @param data - Array of objects to export as table, or object with sections
- * @param baseFilename - Base filename without extension or timestamp
- * @param metadata - Export metadata to include in header
- * @returns The full filename used for download
- * @throws Will throw if Markdown generation fails
- * @throws Will throw if document.body is unavailable
+ * Exports data to Markdown format with metadata header; handles tables and sections; triggers browser download.
+ * @param data - Array (for table) or object with sections to export.
+ * @param baseFilename - Base filename (without extension or timestamp).
+ * @param metadata - Export metadata to include in header.
+ * @returns Full filename used for download.
+ * @throws If Markdown generation fails or document.body unavailable.
  * @source
  */
 export function exportToMarkdown(
@@ -799,21 +775,12 @@ export function exportToMarkdown(
 }
 
 /**
- * Exports match results in the specified format with optional filtering.
- *
+ * Exports match results in specified format with optional filtering; triggers browser download.
  * @param matches - Array of match results to export.
  * @param format - Export format (json, csv, markdown).
  * @param filters - Optional filters to apply before export.
- * @returns Promise resolving to the filename of the exported file.
- * @throws Will throw if export fails.
- * @example
- * ```typescript
- * // Export matched items only as CSV
- * const filename = await exportMatchResults(matches, 'csv', {
- *   statusFilter: ['matched'],
- *   confidenceThreshold: 75
- * });
- * ```
+ * @returns Promise resolving to filename of exported file.
+ * @throws If export fails or document.body unavailable.
  * @source
  */
 export async function exportMatchResults(
@@ -881,11 +848,7 @@ export async function exportMatchResults(
 }
 
 /**
- * Exports sync error logs to a JSON file.
- *
- * Extracts error details from a sync report and downloads them as a JSON file.
- * Skips export if no errors are present.
- *
+ * Exports sync error logs to JSON file; extracts errors from sync report if present.
  * @param report - The sync report containing errors to export.
  * @source
  */
@@ -918,11 +881,7 @@ export function exportSyncErrorLog(report: SyncReport): void {
 }
 
 /**
- * Exports a full sync report to a JSON file.
- *
- * Downloads the complete sync report including all entries and outcomes as a JSON file.
- * Skips export if the report is empty.
- *
+ * Exports complete sync report to JSON file; downloads all entries and outcomes.
  * @param report - The sync report to export.
  * @source
  */
@@ -948,13 +907,8 @@ export function exportSyncReport(report: SyncReport): void {
 }
 
 /**
- * Saves a sync report to storage for later reference.
- *
- * Persists the report using the storage abstraction and maintains a history of up to 10 most recent reports.
- * Validates JSON parsing to prevent corruption of stored history. Filters history to include only valid
- * SyncReport objects and caps error arrays to prevent unbounded growth.
- *
- * @param report - The sync report to save. timestamp should be ISO 8601 string.
+ * Saves sync report to storage for later reference; maintains history of 10 most recent reports.
+ * @param report - The sync report to save (timestamp should be ISO 8601 string).
  * @source
  */
 export function saveSyncReportToHistory(report: SyncReport): void {

@@ -211,7 +211,10 @@ export function MatchingPage() {
     };
   }, [matchResults]);
 
-  // New: Set all matched (including manual) entries to pending
+  /**
+   * Resets all matched and manually matched entries back to pending status for re-review.
+   * @source
+   */
   const handleSetAllMatchedToPending = () => {
     if (!matchResults.length) return;
     const updated = matchResults.map((m) =>
@@ -239,7 +242,8 @@ export function MatchingPage() {
   };
 
   /**
-   * Undo the last action
+   * Undo the last action in match operations.
+   * @source
    */
   const handleUndo = () => {
     const metadata = undoRedoManager.undo();
@@ -260,7 +264,8 @@ export function MatchingPage() {
   };
 
   /**
-   * Redo the last undone action
+   * Redo the last undone action in match operations.
+   * @source
    */
   const handleRedo = () => {
     const metadata = undoRedoManager.redo();

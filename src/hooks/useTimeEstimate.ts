@@ -13,21 +13,27 @@ import { TimeEstimate } from "../types/matching";
  * @source
  */
 export const useTimeEstimate = () => {
-  // State for time tracking
+  /** Current time estimate and calculation state. @source */
   const [timeEstimate, setTimeEstimate] = useState<TimeEstimate>({
     startTime: 0,
     averageTimePerManga: 0,
     estimatedRemainingSeconds: 0,
   });
 
+  /** Whether time tracking is currently paused. @source */
   const [isPaused, setIsPaused] = useState(false);
 
-  // Refs for stable time tracking
+  /** Start time of the current processing session. @source */
   const processingStartTimeRef = useRef<number>(0);
+  /** Number of items processed as of last time estimate update. @source */
   const lastProcessedCountRef = useRef<number>(0);
+  /** Array of processing times per item (moving window of 10 samples). @source */
   const processingTimesRef = useRef<number[]>([]);
+  /** Timestamp of the last time estimate calculation. @source */
   const lastTimeUpdateRef = useRef<number>(0);
+  /** Nesting counter for pause/resume balance tracking. @source */
   const pauseCountRef = useRef<number>(0);
+  /** Timestamp when pause was initiated for duration calculation. @source */
   const pauseStartRef = useRef<number | null>(null);
 
   /**
@@ -41,46 +47,37 @@ export const useTimeEstimate = () => {
     (current: number, total: number) => {
       const now = Date.now();
 
-      // Only update time estimate if we've made progress
+      // Skip update if no progress made since last calculation
       if (current <= lastProcessedCountRef.current) {
         return;
       }
 
-      // Skip updates while paused to prevent skewed averages
+      // Skip updates while paused to maintain accurate averages
       if (pauseCountRef.current > 0) {
         return;
       }
 
-      // Calculate time since last update
       const timeSinceLastUpdate = now - lastTimeUpdateRef.current;
-
-      // Calculate items processed since last update
       const itemsProcessed = current - lastProcessedCountRef.current;
 
-      // Only update if we've processed at least one item and time has passed
       if (itemsProcessed > 0 && timeSinceLastUpdate > 0) {
-        // Calculate time per item for this batch
         const timePerItem = timeSinceLastUpdate / itemsProcessed;
 
-        // Add to our processing times array (limit to last 10 values for a moving average)
+        // Maintain moving window of processing times (last 10 samples)
         processingTimesRef.current.push(timePerItem);
         if (processingTimesRef.current.length > 10) {
           processingTimesRef.current.shift();
         }
 
-        // Calculate average time per item from our collected samples
         const avgTimePerItem =
           processingTimesRef.current.reduce((sum, time) => sum + time, 0) /
           processingTimesRef.current.length;
 
-        // Calculate remaining time based on average speed
         const remainingItems = total - current;
         const estimatedRemainingMs = avgTimePerItem * remainingItems;
 
-        // Cap at 24 hours for sanity and add validation
+        // Cap estimate at 24 hours and validate sanity
         const maxTimeMs = 24 * 60 * 60 * 1000;
-
-        // Validate that the estimated time is reasonable (not NaN, Infinity, or negative)
         const isValidEstimate =
           Number.isFinite(estimatedRemainingMs) &&
           estimatedRemainingMs >= 0 &&
@@ -90,7 +87,6 @@ export const useTimeEstimate = () => {
           ? Math.min(estimatedRemainingMs, maxTimeMs)
           : 0;
 
-        // Update state with new estimate
         const newEstimate = {
           startTime: processingStartTimeRef.current,
           averageTimePerManga: avgTimePerItem,
@@ -99,14 +95,13 @@ export const useTimeEstimate = () => {
 
         setTimeEstimate(newEstimate);
 
-        // Update global tracking state
+        // Sync with global state for cross-component access
         if (globalThis.matchingProcessState) {
           // eslint-disable-next-line react-compiler/react-compiler
           globalThis.matchingProcessState.timeEstimate = newEstimate;
           globalThis.matchingProcessState.lastUpdated = now;
         }
 
-        // Update refs for next calculation
         lastProcessedCountRef.current = current;
         lastTimeUpdateRef.current = now;
       }
@@ -123,7 +118,7 @@ export const useTimeEstimate = () => {
   const initializeTimeTracking = useCallback(() => {
     const now = Date.now();
 
-    // Only reset if we don't have a running process with valid timing data
+    // Reset if no active process or valid timing data exists
     const shouldReset =
       !globalThis.matchingProcessState?.isRunning ||
       !globalThis.matchingProcessState?.timeEstimate ||
@@ -138,7 +133,6 @@ export const useTimeEstimate = () => {
       pauseStartRef.current = null;
       setIsPaused(false);
 
-      // Reset time estimate state
       const initialEstimate = {
         startTime: now,
         averageTimePerManga: 0,
@@ -147,39 +141,37 @@ export const useTimeEstimate = () => {
 
       setTimeEstimate(initialEstimate);
       return initialEstimate;
-    } else {
-      // Restore from global state and populate refs for continued tracking
-      console.debug("[TimeEstimate] Preserving existing time tracking data");
-      const globalEstimate = globalThis.matchingProcessState?.timeEstimate;
+    }
 
-      if (globalEstimate) {
-        // Restore refs so calculateTimeEstimate can continue working
-        processingStartTimeRef.current = globalEstimate.startTime;
-        lastProcessedCountRef.current =
-          globalThis.matchingProcessState?.progress.current || 0;
-        lastTimeUpdateRef.current = now;
+    // Restore from global state and continue with existing tracking
+    console.debug("[TimeEstimate] Preserving existing time tracking data");
+    const globalEstimate = globalThis.matchingProcessState?.timeEstimate;
 
-        // If we have an average time, populate processingTimesRef with it
-        // so we maintain continuity in time estimates
-        if (globalEstimate.averageTimePerManga > 0) {
-          processingTimesRef.current = [globalEstimate.averageTimePerManga];
-        }
+    if (globalEstimate) {
+      processingStartTimeRef.current = globalEstimate.startTime;
+      lastProcessedCountRef.current =
+        globalThis.matchingProcessState?.progress.current || 0;
+      lastTimeUpdateRef.current = now;
 
-        setTimeEstimate(globalEstimate);
-        return globalEstimate;
+      // Restore timing sample for continuity in estimates
+      if (globalEstimate.averageTimePerManga > 0) {
+        processingTimesRef.current = [globalEstimate.averageTimePerManga];
       }
 
-      return {
-        startTime: now,
-        averageTimePerManga: 0,
-        estimatedRemainingSeconds: 0,
-      };
+      setTimeEstimate(globalEstimate);
+      return globalEstimate;
     }
+
+    return {
+      startTime: now,
+      averageTimePerManga: 0,
+      estimatedRemainingSeconds: 0,
+    };
   }, []);
 
   /**
-   * Pauses time tracking to prevent skewing of average times during idle periods.
-   * Increments a pause counter for nested pause/resume support.
+   * Pauses time tracking by incrementing a counter for nested pause/resume support.
+   * Prevents skewing averages during idle periods.
    * @source
    */
   const pauseTimeTracking = useCallback(() => {
@@ -191,8 +183,8 @@ export const useTimeEstimate = () => {
   }, []);
 
   /**
-   * Resumes time tracking after pause, adjusting start time by paused duration.
-   * Decrements pause counter, only resuming when count reaches zero.
+   * Resumes time tracking by decrementing the pause counter.
+   * Adjusts start time to account for paused duration only when counter reaches zero.
    * @source
    */
   const resumeTimeTracking = useCallback(() => {

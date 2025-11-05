@@ -1,36 +1,17 @@
 /**
- * Rate limit queue processing logic.
+ * Rate limit queue processing and retry logic.
  *
- * Processes queued requests sequentially, enforcing the minimum interval between requests
- * to stay within AniList's rate limits. Respects manual pause states and coordinates
- * with the rate limit queue state.
+ * Sequentially processes queued requests with enforced intervals to comply with AniList's
+ * rate limits. Respects manual pause states and implements exponential backoff for transient errors.
  *
  * **RESPONSIBILITY SEPARATION:**
  * - This module: Rate limit spacing enforcement + transient error retry with backoff
  * - IPC layer (api-listeners.ts): Handles IPC-level retry logic
  * - Browser client (client.ts): Exponential backoff for direct fetch requests
  *
- * This module now handles:
- * - Rate limit spacing between retries
- * - Transient error detection and re-queuing
- * - Exponential backoff with jitter for retries
- * - Max retry cap (3 attempts) with permanent failure events
- *
- * **USAGE FOR RETRY HANDLERS:**
- * On transient failures (network errors, 5xx, 429, 408), call `retryQueueEntry(entry, error)`
- * instead of dropping the entry. The function handles backoff calculation and re-queuing.
- * Example:
- * ```
- * try {
- *   const entry = await processRequest();
- * } catch (error) {
- *   if (isTransientError(error)) {
- *     retryQueueEntry(entry, error);
- *   } else {
- *     entry.onRetryFailed?.(error);
- *   }
- * }
- * ```
+ * **RETRY FLOW:** On transient failures (network errors, 5xx, 429, 408), call `retryQueueEntry()`
+ * to re-queue with exponential backoff. Max retries: 3 attempts. Permanent failures trigger
+ * event emissions and optional callbacks.
  *
  * @packageDocumentation
  * @source
@@ -49,15 +30,16 @@ import { REQUEST_INTERVAL, SAFETY_DELAY } from "./config";
 import { sleep } from "./utils";
 import { calculateBackoff } from "@/utils/retry";
 
+/** Maximum number of retry attempts per queued request. @source */
 const MAX_RETRIES = 3;
 
 /**
- * Acquire a rate limit slot. Returns a promise that resolves when safe to make a request.
+ * Acquire a rate limit slot for making a request.
  *
- * Queues the request and starts processing if not already active. Ensures compliance
- * with AniList's rate limits by enforcing minimum intervals between requests.
+ * Queues the request and starts the processor if inactive. Blocks until it's safe to make
+ * the request based on rate limit intervals.
  *
- * @param onRetryFailed - Optional callback when retries are exhausted.
+ * @param onRetryFailed - Optional callback invoked if retries are exhausted after transient errors.
  * @returns Promise that resolves when rate limit permits the request.
  * @source
  */
@@ -65,7 +47,7 @@ export async function acquireRateLimit(
   onRetryFailed?: (error: Error) => void,
 ): Promise<void> {
   return new Promise<void>((resolve) => {
-    // Add this request to the queue with retry tracking
+    // Queue this request with initial retry tracking
     requestQueue.push({
       resolve,
       attempt: 0,
@@ -74,7 +56,7 @@ export async function acquireRateLimit(
       onRetryFailed,
     });
 
-    // If not already processing the queue, start processing
+    // Start processing if not already active
     if (!isProcessingQueue()) {
       processRateLimitQueue();
     }
@@ -82,13 +64,13 @@ export async function acquireRateLimit(
 }
 
 /**
- * Mark a queued request as failed and retry with backoff.
+ * Re-queue a failed request with exponential backoff.
  *
- * Computes exponential backoff, re-enqueues the item with incremented attempt count,
- * and emits an event on permanent failure. Ensures the queue processor is running.
+ * Computes backoff based on attempt count, increments the attempt counter, and re-enqueues
+ * the entry. Emits permanent failure event when max retries are exceeded.
  *
  * @param entry - The queue entry that failed.
- * @param error - The error that occurred.
+ * @param error - The error that triggered the retry.
  * @source
  */
 export function retryQueueEntry(entry: QueueEntry, error: Error): void {
@@ -96,7 +78,7 @@ export function retryQueueEntry(entry: QueueEntry, error: Error): void {
   const maxAttempts = entry.maxAttempts ?? MAX_RETRIES;
 
   if (attempt < maxAttempts) {
-    // Calculate backoff and re-enqueue
+    // Calculate backoff and re-enqueue with incremented attempt
     const backoffMs = calculateBackoff(attempt);
     const newEntry: QueueEntry = {
       ...entry,
@@ -108,12 +90,12 @@ export function retryQueueEntry(entry: QueueEntry, error: Error): void {
       `[RateLimitQueue] Retrying request (attempt ${attempt + 1}/${maxAttempts}) after ${backoffMs}ms`,
     );
 
-    // Ensure the queue processor is running to handle the re-queued entry
+    // Ensure processor is running to handle the re-queued entry
     if (!isProcessingQueue()) {
       processRateLimitQueue();
     }
   } else {
-    // Max retries exceeded - emit event and call callback
+    // Max retries exceeded - notify listeners and emit event
     console.error(
       `[RateLimitQueue] Request failed after ${maxAttempts} attempts:`,
       error.message,
@@ -132,11 +114,10 @@ export function retryQueueEntry(entry: QueueEntry, error: Error): void {
 }
 
 /**
- * Process the rate limit queue.
+ * Process the rate limit queue sequentially.
  *
- * Sequentially processes queued requests, respecting rate limit intervals and retry backoff.
- * Skips items not yet eligible for processing and stops at the first unready item to prevent
- * busy loops.
+ * Dequeues requests and waits for rate limit intervals between them. Respects retry
+ * eligibility times (backoff) and manual pause states. Stops processing when queue is empty.
  *
  * @source
  */
@@ -146,21 +127,22 @@ async function processRateLimitQueue(): Promise<void> {
   setProcessingQueue(true);
 
   while (requestQueue.length > 0) {
+    // Wait for manual pause to be lifted
     await waitWhileManuallyPaused();
     const now = Date.now();
 
-    // Check if next item is ready for retry
+    // Check if the next entry is ready for retry
     const nextEntry = requestQueue[0];
     if (nextEntry && (nextEntry.nextEligibleAt ?? 0) > now) {
-      // Item not ready yet - wait and try again
+      // Not ready yet - wait and retry
       const waitTime = (nextEntry.nextEligibleAt ?? now) - now;
-      await sleep(Math.min(waitTime, 1000)); // Wait up to 1 second
+      await sleep(Math.min(waitTime, 1000)); // Cap wait at 1 second to remain responsive
       continue;
     }
 
     const timeSinceLastRequest = now - getLastRequestTime();
 
-    // Enforce minimum interval between requests to stay within rate limits
+    // Enforce minimum interval between requests for rate limit compliance
     if (getLastRequestTime() > 0 && timeSinceLastRequest < REQUEST_INTERVAL) {
       const waitTime = REQUEST_INTERVAL - timeSinceLastRequest;
       await sleep(waitTime);

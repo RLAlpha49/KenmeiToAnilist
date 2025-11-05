@@ -1,3 +1,9 @@
+/**
+ * @packageDocumentation
+ * @module components/ui/error-message
+ * @description Error message display component with type-specific styling and actions.
+ * @source
+ */
 import React from "react";
 import {
   AlertCircle,
@@ -11,6 +17,15 @@ import {
 } from "lucide-react";
 import { ErrorType } from "../../utils/errorHandling";
 
+/**
+ * Props for the ErrorMessage component.
+ * @property message - Error message text to display.
+ * @property type - Error type determining icon and styling.
+ * @property retry - Optional callback for retry button.
+ * @property dismiss - Optional callback for dismiss button.
+ * @property showTypeLabel - Whether to display the error type label.
+ * @source
+ */
 interface ErrorMessageProps {
   message: string;
   type?: ErrorType;
@@ -19,6 +34,10 @@ interface ErrorMessageProps {
   showTypeLabel?: boolean;
 }
 
+/**
+ * Configuration for error type styling and icons.
+ * @source
+ */
 type TypeConfig = {
   icon: React.ReactNode;
   classes: string;
@@ -82,6 +101,12 @@ const TYPE_CONFIG: Record<string, TypeConfig> = {
   },
 };
 
+/**
+ * Error message alert component with type-specific styling and action buttons.
+ * @param props - Component props including message, type, and optional handlers.
+ * @returns Styled error message alert element.
+ * @source
+ */
 export function ErrorMessage({
   message,
   type = ErrorType.UNKNOWN,

@@ -1,9 +1,21 @@
+/**
+ * @packageDocumentation
+ * @module components/ui/radio-group
+ * @description Radio group component with Radix UI for single selection inputs.
+ * @source
+ */
 import * as React from "react";
 import * as RadioGroupPrimitive from "@radix-ui/react-radio-group";
 import { CircleIcon } from "lucide-react";
 
 import { cn } from "@/utils/tailwind";
 
+/**
+ * Radio group root component for grouping radio items.
+ * @param props - Standard radio group props from Radix UI.
+ * @returns Radio group container.
+ * @source
+ */
 function RadioGroup({
   className,
   ...props

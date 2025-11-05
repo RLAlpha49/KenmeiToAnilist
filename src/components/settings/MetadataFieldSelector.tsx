@@ -1,10 +1,10 @@
 /**
- * Component for selecting metadata fields for custom matching rules.
+ * @packageDocumentation
+ * @module MetadataFieldSelector
+ * @description Component for selecting metadata fields for custom matching rules.
  *
  * Provides organized categories of metadata fields that users can select
  * to determine which fields a custom rule pattern should check.
- *
- * @module MetadataFieldSelector
  */
 
 import React, { memo, useCallback } from "react";
@@ -20,14 +20,22 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Info } from "lucide-react";
 
+/**
+ * Props for MetadataFieldSelector component.
+ * @source
+ */
 interface MetadataFieldSelectorProps {
+  /** Currently selected metadata field targets. */
   selectedFields: CustomRuleTarget[];
+  /** Callback when field selection changes. */
   onChange: (fields: CustomRuleTarget[]) => void;
+  /** Whether the selector is disabled. */
   disabled?: boolean;
 }
 
 /**
  * Metadata for each available target field.
+ * @source
  */
 const METADATA_FIELDS: Record<
   CustomRuleTarget,
@@ -88,6 +96,7 @@ const METADATA_FIELDS: Record<
 
 /**
  * Group fields by category for organized display.
+ * @source
  */
 const FIELD_CATEGORIES = {
   "Text Fields": ["titles", "author", "description"] as CustomRuleTarget[],
@@ -97,9 +106,9 @@ const FIELD_CATEGORIES = {
 
 /**
  * Component for selecting which metadata fields to check in a custom rule.
- *
- * @param props - Component props
- * @returns Rendered metadata field selector
+ * @param props - Component props.
+ * @returns The rendered metadata field selector.
+ * @source
  */
 function MetadataFieldSelectorComponent({
   selectedFields,

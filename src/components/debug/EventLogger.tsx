@@ -488,6 +488,7 @@ export function EventLogger(): React.ReactElement {
     const handleSetFilter = (event: CustomEvent) => {
       const detail = event.detail as { types?: string[] } | undefined;
       if (detail?.types) {
+        // Set type filter when custom event is triggered
         setActiveTypes(detail.types);
         setSearchTerm(""); // Clear search to focus on type filter
         setVisibleCount(DEFAULT_VISIBLE_COUNT);
@@ -532,10 +533,12 @@ export function EventLogger(): React.ReactElement {
       const aValid = !Number.isNaN(aTime);
       const bValid = !Number.isNaN(bTime);
 
+      // Sort by parsed timestamp (newest first), fallback to string compare if parse fails
       if (aValid && bValid) {
         return bTime - aTime;
       }
 
+      // Prioritize valid dates over invalid ones
       if (aValid) return -1;
       if (bValid) return 1;
 

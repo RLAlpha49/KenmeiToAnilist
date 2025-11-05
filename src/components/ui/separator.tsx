@@ -1,3 +1,9 @@
+/**
+ * @packageDocumentation
+ * @module components/ui/separator
+ * @description Separator component for dividing content sections.
+ * @source
+ */
 "use client";
 
 import * as React from "react";
@@ -5,6 +11,13 @@ import * as SeparatorPrimitive from "@radix-ui/react-separator";
 
 import { cn } from "@/utils/tailwind";
 
+/**
+ * Separator component wrapping Radix UI separator primitive.
+ * Supports horizontal and vertical orientations.
+ * @param props - Standard separator props from Radix UI.
+ * @returns Styled separator element.
+ * @source
+ */
 function Separator({
   className,
   orientation = "horizontal",

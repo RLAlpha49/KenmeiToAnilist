@@ -1,9 +1,21 @@
+/**
+ * @packageDocumentation
+ * @module components/ui/alert-dialog
+ * @description Alert dialog component for confirmation prompts with Radix UI.
+ * @source
+ */
 import * as React from "react";
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 
 import { cn } from "@/utils/tailwind";
 import { buttonVariants } from "@/components/ui/button";
 
+/**
+ * Alert dialog root component.
+ * @param props - Standard alert dialog props from Radix UI.
+ * @returns Alert dialog root element.
+ * @source
+ */
 function AlertDialog({
   ...props
 }: Readonly<React.ComponentProps<typeof AlertDialogPrimitive.Root>>) {

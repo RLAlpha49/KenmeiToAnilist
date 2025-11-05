@@ -13,13 +13,13 @@ import type {
 } from "./types";
 
 /**
- * Merge results from original search, Comick, and MangaDex while handling duplicates.
+ * Merge results from direct AniList search and fallback sources, deduplicating by manga ID.
  * @param originalResults - Results from direct AniList search.
  * @param comickResults - Results from Comick fallback.
  * @param mangaDexResults - Results from MangaDex fallback.
- * @param comickSourceMap - Comick source information map.
- * @param mangaDexSourceMap - MangaDex source information map.
- * @returns Merged results and updated source maps.
+ * @param comickSourceMap - Comick source information to preserve.
+ * @param mangaDexSourceMap - MangaDex source information to preserve.
+ * @returns Merged results and source maps.
  * @source
  */
 export function mergeSourceResults(
@@ -84,11 +84,11 @@ export function mergeSourceResults(
 }
 
 /**
- * Get source information for a manga from either Comick or MangaDex source maps.
+ * Retrieve source metadata for a manga from the appropriate source map.
  * @param mangaId - The manga ID to look up.
  * @param comickSourceMap - Comick source information map.
  * @param mangaDexSourceMap - MangaDex source information map.
- * @returns Generic source info or undefined if not found.
+ * @returns Generic source info or undefined if not found in either map.
  * @source
  */
 export function getSourceInfo(

@@ -1,5 +1,5 @@
 /**
- * @file Build final search response with confidence scores and source info
+ * Build final search response with confidence scores and source info
  * @module matching/orchestration/response-builder
  */
 
@@ -20,6 +20,7 @@ import { getSourceInfo } from "../sources";
  * @param mangaDexSourceMap - MangaDex source information by manga ID
  * @param lastPageInfo - Optional pagination info from last search page
  * @returns Complete manga search response
+ *
  * @source
  */
 export function buildFinalResponse(

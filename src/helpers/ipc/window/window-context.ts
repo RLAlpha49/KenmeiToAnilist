@@ -12,8 +12,9 @@ import {
 } from "./window-channels";
 
 /**
- * Exposes the Electron window control context bridge to the renderer process.
- *
+ * Exposes window control IPC methods to the renderer process via context bridge.
+ * Provides minimize, maximize, and close operations.
+ * @throws {Error} If electron modules are unavailable.
  * @source
  */
 export function exposeWindowContext() {

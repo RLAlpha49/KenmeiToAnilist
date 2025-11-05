@@ -173,11 +173,11 @@ initializeSearchCache();
 
 /**
  * Constructs request options with headers and body for GraphQL requests.
- * @param query - The GraphQL query or mutation string.
- * @param variables - Optional variables for the query.
- * @param token - Optional authentication bearer token.
- * @param abortSignal - Optional signal to abort the request.
- * @returns Configured RequestInit object for fetch.
+ * @param query - GraphQL query or mutation string.
+ * @param variables - Optional query variables.
+ * @param token - Optional Bearer token for authentication.
+ * @param abortSignal - Optional AbortSignal to cancel the request.
+ * @returns RequestInit object configured for GraphQL POST request.
  * @source
  */
 function buildRequestOptions(
@@ -378,15 +378,11 @@ async function processHttpError(
 }
 
 /**
- * Handles browser-based GraphQL requests directly to the AniList API.
- * @param requestId - Unique identifier for tracking this request in logs.
- * @param options - Configured request options for fetch.
- * @returns Promise resolving to the API response.
- * @source
- */
-
-/**
  * Extract operation endpoint name from GraphQL query for telemetry.
+ * Maps GraphQL operation names to user-friendly endpoint names.
+ * @param options - RequestInit containing the GraphQL query in body.
+ * @returns Normalized endpoint name or "unknown".
+ * @source
  */
 function extractOperationEndpoint(options: RequestInit): string {
   let endpoint = "unknown";
@@ -422,6 +418,10 @@ function extractOperationEndpoint(options: RequestInit): string {
 
 /**
  * Get retry delay from Retry-After header if present, otherwise returns null.
+ * Handles both delay-in-seconds and HTTP-date formats per RFC 9110.
+ * @param response - HTTP response object potentially containing Retry-After header.
+ * @returns Delay in milliseconds or null if header absent.
+ * @source
  */
 function getRetryAfterDelay(response: Response): number | null {
   const retryAfter = response.headers.get("Retry-After");
@@ -441,6 +441,13 @@ function getRetryAfterDelay(response: Response): number | null {
 
 /**
  * Handle a successful browser response and dispatch telemetry event.
+ * Logs GraphQL errors if present in response despite successful HTTP status.
+ * @param requestId - Unique identifier for tracking this request in logs.
+ * @param jsonResponse - Parsed JSON response from AniList API.
+ * @param options - Original RequestInit for extracting operation endpoint.
+ * @param duration - Request duration in milliseconds.
+ * @returns The response object unchanged.
+ * @source
  */
 function handleSuccessResponse<T>(
   requestId: string,
@@ -477,6 +484,13 @@ function handleSuccessResponse<T>(
 
 /**
  * Handle a failed browser response and dispatch telemetry event.
+ * Always throws an error; never returns normally.
+ * @param requestId - Unique identifier for tracking this request in logs.
+ * @param options - Original RequestInit for extracting operation endpoint.
+ * @param duration - Request duration in milliseconds.
+ * @param error - The error that caused the failure.
+ * @throws {Error} Always re-throws the provided error after logging.
+ * @source
  */
 function handleFailureResponse(
   requestId: string,
@@ -510,6 +524,9 @@ async function handleBrowserRequest<T>(
   requestId: string,
   options: RequestInit,
 ): Promise<AniListResponse<T>> {
+  /**
+   * Maximum retry attempts for transient failures.
+   */
   const MAX_RETRIES = 5;
 
   let lastError: Error | null = null;
@@ -598,7 +615,7 @@ async function handleBrowserRequest<T>(
  * @param bypassCache - Optional flag to bypass cache.
  * @param noRetry - If true, disable internal retry logic (external retry layer will handle retries).
  * @returns A promise resolving to an AniListResponse object.
- * @see api-listeners.ts for retry implementation
+ * See api-listeners.ts for retry implementation
  * @source
  */
 export async function request<T>(
@@ -868,15 +885,15 @@ async function executeSearchQuery(
 }
 
 /**
- * Search for manga on AniList.
- *
- * @param search - Search query.
- * @param page - Page number.
- * @param perPage - Results per page.
- * @param token - Optional access token.
- * @param bypassCache - Optional parameter to bypass cache.
- * @param noRetry - If true, disable internal retry logic.
- * @returns Promise resolving to search results.
+ * Search for manga on AniList by title.
+ * Results are cached for 30 minutes to minimize API calls.
+ * @param search - Search query string.
+ * @param page - Results page number (default: 1).
+ * @param perPage - Results per page (default: 50).
+ * @param token - Optional access token for authenticated requests.
+ * @param bypassCache - Skip cache and fetch from API (default: false).
+ * @param noRetry - Disable automatic retry logic (default: false).
+ * @returns Promise resolving to paginated search results.
  * @source
  */
 export async function searchManga(
@@ -906,9 +923,9 @@ export async function searchManga(
 
 /**
  * Batch search for multiple manga titles in a single GraphQL request.
- *
- * @param searches - Array of search queries with metadata.
- * @param options - Optional configuration including auth token, page size, abort signal, and noRetry flag.
+ * More efficient than individual searches when matching multiple titles.
+ * @param searches - Array of search queries with alias, title, and index.
+ * @param options - Configuration including auth token, page size, abort signal.
  * @returns Promise resolving to map of search results keyed by alias.
  * @source
  */
@@ -1109,15 +1126,15 @@ ${queryParts.join("\n")}
 }
 
 /**
- * Advanced search for manga using the dedicated AniList endpoint.
- *
- * @param search - Search query.
- * @param page - Page number.
- * @param perPage - Results per page.
- * @param token - Optional access token.
- * @param bypassCache - Optional parameter to bypass cache.
- * @param noRetry - If true, disable internal retry logic.
- * @returns Promise resolving to search results.
+ * Advanced search for manga using the AniList dedicated search endpoint.
+ * Results are cached for 30 minutes to minimize API calls.
+ * @param search - Search query string.
+ * @param page - Results page number (default: 1).
+ * @param perPage - Results per page (default: 50).
+ * @param token - Optional access token for authenticated requests.
+ * @param bypassCache - Skip cache and fetch from API (default: false).
+ * @param noRetry - Disable automatic retry logic (default: false).
+ * @returns Promise resolving to paginated search results.
  * @source
  */
 export async function advancedSearchManga(
@@ -1150,9 +1167,9 @@ export async function advancedSearchManga(
 }
 
 /**
- * Clear the search cache.
- *
- * @param searchQuery - Optional search query to clear specific entries.
+ * Clear the search cache entirely or for specific queries.
+ * Persists the cleared cache to storage and notifies main process.
+ * @param searchQuery - Optional query to clear only matching entries; clears all if omitted.
  * @source
  */
 export function clearSearchCache(searchQuery?: string): void {
@@ -1187,13 +1204,13 @@ export function clearSearchCache(searchQuery?: string): void {
 }
 
 /**
- * Get multiple manga by their IDs.
- *
- * @param ids - Array of AniList manga IDs.
- * @param token - Optional access token.
- * @param abortSignal - Optional abort signal to cancel the request.
- * @param noRetry - If true, disable internal retry logic.
- * @returns Promise resolving to an array of AniListManga objects.
+ * Get multiple manga by their AniList media IDs.
+ * Returns results in original order matching input array.
+ * @param ids - Array of AniList manga media IDs.
+ * @param token - Optional access token for authenticated requests.
+ * @param abortSignal - Optional AbortSignal to cancel the request.
+ * @param noRetry - Disable automatic retry logic (default: false).
+ * @returns Promise resolving to array of AniListManga objects.
  * @source
  */
 export async function getMangaByIds(
@@ -1242,11 +1259,12 @@ export async function getMangaByIds(
 }
 
 /**
- * Constructs an Error object for rate limit scenarios with retry information.
+ * Constructs a RateLimitError with retry metadata.
+ * Used internally to standardize rate limit error creation.
  * @param message - Error message describing the rate limit.
  * @param status - HTTP status code (typically 429).
  * @param retryAfter - Seconds to wait before retrying.
- * @returns RateLimitError object with rate limit properties.
+ * @returns RateLimitError object.
  * @source
  */
 function createRateLimitError(
@@ -1262,8 +1280,9 @@ function createRateLimitError(
 }
 
 /**
- * Detects rate limit errors from HTTP status code or flags.
- * @param errorObj - Error object with status and rate limit information.
+ * Detects rate limit errors from HTTP status and error object flags.
+ * Returns null if no rate limit detected.
+ * @param errorObj - Error object with optional status, isRateLimited, retryAfter properties.
  * @returns RateLimitError if detected, null otherwise.
  * @source
  */
@@ -1292,10 +1311,10 @@ function checkDirectRateLimitError(errorObj: {
 }
 
 /**
- * Detects rate limit errors from message text patterns.
- * Extracts retry duration if present in the error message.
- * @param errorObj - Error object with message to check.
- * @returns RateLimitError if detected, null otherwise.
+ * Detects rate limit errors from error message text patterns.
+ * Extracts retry duration from message if present.
+ * @param errorObj - Error object with message property.
+ * @returns RateLimitError if rate limit detected in message, null otherwise.
  * @source
  */
 function checkRateLimitInMessage(errorObj: { message?: string }): Error | null {
@@ -1330,12 +1349,14 @@ function checkRateLimitInMessage(errorObj: { message?: string }): Error | null {
 }
 
 /**
- * Gets the current user's manga list from AniList.
- *
+ * Gets the current authenticated user's manga list from AniList.
+ * Fetches the complete collection in chunks if needed.
+ * Detects and propagates rate limit errors to the caller.
  * @param token - The user's access token.
  * @param abortSignal - Optional AbortSignal to cancel the request.
- * @param noRetry - If true, disable internal retry logic.
- * @returns The user's manga list organized by status.
+ * @param noRetry - Disable automatic retry logic (default: false).
+ * @returns Promise resolving to user's manga list keyed by media ID.
+ * @throws {Error} On network failure, auth failure, or rate limiting.
  * @source
  */
 export async function getUserMangaList(
@@ -1403,11 +1424,12 @@ export async function getUserMangaList(
 }
 
 /**
- * Attempts to retrieve the authenticated user's ID from the AniList Viewer query.
- * Handles multiple response structures and fallback approaches.
+ * Retrieves the authenticated user's AniList user ID.
+ * Tries multiple approaches to extract ID from different response formats.
  * @param token - User's access token.
  * @param abortSignal - Optional signal to abort the request.
- * @returns Promise resolving to the user's AniList ID or undefined if not found.
+ * @returns Promise resolving to user's AniList ID or undefined if not found.
+ * @throws {Error} On network failure or auth error.
  * @source
  */
 async function getAuthenticatedUserID(
@@ -1487,7 +1509,8 @@ async function getAuthenticatedUserID(
 }
 
 /**
- * Single media list entry from the user's AniList collection.
+ * Single user media entry with metadata for display.
+ * Contains ID, status, progress, and score information.
  * @source
  */
 interface MediaListEntry {
@@ -1502,6 +1525,7 @@ interface MediaListEntry {
 
 /**
  * Collection of media lists organized by status categories.
+ * Contains arrays of entries grouped by collection status.
  * @source
  */
 interface MediaListCollection {
@@ -1512,7 +1536,7 @@ interface MediaListCollection {
 }
 
 /**
- * Response structure from the MediaListCollection API query.
+ * API response structure for MediaListCollection queries.
  * Handles multiple nesting levels from different response formats.
  * @source
  */
@@ -1527,9 +1551,10 @@ interface MediaListCollectionResponse {
 }
 
 /**
- * Extracts MediaListCollection from API response, handling various nesting levels.
- * @param response - The API response potentially containing MediaListCollection.
- * @returns MediaListCollection or null if not found in expected structures.
+ * Extracts MediaListCollection from potentially nested API response.
+ * Handles multiple nesting levels from different response formats.
+ * @param response - API response potentially containing MediaListCollection.
+ * @returns MediaListCollection if found, null otherwise.
  * @source
  */
 function extractMediaListCollection(
@@ -1548,13 +1573,13 @@ function extractMediaListCollection(
 }
 
 /**
- * Handles errors that occur during chunk fetching with rate limit detection.
- * Returns control if partial data exists, otherwise re-throws.
- * @param error - The error that occurred.
- * @param currentChunk - The chunk number that failed.
- * @param mediaMap - Current accumulated media map to check for partial data.
- * @returns false to stop fetching; true to continue (never returned for rate limits).
- * @throws {Error} If error is rate limit or no partial data available.
+ * Handles errors during chunk fetching, detecting rate limits.
+ * Returns control if partial data exists; re-throws for rate limits.
+ * @param error - Error that occurred during fetch.
+ * @param currentChunk - Chunk number that failed.
+ * @param mediaMap - Accumulated media map to check for partial data.
+ * @returns false to stop fetching, true to continue.
+ * @throws {Error} For rate limits or if no partial data available.
  * @source
  */
 function handleChunkError(
@@ -1596,8 +1621,9 @@ function handleChunkError(
 
 /**
  * Determines if additional chunks should be fetched based on current chunk size.
- * @param chunkEntryCount - Number of entries in the current chunk.
- * @param perChunk - Maximum entries per chunk.
+ * Returns false when chunk size is below the per-chunk limit (indicating last page).
+ * @param chunkEntryCount - Number of entries returned in current chunk.
+ * @param perChunk - Maximum entries expected per chunk.
  * @returns true if more chunks needed, false if reached the end.
  * @source
  */
@@ -1614,14 +1640,15 @@ function shouldFetchNextChunk(
 }
 
 /**
- * Fetches and processes a single chunk of the user's media list.
- * Updates the mediaMap with entries from this chunk.
+ * Fetches and processes a single page of the user's media list.
+ * Updates mediaMap with entries from the fetched chunk.
  * @param userId - The user's AniList ID.
- * @param currentChunk - The chunk number to fetch (1-indexed).
- * @param perChunk - Maximum entries to fetch per chunk.
+ * @param currentChunk - Chunk number to fetch (1-indexed).
+ * @param perChunk - Maximum entries per chunk.
  * @param token - User's access token.
  * @param abortSignal - Optional signal to abort the request.
  * @param mediaMap - Map to populate with entries from this chunk.
+ * @param noRetry - Disable automatic retry logic (default: false).
  * @returns Number of entries processed from this chunk.
  * @source
  */
@@ -1671,12 +1698,13 @@ async function fetchAndProcessChunk(
 }
 
 /**
- * Fetches the complete user media list using pagination with multiple chunks if needed.
+ * Fetches the complete user media list using pagination with multiple chunks.
  * Returns partial results if errors occur after some data is fetched.
  * @param userId - The user's AniList ID.
  * @param token - User's access token.
  * @param abortSignal - Optional signal to abort the request.
- * @returns Promise resolving to a map of mediaId to UserMediaEntry.
+ * @param noRetry - Disable automatic retry logic (default: false).
+ * @returns Promise resolving to map of mediaId to UserMediaEntry.
  * @source
  */
 async function fetchCompleteUserMediaList(
@@ -1754,11 +1782,11 @@ async function fetchCompleteUserMediaList(
 }
 
 /**
- * Processes a single chunk of MediaListCollection and adds entries to the mediaMap.
- * Entries are keyed by mediaId for quick lookup.
+ * Processes a chunk of MediaListCollection entries into the media map.
+ * Entries are keyed by mediaId for O(1) lookup.
  * @param mediaListCollection - The media list collection to process.
  * @param mediaMap - Map to populate with entries from this chunk.
- * @returns Number of entries processed.
+ * @returns Number of entries successfully processed.
  * @source
  */
 function processMediaListCollectionChunk(

@@ -28,11 +28,11 @@ export interface AlternativeSearchSettingsCardProps {
 /**
  * Displays controls for enabling/disabling alternative manga search sources.
  *
- * Allows users to configure fallback searches to Comick and MangaDex when AniList
- * results are inconclusive.
+ * Provides UI toggles for configuring fallback searches to Comick and MangaDex
+ * when primary AniList search results are inconclusive.
  *
- * @param props - The component props.
- * @returns The rendered settings card.
+ * @param props - Component props including search toggles.
+ * @returns Rendered settings card with source toggle controls.
  * @source
  */
 function AlternativeSearchSettingsCardComponent({

@@ -74,6 +74,7 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
 
   const [activePanel, setActivePanel] = useState<string>("");
 
+  // Build list of enabled debug panels based on user settings
   const panels = useMemo(() => {
     const entries: DebugPanelDefinition[] = [];
 
@@ -192,12 +193,14 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
     setActivePanel,
   ]);
 
+  // Ensure activePanel is valid when panels list changes
   useEffect(() => {
     if (!panels.length) {
       setActivePanel("");
       return;
     }
 
+    // Select first panel if currently active panel is no longer available
     if (!panels.some((panel) => panel.id === activePanel)) {
       setActivePanel(panels[0].id);
     }

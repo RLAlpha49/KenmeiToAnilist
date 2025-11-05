@@ -7,7 +7,7 @@
 import type { MangaMatchResult } from "../api/anilist/types";
 
 /**
- * Result of generating a confidence test command
+ * Result object containing generated test command and associated metadata.
  * @source
  */
 export interface ConfidenceTestCommand {
@@ -21,14 +21,9 @@ export interface ConfidenceTestCommand {
 }
 
 /**
- * Generate a confidence test command from a match result
- *
- * Creates a command that can be used to test the confidence calculation locally
- * using the test:confidence npm script. The command includes the Kenmei manga title
- * as the search term and the matched AniList manga as the candidate.
- *
- * @param match - The manga match result containing Kenmei and AniList data
- * @returns Object with the generated command and metadata
+ * Generates npm test:confidence command from match result for local testing; includes metadata.
+ * @param match - The manga match result containing Kenmei and AniList data.
+ * @returns Object with generated command, description, and all metadata.
  * @source
  */
 export function generateConfidenceTestCommand(
@@ -97,13 +92,10 @@ export function generateConfidenceTestCommand(
 }
 
 /**
- * Copy text to clipboard with Electron-compatible fallback
- *
- * Handles the "Document is not focused" error that can occur in Electron
- * by using a textarea selection method with proper focus handling.
- *
- * @param text - Text to copy
- * @returns Promise that resolves when copy succeeds
+ * Copies text to clipboard with Electron-compatible fallback for unfocused documents.
+ * @param text - Text to copy to clipboard.
+ * @returns Promise that resolves when copy succeeds.
+ * @throws If copy operation fails in all attempts.
  * @source
  */
 export async function copyToClipboard(text: string): Promise<void> {
@@ -127,8 +119,11 @@ export async function copyToClipboard(text: string): Promise<void> {
 }
 
 /**
- * Fallback copy implementation using textarea selection
- * Separated to handle TypeScript deprecation warning
+ * Fallback copy implementation using textarea selection; handles TypeScript deprecation warning.
+ * @param text - Text to copy using execCommand method.
+ * @throws If textarea selection or copy operation fails.
+ * @internal
+ * @source
  */
 function fallbackCopyToClipboard(text: string): void {
   const textArea = document.createElement("textarea");

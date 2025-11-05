@@ -24,7 +24,6 @@ import { MangaMatchResult } from "../../api/anilist/types";
 
 /**
  * Highlight stat configuration for display in the header.
- *
  * @property label - Display name for the statistic.
  * @property value - Numeric value to show.
  * @property icon - Icon component to display.
@@ -40,7 +39,6 @@ type HighlightStat = {
 
 /**
  * Props for the MatchingPageHeader component.
- *
  * @property headerVariants - Framer Motion animation variants.
  * @property matchResultsLength - Total number of matches to process.
  * @property showRematchOptions - Whether to display rematch options panel.
@@ -53,6 +51,7 @@ type HighlightStat = {
  * @property handleRedo - Callback for redo action.
  * @property canUndo - Whether undo is available.
  * @property canRedo - Whether redo is available.
+ * @property matchResults - Array of match results for export.
  * @source
  */
 interface Props {
@@ -80,13 +79,11 @@ interface Props {
 }
 
 /**
- * Displays the matching dashboard header with progress stats and action buttons.
- *
+ * Matching dashboard header displaying progress stats and action buttons.
  * Shows completion percentage, match/manual/pending counts, and rematch controls.
- * Includes undo/redo functionality for match operations.
- *
- * @param props - The component props.
- * @returns The rendered matching page header.
+ * Includes undo/redo functionality and data export options.
+ * @param props - Component props.
+ * @returns Rendered matching page header with progress and statistics.
  * @source
  */
 export function MatchingPageHeader({

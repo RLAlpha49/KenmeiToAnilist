@@ -12,30 +12,57 @@ import { Separator } from "@/components/ui/separator";
 import { highlightText } from "@/utils/textHighlight";
 import { cn } from "@/utils/tailwind";
 
+/**
+ * Cache types that can be cleared individually.
+ * @source
+ */
 interface CachesToClear {
+  /** Authentication tokens and login state. */
   auth: boolean;
+  /** Settings cache. */
   settings: boolean;
+  /** Sync history and records. */
   sync: boolean;
+  /** Import operation history. */
   import: boolean;
+  /** Matching results. */
   review: boolean;
+  /** Manga metadata. */
   manga: boolean;
+  /** Search results. */
   search: boolean;
+  /** Other caches. */
   other: boolean;
 }
 
+/**
+ * Props for CacheManagementSection component.
+ * @source
+ */
 interface CacheManagementSectionProps {
+  /** Which caches are selected for clearing. */
   cachesToClear: CachesToClear;
+  /** Whether cache clearing is in progress. */
   isClearing: boolean;
+  /** Whether caches were successfully cleared. */
   cacheCleared: boolean;
+  /** Current search query. */
   searchQuery: string;
+  /** Currently highlighted section ID. */
   highlightedSectionId: string | null;
+  /** Callback when cache selection changes. */
   onCachesToClearChange: (caches: CachesToClear) => void;
+  /** Callback to execute cache clearing. */
   onClearCaches: () => void;
 }
 
 /**
  * Helper function to render text with highlighting if search query exists.
  * Reduces cognitive complexity by extracting conditional highlighting pattern.
+ * @param text - The text to potentially highlight.
+ * @param searchQuery - The search query to highlight with.
+ * @returns Highlighted text or plain text.
+ * @source
  */
 const renderHighlightedText = (
   text: string,
@@ -47,7 +74,8 @@ const renderHighlightedText = (
 /**
  * Cache management section component.
  * Allows users to select and clear various types of cached data.
- *
+ * @param props - Component props.
+ * @returns The rendered cache management section.
  * @source
  */
 export function CacheManagementSection({

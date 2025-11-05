@@ -9,11 +9,9 @@ import { Footer } from "./Footer";
 import { BackgroundMatchingIndicator } from "./BackgroundMatchingIndicator";
 
 /**
- * BaseLayout React component that provides the main application layout with header, footer, and content area.
+ * Main application layout component providing header, footer, and content wrapper.
  *
- * @param children - The content to render inside the layout.
- * @param onOpenShortcutsPanel - Callback function invoked to open the shortcuts panel.
- * @returns The rendered layout React element.
+ * @returns The rendered layout structure.
  * @source
  */
 export default function BaseLayout({
@@ -25,6 +23,7 @@ export default function BaseLayout({
 }>) {
   return (
     <div className="from-background via-background to-background text-foreground bg-linear-to-br relative flex h-screen flex-col overflow-hidden">
+      {/* Animated gradient background elements */}
       <div className="pointer-events-none absolute inset-0">
         <div className="bg-linear-to-br absolute -left-32 top-10 h-72 w-72 rounded-full from-blue-500/10 via-purple-500/10 to-transparent blur-3xl" />
         <div className="bg-linear-to-br absolute right-[-60px] top-1/2 h-96 w-96 -translate-y-1/2 rounded-full from-emerald-500/10 via-teal-500/10 to-transparent blur-3xl" />
@@ -35,6 +34,7 @@ export default function BaseLayout({
 
       <BackgroundMatchingIndicator />
 
+      {/* Main content area with glassmorphism styling */}
       <main
         id="main-content"
         tabIndex={-1}

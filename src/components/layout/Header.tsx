@@ -49,10 +49,10 @@ import type { LucideIcon } from "lucide-react";
 import { cn } from "@/utils/tailwind";
 
 /**
- * Navigation item configuration for header navigation menu.
- * @property label - Display label for the navigation item.
- * @property to - Route path for TanStack Router navigation.
- * @property icon - Lucide icon component for the navigation item.
+ * Navigation item configuration for header menu.
+ * @property label - Display label for the navigation link.
+ * @property to - Route path for navigation.
+ * @property icon - Lucide React icon component.
  * @source
  */
 type NavItem = {
@@ -61,7 +61,7 @@ type NavItem = {
   icon: LucideIcon;
 };
 
-/** Navigation menu items array with label, route, and icon for each page. @source */
+/** Navigation menu items with labels, routes, and icons for each application page. @source */
 const NAV_ITEMS: NavItem[] = [
   { label: "Home", to: "/", icon: Home },
   { label: "Import", to: "/import", icon: Download },
@@ -72,10 +72,10 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 /**
- * Header React component that displays the application header with logo, navigation links, theme toggle, and window controls.
+ * Application header with logo, navigation, theme toggle, debug menu, and window controls.
  *
- * @param onOpenShortcutsPanel - Optional callback function invoked to open the shortcuts panel.
- * @returns The rendered header React element.
+ * @param onOpenShortcutsPanel - Optional callback to display keyboard shortcuts panel.
+ * @returns The rendered header element.
  * @source
  */
 export function Header({
@@ -88,6 +88,7 @@ export function Header({
 
   const location = useLocation();
 
+  // Determine current page pathname for active nav item highlighting
   const pathname = getPathname(location);
 
   return (
@@ -137,6 +138,7 @@ export function Header({
                 <NavigationMenu>
                   <NavigationMenuList className="bg-background/60 flex rounded-full p-1 text-xs font-medium shadow-inner shadow-black/5 ring-1 ring-white/40 backdrop-blur-sm dark:bg-slate-950/60 dark:ring-white/10">
                     {NAV_ITEMS.map(({ label, to, icon: Icon }) => {
+                      // Exact match for home route, prefix match for others
                       const isActive =
                         to === "/" ? pathname === "/" : pathname.startsWith(to);
                       return (
@@ -197,6 +199,7 @@ export function Header({
                   </TooltipContent>
                 </Tooltip>
               </div>
+              {/* Debug menu only visible when debug mode is enabled */}
               {isDebugEnabled && (
                 <div className="non-draggable">
                   <Tooltip>
@@ -215,6 +218,7 @@ export function Header({
                   </Tooltip>
                 </div>
               )}
+              {/* Window control buttons (minimize, maximize, close) */}
               <div className="non-draggable flex">
                 <Tooltip>
                   <TooltipTrigger asChild>

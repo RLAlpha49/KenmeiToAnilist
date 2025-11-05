@@ -17,7 +17,11 @@ import type { MangaSource } from "../../../api/manga-sources/types";
 
 /**
  * Extended Error interface for GraphQL API errors.
+ * @property status - Optional HTTP status code.
+ * @property statusText - Optional HTTP status text.
+ * @property errors - Optional array of GraphQL error objects.
  * @internal
+ * @source
  */
 interface GraphQLError extends Error {
   status?: number;
@@ -25,26 +29,38 @@ interface GraphQLError extends Error {
   errors?: unknown[];
 }
 
+/** AniList GraphQL API endpoint. @source */
 const API_URL = "https://graphql.anilist.co";
 
-// Cache settings
-const CACHE_EXPIRATION = 30 * 60 * 1000; // 30 minutes
+/** Cache expiration time in milliseconds (30 minutes). @source */
+const CACHE_EXPIRATION = 30 * 60 * 1000;
 
-// API request rate limiting (using safe rate from config)
-const API_RATE_LIMIT = SAFE_REQUESTS_PER_MINUTE; // Safe headroom below AniList's 60 req/min
-const REQUEST_INTERVAL = (60 * 1000) / API_RATE_LIMIT; // milliseconds between requests
-const MAX_RETRY_ATTEMPTS = 5; // Maximum number of retry attempts for rate limited requests
-const MAX_BACKOFF_MS = 60000; // 60 seconds maximum backoff to prevent long queue starvation
+/** Requests per minute rate limit (safe headroom below AniList's 60 req/min). @source */
+const API_RATE_LIMIT = SAFE_REQUESTS_PER_MINUTE;
+
+/** Milliseconds between requests for rate limiting. @source */
+const REQUEST_INTERVAL = (60 * 1000) / API_RATE_LIMIT;
+
+/** Maximum retry attempts for rate-limited requests. @source */
+const MAX_RETRY_ATTEMPTS = 5;
+
+/** Maximum backoff time in milliseconds (60 seconds) to prevent queue starvation. @source */
+const MAX_BACKOFF_MS = 60000;
 
 /**
- * Simple promise-based mutex for serializing state updates.
- * Ensures only one request can acquire the lock at a time.
+ * Promise-based mutex for serializing state updates.
+ * Ensures only one request acquires the lock at a time.
  * @internal
+ * @source
  */
 class Mutex {
   private locked = false;
   private readonly waiters: (() => void)[] = [];
 
+  /**
+   * Acquire the lock, waiting if already held.
+   * @source
+   */
   async lock(): Promise<void> {
     if (!this.locked) {
       this.locked = true;
@@ -59,6 +75,10 @@ class Mutex {
     });
   }
 
+  /**
+   * Release the lock and wake the next waiter, if any.
+   * @source
+   */
   unlock(): void {
     const waiter = this.waiters.shift();
     if (waiter) {
@@ -71,7 +91,11 @@ class Mutex {
 
 /**
  * Request queue item for batching and scheduling.
+ * @property execute - Function to execute the request.
+ * @property resolve - Callback to resolve the request promise.
+ * @property reject - Callback to reject the request promise.
  * @internal
+ * @source
  */
 interface QueuedRequest {
   execute: () => Promise<Record<string, unknown>>;
@@ -80,9 +104,10 @@ interface QueuedRequest {
 }
 
 /**
- * Rate-limited request queue with proper concurrency control and spacing.
- * Ensures REQUEST_INTERVAL between dequeues and propagates retry-after signals.
+ * Rate-limited request queue with concurrency control and spacing.
+ * Enforces REQUEST_INTERVAL between dequeues and propagates retry-after signals.
  * @internal
+ * @source
  */
 class RequestQueue {
   private readonly queue: QueuedRequest[] = [];
@@ -93,6 +118,9 @@ class RequestQueue {
 
   /**
    * Enqueue a request for execution with rate limiting.
+   * @param execute - Function to execute the request.
+   * @returns Promise resolving to the request result.
+   * @source
    */
   enqueue(
     execute: () => Promise<Record<string, unknown>>,
@@ -109,36 +137,45 @@ class RequestQueue {
   }
 
   /**
-   * Update rate limit reset time (called when 429 response received).
+   * Update rate limit reset time when 429 response is received.
+   * @param resetTime - Unix timestamp when the rate limit resets.
+   * @source
    */
   updateRetryAfter(resetTime: number): void {
     this.rateLimitResetTime = Math.max(this.rateLimitResetTime, resetTime);
   }
 
   /**
-   * Get current rate limit reset time.
+   * Get the current rate limit reset time.
+   * @returns Unix timestamp of rate limit reset time.
+   * @source
    */
   getRateLimitResetTime(): number {
     return this.rateLimitResetTime;
   }
 
   /**
-   * Get current queue size for diagnostics.
+   * Get the current queue size.
+   * @returns Number of pending requests in the queue.
+   * @source
    */
   size(): number {
     return this.queue.length;
   }
 
   /**
-   * Check if queue is currently processing.
+   * Check if the queue is currently processing.
+   * @returns True if the queue is actively processing requests.
+   * @source
    */
   isProcessing(): boolean {
     return this.processing;
   }
 
   /**
-   * Process the queue with proper rate limiting and spacing.
+   * Process the queue with rate limiting and spacing.
    * Micro-batches requests to prevent starvation under continuous enqueue.
+   * @source
    */
   private async processQueue(): Promise<void> {
     if (this.processing || this.queue.length === 0) {
@@ -215,11 +252,10 @@ class RequestQueue {
 const requestQueue = new RequestQueue();
 
 /**
- * Simple in-memory cache for API responses.
- *
+ * In-memory cache for API responses.
  * @template T - The type of cached data.
- * @property data - The cached data.
- * @property timestamp - The time the data was cached.
+ * @property data - The cached response data.
+ * @property timestamp - The Unix timestamp when the data was cached.
  * @source
  */
 interface Cache<T> {
@@ -229,19 +265,23 @@ interface Cache<T> {
   };
 }
 
-// Search cache
+/** Global search response cache. @source */
 const searchCache: Cache<Record<string, unknown>> = {};
 
 /**
  * Index mapping normalized search terms to their hashed cache keys.
  * Allows precise clearing of specific search queries without substring matching.
  * @internal
+ * @source
  */
 const searchTermIndex = new Map<string, Set<string>>();
 
 /**
- * Normalize a search term for indexing purposes.
+ * Normalize a search term for indexing and cache clearing.
+ * @param term - The search term to normalize.
+ * @returns Lowercase, trimmed search term.
  * @internal
+ * @source
  */
 function normalizeSearchTerm(term: unknown): string {
   if (typeof term === "string") {
@@ -251,19 +291,19 @@ function normalizeSearchTerm(term: unknown): string {
 }
 
 /**
- * Sleep for the specified number of milliseconds.
- *
- * @param ms - The number of milliseconds to sleep.
- * @returns A promise that resolves after the specified time.
+ * Sleep for the specified duration.
+ * @param ms - Milliseconds to sleep.
+ * @returns Promise that resolves after the delay.
  * @internal
  * @source
  */
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Handle rate limit checking and waiting.
- * Consults the request queue's reset time to determine if waiting is needed.
+ * Check rate limit status and wait if needed.
+ * Consults the request queue's reset time to determine if waiting is required.
  * @internal
+ * @source
  */
 async function handleRateLimit(): Promise<void> {
   const now = Date.now();
@@ -279,8 +319,12 @@ async function handleRateLimit(): Promise<void> {
 }
 
 /**
- * Safely extract search term from variables for logging purposes.
+ * Extract search term from GraphQL variables for logging.
+ * Handles primitives and objects with safe JSON truncation.
+ * @param variables - The GraphQL query variables.
+ * @returns Human-friendly search term for logging.
  * @internal
+ * @source
  */
 function getSearchTermFromVariables(
   variables: Record<string, unknown> | undefined,
@@ -320,9 +364,16 @@ function getSearchTermFromVariables(
 }
 
 /**
- * Handle 429 rate limit response with retry logic.
- * Uses exponential backoff capped at MAX_BACKOFF_MS with random jitter (±10%) to reduce queue starvation.
+ * Handle 429 rate limit response with exponential backoff and retry logic.
+ * Uses exponential backoff capped at MAX_BACKOFF_MS with ±10% jitter to reduce queue starvation.
+ * @param response - The 429 response object.
+ * @param variables - Query variables for logging.
+ * @param retryCount - Current retry attempt number.
+ * @param query - The GraphQL query string.
+ * @param token - Optional authentication token.
+ * @returns Promise resolving to the request result or rejection.
  * @internal
+ * @source
  */
 async function handleRateLimitResponse(
   response: Response,
@@ -382,9 +433,16 @@ async function handleRateLimitResponse(
 }
 
 /**
- * Handle server error response with retry logic.
- * Uses exponential backoff capped at MAX_BACKOFF_MS with jitter to prevent queue starvation.
+ * Handle server error (5xx) response with exponential backoff and retry logic.
+ * Uses exponential backoff capped at MAX_BACKOFF_MS with ±10% jitter to prevent queue starvation.
+ * @param response - The 5xx response object.
+ * @param variables - Query variables for logging.
+ * @param retryCount - Current retry attempt number.
+ * @param query - The GraphQL query string.
+ * @param token - Optional authentication token.
+ * @returns Promise resolving to the request result or rejection.
  * @internal
+ * @source
  */
 async function handleServerError(
   response: Response,
@@ -425,8 +483,16 @@ async function handleServerError(
 }
 
 /**
- * Handle network error with retry logic.
+ * Handle network errors with retry logic.
+ * Retries FetchError up to MAX_RETRY_ATTEMPTS with exponential backoff.
+ * @param error - The network error.
+ * @param retryCount - Current retry attempt number.
+ * @param query - The GraphQL query string.
+ * @param variables - Query variables for logging.
+ * @param token - Optional authentication token.
+ * @returns Promise resolving to the request result or rejection.
  * @internal
+ * @source
  */
 async function handleNetworkError(
   error: Error,
@@ -449,14 +515,15 @@ async function handleNetworkError(
 /**
  * Make a GraphQL request to the AniList API.
  *
- * Requests are automatically queued and rate-limited with REQUEST_INTERVAL spacing.
- * The queue handles 429 rate limit responses and propagates retry-after signals.
+ * Requests are queued and rate-limited with REQUEST_INTERVAL spacing.
+ * Automatically retries on 429 (rate limit), 5xx (server errors), and network errors.
+ * The queue propagates retry-after signals to prevent thundering herd problems.
  *
- * @param query - GraphQL query or mutation.
- * @param variables - Variables for the query.
+ * @param query - GraphQL query or mutation string.
+ * @param variables - Optional variables for the query.
  * @param token - Optional access token for authenticated requests.
- * @param retryCount - Current retry attempt (for internal use).
- * @returns Promise resolving to the response data.
+ * @param retryCount - Current retry attempt (internal use only).
+ * @returns Promise resolving to the GraphQL response data.
  * @internal
  * @source
  */
@@ -547,12 +614,12 @@ async function requestAniList(
 }
 
 /**
- * Generate a cache key from search parameters using stable SHA-1 hash.
- * Uses full query and variables to avoid collisions across large queries.
+ * Generate a stable cache key from query and variables using SHA-1 hash.
+ * Uses the full query and variables to avoid collisions across different queries.
  *
  * @param query - The GraphQL query string.
- * @param variables - The variables for the query.
- * @returns The generated cache key string (SHA-1 hex digest).
+ * @param variables - The query variables object.
+ * @returns Cache key string (SHA-1 hex digest with 'cache_' prefix).
  * @internal
  * @source
  */
@@ -567,11 +634,11 @@ function generateCacheKey(
 }
 
 /**
- * Check if a cache entry is valid.
- *
- * @param cache - The cache object.
- * @param key - The cache key to check.
- * @returns True if the cache entry is valid, false otherwise.
+ * Check if a cache entry is still valid.
+ * @template T - Type of cached data.
+ * @param cache - The cache object to check.
+ * @param key - The cache key to validate.
+ * @returns True if the entry exists and is within CACHE_EXPIRATION time.
  * @internal
  * @source
  */
@@ -584,9 +651,16 @@ function isCacheValid<T>(cache: Cache<T>, key: string): boolean {
 }
 
 /**
- * Setup IPC handlers for AniList API requests, token exchange, cache, and shell actions.
+ * Setup IPC handlers for AniList API requests, cache management, and shell operations.
  *
- * @param mainWindow - The main application window for security validation
+ * Registers handlers for:
+ * - GraphQL requests with automatic rate limiting and caching
+ * - Cache clearing by search term or all
+ * - Rate limit status queries
+ * - Manga source searches and detail retrieval
+ * - External URL opening in the default browser
+ *
+ * @param mainWindow - The main Electron window for security validation.
  * @source
  */
 export function setupAniListAPI(mainWindow: BrowserWindow) {

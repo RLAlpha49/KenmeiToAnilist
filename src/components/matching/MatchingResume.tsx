@@ -4,7 +4,6 @@ import { ResumeNotification } from "./ResumeNotification";
 
 /**
  * Props for the MatchingResume component.
- *
  * @property pendingMangaCount - Number of manga pending from a previous session.
  * @property onResumeMatching - Callback to resume the matching process.
  * @property onCancelResume - Callback to cancel resuming and continue normally.
@@ -17,10 +16,10 @@ interface Props {
 }
 
 /**
- * Container component that displays a resume notification for unfinished matching sessions.
- *
- * @param props - The component props.
- * @returns The rendered matching resume component.
+ * Container component displaying resume notification for unfinished matching sessions.
+ * Features animated entrance and allows users to resume or cancel.
+ * @param props - Component props.
+ * @returns Rendered matching resume notification with action buttons.
  * @source
  */
 export function MatchingResume({

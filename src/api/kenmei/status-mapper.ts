@@ -91,8 +91,9 @@ export function createCustomStatusMapping(
 
 /**
  * Validate and normalize a Kenmei status string to a valid enum value.
- * @param status - Status string to validate.
- * @returns Valid KenmeiStatus or undefined if the input doesn't match any valid status.
+ * Accepts exact, case-insensitive, space-normalized, and common variations (e.g., 'plan' → 'plan_to_read').
+ * @param status - Status string to validate and normalize.
+ * @returns Valid KenmeiStatus if matched, or undefined if unrecognized.
  * @source
  */
 function validateKenmeiStatus(status: string): KenmeiStatus | undefined {
@@ -132,8 +133,9 @@ function validateKenmeiStatus(status: string): KenmeiStatus | undefined {
 
 /**
  * Validate and normalize an AniList status string to a valid MediaListStatus enum value.
- * @param status - Status string to validate.
- * @returns Valid MediaListStatus or undefined if the input doesn't match any valid status.
+ * Accepts exact, case-insensitive, underscore-normalized, and common variations (e.g., 'PTW' → 'PLANNING').
+ * @param status - Status string to validate and normalize.
+ * @returns Valid MediaListStatus if matched, or undefined if unrecognized.
  * @source
  */
 function validateAniListStatus(status: string): MediaListStatus | undefined {

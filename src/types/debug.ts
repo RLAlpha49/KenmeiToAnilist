@@ -19,10 +19,10 @@ export type IpcLogTransport =
 export type IpcLogStatus = "pending" | "fulfilled" | "rejected";
 
 /**
- * Represents a serialized IPC message payload with preview.
+ * Serialized IPC message payload with preview.
  *
- * @property raw - The raw payload data.
- * @property preview - A string representation for display purposes.
+ * @property raw - Raw payload data.
+ * @property preview - String representation for display.
  * @source
  */
 export interface IpcLogPayload {
@@ -31,17 +31,17 @@ export interface IpcLogPayload {
 }
 
 /**
- * Represents a single IPC communication log entry.
+ * Single IPC communication log entry.
  *
  * @property id - Unique identifier for this log entry.
  * @property correlationId - Identifier linking request-response pairs.
- * @property channel - The IPC channel name.
- * @property direction - Whether message was sent or received.
- * @property transport - The type of IPC transport used.
- * @property status - The operation status (pending/fulfilled/rejected).
- * @property timestamp - ISO timestamp of when the message was logged.
+ * @property channel - IPC channel name.
+ * @property direction - Message direction (sent or received).
+ * @property transport - Type of IPC transport used.
+ * @property status - Operation status (pending/fulfilled/rejected).
+ * @property timestamp - ISO timestamp of the log entry.
  * @property durationMs - Time taken for operation to complete.
- * @property payload - The message payload and preview.
+ * @property payload - Message payload and preview.
  * @property error - Error message if the operation failed.
  * @source
  */
@@ -62,12 +62,12 @@ export interface IpcLogEntry {
 export type DebugEventLevel = "info" | "warn" | "error" | "success" | "debug";
 
 /**
- * Represents a generic debug event record.
+ * Generic debug event record.
  *
- * @property type - The event type identifier.
- * @property message - The event message.
- * @property level - The severity level.
- * @property source - The source component or module.
+ * @property type - Event type identifier.
+ * @property message - Event message.
+ * @property level - Severity level.
+ * @property source - Source component or module.
  * @property context - Additional contextual information.
  * @property metadata - Key-value metadata for the event.
  * @property tags - Array of tags for categorization.
@@ -86,9 +86,9 @@ export interface DebugEventRecord {
 }
 
 /**
- * Represents a debug event with a generated unique identifier.
+ * Debug event with a generated unique identifier.
  *
- * Extends DebugEventRecord with an id and ensures a timestamp is always present.
+ * Extends DebugEventRecord with an id and ensures timestamp is always present.
  *
  * @source
  */
@@ -98,7 +98,7 @@ export interface DebugEventEntry extends DebugEventRecord {
 }
 
 /**
- * Represents a single API request latency sample with context.
+ * API request latency sample with context.
  *
  * @property duration - Request duration in milliseconds.
  * @property provider - API provider (e.g., "anilist", "mal").

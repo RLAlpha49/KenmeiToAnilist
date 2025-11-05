@@ -17,11 +17,11 @@ import { toast } from "sonner";
 import { useDebugActions, StateInspectorHandle } from "./DebugContext";
 
 /**
- * The shape of the rate limit state managed by the context.
+ * The rate limit state indicating whether the API is currently rate limited.
  *
  * @property isRateLimited - Whether the API is currently rate limited.
- * @property retryAfter - The timestamp (ms) when requests can be retried, or null.
- * @property message - The message to display to the user, or null.
+ * @property retryAfter - Unix timestamp in milliseconds when the rate limit expires, or null if not rate limited.
+ * @property message - User-facing message explaining the rate limit, or null if not rate limited.
  * @source
  */
 export interface RateLimitState {
@@ -31,10 +31,10 @@ export interface RateLimitState {
 }
 
 /**
- * The shape of the rate limit context value provided to consumers.
+ * Context value providing rate limit state and action functions.
  *
  * @property rateLimitState - The current rate limit state.
- * @property setRateLimit - Function to set the rate limit state.
+ * @property setRateLimit - Function to set or update the rate limit state with retry time.
  * @property clearRateLimit - Function to clear the rate limit state.
  * @source
  */
@@ -48,6 +48,12 @@ interface RateLimitContextType {
   clearRateLimit: () => void;
 }
 
+/**
+ * Debug snapshot of rate limit state for inspection and time-travel debugging.
+ * @property rateLimitState - The captured rate limit state.
+ * @property toastId - The ID of the active toast notification, or null if no toast is shown.
+ * @source
+ */
 interface RateLimitDebugSnapshot {
   rateLimitState: RateLimitState;
   toastId: string | null;
@@ -58,8 +64,17 @@ const RateLimitContext = createContext<RateLimitContextType | undefined>(
 );
 
 /**
- * Provides rate limit context to its children, managing API rate limit state and monitoring.
- * Polls rate limit status and displays toast notifications when rate limited.
+ * Provides rate limit context to child components with adaptive polling and toast notifications.
+ * Monitors AniList API rate limit status and displays countdown toast when rate limited.
+ * Uses adaptive polling that accelerates when rate limited and slows when normal.
+ *
+ * **Features:**
+ * - Adaptive polling interval (fast when rate-limited, slow when normal)
+ * - Toast notifications with countdown timer
+ * - Automatic polling on matching process state changes
+ * - Rate limit state inspection via Debug Context
+ * - Integration with IPC for rate limit status checks
+ *
  * @param children - React children to wrap with rate limit context.
  * @returns Provider component with rate limit context value.
  * @source
@@ -368,8 +383,9 @@ export function RateLimitProvider({
 
 /**
  * Hook to access the rate limit context.
+ * Must be used within a RateLimitProvider.
  * @returns The current rate limit context value.
- * @throws If used outside a RateLimitProvider.
+ * @throws {Error} If used outside a RateLimitProvider.
  * @source
  */
 export function useRateLimit() {
@@ -381,11 +397,13 @@ export function useRateLimit() {
 }
 
 /**
- * Toast component displaying rate limit countdown and status message.
- * Shows a progress bar that depletes as the rate limit period expires.
- * @param message - The message to display.
- * @param retryAfter - The timestamp (ms) when requests can be retried.
- * @param onComplete - Callback when countdown reaches zero.
+ * Toast component displaying API rate limit status with countdown timer.
+ * Shows a progress bar that depletes as the rate limit retry period approaches expiration.
+ * Automatically dismisses when countdown reaches zero.
+ *
+ * @param message - The message to display to the user.
+ * @param retryAfter - Unix timestamp in milliseconds when the rate limit expires.
+ * @param onComplete - Callback invoked when the countdown reaches zero (rate limit cleared).
  * @source
  */
 function RateLimitToast({

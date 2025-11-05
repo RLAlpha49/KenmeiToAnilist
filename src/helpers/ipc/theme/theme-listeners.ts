@@ -15,18 +15,19 @@ import {
 } from "./theme-channels";
 
 /**
- * Registers IPC event listeners for theme mode actions (current, toggle, dark, light, system).
- *
- * @param mainWindow - The main application window for security validation
+ * Registers IPC handlers for theme mode operations.
+ * @param mainWindow - Main application window for security validation.
  * @source
  */
 export function addThemeEventListeners(mainWindow: BrowserWindow) {
+  // Return current theme source
   secureHandle(
     THEME_MODE_CURRENT_CHANNEL,
     () => nativeTheme.themeSource,
     mainWindow,
   );
 
+  // Toggle between dark and light modes
   secureHandle(
     THEME_MODE_TOGGLE_CHANNEL,
     () => {
@@ -40,18 +41,21 @@ export function addThemeEventListeners(mainWindow: BrowserWindow) {
     mainWindow,
   );
 
+  // Force dark mode
   secureHandle(
     THEME_MODE_DARK_CHANNEL,
     () => (nativeTheme.themeSource = "dark"),
     mainWindow,
   );
 
+  // Force light mode
   secureHandle(
     THEME_MODE_LIGHT_CHANNEL,
     () => (nativeTheme.themeSource = "light"),
     mainWindow,
   );
 
+  // Use system theme preference
   secureHandle(
     THEME_MODE_SYSTEM_CHANNEL,
     () => {

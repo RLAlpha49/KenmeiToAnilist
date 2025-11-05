@@ -25,8 +25,7 @@ import { toast } from "sonner";
 import { PageLoadingFallback } from "../components/ui/loading-fallback";
 
 /**
- * The root route for the application, providing the base layout and outlet for all child routes.
- *
+ * Root route providing base layout and outlet for all child routes.
  * @source
  */
 export const RootRoute = createRootRoute({
@@ -34,11 +33,8 @@ export const RootRoute = createRootRoute({
 });
 
 /**
- * The root layout component that wraps all pages with the base layout and renders the route outlet.
- *
- * Manages global keyboard shortcuts and the shortcuts panel overlay.
- * Coordinates with page-level shortcuts to avoid conflicts.
- *
+ * Root layout component that wraps all pages with the base layout.
+ * Manages global keyboard shortcuts and overlay visibility.
  * @internal
  * @source
  */
@@ -55,6 +51,7 @@ export function Root() {
   // Handles navigation shortcuts
   const handleNavigationShortcut = useCallback(
     (action: string) => {
+      // Map shortcut actions to routes
       const routes: Record<string, string> = {
         "navigate:home": "/",
         "navigate:import": "/import",
@@ -70,8 +67,9 @@ export function Root() {
     [navigate],
   );
 
-  // Handles context-aware save
+  // Handles context-aware save based on current route
   const handleContextSave = useCallback(() => {
+    // Save sync config when on sync page
     if (location.pathname === "/sync") {
       const syncConfig = getSyncConfig();
       if (syncConfig) {
@@ -79,6 +77,7 @@ export function Root() {
         toast.success("Sync configuration saved");
       }
     } else if (location.pathname === "/settings") {
+      // Save match config when on settings page
       const matchConfig = getMatchConfig();
       if (matchConfig) {
         saveMatchConfig(matchConfig);

@@ -6,6 +6,7 @@
 
 /**
  * Options for sanitizing debug output.
+ * @source
  */
 export interface SanitizeOptions {
   /** Whether to redact sensitive data (tokens, credentials, etc.) */
@@ -16,6 +17,8 @@ export interface SanitizeOptions {
 
 /**
  * Patterns that match sensitive data to redact.
+ * @internal
+ * @source
  */
 const SENSITIVE_PATTERNS = [
   /bearer\s+[\w\-.]+/gi,
@@ -31,6 +34,8 @@ const SENSITIVE_PATTERNS = [
 
 /**
  * Keys that typically contain sensitive data and should be redacted.
+ * @internal
+ * @source
  */
 const SENSITIVE_KEYS = new Set([
   "token",
@@ -54,10 +59,9 @@ const SENSITIVE_KEYS = new Set([
 ]);
 
 /**
- * Sanitizes a string value by redacting sensitive data.
- * Replaces patterns matching tokens, keys, and other sensitive info with [REDACTED].
- * @param value - String to sanitize
- * @returns Redacted string
+ * Sanitizes a string value by redacting sensitive data patterns.
+ * @param value - String to sanitize.
+ * @returns Redacted string.
  */
 function sanitizeString(value: string): string {
   let result = value;
@@ -69,10 +73,10 @@ function sanitizeString(value: string): string {
 
 /**
  * Sanitizes an object by recursively redacting sensitive keys and values.
- * @param obj - Object to sanitize
- * @param maxDepth - Maximum depth to traverse (default 10)
- * @param currentDepth - Current recursion depth
- * @returns Sanitized copy of object
+ * @param obj - Object to sanitize.
+ * @param maxDepth - Maximum recursion depth (default: 10).
+ * @param currentDepth - Current recursion depth.
+ * @returns Sanitized copy of object.
  */
 function sanitizeObject(
   obj: Record<string, unknown>,
@@ -125,11 +129,11 @@ function sanitizeObject(
 }
 
 /**
- * Sanitizes any value based on its type.
- * @param value - Value to sanitize
- * @param maxDepth - Maximum recursion depth
- * @param currentDepth - Current recursion depth
- * @returns Sanitized value
+ * Sanitizes any value based on its type (string, object, array, or primitive).
+ * @param value - Value to sanitize.
+ * @param maxDepth - Maximum recursion depth (default: 10).
+ * @param currentDepth - Current recursion depth.
+ * @returns Sanitized value.
  */
 function sanitizeValue(
   value: unknown,
@@ -166,17 +170,11 @@ function sanitizeValue(
 
 /**
  * Sanitizes a value for debug display by redacting sensitive data.
- * Handles objects, arrays, strings, and primitives recursively.
- * Respects maximum depth to prevent infinite recursion.
- *
- * @param value - The value to sanitize
- * @param options - Sanitization options
- * @returns Sanitized copy of the value, or original if not flagged for redaction
- *
- * @example
- * const unsafeData = { token: "secret-123", user: "john" };
- * const safe = sanitizeForDebug(unsafeData, { redactSensitive: true });
- * // Result: { token: "[REDACTED]", user: "john" }
+ * Handles objects, arrays, strings, and primitives recursively with configurable depth limit.
+ * @param value - The value to sanitize.
+ * @param options - Sanitization options (redactSensitive, maxDepth).
+ * @returns Sanitized copy of the value, or original if redaction is disabled.
+ * @source
  */
 export function sanitizeForDebug(
   value: unknown,
@@ -192,17 +190,12 @@ export function sanitizeForDebug(
 }
 
 /**
- * Sanitizes a string for debug display.
- * Useful for sanitizing log messages or JSON strings.
- *
- * @param text - The text to sanitize
- * @param redact - Whether to apply redaction (default: true)
- * @returns Sanitized text
- *
- * @example
- * const log = 'Authorization: Bearer secret-token-123';
- * const safe = sanitizeStringForDebug(log);
- * // Result: 'Authorization: [REDACTED]'
+ * Sanitizes a string for debug display by redacting sensitive patterns.
+ * Useful for log messages or JSON strings containing credentials.
+ * @param text - The text to sanitize.
+ * @param redact - Whether to apply redaction (default: true).
+ * @returns Sanitized text.
+ * @source
  */
 export function sanitizeStringForDebug(
   text: string,

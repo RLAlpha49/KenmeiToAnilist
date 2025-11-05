@@ -179,7 +179,12 @@ export function SettingsPage() {
   >(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Wrapper functions to log events when configs are saved
+  /**
+   * Saves sync configuration with debug event logging.
+   * @param config - Updated sync configuration to save.
+   * @param changedField - The name of the configuration field that changed.
+   * @source
+   */
   const saveSyncConfigWithEvent = (
     config: SyncConfig,
     changedField: string,
@@ -193,6 +198,12 @@ export function SettingsPage() {
     saveSyncConfig(config);
   };
 
+  /**
+   * Saves match configuration with debug event logging.
+   * @param config - Updated match configuration to save.
+   * @param changedField - The name of the configuration field that changed.
+   * @source
+   */
   const saveMatchConfigWithEvent = (
     config: MatchConfig,
     changedField: string,
@@ -392,7 +403,12 @@ export function SettingsPage() {
     });
   }, [settingsSections]);
 
-  // Perform fuzzy search when query changes
+  /**
+   * Performs fuzzy search on settings sections using Fuse.js.
+   * @param query - Search query string.
+   * @returns Array of settings search results with scores and matches.
+   * @source
+   */
   const performSearch = useCallback(
     (query: string): SettingsSearchResult[] => {
       if (!query.trim()) {
@@ -409,7 +425,11 @@ export function SettingsPage() {
     [fuse],
   );
 
-  // Handle search query change
+  /**
+   * Handles search query input changes and updates search results.
+   * @param value - The new search query value.
+   * @source
+   */
   const handleSearchChange = useCallback(
     (value: string) => {
       setSearchQuery(value);
@@ -1333,8 +1353,8 @@ export function SettingsPage() {
   };
 
   /**
-   * Check for updates using electron-updater IPC.
-   * Uses the configured update channel preference.
+   * Checks for updates using the configured update channel preference.
+   * Updates state with version info or error message.
    * @source
    */
   const handleCheckForUpdates = async () => {
@@ -1368,7 +1388,7 @@ export function SettingsPage() {
   };
 
   /**
-   * Download an available update.
+   * Initiates download of an available update.
    * Progress is tracked via the useAutoUpdater hook.
    * @source
    */
@@ -1384,8 +1404,7 @@ export function SettingsPage() {
   };
 
   /**
-   * Install the downloaded update.
-   * Quits the application and applies the update.
+   * Installs the downloaded update by quitting the app and applying changes.
    * @source
    */
   const handleInstallUpdate = async () => {

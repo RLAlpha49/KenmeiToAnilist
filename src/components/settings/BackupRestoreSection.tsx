@@ -23,26 +23,51 @@ import { highlightText } from "@/utils/textHighlight";
 import { cn } from "@/utils/tailwind";
 import type { BackupScheduleConfig } from "@/utils/storage";
 
+/**
+ * Represents a backup file with metadata.
+ * @source
+ */
 interface BackupFile {
+  /** Backup filename. */
   name: string;
+  /** Timestamp when backup was created. */
   timestamp: number;
+  /** Backup file size in bytes. */
   size: number;
 }
 
+/**
+ * Props for BackupRestoreSection component.
+ * @source
+ */
 interface BackupRestoreSectionProps {
+  /** Current search query for text highlighting. */
   searchQuery: string;
+  /** ID of currently highlighted section. */
   highlightedSectionId: string | null;
+  /** Backup schedule configuration. */
   scheduleConfig: BackupScheduleConfig;
+  /** Timestamp of next scheduled backup. */
   nextScheduledBackup: number | null;
+  /** Timestamp of last scheduled backup. */
   lastScheduledBackup: number | null;
+  /** Whether a manual backup trigger is in progress. */
   isTriggeringBackup: boolean;
+  /** Whether a backup restore operation is in progress. */
   isRestoringBackup: boolean;
+  /** Currently selected backup file for restore. */
   selectedBackupFile: File | null;
+  /** Error message if backup file validation fails. */
   backupValidationError: string | null;
+  /** Callback when backup schedule config changes. */
   onScheduleConfigChange: (config: BackupScheduleConfig) => void;
+  /** Callback to trigger manual backup. */
   onTriggerBackup: () => void;
+  /** Callback to restore backup. */
   onRestoreBackup: () => void;
+  /** Optional callback to restore from specific file. */
   onRestoreBackupFile?: (file: File) => void;
+  /** Callback when backup file is selected. */
   onFileSelect: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 

@@ -22,6 +22,7 @@ import { cn } from "@/utils/tailwind";
 
 /**
  * Minimal match result shape containing only matchDate and status for timeline.
+ * @source
  */
 type MinimalMatchResult = {
   readonly matchDate?: Date;
@@ -35,6 +36,10 @@ interface MatchProgressChartProps {
   readonly className?: string;
 }
 
+/**
+ * Single day's match data with running totals by status.
+ * @source
+ */
 type TimelineDatum = {
   readonly isoDate: string;
   readonly label: string;
@@ -50,6 +55,10 @@ const DATE_FORMATTER = new Intl.DateTimeFormat(undefined, {
   day: "numeric",
 });
 
+/**
+ * Full date format with month, day, and year for display.
+ * @source
+ */
 const FULL_DATE_FORMATTER = new Intl.DateTimeFormat(undefined, {
   month: "long",
   day: "numeric",

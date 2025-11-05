@@ -1,9 +1,9 @@
 /**
  * Rate limiting module for AniList API requests.
  *
- * Provides queue-based rate limiting to ensure compliance with AniList's 60 requests/minute limit,
- * with additional manual pause capabilities for user control. Maintains request timing, processes
- * queued requests sequentially, and provides rate-limited wrappers for search operations.
+ * Provides queue-based rate limiting to ensure compliance with AniList's 60 requests/minute limit.
+ * Includes manual pause capabilities, sequential request processing with retry logic, and
+ * rate-limited search operation wrappers.
  *
  * @packageDocumentation
  * @source

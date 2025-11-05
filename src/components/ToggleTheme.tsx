@@ -17,8 +17,8 @@ import {
 
 /**
  * Button for toggling between light and dark themes.
- * Displays the appropriate icon and provides a tooltip for accessibility.
- * @returns The rendered toggle theme button component.
+ * Displays appropriate icon and provides accessible tooltip.
+ * @returns Theme toggle button component.
  * @source
  */
 export default function ToggleTheme() {

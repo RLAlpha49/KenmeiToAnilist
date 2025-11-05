@@ -38,10 +38,11 @@ export interface MatchStatisticsCardProps {
 /**
  * Displays match statistics and search input for the matching panel.
  *
- * Shows reviewed/manual/pending counts with a search bar for filtering results.
+ * Shows reviewed, manual, and pending counts with a search bar for filtering results.
+ * Includes a no-matches counter for quick reference.
  *
- * @param props - The component props.
- * @returns The rendered statistics card.
+ * @param props - Component configuration.
+ * @returns Rendered statistics card with search input.
  * @source
  */
 function MatchStatisticsCardComponent({
@@ -54,6 +55,7 @@ function MatchStatisticsCardComponent({
   const reviewedTotal =
     matchStats.matched + matchStats.manual + matchStats.skipped;
 
+  // Stat tiles showing key metrics for the matching workflow
   const statTiles = [
     {
       label: "Reviewed",

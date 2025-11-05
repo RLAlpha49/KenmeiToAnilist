@@ -20,20 +20,19 @@ import {
 } from "./update-channels";
 
 /**
- * Exposes update context to the renderer process.
- * Creates a global `electronUpdater` object with methods for update operations
- * and event subscriptions.
- *
- * @throws {Error} If context bridge exposure fails
+ * Exposes update APIs to the renderer process via context bridge.
+ * Provides methods for checking, downloading, and installing updates plus event listeners.
+ * @throws {Error} If context bridge exposure fails.
+ * @source
  */
 export function exposeUpdateContext(): void {
   try {
     contextBridge.exposeInMainWorld("electronUpdater", {
       /**
        * Checks for available updates from the update server.
-       * @param options Optional configuration for the check
-       * @param options.allowPrerelease Whether to include prerelease versions (default: false)
-       * @returns Promise with update information
+       * @param options - Optional configuration including allowPrerelease flag.
+       * @returns Update information (version, release notes, date, availability).
+       * @source
        */
       checkForUpdates: async (
         options?: CheckForUpdatesPayload,
@@ -47,26 +46,29 @@ export function exposeUpdateContext(): void {
       },
 
       /**
-       * Initiates download of an available update.
-       * Progress can be monitored via onDownloadProgress callback.
-       * @returns Promise that resolves when download starts
+       * Initiates download of available update.
+       * Monitor progress with onDownloadProgress callback.
+       * @returns Promise resolving when download begins.
+       * @source
        */
       downloadUpdate: async (): Promise<void> => {
         return await ipcRenderer.invoke(UPDATE_DOWNLOAD_CHANNEL);
       },
 
       /**
-       * Quits the application and installs the downloaded update.
-       * @returns Promise that resolves before app quits
+       * Installs downloaded update and restarts application.
+       * @returns Promise resolving before restart.
+       * @source
        */
       installUpdate: async (): Promise<void> => {
         return await ipcRenderer.invoke(UPDATE_INSTALL_CHANNEL);
       },
 
       /**
-       * Subscribes to update available events.
-       * @param callback Function to call when an update is available
-       * @returns Function to unsubscribe from the event
+       * Subscribes to update available event.
+       * @param callback - Invoked when update is available with version and release info.
+       * @returns Unsubscribe function.
+       * @source
        */
       onUpdateAvailable: (
         callback: (info: {
@@ -89,9 +91,10 @@ export function exposeUpdateContext(): void {
       },
 
       /**
-       * Subscribes to download progress events.
-       * @param callback Function to call with download progress updates
-       * @returns Function to unsubscribe from the event
+       * Subscribes to download progress event.
+       * @param callback - Invoked with progress percentage, speed, bytes transferred and total.
+       * @returns Unsubscribe function.
+       * @source
        */
       onDownloadProgress: (
         callback: (progress: {
@@ -116,9 +119,10 @@ export function exposeUpdateContext(): void {
       },
 
       /**
-       * Subscribes to update downloaded events.
-       * @param callback Function to call when download is complete
-       * @returns Function to unsubscribe from the event
+       * Subscribes to update downloaded event.
+       * @param callback - Invoked with update version when download completes.
+       * @returns Unsubscribe function.
+       * @source
        */
       onUpdateDownloaded: (
         callback: (info: { version: string }) => void,
@@ -131,9 +135,10 @@ export function exposeUpdateContext(): void {
       },
 
       /**
-       * Subscribes to update error events.
-       * @param callback Function to call when an update error occurs
-       * @returns Function to unsubscribe from the event
+       * Subscribes to update error event.
+       * @param callback - Invoked with error details when update operation fails.
+       * @returns Unsubscribe function.
+       * @source
        */
       onUpdateError: (
         callback: (error: {

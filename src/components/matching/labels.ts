@@ -5,9 +5,10 @@
  */
 
 /**
- * Format label for manga format display.
- * @param format - The format string (MANGA, ONE_SHOT, NOVEL, etc.).
- * @returns A human-readable label for the format.
+ * Formats manga format string to human-readable label.
+ * @param format - Format string (MANGA, ONE_SHOT, NOVEL, etc.).
+ * @returns Human-readable label for the format.
+ * @source
  */
 export function formatLabel(format: string): string {
   switch (format) {
@@ -23,9 +24,10 @@ export function formatLabel(format: string): string {
 }
 
 /**
- * Format label for publication status display.
- * @param status - The status string (FINISHED, RELEASING, etc.).
- * @returns A human-readable label for the status.
+ * Formats publication status string to human-readable label.
+ * @param status - Status string (FINISHED, RELEASING, NOT_YET_RELEASED, etc.).
+ * @returns Human-readable label for the status.
+ * @source
  */
 export function statusLabel(status: string): string {
   switch (status) {

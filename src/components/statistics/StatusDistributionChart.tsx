@@ -20,6 +20,7 @@ import { cn } from "@/utils/tailwind";
 
 /**
  * Supported manga status labels mapped to human friendly display text.
+ * Maps status keys to localized display names for UI presentation.
  * @source
  */
 const STATUS_LABELS: Record<string, string> = {
@@ -34,6 +35,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 /**
  * Color palette for each status segment.
+ * Ensures consistent visual identification across the application.
  * @source
  */
 const STATUS_COLORS: Record<string, string> = {
@@ -57,6 +59,10 @@ export interface StatusDistributionChartProps {
   readonly className?: string;
 }
 
+/**
+ * Chart data point with status name, count, color, and raw key.
+ * @source
+ */
 type ChartDatum = {
   readonly name: string;
   readonly value: number;

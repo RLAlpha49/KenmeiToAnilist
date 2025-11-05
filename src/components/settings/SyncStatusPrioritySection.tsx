@@ -11,18 +11,28 @@ import { highlightText } from "@/utils/textHighlight";
 import { cn } from "@/utils/tailwind";
 import type { SyncConfig } from "@/utils/storage";
 
+/**
+ * Props for SyncStatusPrioritySection component.
+ * @source
+ */
 interface SyncStatusPrioritySectionProps {
+  /** Current sync configuration. */
   syncConfig: SyncConfig;
+  /** Current search query. */
   searchQuery: string;
+  /** Currently highlighted section ID. */
   highlightedSectionId: string | null;
+  /** Callback when sync config changes. */
   onSyncConfigChange: (config: SyncConfig, field: string) => void;
+  /** Callback to set entire sync config. */
   setSyncConfig: (config: SyncConfig) => void;
 }
 
 /**
  * Status priority settings section.
  * Controls which AniList values override Kenmei data during sync.
- *
+ * @param props - Component props.
+ * @returns The rendered status priority section.
  * @source
  */
 export function SyncStatusPrioritySection({

@@ -6,8 +6,8 @@
 import type { AniListManga } from "../../anilist/types";
 
 /**
- * Cache for manga search results mapped by cache key.
- * Each entry contains an array of manga and associated timestamp.
+ * Manga search result cache structure.
+ * Maps cache keys to arrays of manga with associated timestamp.
  * @source
  */
 export interface MangaCache {

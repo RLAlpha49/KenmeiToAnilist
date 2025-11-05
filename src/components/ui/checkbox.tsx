@@ -1,9 +1,21 @@
+/**
+ * @packageDocumentation
+ * @module components/ui/checkbox
+ * @description Checkbox component for boolean inputs with Radix UI and Tailwind styling.
+ * @source
+ */
 import * as React from "react";
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import { CheckIcon } from "lucide-react";
 
 import { cn } from "@/utils/tailwind";
 
+/**
+ * Checkbox component wrapping Radix UI checkbox primitive with check icon indicator.
+ * @param props - Standard checkbox props from Radix UI.
+ * @returns Styled checkbox element.
+ * @source
+ */
 function Checkbox({
   className,
   ...props

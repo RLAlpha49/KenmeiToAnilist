@@ -1,18 +1,14 @@
 /**
- * Network error utilities for centralized error handling and detection
+ * @packageDocumentation
+ * @module network
+ * @description Network error utilities for centralized error handling and detection, including retry logic determination.
  */
 
 /**
- * Determines if an error is transient and should be retried
- *
- * Handles:
- * - HTTP status codes (5xx, 429 rate limit, 408 timeout)
- * - Network errors (TypeError, fetch failures, connection resets)
- * - Response objects from fetch API
- * - Error objects with nested response properties
- *
- * @param error - The error to check
- * @returns true if the error is transient and should be retried
+ * Determines if error is transient and safe to retry; detects network failures, rate limits, and timeouts.
+ * @param error - The error to check.
+ * @returns True if error is transient and should be retried; false otherwise.
+ * @source
  */
 export function isTransientError(error: unknown): boolean {
   // Handle Response objects (from fetch API)

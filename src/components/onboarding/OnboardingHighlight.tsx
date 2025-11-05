@@ -1,31 +1,55 @@
 import React, { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
+/**
+ * Configuration for an element spotlight in the onboarding overlay.
+ * @source
+ */
 export interface ElementSpotlight {
+  /** Element ID to spotlight. Takes precedence over selector. */
   elementId?: string;
+  /** CSS selector to spotlight. Used if elementId is not provided. */
   selector?: string;
+  /** Padding around the element in pixels. Default is 8. */
   padding?: number;
+  /** Border radius of the spotlight. Default is 8. */
   borderRadius?: number;
 }
 
+/**
+ * Calculated position and dimensions of a highlighted element.
+ * @source
+ */
 interface HighlightPosition {
+  /** Top offset in pixels. */
   top: number;
+  /** Left offset in pixels. */
   left: number;
+  /** Width in pixels. */
   width: number;
+  /** Height in pixels. */
   height: number;
 }
 
+/**
+ * Props for the OnboardingHighlight component.
+ * @source
+ */
 interface OnboardingHighlightProps {
+  /** Whether the highlight is currently active and visible. */
   isActive: boolean;
+  /** Spotlight configuration for the element to highlight. */
   spotlight?: ElementSpotlight;
+  /** Callback fired when a highlighted action is completed. */
   onActionComplete?: () => void;
 }
 
 /**
  * Resolves the DOM element from a spotlight configuration.
- * Prefers elementId over selector.
- * @param spotlight - The spotlight configuration
- * @returns The found HTML element, or null if not found
+ * Prefers elementId over selector for element resolution.
+ * @param spotlight - The spotlight configuration.
+ * @returns The found HTML element, or null if not found.
+ * @source
  */
 function resolveElement(
   spotlight: ElementSpotlight | undefined,
@@ -40,6 +64,19 @@ function resolveElement(
   return null;
 }
 
+/**
+ * Renders a spotlight highlight around a DOM element with animated glow effects.
+ * Automatically tracks element position changes and maintains highlight positioning.
+ *
+ * Features:
+ * - Tracks element DOM changes via MutationObserver
+ * - Updates position on scroll and resize events
+ * - Provides animated glow border and pulsing indicator dot
+ * - Displays floating pointer animation above the highlighted element
+ * - Handles special cases like sync tab and sync button interactions
+ *
+ * @source
+ */
 export function OnboardingHighlight({
   isActive,
   spotlight,
@@ -55,19 +92,19 @@ export function OnboardingHighlight({
     Map<HTMLElement, { listener: (e: Event) => void; useCapture: boolean }>
   >(new Map());
 
-  // Handle settings step tab switching
+  // Sync tab switching: auto-switch spotlight when sync tab is clicked
   useEffect(() => {
     if (!isActive || !spotlight?.selector?.includes("sync-tab")) {
       setCurrentSpotlight(spotlight);
       return;
     }
 
-    // For the sync tab, listen for when it's clicked to switch spotlight
+    // Listen for sync tab click to switch spotlight to sync settings
     const syncTab = document.querySelector('[data-onboarding="sync-tab"]');
     if (!syncTab) return;
 
     const handleSyncTabClick = () => {
-      // Switch to highlighting the sync settings
+      // Transition spotlight to sync-settings when sync tab is clicked
       setCurrentSpotlight({
         selector: '[data-onboarding="sync-settings"]',
         padding: 12,
@@ -81,7 +118,7 @@ export function OnboardingHighlight({
     };
   }, [isActive, spotlight]);
 
-  // Handle sync button click - dismiss spotlight immediately when button is clicked
+  // Dismiss spotlight when sync button is clicked
   useEffect(() => {
     if (!isActive || !currentSpotlight?.selector?.includes("sync-button")) {
       return;
@@ -93,16 +130,16 @@ export function OnboardingHighlight({
     if (!syncButton || !(syncButton instanceof HTMLElement)) return;
 
     const handleSyncButtonClick = (e: Event) => {
-      // Prevent any potential issues with the click propagation
+      // Prevent default behavior and stop propagation
       e.stopPropagation();
 
-      // Clear the spotlight immediately when sync button is clicked
+      // Clear spotlight on button click
       setPosition(null);
       setCurrentSpotlight(undefined);
       onActionComplete?.();
     };
 
-    // Guard: only attach listener if not already attached to this element
+    // Track attached listeners to prevent duplicate event handlers
     if (!attachedElementsRef.current.has(syncButton)) {
       syncButton.addEventListener("click", handleSyncButtonClick, true);
       attachedElementsRef.current.add(syncButton);
@@ -113,7 +150,7 @@ export function OnboardingHighlight({
     }
 
     return () => {
-      // Clean up listener if this exact element instance still exists
+      // Clean up listener only if element still exists in DOM
       if (
         attachedElementsRef.current.has(syncButton) &&
         document.contains(syncButton)
@@ -132,18 +169,18 @@ export function OnboardingHighlight({
     };
   }, [isActive, currentSpotlight, onActionComplete]);
 
-  // Sync current spotlight state prop
+  // Update spotlight when configuration changes
   useEffect(() => {
-    // Clear spotlight when it becomes undefined
+    // Dismiss spotlight when undefined
     if (!spotlight) {
       setCurrentSpotlight(undefined);
       setPosition(null);
       return;
     }
-    // When spotlight selector changes, clear position immediately to trigger exit animation
+    // Switch spotlight selector: exit animation, then update
     if (spotlight?.selector !== currentSpotlight?.selector) {
       setPosition(null);
-      // Use setTimeout to ensure animation completes before updating spotlight
+      // Wait for exit animation to complete before updating
       const timeoutId = setTimeout(() => {
         setCurrentSpotlight(spotlight);
       }, 50);
@@ -151,6 +188,7 @@ export function OnboardingHighlight({
     }
   }, [spotlight, currentSpotlight?.selector]);
 
+  // Track element position and DOM changes
   useEffect(() => {
     if (!isActive || !currentSpotlight) {
       setPosition(null);
@@ -173,33 +211,32 @@ export function OnboardingHighlight({
       }
     };
 
-    // Helper to handle when element is no longer available
+    // Clear spotlight when element is no longer available
     const handleElementNotFound = () => {
       setPosition(null);
       setCurrentSpotlight(undefined);
     };
 
-    // Update position immediately
+    // Initial position calculation
     updatePosition();
 
     let isMounted = true;
     let observerActive = false;
 
-    // Use MutationObserver to watch for DOM changes (element additions/removals)
+    // Watch for DOM mutations to recompute position on element changes
     const observer = new MutationObserver(() => {
       if (!isMounted) return;
 
-      // Recompute spotlight position if DOM subtree changed
       const element = resolveElement(currentSpotlight);
       if (element) {
         updatePosition();
       } else if (observerActive) {
-        // Element was removed, clear spotlight
+        // Element was removed from DOM
         handleElementNotFound();
       }
     });
 
-    // Start observing document.body for subtree changes
+    // Start observing subtree changes on document body
     observer.observe(document.body, {
       childList: true,
       subtree: true,
@@ -207,13 +244,13 @@ export function OnboardingHighlight({
     });
     observerActive = true;
 
-    // Also update on scroll and resize
+    // Handle window scroll and resize events
     const handlePositionChange = () => {
       if (!isMounted) return;
 
       const element = resolveElement(currentSpotlight);
       if (!element) {
-        // Element disappeared, remove spotlight
+        // Element disappeared during scroll/resize
         handleElementNotFound();
         observer.disconnect();
         observerActive = false;

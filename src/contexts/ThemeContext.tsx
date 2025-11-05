@@ -24,12 +24,12 @@ import {
 import { useDebugActions, StateInspectorHandle } from "./DebugContext";
 
 /**
- * The shape of the theme context value provided to consumers.
+ * Context value providing theme state and action functions.
  *
- * @property theme - The current theme preferences (system and local).
- * @property isDarkMode - Whether dark mode is currently enabled.
- * @property setThemeMode - Function to set the theme mode.
- * @property toggleTheme - Function to toggle between dark and light modes.
+ * @property theme - Current theme preferences (system preference and local override).
+ * @property isDarkMode - Whether dark mode is currently applied to the document.
+ * @property setThemeMode - Function to set the theme mode (dark, light, or system).
+ * @property toggleTheme - Function to toggle between dark and light modes (preserves system mode if set).
  * @source
  */
 interface ThemeContextType {
@@ -39,6 +39,12 @@ interface ThemeContextType {
   toggleTheme: () => Promise<boolean>;
 }
 
+/**
+ * Debug snapshot of theme state for inspection and time-travel debugging.
+ * @property theme - The captured theme preferences.
+ * @property isDarkMode - The captured dark mode flag.
+ * @source
+ */
 interface ThemeDebugSnapshot {
   theme: ThemePreferences;
   isDarkMode: boolean;
@@ -47,8 +53,18 @@ interface ThemeDebugSnapshot {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 /**
- * Provides theme context to its children, managing dark/light/system theme preferences.
- * Syncs theme state with localStorage and system preferences.
+ * Provides theme context to child components, managing dark/light/system theme preferences.
+ * Syncs theme state with localStorage, system preferences, and document classList.
+ * Registers theme state with Debug Context for inspection and time-travel debugging.
+ *
+ * **Features:**
+ * - Dark, light, and system theme modes
+ * - Persistent theme preference storage
+ * - System preference detection and syncing
+ * - Fallback to light theme on error
+ * - Document classList updates for CSS styling
+ * - Theme change event listening
+ *
  * @param children - React children to wrap with theme context.
  * @returns Provider component with theme context value.
  * @source
@@ -215,8 +231,9 @@ export function ThemeProvider({
 
 /**
  * Hook to access the theme context.
+ * Must be used within a ThemeProvider.
  * @returns The current theme context value.
- * @throws If used outside a ThemeProvider.
+ * @throws {Error} If used outside a ThemeProvider.
  * @source
  */
 export const useTheme = (): ThemeContextType => {

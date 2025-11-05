@@ -1,7 +1,19 @@
+/**
+ * @packageDocumentation
+ * @module components/ui/input
+ * @description Reusable input component with support for various input types and states.
+ * @source
+ */
 import * as React from "react";
 
 import { cn } from "@/utils/tailwind";
 
+/**
+ * Input field component with styled focus states and accessibility features.
+ * @param props - Standard HTML input element props.
+ * @returns Styled input element.
+ * @source
+ */
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (
     <input

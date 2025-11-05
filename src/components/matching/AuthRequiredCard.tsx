@@ -7,7 +7,6 @@ import { Badge } from "../ui/badge";
 
 /**
  * Props for the AuthRequiredCard component.
- *
  * @property onGoToSettings - Callback to navigate to settings for AniList authentication.
  * @source
  */
@@ -17,9 +16,9 @@ interface Props {
 
 /**
  * Displays a call-to-action card prompting user to authenticate with AniList.
- *
- * @param props - The component props.
- * @returns The rendered authentication required card.
+ * Features animated entrance and gradient styling with responsive layout.
+ * @param props - Component props containing navigation callback.
+ * @returns Rendered authentication prompt card with action button.
  * @source
  */
 export default function AuthRequiredCard({ onGoToSettings }: Readonly<Props>) {

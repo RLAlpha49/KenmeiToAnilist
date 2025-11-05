@@ -1,7 +1,8 @@
 /**
  * Skip rules for filtering manga during matching.
- * Handles manga exclusion based on format (light novels) and automatic matching blacklists.
+ * Handles exclusion based on format (light novels), automatic matching blacklists, and custom rules.
  * @module filtering/skip-rules
+ * @source
  */
 
 import type { AniListManga } from "../../anilist/types";
@@ -10,7 +11,8 @@ import { shouldSkipByCustomRules } from "./custom-rules";
 
 /**
  * Titles to ignore during automatic matching operations.
- * These entries are excluded from automatic matching but may be included in manual searches.
+ * Excluded from automatic matching but may be included in manual searches.
+ * @constant
  * @source
  */
 const IGNORED_AUTOMATIC_MATCH_TITLES = new Set([
@@ -19,8 +21,9 @@ const IGNORED_AUTOMATIC_MATCH_TITLES = new Set([
 
 /**
  * Checks if a manga should be ignored for automatic matching.
- * @param manga - The manga to check.
- * @returns True if the manga title is in the automatic matching blacklist.
+ * Checks against automatic matching blacklist (case-insensitive).
+ * @param manga - The manga to check
+ * @returns True if manga is in the automatic matching blacklist
  * @source
  */
 export function shouldIgnoreForAutomaticMatching(manga: AniListManga): boolean {
@@ -40,23 +43,11 @@ export function shouldIgnoreForAutomaticMatching(manga: AniListManga): boolean {
 
 /**
  * Checks if a manga should be skipped during ranking.
- *
- * Skips light novels (format-based), automatic matching blacklist entries,
- * and custom skip rules defined by the user.
- *
- * @param manga - The manga to check.
- * @param isManualSearch - Whether this is a manual search operation.
- * @param kenmeiManga - Optional Kenmei manga for custom rule evaluation.
- * @returns True if the manga should be skipped.
- *
- * @example
- * ```typescript
- * const shouldSkip = shouldSkipManga(anilistManga, false, kenmeiManga);
- * if (shouldSkip) {
- *   console.log("Manga will be excluded from results");
- * }
- * ```
- *
+ * Skips light novels, automatic matching blacklist entries, and custom skip rules.
+ * @param manga - The manga to check
+ * @param isManualSearch - Whether this is a manual search operation
+ * @param kenmeiManga - Optional Kenmei manga for custom rule evaluation
+ * @returns True if the manga should be skipped
  * @source
  */
 export function shouldSkipManga(

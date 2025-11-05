@@ -9,12 +9,11 @@ import { secureHandle } from "../listeners-register";
 import Store from "electron-store";
 
 /**
- * Schema for the Electron store, defining the available keys and their types.
- *
- * @property authState - The authentication state.
- * @property useCustomCredentials - Whether custom credentials are used.
- * @property customCredentials - The custom credentials string.
- * @property theme - The theme preference string.
+ * Schema for the Electron store.
+ * @property authState - Authentication state.
+ * @property useCustomCredentials - Flag indicating custom credentials are enabled.
+ * @property customCredentials - Serialized custom credentials.
+ * @property theme - User theme preference.
  * @source
  */
 interface StoreSchema {
@@ -25,7 +24,8 @@ interface StoreSchema {
 }
 
 /**
- * Interface for electron-store methods to avoid any types
+ * Interface for electron-store methods.
+ * @source
  */
 interface ElectronStoreInterface {
   get(key: string): unknown;
@@ -34,17 +34,16 @@ interface ElectronStoreInterface {
   clear(): void;
 }
 
-// Create store instance
+/** Persistent store instance for application data. @source */
 const store = new Store<StoreSchema>() as unknown as ElectronStoreInterface;
 
 /**
- * Registers IPC event listeners for interacting with the Electron store (get, set, remove, clear).
- *
- * @param mainWindow - The main application window for security validation
+ * Registers IPC handlers for store operations: get, set, remove, and clear.
+ * @param mainWindow - Main application window for security validation.
  * @source
  */
 export function setupStoreIPC(mainWindow: BrowserWindow) {
-  // Handle getting an item from the store
+  // store:getItem - Retrieve value by key
   secureHandle(
     "store:getItem",
     (_event: Electron.IpcMainInvokeEvent, key: string) => {
@@ -58,7 +57,7 @@ export function setupStoreIPC(mainWindow: BrowserWindow) {
     mainWindow,
   );
 
-  // Handle setting an item in the store
+  // store:setItem - Store key-value pair
   secureHandle(
     "store:setItem",
     (_event: Electron.IpcMainInvokeEvent, key: string, value: string) => {
@@ -73,7 +72,7 @@ export function setupStoreIPC(mainWindow: BrowserWindow) {
     mainWindow,
   );
 
-  // Handle removing an item from the store
+  // store:removeItem - Delete value by key
   secureHandle(
     "store:removeItem",
     (_event: Electron.IpcMainInvokeEvent, key: string) => {
@@ -88,7 +87,7 @@ export function setupStoreIPC(mainWindow: BrowserWindow) {
     mainWindow,
   );
 
-  // Handle clearing the store
+  // store:clear - Remove all stored values
   secureHandle(
     "store:clear",
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

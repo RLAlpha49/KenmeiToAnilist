@@ -61,6 +61,10 @@ interface SyncResumeSnapshot {
   timestamp: number;
 }
 
+/**
+ * JSON-serializable sync report format with timestamp as ISO string for storage.
+ * @source
+ */
 type PersistedSyncReport = Omit<SyncReport, "timestamp"> & {
   timestamp: string;
 };
@@ -903,6 +907,10 @@ interface SynchronizationActions {
   clearFailedOperation: (operationId: string) => void;
 }
 
+/**
+ * Debuggable synchronization state with abort controller info serializable for inspection.
+ * @source
+ */
 type DebuggableSynchronizationState = Omit<
   SynchronizationState,
   "abortController"
@@ -913,6 +921,10 @@ type DebuggableSynchronizationState = Omit<
   } | null;
 };
 
+/**
+ * Debug snapshot of synchronization state for inspection and troubleshooting.
+ * @source
+ */
 interface SyncDebugSnapshot {
   state: DebuggableSynchronizationState;
   resumeSnapshot: SyncResumeSnapshot | null;
@@ -1278,6 +1290,10 @@ export function useSynchronization(): [
 
   /**
    * Initialize controller, ids, refs and initial progress state for a sync run.
+   * @param entries - Array of AniList media entries to sync.
+   * @param displayOrderMediaIds - Optional array of media IDs in display order.
+   * @returns Object containing abort controller, unique media IDs, and initial progress state.
+   * @source
    */
   const initializeSyncRun = (
     entries: AniListMediaEntry[],
@@ -1324,6 +1340,12 @@ export function useSynchronization(): [
 
   /**
    * Run the core sync execution and return the resulting report and last progress.
+   * @param entries - Array of AniList media entries to sync.
+   * @param token - AniList authentication token.
+   * @param abortController - Abort controller for cancellation.
+   * @param uniqueMediaIds - Array of unique media IDs to sync.
+   * @returns Sync execution result with report and final progress.
+   * @source
    */
   const runSyncExecution = async (
     entries: AniListMediaEntry[],

@@ -1,8 +1,19 @@
+/**
+ * @packageDocumentation
+ * @module components/ui/progress
+ * @description Progress bar component with Radix UI and accessibility support.
+ * @source
+ */
 import * as React from "react";
 import * as ProgressPrimitive from "@radix-ui/react-progress";
 
 import { cn } from "@/utils/tailwind";
 
+/**
+ * Props for the Progress component.
+ * @property indicatorClassName - Optional custom class for the progress indicator.
+ * @source
+ */
 type ProgressProps = React.ComponentProps<typeof ProgressPrimitive.Root> & {
   indicatorClassName?: string;
   /** Accessible label describing what the progress bar represents */
@@ -11,6 +22,12 @@ type ProgressProps = React.ComponentProps<typeof ProgressPrimitive.Root> & {
   "aria-valuetext"?: string;
 };
 
+/**
+ * Progress bar component for displaying completion percentage.
+ * @param props - Component props including value and accessibility attributes.
+ * @returns Styled progress bar element.
+ * @source
+ */
 function Progress({
   className,
   value,

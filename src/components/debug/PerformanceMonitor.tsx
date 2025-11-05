@@ -184,6 +184,7 @@ export function PerformanceMonitor() {
         dataPoints[i] = { name: `${i + 1}` };
       }
 
+      // Store latency value, ensuring it's a valid number for chart rendering
       dataPoints[i][providerKey] = Number.isFinite(sample.duration)
         ? Number.parseFloat(sample.duration.toFixed(1))
         : 0;
@@ -301,6 +302,7 @@ export function PerformanceMonitor() {
       ? Number.parseFloat((latestMemorySample.shared / 1024).toFixed(1))
       : 0;
 
+    // Sum all components for total memory footprint
     const totalMb = Number.parseFloat(
       (heapMb + privateMb + sharedMb).toFixed(1),
     );

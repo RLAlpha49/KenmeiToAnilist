@@ -1,8 +1,22 @@
+/**
+ * @packageDocumentation
+ * @module components/ui/slider
+ * @description Dual-handle range slider component for min/max value selection.
+ * @source
+ */
 import React, { useCallback } from "react";
 import { cn } from "@/utils/tailwind";
 
 /**
  * Props for the RangeSlider component.
+ * @property min - Minimum allowed value.
+ * @property max - Maximum allowed value.
+ * @property step - Step size for slider increments (default: 1).
+ * @property value - Current min/max values.
+ * @property onChange - Callback when values change.
+ * @property label - Optional label for the slider.
+ * @property className - Optional custom CSS classes.
+ * @source
  */
 interface RangeSliderProps {
   min: number;
@@ -17,6 +31,9 @@ interface RangeSliderProps {
 /**
  * Dual-handle range slider component for selecting min/max values.
  * Used for confidence range filtering in advanced filters.
+ * @param props - Range slider props.
+ * @returns Styled range slider element.
+ * @source
  */
 export function RangeSlider({
   min,

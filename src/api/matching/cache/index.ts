@@ -1,7 +1,6 @@
 /**
- * Cache module for manga search results.
- * Provides centralized caching, synchronization, persistence, and debugging utilities.
- * Exports types, storage, utilities, persistence, sync, initialization, and debugging functions.
+ * Cache module for manga search results and synchronization.
+ * Centralizes caching, persistence, synchronization, initialization, and debugging utilities.
  * @module cache
  * @source
  */

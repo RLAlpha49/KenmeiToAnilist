@@ -126,9 +126,11 @@ export function StateInspector(): React.ReactElement {
       for (const source of stateInspectorSources) {
         const previous = prev[source.id];
         const formatted = safeStringify(source.value);
+        // Preserve dirty editor state to avoid losing unsaved changes
         if (previous?.isDirty) {
           nextState[source.id] = previous;
         } else {
+          // Update with fresh snapshot when not being edited
           nextState[source.id] = {
             value: formatted,
             isDirty: false,
@@ -142,6 +144,7 @@ export function StateInspector(): React.ReactElement {
   }, [stateInspectorSources]);
 
   const groups = useMemo(() => {
+    // Group sources by category for organized display
     return stateInspectorSources.reduce(
       (acc, source) => {
         if (!acc[source.group]) {

@@ -1,5 +1,5 @@
 /**
- * @file Search result processing and filtering
+ * Search result processing and filtering
  * @module matching/orchestration/result-processing
  */
 
@@ -21,12 +21,6 @@ import { applySystemContentFilters } from "../filtering";
  * @param searchConfig - Search configuration
  * @param kenmeiManga - Optional Kenmei manga for custom rule evaluation
  * @returns Ranked manga results
- *
- * @example
- * ```typescript
- * const ranked = processSearchResults(results, "Naruto", config, kenmeiManga);
- * console.log(`Processed ${ranked.length} results`);
- * ```
  *
  * @source
  */
@@ -84,6 +78,7 @@ export function processSearchResults(
  * @param title - Original search title (for logging)
  * @param searchConfig - Search configuration
  * @returns Filtered manga results
+ *
  * @source
  */
 export function applyContentFiltering(
@@ -118,6 +113,7 @@ export function applyContentFiltering(
  * @param originalResults - Original unfiltered results
  * @param searchConfig - Search configuration
  * @returns Final results (filtered or fallback)
+ *
  * @source
  */
 export function handleNoResultsFallback(

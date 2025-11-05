@@ -11,8 +11,7 @@ import { Badge } from "../ui/badge";
 
 /**
  * Props for the ResumeNotification component.
- *
- * @property pendingMangaCount - The number of manga pending from a previous session.
+ * @property pendingMangaCount - Number of manga pending from a previous session.
  * @property onResumeMatching - Callback to resume the matching process.
  * @property onCancelResume - Callback to cancel resuming the matching process.
  * @source
@@ -24,10 +23,10 @@ export interface ResumeNotificationProps {
 }
 
 /**
- * Displays a notification card if there are unfinished manga matching processes, allowing the user to resume or cancel.
- *
- * @param props - The props for the ResumeNotification component.
- * @returns The rendered resume notification React element, or null if no pending manga.
+ * Notification card for unfinished manga matching processes allowing resume or cancel.
+ * Shows pending manga count and provides action buttons to resume or clear queue.
+ * @param props - Component props.
+ * @returns Rendered notification or null if no pending manga.
  * @source
  */
 export const ResumeNotification: React.FC<ResumeNotificationProps> = ({

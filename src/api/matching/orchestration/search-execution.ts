@@ -1,5 +1,5 @@
 /**
- * @file Search execution and pagination handling
+ * Search execution and pagination handling
  * @module matching/orchestration/search-execution
  */
 
@@ -19,6 +19,7 @@ import {
  * @param searchConfig - Search service configuration
  * @param token - Optional authentication token
  * @returns Promise resolving to search results
+ *
  * @source
  */
 async function executeSingleSearch(
@@ -35,7 +36,6 @@ async function executeSingleSearch(
       perPage: searchConfig.searchPerPage,
       token,
       acquireLimit: false,
-      retryCount: 0,
       bypassCache: searchConfig.bypassCache,
     });
   } else {
@@ -45,7 +45,6 @@ async function executeSingleSearch(
       searchConfig.searchPerPage,
       token,
       false,
-      0,
       searchConfig.bypassCache,
     );
   }
@@ -64,6 +63,7 @@ async function executeSingleSearch(
  * @param maxResults - Maximum number of results allowed
  * @param singlePageMode - Whether operating in single page mode
  * @returns True if pagination should continue
+ *
  * @source
  */
 function shouldContinuePagination(
@@ -93,6 +93,7 @@ function shouldContinuePagination(
  * @param searchResult - Search result to validate
  * @param searchQuery - Search query that generated this result
  * @returns True if valid and properly structured
+ *
  * @source
  */
 function validateSearchResult(
@@ -131,6 +132,7 @@ function validateSearchResult(
  *
  * @param error - Error that occurred
  * @param searchQuery - Search query that caused the error
+ *
  * @source
  */
 function handleSearchError(error: unknown, searchQuery: string): void {
@@ -159,6 +161,7 @@ function handleSearchError(error: unknown, searchQuery: string): void {
  * @param abortSignal - Optional abort signal to cancel search
  * @param specificPage - Optional specific page number (disables pagination)
  * @returns Promise with collected results and final page info
+ *
  * @source
  */
 export async function executeSearchLoop(

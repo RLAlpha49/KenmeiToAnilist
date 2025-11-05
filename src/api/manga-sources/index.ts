@@ -52,10 +52,11 @@ export async function getMangaSourceClient(source: MangaSource) {
 
 /**
  * Convenience function to search manga across a source.
- * @param source - The manga source to search
- * @param query - Search query
- * @param limit - Maximum results to return
- * @returns Promise resolving to search results
+ * @param source - The manga source to search.
+ * @param query - The search query string.
+ * @param limit - Maximum number of results to return.
+ * @returns Promise resolving to array of manga entries.
+ * @source
  */
 export async function searchMangaSource(
   source: MangaSource,
@@ -67,9 +68,10 @@ export async function searchMangaSource(
 
 /**
  * Convenience function to get manga details from a source.
- * @param source - The manga source to query
- * @param slug - Manga slug/identifier
- * @returns Promise resolving to manga details or null
+ * @param source - The manga source to query.
+ * @param slug - The manga slug/identifier.
+ * @returns Promise resolving to manga details or null if not found.
+ * @source
  */
 export async function getMangaSourceDetail(source: MangaSource, slug: string) {
   return mangaSourceRegistry.getMangaDetail(source, slug);

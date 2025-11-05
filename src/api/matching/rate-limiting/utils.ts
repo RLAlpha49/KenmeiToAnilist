@@ -1,14 +1,14 @@
 /**
- * Utility functions for rate limiting.
+ * Utility functions for rate limiting operations.
  *
  * @packageDocumentation
  * @source
  */
 
 /**
- * Sleep for a specified duration.
- * @param ms - Number of milliseconds to sleep.
- * @returns Promise that resolves after the specified delay.
+ * Delay execution for a specified duration.
+ * @param ms - Number of milliseconds to delay.
+ * @returns Promise that resolves after the delay.
  * @source
  */
 export async function sleep(ms: number): Promise<void> {

@@ -29,10 +29,9 @@ import { Separator } from "../ui/separator";
 
 /**
  * Props for the ImportSummary component.
- *
- * @property data - The KenmeiExport data to summarize.
- * @property onProceed - Callback invoked when the user chooses to proceed with the import.
- * @property onCancel - Callback invoked when the user cancels the import.
+ * @property data - KenmeiExport data to summarize.
+ * @property onProceed - Callback invoked when user chooses to proceed with import.
+ * @property onCancel - Callback invoked when user cancels import.
  * @internal
  * @source
  */
@@ -43,16 +42,15 @@ export interface ImportSummaryProps {
 }
 
 /**
- * Status count information for each Kenmei status.
- *
+ * Status count information for a Kenmei manga status category.
  * @property status - The KenmeiStatus value.
- * @property count - The number of manga entries with this status.
- * @property icon - The icon to display for this status.
- * @property label - The label for this status.
- * @property color - The text color class for this status.
- * @property bgColor - The background color class for this status.
- * @source
+ * @property count - Number of manga entries with this status.
+ * @property icon - React element to display for this status.
+ * @property label - Human-readable label for this status.
+ * @property color - Text color CSS class for this status.
+ * @property bgColor - Background color CSS class for this status.
  * @internal
+ * @source
  */
 export interface StatusCount {
   status: KenmeiStatus;
@@ -64,12 +62,10 @@ export interface StatusCount {
 }
 
 /**
- * ImportSummary React component for displaying a summary of Kenmei import data.
- *
- * Displays the total number of manga entries, a breakdown by status, and provides actions to proceed or cancel the import.
- *
- * @param props - {@link ImportSummaryProps}
- * @returns React.ReactElement with import summary and action buttons.
+ * ImportSummary component for displaying a summary of Kenmei import data.
+ * Displays total manga entries, breakdown by status, and provides actions to proceed or cancel.
+ * @param props - Component props.
+ * @returns React element with import summary and action buttons.
  * @source
  */
 export function ImportSummary({

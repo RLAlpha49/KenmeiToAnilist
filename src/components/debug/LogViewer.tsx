@@ -220,6 +220,7 @@ export function LogViewer(): React.ReactElement {
 
   useEffect(() => {
     if (!autoScroll) return;
+    // Scroll to the bottom of the viewport when new entries are added
     const viewport = scrollRootRef.current?.querySelector<HTMLDivElement>(
       '[data-slot="scroll-area-viewport"]',
     );

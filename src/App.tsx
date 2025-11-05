@@ -1,7 +1,9 @@
 /**
  * @packageDocumentation
  * @module App
- * @description Main React application entry point. Sets up providers and mounts the router for the KenmeiToAnilist app.
+ * @description Main React application component.
+ * Sets up all context providers, routing, and UI overlays for the KenmeiToAnilist application.
+ * @source
  */
 import React from "react";
 import { createRoot } from "react-dom/client";
@@ -20,8 +22,9 @@ import { OnboardingOverlay } from "./components/onboarding/OnboardingOverlay";
 import { useAutoUpdater } from "./hooks/useAutoUpdater";
 
 /**
- * Main application component that wraps the router with context providers.
- * @returns The root React element with all providers configured.
+ * Main application content with all providers and UI layers.
+ * Renders the router with context providers, notifications, and overlays.
+ * @returns Root React element with nested providers and router.
  * @source
  */
 function AppContent() {
@@ -48,6 +51,7 @@ function AppContent() {
                 <SonnerProvider />
                 <OnboardingOverlay position="bottom-left" showProgress={true} />
 
+                {/* Display update notification when available */}
                 <AnimatePresence>
                   {updateAvailable && updateInfo && (
                     <div className="fixed bottom-4 right-4 z-50 max-w-md">
@@ -76,8 +80,9 @@ function AppContent() {
 }
 
 /**
- * Splash screen shown while storage is being initialized.
- * @returns A minimal splash screen UI
+ * Splash screen displayed during storage initialization.
+ * Shows a loading spinner with initialization message.
+ * @returns Splash screen UI element.
  * @source
  */
 function StorageSplash() {
@@ -92,17 +97,20 @@ function StorageSplash() {
 }
 
 /**
- * App wrapper that ensures storage is initialized before rendering content.
- * Storage is initialized by renderer.ts before this component mounts.
- * @returns The app content
+ * Application wrapper component.
+ * Ensures storage is initialized and handles React strict mode rendering.
+ * Storage initialization occurs in renderer.ts before this component mounts.
+ * @returns Application content or splash screen.
  * @source
  */
 export default function App() {
+  // State tracks if storage is ready; normally true immediately
+  // Used to handle strict mode remounting in development
   const [isStorageReady, setIsStorageReady] = React.useState(true);
 
   React.useEffect(() => {
     // Storage should already be initialized by renderer.ts before App mounts
-    // This state ensures proper hydration in strict mode
+    // This state ensures proper hydration in React strict mode
     setIsStorageReady(true);
   }, []);
 
@@ -113,7 +121,11 @@ export default function App() {
   return <AppContent />;
 }
 
-// Mount the application if the root container is available
+/**
+ * Mount the React application to the DOM.
+ * Renders the App component in strict mode for development safety checks.
+ * @source
+ */
 const container = document.getElementById("app");
 if (container) {
   const root = createRoot(container);

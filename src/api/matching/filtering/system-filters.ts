@@ -1,10 +1,7 @@
 /**
  * System content filtering utilities for manga matching.
- *
- * Provides shared filtering logic for system-level content filters
- * (novels, one-shots, adult content) that are applied consistently
- * across multiple matching pipelines.
- *
+ * Provides shared filtering logic for novels, one-shots, and adult content
+ * applied consistently across multiple matching pipelines.
  * @module filtering/system-filters
  * @source
  */
@@ -27,28 +24,12 @@ export interface SystemFilterConfig {
 
 /**
  * Apply system content filters to manga results.
- *
- * Applies the following filters in order:
- * 1. Always filter out novels and light novels (format-based)
- * 2. Filter one-shots if ignoreOneShots is enabled
- * 3. Filter adult content if ignoreAdultContent is enabled
- * 4. Apply custom skip rules if kenmeiManga is provided
- *
- * This shared logic is used across multiple filtering pipelines to ensure
- * consistent behavior for system-level content filtering.
- *
+ * Filters novels, one-shots (if enabled), adult content (if enabled), and custom skip rules.
  * @param results - Manga results to filter
  * @param matchConfig - Match configuration with filter settings
  * @param kenmeiManga - Optional Kenmei manga for custom rule evaluation
  * @param contextTitle - Optional title for debug logging
  * @returns Filtered manga results
- *
- * @example
- * ```typescript
- * const filtered = applySystemContentFilters(results, matchConfig, kenmeiManga, "Naruto");
- * console.log(`Filtered from ${results.length} to ${filtered.length} results`);
- * ```
- *
  * @source
  */
 export function applySystemContentFilters(

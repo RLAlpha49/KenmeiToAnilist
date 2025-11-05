@@ -7,8 +7,15 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 import type { IpcLogEntry, IpcLogPayload } from "@/types/debug";
 
+/** Maximum number of IPC log entries to retain in memory. @source */
 export const MAX_IPC_LOG_ENTRIES = 500;
 
+/**
+ * Generates a unique identifier using crypto.randomUUID or a fallback timestamp-based approach.
+ * @returns A unique string identifier for correlating IPC events.
+ * @internal
+ * @source
+ */
 const generateId = (): string => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
@@ -16,6 +23,12 @@ const generateId = (): string => {
   return `${Date.now().toString(36)}-${Math.random().toString(16).slice(2, 10)}`;
 };
 
+/**
+ * Gets the current timestamp in milliseconds using performance.now() or fallback.
+ * @returns Current time in milliseconds.
+ * @internal
+ * @source
+ */
 const nowMs = (): number => {
   if (
     typeof performance !== "undefined" &&
@@ -26,6 +39,14 @@ const nowMs = (): number => {
   return Date.now();
 };
 
+/**
+ * Safely clones a value, handling Error, BigInt, Symbol, and Function types.
+ * Falls back to structuredClone or Object.prototype.toString.call for unsupported types.
+ * @param value - The value to clone.
+ * @returns A safely cloned copy of the value.
+ * @internal
+ * @source
+ */
 const safeClone = (value: unknown): unknown => {
   if (value instanceof Error) {
     return {
@@ -54,6 +75,13 @@ const safeClone = (value: unknown): unknown => {
   }
 };
 
+/**
+ * Summarizes a value for logging display, truncating long strings and JSON to 200 characters.
+ * @param value - The value to summarize.
+ * @returns A string representation suitable for display in logs.
+ * @internal
+ * @source
+ */
 const summarise = (value: unknown): string => {
   if (value === undefined) return "undefined";
   if (value === null) return "null";
@@ -85,8 +113,10 @@ const summarise = (value: unknown): string => {
 /**
  * Redacts sensitive data from payloads for security.
  * Masks common secrets like Authorization headers, tokens, and client secrets.
- * @param value - The value to potentially redact
- * @returns Redacted copy of value
+ * @param value - The value to potentially redact.
+ * @returns Redacted copy of value.
+ * @internal
+ * @source
  */
 const redactSensitiveData = (value: unknown): unknown => {
   if (typeof value === "string") {
@@ -138,6 +168,15 @@ const redactSensitiveData = (value: unknown): unknown => {
   return value;
 };
 
+/**
+ * Creates a payload object with raw cloned data and a preview summary.
+ * Optionally redacts sensitive data before summarizing.
+ * @param value - The value to include in the payload.
+ * @param redact - Whether to redact sensitive fields (default: false).
+ * @returns Payload object with raw and preview fields.
+ * @internal
+ * @source
+ */
 const createPayload = (
   value: unknown,
   redact: boolean = false,
@@ -150,25 +189,50 @@ const createPayload = (
   };
 };
 
+/**
+ * Manages IPC event collection and subscriber notifications.
+ * Maintains a fixed-size buffer of recent IPC events and notifies subscribers of changes.
+ * @source
+ */
 class IpcEventCollector {
   #entries: IpcLogEntry[] = [];
   readonly #listeners = new Set<(entries: IpcLogEntry[]) => void>();
 
+  /**
+   * Adds a new IPC event to the collection, maintaining the maximum entry limit.
+   * @param entry - The IPC log entry to add.
+   * @source
+   */
   addEntry(entry: IpcLogEntry) {
     this.#entries = [...this.#entries, entry].slice(-MAX_IPC_LOG_ENTRIES);
     this.#notify();
   }
 
+  /**
+   * Clears all stored IPC events.
+   * @source
+   */
   clear() {
     if (!this.#entries.length) return;
     this.#entries = [];
     this.#notify();
   }
 
+  /**
+   * Retrieves all stored IPC events.
+   * @returns Array of current IPC log entries.
+   * @source
+   */
   getEntries(): IpcLogEntry[] {
     return this.#entries;
   }
 
+  /**
+   * Registers a subscriber to receive IPC event updates.
+   * @param listener - Callback invoked with the current entries list when updates occur.
+   * @returns Function to unsubscribe the listener.
+   * @source
+   */
   subscribe(listener: (entries: IpcLogEntry[]) => void): () => void {
     this.#listeners.add(listener);
     listener(this.#entries);
@@ -177,6 +241,11 @@ class IpcEventCollector {
     };
   }
 
+  /**
+   * Notifies all subscribers of state changes.
+   * @internal
+   * @source
+   */
   #notify() {
     const snapshot = this.#entries;
     for (const listener of this.#listeners) {
@@ -187,6 +256,12 @@ class IpcEventCollector {
 
 const collector = new IpcEventCollector();
 
+/**
+ * Adds an IPC event to the collector if debugging is enabled.
+ * @param entry - The IPC event to log (id is auto-generated if missing).
+ * @internal
+ * @source
+ */
 const appendEvent = (entry: Omit<IpcLogEntry, "id"> & { id?: string }) => {
   if (!enabled) return; // Only track when debugging is enabled
   collector.addEntry({
@@ -195,10 +270,21 @@ const appendEvent = (entry: Omit<IpcLogEntry, "id"> & { id?: string }) => {
   });
 };
 
+/** Type for IPC renderer event listeners. @internal @source */
 type RendererListener = (event: IpcRendererEvent, ...args: unknown[]) => void;
 
+/** Maps original listeners to wrapped listeners for proper cleanup. @internal @source */
 const listenerMap = new WeakMap<RendererListener, RendererListener>();
 
+/**
+ * Wraps an IPC listener to capture events before invoking the original.
+ * @param channel - The IPC channel name.
+ * @param listener - The original listener function.
+ * @param mode - Registration mode: "on" for persistent, "once" for single-use.
+ * @returns The wrapped listener function.
+ * @internal
+ * @source
+ */
 const wrapListener = (
   channel: string,
   listener: RendererListener,
@@ -229,17 +315,35 @@ const wrapListener = (
   return wrapped;
 };
 
+/** Tracks if IPC debugging instrumentation is installed. @internal @source */
 let installed = false;
+/** Controls whether IPC debugging is currently active. @internal @source */
 let enabled = false;
 
+/**
+ * Enables or disables IPC debugging without affecting the collector.
+ * @param value - True to enable, false to disable.
+ * @source
+ */
 export function setIpcDebuggingEnabled(value: boolean): void {
   enabled = value;
 }
 
+/**
+ * Checks if IPC debugging is currently enabled.
+ * @returns True if debugging is enabled, false otherwise.
+ * @source
+ */
 export function isIpcDebuggingEnabled(): boolean {
   return enabled;
 }
 
+/**
+ * Sets up IPC debugging instrumentation in the preload/renderer context.
+ * Wraps ipcRenderer methods to capture and log IPC events.
+ * Exposes `electronDebug` object with IPC viewer and memory stats.
+ * @source
+ */
 export function setupIpcDebugging(): void {
   if (installed) return;
   installed = true;

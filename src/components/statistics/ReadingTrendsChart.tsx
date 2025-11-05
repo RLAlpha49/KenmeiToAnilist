@@ -25,6 +25,7 @@ import { computeReadingTrends } from "@/utils/statisticsAdapter";
 
 /**
  * Props for ReadingTrendsChart component.
+ * @source
  */
 interface ReadingTrendsChartProps {
   readonly history: ReadingHistory;
@@ -34,6 +35,10 @@ interface ReadingTrendsChartProps {
 
 /**
  * ReadingTrendsChart - Displays chapters read over time as a line chart with gradient fill.
+ * Visualizes reading volume trends with optional peak day annotation.
+ * @param props - Component props with reading history and time range.
+ * @returns Rendered line chart with trend visualization or empty state.
+ * @source
  */
 export const ReadingTrendsChart: FC<ReadingTrendsChartProps> = ({
   history,

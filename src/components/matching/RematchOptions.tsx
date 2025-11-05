@@ -32,14 +32,12 @@ import { motion } from "framer-motion";
 
 /**
  * Props for the RematchOptions component.
- *
- * @property selectedStatuses - The current status filter options for rematching.
+ * @property selectedStatuses - Current status filter options for rematching.
  * @property onChangeSelectedStatuses - Callback to update the selected statuses.
- * @property matchResults - The list of manga match results.
+ * @property matchResults - List of manga match results.
  * @property rematchWarning - Optional warning message to display.
  * @property onRematchByStatus - Callback to trigger rematching by selected statuses.
  * @property onCloseOptions - Callback to close the rematch options panel.
- * @internal
  * @source
  */
 export interface RematchOptionsProps {
@@ -52,10 +50,10 @@ export interface RematchOptionsProps {
 }
 
 /**
- * RematchOptions React component for configuring and triggering rematch operations for manga entries by status.
- *
- * @param props - The props for the RematchOptions component.
- * @returns The rendered rematch options panel React element.
+ * Panel for configuring and triggering rematch operations for manga entries by status.
+ * Allows users to select which statuses to include in rematch and clears cache if requested.
+ * @param props - Component props.
+ * @returns Rendered rematch options panel with status filters and action buttons.
  * @source
  */
 export const RematchOptions: React.FC<RematchOptionsProps> = ({

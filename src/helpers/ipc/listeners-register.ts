@@ -17,10 +17,9 @@ import { setupDebugIPC } from "./debug/debug-listeners";
 /**
  * Validates that an IPC event originates from the main application window.
  * Prevents unauthorized IPC calls from other windows or injected content.
- *
- * @param event - The IPC event to validate
- * @param mainWindow - The main application window
- * @returns True if the sender is the main window, false otherwise
+ * @param event - The IPC event to validate.
+ * @param mainWindow - The main application window.
+ * @returns True if sender is the main window, false otherwise.
  * @internal
  * @source
  */
@@ -49,10 +48,9 @@ function isValidSender(
 /**
  * Creates and registers a secure IPC handler with sender validation.
  * Wraps the handler to verify the request originates from the main window.
- *
- * @param channel - The IPC channel name
- * @param handler - The handler function to register
- * @param mainWindow - The main application window for sender validation
+ * @param channel - The IPC channel name.
+ * @param handler - The handler function to register.
+ * @param mainWindow - The main application window for sender validation.
  * @internal
  * @source
  */
@@ -75,8 +73,8 @@ function secureHandle<T extends unknown[]>(
 }
 
 /**
- * Registers all IPC event listeners for the Electron main process.
- *
+ * Registers all IPC handlers for the main process.
+ * Sets up listeners for window, theme, auth, store, backup, debug, and update operations.
  * @param mainWindow - The main Electron browser window instance.
  * @source
  */
@@ -95,13 +93,8 @@ export default function registerListeners(mainWindow: BrowserWindow) {
 }
 
 /**
- * Export secureHandle for use in listener modules.
- * This allows each listener to register handlers with built-in sender validation.
- * @example
- * import { secureHandle } from "./listeners-register";
- *
- * export function addWindowEventListeners(mainWindow: BrowserWindow) {
- *   secureHandle('window:minimize', () => { mainWindow.minimize(); }, mainWindow);
- * }
+ * Secure IPC handler factory with sender validation.
+ * Registers handlers with protection against unauthorized IPC calls from unverified sources.
+ * @source
  */
 export { secureHandle };

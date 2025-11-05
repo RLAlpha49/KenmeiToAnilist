@@ -19,6 +19,7 @@ import { cn } from "@/utils/tailwind";
 
 /**
  * Minimal match result shape containing only selectedMatch for format extraction.
+ * @source
  */
 type MinimalMatchResult = {
   readonly selectedMatch?: {
@@ -34,6 +35,10 @@ interface FormatDistributionChartProps {
   readonly className?: string;
 }
 
+/**
+ * Format chart data point with name, value, display color, and raw format key.
+ * @source
+ */
 type FormatDatum = {
   readonly name: string;
   readonly value: number;
@@ -43,6 +48,7 @@ type FormatDatum = {
 
 /**
  * Recharts pie chart label render props with strongly typed value field.
+ * @source
  */
 type PieLabelPayload = {
   value?: number;
@@ -60,6 +66,10 @@ const FORMAT_LABELS: Record<string, string> = {
   doujin: "Doujinshi",
 };
 
+/**
+ * Format-to-color mapping for consistent visual identification.
+ * @source
+ */
 const FORMAT_COLORS: Record<string, string> = {
   manga: "#3b82f6",
   novel: "#a855f7",

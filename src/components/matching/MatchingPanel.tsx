@@ -7,7 +7,6 @@ import type { KenmeiManga } from "../../api/kenmei/types";
 
 /**
  * Props for the MatchingPanel component.
- *
  * @property matches - List of manga match results to display and manage.
  * @property onManualSearch - Callback to trigger manual search for a Kenmei manga.
  * @property onAcceptMatch - Callback when a match is accepted.
@@ -62,12 +61,9 @@ interface Props {
 
 /**
  * Container component for reviewing and managing manga matches before syncing.
- *
- * Provides UI for accepting/rejecting matches, searching alternatives, and
- * navigating between import and sync stages.
- *
- * @param props - The component props.
- * @returns The rendered matching panel.
+ * Provides UI for accepting/rejecting matches, searching alternatives, and navigating stages.
+ * @param props - Component props.
+ * @returns Rendered matching panel with integrated controls.
  * @source
  */
 export function MatchingPanel({

@@ -13,18 +13,34 @@ import { Badge } from "@/components/ui/badge";
 import { DEFAULT_AUTH_PORT } from "@/config/anilist";
 import type { AuthState } from "@/types/auth";
 
+/**
+ * Props for AccountCredentialsSection component.
+ * @source
+ */
 interface AccountCredentialsSectionProps {
+  /** Current authentication state. */
   authState: AuthState;
+  /** Whether an authentication operation is in progress. */
   isLoading: boolean;
+  /** Whether to use custom OAuth credentials. */
   useCustomCredentials: boolean;
+  /** Custom OAuth client ID. */
   clientId: string;
+  /** Custom OAuth client secret. */
   clientSecret: string;
+  /** Custom OAuth redirect URI. */
   redirectUri: string;
+  /** Status of default AniList credentials. */
   defaultCredentialStatus: { hasCredentials: boolean; missing: string[] };
+  /** Status of custom credentials. */
   customCredentialStatus: { complete: boolean; missing: string[] };
+  /** Callback to toggle custom credentials mode. */
   onToggleCustomCredentials: (value: boolean) => void;
+  /** Callback when client ID is changed. */
   onClientIdChange: (value: string) => void;
+  /** Callback when client secret is changed. */
   onClientSecretChange: (value: string) => void;
+  /** Callback when redirect URI is changed. */
   onRedirectUriChange: (value: string) => void;
 }
 

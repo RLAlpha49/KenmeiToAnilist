@@ -5,9 +5,8 @@
  */
 
 /**
- * Minimizes the current Electron globalThis.
- *
- * @returns A promise that resolves when the window is minimized.
+ * Minimizes the main Electron window.
+ * @returns Promise resolving when window is minimized.
  * @source
  */
 export async function minimizeWindow() {
@@ -15,9 +14,8 @@ export async function minimizeWindow() {
 }
 
 /**
- * Maximizes the current Electron globalThis.
- *
- * @returns A promise that resolves when the window is maximized.
+ * Maximizes the main Electron window.
+ * @returns Promise resolving when window is maximized.
  * @source
  */
 export async function maximizeWindow() {
@@ -25,9 +23,8 @@ export async function maximizeWindow() {
 }
 
 /**
- * Closes the current Electron globalThis.
- *
- * @returns A promise that resolves when the window is closed.
+ * Closes the main Electron window.
+ * @returns Promise resolving when window is closed.
  * @source
  */
 export async function closeWindow() {

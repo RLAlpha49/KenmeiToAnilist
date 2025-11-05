@@ -258,6 +258,7 @@ export function IpcViewer(): React.ReactElement {
     const handleSetFilter = (event: CustomEvent) => {
       const detail = event.detail as { channel?: string } | undefined;
       if (detail?.channel) {
+        // Set channel filter when custom event is triggered
         setChannelFilter(detail.channel);
         setVisibleCount(DEFAULT_WINDOW);
       }
@@ -520,6 +521,7 @@ const IpcEntry = React.memo(function IpcEntry({
   const canShowJsonViewer = useMemo(() => {
     if (isInvokeWithNoPayload) return false;
     if (!payloadRaw) return false;
+    // Try to stringify/parse to verify JSON validity
     try {
       if (typeof payloadRaw === "string") {
         JSON.parse(payloadRaw);

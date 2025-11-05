@@ -1,13 +1,19 @@
+/**
+ * @packageDocumentation
+ * @module SyncPage/LoadingStateDisplay
+ * @description React component for displaying loading states with context-specific messaging.
+ */
+
 import React from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "../ui/card";
 
 /**
  * Props for the LoadingStateDisplay component.
- * @property type - Type of loading state (manga data or library).
- * @property isRateLimited - Whether currently rate limited (optional, default false).
- * @property retryCount - Current retry attempt number (optional, default 0).
- * @property maxRetries - Maximum retry attempts allowed (optional, default 3).
+ * @property type - Type of loading state: "manga" for sync data prep, "library" for AniList fetch.
+ * @property isRateLimited - Whether currently rate limited by AniList API (optional, default false).
+ * @property retryCount - Current retry attempt number for failed requests (optional, default 0).
+ * @property maxRetries - Maximum retry attempts allowed before giving up (optional, default 3).
  * @source
  */
 interface LoadingStateDisplayProps {
@@ -18,8 +24,11 @@ interface LoadingStateDisplayProps {
 }
 
 /**
- * Display loading state with context-specific messaging and animations.
- * Handles different loading scenarios: manga data, library fetch, rate limiting, and retries.
+ * Display animated loading state with context-specific messaging and visual feedback.
+ * Handles different loading scenarios: manga data preparation, library fetch, rate limiting, and retry states.
+ * Provides different visual treatment based on scenario (glow colors, icons, descriptions).
+ * @param props - Component props with loading type and optional rate limit/retry info.
+ * @returns Animated loading card with spinner and contextual message.
  * @source
  */
 export function LoadingStateDisplay({

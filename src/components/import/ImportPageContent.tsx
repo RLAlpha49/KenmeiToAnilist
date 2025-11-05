@@ -33,7 +33,7 @@ import {
 } from "../../utils/manga-status-utils";
 import { SkeletonCard } from "../ui/skeleton";
 
-/** Animation variants for container entrance with staggered children. @source */
+/** Animation variants for container entrance with staggered children effects. @source */
 const containerVariants = {
   hidden: { opacity: 0 },
   show: {
@@ -73,8 +73,8 @@ interface ImportSuccessProps {
 
 /**
  * Displays success message for completed import with progress indicator.
- * @param props - {@link ImportSuccessProps}
- * @returns React.ReactElement with success animation and confirmation.
+ * @param props - Component props.
+ * @returns React element with success animation and confirmation.
  * @source
  */
 export function ImportSuccessContent({
@@ -158,8 +158,8 @@ interface FileUploadProps {
 
 /**
  * Displays file upload interface with drag-and-drop and help tabs.
- * @param props - {@link FileUploadProps}
- * @returns React.ReactElement with file upload and help content.
+ * @param props - Component props.
+ * @returns React element with file upload and help content.
  * @source
  */
 export function FileUploadContent({
@@ -283,8 +283,8 @@ interface FileReadyProps {
 
 /**
  * Displays import preview with data summary, manga entries table, and action buttons.
- * @param props - {@link FileReadyProps}
- * @returns React.ReactElement with import confirmation interface.
+ * @param props - Component props.
+ * @returns React element with import confirmation interface.
  * @source
  */
 export function FileReadyContent({

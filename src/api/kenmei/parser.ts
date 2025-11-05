@@ -113,8 +113,13 @@ function processSingleManga(
 }
 
 /**
- * Log progress for a batch at intervals or at the final batch.
+ * Log progress for a batch at regular intervals or at the final batch for batch processing diagnostics.
+ * @param batchIndex - Current batch number (1-indexed).
+ * @param totalBatches - Total number of batches to process.
+ * @param processedCount - Number of successfully processed entries so far.
+ * @param errorCount - Number of validation errors accumulated so far.
  * @internal
+ * @source
  */
 function logBatchProgress(
   batchIndex: number,
@@ -130,8 +135,11 @@ function logBatchProgress(
 }
 
 /**
- * Log validation errors with sampling for large error lists.
+ * Log validation errors with sampling for large error lists to avoid excessive logging.
+ * Shows first 5 errors by default; logs only count if errors are non-serializable.
+ * @param validationErrors - Array of validation errors to log.
  * @internal
+ * @source
  */
 function logValidationErrors(validationErrors: ValidationError[]): void {
   if (validationErrors.length > 0) {
@@ -152,8 +160,15 @@ function logValidationErrors(validationErrors: ValidationError[]): void {
 }
 
 /**
- * Process a batch of manga entries and accumulate results.
+ * Process a batch of manga entries in chunks and accumulate results into error and success arrays.
+ * Handles manga validation, normalization, and error tracking per batch.
+ * @param mangaList - Array of manga entries to process in batches.
+ * @param batchSize - Number of entries per batch.
+ * @param parseOptions - Parsing configuration for validation behavior.
+ * @param validationErrors - Accumulator array for validation errors.
+ * @param processedEntries - Accumulator array for successfully processed entries.
  * @internal
+ * @source
  */
 function processBatchIteration(
   mangaList: KenmeiManga[],
@@ -609,8 +624,15 @@ export const parseKenmeiCsvExport = (
 };
 
 /**
- * Process a quote character in CSV parsing, handling escaped quotes.
+ * Process a quote character in CSV parsing, handling escaped quotes ("").
+ * Detects and handles doubled quotes as escape sequences for literal quotes.
+ * @param csvContent - The full CSV content being parsed.
+ * @param currentIndex - Current position in csvContent.
+ * @param currentValue - Current field value being accumulated.
+ * @param inQuotes - Whether currently inside a quoted field.
+ * @returns Updated parsing state with new index, value, quote flag, and escape detection.
  * @internal
+ * @source
  */
 function processQuoteCharacter(
   csvContent: string,
@@ -646,12 +668,13 @@ function processQuoteCharacter(
 }
 
 /**
- * Process a delimiter or newline character in CSV parsing.
+ * Finalize the last row in CSV parsing if needed, adding any remaining value and row to the results.
+ * Ensures the final field and row are captured when EOF is reached.
+ * @param currentValue - Last accumulated field value.
+ * @param currentRow - Last accumulated row data.
+ * @param rows - Array of all parsed rows to push final values to.
  * @internal
- */
-/**
- * Finalize the last row in CSV parsing if needed.
- * @internal
+ * @source
  */
 function finalizeLastRow(
   currentValue: string,
@@ -665,8 +688,14 @@ function finalizeLastRow(
 }
 
 /**
- * Process a single character in CSV content, updating mutable state.
+ * Process a single character in CSV content, updating parsing state for quotes, delimiters, and newlines.
+ * Handles in-quote state, escaped quotes, field separation, and row termination.
+ * @param csvContent - The full CSV content being parsed.
+ * @param index - Current character position.
+ * @param state - Mutable parsing state object with current row, field value, quote flag, and accumulated results.
+ * @returns Next index to process after handling current character.
  * @internal
+ * @source
  */
 function handleCSVCharacter(
   csvContent: string,

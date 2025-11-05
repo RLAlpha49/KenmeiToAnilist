@@ -12,6 +12,7 @@ import type { TimeRange } from "@/utils/statisticsAdapter";
 
 /**
  * Props for TimeRangeSelector component.
+ * @source
  */
 interface TimeRangeSelectorProps {
   readonly value: TimeRange;
@@ -20,7 +21,9 @@ interface TimeRangeSelectorProps {
 }
 
 /**
- * Time range options configuration.
+ * Time range options configuration with display labels.
+ * Provides 7 days, 30 days, 90 days, and all-time selection options.
+ * @source
  */
 const TIME_RANGE_OPTIONS = [
   { value: "7d" as const, label: "7 Days", shortLabel: "7D" },
@@ -31,6 +34,10 @@ const TIME_RANGE_OPTIONS = [
 
 /**
  * TimeRangeSelector - Button group for selecting time ranges.
+ * Provides quick switching between predefined time periods for chart analysis.
+ * @param props - Component props with current value and change handler.
+ * @returns Button group control with active state indication.
+ * @source
  */
 export const TimeRangeSelector: FC<TimeRangeSelectorProps> = ({
   value,

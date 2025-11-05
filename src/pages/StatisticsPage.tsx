@@ -64,6 +64,10 @@ const containerVariants: Variants = {
   },
 };
 
+/**
+ * Item animation variant for child elements in container.
+ * @source
+ */
 const itemVariants: Variants = {
   hidden: { opacity: 0, y: 18 },
   show: {
@@ -78,6 +82,7 @@ const itemVariants: Variants = {
 
 /**
  * StatisticsPage component – visual analytics for import, match, and sync data.
+ * Displays comprehensive statistics with charts, filters, and data export capabilities.
  * @returns Rendered statistics dashboard.
  * @source
  */
@@ -95,6 +100,10 @@ export function StatisticsPage() {
   );
   const [selectedTimeRange, setSelectedTimeRange] = useState<TimeRange>("30d");
 
+  /**
+   * Loads all statistics data from storage and normalizes for display.
+   * @source
+   */
   const loadStatistics = useCallback(async () => {
     try {
       const stats = getImportStats();
@@ -140,6 +149,10 @@ export function StatisticsPage() {
     };
   }, [loadStatistics]);
 
+  /**
+   * Handles manual refresh of all statistics data.
+   * @source
+   */
   const handleRefresh = useCallback(async () => {
     if (isRefreshing) return;
     setIsRefreshing(true);
@@ -148,11 +161,20 @@ export function StatisticsPage() {
     toast.success("Statistics refreshed");
   }, [isRefreshing, loadStatistics]);
 
+  /**
+   * Handles time range selection for filtered statistics views.
+   * @param range - The selected time range period.
+   * @source
+   */
   const handleTimeRangeChange = useCallback((range: TimeRange) => {
     setSelectedTimeRange(range);
     console.debug(`[Statistics] Time range changed to: ${range}`);
   }, []);
 
+  /**
+   * Computes hero metrics including total imports, matched, and pending counts.
+   * @source
+   */
   const heroMetrics = useMemo(() => {
     const totalImported = importStats?.total ?? 0;
     const matchedCount = matchResults.filter((match) =>
@@ -164,11 +186,19 @@ export function StatisticsPage() {
     return { totalImported, matchedCount, pendingCount };
   }, [importStats, matchResults]);
 
+  /**
+   * Formats the last updated timestamp for display.
+   * @source
+   */
   const lastUpdatedLabel = useMemo(
     () => formatRelativeTime(lastRefreshedAt),
     [lastRefreshedAt],
   );
 
+  /**
+   * Determines if there is any data available to display.
+   * @source
+   */
   const hasAnyData = useMemo(() => {
     const hasImport = (importStats?.total ?? 0) > 0;
     const hasMatches = matchResults.length > 0;
@@ -177,6 +207,10 @@ export function StatisticsPage() {
     return hasImport || hasMatches || hasSync || hasHistory;
   }, [importStats, matchResults, syncStats, readingHistory]);
 
+  /**
+   * Generates skeleton card keys for loading state.
+   * @source
+   */
   const skeletonKeys = useMemo(
     () => [
       "status",

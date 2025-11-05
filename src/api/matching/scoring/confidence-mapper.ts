@@ -1,18 +1,19 @@
 /**
  * @packageDocumentation
  * @module Matching/Scoring/ConfidenceMapper
- * @description Converts match scores (0-1) to confidence percentages (0-100)
+ * @description Converts normalized match scores (0-1) to confidence percentages (0-100) using adaptive thresholds.
  */
 
 import { AniListManga } from "../../anilist/types";
 import { calculateMatchScore } from "./match-scorer";
 
 /**
- * Convert match score to confidence percentage using conservative scaling.
+ * Convert match score to confidence percentage using conservative adaptive scaling.
+ * Applies different thresholds based on match score ranges to avoid overconfidence.
  *
  * @param searchTitle - The search title used for matching
  * @param manga - The manga to calculate confidence for
- * @returns Confidence percentage between 0-100
+ * @returns Confidence percentage between 0-100 (capped at 99% for near-perfect matches)
  * @source
  */
 export function calculateConfidence(

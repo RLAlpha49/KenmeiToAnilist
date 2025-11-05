@@ -1,3 +1,9 @@
+/**
+ * @packageDocumentation
+ * @module components/ui/carousel
+ * @description Carousel/slider component using Embla Carousel library.
+ * @source
+ */
 import * as React from "react";
 import useEmblaCarousel, {
   type UseEmblaCarouselType,
@@ -7,11 +13,23 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { cn } from "@/utils/tailwind";
 import { Button } from "@/components/ui/button";
 
+/** Carousel API type from Embla Carousel. */
 type CarouselApi = UseEmblaCarouselType[1];
+/** Carousel initialization parameters. */
 type UseCarouselParameters = Parameters<typeof useEmblaCarousel>;
+/** Carousel options configuration. */
 type CarouselOptions = UseCarouselParameters[0];
+/** Carousel plugins for extended functionality. */
 type CarouselPlugin = UseCarouselParameters[1];
 
+/**
+ * Props for the Carousel component.
+ * @property opts - Embla carousel options.
+ * @property plugins - Embla carousel plugins.
+ * @property orientation - Carousel direction (horizontal or vertical).
+ * @property setApi - Callback to receive the carousel API instance.
+ * @source
+ */
 type CarouselProps = {
   opts?: CarouselOptions;
   plugins?: CarouselPlugin;

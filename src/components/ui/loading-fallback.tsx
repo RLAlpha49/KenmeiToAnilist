@@ -1,11 +1,29 @@
+/**
+ * @packageDocumentation
+ * @module components/ui/loading-fallback
+ * @description Loading fallback components for various loading states.
+ * @source
+ */
 import React from "react";
 import { Loader2 } from "lucide-react";
 
+/**
+ * Props for the LoadingFallback component.
+ * @property message - Loading message text (default: "Loading...").
+ * @property className - Optional custom CSS classes.
+ * @source
+ */
 interface LoadingFallbackProps {
   message?: string;
   className?: string;
 }
 
+/**
+ * Generic loading fallback component with spinner and message.
+ * @param props - Loading fallback props.
+ * @returns Loading indicator element.
+ * @source
+ */
 export function LoadingFallback({
   message = "Loading...",
   className = "",
@@ -23,11 +41,20 @@ export function LoadingFallback({
   );
 }
 
-// Specific fallbacks for different contexts
+/**
+ * Loading fallback for debug tools context.
+ * @returns Debug loading indicator element.
+ * @source
+ */
 export function DebugLoadingFallback() {
   return <LoadingFallback message="Loading debug tools..." />;
 }
 
+/**
+ * Loading fallback for page navigation.
+ * @returns Page loading indicator element.
+ * @source
+ */
 export function PageLoadingFallback() {
   return (
     <LoadingFallback message="Loading page..." className="min-h-[400px]" />

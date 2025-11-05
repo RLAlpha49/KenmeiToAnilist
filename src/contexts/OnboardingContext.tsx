@@ -1,3 +1,9 @@
+/**
+ * @packageDocumentation
+ * @module OnboardingContext
+ * @description React context and provider for managing onboarding flow state and progression.
+ */
+
 import React, {
   createContext,
   useContext,
@@ -9,6 +15,11 @@ import React, {
 } from "react";
 import { storage, STORAGE_KEYS } from "@/utils/storage";
 
+/**
+ * Represents a step in the onboarding wizard flow.
+ * Each value corresponds to a unique step in the migration process.
+ * @source
+ */
 export type OnboardingStep =
   | "welcome"
   | "import"
@@ -18,6 +29,16 @@ export type OnboardingStep =
   | "sync"
   | "complete";
 
+/**
+ * Configuration and metadata for a single onboarding step.
+ * @property id - Unique identifier matching an OnboardingStep.
+ * @property title - User-facing title displayed in the UI.
+ * @property description - Brief description of the step's purpose.
+ * @property instructions - Detailed instructions for completing the step.
+ * @property icon - Icon name (e.g., "Sparkles", "Upload") from icon library.
+ * @property optional - Whether this step can be skipped (optional steps still mark completion).
+ * @source
+ */
 export interface OnboardingStepConfig {
   id: OnboardingStep;
   title: string;
@@ -27,6 +48,10 @@ export interface OnboardingStepConfig {
   optional?: boolean;
 }
 
+/**
+ * Ordered sequence of onboarding steps from welcome to completion.
+ * @source
+ */
 const STEP_ORDER: OnboardingStep[] = [
   "welcome",
   "import",
@@ -37,6 +62,10 @@ const STEP_ORDER: OnboardingStep[] = [
   "complete",
 ];
 
+/**
+ * Configuration registry mapping each onboarding step to its metadata and instructions.
+ * @source
+ */
 export const STEP_CONFIGS: Record<OnboardingStep, OnboardingStepConfig> = {
   welcome: {
     id: "welcome",
@@ -97,6 +126,28 @@ export const STEP_CONFIGS: Record<OnboardingStep, OnboardingStepConfig> = {
   },
 };
 
+/**
+ * Shape of the onboarding context value provided to consumers.
+ * Combines state and action properties for complete onboarding flow control.
+ *
+ * @property isActive - Whether the onboarding flow is currently active.
+ * @property currentStep - The step currently being displayed or processed.
+ * @property completedSteps - Array of steps marked as completed.
+ * @property stepProgress - Object mapping each step to completion status.
+ * @property startOnboarding - Initiates the onboarding flow from the beginning.
+ * @property completeStep - Marks a step as completed and persists to storage.
+ * @property skipStep - Skips a step (marks as completed to allow progression).
+ * @property goToStep - Navigates directly to a specific step.
+ * @property nextStep - Advances to the next step in sequence.
+ * @property previousStep - Goes back to the previous step.
+ * @property finishOnboarding - Marks onboarding as complete and closes the flow.
+ * @property resetOnboarding - Clears all progress and restarts from the beginning.
+ * @property dismissOnboarding - Hides onboarding without resetting progress.
+ * @property isStepCompleted - Query function to check if a step is completed.
+ * @property isStepActive - Query function to check if a step is currently active.
+ * @property getStepProgress - Returns progress percentage (0-100).
+ * @source
+ */
 interface OnboardingContextType {
   isActive: boolean;
   currentStep: OnboardingStep;
@@ -124,6 +175,21 @@ const OnboardingContext = createContext<OnboardingContextType | undefined>(
   undefined,
 );
 
+/**
+ * Provides onboarding context to child components, managing step progression and completion state.
+ * Persists onboarding state to storage and validates step data on initialization.
+ *
+ * **Features:**
+ * - Persistent step completion tracking via storage
+ * - Automatic validation and filtering of stored steps
+ * - Graceful handling of storage migrations and data corruption
+ * - Async storage I/O with error handling
+ * - Strict boolean parsing for onboarding completion flag
+ *
+ * @param children - React children to wrap with onboarding context.
+ * @returns Provider component with onboarding context value.
+ * @source
+ */
 export function OnboardingProvider({
   children,
 }: Readonly<{
@@ -397,6 +463,13 @@ export function OnboardingProvider({
   );
 }
 
+/**
+ * Hook to access the onboarding context.
+ * Must be used within an OnboardingProvider.
+ * @returns The onboarding context value.
+ * @throws {Error} If used outside an OnboardingProvider.
+ * @source
+ */
 export function useOnboarding(): OnboardingContextType {
   const context = useContext(OnboardingContext);
   if (context === undefined) {

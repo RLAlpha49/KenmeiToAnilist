@@ -101,9 +101,7 @@ const setCacheEntry = <T>(
 
 /**
  * Creates a canonical cache key for a string pair (order-independent).
- *
  * Ensures the same pair yields the same key regardless of argument order.
- *
  * @param a - First string.
  * @param b - Second string.
  * @returns Ordered pair key string.
@@ -115,11 +113,8 @@ const makeOrderedPairKey = (a: string, b: string): string => {
 };
 
 /**
- * Implements Porter Stemming algorithm to reduce words to their root form.
- *
- * Browser-compatible implementation using regex-based word form transformations.
- * Handles common English word modifications (plurals, tenses, etc.).
- *
+ * Implements Porter Stemming algorithm for reducing words to their root form.
+ * Uses regex-based transformations to handle English word modifications.
  * @param word - The word to stem.
  * @returns The stemmed word root.
  * @internal
@@ -206,14 +201,12 @@ const porterStem = (word: string): string => {
 };
 
 /**
- * Finds character matches between two strings for Jaro-Winkler distance calculation.
- *
- * Identifies matching characters within a specified distance to support the algorithm.
- *
+ * Finds character matches between two strings for Jaro-Winkler calculation.
+ * Identifies matching characters within a specified distance.
  * @param s1 - First string.
  * @param s2 - Second string.
  * @param matchDistance - Maximum distance to search for matches.
- * @returns Object containing match count and boolean arrays indicating matched positions.
+ * @returns Object containing match count and matched position arrays.
  * @internal
  * @source
  */
@@ -248,9 +241,7 @@ const findCharacterMatches = (
 
 /**
  * Calculates the number of transpositions between matched characters.
- *
- * Counts positions where matched characters differ, a key component of Jaro-Winkler distance.
- *
+ * Key component of Jaro-Winkler distance calculation.
  * @param s1 - First string.
  * @param s2 - Second string.
  * @param matches1 - Boolean array indicating matches in first string.
@@ -280,9 +271,7 @@ const calculateTranspositions = (
 
 /**
  * Calculates the common prefix length for Jaro-Winkler bonus calculation.
- *
- * Compares characters from the beginning of each string up to a maximum of 4 characters.
- *
+ * Compares leading characters up to a maximum of 4.
  * @param s1 - First string.
  * @param s2 - Second string.
  * @returns Length of common prefix, max 4.
@@ -646,7 +635,9 @@ function calculateExactMatch(str1: string, str2: string): number {
 }
 
 /**
- * Calculate substring similarity
+ * Calculate substring similarity.
+ * @internal
+ * @source
  */
 function calculateSubstringMatch(str1: string, str2: string): number {
   const norm1 = enhancedNormalize(str1);
@@ -697,7 +688,9 @@ function calculateSubstringMatch(str1: string, str2: string): number {
 }
 
 /**
- * Calculate word order similarity using bag-of-words approach
+ * Calculate word order similarity using bag-of-words approach.
+ * @internal
+ * @source
  */
 function calculateWordOrderSimilarity(str1: string, str2: string): number {
   const pairKey = makeOrderedPairKey(
@@ -1023,15 +1016,12 @@ function calculateSemanticSimilarity(str1: string, str2: string): number {
 }
 
 /**
- * Calculates enhanced title similarity using multiple algorithms and weighted combination.
- *
- * Combines exact matching, character similarity, semantic matching, and edit distances
- * to produce a robust 0-100 similarity score. Results are cached for performance.
- * Supports custom configuration for algorithm weights and threshold tuning.
- *
+ * Calculates enhanced title similarity using multiple algorithms with weighted combination.
+ * Combines exact matching, character similarity, semantic matching, and edit distances.
+ * Results are cached for performance with support for custom configuration.
  * @param str1 - First string to compare.
  * @param str2 - Second string to compare.
- * @param config - Optional custom similarity configuration (weights, thresholds, debug mode).
+ * @param config - Optional custom similarity configuration (weights, thresholds, debug).
  * @returns Similarity score between 0 and 100.
  * @source
  */

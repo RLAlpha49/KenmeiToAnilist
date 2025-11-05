@@ -5,9 +5,9 @@ import { router, history } from "@/routes/router";
 import { getPathname } from "@/utils/getPathname";
 
 /**
- * Hook that automatically navigates to the correct page for the current onboarding step.
- * Includes debouncing to prevent navigation loops, in-flight tracking to prevent duplicate navigations,
- * and router readiness checks to ensure route state is stable.
+ * Automatically navigates to the correct onboarding page for the current step.
+ * Includes debouncing, in-flight tracking, and router readiness checks to prevent loops.
+ * @source
  */
 export function useOnboardingNavigation() {
   const { isActive, currentStep } = useOnboarding();

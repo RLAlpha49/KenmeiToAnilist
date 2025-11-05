@@ -14,6 +14,7 @@ import { computeReadingVelocity } from "@/utils/statisticsAdapter";
 
 /**
  * Props for ReadingVelocityChart component.
+ * @source
  */
 interface ReadingVelocityChartProps {
   readonly history: ReadingHistory;
@@ -23,6 +24,10 @@ interface ReadingVelocityChartProps {
 
 /**
  * ReadingVelocityChart - Displays average reading velocity metrics.
+ * Shows chapters per day, week, and month across metric cards.
+ * @param props - Component props with reading history and time range.
+ * @returns Rendered metric cards with velocity values or empty state.
+ * @source
  */
 export const ReadingVelocityChart: FC<ReadingVelocityChartProps> = ({
   history,

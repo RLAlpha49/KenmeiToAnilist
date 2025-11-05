@@ -7,13 +7,9 @@
 import { MediaListStatus } from "../api/anilist/types";
 
 /**
- * Formats an AniList media list status into a human-readable label.
- *
- * Translates internal AniList status constants (CURRENT, PLANNING, COMPLETED, etc.)
- * to user-friendly display strings.
- *
- * @param status - The AniList media list status.
- * @returns A human-readable status label.
+ * Formats AniList media list status constants into human-readable display labels.
+ * @param status - The AniList media list status (CURRENT, PLANNING, COMPLETED, etc.).
+ * @returns Human-readable status label.
  * @source
  */
 export function formatMediaListStatus(status: MediaListStatus): string {
@@ -36,8 +32,7 @@ export function formatMediaListStatus(status: MediaListStatus): string {
 }
 
 /**
- * Returns Tailwind CSS text color classes for an AniList media list status.
- *
+ * Returns Tailwind CSS text color classes for AniList media list status.
  * @param status - The AniList media list status.
  * @returns Tailwind CSS class string for text coloring.
  * @source
@@ -62,10 +57,7 @@ export function getStatusColor(status: MediaListStatus): string {
 }
 
 /**
- * Returns Tailwind CSS classes for styling an AniList media list status badge.
- *
- * Combines background and text colors appropriate for badge display with dark mode support.
- *
+ * Returns Tailwind CSS badge styling classes for AniList media list status with dark mode support.
  * @param status - The AniList media list status.
  * @returns Tailwind CSS class string for badge styling.
  * @source
@@ -90,12 +82,9 @@ export function getStatusBadgeColor(status: MediaListStatus): string {
 }
 
 /**
- * Formats a score into a human-readable string on the 0-10 scale.
- *
- * Returns "Not Rated" for a score of 0, otherwise returns the score with "/10" suffix.
- *
+ * Formats 0-10 score into human-readable string ("Not Rated" or "{score}/10").
  * @param score - The score value (0-10).
- * @returns A formatted score string.
+ * @returns Formatted score string.
  * @source
  */
 export function formatScore(score: number): string {
@@ -106,10 +95,9 @@ export function formatScore(score: number): string {
 }
 
 /**
- * Determines whether a manga entry exists on the user's AniList list.
- *
- * @param mediaListEntry - The media list entry object.
- * @returns True if the entry exists (has an id), false otherwise.
+ * Checks whether manga entry exists on user's AniList list (has valid id).
+ * @param mediaListEntry - The media list entry object (may be null/undefined).
+ * @returns True if entry has an id; false otherwise.
  * @source
  */
 export function isOnUserList(mediaListEntry?: { id?: number } | null): boolean {

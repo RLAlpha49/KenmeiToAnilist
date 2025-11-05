@@ -1,7 +1,7 @@
 /**
  * @packageDocumentation
  * @module SyncResultsView
- * @description React component for displaying the results of the AniList synchronization process, including summary statistics and error details.
+ * @description React component for displaying comprehensive synchronization results and error logs.
  */
 import React from "react";
 import { SyncReport } from "../../api/anilist/sync-service";
@@ -26,9 +26,9 @@ import { Button } from "../ui/button";
 
 /**
  * Props for the SyncResultsView component.
- * @property report - The synchronization report containing results and errors.
- * @property onClose - Callback to close the results view.
- * @property onExportErrors - Optional callback to export the error log.
+ * @property report - The synchronization report with success count, failures, errors, and timestamp.
+ * @property onClose - Callback invoked when user closes the results view.
+ * @property onExportErrors - Optional callback to export detailed error log as file.
  * @source
  */
 export interface SyncResultsViewProps {
@@ -38,8 +38,13 @@ export interface SyncResultsViewProps {
 }
 
 /**
- * Display comprehensive synchronization results including success rate, statistics, and error details.
- * Shows summary of successful/failed/skipped updates with detailed error log and export capability.
+ * Display comprehensive synchronization results with metrics, statistics, and error details.
+ * Shows: success percentage, entry counts (successful/failed/skipped), timestamp,
+ * detailed error log (preview + remaining count), and export capability for error details.
+ * Uses gradient accents and animated cards for visual hierarchy.
+ *
+ * @param props - Component props with sync report and action callbacks.
+ * @returns Results card with summary statistics and error log preview.
  * @source
  */
 const SyncResultsView: React.FC<SyncResultsViewProps> = ({

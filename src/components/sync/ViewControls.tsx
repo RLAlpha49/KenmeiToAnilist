@@ -1,7 +1,7 @@
 /**
  * @packageDocumentation
  * @module SyncPage/ViewControls
- * @description View controls for the sync page including display mode toggle, sort dropdown, and filter dropdown.
+ * @description React component for controlling manga entry view display, sorting, and filtering.
  */
 
 import React from "react";
@@ -17,6 +17,16 @@ import {
 } from "../ui/dropdown-menu";
 import { DisplayMode, SortOption, FilterOptions } from "./types";
 
+/**
+ * Props for the ViewControls component.
+ * @property displayMode - Current view mode ("cards" or "compact" layout).
+ * @property setDisplayMode - Callback to change the display mode.
+ * @property sortOption - Current sort field and direction configuration.
+ * @property setSortOption - State dispatch to update sort configuration.
+ * @property filters - Current filter state (status, changes, library).
+ * @property setFilters - State dispatch to update filter configuration.
+ * @source
+ */
 interface ViewControlsProps {
   /** Current display mode (cards or compact). */
   displayMode: DisplayMode;
@@ -33,8 +43,18 @@ interface ViewControlsProps {
 }
 
 /**
- * Controls for view mode, sorting, and filtering manga entries.
- * Provides display mode toggle, sort/filter dropdowns, and reset button.
+ * Controls component for view layout, entry sorting, and filtering.
+ * Provides: display mode toggle (cards/compact), multi-criteria sort dropdown,
+ * advanced filter menu (status/changes/library), and visual indicators for active filters.
+ *
+ * Includes:
+ * - Display mode toggle buttons with selected state highlighting
+ * - Sort dropdown with active sort display and preset options
+ * - Filter dropdown with multi-select capability and reset option
+ * - Active filter count badge
+ *
+ * @param props - Component props with display/sort/filter state and callbacks.
+ * @returns Toolbar with view controls, sort options, and filter menu.
  * @source
  */
 export const ViewControls: React.FC<ViewControlsProps> = ({

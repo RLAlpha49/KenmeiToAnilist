@@ -70,6 +70,34 @@ excluded_tools:
 
 # initial prompt for the project. It will always be given to the LLM upon activating the project
 # (contrary to the memories, which are loaded on demand).
-initial_prompt: ""
+initial_prompt: |
+  ## Default Modes & Adaptive Behavior
+
+  **Default modes:** planning, interactive, editing
+
+  These modes work together to:
+  - planning: produce explicit todos/plans before making changes, use thinking tools at checkpoints
+  - interactive: ask clarifying questions when requirements are ambiguous, confirm risky changes
+  - editing: apply code changes safely with verification
+
+  NOTE: The Serena "think" tools (think_about_collected_information, think_about_task_adherence, think_about_whether_you_are_done) should be used whenever they are applicable — not only for the largest or riskiest changes. Use them at relevant checkpoints, for example:
+  - after gathering context to verify information is sufficient (think_about_collected_information)
+  - before making or committing edits to ensure the plan and approach remain appropriate (think_about_task_adherence)
+  - when finishing work to confirm requirements are met and no further steps are needed (think_about_whether_you_are_done)
+
+  **Adapt modes based on task complexity:**
+
+  - **Trivial fixes** (1-line changes, obvious typos, simple renames): Switch to ["one-shot", "editing"]
+    - Skip planning overhead, make and verify the change immediately.
+
+  - **Small edits** (single file, <50 lines changed): Use ["interactive", "editing"]
+    - Still ask clarifying questions but skip detailed planning.
+
+  - **Medium features** (2–5 files, straightforward logic): Keep default ["planning", "interactive", "editing"]
+    - Produce a brief 3–6 item plan, explore with Serena tools, then edit incrementally.
+
+  - **Large refactors or risky changes** (touches auth/IPC/storage, many files): Enhance to ["planning", "interactive", "editing"] + extra verification
+
+  Important: Always use the Serena tool `switch_modes` to change active modes.
 
 project_name: "KenmeiToAnilist"

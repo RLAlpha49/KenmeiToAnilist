@@ -8,7 +8,7 @@ import { KenmeiMangaItem } from "../types/kenmei";
 import { MatchResult, KenmeiManga } from "./storage";
 
 /**
- * Represents a normalized manga item with a guaranteed unique identifier.
+ * Manga item with guaranteed unique identifier; used internally for import operations.
  * @source
  */
 export interface NormalizedMangaItem extends KenmeiMangaItem {
@@ -16,7 +16,7 @@ export interface NormalizedMangaItem extends KenmeiMangaItem {
 }
 
 /**
- * Statistics about the results of a manga import operation.
+ * Statistics tracking results of a manga import operation (new, updated, total counts).
  * @source
  */
 export interface ImportResults {
@@ -26,10 +26,7 @@ export interface ImportResults {
 }
 
 /**
- * Normalizes manga items by ensuring each has a unique ID and all required fields are present.
- *
- * Generates synthetic IDs if missing and fills in default values for optional fields.
- *
+ * Normalizes manga items by ensuring unique IDs and filling in default values for optional fields.
  * @param manga - Array of manga items to normalize.
  * @returns Array of normalized manga items with guaranteed IDs.
  * @source
@@ -59,12 +56,8 @@ export function normalizeMangaItems(
 }
 
 /**
- * Retrieves previously imported manga data from localStorage.
- *
- * Attempts to parse and return stored manga data, returning an empty array
- * if no previous data exists or if parsing fails.
- *
- * @returns Array of previously stored manga items, or empty array if none found.
+ * Retrieves previously imported manga data from localStorage; returns empty array if none found or parse fails.
+ * @returns Array of previously stored manga items or empty array.
  * @source
  */
 export function getPreviousMangaData(): NormalizedMangaItem[] {
@@ -92,14 +85,10 @@ export function getPreviousMangaData(): NormalizedMangaItem[] {
 }
 
 /**
- * Merges new manga data with existing manga, tracking changes.
- *
- * Matches new items against existing ones by ID or title (case-insensitive).
- * Updates existing matches and appends new items to the list.
- *
+ * Merges new manga with existing manga by ID/title match; updates existing, appends new.
  * @param previousManga - Array of previously stored manga items.
  * @param normalizedManga - Array of newly imported manga items to merge.
- * @returns Object containing merged manga array and import statistics.
+ * @returns Object with merged manga array and import statistics.
  * @source
  */
 export function mergeMangaData(
@@ -167,10 +156,7 @@ export function mergeMangaData(
 }
 
 /**
- * Validates and standardizes manga data for storage.
- *
- * Ensures all manga entries have proper IDs, timestamps, and required fields with defaults.
- *
+ * Validates and standardizes manga data with proper IDs, timestamps, and default field values for storage.
  * @param manga - Array of normalized manga items to validate.
  * @returns Array of validated manga items ready for storage.
  * @source
@@ -198,13 +184,9 @@ export function validateMangaData(manga: NormalizedMangaItem[]): KenmeiManga[] {
 }
 
 /**
- * Updates existing match results with new manga data from an import.
- *
- * Refreshes match result records with updated manga information by matching
- * on both ID and title (case-insensitive).
- *
+ * Updates match results with new manga data from import by matching on ID or title.
  * @param validMergedManga - Array of validated, merged manga items.
- * @returns True if any match results were updated, false otherwise.
+ * @returns True if any match results were updated; false otherwise.
  * @source
  */
 export function updateMatchResults(validMergedManga: KenmeiManga[]): boolean {
@@ -279,11 +261,7 @@ export function updateMatchResults(validMergedManga: KenmeiManga[]): boolean {
 }
 
 /**
- * Clears pending manga storage to force recalculation on next sync.
- *
- * Removes pending manga data from both electron-store and localStorage
- * to ensure fresh processing of pending items.
- *
+ * Clears pending manga storage from electron-store and localStorage to force recalculation on next sync.
  * @source
  */
 export function clearPendingMangaStorage(): void {

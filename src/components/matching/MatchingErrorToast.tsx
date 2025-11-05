@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 
 /**
  * Props for the MatchingErrorToast component.
- *
  * @property error - Error message to display, or null to hide the toast.
  * @property onDismiss - Callback when the dismiss button is clicked.
  * @source
@@ -14,10 +13,10 @@ interface Props {
 }
 
 /**
- * Displays a dismissible error notification toast in the bottom-right corner.
- *
- * @param props - The component props.
- * @returns The rendered error toast or null if no error.
+ * Dismissible error notification toast displayed in bottom-right corner.
+ * Features animated entrance and customizable error message.
+ * @param props - Component props.
+ * @returns Rendered error toast or null if no error exists.
  * @source
  */
 export default function MatchingErrorToast({

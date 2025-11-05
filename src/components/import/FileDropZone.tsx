@@ -13,8 +13,7 @@ import { Progress } from "../ui/progress";
 
 /**
  * Props for the FileDropZone component.
- *
- * @property onFileLoaded - Callback invoked with parsed KenmeiData when a file is successfully loaded and parsed.
+ * @property onFileLoaded - Callback invoked with parsed KenmeiData when file is successfully loaded and parsed.
  * @property onError - Callback invoked with an AppError if file loading or parsing fails.
  * @internal
  * @source
@@ -25,12 +24,10 @@ export interface FileDropZoneProps {
 }
 
 /**
- * FileDropZone React component for uploading and parsing Kenmei CSV export files.
- *
- * Provides drag-and-drop and file selection UI, validates file type and size, parses the CSV, and reports progress and errors.
- *
- * @param props - {@link FileDropZoneProps}
- * @returns React.ReactElement displaying file upload interface.
+ * FileDropZone component for uploading and parsing Kenmei CSV export files.
+ * Provides drag-and-drop and file selection UI, validates file type and size, parses CSV, and reports progress and errors.
+ * @param props - Component props.
+ * @returns React element displaying file upload interface.
  * @source
  */
 export function FileDropZone({
@@ -64,6 +61,7 @@ export function FileDropZone({
 
   /**
    * Handles file drop event and delegates to processFile.
+   * @param e - Drag event.
    * @source
    */
   const handleDrop = (e: React.DragEvent<HTMLLabelElement>) => {
@@ -77,7 +75,8 @@ export function FileDropZone({
   };
 
   /**
-   * Handles file selection from input element.
+   * Handles file selection from input element and delegates to processFile.
+   * @param e - Change event from file input.
    * @source
    */
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -89,7 +88,7 @@ export function FileDropZone({
 
   /**
    * Validates and processes a file for CSV parsing.
-   * Validates file type (.csv), size (max 10MB), and then parses the content.
+   * Validates file type (.csv), size (max 10MB), and parses content.
    * Calls onFileLoaded or onError callback based on result.
    * @param file - File object to process.
    * @source
@@ -196,7 +195,7 @@ export function FileDropZone({
   };
 
   /**
-   * Formats a file size in bytes to a human-readable string.
+   * Formats file size in bytes to human-readable string.
    * @param bytes - File size in bytes.
    * @returns Formatted string (e.g., "1.5 MB", "256 KB").
    * @source

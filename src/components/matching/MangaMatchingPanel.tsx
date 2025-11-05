@@ -74,19 +74,20 @@ import { Button } from "../ui/button";
 
 /**
  * Props for the MangaMatchingPanel component.
- *
- * @property matches - The list of manga match results to review and manage.
- * @property onManualSearch - Optional callback to trigger a manual search for a Kenmei manga.
- * @property onAcceptMatch - Optional callback to accept a match result.
- * @property onRejectMatch - Optional callback to reject a match result or batch of matches.
+ * @property matches - List of manga match results to review and manage.
+ * @property onManualSearch - Optional callback to trigger manual search for a Kenmei manga.
+ * @property onAcceptMatch - Optional callback to accept a match result or batch.
+ * @property onRejectMatch - Optional callback to reject a match result or batch.
  * @property onSelectAlternative - Optional callback to select an alternative match.
  * @property onResetToPending - Optional callback to reset a match to pending status.
+ * @property searchQuery - Optional search query string to filter results.
+ * @property onSetMatchedToPending - Optional callback to reset all matched to pending.
+ * @property disableSetMatchedToPending - Optional flag to disable the set-to-pending action.
  * @property isLoadingInitial - Optional flag to show skeleton loaders during initial load.
  * @property selectedMatchIds - Optional set of selected match IDs for batch operations.
  * @property onToggleSelection - Optional callback to toggle selection of a match.
- * @property onSelectAll - Optional callback to select all visible matches with list of IDs.
+ * @property onSelectAll - Optional callback to select all visible matches.
  * @property onClearSelection - Optional callback to clear all selections.
- * @internal
  * @source
  */
 export interface MangaMatchingPanelProps {
@@ -124,10 +125,10 @@ export interface MangaMatchingPanelProps {
 }
 
 /**
- * MangaMatchingPanel React component for reviewing, filtering, sorting, and managing manga match results, including manual search, acceptance, rejection, and alternative selection.
- *
- * @param props - The props for the MangaMatchingPanel component.
- * @returns The rendered manga matching panel React element.
+ * Panel for reviewing, filtering, sorting, and managing manga match results.
+ * Supports manual search, acceptance, rejection, alternative selection, and batch operations.
+ * @param props - Component props.
+ * @returns Rendered matching panel with filtering, sorting, and management controls.
  * @source
  */
 export function MangaMatchingPanel({

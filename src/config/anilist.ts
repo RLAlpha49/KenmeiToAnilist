@@ -29,20 +29,18 @@ try {
 }
 
 /**
- * Default port for the AniList auth callback that doesn't require admin privileges.
- *
+ * Default port for AniList auth callback (non-privileged).
  * @source
  */
 export const DEFAULT_AUTH_PORT = 8765;
 
 /**
- * Default AniList API credentials and endpoints. These can be overridden by user settings.
- *
- * @property clientId - The AniList client ID.
- * @property clientSecret - The AniList client secret.
- * @property redirectUri - The OAuth redirect URI.
- * @property authorizationEndpoint - The OAuth authorization endpoint.
- * @property tokenEndpoint - The OAuth token endpoint.
+ * AniList OAuth credentials and endpoints.
+ * @property clientId - AniList application ID.
+ * @property clientSecret - AniList application secret.
+ * @property redirectUri - OAuth callback URI.
+ * @property authorizationEndpoint - Authorization endpoint.
+ * @property tokenEndpoint - Token endpoint.
  * @source
  */
 export const DEFAULT_ANILIST_CONFIG = {
@@ -54,10 +52,9 @@ export const DEFAULT_ANILIST_CONFIG = {
 };
 
 /**
- * Settings for secure storage of AniList authentication data.
- *
- * @property encryptionKey - The key used for encrypting stored data, loaded from the environment variable VITE_ANILIST_ENCRYPTION_KEY.
- * @property storageKey - The key used for storing auth data.
+ * Secure storage settings for AniList authentication data.
+ * @property encryptionKey - Encryption key for stored data (from VITE_ANILIST_ENCRYPTION_KEY env var).
+ * @property storageKey - Storage key name.
  * @source
  */
 export const AUTH_STORAGE_CONFIG = {
@@ -66,10 +63,9 @@ export const AUTH_STORAGE_CONFIG = {
 };
 
 /**
- * AniList API endpoints and rate limit settings.
- *
- * @property graphql - The GraphQL API endpoint.
- * @property rateLimit - The maximum requests per minute.
+ * AniList API endpoints and rate limit.
+ * @property graphql - GraphQL endpoint.
+ * @property rateLimit - Max requests per minute.
  * @source
  */
 export const ANILIST_API_ENDPOINTS = {
@@ -78,26 +74,25 @@ export const ANILIST_API_ENDPOINTS = {
 };
 
 /**
- * AniList official rate limit per minute. (60 requests per minute)
- * Reference: AniList GraphQL API documentation
+ * AniList official rate limit: 60 requests per minute.
+ * Reference: AniList GraphQL API documentation.
  * @source
  */
 export const ANILIST_RATE_LIMIT_PER_MINUTE = 60;
 
 /**
- * Safe request rate for internal IPC processing (28 requests per minute).
- * Used to provide headroom below the official limit and avoid throttling issues.
- * This is applied in main process IPC handlers.
+ * Safe request rate for IPC processing (28 requests per minute).
+ * Provides headroom below the official limit to avoid throttling.
+ * Applied in main process IPC handlers.
  * @source
  */
 export const SAFE_REQUESTS_PER_MINUTE = 28;
 
 /**
- * Rate limiting configuration for AniList API requests.
- *
- * @property maxRequestsPerMinute - The maximum allowed requests per minute.
- * @property requestTimeout - The request timeout in milliseconds.
- * @property retryDelay - The delay between requests to stay under the rate limit.
+ * Rate limiting configuration for AniList API.
+ * @property maxRequestsPerMinute - Max allowed requests per minute (conservative).
+ * @property requestTimeout - Request timeout in milliseconds.
+ * @property retryDelay - Delay between requests to stay under rate limit.
  * @source
  */
 export const RATE_LIMIT_CONFIG = {

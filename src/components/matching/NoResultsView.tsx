@@ -4,7 +4,6 @@ import { Button } from "../ui/button";
 
 /**
  * Props for the NoResultsView component.
- *
  * @property onGoToImport - Callback to navigate back to the import page.
  * @source
  */
@@ -13,12 +12,10 @@ interface Props {
 }
 
 /**
- * Displays an empty state when no manga data is available to match.
- *
+ * Empty state component displayed when no manga data is available to match.
  * Prompts the user to return to the import page to load manga data.
- *
- * @param props - The component props.
- * @returns The rendered no results view.
+ * @param props - Component props.
+ * @returns Rendered empty state view with action button.
  * @source
  */
 export default function NoResultsView({ onGoToImport }: Readonly<Props>) {

@@ -1,7 +1,8 @@
 /**
  * @packageDocumentation
  * @module Matching/Scoring/MatchScorer
- * @description Core match scoring logic for manga title matching
+ * @description Core match scoring logic with multiple strategies for manga title matching.
+ * Employs direct matching, word-based matching, and legacy approaches for comprehensive title coverage.
  */
 
 import { AniListManga } from "../../anilist/types";
@@ -26,13 +27,15 @@ import {
 } from "../../../utils/enhanced-similarity";
 
 /**
- * Check if words from search term appear in title with word order and proximity.
- *
- * @internal
+ * Normalized title entry with original and processed versions.
+ * @source
  */
 type NormalizedTitleEntry = {
+  /** Normalized title text for matching. */
   text: string;
+  /** Source/type identifier (e.g., "english", "romaji", "synonym"). */
   source: string;
+  /** Original title text before normalization. */
   original: string;
 };
 
@@ -42,13 +45,14 @@ type NormalizedTitleEntry = {
  */
 export interface MatchScoreOptions {
   /**
-   * When true, skips enhanced overlap heuristics to mimic legacy behavior.
+   * When true, skips meaningful word overlap and initialism heuristics.
    * Useful for regression testing and before/after comparisons.
    * @source
    */
   disableMeaningfulOverlap?: boolean;
 }
 
+/** Secondary/contextual words excluded from primary token matching (e.g., "season", "part", "episode"). @source */
 const SECONDARY_WORDS = new Set([
   "season",
   "seasons",
@@ -124,9 +128,10 @@ const ROMAN_NUMERAL_PARTS = {
 
 /**
  * Validate if a string is a valid Roman numeral.
+ * Checks for valid characters and confirms the string follows proper Roman numeral patterns.
  *
  * @param str - The string to validate
- * @returns True if the string is a valid Roman numeral
+ * @returns True if the string is a valid Roman numeral (e.g., "I", "IV", "MCMXC")
  * @source
  */
 const isValidRomanNumeral = (str: string): boolean => {
@@ -140,20 +145,24 @@ const isValidRomanNumeral = (str: string): boolean => {
 };
 
 /**
- * Normalized token data for word matching.
+ * Normalized token data for word matching and analysis.
  * @source
  */
 type TokenData = {
+  /** Array of normalized tokens. */
   normalized: string[];
+  /** Set of all normalized tokens for fast membership lookup. */
   tokenSet: Set<string>;
+  /** Primary tokens (non-secondary words with length > 1). */
   primaryTokens: string[];
 };
 
 /**
  * Normalize season, part, volume, chapter, and arc shorthand to numeric strings.
+ * Converts patterns like "s1", "pt2", "vol3", "ch4", "arc5" to their numeric representation.
  *
- * @param token - The token to normalize
- * @returns The numeric string or null if not a recognized shorthand
+ * @param token - The token to normalize (e.g., "s1", "season2", "vol3")
+ * @returns The numeric string or null if not a recognized shorthand pattern
  * @source
  */
 const normalizeSeasonShorthand = (token: string): string | null => {
@@ -183,9 +192,10 @@ const normalizeSeasonShorthand = (token: string): string | null => {
 
 /**
  * Convert Roman numerals to their decimal representation.
+ * Handles standard Roman numeral notation with subtractive principle (IV=4, IX=9, etc.).
  *
- * @param roman - The Roman numeral string to convert
- * @returns The decimal number or null if invalid
+ * @param roman - The Roman numeral string to convert (e.g., "IV", "MCMXC")
+ * @returns The decimal number or null if invalid Roman numeral
  * @source
  */
 const romanToDecimal = (roman: string): number | null => {
@@ -208,10 +218,11 @@ const romanToDecimal = (roman: string): number | null => {
 };
 
 /**
- * Normalize a single token by converting to lowercase, handling shorthands, numbers, and Roman numerals.
+ * Normalize a single token by converting to lowercase and handling special forms.
+ * Processes numeric words, Roman numerals, season/part shorthands, and leading zeros.
  *
- * @param raw - The raw token string
- * @returns The normalized token
+ * @param raw - The raw token string to normalize
+ * @returns The normalized token (lowercase, numeric-substituted, or Roman numeral converted)
  * @source
  */
 const normalizeToken = (raw: string): string => {
@@ -240,7 +251,8 @@ const normalizeToken = (raw: string): string => {
 };
 
 /**
- * Normalize an array of tokens for matching.
+ * Normalize an array of tokens for matching operations.
+ * Applies normalizeToken to each word and filters out empty results.
  *
  * @param words - The word array to normalize
  * @returns Normalized tokens with empty strings filtered out
@@ -251,10 +263,11 @@ const normalizeTokensForMatching = (words: string[]): string[] => {
 };
 
 /**
- * Create normalized token data for word matching analysis.
+ * Create normalized token data for word matching and analysis.
+ * Separates primary tokens (significant words) from secondary/contextual words.
  *
  * @param words - The word array to process
- * @returns Token data with normalized tokens, token set, and primary tokens
+ * @returns Token data with normalized tokens, token set, and primary tokens for matching
  * @source
  */
 const createTokenData = (words: string[]): TokenData => {
@@ -273,9 +286,10 @@ const createTokenData = (words: string[]): TokenData => {
 
 /**
  * Build an initialism from significant words in a title.
+ * Takes the first character of primary (non-secondary) words to create an acronym.
  *
  * @param rawWords - The raw word array from the title
- * @returns The initialism string
+ * @returns The initialism string (e.g., "JJK" for "Jujutsu Kaisen")
  * @source
  */
 const buildInitialism = (rawWords: string[]): string => {
@@ -299,7 +313,8 @@ const buildInitialism = (rawWords: string[]): string => {
 };
 
 /**
- * Check if search term words appear in title with order and proximity consideration.
+ * Check if search term words appear in title with acceptable word order and proximity.
+ * Single-word searches only check for word presence; multi-word searches verify order or adjacency.
  *
  * @param title - The title to check against
  * @param searchName - The search term to match
@@ -358,12 +373,13 @@ function checkTitleMatch(title: string, searchName: string): boolean {
 }
 
 /**
- * Check for perfect and substantial partial matches.
+ * Check for perfect and substantial partial matches between search and title.
+ * Returns highest scores for exact matches, with lower scores for substantial containment.
  *
  * @param normalizedTitles - Normalized title entries to check
  * @param normalizedSearchTitle - The normalized search title
- * @param searchTitle - The original search title
- * @param manga - The manga object being matched
+ * @param searchTitle - The original search title (for logging)
+ * @param manga - The manga object being matched (for logging)
  * @returns Match score (0.8-1) if found, -1 otherwise
  * @source
  */
@@ -428,12 +444,13 @@ function checkDirectMatches(
 }
 
 /**
- * Calculate enhanced text similarity with adaptive thresholds.
+ * Calculate enhanced text similarity with adaptive thresholds based on search length.
+ * Shorter searches use higher threshold (0.6); longer searches use lower threshold (0.5).
  *
  * @param text - The text to compare
  * @param normalizedSearchTitle - The normalized search title
- * @param searchTitle - The original search title
- * @param source - The source/type of the text being compared
+ * @param searchTitle - The original search title (for logging)
+ * @param source - The source/type of the text being compared (for logging)
  * @returns Similarity score (0.6+) if above threshold, -1 otherwise
  * @source
  */
@@ -458,12 +475,13 @@ function checkEnhancedSimilarityScore(
 }
 
 /**
- * Calculate composite word match score using coverage, Jaccard similarity, and word order.
+ * Calculate composite word match score combining coverage, Jaccard similarity, and word order.
+ * Weights coverage (65%) as primary factor, with Jaccard (20%) and order (15%) as supporting factors.
  *
  * @param titleTokenData - Token data from the title
  * @param searchTokenData - Token data from the search query
- * @param searchOrderTokens - Search tokens in order
- * @returns Composite match score
+ * @param searchOrderTokens - Search tokens in order for order similarity calculation
+ * @returns Composite match score between 0 and 1
  * @source
  */
 function calculateCompositeWordScore(
@@ -500,11 +518,12 @@ function calculateCompositeWordScore(
 }
 
 /**
- * Determine if a title has sufficient primary token matches for overlap processing.
+ * Determine if a title has sufficient primary token matches to warrant overlap processing.
+ * Requires at least 60% of search's primary tokens to be present in title, or no search tokens.
  *
  * @param searchTokenData - Token data from the search query
  * @param titleTokenData - Token data from the title
- * @returns True if title should be processed for word overlap
+ * @returns True if title should be processed for word overlap analysis
  * @source
  */
 function shouldProcessTitleForOverlap(
@@ -520,15 +539,16 @@ function shouldProcessTitleForOverlap(
 }
 
 /**
- * Log debug information for meaningful word overlap matches.
+ * Log debug information for meaningful word overlap matches with detailed metrics.
+ * Provides visibility into coverage, Jaccard similarity, and word order components.
  *
- * @param original - Original title text
- * @param searchTitle - The search title
- * @param source - Source/type of the title
+ * @param original - Original title text (for logging)
+ * @param searchTitle - The search title (for logging)
+ * @param source - Source/type of the title (for logging)
  * @param finalScore - The final match score
- * @param coverageRatio - Ratio of covered search terms
- * @param jaccardScore - Jaccard similarity score
- * @param orderSimilarity - Word order similarity score
+ * @param coverageRatio - Ratio of search primary tokens found in title (0-1)
+ * @param jaccardScore - Jaccard similarity score (0-1)
+ * @param orderSimilarity - Word order similarity score (0-1)
  * @source
  */
 function logMeaningfulOverlapResult(
@@ -547,11 +567,12 @@ function logMeaningfulOverlapResult(
 
 /**
  * Calculate metrics for meaningful word overlap analysis.
+ * Computes coverage, Jaccard similarity, and word order similarity ratios.
  *
  * @param titleTokenData - Token data from the title
  * @param searchTokenData - Token data from the search query
- * @param searchOrderTokens - Search tokens in order
- * @returns Object with coverage, Jaccard, and order similarity ratios
+ * @param searchOrderTokens - Search tokens in order for order similarity
+ * @returns Object with coverage, Jaccard, and order similarity ratios (all 0-1)
  * @source
  */
 function calculateOverlapMetrics(
@@ -593,11 +614,13 @@ function calculateOverlapMetrics(
 
 /**
  * Check word overlap between title and search using composite scoring.
+ * Analyzes meaningful words with coverage, Jaccard, and order similarity metrics.
+ * Returns best score or -1 if no meaningful overlap found.
  *
  * @param normalizedTitles - Normalized title entries to check
  * @param normalizedSearchTitle - The normalized search title
- * @param searchTitle - The original search title
- * @returns Best overlap match score or -1 if no match
+ * @param searchTitle - The original search title (for logging)
+ * @returns Best overlap match score (0.6-0.98) or -1 if no match
  * @source
  */
 function checkMeaningfulWordOverlap(
@@ -661,11 +684,12 @@ function checkMeaningfulWordOverlap(
 }
 
 /**
- * Check if search term matches title initialism.
+ * Check if search term matches title initialism (e.g., "JJK" for "Jujutsu Kaisen").
+ * Returns high score for exact initialism matches, lower scores for high similarity.
  *
  * @param normalizedTitles - Normalized title entries to check
- * @param searchTitle - The search title to match
- * @returns Initialism match score or -1 if no match
+ * @param searchTitle - The search title to match as potential initialism
+ * @returns Initialism match score (0.8-0.92) or -1 if no match
  * @source
  */
 function checkInitialismMatch(
@@ -713,12 +737,13 @@ function checkInitialismMatch(
 }
 
 /**
- * Check word-based matching approaches including similarity and overlap.
+ * Check word-based matching approaches including word match, similarity, and overlap.
+ * Tries enhanced similarity and meaningful word overlap unless disabled via options.
  *
  * @param normalizedTitles - Normalized title entries to check
  * @param normalizedSearchTitle - The normalized search title
  * @param searchTitle - The original search title
- * @param options - Matching options
+ * @param options - Matching options (e.g., to disable overlap heuristics)
  * @returns Best word-based match score or -1 if no match
  * @source
  */
@@ -782,7 +807,8 @@ function checkWordMatching(
 }
 
 /**
- * Check for exact title matches including suffix removal.
+ * Check for exact title matches including suffix removal and special character handling.
+ * Returns highest score (1.0) for perfect matches, lower score (0.95) after suffix removal.
  *
  * @param normalizedTitle - The normalized title
  * @param specialCharTitle - Title with special characters replaced
@@ -832,6 +858,7 @@ function checkExactTitleMatch(
 
 /**
  * Check if search term is a substantial part of the title.
+ * Requires search length > 6 to avoid false positives on short terms.
  *
  * @param normalizedTitle - The normalized title
  * @param specialCharTitle - Title with special characters replaced
@@ -865,12 +892,13 @@ function checkPartialTitleMatch(
 
 /**
  * Check word-level similarity between title and search.
+ * Counts matching words (length > 1) and returns score based on match ratio threshold (0.75).
  *
  * @param specialCharTitle - Title with special characters replaced
  * @param specialCharSearchTitle - Search with special characters replaced
  * @param title - The original title for logging
  * @param searchTitle - The original search title for logging
- * @returns Similarity score (0.8+) if high match, -1 otherwise
+ * @returns Similarity score (0.8-1) if high match ratio, -1 otherwise
  * @source
  */
 function checkWordSimilarity(
@@ -904,6 +932,7 @@ function checkWordSimilarity(
 
 /**
  * Check if search term is completely contained in the title.
+ * Uses containsCompleteTitle to calculate significance bonus based on search term proportion.
  *
  * @param normalizedTitle - The normalized title
  * @param normalizedSearchTitle - The normalized search title
@@ -934,12 +963,13 @@ function checkContainedTitle(
 
 /**
  * Check enhanced similarity between title and search with adaptive thresholds.
+ * Uses length-based thresholds: shorter searches (< 10 chars) use 0.6, longer use 0.45.
  *
  * @param normalizedTitle - The normalized title
  * @param normalizedSearchTitle - The normalized search title
  * @param title - The original title for logging
  * @param searchTitle - The original search title for logging
- * @returns Similarity score (0.45+) if above threshold, -1 otherwise
+ * @returns Similarity score (0.45-1) if above threshold, -1 otherwise
  * @source
  */
 function checkEnhancedSimilarity(
@@ -964,13 +994,14 @@ function checkEnhancedSimilarity(
 
 /**
  * Check subset matching using word coverage, length difference, and word order.
+ * Combines multiple factors: base score (50%), length (10%), coverage (10%), order (10%), plus 20% extra.
  *
  * @param processedTitle - The processed title
  * @param searchTitle - The original search title
  * @param normalizedTitle - The normalized title
  * @param normalizedSearchTitle - The normalized search title
- * @param importantWords - Important search words to check
- * @returns Composite match score or -1 if no match
+ * @param importantWords - Important search words (length > 2) to check coverage
+ * @returns Composite match score (0.5+) or -1 if no title match
  * @source
  */
 function checkSubsetMatch(
@@ -1016,11 +1047,13 @@ function checkSubsetMatch(
 
 /**
  * Check legacy matching approaches for comprehensive title coverage.
+ * Tries multiple matching strategies: exact, partial, word similarity, containment, enhanced similarity, season patterns, and subset.
+ * Returns early if score >= 0.95 for efficiency.
  *
  * @param titles - Array of title strings to check
  * @param normalizedSearchTitle - The normalized search title
  * @param searchTitle - The original search title
- * @param importantWords - Important search words to check
+ * @param importantWords - Important search words (length > 2) for subset matching
  * @returns Best legacy match score or -1 if no match
  * @source
  */
@@ -1118,11 +1151,12 @@ function checkLegacyMatching(
 
 /**
  * Calculate match score between a manga title and search query.
- * Uses multiple matching strategies to find the best match.
+ * Uses multiple matching strategies in order: direct matches, word-based matching, then legacy approaches.
+ * Returns normalized score between 0 and 1, or -1 if no match found.
  *
  * @param manga - The manga to calculate match score for
  * @param searchTitle - The search title to match against
- * @param options - Options to customize matching behavior
+ * @param options - Options to customize matching behavior (e.g., disable overlap heuristics)
  * @returns Match score between 0 and 1, or -1 if no match found
  * @source
  */

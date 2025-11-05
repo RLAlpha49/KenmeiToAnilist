@@ -15,6 +15,7 @@ import { cn } from "../../utils/tailwind";
 
 /**
  * Props for the SettingsHero component.
+ * Manages authentication UI display with user information and status.
  * @source
  */
 interface SettingsHeroProps {

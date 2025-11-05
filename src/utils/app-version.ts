@@ -4,12 +4,8 @@
  * @description Utility functions and types for accessing and comparing the application version, checking for updates, and determining version status.
  */
 
-// Renderer process (React) - version from build-time environment variable
 /**
- * Gets the application version for the renderer process.
- *
- * Retrieves the version from the build-time environment variable set during the build process.
- *
+ * Gets the application version for the renderer process from build-time environment variable.
  * @returns The current application version as a string.
  * @source
  */
@@ -17,14 +13,11 @@ export const getAppVersion = (): string => {
   return import.meta.env.VITE_APP_VERSION || "1.0.0";
 };
 
-// Main process (Electron) - dynamically import electron.app to avoid requiring it in renderer
 /**
  * Gets the application version for the Electron main process.
- *
- * Uses dynamic import to safely access the Electron app module only in the main process context.
- * Falls back to the renderer version or npm package version if the main process is unavailable.
- *
- * @returns A promise that resolves to the current application version as a string.
+ * Uses dynamic import to safely access the Electron app module only in main process context.
+ * Fallback: renderer version or npm package version if main process unavailable.
+ * @returns A promise resolving to the current application version as a string.
  * @source
  */
 export const getAppVersionElectron = async (): Promise<string> => {
@@ -42,10 +35,8 @@ export const getAppVersionElectron = async (): Promise<string> => {
   }
 };
 
-// Use this to display version with v prefix
 /**
  * Gets the formatted application version with a 'v' prefix.
- *
  * @returns The formatted version string (e.g., 'v1.0.0').
  * @source
  */
@@ -53,10 +44,8 @@ export const getFormattedAppVersion = (): string => {
   return `v${getAppVersion()}`;
 };
 
-// Fetch latest release from GitHub to detect available updates
 /**
- * Information about an available update.
- *
+ * Information about an available application update.
  * @source
  */
 export interface UpdateInfo {
@@ -67,11 +56,8 @@ export interface UpdateInfo {
 
 /**
  * Checks for updates by comparing the current version with the latest GitHub release.
- *
- * Fetches the latest release information from the GitHub API and compares version numbers
- * to determine if an update is available.
- *
- * @returns A promise that resolves to an UpdateInfo object.
+ * Fetches release information from GitHub API and compares version numbers to determine availability.
+ * @returns A promise resolving to an UpdateInfo object.
  * @source
  */
 export async function checkForUpdates(): Promise<UpdateInfo> {
@@ -129,10 +115,9 @@ export async function checkForUpdates(): Promise<UpdateInfo> {
 }
 
 /**
- * Compares two version strings (e.g., '1.2.3').
- *
- * @param v1 - The first version string.
- * @param v2 - The second version string.
+ * Compares two semantic version strings.
+ * @param v1 - The first version string (e.g., '1.2.3').
+ * @param v2 - The second version string (e.g., '1.2.4').
  * @returns 1 if v1 > v2, -1 if v1 < v2, 0 if equal.
  * @internal
  * @source
@@ -152,10 +137,8 @@ export function compareVersions(v1: string, v2: string): number {
   return 0;
 }
 
-// Version status type
 /**
- * Represents the status of the application version.
- *
+ * Represents the status of the application version (stable, beta, or development).
  * @source
  */
 export type AppVersionStatus =
@@ -163,10 +146,8 @@ export type AppVersionStatus =
   | { status: "beta"; latestVersion: string; releaseUrl: string }
   | { status: "development"; latestVersion: string; releaseUrl: string };
 
-// Type for GitHub Release API response (minimal fields used)
 /**
- * Minimal fields used from the GitHub Release API response.
- *
+ * Minimal fields from the GitHub Release API response.
  * @internal
  * @source
  */
@@ -179,9 +160,7 @@ export type GitHubRelease = {
 
 /**
  * Determines app version status by comparing current version to latest GitHub releases.
- *
- * Fetches release information and categorizes the current version as stable, beta, or development.
- *
+ * Categorizes version as stable, beta, or development based on release information.
  * @returns A promise resolving to the app version status.
  * @source
  */

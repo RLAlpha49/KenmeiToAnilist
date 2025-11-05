@@ -1,8 +1,15 @@
+/**
+ * @packageDocumentation
+ * @module components/ui/alert
+ * @description Alert component for displaying important messages with variant styling.
+ * @source
+ */
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/utils/tailwind";
 
+/** Alert style variants using CVA. */
 const alertVariants = cva(
   "relative grid w-full grid-cols-[0_1fr] items-start gap-y-0.5 rounded-lg border px-4 py-3 text-sm has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr] has-[>svg]:gap-x-3 [&>svg]:size-4 [&>svg]:translate-y-0.5 [&>svg]:text-current",
   {
@@ -19,6 +26,12 @@ const alertVariants = cva(
   },
 );
 
+/**
+ * Alert component for displaying messages with variant styling.
+ * @param props - Alert props including variant and standard div props.
+ * @returns Styled alert element.
+ * @source
+ */
 function Alert({
   className,
   variant,
@@ -34,6 +47,12 @@ function Alert({
   );
 }
 
+/**
+ * Alert title component for heading text.
+ * @param props - Standard div element props.
+ * @returns Alert title element.
+ * @source
+ */
 function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -47,6 +66,12 @@ function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+/**
+ * Alert description component for body text.
+ * @param props - Standard div element props.
+ * @returns Alert description element.
+ * @source
+ */
 function AlertDescription({
   className,
   ...props

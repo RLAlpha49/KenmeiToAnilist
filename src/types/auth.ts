@@ -84,15 +84,15 @@ export interface ViewerResponse {
 }
 
 /**
- * Represents the state values exposed through authentication context.
+ * Authentication context state values.
  *
- * @property authState - The current authentication state.
- * @property isLoading - Whether an authentication operation is in progress.
- * @property error - The current authentication error message, if any.
- * @property statusMessage - The current status message, if any.
- * @property customCredentials - The current custom credentials, if any.
- * @property isOnline - Whether the application currently has network connectivity. Updated via Navigator Online API and window online/offline events.
- * @property wasOffline - Whether the application was offline at any point during this session. Useful for triggering retry logic after reconnection.
+ * @property authState - Current authentication state.
+ * @property isLoading - Whether an auth operation is in progress.
+ * @property error - Current error message, if any.
+ * @property statusMessage - Current status message, if any.
+ * @property customCredentials - Current custom credentials, if any.
+ * @property isOnline - Current network connectivity status (updated via Navigator Online API and window online/offline events).
+ * @property wasOffline - Whether the app was offline during this session (useful for retry logic after reconnection).
  * @source
  */
 export interface AuthStateContextValue {
@@ -106,7 +106,7 @@ export interface AuthStateContextValue {
 }
 
 /**
- * Represents a task queued for execution when the application comes online.
+ * Task queued for execution when the application comes online.
  *
  * @property taskId - Unique identifier for the task (used for deduplication).
  * @property fn - Async function to execute when online.
@@ -122,22 +122,20 @@ export interface OfflineQueueTask {
 }
 
 /**
- * Represents the action functions exposed through authentication context.
+ * Authentication actions exposed through context.
  *
- * **Note on Operation Queuing:**
- * This layer implements operation queuing for critical auth-layer operations while offline.
- * Operations are dequeued automatically when connectivity is restored. Failed operations
- * at the sync/storage level are managed by useSynchronization hook (see storage.ts).
- * When the app goes offline, sync operations fail with network errors, captured and
- * persisted via addFailedSyncOperation() in the sync pipeline.
+ * **Operation Queuing Note:**
+ * This layer implements queuing for critical auth operations while offline.
+ * Operations dequeue when connectivity restores. Failed sync-level operations
+ * are managed by useSynchronization hook (see storage.ts).
  *
- * @property login - Function to log in with credentials.
- * @property refreshToken - Function to refresh the authentication token.
- * @property logout - Function to log out the user.
- * @property cancelAuth - Function to cancel an in-progress authentication flow.
- * @property setCredentialSource - Function to set the credential source.
- * @property updateCustomCredentials - Function to update custom credentials.
- * @property enqueueWhenOnline - Function to queue a task for execution when online (with deduplication).
+ * @property login - Log in with credentials.
+ * @property refreshToken - Refresh the authentication token.
+ * @property logout - Log out the user.
+ * @property cancelAuth - Cancel an in-progress auth flow.
+ * @property setCredentialSource - Set the credential source.
+ * @property updateCustomCredentials - Update custom credentials.
+ * @property enqueueWhenOnline - Queue a task for execution when online (with deduplication).
  * @source
  */
 export interface AuthActionsContextValue {

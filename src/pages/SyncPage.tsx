@@ -176,8 +176,8 @@ export function SyncPage() {
   );
 
   /**
-   * Toggles a sync configuration option and saves the updated config to storage.
-   * @param option - The sync configuration option to toggle.
+   * Toggles a sync configuration option and persists the updated config to storage.
+   * @param option - The sync configuration option key to toggle.
    * @source
    */
   const handleToggleOption = (option: keyof SyncConfig) => {
@@ -195,7 +195,7 @@ export function SyncPage() {
   };
 
   /**
-   * Refreshes the user's AniList library by fetching latest data.
+   * Refreshes the user's AniList library from the server.
    * Delegates to utility function with appropriate state handlers.
    * @source
    */
@@ -319,11 +319,11 @@ export function SyncPage() {
   };
 
   /**
-   * Handles rate limit errors from the AniList API and schedules a retry.
+   * Handles rate limit errors from the AniList API with scheduled retry.
    * @param error - The API error containing rate limit information.
    * @param controller - AbortController to manage request cancellation.
    * @param fetchLibrary - Callback to retry fetching the library.
-   * @returns Cleanup function or void.
+   * @returns Cleanup function to clear timeout if needed.
    * @source
    */
   const handleRateLimitError = (
@@ -362,7 +362,7 @@ export function SyncPage() {
   };
 
   /**
-   * Handles server errors from the AniList API with exponential backoff retry logic.
+   * Handles server errors with exponential backoff retry logic.
    * @param error - The API error to handle.
    * @param attempt - Current retry attempt number.
    * @param controller - AbortController to manage request cancellation.
@@ -405,8 +405,7 @@ export function SyncPage() {
   };
 
   /**
-   * Handles successful library fetch from AniList API.
-   * Updates state with user's manga entries and clears errors.
+   * Handles successful library data fetch from AniList API.
    * @param library - The user's AniList media list.
    * @source
    */
@@ -421,7 +420,7 @@ export function SyncPage() {
   };
 
   /**
-   * Handles errors from library fetch with appropriate retry logic and error messages.
+   * Handles errors from library fetch with appropriate retry logic.
    * Delegates to specific error handlers for rate limit and server errors.
    * @param error - The API error from library fetch.
    * @param attempt - Current retry attempt number.
@@ -601,7 +600,8 @@ export function SyncPage() {
   };
 
   /**
-   * Generates title for the start sync button based on state.
+   * Generates button title text based on current sync state.
+   * @returns Descriptive title or undefined if sync can proceed.
    * @source
    */
   const getStartSyncButtonTitle = () => {
@@ -615,7 +615,7 @@ export function SyncPage() {
   };
 
   /**
-   * Handles completion of sync process and transitions to results view.
+   * Handles completion of the sync process and transitions to results view.
    * @source
    */
   const handleSyncComplete = () => {
@@ -656,7 +656,11 @@ export function SyncPage() {
     setWasCancelled(false);
     navigate({ to: "/" });
   };
-  // Helper to refresh AniList library
+
+  /**
+   * Refreshes the user's AniList library from the server.
+   * @source
+   */
   const refreshUserLibrary = () => {
     refreshUserLibraryUtil({
       token,
@@ -670,7 +674,6 @@ export function SyncPage() {
 
   /**
    * Navigates back to the matching review page after sync completion.
-   * Resets sync state and refreshes the user library.
    * @source
    */
   const handleBackToReview = () => {
@@ -711,7 +714,10 @@ export function SyncPage() {
   };
 
   /**
-   * Handles retrying a single failed operation.
+   * Handles retrying a single failed sync operation.
+   * Updates retry state and calls the retry handler.
+   * @param operationId - The ID of the failed operation to retry.
+   * @source
    */
   const handleRetryOperation = async (operationId: string) => {
     setRetryingOperations((prev) => new Set([...prev, operationId]));
@@ -734,7 +740,8 @@ export function SyncPage() {
   };
 
   /**
-   * Handles retrying all failed operations.
+   * Handles retrying all failed sync operations at once.
+   * @source
    */
   const handleRetryAll = async () => {
     try {
@@ -746,7 +753,9 @@ export function SyncPage() {
   };
 
   /**
-   * Handles clearing a failed operation.
+   * Handles clearing a single failed operation from the retry queue.
+   * @param operationId - The ID of the operation to clear.
+   * @source
    */
   const handleClearOperation = (operationId: string) => {
     clearFailedOperation(operationId);

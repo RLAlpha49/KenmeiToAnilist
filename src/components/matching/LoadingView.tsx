@@ -13,7 +13,6 @@ type RateLimitType = ReturnType<typeof useRateLimit>;
 
 /**
  * Props for the LoadingView component.
- *
  * @property pageVariants - Framer Motion variants for page animation.
  * @property contentVariants - Framer Motion variants for content animation.
  * @property matchingProcess - Current matching process state and methods.
@@ -36,13 +35,10 @@ interface LoadingViewProps {
 }
 
 /**
- * Displays the matching process progress with rate limit warnings and controls.
- *
- * Shows real-time progress updates, rate limit countdowns, and action buttons for
- * pause/resume/cancel operations during the manga matching process.
- *
- * @param props - The component props.
- * @returns The rendered loading view with progress tracking.
+ * Displays matching process progress with rate limit warnings and controls.
+ * Shows real-time progress, rate limit countdowns, and pause/resume/cancel buttons.
+ * @param props - Component props.
+ * @returns Rendered loading view with progress tracking and error handling.
  * @source
  */
 export function LoadingView({
@@ -60,6 +56,7 @@ export function LoadingView({
       return null;
     }
 
+    // Format remaining time as MM:SS
     const msRemaining = Math.max(rateLimitState.retryAfter - Date.now(), 0);
     const totalSeconds = Math.ceil(msRemaining / 1000);
     const minutes = Math.floor(totalSeconds / 60);

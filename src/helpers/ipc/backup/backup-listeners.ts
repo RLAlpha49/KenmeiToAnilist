@@ -1,7 +1,7 @@
 /**
  * @packageDocumentation
  * @module backup_listeners
- * @description Registers IPC event listeners for backup-related actions (schedule config, trigger backup, notifications) in the Electron main process.
+ * @description Registers IPC event listeners for backup-related actions in the Electron main process.
  */
 
 import { BrowserWindow, app, shell } from "electron";
@@ -18,9 +18,8 @@ import {
 import { BACKUP_CHANNELS } from "./backup-channels";
 
 /**
- * Local storage keys for the main process backup store.
- * These are isolated from renderer storage to maintain separation of concerns.
- * @internal
+ * Storage keys for the main process backup store.
+ * @source
  */
 const MAIN_PROCESS_STORAGE_KEYS = {
   BACKUP_SCHEDULE_CONFIG: "backup_schedule_config",
@@ -28,9 +27,8 @@ const MAIN_PROCESS_STORAGE_KEYS = {
 } as const;
 
 /**
- * Default backup schedule configuration for the main process.
- * Used when no configuration exists.
- * @internal
+ * Default backup schedule configuration used on first initialization.
+ * @source
  */
 const DEFAULT_BACKUP_SCHEDULE_CONFIG: BackupScheduleConfig = {
   enabled: false,
@@ -45,7 +43,8 @@ const DEFAULT_BACKUP_SCHEDULE_CONFIG: BackupScheduleConfig = {
 };
 
 /**
- * Schema for the backup store
+ * Schema for the electron-store backup store.
+ * @source
  */
 interface BackupStoreSchema {
   [MAIN_PROCESS_STORAGE_KEYS.BACKUP_SCHEDULE_CONFIG]: string;
@@ -53,7 +52,8 @@ interface BackupStoreSchema {
 }
 
 /**
- * Interface for electron-store methods to avoid any types
+ * Typed interface for electron-store methods.
+ * @source
  */
 interface ElectronStoreInterface {
   get(key: string): unknown;
@@ -63,7 +63,8 @@ interface ElectronStoreInterface {
 }
 
 /**
- * Scheduler state with separate timeout and interval tracking and update queue
+ * Backup scheduler state tracking timeouts, intervals, and pending updates.
+ * @source
  */
 interface SchedulerState {
   timeoutId: NodeJS.Timeout | null;
@@ -85,15 +86,15 @@ const schedulerState: SchedulerState = {
 
 /**
  * File operations mutex to serialize backup, rotation, and delete operations.
- * Uses a promise chain pattern to ensure operations don't race.
- * @internal
+ * @source
  */
 let fileOpsMutex: Promise<void> = Promise.resolve();
 
 /**
  * Acquires the file operations mutex and returns a release function.
- * Serializes file operations to prevent races during backup, rotation, and deletion.
- * @internal
+ * Serializes file operations to prevent race conditions.
+ * @returns Promise resolving to a release function.
+ * @source
  */
 async function acquireFileOpsMutex(): Promise<() => void> {
   const currentMutex = fileOpsMutex;
@@ -113,8 +114,8 @@ const store =
 
 /**
  * Retrieves backup schedule configuration from the store.
- * @returns Configuration or defaults if not found
- * @internal
+ * @returns Configuration or defaults if not found.
+ * @source
  */
 function getStoredBackupScheduleConfig(): BackupScheduleConfig {
   try {
@@ -131,8 +132,8 @@ function getStoredBackupScheduleConfig(): BackupScheduleConfig {
 
 /**
  * Saves backup schedule configuration to the store.
- * @param config - Configuration to save
- * @internal
+ * @param config - Configuration to save.
+ * @source
  */
 function saveStoredBackupScheduleConfig(config: BackupScheduleConfig): void {
   try {
@@ -147,8 +148,8 @@ function saveStoredBackupScheduleConfig(config: BackupScheduleConfig): void {
 
 /**
  * Retrieves backup history from the store.
- * @returns History array or empty if not found
- * @internal
+ * @returns History array sorted by timestamp (newest first), or empty if not found.
+ * @source
  */
 function getStoredBackupHistory(): BackupHistoryEntry[] {
   try {
@@ -164,8 +165,8 @@ function getStoredBackupHistory(): BackupHistoryEntry[] {
 
 /**
  * Saves backup history to the store.
- * @param history - History array to save
- * @internal
+ * @param history - History array to save.
+ * @source
  */
 function saveStoredBackupHistory(history: BackupHistoryEntry[]): void {
   try {
@@ -179,11 +180,11 @@ function saveStoredBackupHistory(history: BackupHistoryEntry[]): void {
 }
 
 /**
- * Adds entry to backup history in the store and manages retention.
- * @param entry - Backup history entry to add
- * @param maxRetention - Maximum history entries to keep
- * @param mainWindow - The Electron main window for sending notifications
- * @internal
+ * Adds entry to backup history and manages retention limit.
+ * @param entry - Backup history entry to add.
+ * @param maxRetention - Maximum history entries to keep.
+ * @param mainWindow - Main window for sending notifications.
+ * @source
  */
 function addBackupToStoredHistory(
   entry: BackupHistoryEntry,
@@ -207,9 +208,10 @@ function addBackupToStoredHistory(
 }
 
 /**
- * Reconciles backup history with remaining files.
- * @param backupFilenames - Array of remaining backup filenames
- * @internal
+ * Reconciles backup history with existing files on disk.
+ * Removes history entries for deleted backup files.
+ * @param backupFilenames - Array of existing backup filenames.
+ * @source
  */
 function reconcileStoredHistory(backupFilenames: string[]): void {
   try {
@@ -243,11 +245,10 @@ function reconcileStoredHistory(backupFilenames: string[]): void {
 }
 
 /**
- * Calculates the interval in milliseconds based on the backup interval setting.
- *
- * @param interval - The backup interval ('daily', 'weekly', 'monthly', 'disabled')
- * @returns Interval in milliseconds
- * @internal
+ * Calculates interval in milliseconds based on the backup interval setting.
+ * @param interval - Backup interval ('daily', 'weekly', 'monthly', 'disabled').
+ * @returns Interval in milliseconds.
+ * @source
  */
 function calculateIntervalMs(interval: string): number {
   const intervals: Record<string, number> = {
@@ -259,11 +260,10 @@ function calculateIntervalMs(interval: string): number {
 }
 
 /**
- * Reads all backup files from the backups directory.
- *
- * @param backupDir - Path to the backups directory
- * @returns Array of backup file names and their stats
- * @internal
+ * Lists backup files in a directory.
+ * @param backupDir - Path to the backups directory.
+ * @returns Array of backup file information sorted by modification time (newest first).
+ * @source
  */
 async function listBackupFiles(
   backupDir: string,
@@ -299,10 +299,10 @@ async function listBackupFiles(
 
 /**
  * Performs backup rotation according to retention policy.
- *
- * @param backupDir - Path to the backups directory
- * @param config - Backup schedule configuration with retention limits
- * @internal
+ * @param backupDir - Path to the backups directory.
+ * @param config - Backup schedule configuration with retention limits.
+ * @param mainWindow - Main window for sending notifications.
+ * @source
  */
 async function performRotation(
   backupDir: string,
@@ -368,16 +368,12 @@ async function performRotation(
 }
 
 /**
- * Performs backup logic shared by immediate and scheduled backups.
- * Ensures directory, reads store keys, builds dataMap, writes file, updates history, runs rotation,
- * updates config timestamps, and emits events.
- * Uses file operations mutex to serialize with other file operations.
- *
- * @param mainWindow - The Electron main window for sending notifications
- * @param config - Current backup schedule configuration
- * @param mode - Either 'immediate' or 'scheduled' for logging purposes
- * @returns Backup result with success, backupId, and optional error
- * @internal
+ * Performs backup logic shared by immediate and scheduled backups using file mutex.
+ * @param mainWindow - Main window for sending notifications.
+ * @param config - Current backup schedule configuration.
+ * @param mode - Either 'immediate' or 'scheduled' for logging purposes.
+ * @returns Backup result with success, backupId, and optional error.
+ * @source
  */
 async function performBackupWithMutex(
   mainWindow: BrowserWindow | null,
@@ -397,7 +393,9 @@ async function performBackupWithMutex(
 }
 
 /**
- * Collects backupable data from electron-store.
+ * Collects backupable data from the electron store.
+ * @returns Object mapping storage keys to their stringified values.
+ * @source
  */
 function collectBackupData(): Record<string, string> {
   const backupableKeys = [
@@ -425,7 +423,15 @@ function collectBackupData(): Record<string, string> {
 }
 
 /**
- * Writes backup to file and records in history.
+ * Writes backup data to file and records in history.
+ * @param backupDir - Path to the backups directory.
+ * @param data - Backup data object.
+ * @param backupId - Unique backup identifier.
+ * @param size - Size of the backup.
+ * @param appVersion - Application version string.
+ * @param config - Backup schedule configuration.
+ * @param mainWindow - Main window for sending notifications.
+ * @source
  */
 async function writeBackupAndRecordHistory(
   backupDir: string,
@@ -464,7 +470,10 @@ async function writeBackupAndRecordHistory(
 }
 
 /**
- * Updates backup schedule config and calculates next run time.
+ * Updates backup schedule config with next run timestamp.
+ * @param config - Current backup schedule configuration.
+ * @param timestamp - Current timestamp for calculation.
+ * @source
  */
 function updateBackupScheduleConfig(
   config: BackupScheduleConfig,
@@ -482,7 +491,11 @@ function updateBackupScheduleConfig(
 }
 
 /**
- * Notifies renderer of backup completion.
+ * Notifies renderer of successful backup completion.
+ * @param mainWindow - Main window for sending notification.
+ * @param backupId - Backup identifier.
+ * @param timestamp - Backup creation timestamp.
+ * @source
  */
 function notifyBackupComplete(
   mainWindow: BrowserWindow | null,
@@ -499,6 +512,10 @@ function notifyBackupComplete(
 
 /**
  * Handles backup errors and notifies renderer.
+ * @param mainWindow - Main window for sending error notification.
+ * @param error - The error encountered.
+ * @returns Error message string.
+ * @source
  */
 function handleBackupError(
   mainWindow: BrowserWindow | null,
@@ -513,11 +530,13 @@ function handleBackupError(
 }
 
 /**
- * @param mainWindow - The Electron main window for sending notifications
- * @param config - Current backup schedule configuration
- * @param mode - Either 'immediate' or 'scheduled' for logging purposes
- * @returns Backup result with success, backupId, and optional error
- * @internal
+ * Performs backup logic for both immediate and scheduled backups.
+ * Collects data, writes backup file, performs rotation, and emits events.
+ * @param mainWindow - Main window for sending notifications.
+ * @param config - Current backup schedule configuration.
+ * @param mode - Either 'immediate' or 'scheduled' for logging purposes.
+ * @returns Backup result with success, backupId, and optional error.
+ * @source
  */
 async function performBackup(
   mainWindow: BrowserWindow | null,
@@ -586,9 +605,9 @@ async function performBackup(
 
 /**
  * Creates an immediate backup outside the scheduled interval.
- *
- * @param mainWindow - The Electron main window for sending notifications
- * @internal
+ * @param mainWindow - Main window for sending notifications.
+ * @returns Backup result with success, backupId, and optional error.
+ * @source
  */
 async function createImmediateBackup(
   mainWindow: BrowserWindow | null,
@@ -616,14 +635,11 @@ async function createImmediateBackup(
 }
 
 /**
- * Performs a scheduled backup and handles rotation.
- * Implements mutex pattern to prevent race conditions with scheduler updates.
- * If updateScheduler() is called while a backup is running, the pending update
- * will be processed after the backup completes with the latest config.
- *
- * @param mainWindow - The Electron main window for sending notifications
- * @param config - Current backup schedule configuration
- * @internal
+ * Performs a scheduled backup and handles queued scheduler updates.
+ * Implements mutex pattern to prevent race conditions.
+ * @param mainWindow - Main window for sending notifications.
+ * @param config - Current backup schedule configuration.
+ * @source
  */
 async function performScheduledBackup(
   mainWindow: BrowserWindow | null,
@@ -657,7 +673,9 @@ async function performScheduledBackup(
 
 /**
  * Validates backup schedule configuration values.
- * @internal
+ * @param config - Configuration object to validate.
+ * @returns Validation result with boolean valid flag and optional validated config or error.
+ * @source
  */
 function validateScheduleConfig(config: unknown): {
   valid: boolean;
@@ -728,10 +746,8 @@ function validateScheduleConfig(config: unknown): {
 
 /**
  * Emits a status change event to the renderer with current backup scheduler status.
- * Called after config updates, manual triggers, or scheduled backups.
- *
- * @param mainWindow - The Electron main window
- * @internal
+ * @param mainWindow - Main window for sending notification.
+ * @source
  */
 function emitStatusChanged(mainWindow: BrowserWindow | null): void {
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -748,13 +764,11 @@ function emitStatusChanged(mainWindow: BrowserWindow | null): void {
 
 /**
  * Updates the backup scheduler with new configuration.
- * Implements mutex pattern to prevent race conditions: if a backup is currently running,
- * the update is queued and will be processed after the backup completes.
+ * Implements mutex pattern to queue updates during active backups.
  * Separates timeout for initial run from interval for repeating runs.
- *
- * @param mainWindow - The Electron main window for sending notifications
- * @param config - New backup schedule configuration
- * @internal
+ * @param mainWindow - Main window for sending notifications.
+ * @param config - New backup schedule configuration.
+ * @source
  */
 function updateScheduler(
   mainWindow: BrowserWindow | null,
@@ -867,8 +881,8 @@ function updateScheduler(
 
 /**
  * Gets the default backup location path.
- * @returns Default path to backups directory in userData
- * @internal
+ * @returns Default path to backups directory in userData.
+ * @source
  */
 function getDefaultBackupLocation(): string {
   return path.join(app.getPath("userData"), "backups");
@@ -876,9 +890,9 @@ function getDefaultBackupLocation(): string {
 
 /**
  * Initializes backup location in config if empty.
- * @param config - The backup schedule config to check/update
- * @returns Config with backupLocation populated if it was empty
- * @internal
+ * @param config - Backup schedule config to check/update.
+ * @returns Config with backupLocation populated if it was empty.
+ * @source
  */
 function ensureBackupLocationInitialized(
   config: BackupScheduleConfig,
@@ -895,9 +909,9 @@ function ensureBackupLocationInitialized(
 /**
  * Validates backup location path for security and existence.
  * Enforces absolute paths and rejects directory traversal attempts.
- * @param location - The backup location path to validate
- * @returns Tuple of [isValid, errorMessage]
- * @internal
+ * @param location - Backup location path to validate.
+ * @returns Tuple of [isValid, errorMessage].
+ * @source
  */
 function validateBackupLocationPath(location: string): [boolean, string?] {
   if (!location || typeof location !== "string") {
@@ -956,9 +970,9 @@ function validateBackupLocationPath(location: string): [boolean, string?] {
 
 /**
  * Lists backup files in the configured backup location.
- * @param backupLocation - Path to the backups directory
- * @returns Array of backup file information
- * @internal
+ * @param backupLocation - Path to the backups directory.
+ * @returns Array of backup file information sorted by timestamp (newest first).
+ * @source
  */
 async function listBackupsInLocation(
   backupLocation: string,
@@ -998,13 +1012,11 @@ async function listBackupsInLocation(
 }
 
 /**
- * Deletes a specific backup file from the configured location.
- * Uses file operations mutex to serialize with backup/rotation operations.
- *
- * @param backupLocation - Path to the backups directory
- * @param filename - Name of the file to delete
- * @returns Success status
- * @internal
+ * Deletes a specific backup file using the file operations mutex.
+ * @param backupLocation - Path to the backups directory.
+ * @param filename - Name of the file to delete.
+ * @returns Success status.
+ * @source
  */
 async function deleteBackupFileWithMutex(
   backupLocation: string,
@@ -1020,10 +1032,10 @@ async function deleteBackupFileWithMutex(
 
 /**
  * Deletes a specific backup file from the configured location.
- * @param backupLocation - Path to the backups directory
- * @param filename - Name of the file to delete
- * @returns Success status
- * @internal
+ * @param backupLocation - Path to the backups directory.
+ * @param filename - Name of the file to delete.
+ * @returns Success status.
+ * @source
  */
 async function deleteBackupFile(
   backupLocation: string,
@@ -1056,9 +1068,9 @@ async function deleteBackupFile(
 }
 
 /**
- * Registers IPC event listeners for backup-related actions in the main process.
- *
- * @param mainWindow - The Electron main window
+ * Registers IPC event listeners for backup-related actions in the Electron main process.
+ * Handles all backup operations: config management, file operations, scheduler control, and history tracking.
+ * @param mainWindow - The Electron main window.
  * @source
  */
 export function setupBackupIPC(mainWindow: BrowserWindow): void {

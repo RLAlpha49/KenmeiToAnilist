@@ -14,8 +14,8 @@ import { syncWithClientCache } from "./sync";
  */
 export const cacheDebugger = {
   /**
-   * Retrieves a summary of cache status across in-memory and localStorage layers.
-   * @returns Summary of cache counts in memory and localStorage.
+   * Retrieves cache status summary for in-memory and localStorage layers.
+   * @returns Object with in-memory cache count and localStorage cache counts.
    * @source
    */
   getCacheStatus(): {
@@ -63,9 +63,9 @@ export const cacheDebugger = {
   },
 
   /**
-   * Checks if a manga title is cached and retrieves cache metadata.
-   * @param title - Manga title to look up in cache.
-   * @returns Cache lookup result with key, presence flag, and entry metadata (manga count, timestamp, age).
+   * Checks if a manga title exists in cache and retrieves its metadata.
+   * @param title - Manga title to look up.
+   * @returns Object with found flag, cache key, and entry metadata if found (count, timestamp, age).
    * @source
    */
   checkMangaInCache(title: string): {
@@ -84,7 +84,7 @@ export const cacheDebugger = {
       return { found: false, cacheKey };
     }
 
-    // Calculate cache entry age in human-readable format
+    // Calculate cache entry age from timestamp in human-readable format
     const ageMs = Date.now() - entry.timestamp;
     const ageMinutes = Math.floor(ageMs / 60000);
 
@@ -109,8 +109,7 @@ export const cacheDebugger = {
   },
 
   /**
-   * Forces cache synchronization and logs current cache status.
-   * @returns void
+   * Forces cache synchronization and logs current status.
    * @source
    */
   forceSyncCaches(): void {
@@ -121,7 +120,6 @@ export const cacheDebugger = {
 
   /**
    * Clears all in-memory and localStorage caches.
-   * @returns void
    * @source
    */
   resetAllCaches(): void {
@@ -168,7 +166,7 @@ export const cacheDebugger = {
 
   /**
    * Retrieves detailed information about all cached manga entries.
-   * @returns Array of cache entries with key, manga count, timestamp, and age.
+   * @returns Array of objects with cache key, manga count, timestamp, and formatted age.
    * @source
    */
   getAllCacheEntries(): Array<{

@@ -1,8 +1,20 @@
+/**
+ * @packageDocumentation
+ * @module components/ui/label
+ * @description Label component for form inputs with accessibility features.
+ * @source
+ */
 import * as React from "react";
 import * as LabelPrimitive from "@radix-ui/react-label";
 
 import { cn } from "@/utils/tailwind";
 
+/**
+ * Accessible label component wrapping Radix UI label primitive.
+ * @param props - Standard label props from Radix UI.
+ * @returns Styled label element.
+ * @source
+ */
 function Label({
   className,
   ...props

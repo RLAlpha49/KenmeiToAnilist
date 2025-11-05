@@ -22,11 +22,11 @@ import { SyncConfig, saveSyncConfig } from "../../utils/storage";
 
 /**
  * Props for the SyncConfigurationPanel component.
- * @property syncConfig - Current sync configuration settings.
- * @property setSyncConfig - Callback to update sync configuration.
- * @property useCustomThreshold - Whether using custom auto-pause threshold.
- * @property setUseCustomThreshold - Callback to toggle custom threshold mode.
- * @property handleToggleOption - Callback to toggle a sync option.
+ * @property syncConfig - Current sync configuration settings object.
+ * @property setSyncConfig - Dispatch function to update sync configuration state.
+ * @property useCustomThreshold - Whether user has selected custom auto-pause threshold.
+ * @property setUseCustomThreshold - Dispatch function to toggle custom threshold mode.
+ * @property handleToggleOption - Callback invoked when toggling a sync configuration option.
  * @source
  */
 interface SyncConfigurationPanelProps {
@@ -38,8 +38,18 @@ interface SyncConfigurationPanelProps {
 }
 
 /**
- * Collapsible panel for configuring sync priority settings.
- * Provides toggles for preserving completed entries, prioritizing AniList values, and auto-pause settings.
+ * Collapsible configuration panel for managing sync priority and behavior settings.
+ * Provides toggles for: preserved completed entries, AniList prioritization, progress sync strategy,
+ * score handling, privacy settings, and auto-pause configuration with custom threshold support.
+ *
+ * Features:
+ * - Five main toggle options with descriptions and icons
+ * - Auto-pause inactive manga with preset/custom day thresholds
+ * - Persistent configuration saving to storage
+ * - Expandable/collapsible UI to manage screen space
+ *
+ * @param props - Component props with sync configuration and callbacks.
+ * @returns Collapsible panel with nested toggle options and auto-pause settings.
  * @source
  */
 export function SyncConfigurationPanel({

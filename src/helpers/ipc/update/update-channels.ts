@@ -1,65 +1,38 @@
 /**
- * IPC channel constants for update operations.
- * These channels facilitate communication between the main and renderer processes
- * for auto-update functionality using electron-updater.
- *
+ * @packageDocumentation
  * @module update-channels
+ * @description IPC channels and events for auto-update operations via electron-updater.
  */
 
 /**
- * Payload for UPDATE_CHECK_CHANNEL.
- * Allows specifying whether to include prerelease versions.
+ * Options for checking updates.
+ * @property allowPrerelease - Include prerelease versions in results.
+ * @source
  */
 export interface CheckForUpdatesPayload {
-  /** Whether to allow prerelease versions (beta/early access). */
   allowPrerelease?: boolean;
 }
 
-/**
- * Channel for checking for available updates.
- * Accepts optional payload to control prerelease inclusion.
- * Payload: CheckForUpdatesPayload
- */
+/** IPC channel for checking available updates. @source */
 export const UPDATE_CHECK_CHANNEL = "update:check";
 
-/**
- * Channel for downloading available updates.
- * Starts the download process for a pending update.
- */
+/** IPC channel for initiating update download. @source */
 export const UPDATE_DOWNLOAD_CHANNEL = "update:download";
 
-/**
- * Channel for installing downloaded updates.
- * Quits the application and installs the update.
- */
+/** IPC channel for installing downloaded updates and restarting. @source */
 export const UPDATE_INSTALL_CHANNEL = "update:install";
 
-/**
- * Channel for canceling an in-progress update download.
- * Stops the current download operation.
- */
+/** IPC channel for canceling in-progress update downloads. @source */
 export const UPDATE_CANCEL_DOWNLOAD_CHANNEL = "update:cancel-download";
 
-/**
- * Event channel for update available notification.
- * Sent from main to renderer when an update is available.
- */
+/** IPC event for update availability notification from main process. @source */
 export const UPDATE_AVAILABLE_EVENT = "update:available";
 
-/**
- * Event channel for download progress updates.
- * Sent from main to renderer during update downloads.
- */
+/** IPC event for download progress updates from main process. @source */
 export const UPDATE_DOWNLOAD_PROGRESS_EVENT = "update:download-progress";
 
-/**
- * Event channel for update downloaded notification.
- * Sent from main to renderer when an update download completes.
- */
+/** IPC event for update download completion from main process. @source */
 export const UPDATE_DOWNLOADED_EVENT = "update:downloaded";
 
-/**
- * Event channel for update error notification.
- * Sent from main to renderer when an error occurs during update operations.
- */
+/** IPC event for update operation errors from main process. @source */
 export const UPDATE_ERROR_EVENT = "update:error";

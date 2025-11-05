@@ -1,11 +1,12 @@
 /**
  * @packageDocumentation
  * @module utils/debounce
- * @description Utility functions for debouncing and throttling function calls
+ * @description Debounce and throttle utilities for controlling function invocation rate.
  */
 
 /**
- * Debounced function with a cancel method to clear pending invocations
+ * Debounced function with a cancel method to clear pending invocations.
+ * @source
  */
 interface DebouncedFunction<T extends (...args: unknown[]) => unknown> {
   (...args: Parameters<T>): void;
@@ -13,13 +14,11 @@ interface DebouncedFunction<T extends (...args: unknown[]) => unknown> {
 }
 
 /**
- * Creates a debounced version of a function that delays invoking func until after
- * wait milliseconds have elapsed since the last time the debounced function was invoked.
- *
- * @template T - The function type to debounce
- * @param func - The function to debounce
- * @param wait - The number of milliseconds to delay
- * @returns The debounced function with a cancel method
+ * Creates a debounced function that delays invocation until after wait milliseconds have elapsed since the last call.
+ * @template T - The function type to debounce.
+ * @param func - The function to debounce.
+ * @param wait - Milliseconds to delay invocation.
+ * @returns Debounced function with cancel method.
  * @source
  */
 export function debounce<T extends (...args: unknown[]) => unknown>(
@@ -50,13 +49,11 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
 }
 
 /**
- * Creates a throttled version of a function that only invokes func at most once per
- * every wait milliseconds.
- *
- * @template T - The function type to throttle
- * @param func - The function to throttle
- * @param wait - The number of milliseconds to throttle invocations to
- * @returns The throttled function
+ * Creates a throttled function that invokes func at most once per wait milliseconds.
+ * @template T - The function type to throttle.
+ * @param func - The function to throttle.
+ * @param wait - Milliseconds to throttle invocations to.
+ * @returns Throttled function.
  * @source
  */
 export function throttle<T extends (...args: unknown[]) => unknown>(
@@ -83,13 +80,12 @@ export function throttle<T extends (...args: unknown[]) => unknown>(
 }
 
 /**
- * Creates a debounced function that also flushes immediately on the leading edge.
- * Useful for operations that should happen immediately but also batch subsequent calls.
- *
- * @template T - The function type to debounce
- * @param func - The function to debounce
- * @param wait - The number of milliseconds to delay
- * @returns The debounced function with immediate first call
+ * Creates a debounced function that immediately invokes on the leading edge and delays subsequent calls.
+ * Useful for operations that should happen immediately but also batch follow-up calls.
+ * @template T - The function type to debounce.
+ * @param func - The function to debounce.
+ * @param wait - Milliseconds to delay subsequent invocations.
+ * @returns Debounced function with immediate leading call.
  * @source
  */
 export function debounceImmediate<T extends (...args: unknown[]) => unknown>(

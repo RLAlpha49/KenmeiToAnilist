@@ -1,12 +1,13 @@
 /**
  * @packageDocumentation
  * @module Matching/Scoring/SimilarityCalculator
- * @description String similarity and word order comparison utilities
+ * @description String similarity and word order comparison utilities for title matching.
+ * Implements longest common subsequence analysis and position-based proximity scoring.
  */
 
 /**
  * Calculate word order similarity using longest common subsequence.
- * Combines order preservation, position proximity, and word coverage.
+ * Combines order preservation (50%), position proximity (30%), and word coverage (20%).
  *
  * @param words1 - First array of words to compare
  * @param words2 - Second array of words to compare
@@ -62,6 +63,7 @@ export function calculateWordOrderSimilarity(
 
 /**
  * Calculate longest common subsequence length between two word arrays.
+ * Uses space-optimized dynamic programming (O(mn) time, O(n) space).
  *
  * @param words1 - First array of words
  * @param words2 - Second array of words
@@ -94,10 +96,11 @@ function calculateLCS(words1: string[], words2: string[]): number {
 
 /**
  * Check if title contains the complete search term and return significance score.
+ * Significance is measured as the proportion of the full title that the search term represents.
  *
  * @param normalizedTitle - The normalized manga title
  * @param normalizedSearchTitle - The normalized search title
- * @returns Significance score between 0 and 1 (search term portion of full title)
+ * @returns Significance score between 0 and 1 (search term length / full title length), or 0 if not contained
  * @source
  */
 export function containsCompleteTitle(
@@ -114,11 +117,12 @@ export function containsCompleteTitle(
 
 /**
  * Calculate word matching score between title and search words.
- * Returns high score if enough words match, -1 if insufficient match.
+ * Counts exact word matches and partial matches (prefix/suffix) of length >= 4.
+ * Requires minimum 75% match ratio to return a score.
  *
  * @param titleWords - Array of words from the manga title
  * @param searchWords - Array of words from the search query
- * @returns Word match score (0.75+) or -1 if below threshold
+ * @returns Word match score (0.75-1) or -1 if below threshold
  * @source
  */
 export function calculateWordMatchScore(

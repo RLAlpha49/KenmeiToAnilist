@@ -1,7 +1,7 @@
 /**
  * @packageDocumentation
  * @module SyncPage/ChangesSummary
- * @description Displays a summary of synchronization changes including library status, statistics, and refresh controls.
+ * @description React component for displaying synchronization scope overview with statistics and controls.
  */
 
 import React from "react";
@@ -20,6 +20,18 @@ import { UserMediaList, MangaMatchResult } from "../../api/anilist/types";
 import { SyncConfig } from "../../utils/storage";
 import { getEffectiveStatus } from "./sync-utils";
 
+/**
+ * Props for the ChangesSummary component.
+ * @property entriesWithChanges - Number of entries that have changes to sync.
+ * @property libraryLoading - Whether the library is currently being fetched.
+ * @property libraryError - Error message from library loading (null if no error).
+ * @property isRateLimited - Whether currently rate limited by AniList API.
+ * @property onLibraryRefresh - Callback triggered when user clicks refresh button.
+ * @property userLibrary - User's AniList library indexed by manga ID.
+ * @property mangaMatches - All matched manga entries from Kenmei scan.
+ * @property syncConfig - Current sync configuration with priority settings.
+ * @source
+ */
 interface ChangesSummaryProps {
   /** Number of entries that have changes to sync. */
   entriesWithChanges: number;
@@ -40,8 +52,12 @@ interface ChangesSummaryProps {
 }
 
 /**
- * Summary display showing sync statistics and library refresh controls.
- * Displays: total entries to sync, library status, new/updated entry counts, and error states.
+ * Display synchronization scope summary with statistics and library refresh controls.
+ * Shows: entries ready to sync, matched count, new entries, and queued updates.
+ * Displays library status (loading/error/success) with refresh capability.
+ * Uses gradient-accented metric cards and progress visualization.
+ * @param props - Component props with sync data and callbacks.
+ * @returns Summary card with metrics, library status, and refresh button.
  * @source
  */
 export const ChangesSummary: React.FC<ChangesSummaryProps> = ({

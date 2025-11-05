@@ -18,10 +18,7 @@ declare global {
 }
 
 /**
- * Represents a manga entry from the Kenmei import.
- *
- * Contains metadata about a manga item including reading status, score, and progress.
- *
+ * Manga entry imported from Kenmei.
  * @source
  */
 export interface KenmeiManga {
@@ -38,10 +35,7 @@ export interface KenmeiManga {
 }
 
 /**
- * Represents the complete Kenmei data structure.
- *
- * Contains the collection of manga items and other import metadata.
- *
+ * Collection of manga entries from a Kenmei import.
  * @source
  */
 export interface KenmeiData {
@@ -50,10 +44,7 @@ export interface KenmeiData {
 }
 
 /**
- * Statistics tracking the import of Kenmei data.
- *
- * Counts total manga imported and breaks down by status category.
- *
+ * Statistics for a Kenmei import operation.
  * @source
  */
 export interface ImportStats {
@@ -63,10 +54,7 @@ export interface ImportStats {
 }
 
 /**
- * Represents an AniList manga match with metadata.
- *
- * Minimal representation of an AniList manga entry returned from search/lookup operations.
- *
+ * AniList manga search result with core metadata.
  * @source
  */
 export interface AnilistMatch {
@@ -86,11 +74,7 @@ export interface AnilistMatch {
 }
 
 /**
- * Represents a match result between a Kenmei manga entry and AniList candidates.
- *
- * Tracks the original Kenmei entry, available AniList matches, the user's selection,
- * and the status of the matching process.
- *
+ * Match result between a Kenmei manga and AniList candidates.
  * @source
  */
 export interface MatchResult {
@@ -102,32 +86,19 @@ export interface MatchResult {
 }
 
 /**
- * In-memory cache for storage operations to reduce redundant reads.
- *
- * Helps minimize repeated access to localStorage and electron-store.
- * Cleared on application restart; not persisted.
- *
+ * In-memory cache for storage operations to reduce I/O.
  * @source
  */
 export const storageCache: Record<string, string> = {};
 
 /**
- * Storage abstraction layer combining in-memory cache, localStorage, and electron-store.
- *
- * Provides a unified interface for persistent storage that respects the three-layer hierarchy:
- * cache → localStorage → electron-store (authoritative source).
- * All operations are internally consistent across layers.
- *
+ * Unified storage abstraction across cache, localStorage, and electron-store.
  * @source
  */
 export const storage = {
   /**
-   * Retrieves a value from storage (cache → localStorage).
-   *
-   * Checks in-memory cache first, then falls back to localStorage. For most accurate data
-   * that reflects electron-store state, use async getter functions instead.
-   *
-   * @param key - The storage key.
+   * Retrieves a value from cache or localStorage.
+   * @param key - Storage key.
    * @returns The stored value, or null if not found.
    * @source
    */
@@ -155,18 +126,10 @@ export const storage = {
   },
 
   /**
-   * Stores a value across all storage layers (cache → localStorage → electron-store).
-   *
-   * Updates cache immediately and syncs to localStorage and electron-store asynchronously.
-   * **Important**: Skips redundant writes if the in-memory cache already holds the same value.
-   * This optimization avoids thrashing localStorage and electron-store during rapid successive writes
-   * with the same value, but can cause drift if the storage layers become out of sync.
-   *
-   * If you suspect cache/localStorage/electron-store drift, clear the cache or use `storage.getItemAsync()`
-   * to explicitly sync from the authoritative electron-store layer before writing.
-   *
-   * @param key - The storage key.
-   * @param value - The value to store.
+   * Stores a value across all storage layers (cache, localStorage, electron-store).
+   * Skips writes if the value hasn't changed in the cache.
+   * @param key - Storage key.
+   * @param value - Value to store.
    * @source
    */
   setItem: (key: string, value: string): void => {
@@ -206,11 +169,8 @@ export const storage = {
   },
 
   /**
-   * Removes a value from all storage layers (cache, localStorage, electron-store).
-   *
-   * Synchronously removes from cache and localStorage, asynchronously from electron-store.
-   *
-   * @param key - The storage key to remove.
+   * Removes a value from all storage layers.
+   * @param key - Storage key to remove.
    * @source
    */
   removeItem: (key: string): void => {
@@ -241,10 +201,7 @@ export const storage = {
   },
 
   /**
-   * Clears all items from all storage layers (cache, localStorage, electron-store).
-   *
-   * Complete reset of all stored data across all persistence layers.
-   *
+   * Clears all storage layers.
    * @source
    */
   clear: (): void => {
@@ -274,15 +231,10 @@ export const storage = {
   },
 
   /**
-   * Asynchronously stores a value to electron-store first, then syncs to localStorage.
-   *
-   * This is the authoritative async write method that ensures electron-store is updated first
-   * (the source of truth) before updating localStorage and cache. Use this for critical
-   * persisted state like onboarding flags.
-   *
-   * @param key - The storage key.
-   * @param value - The value to store.
-   * @returns A promise that resolves when the write is complete.
+   * Stores a value to electron-store (authoritative), then syncs to localStorage.
+   * @param key - Storage key.
+   * @param value - Value to store.
+   * @returns Promise that resolves when complete.
    * @source
    */
   setItemAsync: async (key: string, value: string): Promise<void> => {
@@ -316,13 +268,9 @@ export const storage = {
     }
   },
   /**
-   * Asynchronously retrieves a value from storage, preferring electron-store if available.
-   *
-   * Checks electron-store first (authoritative source), falls back to localStorage,
-   * and keeps both layers synchronized.
-   *
-   * @param key - The storage key.
-   * @returns A promise resolving to the stored value or null if not found.
+   * Retrieves a value, preferring electron-store (authoritative) over localStorage.
+   * @param key - Storage key.
+   * @returns Promise resolving to the stored value or null.
    * @source
    */
   getItemAsync: async (key: string): Promise<string | null> => {
@@ -359,12 +307,7 @@ export const storage = {
 };
 
 /**
- * Ensures onboarding-specific keys are initialized with default values if missing.
- *
- * Sets ONBOARDING_COMPLETED to "false" and ONBOARDING_STEPS_COMPLETED to "[]"
- * if they don't exist, preventing the onboarding overlay from being unexpectedly
- * re-triggered due to missing initialization.
- *
+ * Initializes onboarding keys with default values if missing.
  * @internal
  * @source
  */
@@ -400,11 +343,7 @@ async function ensureOnboardingKeysInitialized(): Promise<void> {
 }
 
 /**
- * Initializes storage by syncing electron-store to localStorage on app startup.
- *
- * Ensures both storage layers are in sync and loads cached values.
- * Should be called once during app initialization.
- *
+ * Syncs electron-store to localStorage on app startup.
  * @source
  */
 export async function initializeStorage(): Promise<void> {
@@ -457,8 +396,7 @@ export async function initializeStorage(): Promise<void> {
 }
 
 /**
- * Storage keys used for Kenmei data, import stats, match results, and configuration.
- *
+ * Storage keys for persisted state.
  * @source
  */
 export const STORAGE_KEYS = {
@@ -487,15 +425,13 @@ export const STORAGE_KEYS = {
 };
 
 /**
- * The current cache version. Increment this when incompatible changes are made to the data structure.
- *
+ * Current cache schema version. Increment when breaking changes occur.
  * @source
  */
 export const CURRENT_CACHE_VERSION = 1;
 
 /**
- * Sync configuration options for the application.
- *
+ * Sync operation settings.
  * @source
  */
 export type SyncConfig = {
@@ -514,8 +450,7 @@ export type SyncConfig = {
 };
 
 /**
- * The default sync configuration.
- *
+ * Default sync configuration.
  * @source
  */
 export const DEFAULT_SYNC_CONFIG: SyncConfig = {
@@ -534,56 +469,7 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
 };
 
 /**
- * Matching configuration options for automatic manga matching.
- *
- * @source
- */
-/**
- * Represents a single custom matching rule.
- *
- * @property id - Unique identifier (timestamp-based)
- * @property pattern - Regex pattern string to match against manga titles
- * @property description - User-friendly label describing the rule's purpose
- * @property enabled - Whether the rule is currently active
- * @property caseSensitive - Whether pattern matching should be case-sensitive
- * @property createdAt - ISO timestamp of rule creation
- *
- * @example
- * ```typescript
- * const skipAnthologies: CustomRule = {
- *   id: "1234567890_abc123",
- *   pattern: "anthology",
- *   description: "Skip anthology collections",
- *   enabled: true,
- *   caseSensitive: false,
- *   createdAt: "2025-10-25T12:00:00.000Z"
- * };
- * ```
- *
- * @source
- */
-
-/**
- * Target metadata fields for custom matching rules.
- *
- * @remarks
- * Determines which metadata fields a custom rule pattern should check:
- * - `titles`: All title variants (romaji, english, native, synonyms, alternative_titles)
- * - `author`: Author/staff names (filtered by Story, Art, Original Creator roles)
- * - `genres`: Genre array (Action, Romance, Fantasy, etc.)
- * - `tags`: Tag names and categories (Overpowered MC, Time Travel, etc.)
- * - `format`: Publication format (MANGA, NOVEL, ONE_SHOT, MANHWA, MANHUA)
- * - `country`: Country of origin (JP, KR, CN, etc.)
- * - `source`: Source material (ORIGINAL, MANGA, LIGHT_NOVEL, etc.)
- * - `description`: Description text and notes (HTML stripped from description)
- * - `status`: Publishing status (FINISHED, PUBLISHING, etc.)
- *
- * @example
- * ```typescript
- * const targets: CustomRuleTarget[] = ['titles', 'genres'];
- * // Pattern will check both title fields and genres
- * ```
- *
+ * Metadata fields that custom rules can target.
  * @source
  */
 export type CustomRuleTarget =
@@ -598,35 +484,7 @@ export type CustomRuleTarget =
   | "status"; // Publishing status
 
 /**
- * Custom matching rule for filtering manga based on regex patterns.
- *
- * @property id - Unique identifier for the rule
- * @property pattern - Regular expression pattern to match against
- * @property description - Human-readable description of what the rule does
- * @property enabled - Whether the rule is currently active
- * @property caseSensitive - Whether pattern matching should be case-sensitive
- * @property targetFields - Which metadata fields to check (defaults to ['titles'] for backward compatibility)
- * @property createdAt - ISO timestamp when the rule was created
- *
- * @remarks
- * The `targetFields` array determines which metadata fields the pattern checks.
- * Pattern matches if it matches ANY of the selected fields.
- * Array fields (genres, tags, synonyms) are flattened to strings for matching.
- * Missing fields are treated as non-match (not error).
- *
- * @example
- * ```typescript
- * const skipRule: CustomRule = {
- *   id: "rule-123",
- *   pattern: "isekai|reincarnation",
- *   description: "Skip isekai manga",
- *   enabled: true,
- *   caseSensitive: false,
- *   targetFields: ['genres', 'tags'], // Check genres and tags, not titles
- *   createdAt: "2025-10-25T12:00:00.000Z"
- * };
- * ```
- *
+ * Regex-based custom matching rule for filtering manga.
  * @source
  */
 export type CustomRule = {
@@ -640,16 +498,7 @@ export type CustomRule = {
 };
 
 /**
- * Configuration for custom matching rules.
- *
- * @property skipRules - Rules for automatically excluding manga from matching results
- * @property acceptRules - Rules for automatically boosting confidence scores for matches
- *
- * @remarks
- * Skip rules are evaluated before ranking and prevent manga from appearing in results.
- * Accept rules are evaluated after ranking and boost confidence scores to ensure inclusion.
- * Both rule types check all title variants (romaji, english, native, synonyms, alternative titles).
- *
+ * Set of custom skip and accept rules.
  * @source
  */
 export type CustomRulesConfig = {
@@ -667,25 +516,13 @@ export type MatchConfig = {
 };
 
 /**
- * Backup schedule intervals.
- *
+ * Backup interval options.
  * @source
  */
 export type BackupInterval = "daily" | "weekly" | "monthly" | "disabled";
 
 /**
- * Configuration for automatic backup scheduling.
- *
- * @property enabled - Whether automatic backups are enabled
- * @property interval - How often to create backups
- * @property lastBackupTimestamp - Unix timestamp of the last scheduled backup
- * @property nextBackupTimestamp - Unix timestamp of the next scheduled backup
- * @property maxBackupCount - Maximum number of backups to keep
- * @property maxBackupSizeMB - Maximum total backup size in megabytes
- * @property backupLocation - Full path to directory where backups are saved
- * @property autoBackupBeforeSync - Whether to auto-backup before sync operations
- * @property autoBackupBeforeMatch - Whether to auto-backup before match operations
- *
+ * Automatic backup scheduling configuration.
  * @source
  */
 export interface BackupScheduleConfig {
@@ -701,8 +538,7 @@ export interface BackupScheduleConfig {
 }
 
 /**
- * The default backup schedule configuration.
- *
+ * Default backup schedule configuration.
  * @source
  */
 export const DEFAULT_BACKUP_SCHEDULE_CONFIG: BackupScheduleConfig = {
@@ -718,8 +554,8 @@ export const DEFAULT_BACKUP_SCHEDULE_CONFIG: BackupScheduleConfig = {
 };
 
 /**
- * Single reading history entry capturing manga progress at a point in time.
- * Used for trend analysis and velocity calculations.
+ * Reading history entry capturing manga progress at a point in time.
+ * @source
  */
 export interface ReadingHistoryEntry {
   timestamp: number; // Unix timestamp in milliseconds
@@ -732,6 +568,7 @@ export interface ReadingHistoryEntry {
 
 /**
  * Enumeration of failed operation types.
+ * @source
  */
 export enum FailedOperationType {
   SYNC_UPDATE = "sync_update",
@@ -742,6 +579,7 @@ export enum FailedOperationType {
 
 /**
  * Structure for a single failed operation with retry metadata.
+ * @source
  */
 export interface FailedOperation {
   id: string; // Unique identifier, timestamp-based
@@ -758,6 +596,7 @@ export interface FailedOperation {
 
 /**
  * Queue structure for managing failed operations.
+ * @source
  */
 export interface FailedOperationsQueue {
   operations: FailedOperation[];
@@ -767,6 +606,7 @@ export interface FailedOperationsQueue {
 
 /**
  * Default failed operations queue structure.
+ * @source
  */
 export const DEFAULT_FAILED_OPERATIONS_QUEUE: FailedOperationsQueue = {
   operations: [],
@@ -776,21 +616,25 @@ export const DEFAULT_FAILED_OPERATIONS_QUEUE: FailedOperationsQueue = {
 
 /**
  * Maximum number of failed operations to store.
+ * @source
  */
 export const MAX_FAILED_OPERATIONS = 100;
 
 /**
  * Maximum number of retry attempts before giving up.
+ * @source
  */
 export const MAX_RETRY_ATTEMPTS = 3;
 
 /**
  * Number of days to keep failed operations before auto-removal.
+ * @source
  */
 export const FAILED_OPERATION_EXPIRY_DAYS = 7;
 
 /**
- * Reading history storage structure with metadata.
+ * Reading history storage with entries and metadata.
+ * @source
  */
 export interface ReadingHistory {
   entries: ReadingHistoryEntry[];
@@ -799,7 +643,8 @@ export interface ReadingHistory {
 }
 
 /**
- * Default reading history structure.
+ * Default reading history (empty).
+ * @source
  */
 export const DEFAULT_READING_HISTORY: ReadingHistory = {
   entries: [],
@@ -808,13 +653,13 @@ export const DEFAULT_READING_HISTORY: ReadingHistory = {
 };
 
 /**
- * Maximum number of history entries to retain (365 days worth).
+ * Maximum reading history entries retained (365 days).
+ * @source
  */
 export const MAX_READING_HISTORY_ENTRIES = 365;
 
 /**
- * The default match configuration.
- *
+ * Default match configuration.
  * @source
  */
 export const DEFAULT_MATCH_CONFIG: MatchConfig = {
@@ -830,10 +675,7 @@ export const DEFAULT_MATCH_CONFIG: MatchConfig = {
 };
 
 /**
- * Saves Kenmei manga data to storage and updates import stats and cache version.
- *
- * Also calculates and saves import statistics for quick dashboard access.
- *
+ * Saves Kenmei data and updates import stats and cache version.
  * @param data - The Kenmei data to save.
  * @source
  */
@@ -872,9 +714,8 @@ export function saveKenmeiData(data: KenmeiData): void {
 }
 
 /**
- * Retrieves Kenmei manga data from storage.
- *
- * @returns The saved Kenmei data or null if not found.
+ * Retrieves saved Kenmei data.
+ * @returns The Kenmei data or null if not found.
  * @source
  */
 export function getKenmeiData(): KenmeiData | null {
@@ -900,8 +741,7 @@ export function getKenmeiData(): KenmeiData | null {
 }
 
 /**
- * Retrieves import statistics from storage.
- *
+ * Retrieves saved import statistics.
  * @returns The import stats or null if not found.
  * @source
  */
@@ -929,11 +769,8 @@ export function getImportStats(): ImportStats | null {
 
 /**
  * Calculates status counts from Kenmei data.
- *
- * Aggregates the number of manga entries for each reading status.
- *
  * @param data - The Kenmei data to analyze.
- * @returns An object mapping status strings to entry counts.
+ * @returns Map of status to entry count.
  * @internal
  * @source
  */
@@ -953,11 +790,8 @@ export function getStatusCountsFromData(
 }
 
 /**
- * Retrieves saved match results from storage with cache version compatibility check.
- *
- * Validates the cache version before returning to ensure data is compatible with current app.
- *
- * @returns The saved match results or null if not found or incompatible.
+ * Retrieves saved match results with cache version check.
+ * @returns The match results or null if not found or incompatible version.
  * @source
  */
 export function getSavedMatchResults(): MatchResult[] | null {
@@ -994,13 +828,9 @@ export function getSavedMatchResults(): MatchResult[] | null {
 }
 
 /**
- * Merges new match results with existing ones to preserve user progress.
- *
- * Maintains user selections and review status while updating with new match candidates.
- * Results not present in the new batch are preserved.
- *
+ * Merges new match results with existing ones, preserving user progress.
  * @param newResults - The new matching results to merge.
- * @returns Merged results with preserved user progress and selections.
+ * @returns Merged results with preserved user selections and status.
  * @source
  */
 export function mergeMatchResults(newResults: MatchResult[]): MatchResult[] {
@@ -1136,10 +966,7 @@ export function mergeMatchResults(newResults: MatchResult[]): MatchResult[] {
 }
 
 /**
- * Saves sync configuration to storage.
- *
- * Persists user's sync preferences across sessions.
- *
+ * Saves sync configuration.
  * @param config - The sync configuration to save.
  * @source
  */
@@ -1152,11 +979,8 @@ export function saveSyncConfig(config: SyncConfig): void {
 }
 
 /**
- * Retrieves sync configuration from storage.
- *
- * Falls back to default configuration if not found or on error.
- *
- * @returns The saved sync configuration or default if not found.
+ * Retrieves sync configuration, using defaults if not found.
+ * @returns The saved sync configuration or default.
  * @source
  */
 export function getSyncConfig(): SyncConfig {
@@ -1170,10 +994,7 @@ export function getSyncConfig(): SyncConfig {
 }
 
 /**
- * Saves match configuration to storage.
- *
- * Persists user's match preferences and filters across sessions.
- *
+ * Saves match configuration.
  * @param config - The match configuration to save.
  * @source
  */
@@ -1186,11 +1007,8 @@ export function saveMatchConfig(config: MatchConfig): void {
 }
 
 /**
- * Retrieves match configuration from storage.
- *
- * Falls back to default configuration if not found or on error.
- *
- * @returns The saved match configuration or default if not found.
+ * Retrieves match configuration, using defaults if not found.
+ * @returns The saved match configuration or default.
  * @source
  */
 export function getMatchConfig(): MatchConfig {
@@ -1224,10 +1042,9 @@ export function getMatchConfig(): MatchConfig {
 }
 
 /**
- * Retrieves saved advanced match filters from storage.
- * Returns default filters if none are saved.
+ * Retrieves advanced match filters, using defaults if not found.
  * Validates and clamps all values to acceptable ranges.
- * @returns The advanced match filters configuration.
+ * @returns The advanced match filters.
  * @source
  */
 export function getMatchFilters(): AdvancedMatchFilters {
@@ -1278,7 +1095,7 @@ export function getMatchFilters(): AdvancedMatchFilters {
 }
 
 /**
- * Saves advanced match filters to storage.
+ * Saves advanced match filters.
  * @param filters - The advanced match filters to save.
  * @source
  */
@@ -1292,10 +1109,7 @@ export function saveMatchFilters(filters: AdvancedMatchFilters): void {
 }
 
 /**
- * Saves backup schedule configuration to storage.
- *
- * Persists user's backup schedule preferences across sessions.
- *
+ * Saves backup schedule configuration.
  * @param config - The backup schedule configuration to save.
  * @source
  */
@@ -1314,8 +1128,9 @@ export function saveBackupScheduleConfig(config: BackupScheduleConfig): void {
 }
 
 /**
- * Retrieves reading history from storage.
- * Returns default empty history if none exists.
+ * Retrieves reading history, using defaults if not found.
+ * @returns The reading history.
+ * @source
  */
 export function getReadingHistory(): ReadingHistory {
   try {
@@ -1346,7 +1161,9 @@ export function getReadingHistory(): ReadingHistory {
 }
 
 /**
- * Saves reading history to storage.
+ * Saves reading history.
+ * @param history - The reading history to save.
+ * @source
  */
 export function saveReadingHistory(history: ReadingHistory): void {
   try {
@@ -1362,8 +1179,7 @@ export function saveReadingHistory(history: ReadingHistory): void {
 }
 
 /**
- * Helper to get local date string from timestamp for consistent dedup and habit computation.
- * Uses local timezone to avoid day boundary mismatches.
+ * Converts timestamp to local date string (YYYY-MM-DD).
  * @param timestamp - Unix timestamp in milliseconds.
  * @returns Local date string in YYYY-MM-DD format.
  * @source
@@ -1377,9 +1193,9 @@ export function getLocalDateString(timestamp: number): string {
 }
 
 /**
- * Records a reading history snapshot for manga entries.
- * Deduplicates entries from the same day (local time) for the same manga.
- * Enforces maximum entries per manga to distribute retention fairly.
+ * Records reading history snapshots with deduplication and retention limits.
+ * @param entries - Reading history entries to record.
+ * @source
  */
 export function recordReadingHistory(entries: ReadingHistoryEntry[]): void {
   if (!entries.length) return;
@@ -1446,6 +1262,7 @@ export function recordReadingHistory(entries: ReadingHistoryEntry[]): void {
 
 /**
  * Clears all reading history from storage.
+ * @source
  */
 export function clearReadingHistory(): void {
   try {
@@ -1457,9 +1274,9 @@ export function clearReadingHistory(): void {
 }
 
 /**
- * Retrieves failed operations queue from storage.
- * Filters out expired operations (older than FAILED_OPERATION_EXPIRY_DAYS).
- * Returns default empty queue if none exists.
+ * Retrieves failed operations queue, filtering out expired ones.
+ * @returns The failed operations queue.
+ * @source
  */
 export function getFailedOperations(): FailedOperationsQueue {
   try {
@@ -1527,8 +1344,10 @@ export function getFailedOperations(): FailedOperationsQueue {
 }
 
 /**
- * Adds a failed operation to the queue.
- * Enforces MAX_FAILED_OPERATIONS limit by removing oldest on overflow.
+ * Adds a failed operation to the queue, enforcing size limits.
+ * @param operation - The failed operation to add.
+ * @returns The created failed operation with ID and timestamp.
+ * @source
  */
 export function addFailedOperation(
   operation: Omit<
@@ -1579,6 +1398,10 @@ export function addFailedOperation(
 
 /**
  * Updates a failed operation in the queue.
+ * @param id - The operation ID.
+ * @param updates - Partial updates to apply.
+ * @returns The updated operation, or null if not found.
+ * @source
  */
 export function updateFailedOperation(
   id: string,
@@ -1610,6 +1433,9 @@ export function updateFailedOperation(
 
 /**
  * Removes a failed operation from the queue.
+ * @param id - The operation ID.
+ * @returns True if removed, false if not found.
+ * @source
  */
 export function removeFailedOperation(id: string): boolean {
   try {
@@ -1635,7 +1461,9 @@ export function removeFailedOperation(id: string): boolean {
 }
 
 /**
- * Clears all failed operations or only specific type.
+ * Clears failed operations, optionally filtered by type.
+ * @param type - Optional operation type to clear; if omitted, clears all.
+ * @source
  */
 export function clearFailedOperations(type?: FailedOperationType): void {
   try {
@@ -1660,8 +1488,10 @@ export function clearFailedOperations(type?: FailedOperationType): void {
 }
 
 /**
- * Increments retry count for a failed operation.
- * Updates lastRetryTimestamp to current time.
+ * Increments retry count and last retry timestamp.
+ * Marks as permanently failed if max retries exceeded.
+ * @param id - The operation ID.
+ * @source
  */
 export function incrementRetryCount(id: string): void {
   try {
@@ -1693,8 +1523,8 @@ export function incrementRetryCount(id: string): void {
 }
 
 /**
- * Data for a failed sync operation.
- * Includes sync configuration to enable faithful retry of original intent.
+ * Data payload for a failed sync operation.
+ * @source
  */
 export interface FailedSyncOperationData {
   mediaId: number;
@@ -1721,6 +1551,12 @@ export interface FailedSyncOperationData {
   } | null;
 }
 
+/**
+ * Adds a failed sync operation with typed data.
+ * @param data - The sync operation data.
+ * @returns The created failed operation.
+ * @source
+ */
 export function addFailedSyncOperation(
   data: FailedSyncOperationData,
 ): FailedOperation {
@@ -1759,11 +1595,8 @@ export function addFailedSyncOperation(
 }
 
 /**
- * Retrieves backup schedule configuration from storage.
- *
- * Falls back to default configuration if not found or on error.
- *
- * @returns The saved backup schedule configuration or default if not found.
+ * Retrieves backup schedule configuration, using defaults if not found.
+ * @returns The saved backup schedule configuration or default.
  * @source
  */
 export function getBackupScheduleConfig(): BackupScheduleConfig {
@@ -1782,10 +1615,11 @@ export function getBackupScheduleConfig(): BackupScheduleConfig {
 }
 
 /**
- * Checks for basic validation errors in a custom rule.
- *
- * @param rule - The custom rule to check
- * @returns Error message if invalid, undefined if valid
+ * Checks basic validation of a custom rule.
+ * @param rule - The rule to check.
+ * @returns Error message if invalid, undefined if valid.
+ * @internal
+ * @source
  */
 function checkBasicValidation(rule: CustomRule): string | undefined {
   if (!rule.pattern || rule.pattern.trim() === "") {
@@ -1806,9 +1640,10 @@ function checkBasicValidation(rule: CustomRule): string | undefined {
 
 /**
  * Validates target fields are all valid CustomRuleTarget values.
- *
- * @param targetFields - The target fields to validate
- * @returns Error message if invalid fields found, undefined if all valid
+ * @param targetFields - Fields to validate.
+ * @returns Error message if invalid, undefined if all valid.
+ * @internal
+ * @source
  */
 function validateTargetFields(
   targetFields: CustomRuleTarget[],
@@ -1835,9 +1670,10 @@ function validateTargetFields(
 
 /**
  * Checks if pattern contains ReDoS-vulnerable constructs.
- *
- * @param pattern - The regex pattern to check
- * @returns Warning message if vulnerable, undefined if safe
+ * @param pattern - The regex pattern to check.
+ * @returns Warning if vulnerable, undefined if safe.
+ * @internal
+ * @source
  */
 function checkRedosVulnerabilities(pattern: string): string | undefined {
   const redosWarning =
@@ -1863,9 +1699,10 @@ function checkRedosVulnerabilities(pattern: string): string | undefined {
 
 /**
  * Checks for overly broad or complex patterns.
- *
- * @param pattern - The regex pattern to check
- * @returns Warning message if problematic, undefined if acceptable
+ * @param pattern - The regex pattern to check.
+ * @returns Warning if problematic, undefined if acceptable.
+ * @internal
+ * @source
  */
 function checkBroadPatterns(pattern: string): string | undefined {
   const broadPatterns = [
@@ -1898,36 +1735,9 @@ function checkBroadPatterns(pattern: string): string | undefined {
 }
 
 /**
- * Validates a custom matching rule for correctness and safety.
- *
- * @param rule - The custom rule to validate
- * @returns Validation result with error or warning messages
- *
- * @remarks
- * Performs comprehensive validation including:
- * - Pattern and description non-empty checks
- * - Regex syntax validation
- * - ReDoS vulnerability detection (nested quantifiers, overlapping alternations)
- * - Overly broad pattern detection
- * - Target fields validation
- *
- * @example
- * ```typescript
- * const rule: CustomRule = {
- *   id: "123",
- *   pattern: "anthology",
- *   description: "Skip anthologies",
- *   enabled: true,
- *   caseSensitive: false,
- *   targetFields: ['titles'],
- *   createdAt: new Date().toISOString()
- * };
- * const result = validateCustomRule(rule);
- * if (!result.valid) {
- *   console.error(result.error);
- * }
- * ```
- *
+ * Validates a custom rule for syntax, security, and performance issues.
+ * @param rule - The rule to validate.
+ * @returns Validation result with error or warning messages.
  * @source
  */
 export function validateCustomRule(rule: CustomRule): {
@@ -1974,23 +1784,9 @@ export function validateCustomRule(rule: CustomRule): {
 }
 
 /**
- * Migrates a custom rule from older format to current format.
- *
- * @param rule - Partial custom rule (may be missing targetFields)
- * @returns Complete custom rule with all required properties
- *
- * @remarks
- * Ensures backward compatibility by defaulting `targetFields` to `['titles']`
- * if the property is missing. This allows existing rules created before the
- * metadata field selection feature to continue working without modification.
- *
- * @example
- * ```typescript
- * const oldRule = { id: "1", pattern: "test", ... }; // no targetFields
- * const migratedRule = migrateCustomRule(oldRule);
- * // migratedRule.targetFields === ['titles']
- * ```
- *
+ * Migrates rule to current format, defaulting targetFields to ['titles'] for backward compatibility.
+ * @param rule - Partial rule (may be missing targetFields).
+ * @returns Complete rule with all required properties.
  * @source
  */
 export function migrateCustomRule(rule: Partial<CustomRule>): CustomRule {
@@ -2013,8 +1809,7 @@ export function migrateCustomRule(rule: Partial<CustomRule>): CustomRule {
 }
 
 /**
- * Represents an AniList entry that has been marked as a duplicate to ignore.
- *
+ * AniList entry marked as ignored duplicate.
  * @source
  */
 export interface IgnoredDuplicate {
@@ -2024,10 +1819,7 @@ export interface IgnoredDuplicate {
 }
 
 /**
- * Marks an AniList entry as ignored duplicate for future operations.
- *
- * Prevents this entry from being offered as a match in future sessions.
- *
+ * Adds an AniList entry to the ignored duplicates list.
  * @param anilistId - The AniList ID to ignore.
  * @param anilistTitle - The AniList title for reference.
  * @source
@@ -2058,9 +1850,8 @@ export function addIgnoredDuplicate(
 }
 
 /**
- * Retrieves all ignored duplicate entries from storage.
- *
- * @returns Array of ignored duplicate entries, or empty array if none exist.
+ * Retrieves all ignored duplicate entries.
+ * @returns Array of ignored duplicates, or empty array if none exist.
  * @source
  */
 export function getIgnoredDuplicates(): IgnoredDuplicate[] {
@@ -2078,9 +1869,6 @@ export function getIgnoredDuplicates(): IgnoredDuplicate[] {
 
 /**
  * Removes an AniList entry from the ignored duplicates list.
- *
- * Allows this entry to be offered as a match again in future operations.
- *
  * @param anilistId - The AniList ID to un-ignore.
  * @source
  */
@@ -2098,10 +1886,7 @@ export function removeIgnoredDuplicate(anilistId: number): void {
 }
 
 /**
- * Clears all ignored duplicate entries from storage.
- *
- * Resets the duplicate ignore list, allowing all previously ignored entries to be offered again.
- *
+ * Clears all ignored duplicates.
  * @source
  */
 export function clearIgnoredDuplicates(): void {
@@ -2116,8 +1901,7 @@ export function clearIgnoredDuplicates(): void {
 }
 
 /**
- * Checks whether a specific AniList ID is in the ignored duplicates list.
- *
+ * Checks if an AniList ID is in the ignored duplicates list.
  * @param anilistId - The AniList ID to check.
  * @returns True if the ID is ignored, false otherwise.
  * @source
@@ -2133,12 +1917,8 @@ export function isAniListIdIgnored(anilistId: number): boolean {
 }
 
 /**
- * Checks if the onboarding wizard has been completed (async version for authoritative consistency).
- *
- * Uses async getItemAsync() to fetch from the authoritative electron-store source first,
- * ensuring consistency across storage layers. Only the exact string "true" is considered true.
- *
- * @returns {Promise<boolean>} Promise that resolves to true if onboarding has been completed, false otherwise
+ * Checks if onboarding has been completed (uses authoritative async storage).
+ * @returns Promise resolving to true if onboarding completed, false otherwise.
  * @source
  */
 export async function isOnboardingCompleted(): Promise<boolean> {
@@ -2155,13 +1935,9 @@ export async function isOnboardingCompleted(): Promise<boolean> {
 }
 
 /**
- * Sets the onboarding completion status (async version for authoritative persistence).
- *
- * Uses async setItemAsync() to ensure electron-store (authoritative source) is updated first,
- * then syncs to localStorage for consistency across storage layers.
- *
- * @param {boolean} completed - Whether the onboarding has been completed
- * @returns {Promise<void>} Promise that resolves when the write is complete
+ * Sets the onboarding completion status (uses authoritative async storage).
+ * @param completed - Whether onboarding has been completed.
+ * @returns Promise that resolves when complete.
  * @source
  */
 export async function setOnboardingCompleted(
@@ -2181,7 +1957,8 @@ export async function setOnboardingCompleted(
 }
 
 /**
- * Resets the onboarding status to allow the wizard to show again
+ * Resets onboarding status to show wizard again.
+ * @source
  */
 export function resetOnboarding(): void {
   try {
@@ -2193,13 +1970,9 @@ export function resetOnboarding(): void {
 
 /**
  * Validates a sync snapshot object for completeness and correctness.
- * @param snapshot - The snapshot object to validate.
+ * @param snapshot - The snapshot to validate.
  * @returns Validation result with status and optional reason.
- * @example
- * const result = validateSyncSnapshot(parsed);
- * if (!result.valid) {
- *   console.error("Invalid snapshot:", result.reason);
- * }
+ * @source
  */
 export function validateSyncSnapshot(snapshot: unknown): {
   valid: boolean;
@@ -2246,14 +2019,11 @@ export function validateSyncSnapshot(snapshot: unknown): {
 }
 
 /**
- * Checks if a sync snapshot is stale based on its timestamp.
- * @param timestamp - The snapshot timestamp in milliseconds.
- * @param maxAgeHours - Maximum age in hours before considering stale (default 24 hours).
- * @returns True if the snapshot is stale, false otherwise.
- * @example
- * if (isSyncSnapshotStale(snapshot.timestamp)) {
- *   console.warn("Snapshot is older than 24 hours");
- * }
+ * Checks if a sync snapshot is stale based on age.
+ * @param timestamp - Snapshot timestamp in milliseconds.
+ * @param maxAgeHours - Max age before stale (default 24 hours).
+ * @returns True if stale, false otherwise.
+ * @source
  */
 export function isSyncSnapshotStale(
   timestamp: number,
@@ -2264,10 +2034,8 @@ export function isSyncSnapshotStale(
 }
 
 /**
- * Cleans up stale sync snapshots from storage.
- * Removes snapshots that are older than the maximum age or invalid.
- * @example
- * cleanupStaleSyncSnapshot(); // Remove stale snapshots on app start
+ * Removes stale or invalid sync snapshots.
+ * @source
  */
 export function cleanupStaleSyncSnapshot(): void {
   try {

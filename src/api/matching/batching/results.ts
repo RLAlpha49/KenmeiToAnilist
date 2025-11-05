@@ -1,5 +1,5 @@
 /**
- * @file Compile and finalize batch match results
+ * Compile and finalize batch match results
  * @module matching/batching/results
  */
 
@@ -36,14 +36,6 @@ import { applySystemContentFilters } from "../filtering/system-filters";
  * @param matchConfig - Configuration with ignoreOneShots, ignoreAdultContent.
  * @param kenmeiManga - Kenmei manga for custom rule evaluation.
  * @returns Filtered list of manga matches (with internal accept rule tracking if applicable).
- *
- * @example
- * ```typescript
- * const filtered = applyMatchFiltering(matches, "Naruto", config, kenmeiManga);
- * console.log(`Filtered to ${filtered.length} matches`);
- * // Accept rule matches will have confidence boosted in createMangaMatchResult()
- * ```
- *
  * @source
  */
 export function applyMatchFiltering(

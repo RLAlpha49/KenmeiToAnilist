@@ -6,6 +6,7 @@
  *
  * See: src/components/onboarding/OnboardingOverlay.tsx
  * See: src/contexts/OnboardingContext.tsx
+ * @source
  */
 
 import React, { useState, useCallback, useEffect } from "react";
@@ -52,19 +53,43 @@ import {
 } from "@/components/ui/tooltip";
 import { setOnboardingCompleted } from "@/utils/storage";
 
+/**
+ * Props for the deprecated OnboardingWizard component.
+ * @source
+ */
 interface OnboardingWizardProps {
+  /** Callback fired when onboarding is completed. */
   onComplete: () => void;
+  /** Callback fired when onboarding is skipped. */
   onSkip: () => void;
 }
 
+/**
+ * Configuration for a single onboarding step.
+ * @source
+ */
 interface StepConfig {
+  /** Title displayed at the top of the step. */
   title: string;
+  /** Brief description of the step. */
   description: string;
+  /** Icon element displayed with the title. */
   icon: React.ReactNode;
+  /** Main content and instructions for the step. */
   content: React.ReactNode;
+  /** Background gradient class for visual variety. */
   gradient: string;
 }
 
+/**
+ * Renders button content based on current step and loading state.
+ * Shows spinner while completing, "Complete" on last step, "Next" otherwise.
+ * @param currentStep - The current step index (1-based).
+ * @param totalSteps - The total number of steps.
+ * @param isCompleting - Whether the wizard is currently completing.
+ * @returns Button content JSX.
+ * @source
+ */
 function renderButtonContent(
   currentStep: number,
   totalSteps: number,
@@ -94,6 +119,20 @@ function renderButtonContent(
   );
 }
 
+/**
+ * Deprecated wizard-style onboarding dialog component (modal with steps).
+ * Provides guided tour through onboarding steps with keyboard navigation.
+ *
+ * Features:
+ * - Multi-step dialog with animated transitions
+ * - Keyboard support (Enter to advance, Escape to skip)
+ * - Progress bar showing completed, current, and upcoming steps
+ * - Restart option on the final step
+ * - Skip confirmation dialog
+ *
+ * @deprecated Use OnboardingOverlay instead for non-blocking experience.
+ * @source
+ */
 export function OnboardingWizard({
   onComplete,
   onSkip,
@@ -102,6 +141,7 @@ export function OnboardingWizard({
   const [isCompleting, setIsCompleting] = useState(false);
   const [showEscapeConfirmDialog, setShowEscapeConfirmDialog] = useState(false);
 
+  // Define step configuration with icons, titles, and content
   const steps: StepConfig[] = [
     {
       title: "Welcome to Kenmei to AniList",
@@ -328,6 +368,7 @@ export function OnboardingWizard({
     },
   ];
 
+  // Navigate to next step or complete wizard
   const handleNext = useCallback(async () => {
     if (currentStep === steps.length) {
       await handleComplete();
@@ -336,10 +377,12 @@ export function OnboardingWizard({
     }
   }, [currentStep, steps.length]);
 
+  // Navigate to previous step
   const handleBack = useCallback(() => {
     setCurrentStep((prev) => Math.max(1, prev - 1));
   }, []);
 
+  // Mark onboarding as complete and trigger callback
   const handleComplete = useCallback(async () => {
     setIsCompleting(true);
     try {
@@ -350,6 +393,7 @@ export function OnboardingWizard({
     }
   }, [onComplete]);
 
+  // Mark onboarding as complete and skip
   const handleSkip = useCallback(async () => {
     setIsCompleting(true);
     try {
@@ -360,11 +404,12 @@ export function OnboardingWizard({
     }
   }, [onSkip]);
 
+  // Reset to first step
   const handleRestartTour = useCallback(() => {
     setCurrentStep(1);
   }, []);
 
-  // Handle keyboard navigation (Enter to advance, Escape to show confirmation)
+  // Keyboard navigation: Enter to advance, Escape to confirm skip
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (isCompleting) return;
@@ -384,6 +429,7 @@ export function OnboardingWizard({
     };
   }, [handleNext, isCompleting]);
 
+  // Get current step configuration
   const step = steps[currentStep - 1];
 
   return (

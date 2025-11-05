@@ -1,10 +1,10 @@
 /**
- * Comprehensive regex documentation component for custom matching rules.
+ * @packageDocumentation
+ * @module RegexDocumentation
+ * @description Comprehensive regex documentation component for custom matching rules.
  *
  * Provides detailed guidance on regex syntax, safe patterns, dangerous patterns,
  * and security considerations including ReDoS vulnerabilities.
- *
- * @module RegexDocumentation
  */
 
 import React, { memo } from "react";
@@ -35,8 +35,8 @@ import {
 
 /**
  * Regex documentation component with comprehensive guides and examples.
- *
- * @returns Rendered regex documentation
+ * @returns The rendered regex documentation panel.
+ * @source
  */
 function RegexDocumentationComponent() {
   return (

@@ -1,7 +1,7 @@
 /**
  * @packageDocumentation
  * @module backup_context
- * @description Exposes the Electron backup context bridge (schedule config, trigger backup, event listeners) to the renderer process.
+ * @description Exposes the Electron backup context bridge to the renderer process.
  */
 
 import type { BackupScheduleConfig } from "@/utils/storage";
@@ -10,9 +10,9 @@ import { contextBridge, ipcRenderer } from "electron";
 import { BACKUP_CHANNELS } from "./backup-channels";
 
 /**
- * Backup schedule management interface exposed to the renderer process.
- * Provides all backup-related functionality including scheduling, file management, and restore operations.
- * @internal
+ * Backup API exposed to the renderer process.
+ * Provides schedule configuration, backup triggering, file management, and restore operations.
+ * @source
  */
 export interface ElectronBackupApi {
   getScheduleConfig: () => Promise<BackupScheduleConfig>;
@@ -75,8 +75,7 @@ export interface ElectronBackupApi {
 }
 
 /**
- * Exposes the Electron backup context bridge to the renderer process.
- *
+ * Exposes the backup context bridge to the renderer process.
  * @source
  */
 export function exposeBackupContext() {
@@ -91,8 +90,9 @@ export function exposeBackupContext() {
 
     contextBridge.exposeInMainWorld("electronBackup", {
       /**
-       * Retrieves the current backup schedule configuration from the main process.
-       * @returns Promise<BackupScheduleConfig>
+       * Retrieves current backup schedule configuration from the main process.
+       * @returns Promise<BackupScheduleConfig> The backup schedule configuration.
+       * @source
        */
       getScheduleConfig: () => {
         console.debug(
@@ -103,8 +103,9 @@ export function exposeBackupContext() {
 
       /**
        * Updates the backup schedule configuration in the main process.
-       * @param config - New backup schedule configuration
-       * @returns Promise<{ success: boolean; error?: string }>
+       * @param config - New backup schedule configuration.
+       * @returns Promise indicating success or error.
+       * @source
        */
       setScheduleConfig: (
         config: BackupScheduleConfig,
@@ -121,8 +122,9 @@ export function exposeBackupContext() {
       },
 
       /**
-       * Gets the current backup location configured in the system.
-       * @returns Promise<{ success: boolean; data?: string; error?: string }> - Backup directory path or error
+       * Retrieves the currently configured backup location.
+       * @returns Promise with backup directory path or error.
+       * @source
        */
       getBackupLocation: (): Promise<{
         success: boolean;
@@ -136,8 +138,9 @@ export function exposeBackupContext() {
 
       /**
        * Updates the backup location directory in the main process.
-       * @param location - Full path to new backup directory
-       * @returns Promise<{ success: boolean; error?: string; code?: string }> - Success status with optional error code
+       * @param location - Full path to new backup directory.
+       * @returns Promise with success status or error with code.
+       * @source
        */
       setBackupLocation: (
         location: string,
@@ -152,7 +155,8 @@ export function exposeBackupContext() {
 
       /**
        * Opens the backup location in the system file browser.
-       * @returns Promise<{ success: boolean; error?: string }>
+       * @returns Promise with success status.
+       * @source
        */
       openBackupLocation: (): Promise<{ success: boolean; error?: string }> => {
         console.debug(
@@ -163,8 +167,9 @@ export function exposeBackupContext() {
       },
 
       /**
-       * Lists all available backup files in the configured backup location.
-       * @returns Promise<{ success: boolean; data?: Array<{name, timestamp, size}>; error?: string }>
+       * Lists all available backup files in the configured location.
+       * @returns Promise with array of backup file metadata.
+       * @source
        */
       listLocalBackups: (): Promise<{
         success: boolean;
@@ -179,9 +184,10 @@ export function exposeBackupContext() {
       },
 
       /**
-       * Reads the contents of a local backup file and returns it as a string.
-       * @param filename - Name of the backup file to read
-       * @returns Promise<{ success: boolean; data?: string; error?: string }>
+       * Reads a backup file's contents as a string.
+       * @param filename - Name of the backup file to read.
+       * @returns Promise with file contents or error.
+       * @source
        */
       readLocalBackupFile: (
         filename: string,
@@ -195,8 +201,9 @@ export function exposeBackupContext() {
 
       /**
        * Deletes a specific backup file by name.
-       * @param filename - Name of the backup file to delete
-       * @returns Promise<{ success: boolean; error?: string }>
+       * @param filename - Name of the backup file to delete.
+       * @returns Promise with success status.
+       * @source
        */
       deleteBackup: (
         filename: string,
@@ -209,8 +216,9 @@ export function exposeBackupContext() {
       },
 
       /**
-       * Triggers a manual backup outside of the scheduled interval.
-       * @returns Promise<{ success: boolean; backupId?: string; error?: string }>
+       * Triggers a manual backup outside the scheduled interval.
+       * @returns Promise with backup ID on success.
+       * @source
        */
       triggerBackup: () => {
         console.debug("[BackupContext] Renderer manually triggering backup");
@@ -218,9 +226,10 @@ export function exposeBackupContext() {
       },
 
       /**
-       * Creates an immediate backup in the main process (bypasses scheduler).
-       * Intended for manual "Create Backup Now" operations from the renderer.
-       * @returns Promise<{ success: boolean; backupId?: string; error?: string }>
+       * Creates an immediate backup bypassing the scheduler.
+       * Intended for manual "Create Backup Now" operations.
+       * @returns Promise with backup ID on success.
+       * @source
        */
       createNow: () => {
         console.debug(
@@ -230,8 +239,9 @@ export function exposeBackupContext() {
       },
 
       /**
-       * Gets the current backup status including running state and next backup time.
-       * @returns Promise<{ isRunning: boolean; lastBackup: number | null; nextBackup: number | null }>
+       * Retrieves the current backup scheduler status.
+       * @returns Promise with running state and backup timestamps.
+       * @source
        */
       getBackupStatus: () => {
         console.debug("[BackupContext] Renderer requesting backup status");
@@ -239,8 +249,9 @@ export function exposeBackupContext() {
       },
 
       /**
-       * Retrieves the backup history from the main process store.
-       * @returns Promise<BackupHistoryEntry[]>
+       * Retrieves backup history entries from the main process store.
+       * @returns Promise<BackupHistoryEntry[]> Array of backup history entries.
+       * @source
        */
       getBackupHistory: (): Promise<BackupHistoryEntry[]> => {
         console.debug("[BackupContext] Renderer requesting backup history");
@@ -248,9 +259,10 @@ export function exposeBackupContext() {
       },
 
       /**
-       * Clears all backup history from the main process store.
+       * Clears all backup history from storage.
        * Triggers ON_HISTORY_UPDATED event to notify renderer.
-       * @returns Promise<{ success: boolean; error?: string }>
+       * @returns Promise with success status.
+       * @source
        */
       clearHistory: () => {
         console.debug(
@@ -260,11 +272,12 @@ export function exposeBackupContext() {
       },
 
       /**
-       * Restores application data from a backup file stored locally.
-       * Reads and parses the backup file on the main process, then restores data.
-       * @param filename - Name of the backup file to restore from
-       * @param options - Restore options (merge mode for match results)
-       * @returns Promise<{ success: boolean; errors?: string[] }>
+       * Restores application data from a backup file.
+       * Supports merge mode for match results.
+       * @param filename - Name of the backup file to restore from.
+       * @param options - Restore options (merge mode for match results).
+       * @returns Promise with success status and optional errors.
+       * @source
        */
       restoreFromLocal: (
         filename: string,
@@ -284,8 +297,9 @@ export function exposeBackupContext() {
 
       /**
        * Registers a listener for backup completion events.
-       * @param callback - Function to call when backup completes, receives payload { backupId: string; timestamp: number }
-       * @returns Cleanup function to remove the listener - call to unsubscribe and clean up resources
+       * @param callback - Function called with backup ID and timestamp on completion.
+       * @returns Cleanup function to remove the listener.
+       * @source
        */
       onBackupComplete: (
         callback: (data: { backupId: string; timestamp: number }) => void,
@@ -316,8 +330,9 @@ export function exposeBackupContext() {
 
       /**
        * Registers a listener for backup error events.
-       * @param callback - Function to call when backup encounters an error, receives error message (string)
-       * @returns Cleanup function to remove the listener - call to unsubscribe and clean up resources
+       * @param callback - Function called with error message on backup error.
+       * @returns Cleanup function to remove the listener.
+       * @source
        */
       onBackupError: (callback: (error: string) => void): (() => void) => {
         // Create a local handler function for this specific callback
@@ -337,9 +352,10 @@ export function exposeBackupContext() {
 
       /**
        * Registers a listener for backup history updates.
-       * Fired when backup history is updated in the main process.
-       * @param callback - Function to call when history is updated
-       * @returns Cleanup function to remove the listener
+       * Fired when history is updated in the main process.
+       * @param callback - Function called on history update.
+       * @returns Cleanup function to remove the listener.
+       * @source
        */
       onHistoryUpdated: (callback: () => void) => {
         // Create a local handler function for this specific callback
@@ -362,9 +378,10 @@ export function exposeBackupContext() {
 
       /**
        * Registers a listener for backup status changes.
-       * Fired when scheduler status changes (config update, manual trigger, or scheduled backup).
-       * @param callback - Function to call with updated status
-       * @returns Cleanup function to remove the listener
+       * Fired when scheduler status changes (config update, trigger, or scheduled backup).
+       * @param callback - Function called with updated status.
+       * @returns Cleanup function to remove the listener.
+       * @source
        */
       onStatusChanged: (
         callback: (status: {

@@ -41,6 +41,10 @@ import {
 
 export type StatisticsExportFormat = "json" | "csv" | "markdown";
 
+/**
+ * Props for the ExportStatisticsButton component.
+ * @source
+ */
 interface ExportStatisticsButtonProps {
   /** Import statistics to include in the export payload. */
   readonly importStats: ImportStats | null;
@@ -56,8 +60,16 @@ interface ExportStatisticsButtonProps {
   readonly variant?: "default" | "outline" | "ghost";
 }
 
+/**
+ * Export section identifier for filtering data subsets.
+ * @source
+ */
 type ExportSection = "import" | "sync" | "matches";
 
+/**
+ * CSV export row structure combining metadata and data fields.
+ * @source
+ */
 interface ExportRow {
   section: string;
   metric: string;
@@ -71,6 +83,14 @@ interface ExportRow {
   confidence?: number;
 }
 
+/**
+ * Builds export rows from import and sync statistics.
+ * @param importStats - Import statistics object or null.
+ * @param syncStats - Sync statistics object or null.
+ * @param sections - Active sections to include in export.
+ * @returns Array of export row objects with summary metrics.
+ * @source
+ */
 function buildSummaryRows(
   importStats: ImportStats | null,
   syncStats: SyncStats | null,
@@ -133,6 +153,12 @@ function buildSummaryRows(
   return rows;
 }
 
+/**
+ * Converts match results to export rows with flattened structure.
+ * @param matches - Array of match result objects.
+ * @returns Array of export row objects for each match.
+ * @source
+ */
 function buildMatchRows(matches: Array<MatchForExport>): ExportRow[] {
   return matches.map((match) => {
     const flattened = flattenMatchResult(match);

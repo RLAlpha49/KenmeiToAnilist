@@ -1,3 +1,9 @@
+/**
+ * @packageDocumentation
+ * @module components/ui/switch
+ * @description Toggle switch component for boolean inputs with Radix UI.
+ * @source
+ */
 "use client";
 
 import * as React from "react";
@@ -5,6 +11,12 @@ import * as SwitchPrimitive from "@radix-ui/react-switch";
 
 import { cn } from "@/utils/tailwind";
 
+/**
+ * Switch toggle component wrapping Radix UI switch primitive.
+ * @param props - Standard switch props from Radix UI.
+ * @returns Styled switch toggle element.
+ * @source
+ */
 function Switch({
   className,
   ...props

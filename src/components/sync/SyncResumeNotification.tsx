@@ -1,7 +1,7 @@
 /**
  * @packageDocumentation
- * @module SyncResumeNotification
- * @description React component for notifying the user about interrupted sync sessions and providing resume/discard actions.
+ * @module SyncPage/SyncResumeNotification
+ * @description React component for displaying and managing interrupted sync session resumption.
  */
 import React from "react";
 import { motion } from "framer-motion";
@@ -13,10 +13,10 @@ import { Badge } from "../ui/badge";
  * Props for the SyncResumeNotification component.
  *
  * @property remainingCount - The number of entries remaining from the interrupted sync.
- * @property totalCount - The total number of entries in the original sync.
- * @property lastSyncTime - Timestamp when the sync was last checkpointed.
- * @property onResume - Callback to resume the sync from the checkpoint.
- * @property onDiscard - Callback to discard the checkpoint and start fresh.
+ * @property totalCount - The total number of entries in the original sync session.
+ * @property lastSyncTime - Timestamp (ms) when the sync was last checkpointed.
+ * @property onResume - Callback triggered when user resumes the interrupted sync.
+ * @property onDiscard - Callback triggered when user discards the checkpoint and starts fresh.
  * @source
  */
 export interface SyncResumeNotificationProps {
@@ -29,8 +29,10 @@ export interface SyncResumeNotificationProps {
 
 /**
  * Formats a timestamp into a human-readable relative or absolute time string.
- * @param timestamp - The timestamp to format.
- * @returns A formatted time string.
+ * Shows "just now" for recent timestamps, relative times for same-day events, and absolute times for older events.
+ * @param timestamp - The timestamp (ms) to format.
+ * @returns A formatted time string (e.g., "5 minutes ago" or "Yesterday at 2:30 PM").
+ * @source
  */
 const formatTimestamp = (timestamp: number): string => {
   const now = Date.now();
@@ -61,10 +63,12 @@ const formatTimestamp = (timestamp: number): string => {
 };
 
 /**
- * Displays a notification card for interrupted sync sessions, allowing the user to resume or discard the checkpoint.
+ * Displays a notification card for interrupted sync sessions with resume and discard options.
+ * Shows countdown badge with remaining entries, formatted checkpoint time, and action buttons.
+ * Returns null if no entries are remaining (nothing to resume).
  *
- * @param props - The props for the SyncResumeNotification component.
- * @returns The rendered resume notification React element, or null if no remaining entries.
+ * @param props - Component props containing sync state and action callbacks.
+ * @returns Animated resume notification card, or null if remainingCount <= 0.
  * @source
  */
 const SyncResumeNotificationComponent: React.FC<

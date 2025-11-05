@@ -21,6 +21,7 @@ import { cn } from "@/utils/tailwind";
 
 /**
  * Minimal match result shape containing only kenmeiManga for chapters extraction.
+ * @source
  */
 type MinimalMatchResult = {
   readonly kenmeiManga: {
@@ -35,17 +36,29 @@ interface ChaptersReadDistributionChartProps {
   readonly className?: string;
 }
 
+/**
+ * Bin definition for chapter count histogram.
+ * @source
+ */
 type BinDefinition = {
   readonly label: string;
   readonly min: number;
   readonly max: number | null;
 };
 
+/**
+ * Histogram bin data point with range and count.
+ * @source
+ */
 type BinDatum = {
   readonly range: string;
   readonly count: number;
 };
 
+/**
+ * Summary statistics computed from chapter read values.
+ * @source
+ */
 type StatsSummary = {
   readonly totalChapters: number;
   readonly averageChapters: number;
@@ -63,6 +76,12 @@ const BINS: BinDefinition[] = [
   { label: "500+", min: 501, max: null },
 ];
 
+/**
+ * Finds the bin index for a given chapter value.
+ * @param value - Chapter count to classify.
+ * @returns Index into BINS array, or -1 if no match.
+ * @source
+ */
 function computeBinIndex(value: number): number {
   for (let index = 0; index < BINS.length; index++) {
     const bin = BINS[index];
@@ -75,6 +94,12 @@ function computeBinIndex(value: number): number {
   return -1;
 }
 
+/**
+ * Computes statistical summary (total, average, median, mode) from chapter values.
+ * @param values - Array of chapter counts.
+ * @returns Summary statistics object.
+ * @source
+ */
 function calculateStatistics(values: number[]): StatsSummary {
   if (values.length === 0) {
     return {

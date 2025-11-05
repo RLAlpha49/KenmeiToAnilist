@@ -1,5 +1,5 @@
 /**
- * @file Cache handling operations for search orchestration
+ * Cache handling operations for search orchestration
  * @module matching/orchestration/cache-handlers
  */
 
@@ -68,17 +68,6 @@ export function handleCacheBypass(title: string, cacheKey: string): void {
  * Skip rules take precedence over accept rules - if a match satisfies both, it is skipped.
  * Accept rule confidence boost is applied immediately within this function for cached results,
  * ensuring consistent confidence values before returning to the caller.
- *
- * @example
- * ```typescript
- * // With custom rules enabled
- * const response = processCachedResults("Naruto", "naruto_key", kenmeiManga);
- * // Result includes skip-rule filtered matches and accept-rule boosted confidence
- *
- * // Without custom rules (backward compatible)
- * const response = processCachedResults("Naruto", "naruto_key");
- * // Result is only system-filtered
- * ```
  *
  * @source
  */

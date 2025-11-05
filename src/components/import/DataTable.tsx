@@ -22,11 +22,9 @@ import { Loader2, ChevronDown } from "lucide-react";
 
 /**
  * Props for the DataTable component.
- *
- * @property data - Array of KenmeiMangaItem objects to display in the table
- * @property itemsPerPage - Optional number of items to show per page (default: 50)
- * @property isLoading - Optional flag to display skeleton rows during initial data load
- *
+ * @property data - Array of KenmeiMangaItem objects to display in the table.
+ * @property itemsPerPage - Number of items to show per page. Defaults to 50.
+ * @property isLoading - Optional flag to display skeleton rows during initial data load.
  * @internal
  * @source
  */
@@ -38,10 +36,9 @@ export interface DataTableProps {
 
 /**
  * Renders a paginated table of manga items with load-more functionality.
- * Displays columns based on available data: title, status, chapters, volumes, score, last read.
- * Shows skeleton rows when loading initial data.
- * @param props - Table configuration including data and items per page.
- * @returns Table component with pagination support.
+ * Displays columns based on data presence: title, status, chapters, volumes, score, last read.
+ * @param props - Component props.
+ * @returns Paginated table component with load more button.
  * @source
  */
 export function DataTable({
@@ -64,8 +61,8 @@ export function DataTable({
   }, [data, itemsPerPage]);
 
   /**
-   * Loads additional manga items with simulated delay for better UX.
-   * Scrolls to the bottom of the scroll area after loading completes.
+   * Loads additional manga items with a simulated delay for smoother UX.
+   * Scrolls to the bottom of the table after loading completes.
    * @source
    */
   const handleLoadMore = () => {
@@ -103,9 +100,9 @@ export function DataTable({
   const hasLastRead = data.some((item) => item.updated_at || item.created_at);
 
   /**
-   * Formats an ISO date string into a localized date string.
-   * @param dateString - ISO date string to format, or undefined.
-   * @returns Localized date string, or "-" if dateString is invalid/undefined.
+   * Formats an ISO date string into a localized date representation.
+   * @param dateString - ISO date string or undefined.
+   * @returns Localized date string or "-" if invalid/undefined.
    * @source
    */
   const formatDate = (dateString: string | undefined) => {
@@ -120,8 +117,8 @@ export function DataTable({
 
   /**
    * Returns a styled Badge component for the given manga status.
-   * @param status - The manga status string.
-   * @returns Badge component with appropriate styling and label.
+   * @param status - Manga status string.
+   * @returns Badge component with status-specific styling and label.
    * @source
    */
   const getStatusBadge = (status: string) => {

@@ -28,6 +28,13 @@ import { formatLabel, statusLabel } from "./labels";
 
 /**
  * Props for the AdvancedFilterPanel component.
+ * @property filters - Current filter state.
+ * @property onFiltersChange - Callback when filters are modified.
+ * @property availableGenres - List of available genres to filter by.
+ * @property availableFormats - List of available formats to filter by.
+ * @property availableStatuses - List of available publication statuses to filter by.
+ * @property matchCount - Total number of matches to display.
+ * @source
  */
 interface AdvancedFilterPanelProps {
   filters: AdvancedMatchFilters;
@@ -39,7 +46,13 @@ interface AdvancedFilterPanelProps {
 }
 
 /**
- * Filter preset configuration.
+ * Filter preset configuration for quick-apply filtering.
+ * @property id - Unique identifier for the preset.
+ * @property name - Display name of the preset.
+ * @property description - Tooltip description of what the preset filters for.
+ * @property icon - Icon component to display with the preset.
+ * @property filters - Filter values to apply when selected.
+ * @source
  */
 interface FilterPreset {
   id: string;
@@ -50,7 +63,9 @@ interface FilterPreset {
 }
 
 /**
- * Built-in filter presets for quick filtering.
+ * Built-in filter presets for quick filtering of manga matches.
+ * Includes presets for high confidence, low confidence, specific formats, and statuses.
+ * @source
  */
 const FILTER_PRESETS: FilterPreset[] = [
   {
@@ -105,7 +120,10 @@ const FILTER_PRESETS: FilterPreset[] = [
 
 /**
  * Advanced filter panel for manga matching results.
- * Provides filtering by confidence, format, genres, and publication status.
+ * Provides collapsible filtering by confidence score, format, genres, and publication status.
+ * Includes preset filters and real-time genre search functionality.
+ * @returns React component for advanced filtering UI.
+ * @source
  */
 export function AdvancedFilterPanel({
   filters,
@@ -118,7 +136,7 @@ export function AdvancedFilterPanel({
   const [isOpen, setIsOpen] = useState(false);
   const [genreSearch, setGenreSearch] = useState("");
 
-  // Filter genres by search term
+  // Memoize filtered genres to avoid recomputation on every render
   const filteredGenres = useMemo(() => {
     if (!genreSearch.trim()) return availableGenres;
     const search = genreSearch.toLowerCase();
@@ -127,7 +145,7 @@ export function AdvancedFilterPanel({
     );
   }, [availableGenres, genreSearch]);
 
-  // Count active filters
+  // Memoize active filter count for badge display
   const activeFilterCount = useMemo(() => {
     const isDefaultConfidence =
       filters.confidence.min === 0 && filters.confidence.max === 100;
@@ -139,12 +157,12 @@ export function AdvancedFilterPanel({
     );
   }, [filters]);
 
-  // Handle confidence change
+  // Handle confidence range change
   const handleConfidenceChange = (value: { min: number; max: number }) => {
     onFiltersChange({ ...filters, confidence: value });
   };
 
-  // Handle format toggle
+  // Add or remove format filter
   const handleFormatToggle = (format: string) => {
     const newFormats = filters.formats.includes(format)
       ? filters.formats.filter((f) => f !== format)
@@ -152,7 +170,7 @@ export function AdvancedFilterPanel({
     onFiltersChange({ ...filters, formats: newFormats });
   };
 
-  // Handle genre toggle
+  // Add or remove genre filter
   const handleGenreToggle = (genre: string) => {
     const newGenres = filters.genres.includes(genre)
       ? filters.genres.filter((g) => g !== genre)
@@ -160,7 +178,7 @@ export function AdvancedFilterPanel({
     onFiltersChange({ ...filters, genres: newGenres });
   };
 
-  // Handle status toggle
+  // Add or remove publication status filter
   const handleStatusToggle = (status: string) => {
     const newStatuses = filters.publicationStatuses.includes(status)
       ? filters.publicationStatuses.filter((s) => s !== status)
@@ -168,12 +186,12 @@ export function AdvancedFilterPanel({
     onFiltersChange({ ...filters, publicationStatuses: newStatuses });
   };
 
-  // Handle preset application
+  // Apply preset filter configuration
   const handlePresetApply = (preset: FilterPreset) => {
     onFiltersChange(preset.filters);
   };
 
-  // Handle clear all filters
+  // Reset all filters to default state
   const handleClearAll = () => {
     onFiltersChange({
       confidence: { min: 0, max: 100 },
@@ -183,11 +201,12 @@ export function AdvancedFilterPanel({
     });
   };
 
-  // Handle select/clear all genres
+  // Select all genres at once
   const handleSelectAllGenres = () => {
     onFiltersChange({ ...filters, genres: availableGenres });
   };
 
+  // Deselect all genres
   const handleClearAllGenres = () => {
     onFiltersChange({ ...filters, genres: [] });
   };

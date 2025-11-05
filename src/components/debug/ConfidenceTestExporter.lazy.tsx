@@ -1,6 +1,7 @@
 import React, { lazy, Suspense, Component, ErrorInfo, ReactNode } from "react";
 import { DebugLoadingFallback } from "../ui/loading-fallback";
 
+// Lazy-load the actual component to reduce initial bundle size
 const ConfidenceTestExporterComponent = lazy(() =>
   import("./ConfidenceTestExporter").then((module) => ({
     default: module.ConfidenceTestExporter,
@@ -8,8 +9,9 @@ const ConfidenceTestExporterComponent = lazy(() =>
 );
 
 /**
- * Lightweight error boundary for lazy-loaded confidence test exporter.
- * Displays a small error message and retry option on component load failures.
+ * Error boundary for lazy-loaded confidence test exporter.
+ * Catches and handles component load failures gracefully with retry option.
+ * @source
  */
 class ConfidenceTestExporterErrorBoundary extends Component<
   { children: ReactNode },
@@ -20,14 +22,26 @@ class ConfidenceTestExporterErrorBoundary extends Component<
     this.state = { hasError: false };
   }
 
+  /**
+   * Update state so the next render shows the error UI.
+   * @source
+   */
   static getDerivedStateFromError(error: Error) {
     return { hasError: true, error };
   }
 
+  /**
+   * Log error details for debugging purposes.
+   * @source
+   */
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("[ConfidenceTestExporter] Failed to load:", error, errorInfo);
   }
 
+  /**
+   * Clear error state and retry loading the component.
+   * @source
+   */
   handleRetry = () => {
     this.setState({ hasError: false, error: undefined });
   };
@@ -52,9 +66,11 @@ class ConfidenceTestExporterErrorBoundary extends Component<
 }
 
 /**
- * Lazy-loaded ConfidenceTestExporter wrapper with Suspense boundary and error handling.
- * Only loads when debug mode is active in MatchCard.
- * Falls back gracefully on load errors.
+ * Lazy-loaded ConfidenceTestExporter with Suspense and error handling.
+ * Loads only when debug mode is active, falling back gracefully on errors.
+ * @param props - Component props forwarded to lazy-loaded component
+ * @returns Wrapped component with loading and error boundaries
+ * @source
  */
 export function ConfidenceTestExporter(
   props: Readonly<

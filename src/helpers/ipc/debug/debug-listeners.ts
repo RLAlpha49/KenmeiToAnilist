@@ -19,10 +19,12 @@ export function setupDebugIPC(mainWindow: BrowserWindow): void {
   console.log("[DebugIPC] Setting up debug IPC handlers...");
 
   /**
-   * Handler for retrieving memory statistics from the main process.
+   * IPC handler for retrieving process memory statistics.
    * Combines process memory info and V8 heap statistics.
-   *
-   * @returns MemoryMetrics object with private, shared, heap memory in KB
+   * @param _event - The IPC main invoke event (unused).
+   * @returns MemoryMetrics object containing private, shared, and heap memory usage in KB, plus timestamp.
+   * @throws Catches errors and returns fallback metrics to prevent crashing performance monitoring.
+   * @source
    */
   secureHandle(
     "debug:get-memory-stats",

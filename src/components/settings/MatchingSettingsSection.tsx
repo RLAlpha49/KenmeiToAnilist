@@ -13,18 +13,28 @@ import { highlightText } from "@/utils/textHighlight";
 import { cn } from "@/utils/tailwind";
 import type { MatchConfig } from "@/utils/storage";
 
+/**
+ * Props for MatchingSettingsSection component.
+ * @source
+ */
 interface MatchingSettingsSectionProps {
+  /** Unique identifier for this settings section. */
   sectionId: string;
+  /** Current matching configuration. */
   matchConfig: MatchConfig;
+  /** Current search query. */
   searchQuery: string;
+  /** Currently highlighted section ID. */
   highlightedSectionId: string | null;
+  /** Callback when matching config changes. */
   onMatchConfigChange: (config: MatchConfig, field: string) => void;
 }
 
 /**
  * Renders individual matching settings sections.
  * Supports one-shots, adult content, blur adult, comick, mangadex, and custom rules.
- *
+ * @param props - Component props.
+ * @returns The rendered matching settings section.
  * @source
  */
 export function MatchingSettingsSection({

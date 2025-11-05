@@ -17,8 +17,7 @@ import { Badge } from "../ui/badge";
 
 /**
  * Props for the CacheClearingNotification component.
- *
- * @property cacheClearingCount - The number of manga entries being cleared from cache.
+ * @property cacheClearingCount - Number of manga entries being cleared from cache.
  * @source
  */
 export interface CacheClearingNotificationProps {
@@ -26,10 +25,10 @@ export interface CacheClearingNotificationProps {
 }
 
 /**
- * CacheClearingNotification React component that displays a modal notification while cache is being cleared for selected manga.
- *
- * @param props - {@link CacheClearingNotificationProps}
- * @returns The rendered notification React element.
+ * Notification component displaying cache clearing progress for selected manga.
+ * Shows a modal overlay with animated loading indicator and progress bar.
+ * @param props - Component props containing the count of manga being cleared.
+ * @returns Rendered notification modal with animated loading state.
  * @source
  */
 export const CacheClearingNotification: React.FC<

@@ -31,7 +31,7 @@ import { GET_VIEWER } from "../api/anilist/queries";
 
 /**
  * Props for the AuthProvider component.
- * @property children - React children to wrap with authentication context.
+ * @property children - React children elements to wrap with authentication context.
  * @source
  */
 interface AuthProviderProps {
@@ -39,7 +39,16 @@ interface AuthProviderProps {
 }
 
 /**
- * Debug snapshot of the authentication context state.
+ * Debug snapshot of the authentication context state for inspection and time-travel debugging.
+ * Captures the complete authentication state at a point in time for debugging purposes.
+ * @property authState - Current authentication state including credentials and user info.
+ * @property isLoading - Whether an authentication operation is in progress.
+ * @property error - The latest authentication error message, if any.
+ * @property statusMessage - User-facing status message during authentication flow.
+ * @property isBrowserAuthFlow - Whether an OAuth browser flow is currently active.
+ * @property customCredentials - Custom API credentials if user-provided, otherwise null.
+ * @property isOnline - Whether the application currently has network connectivity.
+ * @property wasOffline - Whether the application was offline since the last check.
  * @source
  */
 interface AuthDebugSnapshot {
@@ -54,10 +63,21 @@ interface AuthDebugSnapshot {
 }
 
 /**
- * Provides authentication context including state and actions (login, logout, token refresh).
- * Manages OAuth flow, credential storage, and user profile data.
+ * Provides complete authentication context to child components via split context pattern.
+ * Manages OAuth flows, token lifecycle, credential storage, user profiles, offline queue,
+ * and network status. Integrates with Electron IPC for secure credential storage and OAuth windows.
+ *
+ * **Key Features:**
+ * - Split context (state/actions) to minimize re-renders
+ * - OAuth flow management with browser window integration
+ * - Automatic token refresh on expiry
+ * - Offline queue for background requests when connectivity is lost
+ * - Network status monitoring with automatic recovery
+ * - Debug inspection and state snapshots via Debug Context
+ * - Rate limit aware (checks online status before auth operations)
+ *
  * @param children - React children to wrap with authentication context.
- * @returns Provider component with split contexts for state and actions.
+ * @returns Provider component exposing AuthStateContext and AuthActionsContext.
  * @source
  */
 export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
@@ -214,10 +234,11 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
   }, [authState]);
 
   /**
-   * Validates API credentials have required fields.
+   * Validates that API credentials have all required fields (clientId, clientSecret, redirectUri).
+   * Displays toast error and throws if validation fails.
    * @param credentials - The credentials object to validate.
-   * @returns Validated credentials object.
-   * @throws If any required field is missing.
+   * @returns The validated credentials object.
+   * @throws {Error} If any required credential field is missing.
    * @source
    */
   const validateCredentials = (credentials: APICredentials) => {
@@ -234,8 +255,12 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
   };
 
   /**
-   * Fetches and updates user profile data from AniList using access token.
-   * @param accessToken - The OAuth access token.
+   * Fetches and caches the authenticated user's profile data from AniList GraphQL API.
+   * Updates authentication state with username, user ID, and avatar URL.
+   * Sets user context in Sentry error tracking and records debug event on success.
+   * Gracefully degrades with default values if profile fetch fails but token is valid.
+   * @param accessToken - The OAuth access token for API requests.
+   * @throws Errors are caught and logged; state is partially updated as fallback.
    * @source
    */
   const handleUserProfile = async (accessToken: string) => {
@@ -835,7 +860,8 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
   );
 
   /**
-   * Clears authentication state and removes stored credentials.
+   * Clears authentication state and removes persisted credentials from storage.
+   * Resets Sentry user context and records logout event in debug logs.
    * @source
    */
   const logout = useCallback(() => {
@@ -870,7 +896,8 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
   }, [authState.credentialSource, authState.username, recordEvent]);
 
   /**
-   * Cancels an in-progress OAuth authentication flow.
+   * Cancels an in-progress OAuth authentication flow immediately.
+   * Invalidates in-flight auth responses via attempt ID increment and clears UI state.
    * @source
    */
   const cancelAuth = useCallback(async () => {
@@ -904,9 +931,10 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
   }, [recordEvent]);
 
   /**
-   * Updates the credential source (default or custom) used for OAuth flow.
-   * Prevents switching during active authentication.
-   * @param source - The credential source to use.
+   * Updates the credential source used for OAuth flows (default or custom credentials).
+   * Prevents switching source during an active authentication flow to avoid state mismatch.
+   * Only updates if the new source differs from the current source.
+   * @param source - The credential source: "default" (built-in) or "custom" (user-provided).
    * @source
    */
   const setCredentialSource = useCallback(
@@ -936,10 +964,12 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
   );
 
   /**
-   * Updates the custom API credentials (clientId, clientSecret, redirectUri).
-   * @param clientId - The OAuth client ID.
-   * @param clientSecret - The OAuth client secret.
-   * @param redirectUri - The OAuth redirect URI.
+   * Updates custom API credentials (clientId, clientSecret, redirectUri) for authentication.
+   * Only updates if values have actually changed from the current custom credentials.
+   * Useful for allowing users to bring their own AniList API credentials.
+   * @param clientId - The OAuth client ID from AniList.
+   * @param clientSecret - The OAuth client secret (kept secure in Electron store).
+   * @param redirectUri - The OAuth redirect URI (must match AniList application settings).
    * @source
    */
   const updateCustomCredentials = useCallback(
@@ -972,11 +1002,12 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
   );
 
   /**
-   * Enqueue a task to be executed when the application comes online.
-   * If already online, executes immediately. If offline, stores the task with
-   * deduplication (newer task with same taskId replaces older one).
+   * Enqueues a task to be executed when the application comes online.
+   * If already online, executes the task immediately. If offline, stores the task with
+   * deduplication: a newer task with the same taskId replaces an older one.
+   * Enforces a maximum queue length (100 tasks) and drops oldest tasks if exceeded.
    * @param taskId - Unique identifier for the task (used for deduplication).
-   * @param fn - Async function to execute when online.
+   * @param fn - Async function to execute when online (should be resilient to interruption).
    * @source
    */
   const enqueueWhenOnline = useCallback(
@@ -1024,8 +1055,10 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
   );
 
   /**
-   * Drain the offline queue when connectivity is restored.
-   * Executes tasks sequentially with delay between them.
+   * Drains the offline queue when connectivity is restored.
+   * Executes tasks sequentially with a 150ms delay between tasks to avoid overwhelming the API.
+   * Tasks that fail are logged but do not prevent subsequent tasks from executing.
+   * Clears the queue after all tasks have been attempted.
    * @source
    */
   const drainOfflineQueue = useCallback(async () => {
@@ -1080,16 +1113,15 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
   }, [isOnline, offlineQueue.length, drainOfflineQueue]);
 
   /**
-   * Fetches viewer profile data from AniList GraphQL API.
-   *
-   * Uses the centralized `request()` function from the AniList client, which provides:
+   * Fetches the authenticated user's profile from AniList GraphQL API.
+   * Uses the centralized `request()` function which provides:
    * - Automatic retry with exponential backoff for transient errors
-   * - Rate limit handling and awareness
+   * - Rate limit handling and detection
    * - Consistent error handling across all API operations
    *
-   * @param accessToken - The OAuth access token.
-   * @returns The viewer profile response.
-   * @throws If the API request fails after exhausting retries.
+   * @param accessToken - The OAuth access token to authenticate the request.
+   * @returns The viewer profile response with user ID, name, and avatar URLs.
+   * @throws {Error} If the API request fails after exhausting retries.
    * @source
    */
   const fetchUserProfile = async (

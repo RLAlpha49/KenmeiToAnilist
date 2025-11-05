@@ -10,6 +10,7 @@ import type { ShellOperationResult } from "../types";
 
 /**
  * Cache control options for AniList requests.
+ * @property bypassCache - Bypass the response cache for this request.
  * @source
  */
 export interface CacheControl {
@@ -18,6 +19,11 @@ export interface CacheControl {
 
 /**
  * Typed request payload for AniList GraphQL requests.
+ * @property query - The GraphQL query or mutation string.
+ * @property variables - Optional variables for the query.
+ * @property token - Optional authorization token for authenticated requests.
+ * @property cacheControl - Optional cache control options.
+ * @property noRetry - Optional flag to disable retry logic for this request.
  * @source
  */
 export interface AniListRequest {
@@ -30,7 +36,9 @@ export interface AniListRequest {
 
 /**
  * Exposes the Electron API context bridge to the renderer process.
+ * Provides secure IPC interfaces for AniList GraphQL requests, manga source searches, and shell operations.
  *
+ * @throws {Error} If Electron modules (contextBridge or ipcRenderer) are unavailable.
  * @source
  */
 export function exposeApiContext() {

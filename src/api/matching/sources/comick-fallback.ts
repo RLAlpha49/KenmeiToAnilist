@@ -16,12 +16,12 @@ import {
 import type { ComickSourceMap } from "./types";
 
 /**
- * Execute Comick fallback search when no AniList results found.
+ * Execute Comick fallback when no AniList results are found.
  * @param title - Manga title to search for.
- * @param token - Optional authentication token.
- * @param finalResults - Current results (fallback if search fails).
- * @param searchConfig - Search configuration.
- * @returns Results and Comick source map.
+ * @param token - Optional authentication token for Comick API.
+ * @param finalResults - Current results (returned unchanged if fallback fails or is disabled).
+ * @param searchConfig - Search configuration including cache bypass flag.
+ * @returns Processed Comick results and source map.
  * @source
  */
 export async function executeComickFallback(

@@ -36,16 +36,22 @@ interface SyncMetricsChartProps {
   readonly className?: string;
 }
 
+/**
+ * Composed chart data point with successful, failed counts and success rate.
+ * @source
+ */
 type ChartDatum = {
   readonly name: string;
   readonly successful: number;
   readonly failed: number;
   readonly successRate: number;
 };
+
 /**
- * Determines badge tone based on success rate.
- * @param successRate - Success percentage.
- * @returns Tailwind class name for badge styling.
+ * Determines badge styling based on success rate percentage.
+ * Returns Tailwind classes for visual feedback on sync health.
+ * @param successRate - Success percentage (0-100).
+ * @returns Tailwind class name string for badge styling.
  * @source
  */
 function getSuccessRateTone(successRate: number): string {
@@ -57,9 +63,10 @@ function getSuccessRateTone(successRate: number): string {
 }
 
 /**
- * Composed chart visualizing sync performance.
+ * Composed chart visualizing sync performance metrics.
+ * Displays successful/failed counts as bars and success rate as an overlay line.
  * @param props - Component props containing sync statistics.
- * @returns Composed chart with badges or empty placeholder.
+ * @returns Composed chart with metrics and badges or empty placeholder.
  * @source
  */
 export const SyncMetricsChart: FC<SyncMetricsChartProps> = React.memo(

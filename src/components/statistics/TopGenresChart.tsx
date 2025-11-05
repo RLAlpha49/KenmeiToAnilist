@@ -20,6 +20,7 @@ import { cn } from "@/utils/tailwind";
 
 /**
  * Minimal match result shape containing only selectedMatch for genre extraction.
+ * @source
  */
 type MinimalMatchResult = {
   readonly selectedMatch?: {
@@ -35,16 +36,25 @@ interface TopGenresChartProps {
   readonly className?: string;
 }
 
+/**
+ * Genre frequency data with genre name and count.
+ * @source
+ */
 type GenreDatum = {
   readonly genre: string;
   readonly count: number;
 };
 
+/**
+ * Maximum number of top genres to display in the chart.
+ * @source
+ */
 const MAX_GENRES = 10;
 
 /**
  * TopGenresChart renders a horizontal bar chart summarizing the top manga genres.
  * Genres are derived from selected AniList matches with fallback for missing data.
+ * Displays up to MAX_GENRES sorted by frequency.
  * @param props - Component props containing match results and optional className.
  * @returns A bar chart or empty state when insufficient data is available.
  * @source

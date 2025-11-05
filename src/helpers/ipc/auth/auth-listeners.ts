@@ -12,18 +12,17 @@ import fetch from "node-fetch";
 import { withGroupAsync, startGroup, endGroup } from "../../../utils/logging";
 import type { TokenExchangeResponse } from "../../../types/auth";
 
-let authCancelled = false;
-let loadTimeout: NodeJS.Timeout | null = null;
-let authServer: http.Server | null = null;
-let authResolve: ((code: string) => void) | null = null;
-let authReject: ((error: Error) => void) | null = null;
+let authCancelled = false; // Flag to track if user cancelled auth
+let loadTimeout: NodeJS.Timeout | null = null; // Timeout handle for auth process
+let authServer: http.Server | null = null; // HTTP server for OAuth callback
+let authResolve: ((code: string) => void) | null = null; // Promise resolver for auth code
+let authReject: ((error: Error) => void) | null = null; // Promise rejecter for auth errors
 
-// Use a more reliable default port that doesn't require admin privileges
+/** Port for OAuth callback server (non-privileged, no admin required). @source */
 const DEFAULT_PORT = 8765;
 
 /**
  * Represents authentication credentials for AniList API.
- *
  * @property source - The credential source ("default" or "custom").
  * @property clientId - The client ID string.
  * @property clientSecret - The client secret string.
@@ -37,11 +36,12 @@ interface AuthCredentials {
   redirectUri: string;
 }
 
-// Get client ID and secret from environment or provide defaults
+/** Client ID for default AniList OAuth app. @source */
 const DEFAULT_CLIENT_ID = process.env.VITE_ANILIST_CLIENT_ID || "";
+/** Client secret for default AniList OAuth app. @source */
 const DEFAULT_CLIENT_SECRET = process.env.VITE_ANILIST_CLIENT_SECRET || "";
 
-// Store the credentials for each source
+/** In-memory store of user credentials by source. @source */
 const storedCredentials: Record<string, AuthCredentials | null> = {
   default: {
     source: "default",
@@ -53,8 +53,11 @@ const storedCredentials: Record<string, AuthCredentials | null> = {
 };
 
 /**
- * Validate token exchange parameters.
+ * Validates token exchange request parameters.
+ * @param params - Token exchange parameters to validate.
+ * @returns Validation result with status and optional error message.
  * @internal
+ * @source
  */
 function validateTokenExchangeParams(params: {
   clientId: string;
@@ -64,7 +67,7 @@ function validateTokenExchangeParams(params: {
 }): { isValid: boolean; error?: string } {
   const { clientId, clientSecret, redirectUri, code } = params;
 
-  // Validation guard: ensure required fields are present and non-empty
+  // Check for missing required fields
   const missing: string[] = [];
   if (!clientId) missing.push("clientId");
   if (!clientSecret) missing.push("clientSecret");
@@ -81,7 +84,7 @@ function validateTokenExchangeParams(params: {
     };
   }
 
-  // Basic sanity checks
+  // Warn on suspicious credential lengths
   if (clientId.length < 4 || clientSecret.length < 8) {
     console.warn("[AuthIPC] auth:exchangeToken suspicious credential lengths", {
       clientIdLen: clientId.length,
@@ -89,7 +92,7 @@ function validateTokenExchangeParams(params: {
     });
   }
 
-  // Redirect URI strictness: AniList requires exact match including protocol and path
+  // Validate redirect URI format and protocol
   try {
     const parsed = new URL(redirectUri);
     if (!/^https?:$/.test(parsed.protocol)) {
@@ -109,8 +112,11 @@ function validateTokenExchangeParams(params: {
 }
 
 /**
- * Perform a single token exchange HTTP request.
+ * Exchanges an authorization code for an access token via AniList API.
+ * @param params - Token exchange parameters (clientId, clientSecret, redirectUri, code).
+ * @returns Promise with token exchange result (success or error).
  * @internal
+ * @source
  */
 async function performTokenExchange(params: {
   clientId: string;
@@ -143,6 +149,7 @@ async function performTokenExchange(params: {
 
     if (!response.ok) {
       const errorText = await response.text();
+      // Redact sensitive credentials from error logs
       const redactedError = errorText.replaceAll(
         /client_secret[^&\s]*/gi,
         "client_secret=[REDACTED]",
@@ -188,8 +195,11 @@ async function performTokenExchange(params: {
 }
 
 /**
- * Check if an error is a network error that should be retried.
+ * Detects if an error is a network error that warrants retrying.
+ * @param error - The error to check.
+ * @returns True if error is network-related and retryable.
  * @internal
+ * @source
  */
 function isNetworkError(error: unknown): boolean {
   const errorMessage = error instanceof Error ? error.message : String(error);
@@ -203,8 +213,11 @@ function isNetworkError(error: unknown): boolean {
 }
 
 /**
- * Format the final error message for failed token exchange.
+ * Formats a token exchange error into a user-friendly message.
+ * @param lastError - The error to format.
+ * @returns Formatted error message string.
  * @internal
+ * @source
  */
 function formatTokenExchangeError(lastError: unknown): string {
   let errorMessage: string;
@@ -226,16 +239,11 @@ function formatTokenExchangeError(lastError: unknown): string {
 }
 
 /**
- * Validates an OAuth URL before opening it in the browser.
- * Ensures the URL is from AniList and uses HTTPS.
- *
- * @param url - The OAuth URL to validate
- * @returns Validation result with success flag and optional error message
+ * Validates the OAuth URL protocol is HTTPS.
+ * @param url - Parsed OAuth URL.
+ * @returns Validation result.
  * @internal
  * @source
- */
-/**
- * Validates the OAuth URL protocol is HTTPS.
  */
 function validateOAuthProtocol(url: URL): { valid: boolean; error?: string } {
   if (url.protocol !== "https:") {
@@ -248,7 +256,11 @@ function validateOAuthProtocol(url: URL): { valid: boolean; error?: string } {
 }
 
 /**
- * Validates the OAuth URL domain is anilist.co.
+ * Validates the OAuth URL domain is from AniList.
+ * @param url - Parsed OAuth URL.
+ * @returns Validation result.
+ * @internal
+ * @source
  */
 function validateOAuthDomain(url: URL): { valid: boolean; error?: string } {
   if (!url.hostname.endsWith("anilist.co")) {
@@ -261,7 +273,11 @@ function validateOAuthDomain(url: URL): { valid: boolean; error?: string } {
 }
 
 /**
- * Validates the OAuth URL path is the authorize endpoint.
+ * Validates the OAuth URL path points to the authorize endpoint.
+ * @param url - Parsed OAuth URL.
+ * @returns Validation result.
+ * @internal
+ * @source
  */
 function validateOAuthPath(url: URL): { valid: boolean; error?: string } {
   if (!url.pathname.startsWith("/api/v2/oauth/authorize")) {
@@ -274,7 +290,11 @@ function validateOAuthPath(url: URL): { valid: boolean; error?: string } {
 }
 
 /**
- * Validates required OAuth parameters are present.
+ * Validates required OAuth query parameters are present.
+ * @param url - Parsed OAuth URL.
+ * @returns Validation result.
+ * @internal
+ * @source
  */
 function validateOAuthParams(url: URL): { valid: boolean; error?: string } {
   const requiredParams = ["client_id", "response_type"];
@@ -290,7 +310,12 @@ function validateOAuthParams(url: URL): { valid: boolean; error?: string } {
 }
 
 /**
- * Validates redirect_uri parameter if provided.
+ * Validates the redirect_uri parameter matches expected localhost URL.
+ * @param url - Parsed OAuth URL.
+ * @param expectedRedirectUri - Expected redirect URI to validate against.
+ * @returns Validation result.
+ * @internal
+ * @source
  */
 function validateRedirectUri(
   url: URL,
@@ -308,7 +333,7 @@ function validateRedirectUri(
     const redirectUrl = new URL(urlRedirectUri);
     const expectedUrl = new URL(expectedRedirectUri);
 
-    // Must match protocol and hostname
+    // Protocol and hostname must match
     if (
       redirectUrl.protocol !== expectedUrl.protocol ||
       redirectUrl.hostname !== expectedUrl.hostname
@@ -319,7 +344,7 @@ function validateRedirectUri(
       };
     }
 
-    // Must be localhost or 127.0.0.1
+    // Must use localhost loopback
     if (
       redirectUrl.hostname !== "localhost" &&
       redirectUrl.hostname !== "127.0.0.1"
@@ -346,6 +371,15 @@ function validateRedirectUri(
   }
 }
 
+/**
+ * Validates an OAuth URL comprehensively before opening in browser.
+ * Checks protocol (HTTPS), domain (anilist.co), path, and required parameters.
+ * @param url - The OAuth URL to validate.
+ * @param redirectUri - Optional expected redirect URI to validate against.
+ * @returns Validation result with error details if invalid.
+ * @internal
+ * @source
+ */
 function validateOAuthUrl(
   url: string,
   redirectUri?: string,
@@ -385,8 +419,10 @@ function validateOAuthUrl(
 }
 
 /**
- * Add event listeners for authentication-related IPC events
- * @param mainWindow The main application window
+ * Registers IPC event listeners for all authentication-related operations.
+ * Handles OAuth flow, credentials management, and token exchange.
+ * @param mainWindow - The main application browser window.
+ * @source
  */
 export function addAuthEventListeners(mainWindow: BrowserWindow) {
   // Open the OAuth window when requested by the renderer
@@ -685,8 +721,13 @@ export function addAuthEventListeners(mainWindow: BrowserWindow) {
 }
 
 /**
- * Send an HTTP response with HTML content for OAuth callback.
+ * Sends an HTTP response with HTML content for OAuth callback results.
+ * @param res - HTTP response object.
+ * @param statusCode - HTTP status code.
+ * @param message - Message to display to the user.
+ * @param mainWindow - The main window for sending status updates.
  * @internal
+ * @source
  */
 function sendResponse(
   res: http.ServerResponse,
@@ -749,8 +790,12 @@ function sendResponse(
 }
 
 /**
- * Validate and parse an incoming HTTP request URL.
+ * Validates and parses an incoming HTTP request URL.
+ * @param reqUrl - The request URL string.
+ * @param port - The server port.
+ * @returns Parsed URL or validation failure indicator.
  * @internal
+ * @source
  */
 function validateAndParseUrl(
   reqUrl: string | undefined,
@@ -772,8 +817,13 @@ function validateAndParseUrl(
 }
 
 /**
- * Check if the parsed path matches our callback paths.
+ * Checks if a parsed path matches the expected OAuth callback paths.
+ * @param parsedPath - The parsed request path.
+ * @param normalizedCallbackPath - Normalized callback path with leading slash.
+ * @param callbackPath - Original callback path.
+ * @returns True if path matches either normalized or original path.
  * @internal
+ * @source
  */
 function isCallbackPath(
   parsedPath: string,
@@ -784,8 +834,14 @@ function isCallbackPath(
 }
 
 /**
- * Process OAuth callback parameters and handle authentication flow.
+ * Processes OAuth callback parameters and sends appropriate HTTP response.
+ * @param params - URL search parameters from callback.
+ * @param codeProcessed - Flag indicating if a code was already processed.
+ * @param res - HTTP response object.
+ * @param mainWindow - The main window for sending status updates.
+ * @returns Processing result with code if successful.
  * @internal
+ * @source
  */
 function processAuthCallback(
   params: URLSearchParams,
@@ -800,7 +856,7 @@ function processAuthCallback(
     `[AuthIPC] Callback detected: code=${hasCode}, error=${hasError}`,
   );
 
-  // If we already processed a code, don't do it again
+  // Prevent duplicate code processing
   if (codeProcessed) {
     console.debug(
       "[AuthIPC] Code already processed, returning success response",
@@ -814,6 +870,7 @@ function processAuthCallback(
     return { shouldContinue: false, processed: true };
   }
 
+  // Handle OAuth error response
   if (hasError) {
     const error = params.get("error");
     const errorDescription = params.get("error_description");
@@ -830,6 +887,7 @@ function processAuthCallback(
     return { shouldContinue: false, processed: true };
   }
 
+  // Handle successful code response
   if (hasCode) {
     const code = params.get("code");
     if (!code) {
@@ -839,7 +897,7 @@ function processAuthCallback(
     return { shouldContinue: true, code, processed: true };
   }
 
-  // Neither code nor error
+  // Neither code nor error present
   sendResponse(
     res,
     400,
@@ -850,8 +908,12 @@ function processAuthCallback(
 }
 
 /**
- * Handle successful authentication code receipt.
+ * Handles successful authentication code receipt and sends to renderer.
+ * @param code - The authorization code from OAuth callback.
+ * @param res - HTTP response object.
+ * @param mainWindow - The main window for sending code and cleaning up.
  * @internal
+ * @source
  */
 function handleSuccessfulAuth(
   code: string,
@@ -862,11 +924,11 @@ function handleSuccessfulAuth(
 
   // Resolve the promise with the code
   if (authResolve) {
-    // Set a short timeout to allow the response to be sent first
+    // Small delay to allow HTTP response to be sent first
     setTimeout(() => {
       authResolve!(code);
 
-      // Also set a timeout to clean up the server
+      // Schedule server cleanup after code is processed
       setTimeout(() => {
         cleanupAuthServer();
       }, 3000);
@@ -885,8 +947,10 @@ function handleSuccessfulAuth(
 }
 
 /**
- * Set up a timeout for the authentication process.
+ * Creates a timeout for the entire authentication process (2 minutes).
+ * @returns Timeout handle for cleanup.
  * @internal
+ * @source
  */
 function createAuthTimeout(): NodeJS.Timeout {
   return setTimeout(() => {
@@ -898,8 +962,13 @@ function createAuthTimeout(): NodeJS.Timeout {
 }
 
 /**
- * Handle the authentication code promise after the server is running.
+ * Handles the authentication code promise after server is running.
+ * Sends code to renderer or handles cancellation/errors.
+ * @param authCodePromise - Promise that resolves with the auth code.
+ * @param mainWindow - The main window for sending events.
+ * @param redirectUri - The redirect URI for logging.
  * @internal
+ * @source
  */
 function handleAuthCodePromise(
   authCodePromise: Promise<string>,
@@ -914,7 +983,7 @@ function handleAuthCodePromise(
         redirectUri,
       });
 
-      // Make sure this code isn't truncated
+      // Warn if code is suspiciously long
       if (code.length > 500) {
         console.warn(
           "[AuthIPC] Auth code is very long, it may be truncated or malformed",
@@ -924,6 +993,7 @@ function handleAuthCodePromise(
       mainWindow.webContents.send("auth:codeReceived", { code });
     })
     .catch((error) => {
+      // Only send cancelled event if auth wasn't explicitly cancelled by user
       if (!authCancelled) {
         console.debug(
           "[AuthIPC] Auth promise rejected but not cancelled, sending cancelled event...",
@@ -937,12 +1007,13 @@ function handleAuthCodePromise(
 }
 
 /**
- * Start a temporary HTTP server to handle the OAuth callback
- *
+ * Starts a temporary HTTP server to handle the OAuth callback.
+ * Creates a server listening for the authorization callback with automatic port fallback.
  * @param port - The port to listen on.
- * @param callbackPath - The callback path to watch for.
+ * @param callbackPath - The callback path to watch for (e.g., "/callback").
  * @param mainWindow - The main Electron browser window instance.
- * @returns A promise that resolves when the server is started.
+ * @returns Promise that resolves when server is successfully started.
+ * @throws {Error} If server cannot be started after port fallback attempts.
  * @internal
  * @source
  */
@@ -952,7 +1023,7 @@ async function startAuthServer(
   mainWindow: BrowserWindow,
 ): Promise<void> {
   return withGroupAsync(`[AuthIPC] Auth Server (port ${port})`, async () => {
-    // Cleanup any existing server
+    // Clean up any existing server first
     cleanupAuthServer();
 
     // Normalize the callback path
@@ -964,7 +1035,7 @@ async function startAuthServer(
       `[AuthIPC] Starting auth server on port ${port}, watching for path: ${normalizedCallbackPath}`,
     );
 
-    // Flag to track if we've already processed a code
+    // Flag to prevent duplicate code handling
     let codeProcessed = false;
 
     // Create and start the server
@@ -1048,10 +1119,10 @@ async function startAuthServer(
           resolve();
         });
 
-        // Handle server errors
+        // Handle server errors (e.g., port already in use)
         authServer.on("error", (err: NodeJS.ErrnoException) => {
-          // Handle port already in use - try the next port
           if (err.code === "EADDRINUSE") {
+            // Port in use, try next port
             const nextPort = Number.parseInt(port) + 1;
             console.warn(
               `[AuthIPC] Port ${port} already in use, attempting port ${nextPort}`,
@@ -1088,12 +1159,13 @@ async function startAuthServer(
 }
 
 /**
- * Clean up the auth server and related resources
- *
+ * Cleans up the auth server and all related resources.
+ * Closes the HTTP server, clears timeouts, and resets promise handlers.
  * @internal
  * @source
  */
 function cleanupAuthServer() {
+  // Close the HTTP server
   if (authServer) {
     try {
       authServer.close();
@@ -1109,7 +1181,7 @@ function cleanupAuthServer() {
     loadTimeout = null;
   }
 
-  // Clear the promise resolvers
+  // Reset the promise handlers
   authResolve = null;
   authReject = null;
 }

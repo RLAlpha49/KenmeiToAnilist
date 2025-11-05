@@ -12,7 +12,7 @@ import React, { type ReactNode } from "react";
 
 /**
  * Props for the DragWindowRegion component.
- * @property title - Optional title to display in the draggable region.
+ * @property title - Optional title displayed in the draggable region.
  * @internal
  * @source
  */
@@ -22,7 +22,8 @@ export interface DragWindowRegionProps {
 
 /**
  * Draggable window region with minimize, maximize, and close buttons for Electron.
- * @param title - Optional title to display in the draggable region.
+ * @param props - Component properties.
+ * @param props.title - Optional title to display in the draggable region.
  * @returns Draggable region with window control buttons.
  * @source
  */
@@ -44,9 +45,8 @@ export default function DragWindowRegion({
 }
 
 /**
- * Renders the window control buttons (minimize, maximize, close) for Electron.
- * @returns A React element with window control buttons.
- * @internal
+ * Renders window control buttons (minimize, maximize, close) for Electron.
+ * @returns Window control buttons element.
  * @source
  */
 export function WindowButtons() {

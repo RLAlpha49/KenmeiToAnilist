@@ -9,6 +9,7 @@ import type { MatchEngineConfig } from "@/api/matching/match-engine";
 
 /**
  * Configuration for the search service.
+ *
  * @source
  */
 export interface SearchServiceConfig {
@@ -38,6 +39,7 @@ export interface SearchServiceConfig {
 
 /**
  * Response from manga search containing matches and pagination.
+ *
  * @source
  */
 export interface MangaSearchResponse {
@@ -49,6 +51,7 @@ export interface MangaSearchResponse {
 
 /**
  * Single manga match with confidence and source information.
+ *
  * @source
  */
 export interface MangaMatch {
@@ -82,6 +85,7 @@ export interface MangaMatch {
 
 /**
  * Result of search loop execution.
+ *
  * @source
  */
 export interface SearchLoopResult {
@@ -93,6 +97,7 @@ export interface SearchLoopResult {
 
 /**
  * Default search service configuration.
+ *
  * @source
  */
 export const DEFAULT_SEARCH_CONFIG: SearchServiceConfig = {

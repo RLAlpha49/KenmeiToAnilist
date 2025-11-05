@@ -13,12 +13,12 @@ import {
 } from "./window-channels";
 
 /**
- * Registers IPC event listeners for window actions (minimize, maximize, close).
- *
- * @param mainWindow - The main Electron browser window instance.
+ * Registers IPC handlers for window control operations.
+ * @param mainWindow - Main application window for control operations.
  * @source
  */
 export function addWindowEventListeners(mainWindow: BrowserWindow) {
+  // Minimize window
   secureHandle(
     WIN_MINIMIZE_CHANNEL,
     () => {
@@ -27,6 +27,7 @@ export function addWindowEventListeners(mainWindow: BrowserWindow) {
     mainWindow,
   );
 
+  // Toggle maximize state
   secureHandle(
     WIN_MAXIMIZE_CHANNEL,
     () => {
@@ -39,6 +40,7 @@ export function addWindowEventListeners(mainWindow: BrowserWindow) {
     mainWindow,
   );
 
+  // Close window
   secureHandle(
     WIN_CLOSE_CHANNEL,
     () => {

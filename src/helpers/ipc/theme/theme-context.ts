@@ -14,8 +14,9 @@ import {
 } from "./theme-channels";
 
 /**
- * Exposes the Electron theme mode context bridge to the renderer process.
- *
+ * Exposes theme mode IPC methods to the renderer process via context bridge.
+ * Provides current, toggle, dark, light, and system theme operations.
+ * @throws {Error} If electron modules are unavailable.
  * @source
  */
 export function exposeThemeContext() {

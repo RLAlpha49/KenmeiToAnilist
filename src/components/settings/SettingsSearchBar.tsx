@@ -9,20 +9,37 @@ import { Search, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 
+/**
+ * Search result from settings search.
+ * @source
+ */
+interface SearchResult {
+  /** Matched section information. */
+  section: { id: string; title: string; tab: string };
+  /** Match score (higher = better match). */
+  score: number;
+}
+
+/**
+ * Props for SettingsSearchBar component.
+ * @source
+ */
 interface SettingsSearchBarProps {
+  /** Current search query. */
   searchQuery: string;
-  searchResults: Array<{
-    section: { id: string; title: string; tab: string };
-    score: number;
-  }>;
+  /** Results from the current search. */
+  searchResults: SearchResult[];
+  /** Reference to search input element. */
   searchInputRef: React.RefObject<HTMLInputElement | null>;
+  /** Callback when search query changes. */
   onSearchChange: (query: string) => void;
 }
 
 /**
  * Search bar component for filtering settings sections.
  * Supports keyboard shortcut (Ctrl+F) and displays result count.
- *
+ * @param props - Component props.
+ * @returns The rendered search bar.
  * @source
  */
 export function SettingsSearchBar({

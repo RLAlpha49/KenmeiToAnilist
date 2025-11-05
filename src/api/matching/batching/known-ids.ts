@@ -1,5 +1,5 @@
 /**
- * @file Process manga with known AniList IDs via batch fetching
+ * Process manga with known AniList IDs via batch fetching
  * @module matching/batching/known-ids
  */
 

@@ -1,5 +1,5 @@
 /**
- * @file Manga search service - Main public API
+ * Manga search service - Main public API
  * @module matching/search-service
  *
  * This is the main entry point for manga search and matching operations.
@@ -31,7 +31,7 @@ import { CancelledError, captureError, ErrorType } from "@/utils/errorHandling";
 /**
  * Searches AniList for manga by title with caching and rate limiting.
  *
- * Main entry point providing cache-first strategy, rate-limited API calls, result ranking,
+ * Main entry point using cache-first strategy, rate-limited API calls, result ranking,
  * fallback sources (Comick, MangaDex), and confidence scoring.
  *
  * @param title - Manga title to search for.
@@ -39,6 +39,7 @@ import { CancelledError, captureError, ErrorType } from "@/utils/errorHandling";
  * @param config - Optional search service configuration overrides.
  * @param abortSignal - Optional abort signal to cancel the search.
  * @param specificPage - Optional specific page number (disables pagination).
+ * @param kenmeiManga - Optional Kenmei manga entry for context.
  * @returns Promise resolving to manga search response with matches.
  * @source
  */
@@ -63,8 +64,7 @@ export async function searchMangaByTitle(
 /**
  * Matches a single Kenmei manga with AniList entries using title similarity.
  *
- * Searches for potential matches and applies the match engine to find the best
- * candidate based on title similarity and configuration.
+ * Searches for potential matches and applies the match engine to find the best candidate.
  *
  * @param kenmeiManga - Kenmei manga entry to match.
  * @param token - Optional authentication token.
@@ -134,7 +134,7 @@ export async function matchSingleManga(
  * @param shouldCancel - Optional function to check for cancellation request.
  * @param abortSignal - Optional abort signal to cancel the operation.
  * @returns Promise resolving to array of MangaMatchResult objects.
- * @throws Error if operation is cancelled or aborted.
+ * @throws {CancelledError} If operation is cancelled or aborted.
  * @source
  */
 export async function batchMatchManga(
@@ -312,8 +312,8 @@ export async function batchMatchManga(
 /**
  * Preloads common manga titles into the cache.
  *
- * Searches and caches frequently accessed titles to reduce API calls.
- * Skips titles already present in cache.
+ * Searches and caches frequently accessed titles to reduce subsequent API calls.
+ * Skips titles already in cache.
  *
  * @param titles - Array of manga titles to preload.
  * @param token - Optional authentication token.
@@ -357,8 +357,8 @@ export async function preloadCommonManga(
 /**
  * Fetches multiple manga by AniList ID in batches with cancellation support.
  *
- * Processes IDs in groups of 25 (API limit) with checks for cancellation
- * between batches. Continues processing even if individual batches fail.
+ * Processes IDs in groups of 25 (API limit) with cancellation checks between batches.
+ * Continues processing even if individual batches fail.
  *
  * @param ids - Array of AniList manga IDs to fetch.
  * @param token - Optional authentication token.

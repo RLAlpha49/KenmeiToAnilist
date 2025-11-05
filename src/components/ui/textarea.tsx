@@ -1,7 +1,19 @@
+/**
+ * @packageDocumentation
+ * @module components/ui/textarea
+ * @description Textarea component for multi-line text input.
+ * @source
+ */
 import * as React from "react";
 
 import { cn } from "@/utils/tailwind";
 
+/**
+ * Textarea element for multi-line text input.
+ * @param props - Standard HTML textarea element props.
+ * @returns Styled textarea element.
+ * @source
+ */
 function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
   return (
     <textarea

@@ -9,7 +9,6 @@ import { MANGA_CACHE_KEY } from "./types";
 /**
  * Persists the in-memory manga cache to localStorage.
  * Safely handles errors if localStorage is unavailable (e.g., in Node.js environments).
- * @returns void
  * @source
  */
 export function saveCache(): void {

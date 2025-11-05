@@ -16,19 +16,24 @@ import {
 import { AlertTriangle, RotateCcw, Home } from "lucide-react";
 
 interface Props {
+  /** Child components to render or fallback UI on error. */
   children: ReactNode;
+  /** Optional custom fallback UI to display when an error is caught. */
   fallback?: ReactNode;
 }
 
 interface State {
+  /** Indicates whether an error has been caught. */
   hasError: boolean;
+  /** The caught error object. */
   error: Error | null;
+  /** React error info including component stack. */
   errorInfo: ErrorInfo | null;
 }
 
 /**
- * Error boundary component that catches React errors and displays an error UI.
- * Logs errors to console and debug context for troubleshooting.
+ * Error boundary component that catches React errors and displays error UI.
+ * Logs errors for debugging and attempts to dispatch to debug context.
  * @source
  */
 export class ErrorBoundary extends Component<Props, State> {
@@ -43,12 +48,12 @@ export class ErrorBoundary extends Component<Props, State> {
 
   /**
    * Updates state when an error is caught to trigger fallback UI.
-   * @param error - The error that was thrown.
-   * @returns Partial state update to set hasError flag.
+   * @param error - The thrown error.
+   * @returns Partial state to set hasError flag.
    * @source
    */
   static getDerivedStateFromError(error: Error): Partial<State> {
-    // Update state so the next render will show the fallback UI
+    // Trigger fallback UI on next render
     return {
       hasError: true,
       error,
@@ -57,13 +62,12 @@ export class ErrorBoundary extends Component<Props, State> {
 
   /**
    * Logs error details and stores error info when an error is caught.
-   * Attempts to dispatch error to debug context for tracking.
-   * @param error - The error that was thrown.
+   * @param error - The thrown error.
    * @param errorInfo - React error info with component stack.
    * @source
    */
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // Log error details to console
+    // Log error to console
     console.error("🚨 [ErrorBoundary] Caught error:", error);
     console.error("🚨 [ErrorBoundary] Error info:", errorInfo);
 
@@ -73,7 +77,7 @@ export class ErrorBoundary extends Component<Props, State> {
       errorInfo,
     });
 
-    // Try to log to debug context if available
+    // Dispatch error to debug context if available
     try {
       const debugEvent = new CustomEvent("debug:log", {
         detail: {
@@ -93,7 +97,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   /**
-   * Resets the error boundary state to show children again.
+   * Resets the error boundary state to render children again.
    * @source
    */
   handleReset = (): void => {
@@ -123,7 +127,7 @@ export class ErrorBoundary extends Component<Props, State> {
   /**
    * Renders the error boundary UI or children.
    * Displays custom fallback if provided, otherwise shows default error UI with recovery options.
-   * @returns The error UI or children based on error state.
+   * @returns Error UI or children based on error state.
    * @source
    */
   render(): ReactNode {

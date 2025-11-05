@@ -1,19 +1,7 @@
 /**
  * @packageDocumentation
  * @module useMatchHandlers
- * @description Custom React hook providing handler functions for managing manga match results and user interactions in the Kenmei to AniList sync tool. Supports both single and batch operations with undo/redo capabilities.
- * @example
- * ```typescript
- * // Single match operation
- * handleAcceptMatch(matchResult);
- *
- * // Batch operation
- * const selectedMatches = matchResults.filter(m => selectedIds.has(m.kenmeiManga.id));
- * handleAcceptMatch({ isBatchOperation: true, matches: selectedMatches });
- *
- * // Using the helper
- * handleAcceptMatch(createBatchOperation(selectedMatches));
- * ```
+ * @description Custom React hook providing handler functions for managing manga match results and user interactions, supporting both single and batch operations with undo/redo capabilities.
  */
 
 import { useCallback } from "react";
@@ -906,17 +894,10 @@ export const useMatchHandlers = (
 
   /**
    * Creates a type-safe batch operation object for processing multiple matches.
-   *
-   * @param matches - Array of matches to process in batch
-   * @returns Batch operation object with type safety
-   * @throws Error if matches array is empty
-   * @example
-   * ```typescript
-   * // Create a batch operation from selected matches
-   * const selectedMatches = matchResults.filter(m => selectedIds.has(m.kenmeiManga.id));
-   * const batchOp = createBatchOperation(selectedMatches);
-   * handleAcceptMatch(batchOp);
-   * ```
+   * @param matches - Array of matches to process in batch.
+   * @returns Batch operation object with type safety.
+   * @throws {Error} If matches array is empty.
+   * @source
    */
   const createBatchOperation = useCallback(
     (

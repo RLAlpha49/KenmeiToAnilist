@@ -1,6 +1,7 @@
 /**
- * @file Custom matching rules management component
+ * Custom matching rules management component
  * @module components/settings/CustomRulesManager
+ * @description Provides UI for creating, editing, and deleting custom skip/accept matching rules.
  */
 
 // TODO: Add experimental note and that this has not been thoroughly tested and may not work as expected.
@@ -82,13 +83,19 @@ import { MetadataFieldSelector } from "./MetadataFieldSelector";
 import { RegexDocumentation } from "./RegexDocumentation";
 
 /**
- * Form data for creating/editing custom rules
+ * Form data for creating and editing custom rules.
+ * @source
  */
 interface RuleFormData {
+  /** Regex pattern to match. */
   pattern: string;
+  /** User-friendly rule description. */
   description: string;
+  /** Whether pattern matching is case-sensitive. */
   caseSensitive: boolean;
+  /** Whether this rule is currently enabled. */
   enabled: boolean;
+  /** Metadata fields to check the pattern against. */
   targetFields: CustomRuleTarget[];
 }
 
@@ -96,7 +103,9 @@ interface RuleFormData {
  * CustomRulesManager component for managing user-defined matching rules.
  *
  * Provides UI for creating, editing, and deleting custom skip/accept rules.
- * Rules are persisted in MatchConfig storage.
+ * Rules are persisted in MatchConfig storage and cached for performance.
+ * @returns The rendered custom rules manager component.
+ * @source
  */
 function CustomRulesManagerComponent(): React.JSX.Element {
   const { recordEvent } = useDebugActions();

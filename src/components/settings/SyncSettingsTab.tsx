@@ -26,20 +26,32 @@ const itemVariants = {
   },
 };
 
+/**
+ * Props for SyncSettingsTab component.
+ * @source
+ */
 interface SyncSettingsTabProps {
+  /** Current sync configuration. */
   syncConfig: SyncConfig;
+  /** Whether custom threshold is enabled for auto-pause. */
   useCustomThreshold: boolean;
+  /** Current search query. */
   searchQuery: string;
+  /** Currently highlighted section ID. */
   highlightedSectionId: string | null;
+  /** Callback when sync config changes. */
   onSyncConfigChange: (config: SyncConfig, field: string) => void;
+  /** Callback to toggle custom threshold. */
   onCustomThresholdToggle: (value: boolean) => void;
+  /** Callback to set entire sync config. */
   setSyncConfig: (config: SyncConfig) => void;
 }
 
 /**
  * Sync tab content component.
  * Orchestrates rendering of all sync-related settings sections.
- *
+ * @param props - Component props.
+ * @returns The rendered sync settings tab.
  * @source
  */
 export function SyncSettingsTab({

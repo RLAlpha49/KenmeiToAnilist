@@ -1,5 +1,5 @@
 /**
- * @file Batch categorization - Separates manga into cached, known IDs, and uncached
+ * Batch categorization - Separates manga into cached, known IDs, and uncached
  * @module matching/batching/categorization
  */
 

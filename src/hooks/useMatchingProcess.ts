@@ -28,8 +28,6 @@ import { createBackup } from "../utils/backup";
 
 /**
  * Manages the manga matching process with batch operations, progress tracking, and pause/resume support.
- * @param options.accessToken - AniList OAuth access token for API requests.
- * @param options.rateLimitState - Optional rate limit state from RateLimitContext.
  * @returns Object containing matching state, handlers, and utility functions.
  * @source
  */
@@ -373,6 +371,8 @@ export const useMatchingProcess = ({
 
   /**
    * Create automatic backup if enabled and this is a fresh matching session.
+   * @param isFreshSession - Whether this is a fresh matching session.
+   * @source
    */
   const maybeCreateAutomaticBackup = useCallback(
     async (isFreshSession: boolean) => {
@@ -416,6 +416,8 @@ export const useMatchingProcess = ({
 
   /**
    * Factory to create the progress callback passed into batchMatchManga.
+   * @returns Progress callback function.
+   * @source
    */
   const createBatchProgressCallback = useCallback(
     (
@@ -448,6 +450,9 @@ export const useMatchingProcess = ({
 
   /**
    * Create the cancellation predicate function expected by batchMatchManga.
+   * @param abortController - The abort controller to signal cancellation.
+   * @returns Predicate function that returns true if matching should be cancelled.
+   * @source
    */
   const createCancellationPredicate = useCallback(
     (abortController: AbortController) => {

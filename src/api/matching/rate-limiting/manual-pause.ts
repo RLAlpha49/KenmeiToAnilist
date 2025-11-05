@@ -1,28 +1,28 @@
 /**
  * Manual pause functionality for rate limiting.
  *
- * Provides mechanisms to pause matching operations (e.g., during user adjustments)
- * and resume them on demand. Maintains a list of waiters to notify when pause is lifted.
+ * Allows pausing and resuming matching operations (e.g., during user adjustments).
+ * Maintains a queue of waiters that are notified when pause is lifted.
  *
  * @packageDocumentation
  * @source
  */
 
 /**
- * Manual pause state for matching requests.
+ * Current manual pause state for matching requests.
  * @source
  */
 let _manualPauseActive = false;
 
 /**
- * Array of resolve functions waiting for pause to be lifted.
+ * Queue of resolve functions waiting for pause to be lifted.
  * @source
  */
 let _pauseWaiters: Array<() => void> = [];
 
 /**
- * Check if manual pause is active.
- * @returns True if manual pause is active.
+ * Check if manual pause is currently active.
+ * @returns True if matching is manually paused.
  * @source
  */
 export function isManualPauseActive(): boolean {
@@ -30,10 +30,11 @@ export function isManualPauseActive(): boolean {
 }
 
 /**
- * Resolve all pause waiters and clear the waiting list.
+ * Resolve all pending pause waiters and clear the queue.
  * @source
  */
 function resolvePauseWaiters(): void {
+  // Capture current waiters before clearing to avoid issues if new waiters are added during resolution
   const currentWaiters = _pauseWaiters;
   _pauseWaiters = [];
   for (const resolve of currentWaiters) {
@@ -42,8 +43,8 @@ function resolvePauseWaiters(): void {
 }
 
 /**
- * Wait while manual pause is active. Returns immediately if pause is not active.
- * @returns Promise that resolves when pause is lifted.
+ * Wait until manual pause is lifted. Returns immediately if not paused.
+ * @returns Promise that resolves when pause is lifted or immediately if not paused.
  * @source
  */
 export async function waitWhileManuallyPaused(): Promise<void> {
@@ -53,9 +54,9 @@ export async function waitWhileManuallyPaused(): Promise<void> {
 }
 
 /**
- * Set manual matching pause state and notify all waiters if resuming.
- * Dispatches a custom event for UI updates.
- * @param paused - Whether to pause or resume matching.
+ * Set manual matching pause state and notify waiters when resuming.
+ * Dispatches a custom event for UI synchronization.
+ * @param paused - Whether to pause (true) or resume (false) matching.
  * @source
  */
 export function setManualMatchingPause(paused: boolean): void {
@@ -82,7 +83,7 @@ export function setManualMatchingPause(paused: boolean): void {
 
 /**
  * Check if manual matching is paused (alias for isManualPauseActive).
- * @returns True if manual matching is paused.
+ * @returns True if matching is manually paused.
  * @source
  */
 export function isManualMatchingPaused(): boolean {

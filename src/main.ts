@@ -1,7 +1,10 @@
 /**
  * @packageDocumentation
  * @module main
- * @description Electron main process entry point. Handles window creation, Sentry initialization, Windows installer events, and environment setup for the renderer process.
+ * @description Electron main process entry point.
+ * Handles window creation, security configuration, Sentry initialization, update checking,
+ * Windows installer events (Squirrel), and preload/environment setup for the renderer process.
+ * @source
  */
 
 /// <reference types="@electron-forge/plugin-vite/forge-vite-env" />
@@ -26,13 +29,22 @@ import {
 } from "./utils/logging";
 import { autoUpdater } from "electron-updater";
 
-// --- Sentry Initialization ---
+/**
+ * Initialize error tracking and configuration.
+ * Performs Sentry initialization, auto-updater setup, and store initialization.
+ * All initialization logs are grouped for better console output organization.
+ * @source
+ */
 startGroup(`[Main] App Initialization v${app.getVersion()}`);
 console.info(
   `[Main] 🚀 Initializing app v${app.getVersion()} in ${process.env.NODE_ENV || "production"} mode`,
 );
 
-// Initialize Sentry only in production with a valid DSN
+/**
+ * Initialize Sentry error tracking in production environments only.
+ * Captures unhandled errors and sends them to Sentry for monitoring.
+ * @source
+ */
 const sentryDsn = process.env.SENTRY_DSN;
 const isProduction = process.env.NODE_ENV === "production";
 if (sentryDsn && isProduction) {
@@ -50,7 +62,11 @@ if (sentryDsn && isProduction) {
   );
 }
 
-// --- Auto-Updater Configuration ---
+/**
+ * Configure auto-updater with GitHub releases feed.
+ * Sets up automatic update checking and installation behavior.
+ * @source
+ */
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = false;
 autoUpdater.logger = console;
@@ -62,7 +78,10 @@ autoUpdater.setFeedURL({
   repo: "KenmeiToAnilist",
 });
 
-// Set up auto-updater event listeners for logging
+/**
+ * Set up auto-updater event listeners for logging and error handling.
+ * @source
+ */
 autoUpdater.on("checking-for-update", () => {
   if (!isProduction) {
     console.info("[Auto-Updater] 🔍 Checking for updates...");
@@ -85,7 +104,7 @@ autoUpdater.on("update-not-available", (info) => {
 
 autoUpdater.on("error", (error) => {
   console.error("[Auto-Updater] ❌ Update error:", error);
-  // Report update errors to Sentry
+  // Report update errors to Sentry for visibility
   Sentry.captureException(error, {
     tags: {
       component: "auto-updater",
@@ -97,16 +116,22 @@ if (!isProduction) {
   console.debug("[Main] 🔍 Auto-updater configured");
 }
 endGroup();
-// --- End Sentry Initialization ---
 
-// Initialize electron-store for storing cross-process preferences
-// Provide a narrow typed facade so we avoid using `any` and satisfy eslint/typechecks
+/**
+ * Initialize electron-store for persistent cross-process preferences.
+ * Uses a typed facade to avoid `any` and maintain type safety.
+ * @source
+ */
 const store = new Store() as unknown as {
   get: (key: string) => unknown;
   set: (key: string, value: unknown) => void;
 };
 
-// Ensure auto-updater respects persisted preference at startup
+/**
+ * Restore persisted auto-updater preferences from storage.
+ * Sets `allowPrerelease` based on the stored update channel preference.
+ * @source
+ */
 try {
   const savedChannel = (store.get("update_channel") as string) || "stable";
   autoUpdater.allowPrerelease = savedChannel === "beta";
@@ -269,23 +294,39 @@ if (squirrelStartup) {
   app.quit();
 }
 
+/** Indicates if the application is running in development mode. @source */
 const inDevelopment = process.env.NODE_ENV === "development";
+
+/**
+ * Indicates if developer tools should be enabled.
+ * Set via ENABLE_DEVTOOLS environment variable ("1" or "true").
+ * @source
+ */
 const enableDevTools =
   process.env.ENABLE_DEVTOOLS === "1" || process.env.ENABLE_DEVTOOLS === "true";
 
-// Make app version available to the renderer process
+// Make app version available to the renderer process via environment variable
 process.env.VITE_APP_VERSION = app.getVersion();
 
+/** Splash screen window instance. @source */
 let splashWindow: BrowserWindow | null = null;
 
+/**
+ * Resolves the assets directory path.
+ * In development, loads from src/assets; in production, loads from bundled resources.
+ * @returns Absolute path to the assets directory.
+ * @source
+ */
 const getAssetsPath = () =>
   inDevelopment
     ? path.join(__dirname, "../../src/assets")
     : path.join(process.resourcesPath, "assets");
 
 /**
- * Creates a splash screen window displayed during app startup.
- * @remarks Frameless, always-on-top window with loading animation.
+ * Creates and displays a splash screen window during application startup.
+ * The splash screen is frameless, always-on-top, and transparent with a loading animation.
+ * @returns Void (splash window stored in module-level variable).
+ * @remarks The splash screen is closed by closeSplashScreen() when the main window is ready.
  * @source
  */
 function createSplashScreen() {
@@ -311,6 +352,7 @@ function createSplashScreen() {
     splashWindow.loadFile(splashPath);
     splashWindow.center();
 
+    // Handle splash loading errors
     splashWindow.webContents.on(
       "did-fail-load",
       (_event, errorCode, errorDesc) => {
@@ -325,7 +367,8 @@ function createSplashScreen() {
 }
 
 /**
- * Closes the splash screen window.
+ * Closes and destroys the splash screen window.
+ * Safely checks if the window exists and hasn't already been destroyed.
  * @source
  */
 function closeSplashScreen() {
@@ -337,8 +380,11 @@ function closeSplashScreen() {
 }
 
 /**
- * Creates the main application window and registers IPC listeners.
- * @remarks Loads preload script, initializes window, and handles content loading.
+ * Creates the main application window.
+ * Sets up the BrowserWindow, registers IPC listeners, handles content loading,
+ * and manages the transition from splash screen to main window.
+ * @returns Void (main window is managed by Electron).
+ * @remarks Handles both development (Vite dev server) and production (bundled) loading modes.
  * @source
  */
 function createWindow() {
@@ -384,6 +430,7 @@ function createWindow() {
       },
     );
 
+    // Load content from dev server (development) or bundled file (production)
     if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
       console.debug(
         `[Main] 🔍 Loading dev server: ${MAIN_WINDOW_VITE_DEV_SERVER_URL}`,
@@ -526,7 +573,13 @@ app
     );
   });
 
-//osX only
+/**
+ * Handle macOS-specific behavior for window-all-closed event.
+ * On macOS, applications typically remain active even with all windows closed,
+ * allowing the user to reopen windows via the dock or menu.
+ * On other platforms, closing all windows quits the application.
+ * @source
+ */
 app.on("window-all-closed", () => {
   console.info("[Main] 🪟 All windows closed");
   if (process.platform !== "darwin") {
@@ -535,6 +588,12 @@ app.on("window-all-closed", () => {
   }
 });
 
+/**
+ * Handle macOS-specific activate event.
+ * On macOS, the activate event fires when the dock icon is clicked or the app is activated.
+ * If no windows are open, this recreates the main window(s).
+ * @source
+ */
 app.on("activate", () => {
   console.debug("[Main] 🔍 App activated");
   if (BrowserWindow.getAllWindows().length === 0) {
@@ -543,8 +602,12 @@ app.on("activate", () => {
     createWindow();
   }
 });
-//osX only ends
 
+/**
+ * Export public functions for use in other modules or tests.
+ * These functions are the main entry points for window and extension management.
+ * @source
+ */
 export {
   createWindow,
   createSplashScreen,

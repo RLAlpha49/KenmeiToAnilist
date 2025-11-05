@@ -7,9 +7,9 @@ import React from "react";
 import { Heart, GitBranch } from "lucide-react";
 
 /**
- * GitHub SVG icon component (source: simpleicons.org).
- * @param props - Standard SVG element properties.
- * @returns The rendered GitHub icon SVG element.
+ * GitHub logo SVG icon component (from simpleicons.org).
+ * @param props - Standard SVG element properties and attributes.
+ * @returns GitHub icon SVG element.
  * @source
  */
 const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -37,20 +37,21 @@ import { getAppVersion } from "../../utils/app-version";
 import appIcon from "../../assets/k2a-icon-512x512.png";
 
 /**
- * Footer React component that displays the application footer with logo, version, social links, and credits.
+ * Application footer with branding, version, social links, and credits.
  *
- * @returns The rendered footer React element.
+ * @returns The rendered footer element.
  * @source
  */
 export function Footer() {
   /**
-   * Opens an external URL using the shell API if available (Electron), otherwise uses browser window.open.
-   * @param url - The URL to open.
-   * @returns A React event handler function.
+   * Creates a click handler that opens an external URL using Electron shell API or fallback to window.open.
+   * @param url - The URL to open externally.
+   * @returns A React click event handler function.
    * @source
    */
   const handleOpenExternal = (url: string) => (e: React.MouseEvent) => {
     e.preventDefault();
+    // Use Electron shell API for external links, fallback to browser for web
     if (globalThis.electronAPI?.shell?.openExternal) {
       globalThis.electronAPI.shell.openExternal(url);
     } else {

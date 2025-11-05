@@ -1,7 +1,19 @@
+/**
+ * @packageDocumentation
+ * @module components/ui/table
+ * @description Table components for displaying tabular data.
+ * @source
+ */
 import * as React from "react";
 
 import { cn } from "@/utils/tailwind";
 
+/**
+ * Table container component with horizontal scroll support.
+ * @param props - Standard table element props.
+ * @returns Table element wrapped in scroll container.
+ * @source
+ */
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
     <div
@@ -17,6 +29,12 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
   );
 }
 
+/**
+ * Table header section (thead).
+ * @param props - Standard thead element props.
+ * @returns Table header element.
+ * @source
+ */
 function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
     <thead
@@ -27,6 +45,12 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   );
 }
 
+/**
+ * Table body section (tbody).
+ * @param props - Standard tbody element props.
+ * @returns Table body element.
+ * @source
+ */
 function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
   return (
     <tbody
@@ -37,6 +61,12 @@ function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
   );
 }
 
+/**
+ * Table footer section (tfoot).
+ * @param props - Standard tfoot element props.
+ * @returns Table footer element.
+ * @source
+ */
 function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
   return (
     <tfoot
@@ -50,6 +80,12 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
   );
 }
 
+/**
+ * Table row element (tr).
+ * @param props - Standard tr element props.
+ * @returns Table row element.
+ * @source
+ */
 function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   return (
     <tr
@@ -63,6 +99,12 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   );
 }
 
+/**
+ * Table header cell element (th).
+ * @param props - Standard th element props.
+ * @returns Table header cell element.
+ * @source
+ */
 function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   return (
     <th
@@ -76,6 +118,12 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   );
 }
 
+/**
+ * Table data cell element (td).
+ * @param props - Standard td element props.
+ * @returns Table data cell element.
+ * @source
+ */
 function TableCell({ className, ...props }: React.ComponentProps<"td">) {
   return (
     <td
@@ -89,6 +137,12 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
   );
 }
 
+/**
+ * Table caption element for accessible table titles.
+ * @param props - Standard caption element props.
+ * @returns Table caption element.
+ * @source
+ */
 function TableCaption({
   className,
   ...props

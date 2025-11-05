@@ -29,7 +29,6 @@ export function getListenersRegistered(): boolean {
 /**
  * Sets the listeners registration status flag.
  * @param value - New flag value.
- * @returns void
  * @source
  */
 export function setListenersRegistered(value: boolean): void {
@@ -54,7 +53,6 @@ export function getServiceInitialized(): boolean {
 /**
  * Sets the service initialization status flag.
  * @param value - New flag value.
- * @returns void
  * @source
  */
 export function setServiceInitialized(value: boolean): void {

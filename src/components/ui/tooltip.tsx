@@ -1,8 +1,20 @@
+/**
+ * @packageDocumentation
+ * @module components/ui/tooltip
+ * @description Tooltip component with Radix UI for contextual help text.
+ * @source
+ */
 import * as React from "react";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 
 import { cn } from "@/utils/tailwind";
 
+/**
+ * Tooltip provider component for configuring tooltip behavior.
+ * @param props - Provider props from Radix UI including delayDuration.
+ * @returns Tooltip provider element.
+ * @source
+ */
 function TooltipProvider({
   delayDuration = 0,
   ...props

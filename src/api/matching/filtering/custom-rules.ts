@@ -1,20 +1,10 @@
 /**
  * Custom matching rules for automatic filtering and acceptance of manga.
  *
- * This module provides functionality for evaluating user-defined regex patterns
- * against manga metadata during the matching process. Rules can either skip
- * (exclude) manga or accept (boost confidence) manga based on pattern matches.
- *
- * Rules can check various metadata fields including:
- * - Titles: All title variants (romaji, english, native, synonyms, alternative_titles)
- * - Author: Author/staff names (filtered by Story, Art, Original Creator roles)
- * - Genres: Genre array
- * - Tags: Tag names and categories
- * - Format: Publication format
- * - Country: Country of origin
- * - Source: Source material type
- * - Description: Description text and notes
- * - Status: Publishing status
+ * This module evaluates user-defined regex patterns against manga metadata.
+ * Rules can skip (exclude) or accept (boost confidence) manga based on pattern matches
+ * across various metadata fields: titles, author, genres, tags, format, country, source,
+ * description, and status.
  *
  * @module custom-rules
  * @source
@@ -27,47 +17,35 @@ import { getMatchConfig } from "@/utils/storage";
 
 /**
  * Confidence floor for accept rule boosts on exact title matches.
- * Ensures exact matches are prioritized with high confidence when matched by an accept rule.
- * @constant
+ * @source
  */
 export const ACCEPT_RULE_CONFIDENCE_FLOOR_EXACT = 0.85;
 
 /**
  * Confidence floor for accept rule boosts on regular (non-exact) matches.
- * Ensures regular matches are boosted to high confidence when matched by an accept rule.
- * @constant
+ * @source
  */
 export const ACCEPT_RULE_CONFIDENCE_FLOOR_REGULAR = 0.75;
 
 /**
- * Cache for compiled regex patterns to avoid repeated compilation during evaluation.
- * Keys are formatted as `${ruleId}:${pattern}:${flags}` for deduplication.
- * Entries persist across evaluations to optimize repeated rule matching.
- *
- * @remarks
- * The cache should be cleared or entries invalidated if a rule's pattern or flags change.
- * Size is capped at 1000 entries to prevent unbounded growth across sessions.
- * When the limit is exceeded, the oldest entries are evicted (FIFO).
+ * Cache for compiled regex patterns to avoid repeated compilation.
+ * Keys: `${ruleId}:${pattern}:${flags}`. Size capped at 1000 entries with FIFO eviction.
+ * @source
  */
 const regexCache = new Map<string, RegExp>();
 
 /**
  * Maximum number of compiled regex patterns to cache.
- * When exceeded, the oldest entry is removed (FIFO eviction).
  * @constant
+ * @source
  */
 const MAX_REGEX_CACHE_SIZE = 1000;
 
 /**
- * Get the effective target fields for a rule, applying fallback default if needed.
- * This ensures consistency between evaluation and logging.
- *
+ * Gets the effective target fields for a rule, applying fallback default if needed.
  * @param rule - The custom rule
  * @returns Array of target fields, defaulting to ['titles'] if not set
- *
- * @remarks
- * Used by both testRuleAgainstMetadata() and logging functions to ensure
- * the reported fields match the fields actually evaluated.
+ * @source
  */
 function getEffectiveTargetFields(rule: CustomRule): CustomRuleTarget[] {
   return rule.targetFields?.length ? rule.targetFields : ["titles"];
@@ -75,12 +53,7 @@ function getEffectiveTargetFields(rule: CustomRule): CustomRuleTarget[] {
 
 /**
  * Clears all compiled regex patterns from the cache.
- * Useful when rules are updated in the settings flow to avoid stale patterns.
- *
- * @remarks
- * This function is called automatically when custom rules are modified,
- * ensuring that any pattern changes are reflected in the next evaluation.
- *
+ * Called when custom rules are updated to prevent stale patterns.
  * @source
  */
 export function clearRegexCache(): void {
@@ -89,7 +62,11 @@ export function clearRegexCache(): void {
 }
 
 /**
- * Extracts title values from manga data.
+ * Extracts all title variants from manga data.
+ * @param manga - AniList manga data
+ * @param kenmeiManga - Kenmei manga data
+ * @returns Array of title strings
+ * @source
  */
 function extractTitles(
   manga: AniListManga,
@@ -114,6 +91,11 @@ function extractTitles(
 
 /**
  * Extracts author/staff names from manga data.
+ * Filters AniList staff by relevant roles: Story, Art, Original Creator.
+ * @param manga - AniList manga data
+ * @param kenmeiManga - Kenmei manga data
+ * @returns Array of author/staff names
+ * @source
  */
 function extractAuthors(
   manga: AniListManga,
@@ -142,6 +124,9 @@ function extractAuthors(
 
 /**
  * Extracts tag names and categories from manga data.
+ * @param manga - AniList manga data
+ * @returns Array of tag names and categories
+ * @source
  */
 function extractTags(manga: AniListManga): string[] {
   const values: string[] = [];
@@ -158,6 +143,10 @@ function extractTags(manga: AniListManga): string[] {
 
 /**
  * Extracts description text with HTML stripped from manga data.
+ * @param manga - AniList manga data
+ * @param kenmeiManga - Kenmei manga data
+ * @returns Array of description strings
+ * @source
  */
 function extractDescriptions(
   manga: AniListManga,
@@ -177,28 +166,10 @@ function extractDescriptions(
 
 /**
  * Extracts metadata values for a specific target field from manga data.
- *
- * @param targetField - The metadata field to extract
+ * @param targetField - The metadata field to extract (titles, author, genres, tags, etc.)
  * @param manga - The AniList manga data
  * @param kenmeiManga - The Kenmei manga data
  * @returns Array of string values from the specified field
- *
- * @remarks
- * Handles different field types appropriately:
- * - Array fields (genres, tags, synonyms): Flattened to strings
- * - Staff: Filtered by relevant roles (Story, Art, Original Creator)
- * - Description: HTML tags stripped using regex
- * - Missing/null fields: Returns empty array (not error)
- *
- * @example
- * ```typescript
- * const genres = extractMetadataValues('genres', manga, kenmeiManga);
- * // Returns: ['Action', 'Fantasy', 'Adventure']
- *
- * const authors = extractMetadataValues('author', manga, kenmeiManga);
- * // Returns: ['Author Name', 'Staff Name']
- * ```
- *
  * @source
  */
 function extractMetadataValues(
@@ -245,33 +216,10 @@ function extractMetadataValues(
 
 /**
  * Tests a custom rule pattern against manga metadata fields.
- *
  * @param rule - The custom rule with regex pattern and target fields
  * @param manga - The AniList manga data
  * @param kenmeiManga - The Kenmei manga data
  * @returns True if the pattern matches any value in the target fields, false otherwise
- *
- * @remarks
- * Handles invalid regex patterns gracefully by logging and returning false.
- * Uses the Unicode flag (u) to properly match international characters.
- * Combines Unicode flag with case-insensitive flag unless rule specifies case-sensitive mode.
- * Extracts values from all specified target fields and tests pattern against combined array.
- *
- * Per-value length is capped at 10,000 characters to prevent catastrophic regex backtracking.
- * Long strings are truncated to this limit before testing, which prevents performance issues
- * while still allowing most practical patterns to match meaningful content.
- *
- * @example
- * ```typescript
- * const rule = {
- *   pattern: 'isekai|reincarnation',
- *   targetFields: ['genres', 'tags'],
- *   caseSensitive: false,
- *   ...
- * };
- * const matches = testRuleAgainstMetadata(rule, manga, kenmeiManga);
- * ```
- *
  * @source
  */
 function testRuleAgainstMetadata(
@@ -340,25 +288,10 @@ function testRuleAgainstMetadata(
 
 /**
  * Checks if manga should be skipped based on custom skip rules.
- *
- * @param manga - The AniList manga to check.
- * @param kenmeiManga - The original Kenmei manga entry.
- * @param isManualSearch - Whether this is a manual search (skip rules don't apply).
- * @returns True if manga should be skipped, false otherwise.
- *
- * @remarks
- * Custom skip rules only apply to automatic matching, not manual searches.
- * Evaluates all enabled skip rules against selected metadata fields.
- * First matching rule triggers a skip (short-circuit evaluation).
- *
- * @example
- * ```typescript
- * const shouldSkip = shouldSkipByCustomRules(anilistManga, kenmeiManga, false);
- * if (shouldSkip) {
- *   console.log("Manga skipped by custom rule");
- * }
- * ```
- *
+ * @param manga - The AniList manga to check
+ * @param kenmeiManga - The original Kenmei manga entry
+ * @param isManualSearch - Whether this is a manual search (skip rules don't apply)
+ * @returns True if manga should be skipped, false otherwise
  * @source
  */
 export function shouldSkipByCustomRules(
@@ -406,28 +339,9 @@ export function shouldSkipByCustomRules(
 
 /**
  * Checks if manga should be auto-accepted based on custom accept rules.
- *
- * @param manga - The AniList manga to check.
- * @param kenmeiManga - The original Kenmei manga entry.
- * @returns Object with shouldAccept flag and matched rule if applicable.
- *
- * @remarks
- * Custom accept rules boost confidence scores to ensure inclusion.
- * Evaluates all enabled accept rules against selected metadata fields.
- * First matching rule triggers acceptance (short-circuit evaluation).
- *
- * Note: kenmeiManga context is required to evaluate accept rules.
- * Manual searches without kenmeiManga will never trigger accept rules
- * (by design - ensures proper context for rule evaluation).
- *
- * @example
- * ```typescript
- * const { shouldAccept, matchedRule } = shouldAcceptByCustomRules(anilistManga, kenmeiManga);
- * if (shouldAccept) {
- *   console.log(`Auto-accepted by rule: ${matchedRule?.description}`);
- * }
- * ```
- *
+ * @param manga - The AniList manga to check
+ * @param kenmeiManga - The original Kenmei manga entry
+ * @returns Object with shouldAccept flag and matched rule if applicable
  * @source
  */
 export function shouldAcceptByCustomRules(
@@ -468,27 +382,10 @@ export function shouldAcceptByCustomRules(
 }
 
 /**
- * Gets custom rule match information for debugging purposes.
- *
- * @param manga - The AniList manga to check.
- * @param kenmeiManga - The original Kenmei manga entry.
- * @returns Object with skip and accept rule matches if applicable.
- *
- * @remarks
- * Convenience function that checks both skip and accept rules.
- * Useful for UI display to show which custom rules matched.
- *
- * @example
- * ```typescript
- * const { skipMatch, acceptMatch } = getCustomRuleMatchInfo(anilistManga, kenmeiManga);
- * if (skipMatch) {
- *   console.log(`Skipped by: ${skipMatch.description}`);
- * }
- * if (acceptMatch) {
- *   console.log(`Accepted by: ${acceptMatch.description}`);
- * }
- * ```
- *
+ * Gets custom rule match information for debugging and UI display.
+ * @param manga - The AniList manga to check
+ * @param kenmeiManga - The original Kenmei manga entry
+ * @returns Object with skip and accept rule matches if applicable
  * @source
  */
 export function getCustomRuleMatchInfo(

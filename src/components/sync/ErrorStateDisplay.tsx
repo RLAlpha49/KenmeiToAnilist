@@ -1,3 +1,9 @@
+/**
+ * @packageDocumentation
+ * @module SyncPage/ErrorStateDisplay
+ * @description React component for displaying contextual error states with navigation guidance.
+ */
+
 import React from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
@@ -7,9 +13,9 @@ import { AlertCircle } from "lucide-react";
 
 /**
  * Props for the ErrorStateDisplay component.
- * @property authError - Whether authentication is required.
- * @property matchDataError - Whether matched data is missing.
- * @property validMatchesError - Whether no approved matches exist.
+ * @property authError - Whether authentication is required (user not logged into AniList).
+ * @property matchDataError - Whether matched manga data is missing.
+ * @property validMatchesError - Whether no approved matches exist for syncing.
  * @source
  */
 interface ErrorStateDisplayProps {
@@ -19,8 +25,11 @@ interface ErrorStateDisplayProps {
 }
 
 /**
- * Display contextual error states with navigation guidance.
- * Shows different error messages and action buttons based on the error type.
+ * Display contextual error states with animated card and contextual navigation guidance.
+ * Shows different error messages, icons, and action buttons based on the error type.
+ * Provides visual feedback with gradient accents matching the error severity.
+ * @param props - Component props with error state flags.
+ * @returns Animated error display card with contextual actions.
  * @source
  */
 export function ErrorStateDisplay({

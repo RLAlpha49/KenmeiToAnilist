@@ -54,9 +54,10 @@ export interface MatchFilterControlsProps {
  * Displays filter control buttons for manga match statuses.
  *
  * Allows users to toggle visibility of matched, pending, manual, and skipped items.
+ * Each status has a toggle button with count and visibility indicator.
  *
- * @param props - The component props.
- * @returns The rendered filter controls.
+ * @param props - Component configuration.
+ * @returns Rendered filter controls card.
  * @source
  */
 function MatchFilterControlsComponent({
@@ -64,6 +65,7 @@ function MatchFilterControlsComponent({
   setStatusFilters,
   matchStats,
 }: Readonly<MatchFilterControlsProps>) {
+  // Filter options with styling and count for each status
   const statusOptions: Array<{
     key: keyof StatusFiltersState;
     label: string;
@@ -114,6 +116,7 @@ function MatchFilterControlsComponent({
     },
   ];
 
+  /** Toggle filter visibility for a specific match status. */
   const toggleStatus = (key: keyof StatusFiltersState) => {
     setStatusFilters((prev) => ({
       ...prev,

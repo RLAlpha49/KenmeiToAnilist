@@ -1,8 +1,7 @@
 /**
- * UpdateNotification component for displaying update information and controls.
- * Shows version info, release notes, download progress, and action buttons.
- *
+ * @packageDocumentation
  * @module UpdateNotification
+ * @description Component for displaying update information, release notes, and download progress.
  */
 
 import React, { useState } from "react";
@@ -29,7 +28,18 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 /**
- * Props for the UpdateNotification component
+ * Props for the UpdateNotification component.
+ * @property version - Version string of available update.
+ * @property releaseNotes - Release notes in markdown or plain text.
+ * @property releaseDate - Release date string.
+ * @property onDownload - Callback when download button is clicked.
+ * @property onDismiss - Callback when dismiss button is clicked.
+ * @property onInstall - Callback when install button is clicked.
+ * @property downloadProgress - Download progress percentage (0-100), defaults to 0.
+ * @property isDownloading - Whether download is in progress, defaults to false.
+ * @property isDownloaded - Whether update has been downloaded, defaults to false.
+ * @property error - Error message if download/install failed, defaults to undefined.
+ * @source
  */
 interface UpdateNotificationProps {
   /** Version string of the available update */
@@ -55,8 +65,21 @@ interface UpdateNotificationProps {
 }
 
 /**
- * UpdateNotification component
- * Displays a card with update information and action buttons
+ * Card component for displaying update information, release notes, and download controls.
+ * Shows version, release date, download progress, and action buttons.
+ * @param props - Component properties.
+ * @param props.version - Version string of available update.
+ * @param props.releaseNotes - Release notes content.
+ * @param props.releaseDate - Release date string.
+ * @param props.onDownload - Callback when download button is clicked.
+ * @param props.onDismiss - Callback when dismiss button is clicked.
+ * @param props.onInstall - Callback when install button is clicked.
+ * @param props.downloadProgress - Download progress percentage (0-100).
+ * @param props.isDownloading - Whether download is in progress.
+ * @param props.isDownloaded - Whether update has been downloaded.
+ * @param props.error - Error message if download/install failed.
+ * @returns Update notification card component.
+ * @source
  */
 export function UpdateNotification({
   version,

@@ -1,9 +1,16 @@
+/**
+ * @packageDocumentation
+ * @module components/ui/button
+ * @description Reusable button component with variant and size support using class-variance-authority.
+ * @source
+ */
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/utils/tailwind";
 
+/** Button style variants and sizes using CVA. */
 const buttonVariants = cva(
   "ring-offset-background focus-visible:ring-ring focus-visible:outline-hidden inline-flex cursor-pointer items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
   {
@@ -37,12 +44,19 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
-  /** Accessible label for icon-only buttons or when additional context is needed */
+  /** Accessible label for icon-only buttons or additional context. @source */
   ariaLabel?: string;
-  /** ID of element that provides additional description */
+  /** ID of element providing additional description. @source */
   ariaDescribedBy?: string;
 }
 
+/**
+ * Reusable button component with polymorphic rendering via asChild prop.
+ * Supports variant and size customization through CVA.
+ * @param props - Standard button props plus component extensions.
+ * @returns Rendered button or polymorphic element.
+ * @source
+ */
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   (
     {

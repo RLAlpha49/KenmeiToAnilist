@@ -1,60 +1,30 @@
+/**
+ * @packageDocumentation
+ * @module textHighlight
+ * @description Utility functions for highlighting and styling matching text segments in search and filter features.
+ */
+
 import React from "react";
 
 /**
- * Text highlighting utility for search and filter features.
- *
- * Provides functions to highlight matching text segments with visual styling.
- * Extracted from existing patterns in LogViewer and StorageDebugger components.
- *
- * @module textHighlight
- * @example
- * // Basic usage
- * const highlighted = highlightText("Ignore adult content", "adult");
- * // Returns: ["Ignore ", <mark>adult</mark>, " content"]
- *
- * @example
- * // Multiple matches
- * const highlighted = highlightText("backup and restore backup", "backup");
- * // Returns: [<mark>backup</mark>, " and restore ", <mark>backup</mark>]
- */
-
-/**
- * Helper function to extract substring between indices.
- *
- * @param text - The source text
- * @param start - Start index (inclusive)
- * @param end - End index (exclusive)
- * @returns Substring from start to end
+ * Extracts substring between start and end indices.
+ * @param text - The source text.
+ * @param start - Start index (inclusive).
+ * @param end - End index (exclusive).
+ * @returns Substring from start to end.
  * @internal
+ * @source
  */
 const sliceText = (text: string, start: number, end: number): string => {
   return text.slice(start, end);
 };
 
 /**
- * Highlights all occurrences of a query string in text.
- *
- * Performs case-insensitive matching and wraps matching segments in
- * a `<mark>` element with yellow background styling. Returns an array
- * of React nodes containing text and highlighted segments.
- *
- * @param text - The text to highlight
- * @param query - The search query to find and highlight
- * @returns React nodes array containing text and <mark> elements, or original text if query is empty
- *
- * @example
- * highlightText("Find adult content", "adult")
- * // Returns JSX: "Find <mark>adult</mark> content"
- *
- * @example
- * highlightText("Backup and restore backup", "backup")
- * // Returns JSX: "<mark>Backup</mark> and restore <mark>backup</mark>"
- *
- * @remarks
- * - Matching is case-insensitive
- * - All occurrences are highlighted
- * - Styling uses Tailwind classes for light and dark mode support
- * - Each mark element has a unique key for React rendering
+ * Highlights all case-insensitive occurrences of query in text with yellow mark styling.
+ * @param text - The text to highlight.
+ * @param query - The search query to find and highlight.
+ * @returns React nodes array containing text and mark elements; original text if query empty.
+ * @source
  */
 export const highlightText = (text: string, query: string): React.ReactNode => {
   if (!query.trim()) {

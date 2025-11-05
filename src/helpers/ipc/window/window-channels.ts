@@ -1,26 +1,14 @@
 /**
  * @packageDocumentation
  * @module window_channels
- * @description IPC channel names for window control actions (minimize, maximize, close) in the Electron app.
+ * @description IPC channels for window control operations (minimize, maximize, close) in Electron.
  */
 
-/**
- * IPC channel name for minimizing the globalThis.
- *
- * @source
- */
+/** IPC channel for minimizing the main window. @source */
 export const WIN_MINIMIZE_CHANNEL = "window:minimize";
 
-/**
- * IPC channel name for maximizing or unmaximizing the globalThis.
- *
- * @source
- */
+/** IPC channel for toggling maximize state of the main window. @source */
 export const WIN_MAXIMIZE_CHANNEL = "window:maximize";
 
-/**
- * IPC channel name for closing the globalThis.
- *
- * @source
- */
+/** IPC channel for closing the main window. @source */
 export const WIN_CLOSE_CHANNEL = "window:close";

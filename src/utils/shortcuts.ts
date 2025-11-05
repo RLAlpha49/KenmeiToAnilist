@@ -5,7 +5,7 @@
  */
 
 /**
- * Enum for shortcut categories used to organize shortcuts in the UI.
+ * Categories for organizing keyboard shortcuts in the UI.
  * @source
  */
 export enum ShortcutCategory {
@@ -17,12 +17,7 @@ export enum ShortcutCategory {
 }
 
 /**
- * Represents a keyboard key combination component.
- * @property {string} key - The keyboard key (e.g., 'z', 'f', '1', '/')
- * @property {boolean} [ctrl] - Whether Ctrl key is required (Windows/Linux)
- * @property {boolean} [shift] - Whether Shift key is required
- * @property {boolean} [alt] - Whether Alt key is required
- * @property {boolean} [meta] - Whether Meta/Cmd key is required (Mac)
+ * Keyboard key combination component with optional modifier flags.
  * @source
  */
 interface ShortcutKey {
@@ -34,14 +29,7 @@ interface ShortcutKey {
 }
 
 /**
- * Represents a complete keyboard shortcut definition with metadata and alternatives.
- * @property {string} id - Unique identifier for the shortcut (e.g., 'nav-home', 'match-search')
- * @property {ShortcutCategory} category - Category for organizing shortcuts
- * @property {ShortcutKey} keys - Primary key combination
- * @property {ShortcutKey[]} [altKeys] - Alternative key combinations for the same action
- * @property {string} description - User-facing description of what the shortcut does
- * @property {string} action - Action identifier for dispatcher (e.g., 'navigate:home', 'toggle-search')
- * @property {string} [scope] - Optional scope (e.g., 'matching-page', 'global') for context-aware handling
+ * Complete keyboard shortcut definition with metadata, primary keys, and alternative combinations.
  * @source
  */
 interface Shortcut {
@@ -59,7 +47,6 @@ interface Shortcut {
  * Organized by category.
  * @source
  */
-
 const makeShortcut = (
   base: Pick<Shortcut, "id" | "category" | "keys" | "description" | "action"> &
     Partial<Pick<Shortcut, "altKeys" | "scope">>,
@@ -227,10 +214,9 @@ export const SHORTCUTS: Shortcut[] = [
 ];
 
 /**
- * Formats a shortcut key combination into a human-readable string.
- * Handles platform-specific key names (Ctrl vs Cmd on Mac).
- * @param {ShortcutKey} key - The key combination to format
- * @returns {string} Human-readable shortcut string (e.g., "Ctrl+Z")
+ * Formats key combination into human-readable string with platform-specific key names (Ctrl vs Cmd on Mac).
+ * @param key - The key combination to format.
+ * @returns Human-readable shortcut string (e.g., "Ctrl+Z").
  * @source
  */
 export function formatShortcutKey(key: ShortcutKey): string {
@@ -254,13 +240,11 @@ export function formatShortcutKey(key: ShortcutKey): string {
 }
 
 /**
- * Checks if a keyboard event matches a specific shortcut definition.
- * Handles both primary and alternative key combinations.
- * Enforces exact modifier matching: only specified modifiers are required, and unspecified modifiers must be absent
- * (with an exception for Shift when the defined key is a symbol that requires Shift on some layouts).
- * @param {KeyboardEvent} event - The keyboard event to check
- * @param {Shortcut} shortcut - The shortcut definition to match against
- * @returns {boolean} True if the event matches the shortcut
+ * Checks if keyboard event matches shortcut definition; supports primary and alternative key combinations.
+ * Enforces exact modifier matching (only specified modifiers required; unspecified forbidden except for symbol Shift).
+ * @param event - The keyboard event to check.
+ * @param shortcut - The shortcut definition to match against.
+ * @returns True if event matches the shortcut; false otherwise.
  * @source
  */
 export function matchesShortcut(
@@ -339,10 +323,9 @@ export function matchesShortcut(
 }
 
 /**
- * Retrieves all shortcuts in a specific category.
- * Useful for organizing shortcuts in the UI by category.
- * @param {ShortcutCategory} category - The category to filter by
- * @returns {Shortcut[]} Array of shortcuts in the specified category
+ * Retrieves all shortcuts in a specific category; useful for UI organization by category.
+ * @param category - The category to filter by.
+ * @returns Array of shortcuts in the specified category.
  * @source
  */
 export function getShortcutsByCategory(category: ShortcutCategory): Shortcut[] {
@@ -350,9 +333,9 @@ export function getShortcutsByCategory(category: ShortcutCategory): Shortcut[] {
 }
 
 /**
- * Finds a shortcut by its unique identifier.
- * @param {string} id - The shortcut ID to find
- * @returns {Shortcut | undefined} The shortcut if found, undefined otherwise
+ * Finds shortcut by unique identifier.
+ * @param id - The shortcut ID to find.
+ * @returns The shortcut if found; undefined otherwise.
  * @source
  */
 export function getShortcutById(id: string): Shortcut | undefined {

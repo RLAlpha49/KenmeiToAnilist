@@ -12,13 +12,13 @@ import type { ReadingHistory, ReadingHistoryEntry } from "./storage";
 import { getLocalDateString } from "./storage";
 
 /**
- * Time range options for filtering statistics.
+ * Time range options for filtering and analyzing statistics.
+ * @source
  */
 export type TimeRange = "7d" | "30d" | "90d" | "all";
 
 /**
- * Minimal representation of a selected match for statistics visualization.
- * Contains only the fields needed by the charts.
+ * Minimal match representation for statistics visualization containing only required chart fields.
  * @source
  */
 export type SelectedMatchLite = {
@@ -27,9 +27,7 @@ export type SelectedMatchLite = {
 };
 
 /**
- * Normalized match result optimized for statistics dashboard.
- * Uses local minimal types instead of broader domain types to prevent
- * relying on unguaranteed fields from storage.
+ * Match result optimized for statistics dashboard; uses minimal local types to prevent reliance on unguaranteed fields.
  * @source
  */
 export type NormalizedMatchForStats = {
@@ -41,8 +39,7 @@ export type NormalizedMatchForStats = {
 };
 
 /**
- * Validates and extracts kenmeiManga from a raw object.
- * Returns null if required fields are missing.
+ * Validates and extracts kenmeiManga from raw object; returns null if required fields missing.
  * @param raw - Raw object to validate.
  * @returns Validated KenmeiManga or null if invalid.
  * @source
@@ -76,8 +73,8 @@ export function extractKenmeiManga(raw: unknown): KenmeiManga | null {
 }
 
 /**
- * Parses matchDate string/number to Date object, or returns undefined.
- * @param raw - Raw timestamp (Date, string, number, or other).
+ * Parses matchDate (Date, string, or number) to Date object; returns undefined if invalid.
+ * @param raw - Raw timestamp value.
  * @returns Parsed Date or undefined if invalid.
  * @source
  */
@@ -88,7 +85,7 @@ export function parseMatchDate(raw: unknown): Date | undefined {
 }
 
 /**
- * Builds minimal selectedMatch with format and genres fields only.
+ * Builds minimal selectedMatch with format and genres fields only from raw object.
  * @param raw - Raw object to build from.
  * @returns SelectedMatchLite or undefined if no valid fields present.
  * @source
@@ -135,9 +132,7 @@ export function parseStatus(raw: unknown): MatchStatus {
 }
 
 /**
- * Normalizes match results from storage into optimized statistics format.
- * Safely validates each field and skips invalid entries.
- *
+ * Normalizes match results from storage into optimized statistics format; safely validates and skips invalid entries.
  * @param results - Raw match results array from storage.
  * @returns Array of normalized match results safe for statistics visualization.
  * @source
@@ -186,9 +181,7 @@ export function normalizeMatchResults(
 }
 
 /**
- * Parses sync stats from stored JSON string.
- * Normalizes lastSyncTime to ISO string format.
- *
+ * Parses sync stats from JSON string; normalizes lastSyncTime to ISO string format.
  * @param raw - Stored sync stats JSON string or null.
  * @returns Parsed SyncStats or null if invalid.
  * @source
@@ -228,6 +221,7 @@ export function parseSyncStats(raw: string | null): SyncStats | null {
  * @param history - Complete reading history.
  * @param timeRange - Time range to filter by.
  * @returns Filtered entries within the time range.
+ * @source
  */
 export function filterHistoryByTimeRange(
   history: ReadingHistory,
@@ -249,11 +243,12 @@ export function filterHistoryByTimeRange(
 }
 
 /**
- * Establishes baseline chapters for each manga from the latest snapshot before the range cutoff.
- * Prevents inflating first in-range day deltas.
+ * Establishes baseline chapters per manga from latest snapshot before range cutoff to prevent inflated first-day deltas.
  * @param history - Complete reading history.
  * @param cutoffTimestamp - Cutoff time in milliseconds.
  * @returns Map of mangaId to baseline chapters.
+ * @internal
+ * @source
  */
 function getPreRangeBaseline(
   history: ReadingHistory,
@@ -276,11 +271,11 @@ function getPreRangeBaseline(
 }
 
 /**
- * Computes daily reading trends (chapters read per day).
- * Establishes per-manga baseline from pre-range history to avoid inflated first-day deltas.
+ * Computes daily reading trends with per-manga baseline from pre-range history to avoid inflated first-day deltas.
  * @param history - Reading history data.
  * @param timeRange - Time range to analyze.
- * @returns Array of daily reading data points.
+ * @returns Array of daily reading data points (date, chapters, count).
+ * @source
  */
 export function computeReadingTrends(
   history: ReadingHistory,
@@ -330,11 +325,11 @@ export function computeReadingTrends(
 }
 
 /**
- * Computes reading velocity metrics (average chapters per time period).
- * Establishes per-manga baseline from pre-range history to avoid inflated first-day deltas.
+ * Computes reading velocity metrics (average chapters per day/week/month) with per-manga baseline.
  * @param history - Reading history data.
  * @param timeRange - Time range to analyze.
- * @returns Velocity metrics object.
+ * @returns Velocity metrics object (perDay, perWeek, perMonth, totalChapters, activeDays).
+ * @source
  */
 export function computeReadingVelocity(
   history: ReadingHistory,
@@ -401,11 +396,11 @@ export function computeReadingVelocity(
 }
 
 /**
- * Computes reading habit patterns (day of week, time of day).
- * Establishes per-manga baseline from pre-range history to avoid inflated deltas.
+ * Computes reading habit patterns (day of week, time of day) with per-manga baseline from pre-range history.
  * @param history - Reading history data.
  * @param timeRange - Time range to analyze.
- * @returns Habit pattern data.
+ * @returns Habit pattern data (byDayOfWeek, byTimeOfDay, peakDay, peakHour).
+ * @source
  */
 export function computeReadingHabits(
   history: ReadingHistory,

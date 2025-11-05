@@ -25,17 +25,26 @@ const itemVariants = {
   },
 };
 
+/**
+ * Props for MatchingSettingsTab component.
+ * @source
+ */
 interface MatchingSettingsTabProps {
+  /** Current matching configuration. */
   matchConfig: MatchConfig;
+  /** Current search query. */
   searchQuery: string;
+  /** Currently highlighted section ID. */
   highlightedSectionId: string | null;
+  /** Callback when matching config changes. */
   onMatchConfigChange: (config: MatchConfig, field: string) => void;
 }
 
 /**
  * Matching tab content component.
  * Orchestrates rendering of all matching-related settings sections.
- *
+ * @param props - Component props.
+ * @returns The rendered matching settings tab.
  * @source
  */
 export function MatchingSettingsTab({

@@ -16,11 +16,11 @@ export interface ConfidenceBadgeProps {
 /**
  * Displays a color-coded confidence badge for manga matches.
  *
- * Shows confidence level (High/Good/Fair/Low) with appropriate styling.
+ * Renders confidence level (High/Good/Fair/Low) with corresponding color scheme.
  * Returns null if confidence is undefined, null, or NaN.
  *
- * @param props - The component props.
- * @returns The rendered confidence badge or null if no valid confidence.
+ * @param props - Badge configuration.
+ * @returns Confidence badge component or null if no valid confidence.
  * @source
  */
 export function ConfidenceBadge({
@@ -37,7 +37,7 @@ export function ConfidenceBadge({
   }
 
   // Round the confidence value for display and comparison
-  const roundedConfidence = Math.min(99, Math.round(confidence)); // Cap at 99%
+  const roundedConfidence = Math.min(99, Math.round(confidence)); // Cap at 99% to allow visual distinction for perfect matches
 
   // Determine color scheme and label based on confidence level
   let containerClass = "";

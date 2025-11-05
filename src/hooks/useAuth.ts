@@ -17,8 +17,8 @@ import {
 
 /**
  * Accesses the authentication state context.
- * @returns The current authentication state.
- * @throws {Error} If used outside an AuthProvider.
+ * @returns Authentication state including user, isAuthenticated, and tokens.
+ * @throws {Error} When used outside an AuthProvider.
  * @source
  */
 export function useAuthState(): AuthStateContextValue {
@@ -31,8 +31,8 @@ export function useAuthState(): AuthStateContextValue {
 
 /**
  * Accesses the authentication actions context.
- * @returns The current authentication actions.
- * @throws {Error} If used outside an AuthProvider.
+ * @returns Authentication action functions including login and logout.
+ * @throws {Error} When used outside an AuthProvider.
  * @source
  */
 export function useAuthActions(): AuthActionsContextValue {
@@ -44,9 +44,10 @@ export function useAuthActions(): AuthActionsContextValue {
 }
 
 /**
- * Accesses the complete authentication context, merging state and actions.
- * @returns The merged authentication context.
- * @throws {Error} If used outside an AuthProvider.
+ * Accesses the complete authentication context combining state and actions.
+ * Merges both contexts for convenient single-hook access to auth data and methods.
+ * @returns Merged authentication context with state and action methods.
+ * @throws {Error} When used outside an AuthProvider.
  * @source
  */
 export function useAuth(): AuthContextType {

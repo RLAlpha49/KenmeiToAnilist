@@ -1,34 +1,39 @@
 /**
- * Rate limiting queue state management.
+ * Rate limit queue state management.
  *
- * Maintains the state of the request queue, processing flag, and last request timestamp.
- * Provides accessors for queue coordination between the processor and other modules.
+ * Maintains the request queue, processing flag, and last request timestamp.
+ * Provides atomic accessors for state coordination between processor and other modules.
  *
  * @packageDocumentation
  * @source
  */
 
 /**
- * Request queue entry with retry support.
+ * A queued rate limit request with retry support.
  * @source
  */
 export interface QueueEntry {
+  /** Function to call when the request is ready to proceed. */
   resolve: (value: void) => void;
+  /** Current attempt number (0-based). */
   attempt?: number;
+  /** Maximum number of attempts allowed. */
   maxAttempts?: number;
+  /** Timestamp (ms) when this entry is eligible to be processed (for backoff). */
   nextEligibleAt?: number;
+  /** Optional callback invoked if all retries are exhausted. */
   onRetryFailed?: (error: Error) => void;
 }
 
 /**
- * Last request timestamp for rate limiting calculations (milliseconds).
+ * Timestamp of the last API request in milliseconds.
  * @source
  */
 let _lastRequestTime = 0;
 
 /**
- * Get the last request timestamp.
- * @returns Timestamp of the last request in milliseconds.
+ * Get the timestamp of the last request.
+ * @returns Milliseconds since epoch of the last request, or 0 if never requested.
  * @source
  */
 export function getLastRequestTime(): number {
@@ -36,8 +41,8 @@ export function getLastRequestTime(): number {
 }
 
 /**
- * Set the last request timestamp.
- * @param time - Timestamp in milliseconds.
+ * Set the timestamp of the last request.
+ * @param time - Milliseconds since epoch.
  * @source
  */
 export function setLastRequestTime(time: number): void {
@@ -45,20 +50,20 @@ export function setLastRequestTime(time: number): void {
 }
 
 /**
- * Request queue for storing pending rate limit requests.
+ * Queue of pending rate limit requests.
  * @source
  */
 export const requestQueue: QueueEntry[] = [];
 
 /**
- * Flag indicating if the queue is currently being processed.
+ * Flag indicating whether the queue processor is currently running.
  * @source
  */
 let _processingQueue = false;
 
 /**
  * Check if the queue is currently being processed.
- * @returns True if queue processing is active.
+ * @returns True if the queue processor is active.
  * @source
  */
 export function isProcessingQueue(): boolean {
@@ -67,7 +72,7 @@ export function isProcessingQueue(): boolean {
 
 /**
  * Set the queue processing flag.
- * @param value - New processing state.
+ * @param value - Whether the processor is running.
  * @source
  */
 export function setProcessingQueue(value: boolean): void {

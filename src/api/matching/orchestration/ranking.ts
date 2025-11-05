@@ -1,5 +1,5 @@
 /**
- * @file Manga result ranking and filtering
+ * Manga result ranking and filtering
  * @module matching/orchestration/ranking
  */
 
@@ -24,12 +24,6 @@ import { shouldSkipManga as shouldSkipMangaByRules } from "../filtering/skip-rul
  * @param includeMangaFn - Predicate function determining inclusion
  * @param kenmeiManga - Optional Kenmei manga for custom rule evaluation
  * @returns Ranked manga results
- *
- * @example
- * ```typescript
- * const ranked = rankMangaCore(results, "Naruto", false, includeFn, kenmeiManga);
- * console.log(`Ranked ${ranked.length} results`);
- * ```
  *
  * @source
  */
@@ -96,12 +90,6 @@ function rankMangaCore(
  * @param isManualSearch - Whether this is a manual search operation
  * @param kenmeiManga - Optional Kenmei manga for custom rule evaluation
  * @returns Ranked manga results
- *
- * @example
- * ```typescript
- * const ranked = rankMangaResults(results, "Naruto", true, false, kenmeiManga);
- * console.log(`Ranked ${ranked.length} results`);
- * ```
  *
  * @source
  */

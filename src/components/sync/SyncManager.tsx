@@ -1,10 +1,13 @@
 /**
  * @packageDocumentation
  * @module SyncManager
- * @description React component for managing and displaying the synchronization process of manga entries with AniList, including progress, error handling, and incremental sync options.
+ * @description React component for orchestrating and displaying the manga synchronization process with AniList.
+ * Handles progress tracking, error recovery, incremental sync strategy, rate limit handling, and session resumption.
  */
 
-// Fix marking incremental updates as complete in the beginning causing the progress count to be incorrect. For example If there were 3 entries for incremental updates and 20 total, it would show 3/20 completed at the start before anything and once it gets to 20/20 it would do the 3 incremental updates.
+// FIXME: Progress count for incremental updates - currently marks as complete upfront
+// causing incorrect display (e.g., 3/20 at start instead of 0/20). Should complete
+// incremental updates at the end of the sync process.
 
 import React, { useEffect, useMemo, useState } from "react";
 import { SyncProgress, SyncReport } from "../../api/anilist/sync-service";
@@ -40,7 +43,15 @@ import { Label } from "../ui/label";
 import { useRateLimit } from "../../contexts/RateLimitContext";
 
 /**
- * Displays synchronization progress with percentage, entry count, and status message.
+ * Displays current synchronization progress with percentage, entry count, and status message.
+ * Includes accessible progress bar and screen reader announcements for status updates.
+ * Shows remaining entries, pause state, or completion status with appropriate messaging.
+ * @param props - Object containing progress data and status string.
+ * @param props.completedEntries - Number of entries successfully synced so far.
+ * @param props.totalEntries - Total number of entries in the sync batch.
+ * @param props.progressPercentage - Percentage of sync completion (0-100).
+ * @param props.status - Current sync status ("idle" | "syncing" | "paused" | "completed" | "failed").
+ * @returns Progress display card with percentage, progress bar, and status message.
  * @source
  */
 const ProgressDisplay: React.FC<{
@@ -122,7 +133,16 @@ const ProgressDisplay: React.FC<{
 };
 
 /**
- * Displays status-dependent alerts for sync readiness, progress, pause state, and completion.
+ * Renders status-dependent alerts for different sync states: idle, syncing, paused, completion, and errors.
+ * Displays appropriate messaging, controls (incremental sync toggle), and visual indicators for each state.
+ * @param props - Object containing sync status and configuration data.
+ * @param props.status - Current sync status affecting alert display.
+ * @param props.entries - Array of entries staged for sync.
+ * @param props.incrementalSync - Whether incremental sync is enabled.
+ * @param props.onIncrementalSyncChange - Optional callback when incremental sync toggle changes.
+ * @param props.autoStart - Whether sync should auto-start without user action.
+ * @param props.syncState - Optional current sync state with error/progress/resume metadata.
+ * @returns Alert component with status-specific messaging and controls.
  * @source
  */
 const StatusAlerts: React.FC<{
@@ -799,17 +819,16 @@ const SyncActions: React.FC<{
 /**
  * Props for the SyncManager component.
  *
- * @property entries - The list of AniList media entries to synchronize.
- * @property token - The AniList authentication token.
- * @property onComplete - Optional callback invoked when synchronization completes, with the sync report.
- * @property onCancel - Optional callback invoked when synchronization is cancelled.
- * @property autoStart - Whether to automatically start synchronization on mount (default: true).
- * @property syncState - Optional sync state object containing progress, report, and error information.
- * @property syncActions - Optional sync actions for starting and cancelling sync.
- * @property incrementalSync - Whether to use incremental sync mode.
- * @property onIncrementalSyncChange - Callback for toggling incremental sync mode.
- * @property displayOrderMediaIds - Optional array of media IDs to control display order.
- * @internal
+ * @property entries - Array of AniList media entries to synchronize with detailed metadata.
+ * @property token - AniList authentication bearer token for API requests.
+ * @property onComplete - Optional callback invoked upon sync completion, receives the sync report with results.
+ * @property onCancel - Optional callback invoked when user cancels the sync operation.
+ * @property autoStart - Whether to automatically initiate sync on component mount (default: true).
+ * @property syncState - Optional current sync state containing progress, report, errors, and resume metadata.
+ * @property syncActions - Optional object with sync orchestration functions (start, cancel, pause, resume).
+ * @property incrementalSync - Whether to break large progress jumps into incremental steps for better AniList activity merging.
+ * @property onIncrementalSyncChange - Optional callback when user toggles incremental sync mode.
+ * @property displayOrderMediaIds - Optional array of media IDs to control the display order in UI.
  * @source
  */
 export interface SyncManagerProps {
@@ -851,6 +870,24 @@ export interface SyncManagerProps {
   displayOrderMediaIds?: number[];
 }
 
+/**
+ * Main synchronization orchestration component for syncing manga entries to AniList.
+ *
+ * Manages the complete sync lifecycle: initial state setup, progress tracking,
+ * error handling with recovery options, pause/resume functionality, and result display.
+ * Supports incremental progress updates, rate limiting awareness, and checkpointed resumption.
+ *
+ * UI includes:
+ * - Real-time progress bar with percentage and entry count
+ * - Status-dependent alerts (idle, syncing, paused, completed, failed)
+ * - Current entry display with cover image and metadata
+ * - Error details with action buttons for recovery
+ * - Results summary with statistics and export capability
+ *
+ * @param props - Component props with entries, token, sync actions, and callbacks.
+ * @returns Complete sync UI with progress, status, and results display.
+ * @source
+ */
 const SyncManager: React.FC<SyncManagerProps> = ({
   entries,
   token,

@@ -7,8 +7,9 @@
 import { contextBridge, ipcRenderer } from "electron";
 
 /**
- * Exposes the Electron store context bridge to the renderer process.
- *
+ * Exposes store IPC methods to the renderer process via context bridge.
+ * Provides getItem, setItem, removeItem, and clear operations.
+ * @throws {Error} If electron modules are unavailable.
  * @source
  */
 export function exposeStoreContext() {

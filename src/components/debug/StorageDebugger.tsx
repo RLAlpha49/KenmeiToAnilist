@@ -212,6 +212,7 @@ export function StorageDebugger() {
   // Load localStorage items
   const loadLocalStorageItems = () => {
     const items: StorageItem[] = [];
+    // Iterate through all localStorage entries
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key) {
@@ -220,6 +221,7 @@ export function StorageDebugger() {
         items.push({ key, value, type, size });
       }
     }
+    // Sort by key for consistent display
     items.sort((a, b) => a.key.localeCompare(b.key));
     setLocalStorageItems(items);
   };
@@ -278,6 +280,7 @@ export function StorageDebugger() {
 
     try {
       const items: StorageItem[] = [];
+      // Check both localStorage keys and known electron store keys
       const keysToCheck = getAllKeysToCheck();
 
       for (const key of keysToCheck) {
@@ -331,6 +334,7 @@ export function StorageDebugger() {
           toast.error("Electron store bridge unavailable.");
         }
       } else {
+        // Update only localStorage for non-electron items
         localStorage.setItem(editingItem.key, editingItem.value);
         toast.success("localStorage item updated successfully.");
       }

@@ -36,14 +36,13 @@ import { cn } from "@/utils/tailwind";
 
 /**
  * Props for the PauseResumeButton component.
- *
  * @property isPaused - Whether the process is currently paused.
  * @property isManuallyPaused - Whether the pause was triggered manually.
- * @property onResumeProcess - Callback to resume the matching process (optional).
- * @property onPauseProcess - Callback to pause the matching process (optional).
+ * @property onResumeProcess - Callback to resume the matching process.
+ * @property onPauseProcess - Callback to pause the matching process.
  * @property resumeButtonDisabled - Whether the resume button should be disabled.
  * @property pauseButtonDisabled - Whether the pause button should be disabled.
- * @internal
+ * @property isPausing - Whether a pause transition is occurring.
  * @source
  */
 interface PauseResumeButtonProps {
@@ -57,10 +56,10 @@ interface PauseResumeButtonProps {
 }
 
 /**
- * Button component for pausing/resuming the matching process.
- *
- * @param props - The props for the PauseResumeButton component.
- * @returns The rendered pause/resume button React element.
+ * Button component for pausing or resuming the matching process.
+ * Shows appropriate button state and icon based on pause status.
+ * @param props - Component props.
+ * @returns Rendered pause/resume button with loading state.
  * @source
  */
 const PauseResumeButton: React.FC<PauseResumeButtonProps> = ({

@@ -6,15 +6,23 @@ import React, { useState, useEffect } from "react";
  * @description Displays a countdown timer and progress bar for API rate limit retry, calling a callback when complete.
  */
 
+/**
+ * Props for the RateLimitCountdown component.
+ * @property retryAfter - Timestamp in milliseconds when retry is allowed.
+ * @property onComplete - Callback invoked when countdown reaches zero.
+ * @source
+ */
 interface RateLimitCountdownProps {
   retryAfter: number;
   onComplete: () => void;
 }
 
 /**
- * Props for the RateLimitCountdown component.
- * @property retryAfter - Timestamp (in milliseconds) when retry is allowed.
- * @property onComplete - Callback invoked when countdown reaches zero.
+ * Displays countdown timer and progress bar for API rate limit retry.
+ * @param props - Component properties.
+ * @param props.retryAfter - Timestamp in milliseconds when retry is allowed.
+ * @param props.onComplete - Callback invoked when countdown reaches zero.
+ * @returns React element with countdown timer and progress bar.
  * @source
  */
 export function RateLimitCountdown({
@@ -37,13 +45,14 @@ export function RateLimitCountdown({
 
     const initialRemaining = calcTimeRemaining();
     setTimeRemaining(initialRemaining);
-    setInitialDuration(initialRemaining); // Store the initial duration
+    // Store initial duration for progress calculation
+    setInitialDuration(initialRemaining);
     console.debug(
       "[RateLimitCountdown] Initial time remaining set to:",
       initialRemaining,
     );
 
-    // If the initial time is already 0, call onComplete immediately
+    // Invoke callback immediately if no time remaining
     if (initialRemaining === 0) {
       console.debug(
         "[RateLimitCountdown] Initial time is zero, calling onComplete immediately",
@@ -52,7 +61,7 @@ export function RateLimitCountdown({
       return () => {}; // No interval to clean up
     }
 
-    // Set up interval to update the countdown
+    // Update countdown every second
     const interval = setInterval(() => {
       const remaining = calcTimeRemaining();
       setTimeRemaining(remaining);
@@ -73,7 +82,7 @@ export function RateLimitCountdown({
     };
   }, [retryAfter, onComplete]);
 
-  // Format the time remaining
+  // Format milliseconds to MM:SS format
   const formatTime = (ms: number) => {
     const totalSeconds = Math.ceil(ms / 1000);
     const minutes = Math.floor(totalSeconds / 60);
@@ -82,18 +91,10 @@ export function RateLimitCountdown({
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
-  // Calculate progress percentage (100% to 0% as time elapses)
+  // Calculate progress as percentage (100% to 0%)
   const progressPercentage =
     initialDuration > 0 ? (timeRemaining / initialDuration) * 100 : 100;
 
-  /**
-   * Displays a countdown timer and progress bar for API rate limit retry.
-   * Calls the provided callback when the countdown reaches zero.
-   * @param retryAfter - Timestamp (in milliseconds) when retry is allowed.
-   * @param onComplete - Callback invoked when countdown reaches zero.
-   * @returns A React element displaying the countdown and progress bar.
-   * @source
-   */
   return (
     <div className="mt-2 text-sm">
       <div className="flex items-center justify-between">

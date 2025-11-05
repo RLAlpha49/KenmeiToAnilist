@@ -11,31 +11,59 @@ import { Switch } from "@/components/ui/switch";
 import { highlightText } from "@/utils/textHighlight";
 import { cn } from "@/utils/tailwind";
 
+/**
+ * Props for DebugToolsSection component.
+ * @source
+ */
 interface DebugToolsSectionProps {
+  /** Whether debug mode is enabled. */
   isDebugEnabled: boolean;
+  /** Whether storage debugger is enabled. */
   storageDebuggerEnabled: boolean;
+  /** Whether log viewer is enabled. */
   logViewerEnabled: boolean;
+  /** Whether log redaction is enabled. */
   logRedactionEnabled: boolean;
+  /** Whether state inspector is enabled. */
   stateInspectorEnabled: boolean;
+  /** Whether IPC viewer is enabled. */
   ipcViewerEnabled: boolean;
+  /** Whether event logger is enabled. */
   eventLoggerEnabled: boolean;
+  /** Whether confidence test exporter is enabled. */
   confidenceTestExporterEnabled: boolean;
+  /** Whether performance monitor is enabled. */
   performanceMonitorEnabled: boolean;
+  /** Current search query. */
   searchQuery: string;
+  /** Currently highlighted section ID. */
   highlightedSectionId: string | null;
+  /** Callback to toggle debug mode. */
   onToggleDebug: () => void;
+  /** Callback to toggle storage debugger. */
   onStorageDebuggerChange: (enabled: boolean) => void;
+  /** Callback to toggle log viewer. */
   onLogViewerChange: (enabled: boolean) => void;
+  /** Callback to toggle log redaction. */
   onLogRedactionChange: (enabled: boolean) => void;
+  /** Callback to toggle state inspector. */
   onStateInspectorChange: (enabled: boolean) => void;
+  /** Callback to toggle IPC viewer. */
   onIpcViewerChange: (enabled: boolean) => void;
+  /** Callback to toggle event logger. */
   onEventLoggerChange: (enabled: boolean) => void;
+  /** Callback to toggle confidence test exporter. */
   onConfidenceTestExporterChange: (enabled: boolean) => void;
+  /** Callback to toggle performance monitor. */
   onPerformanceMonitorChange: (enabled: boolean) => void;
 }
 
 /**
  * Helper function to render text with highlighting if search query exists.
+ * @param text - The text to potentially highlight.
+ * @param searchQuery - The search query to highlight with.
+ * @returns Highlighted text or plain text.
+ * @source
  */
 const renderHighlightedText = (
   text: string,
@@ -47,7 +75,8 @@ const renderHighlightedText = (
 /**
  * Debug tools section component.
  * Manages debug mode and individual debug tool toggles.
- *
+ * @param props - Component props.
+ * @returns The rendered debug tools section.
  * @source
  */
 export function DebugToolsSection({

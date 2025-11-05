@@ -38,30 +38,31 @@ import {
 
 /**
  * Props for ExportMatchesButton component.
+ * @property matches - Array of match results to export.
+ * @property disabled - Whether the button is disabled.
+ * @property variant - Button style variant.
+ * @property size - Button size.
  * @source
  */
 export interface ExportMatchesButtonProps {
-  /** Array of match results to export */
   matches: MangaMatchResult[];
-  /** Whether the button is disabled */
   disabled?: boolean;
-  /** Button variant */
   variant?: "default" | "outline" | "ghost";
-  /** Button size */
   size?: "default" | "sm" | "lg";
 }
 
 /**
- * Match status type for filtering.
+ * Match status type for filtering export results.
  * @source
  */
 type MatchStatusType = "matched" | "manual" | "pending" | "skipped";
 
 /**
- * Get aria-describedby value for export button based on filter state.
- * @param statusFiltersSize Number of selected statuses
- * @param filteredCount Number of matches after filtering
- * @returns aria-describedby ID or undefined
+ * Determines aria-describedby value for export button based on filter state.
+ * @param statusFiltersSize - Number of selected statuses.
+ * @param filteredCount - Number of matches after filtering.
+ * @returns aria-describedby ID or undefined.
+ * @source
  */
 function getExportDescription(
   statusFiltersSize: number,
@@ -73,10 +74,10 @@ function getExportDescription(
 }
 
 /**
- * Export button component with format and filter options for match results.
- *
- * Uses the shared matchPassesFilter helper from exportUtils to ensure
- * the preview count always matches the actual export count.
+ * Export button with dropdown menu for format and filter options on match results.
+ * Uses matchPassesFilter helper to ensure preview count matches actual export count.
+ * @param props - Component props.
+ * @returns Dropdown button for exporting match results.
  * @source
  */
 const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
@@ -394,7 +395,7 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
 };
 
 /**
- * Memoized export button component for match results.
+ * Memoized export button component to prevent unnecessary re-renders.
  * @source
  */
 export const ExportMatchesButton = React.memo(ExportMatchesButtonComponent);

@@ -6,10 +6,9 @@ import { Badge } from "../ui/badge";
 
 /**
  * Represents a duplicate entry with one AniList manga mapped to multiple Kenmei titles.
- *
- * @property anilistId - The AniList manga ID.
- * @property anilistTitle - The AniList manga title (romaji or english).
- * @property kenmeiTitles - Array of Kenmei manga titles that map to this AniList ID.
+ * @property anilistId - AniList manga ID.
+ * @property anilistTitle - AniList manga title (romaji or english).
+ * @property kenmeiTitles - Array of Kenmei manga titles mapped to this AniList ID.
  * @source
  */
 export interface DuplicateEntry {
@@ -20,7 +19,6 @@ export interface DuplicateEntry {
 
 /**
  * Props for the DuplicateWarning component.
- *
  * @property duplicates - Array of detected duplicate entries to display.
  * @property onDismiss - Callback to dismiss the warning.
  * @property onSearchAnilist - Callback to search for AniList manga by title.
@@ -35,12 +33,10 @@ interface DuplicateWarningProps {
 }
 
 /**
- * Displays a warning card for duplicate AniList entries mapped to multiple Kenmei manga.
- *
- * Allows user to review conflicts and take action to search or ignore duplicates.
- *
- * @param props - The component props.
- * @returns The rendered duplicate warning component, or null if no duplicates.
+ * Warning card displaying duplicate AniList entries mapped to multiple Kenmei manga.
+ * Allows users to review conflicts and search or ignore duplicates.
+ * @param props - Component props.
+ * @returns Rendered duplicate warning, or null if no duplicates exist.
  * @source
  */
 function DuplicateWarningComponent({
@@ -166,7 +162,7 @@ function DuplicateWarningComponent({
   );
 }
 
-/** Memoized DuplicateWarning component for performance optimization. @source */
+/** Memoized DuplicateWarning component to prevent unnecessary re-renders. @source */
 const MemoizedDuplicateWarning = React.memo(DuplicateWarningComponent);
 MemoizedDuplicateWarning.displayName = "DuplicateWarning";
 

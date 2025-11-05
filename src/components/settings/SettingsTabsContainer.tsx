@@ -25,7 +25,12 @@ import type {
 } from "@/utils/storage";
 import type { DataManagementProps } from "./types";
 
+/**
+ * Search result from settings search.
+ * @source
+ */
 interface SettingsSearchResult {
+  /** Matched section information. */
   section: {
     id: string;
     title: string;
@@ -33,31 +38,52 @@ interface SettingsSearchResult {
     description?: string;
     keywords?: string[];
   };
+  /** Match score (higher = better match). */
   score: number;
 }
 
+/**
+ * Props for SettingsTabsContainer component.
+ * @source
+ */
 interface SettingsTabsContainerProps extends DataManagementProps {
+  /** Search results to display. */
   searchResults: SettingsSearchResult[];
+  /** Current matching configuration. */
   matchConfig: MatchConfig;
+  /** Current sync configuration. */
   syncConfig: SyncConfig;
+  /** Whether custom threshold is enabled for auto-pause. */
   useCustomThreshold: boolean;
+  /** Callback when matching config changes. */
   onMatchConfigChange: (config: MatchConfig, field: string) => void;
+  /** Callback when sync config changes. */
   onSyncConfigChange: (config: SyncConfig, field: string) => void;
+  /** Callback to toggle custom threshold. */
   onCustomThresholdToggle: (value: boolean) => void;
+  /** Callback to set entire sync config. */
   setSyncConfig: (config: SyncConfig) => void;
+  /** Backup schedule configuration. */
   scheduleConfig: BackupScheduleConfig;
+  /** Timestamp of next scheduled backup. */
   nextScheduledBackup: number | null;
+  /** Timestamp of last scheduled backup. */
   lastScheduledBackup: number | null;
+  /** Whether a manual backup trigger is in progress. */
   isTriggeringBackup: boolean;
+  /** Callback when backup schedule config changes. */
   onScheduleConfigChange: (config: BackupScheduleConfig) => void;
+  /** Callback to trigger manual backup. */
   onTriggerBackup: () => void;
+  /** Optional callback to restore from file. */
   onRestoreBackupFile?: (file: File) => void;
 }
 
 /**
  * Settings tabs container component.
  * Orchestrates rendering of three main tabs (Matching, Sync, Data) and search results view.
- *
+ * @param props - Component props.
+ * @returns The rendered settings tabs container.
  * @source
  */
 export function SettingsTabsContainer({

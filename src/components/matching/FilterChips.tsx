@@ -7,6 +7,10 @@ import { formatLabel, statusLabel } from "./labels";
 
 /**
  * Props for the FilterChips component.
+ * @property filters - Current filter state.
+ * @property onRemoveFilter - Callback when removing individual filters.
+ * @property onClearAll - Callback to clear all filters at once.
+ * @source
  */
 interface FilterChipsProps {
   filters: AdvancedMatchFilters;
@@ -18,31 +22,34 @@ interface FilterChipsProps {
 }
 
 /**
- * Display active filters as removable chips/badges.
- * Shows confidence range, formats, genres, and publication statuses.
+ * Displays active filters as removable badge chips.
+ * Shows confidence range, formats, genres, and publication statuses with individual removal buttons.
+ * @param props - Component props.
+ * @returns Rendered filter chips, or null if no filters are active.
+ * @source
  */
 export function FilterChips({
   filters,
   onRemoveFilter,
   onClearAll,
 }: Readonly<FilterChipsProps>) {
-  // Check if confidence is at defaultReadonly<FilterChipsProps>
+  // Check if confidence is at default range
   const isDefaultConfidence =
     filters.confidence.min === 0 && filters.confidence.max === 100;
 
-  // Calculate total active filter count
+  // Count total active filters
   const activeFilterCount =
     (isDefaultConfidence ? 0 : 1) +
     filters.formats.length +
     filters.genres.length +
     filters.publicationStatuses.length;
 
-  // Don't render if no active filters
+  // Return early if no active filters
   if (activeFilterCount === 0) {
     return null;
   }
 
-  // Limit displayed genres to first 5
+  // Limit displayed genres to prevent overflow
   const displayedGenres = filters.genres.slice(0, 5);
   const remainingGenresCount = filters.genres.length - displayedGenres.length;
 

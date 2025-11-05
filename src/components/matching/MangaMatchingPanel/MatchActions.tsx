@@ -34,10 +34,11 @@ export interface MatchActionsProps {
 /**
  * Renders action buttons for a manga match based on its current status.
  *
- * Shows different button combinations for pending, matched, manual, and skipped statuses.
+ * Displays different button combinations for pending, matched, manual, and skipped statuses.
+ * Button styling and behavior adapts to match state and available actions.
  *
- * @param props - The component props.
- * @returns The rendered action buttons.
+ * @param props - Component props including match state and callbacks.
+ * @returns Rendered action buttons appropriate for the match status.
  * @source
  */
 function MatchActionsComponent({
@@ -49,13 +50,15 @@ function MatchActionsComponent({
   onSelectAlternative,
   handleKeyDown,
 }: Readonly<MatchActionsProps>) {
-  // keep onSelectAlternative referenced to preserve API and avoid unused prop linting
+  // Keep onSelectAlternative referenced to preserve API and avoid unused prop warnings
   if (onSelectAlternative) {
     /* no-op to satisfy linter */
   }
+  // Base styling classes for all action buttons
   const buttonBaseClass =
     "relative overflow-hidden rounded-xl px-4 py-2 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
 
+  /** Common search button component used across different match statuses. */
   const commonSearchButton = (text: string, ariaLabel: string) => (
     <Button
       className={`${buttonBaseClass} bg-linear-to-r from-indigo-500 via-indigo-400 to-sky-400 text-white shadow-[0_10px_30px_-12px_rgba(79,70,229,0.65)] hover:shadow-[0_18px_40px_-15px_rgba(14,165,233,0.55)] focus-visible:ring-indigo-400/70 dark:from-indigo-500 dark:via-indigo-400 dark:to-sky-500`}
@@ -77,6 +80,7 @@ function MatchActionsComponent({
     </Button>
   );
 
+  /** Reset button for returning match to pending status. */
   const resetButton = (
     <Button
       variant="secondary"

@@ -14,15 +14,16 @@ import { Card } from "../ui/card";
 import { Progress } from "../ui/progress";
 
 /**
- * A floating indicator component that displays background matching progress when user is not on the matching page.
+ * A floating indicator displaying background manga matching progress when user is not on the matching page.
  *
- * @returns The rendered background matching indicator or null if not applicable.
+ * @returns The rendered matching indicator element or null if no matching is active.
  * @source
  */
 export function BackgroundMatchingIndicator() {
   const location = useLocation();
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(false);
+  // Tracks active matching state including progress, current manga, and time estimates
   const [matchingState, setMatchingState] = useState<{
     isRunning: boolean;
     current: number;
@@ -34,6 +35,7 @@ export function BackgroundMatchingIndicator() {
   } | null>(null);
 
   const pathname = getPathname(location);
+  // Hide indicator when user is already viewing the matching progress page
   const isOnMatchingPage = pathname === "/review";
 
   // Poll for matching state updates
@@ -70,6 +72,7 @@ export function BackgroundMatchingIndicator() {
     return null;
   }
 
+  // Calculate percentage completion, defaulting to 0 if total is not set
   const progressPercent =
     matchingState.total > 0
       ? Math.round((matchingState.current / matchingState.total) * 100)

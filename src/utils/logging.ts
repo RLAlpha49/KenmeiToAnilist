@@ -19,20 +19,17 @@ const groupStack: GroupEntry[] = [];
 
 /**
  * Starts a new console group that will contain related log messages.
- *
- * Groups with the same label are automatically deduplicated (incremented) rather than
- * creating nested groups. The group state is tracked by `LogCollector` so group hierarchy
- * is preserved when logs are captured.
- *
- * @param label - The label for the group. Used for both deduplication and display.
- * @param collapsed - If true, creates a collapsed group (user must click to expand). Default: true.
+ * Groups with the same label are automatically deduplicated rather than creating nested groups.
+ * Group state is tracked by LogCollector so group hierarchy is preserved in capture.
+ * @param label - The label for the group. Used for deduplication and display.
+ * @param collapsed - If true, creates a collapsed group (default: true).
  * @source
  */
 export function startGroup(label: string, collapsed = true): void {
   // If the current top group has the same label, increment its ref count and
   // don't call console.group again to avoid nested identical groups.
   const top = groupStack.at(-1);
-  if (top && top.label === label) {
+  if (top?.label === label) {
     top.count++;
     return;
   }
@@ -58,11 +55,9 @@ export function startGroup(label: string, collapsed = true): void {
 }
 
 /**
- * Ends the most recent console group started with `startGroup()`.
- *
- * Handles reference counting for deduplicated groups - only closes the console group
- * when the last reference is ended. Safe to call when no group is active (no-op).
- *
+ * Ends the most recent console group started with startGroup().
+ * Handles reference counting for deduplicated groups - only closes when last reference ends.
+ * Safe to call when no group is active (no-op).
  * @source
  */
 export function endGroup(): void {
@@ -90,13 +85,12 @@ export function endGroup(): void {
 
 /**
  * Wraps a synchronous operation with automatic group management.
- *
- * Automatically calls `startGroup()` before the operation and `endGroup()` after,
- * ensuring cleanup even if the operation throws an error.
- *
+ * Automatically calls startGroup() before the operation and endGroup() after.
+ * Ensures cleanup even if the operation throws an error.
+ * @template T - The return type of the wrapped function.
  * @param label - The group label for this operation.
  * @param fn - The synchronous function to wrap.
- * @param collapsed - If true, creates a collapsed group. Default: true.
+ * @param collapsed - If true, creates a collapsed group (default: true).
  * @returns The return value of the wrapped function.
  * @throws Rethrows any error thrown by the wrapped function.
  * @source
@@ -111,18 +105,13 @@ export function withGroup<T>(label: string, fn: () => T, collapsed = true): T {
 }
 
 /**
- * Wraps an asynchronous operation with automatic group management.
- *
- * Automatically calls `startGroup()` before the operation and `endGroup()` after,
- * ensuring cleanup even if the operation rejects. All console output from the async
- * function will be contained in the group in browser DevTools and tracked with group
- * hierarchy in log collection.
- *
+ * Async version of withGroup(); automatically manages group lifecycle around async operations.
+ * @template T - The promise return type of the wrapped function.
  * @param label - The group label for this operation.
  * @param fn - The async function to wrap.
- * @param collapsed - If true, creates a collapsed group. Default: true.
- * @returns Promise that resolves to the return value of the wrapped function.
- * @throws Rethrows any error thrown or rejected by the wrapped function.
+ * @param collapsed - If true, creates a collapsed group (default: true).
+ * @returns Promise resolving to the return value of the wrapped function.
+ * @throws Rethrows any error or rejection from the wrapped function.
  * @source
  */
 export async function withGroupAsync<T>(
@@ -142,7 +131,7 @@ export async function withGroupAsync<T>(
 export type LogLevel = "log" | "info" | "warn" | "error" | "debug";
 
 /**
- * Individual captured log entry.
+ * Captured log entry with metadata including severity level, timestamp, and group hierarchy.
  * @source
  */
 export interface LogEntry {
@@ -167,8 +156,9 @@ export interface LogEntry {
 }
 
 const LOG_LEVELS: LogLevel[] = ["error", "warn", "info", "log", "debug"];
+
 /**
- * Maximum number of log entries to retain in memory before discarding oldest.
+ * Maximum log entries retained before discarding oldest entries (buffer size limit).
  * @source
  */
 export const MAX_LOG_ENTRIES = 1000;
@@ -515,7 +505,7 @@ class LogCollector {
 
   /**
    * Retrieves all captured log entries.
-   * @returns Array of log entries.
+   * @returns Array of all captured log entries in chronological order.
    * @source
    */
   getEntries(): LogEntry[] {
@@ -524,7 +514,7 @@ class LogCollector {
 
   /**
    * Subscribes to log entry changes with a callback.
-   * @param listener - Function called with current entries and updates.
+   * @param listener - Function called with current entries on each update.
    * @returns Unsubscribe function to remove the listener.
    * @source
    */
@@ -537,8 +527,7 @@ class LogCollector {
   }
 
   /**
-   * Called when console.group() or console.groupCollapsed() is invoked.
-   * Tracks the group label in the hierarchy stack.
+   * Called when console.group/groupCollapsed is invoked; tracks group label in hierarchy stack.
    * @param label - The group label.
    * @source
    */
@@ -547,8 +536,7 @@ class LogCollector {
   }
 
   /**
-   * Called when console.groupEnd() is invoked.
-   * Removes the most recent group from the hierarchy stack.
+   * Called when console.groupEnd is invoked; removes most recent group from hierarchy stack.
    * @source
    */
   exitGroup(): void {
@@ -556,7 +544,7 @@ class LogCollector {
   }
 
   /**
-   * Adds a new log entry to the collection.
+   * Adds a new log entry to the collection; processes format specifiers and maintains max buffer size.
    * @param level - The log severity level.
    * @param args - Arguments passed to the console method.
    * @source
@@ -605,7 +593,7 @@ class LogCollector {
   }
 
   /**
-   * Clears all captured log entries.
+   * Clears all captured log entries and notifies subscribers.
    * @source
    */
   clear(): void {
@@ -614,7 +602,7 @@ class LogCollector {
   }
 
   /**
-   * Notifies all subscribers of log entry changes.
+   * Notifies all subscribers with current snapshot of log entries.
    * @source
    */
   #notify() {
@@ -625,6 +613,7 @@ class LogCollector {
   }
 }
 
+/** Singleton instance managing all log capture, subscriptions, and group hierarchy. @source */
 export const logCollector = new LogCollector();
 
 /** Tracks whether console interceptors are currently installed. */
@@ -642,15 +631,9 @@ type ConsoleMethod = (...args: unknown[]) => void;
 const assignableConsole = console as Console & Record<LogLevel, ConsoleMethod>;
 
 /**
- * Installs console interceptors to capture all log output.
- *
- * Wraps console methods (log, info, warn, error, debug) to forward entries to the LogCollector
- * while preserving normal console output. Also wraps group methods (group, groupCollapsed, groupEnd)
- * to track the hierarchical group structure for better log organization.
- *
- * Returns a cleanup function to uninstall interceptors.
- *
- * @returns A cleanup function that restores original console methods.
+ * Installs console interceptors to capture all log output; wraps methods to forward to LogCollector.
+ * Preserves normal console output and group hierarchy tracking. No-op if already installed.
+ * @returns Cleanup function to restore original console methods.
  * @source
  */
 export function installConsoleInterceptor(): () => void {
@@ -724,7 +707,7 @@ export function installConsoleInterceptor(): () => void {
 }
 
 /**
- * Represents a log entry in serializable form suitable for export or storage.
+ * Serializable log entry suitable for export or storage; stripped of internal state.
  * @source
  */
 export interface SerializableLogEntry {
@@ -740,11 +723,7 @@ export interface SerializableLogEntry {
 }
 
 /**
- * Transforms internal LogEntry objects into a serializable format for export.
- *
- * Strips internal state and returns only properties needed for persistence or transmission.
- * Includes group hierarchy information to preserve structural context.
- *
+ * Transforms LogEntry objects into serializable format for export/storage; preserves group hierarchy.
  * @param entries - Array of internal log entries to serialize.
  * @returns Array of serializable log entries.
  * @source

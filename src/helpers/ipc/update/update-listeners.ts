@@ -23,23 +23,21 @@ import {
 } from "./update-channels";
 import { withGroupAsync } from "../../../utils/logging";
 
+/** Persistent store instance for update preferences and state. @source */
 const store = new Store() as unknown as {
   get: (key: string) => unknown;
   set: (key: string, value: unknown) => void;
 };
 
-/**
- * Type alias for release notes, which can be a string, an array of note objects, or undefined.
- */
+/** Type alias for release notes: string, array of objects with note field, or undefined. @source */
 type ReleaseNotes = string | { note?: string }[] | undefined;
 
 /**
- * Normalizes release notes to a string.
- * If release notes is an array, joins mapped note fields with double newlines.
- * If undefined, returns empty string.
- *
- * @param releaseNotes The raw release notes (string, array, or undefined)
- * @returns Normalized release notes as string
+ * Normalizes release notes to a string format.
+ * Converts array format to multi-line string, returns string as-is, or returns empty string.
+ * @param releaseNotes - Raw release notes in various formats.
+ * @returns Normalized release notes as string.
+ * @source
  */
 function normalizeReleaseNotes(releaseNotes: ReleaseNotes): string {
   if (typeof releaseNotes === "string") {
@@ -65,19 +63,17 @@ function normalizeReleaseNotes(releaseNotes: ReleaseNotes): string {
 }
 
 /**
- * Set up IPC event listeners for auto-update functionality
- *
- * @param mainWindow - The main application window for security validation
+ * Registers IPC handlers and event forwarding for auto-update operations.
+ * Manages update checking, downloading, installation, and progress events.
+ * @param mainWindow - Main application window for security validation and event forwarding.
+ * @source
  */
 export function addUpdateEventListeners(mainWindow: BrowserWindow): void {
-  // Configure autoUpdater to not download automatically
+  // Disable automatic download and install to give renderer control
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = false;
 
-  /**
-   * Handle update channel selection from renderer
-   * Persists the selected channel and sets autoUpdater.allowPrerelease accordingly
-   */
+  // Handle update channel selection: persist preference and configure prerelease flag
   secureHandle(
     "updates:set-channel",
     (_event: Electron.IpcMainInvokeEvent, channel: "stable" | "beta") => {
@@ -99,11 +95,7 @@ export function addUpdateEventListeners(mainWindow: BrowserWindow): void {
     mainWindow,
   );
 
-  /**
-   * Handle update check requests from renderer
-   * Checks for available updates and returns update information
-   * Respects allowPrerelease option to include beta releases
-   */
+  // Handle update check requests and return update information
   secureHandle(
     UPDATE_CHECK_CHANNEL,
     async (
@@ -119,7 +111,7 @@ export function addUpdateEventListeners(mainWindow: BrowserWindow): void {
         "[Update Listeners] Checking for updates",
         async () => {
           try {
-            // Set allowPrerelease based on payload (default: false for stable only)
+            // Apply prerelease preference from payload
             autoUpdater.allowPrerelease = Boolean(payload?.allowPrerelease);
             console.log(
               `[Update Listeners] allowPrerelease: ${autoUpdater.allowPrerelease}`,
@@ -161,10 +153,7 @@ export function addUpdateEventListeners(mainWindow: BrowserWindow): void {
     mainWindow,
   );
 
-  /**
-   * Handle update download requests from renderer
-   * Initiates download of the available update
-   */
+  // Handle update download requests
   secureHandle(
     UPDATE_DOWNLOAD_CHANNEL,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -188,10 +177,7 @@ export function addUpdateEventListeners(mainWindow: BrowserWindow): void {
     mainWindow,
   );
 
-  /**
-   * Handle update installation requests from renderer
-   * Quits the application and installs the downloaded update
-   */
+  // Handle update installation requests
   secureHandle(
     UPDATE_INSTALL_CHANNEL,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -212,10 +198,7 @@ export function addUpdateEventListeners(mainWindow: BrowserWindow): void {
     mainWindow,
   );
 
-  /**
-   * Forward update-available event to renderer
-   * Triggered when a new update is available
-   */
+  // Forward update-available event to renderer
   autoUpdater.on("update-available", (info: UpdateInfo) => {
     console.log("[Update Listeners] Update available:", info.version);
     mainWindow.webContents.send(UPDATE_AVAILABLE_EVENT, {
@@ -225,10 +208,7 @@ export function addUpdateEventListeners(mainWindow: BrowserWindow): void {
     });
   });
 
-  /**
-   * Forward download-progress event to renderer
-   * Provides real-time download progress updates
-   */
+  // Forward download-progress event to renderer with real-time updates
   autoUpdater.on("download-progress", (progress: ProgressInfo) => {
     console.log(
       `[Update Listeners] Download progress: ${Math.round(progress.percent)}%`,
@@ -241,10 +221,7 @@ export function addUpdateEventListeners(mainWindow: BrowserWindow): void {
     });
   });
 
-  /**
-   * Forward update-downloaded event to renderer
-   * Triggered when the update has been fully downloaded
-   */
+  // Forward update-downloaded event to renderer
   autoUpdater.on("update-downloaded", (info: UpdateInfo) => {
     console.log("[Update Listeners] Update downloaded:", info.version);
     mainWindow.webContents.send(UPDATE_DOWNLOADED_EVENT, {
@@ -252,10 +229,7 @@ export function addUpdateEventListeners(mainWindow: BrowserWindow): void {
     });
   });
 
-  /**
-   * Forward error event to renderer
-   * Triggered when an error occurs during the update process
-   */
+  // Forward error event to renderer with error details
   autoUpdater.on("error", (error: Error) => {
     console.error("[Update Listeners] Update error:", error);
     mainWindow.webContents.send(UPDATE_ERROR_EVENT, {

@@ -13,8 +13,8 @@ import { exposeUpdateContext } from "./update/update-context";
 import { exposeBackupContext } from "./backup/backup-context";
 
 /**
- * Exposes all IPC context bridges for the Electron renderer process.
- *
+ * Exposes all IPC context bridges for the renderer process.
+ * Registers window, theme, auth, store, API, update, and backup contexts with error handling.
  * @source
  */
 export default function exposeContexts() {

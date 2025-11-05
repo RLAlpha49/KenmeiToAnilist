@@ -23,6 +23,7 @@ import { computeReadingHabits } from "@/utils/statisticsAdapter";
 
 /**
  * Props for ReadingHabitsChart component.
+ * @source
  */
 interface ReadingHabitsChartProps {
   readonly history: ReadingHistory;
@@ -32,6 +33,10 @@ interface ReadingHabitsChartProps {
 
 /**
  * ReadingHabitsChart - Displays reading patterns by day of week and time of day.
+ * Visualizes when users read most based on recorded snapshot times.
+ * @param props - Component props with reading history and time range.
+ * @returns Rendered chart with day-of-week and hourly breakdowns or empty state.
+ * @source
  */
 export const ReadingHabitsChart: FC<ReadingHabitsChartProps> = ({
   history,

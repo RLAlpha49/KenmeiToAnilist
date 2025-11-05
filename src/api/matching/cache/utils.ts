@@ -9,9 +9,9 @@ import { CACHE_EXPIRY } from "./types";
 
 /**
  * Generates a normalized cache key from a manga title.
- * Uses string normalization and limits to 30 characters for consistency.
+ * Normalizes string and limits to 30 characters for consistency.
  * @param title - Manga title to convert to cache key.
- * @returns Normalized cache key (maximum 30 characters).
+ * @returns Normalized cache key (max 30 characters).
  * @source
  */
 export function generateCacheKey(title: string): string {
@@ -21,7 +21,7 @@ export function generateCacheKey(title: string): string {
 /**
  * Checks if a cache entry exists and is not expired.
  * @param key - Cache key to validate.
- * @returns True if the cache entry exists and has not exceeded CACHE_EXPIRY; false otherwise.
+ * @returns True if entry exists and has not exceeded CACHE_EXPIRY; false otherwise.
  * @source
  */
 export function isCacheValid(key: string): boolean {
@@ -32,8 +32,7 @@ export function isCacheValid(key: string): boolean {
 
 /**
  * Clears all entries from the in-memory manga cache.
- * Logs the operation before and after clearing.
- * @returns void
+ * Logs operation before and after clearing.
  * @source
  */
 export function clearMangaCache(): void {
@@ -50,10 +49,10 @@ export function clearMangaCache(): void {
 }
 
 /**
- * Clears cache entries for specific manga titles and persists the change.
- * Generates cache keys from titles and removes matching entries from the cache.
+ * Clears cache entries for specific manga titles and persists changes.
+ * Generates cache keys from titles and removes matching entries.
  * @param titles - Array of manga titles whose cache entries should be removed.
- * @returns Statistics object with cleared count, remaining cache size, and titles with no cache.
+ * @returns Object with cleared count, remaining cache size, and count of titles with no cache.
  * @source
  */
 export function clearCacheForTitles(titles: string[]): {
@@ -80,9 +79,9 @@ export function clearCacheForTitles(titles: string[]): {
     }
   }
 
-  // Save the updated cache to localStorage if entries were cleared
+  // Save updated cache to localStorage if entries were cleared
+  // Uses dynamic import to avoid circular dependency with persistence module
   if (clearedCount > 0) {
-    // Use dynamic import to avoid circular dependency with persistence module
     import("./persistence").then(({ saveCache }) => saveCache());
   }
 

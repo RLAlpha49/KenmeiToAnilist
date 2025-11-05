@@ -41,15 +41,27 @@ import type {
 import { DEFAULT_PERFORMANCE_METRICS } from "@/types/debug";
 
 /**
- * The shape of the debug context value provided to consumers.
+ * Read-only state value provided by DebugStateContext.
+ * Contains all debug state but no mutation functions to prevent accidental state corruption.
  *
- * @property isDebugEnabled - Whether debug mode is currently enabled.
- * @property toggleDebug - Function to toggle debug mode on/off.
- * @property setDebugEnabled - Function to explicitly set debug mode state.
- * @property logViewerEnabled - Whether the log viewer panel is available in the debug menu.
- * @property logEntries - Captured console log entries for inspection.
- * @property clearLogs - Clears captured log entries.
- * @property exportLogs - Exports captured log entries to a JSON file.
+ * @property isDebugEnabled - Whether debug mode is currently enabled globally.
+ * @property debugMenuOpen - Whether the debug menu panel is visible.
+ * @property storageDebuggerEnabled - Whether the storage inspector feature is enabled.
+ * @property logViewerEnabled - Whether console log interception and viewing is enabled.
+ * @property logRedactionEnabled - Whether sensitive log content is redacted in logs.
+ * @property stateInspectorEnabled - Whether state inspection and time-travel debugging is enabled.
+ * @property stateInspectorSources - Array of registered state inspector sources for inspection.
+ * @property ipcViewerEnabled - Whether IPC communication tracking is enabled.
+ * @property eventLoggerEnabled - Whether debug event logging is enabled.
+ * @property confidenceTestExporterEnabled - Whether confidence test export feature is enabled.
+ * @property performanceMonitorEnabled - Whether performance metrics collection is enabled.
+ * @property performanceMetrics - Current performance metrics (API latency, cache stats, etc.).
+ * @property eventLogEntries - Array of recorded debug events.
+ * @property maxEventLogEntries - Maximum number of event log entries retained.
+ * @property ipcEvents - Array of tracked IPC communication events.
+ * @property maxIpcEntries - Maximum number of IPC entries retained.
+ * @property logEntries - Array of intercepted console log entries.
+ * @property maxLogEntries - Maximum number of log entries retained.
  * @source
  */
 interface DebugStateContextValue {
@@ -73,6 +85,47 @@ interface DebugStateContextValue {
   maxLogEntries: number;
 }
 
+/**
+ * Mutation functions provided by DebugActionsContext.
+ * Enables modification of debug state, feature toggles, and inspection data.
+ *
+ * @property toggleDebug - Toggles debug mode between enabled/disabled.
+ * @property setDebugEnabled - Explicitly sets debug mode enabled/disabled state.
+ * @property openDebugMenu - Opens the debug menu UI panel.
+ * @property closeDebugMenu - Closes the debug menu UI panel.
+ * @property toggleDebugMenu - Toggles debug menu visibility.
+ * @property setStorageDebuggerEnabled - Enables/disables storage inspector feature.
+ * @property toggleStorageDebugger - Toggles storage debugger feature.
+ * @property setLogViewerEnabled - Enables/disables console log interception and viewing.
+ * @property toggleLogViewer - Toggles log viewer feature.
+ * @property setLogRedactionEnabled - Enables/disables log content redaction for sensitive data.
+ * @property toggleLogRedaction - Toggles log redaction feature.
+ * @property setStateInspectorEnabled - Enables/disables state inspection and time-travel debugging.
+ * @property toggleStateInspector - Toggles state inspector feature.
+ * @property registerStateInspector - Registers a new state source for inspection.
+ * @property applyStateInspectorUpdate - Applies a state mutation via state inspector.
+ * @property refreshStateInspectorSource - Manually refreshes a state inspector source snapshot.
+ * @property setIpcViewerEnabled - Enables/disables IPC communication tracking.
+ * @property toggleIpcViewer - Toggles IPC viewer feature.
+ * @property setEventLoggerEnabled - Enables/disables debug event logging.
+ * @property toggleEventLogger - Toggles event logger feature.
+ * @property setConfidenceTestExporterEnabled - Enables/disables confidence test export feature.
+ * @property toggleConfidenceTestExporter - Toggles confidence test exporter feature.
+ * @property setPerformanceMonitorEnabled - Enables/disables performance metrics collection.
+ * @property togglePerformanceMonitor - Toggles performance monitor feature.
+ * @property recordApiLatency - Records an API request latency sample.
+ * @property recordCacheAccess - Records a cache hit or miss event.
+ * @property recordMatchingProgress - Records matching algorithm progress update.
+ * @property updateMemoryStats - Updates memory usage metrics.
+ * @property resetPerformanceMetrics - Clears all performance metrics.
+ * @property exportPerformanceReport - Exports performance metrics to JSON file.
+ * @property recordEvent - Records a debug event to the event log.
+ * @property clearEventLog - Clears all recorded debug events.
+ * @property clearIpcEvents - Clears all IPC communication events.
+ * @property clearLogs - Clears all console log entries.
+ * @property exportLogs - Exports console logs to JSON file.
+ * @source
+ */
 interface DebugActionsContextValue {
   toggleDebug: () => void;
   setDebugEnabled: (enabled: boolean) => void;
@@ -123,6 +176,11 @@ interface DebugActionsContextValue {
   exportLogs: () => void;
 }
 
+/**
+ * Combined debug context type with both state and action properties.
+ * Used by the legacy unified `useDebug` hook for backward compatibility.
+ * @source
+ */
 interface DebugContextType
   extends DebugStateContextValue,
     DebugActionsContextValue {}
@@ -136,10 +194,30 @@ const DebugActionsContext = createContext<DebugActionsContextValue | undefined>(
   undefined,
 );
 
+/**
+ * Storage key for persisting debug mode enabled/disabled state to localStorage.
+ * @source
+ */
 const DEBUG_STORAGE_KEY = "debug-mode-enabled";
+
+/**
+ * Storage key for persisting debug feature toggles to localStorage.
+ * @source
+ */
 const DEBUG_FEATURE_TOGGLES_KEY = "debug-feature-toggles";
+
+/**
+ * Maximum number of debug event log entries retained in memory.
+ * Oldest entries are discarded when this limit is exceeded.
+ * @source
+ */
 const MAX_EVENT_LOG_ENTRIES = 500;
 
+/**
+ * Configuration of debug feature toggles (storage debugger, log viewer, state inspector, etc.).
+ * Each toggle controls a separate debugging feature that can be enabled/disabled independently.
+ * @source
+ */
 type DebugFeatureToggles = {
   storageDebugger: boolean;
   logViewer: boolean;
@@ -151,7 +229,10 @@ type DebugFeatureToggles = {
   performanceMonitor: boolean;
 };
 
-// Default all features to off for production
+/**
+ * Default state for all debug feature toggles (all disabled for production safety).
+ * @source
+ */
 const DEFAULT_FEATURE_TOGGLES: DebugFeatureToggles = {
   storageDebugger: false,
   logViewer: false,
@@ -163,6 +244,11 @@ const DEFAULT_FEATURE_TOGGLES: DebugFeatureToggles = {
   performanceMonitor: false,
 };
 
+/**
+ * Optional configuration for recording debug events with extended behavior control.
+ * @property force - If true, logs event even when debug mode or event logger is disabled.
+ * @source
+ */
 interface RecordEventOptions {
   force?: boolean;
 }
@@ -265,8 +351,19 @@ function toStateInspectorSnapshots(
 }
 
 /**
- * Provides debug context to its children, managing debug state, feature toggles, and inspection tools.
- * Manages console log interception, IPC monitoring, state inspection, and event logging for development.
+ * Provides comprehensive debug context to child components with split context pattern.
+ * Manages debug mode, feature toggles, console log interception, IPC monitoring,
+ * state inspection, event logging, and performance metrics collection.
+ *
+ * **Features:**
+ * - Console log interception with optional redaction of sensitive data
+ * - State inspection with time-travel debugging via registered state sources
+ * - IPC communication tracking and visualization
+ * - Debug event logging with optional force-logging override
+ * - Performance metrics collection (API latency, cache stats, memory usage)
+ * - Settings state inspector for live configuration editing
+ * - Adaptive memory polling when performance monitor is enabled
+ *
  * @param children - React children to wrap with debug context.
  * @returns Provider component with split contexts for state and actions.
  * @source
@@ -1424,9 +1521,10 @@ export function DebugProvider({
 }
 
 /**
- * Hook to access debug state (read-only).
+ * Hook to access debug state (read-only) via DebugStateContext.
+ * Use this hook when you only need to read debug state without triggering mutations.
  * @returns The debug state context value.
- * @throws If used outside a DebugProvider.
+ * @throws {Error} If used outside a DebugProvider.
  * @source
  */
 export function useDebugState(): DebugStateContextValue {
@@ -1438,9 +1536,10 @@ export function useDebugState(): DebugStateContextValue {
 }
 
 /**
- * Hook to access debug actions (mutations).
+ * Hook to access debug actions (mutations) via DebugActionsContext.
+ * Use this hook when you need to perform debug state mutations without subscribing to state changes.
  * @returns The debug actions context value.
- * @throws If used outside a DebugProvider.
+ * @throws {Error} If used outside a DebugProvider.
  * @source
  */
 export function useDebugActions(): DebugActionsContextValue {
@@ -1452,10 +1551,11 @@ export function useDebugActions(): DebugActionsContextValue {
 }
 
 /**
- * Hook to access complete debug context (state and actions combined).
- * Prefers split contexts but falls back to legacy unified context for compatibility.
+ * Hook to access complete debug context (both state and actions combined).
+ * Prefers split contexts but falls back to legacy unified context for backward compatibility.
+ * Use `useDebugState` or `useDebugActions` separately when possible for better performance.
  * @returns The complete debug context value.
- * @throws If used outside a DebugProvider.
+ * @throws {Error} If used outside a DebugProvider.
  * @source
  */
 export function useDebug(): DebugContextType {

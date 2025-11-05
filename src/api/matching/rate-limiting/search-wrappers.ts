@@ -1,8 +1,8 @@
 /**
- * Rate-limited wrappers for AniList search functions.
+ * Rate-limited search operation wrappers.
  *
  * Provides search and advanced search functions with automatic rate limiting,
- * retry logic with exponential backoff, and manual pause support.
+ * manual pause support, and delegated retry logic through the queue processor.
  *
  * @packageDocumentation
  * @source
@@ -14,38 +14,37 @@ import { waitWhileManuallyPaused } from "./manual-pause";
 import { acquireRateLimit } from "./queue-processor";
 
 /**
- * Options for search rate limiting.
+ * Configuration options for rate-limited search operations.
  * @source
  */
 export interface SearchRateLimitOptions {
-  /** Page number for pagination. */
+  /** Page number for pagination (1-based). */
   page?: number;
   /** Number of results per page. */
   perPage?: number;
-  /** Optional authentication token. */
+  /** Authentication token for private searches. */
   token?: string;
-  /** Whether to acquire a rate limit slot before searching. */
+  /** Whether to acquire a rate limit slot before searching (default: true). */
   acquireLimit?: boolean;
-  /** Whether to bypass the search cache. */
+  /** Whether to bypass the search cache (default: false). */
   bypassCache?: boolean;
 }
 
 /**
- * Performs a search with rate limiting and automatic retry logic.
+ * Perform a simple search with rate limiting.
  *
- * Acquires a rate limit slot and executes the search. Transient errors are
- * re-queued via the rate limit processor's retry mechanism. The processor drives
- * all retries with exponential backoff, ensuring consistent spacing and no duplicate
- * backoff sleeps.
+ * Waits for manual pause to be lifted, optionally acquires a rate limit slot,
+ * then executes the search via the AniList client. Transient errors are handled
+ * by the rate limit queue's retry mechanism.
  *
  * @param query - Search query string.
- * @param page - Page number for pagination (default: 1).
+ * @param page - Page number (1-based, default: 1).
  * @param perPage - Results per page (default: 50).
  * @param token - Optional authentication token.
  * @param acquireLimit - Whether to acquire rate limit slot (default: true).
  * @param bypassCache - Whether to bypass cache (default: false).
  * @returns Promise resolving to search results.
- * @throws Propagates search errors after exhausting retries via the queue processor.
+ * @throws Propagates search errors after retries exhausted.
  * @source
  */
 export async function searchWithRateLimit(
@@ -56,35 +55,35 @@ export async function searchWithRateLimit(
   acquireLimit: boolean = true,
   bypassCache: boolean = false,
 ): Promise<SearchResult<AniListManga>> {
+  // Wait for any active manual pause to be lifted
   await waitWhileManuallyPaused();
 
-  // Only wait for rate limit if requested (first request in a batch should wait, subsequent ones should not)
+  // Only wait for rate limit on the first request in a batch to avoid double-waiting
   if (acquireLimit) {
     await acquireRateLimit();
   }
 
-  // Call the AniList client search function - this will handle caching in the client
+  // Execute the search (client handles caching independently)
   return await searchManga(query, page, perPage, token, bypassCache);
 }
 
 /**
- * Performs an advanced search with rate limiting and automatic retry logic.
+ * Perform an advanced search with rate limiting and flexible options.
  *
- * Similar to searchWithRateLimit but accepts flexible options. Acquires a rate limit slot
- * and executes the search. Transient errors are re-queued via the rate limit processor's retry
- * mechanism. The processor drives all retries with exponential backoff, ensuring consistent
- * spacing and no duplicate backoff sleeps.
+ * Similar to searchWithRateLimit but accepts options as a single object.
+ * Waits for manual pause, optionally acquires rate limit slot, then executes search.
  *
  * @param query - Search query string.
- * @param options - Additional search options including pagination and caching settings.
+ * @param options - Search options (pagination, token, limits, cache).
  * @returns Promise resolving to search results.
- * @throws Propagates search errors after exhausting retries via the queue processor.
+ * @throws Propagates search errors after retries exhausted.
  * @source
  */
 export async function advancedSearchWithRateLimit(
   query: string,
   options: SearchRateLimitOptions = {},
 ): Promise<SearchResult<AniListManga>> {
+  // Wait for any active manual pause to be lifted
   await waitWhileManuallyPaused();
 
   const {
@@ -95,11 +94,11 @@ export async function advancedSearchWithRateLimit(
     bypassCache = false,
   } = options;
 
-  // Only wait for rate limit if requested
+  // Only wait for rate limit on the first request in a batch
   if (acquireLimit) {
     await acquireRateLimit();
   }
 
-  // Call the AniList client search function - this will handle caching in the client
+  // Execute the search (client handles caching independently)
   return await advancedSearchManga(query, page, perPage, token, bypassCache);
 }

@@ -1,10 +1,10 @@
 /**
- * Backup and restore utilities for application data
- * Provides comprehensive backup functionality including history management,
- * validation, and conflict resolution
+ * @packageDocumentation
+ * Backup and restore utilities for application data.
+ * Provides comprehensive backup functionality including history management, validation, and conflict resolution.
  */
 
-// TODO: Fix: LIST_LOCAL_BACKUPS: Invalid backup location: Backup location contains invalid characters
+// TODO: Fix: "LIST_LOCAL_BACKUPS: Invalid backup location: Backup location contains invalid characters"
 // TODO: The automatic backup before matching and sync operations should create backups the same way as the "Run Backup Now" button does in settings. So userinput is not required for the backup creation process.
 
 import {
@@ -17,8 +17,7 @@ import { getAppVersion } from "@/utils/app-version";
 import { exportToJson } from "@/utils/exportUtils";
 
 /**
- * Interface for backup metadata.
- * Includes version information and data structure details.
+ * Backup metadata with version information and data structure details.
  * @source
  */
 export interface BackupMetadata {
@@ -35,8 +34,7 @@ export interface BackupMetadata {
 }
 
 /**
- * Interface for backup data structure.
- * Contains metadata and all backed-up application data.
+ * Complete backup data structure containing metadata and application data.
  * @source
  */
 export interface BackupData {
@@ -47,8 +45,7 @@ export interface BackupData {
 }
 
 /**
- * Interface for backup history entries.
- * Tracks backup metadata for restore history.
+ * Backup history entry tracking metadata for restore history.
  * @source
  */
 export interface BackupHistoryEntry {
@@ -66,21 +63,14 @@ export interface BackupHistoryEntry {
   filename?: string;
 }
 
-/**
- * Maximum number of backups to keep in history.
- * @source
- */
+/** Maximum number of backups to keep in history. @source */
 export const MAX_BACKUP_HISTORY = 5;
 
-/**
- * Current backup format version.
- * Increment when backup schema changes to ensure compatibility.
- * @source
- */
+/** Current backup format version. Increment when backup schema changes. @source */
 export const BACKUP_VERSION = 1;
 
 /**
- * Storage keys that should be included in backups.
+ * Storage keys included in backups.
  * Excludes transient keys (ACTIVE_SYNC_SNAPSHOT, UPDATE_DISMISSED_VERSIONS).
  * @source
  */
@@ -203,8 +193,7 @@ export async function createBackup(): Promise<string> {
 }
 
 /**
- * Retrieves backup history from storage.
- * Returns entries sorted by timestamp in descending order (newest first).
+ * Retrieves backup history from storage sorted by timestamp (newest first).
  * @returns Array of backup history entries.
  * @source
  */
@@ -225,10 +214,11 @@ export function getBackupHistory(): BackupHistoryEntry[] {
 }
 
 /**
- * Adds entry to backup history and manages history limit.
- * Prepends new entry and removes oldest entries when history exceeds MAX_BACKUP_HISTORY.
+ * Adds entry to backup history and manages retention limit.
+ * Prepends new entry and removes oldest entries when history exceeds maximum.
  * @param entry - Backup history entry to add.
- * @internal Used internally by createBackup.
+ * @param maxRetention - Optional custom retention limit (default: MAX_BACKUP_HISTORY).
+ * @internal
  * @source
  */
 export function addBackupToHistory(
@@ -254,10 +244,7 @@ export function addBackupToHistory(
   }
 }
 
-/**
- * Clears all backup history from storage.
- * @source
- */
+/** Clears all backup history from storage. @source */
 export function clearBackupHistory(): void {
   try {
     storage.removeItem(STORAGE_KEYS.BACKUP_HISTORY);
@@ -272,7 +259,7 @@ export function clearBackupHistory(): void {
  * Checks for required keys, version compatibility, and data integrity.
  * @param backupData - Backup data to validate.
  * @returns Validation result with valid flag and any errors found.
- * @internal Used internally by importBackupFromFile and restoreBackup.
+ * @internal
  * @source
  */
 export function validateBackup(backupData: BackupData): ValidationResult {
@@ -361,14 +348,11 @@ function validateJsonKeys(backupData: BackupData): string[] {
   return errors;
 }
 
-/**
- * Maximum allowed backup file size in bytes (10 MB).
- * @internal
- */
+/** Maximum allowed backup file size in bytes (10 MB). @internal @source */
 const MAX_BACKUP_FILE_SIZE = 10 * 1024 * 1024;
 
 /**
- * Validate a single match result item for required fields.
+ * Validates a single match result item for required fields.
  * @internal
  */
 function validateMatchResultItem(item: unknown): {
@@ -409,8 +393,7 @@ function validateMatchResultItem(item: unknown): {
 }
 
 /**
- * Helper function to validate and merge match results from backup.
- * Performs strict schema validation on array items to ensure data integrity.
+ * Validates and merges match results from backup with strict schema validation.
  * @internal
  */
 function validateAndMergeMatchResults(backupDataStr: string): {
@@ -497,8 +480,12 @@ function validateAndMergeMatchResults(backupDataStr: string): {
 }
 
 /**
- * Restore a single storage key from backupData. Returns an error message string on
- * failure, or null on success / when key not present in backup.
+ * Restores a single storage key from backup data.
+ * @param key - Storage key to restore.
+ * @param backupData - Backup data containing the key.
+ * @param options - Restoration options (merge for match results).
+ * @returns Error message on failure, null on success.
+ * @internal
  */
 function restoreKeyFromBackup(
   key: string,
@@ -529,7 +516,9 @@ function restoreKeyFromBackup(
 }
 
 /**
- * Update the cache version in storage. Returns error message on failure or null on success.
+ * Updates the cache version in storage after restore.
+ * @returns Error message on failure, null on success.
+ * @internal
  */
 function updateCacheVersion(): string | null {
   try {
@@ -549,7 +538,7 @@ function updateCacheVersion(): string | null {
 }
 
 /**
- * Restores application data from backup.
+ * Restores application data from backup with optional result merging.
  * Validates backup before restoration and optionally merges match results.
  * @param backupData - Backup data to restore.
  * @param options - Restoration options.
@@ -731,12 +720,13 @@ export async function createBackupSilent(): Promise<{
 }
 
 /**
- * Creates a backup from raw data object (used by main process).
- * This is designed for the main process which doesn't have access to the renderer's storage object.
- * @param dataMap - Map of storage keys to their values
- * @param appVersion - The application version to include in metadata (optional, defaults to current version)
- * @returns Backup data object with metadata
+ * Creates a backup from raw data object for the main process.
+ * Used when the main process doesn't have access to the renderer's storage object.
+ * @param dataMap - Map of storage keys to their values.
+ * @param appVersion - Application version to include in metadata (optional).
+ * @returns Backup data object with metadata.
  * @internal
+ * @source
  */
 export function createBackupFromData(
   dataMap: Record<string, string>,
@@ -788,7 +778,7 @@ export function createBackupFromData(
 
 /**
  * Rotates backups according to retention policy.
- * @deprecated This function is no longer used - rotation is handled in backup-listeners.ts
+ * @deprecated Function kept for backward compatibility. Rotation is now handled in backup-listeners.ts.
  * @internal
  * @source
  */
@@ -804,7 +794,7 @@ export async function rotateBackups(): Promise<void> {
  * Reconciles backup history with actual files on disk.
  * Removes history entries for backups that no longer exist on disk.
  * Called after deleting backups during rotation.
- * @param backupFilenames - Array of remaining backup filenames (e.g., ["backup-123.json"])
+ * @param backupFilenames - Array of remaining backup filenames (e.g., ["backup-123.json"]).
  * @internal
  * @source
  */

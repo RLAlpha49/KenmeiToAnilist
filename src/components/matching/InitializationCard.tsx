@@ -5,7 +5,6 @@ import { Loader2 } from "lucide-react";
 
 /**
  * Props for the InitializationCard component.
- *
  * @property message - Optional custom message to display during initialization.
  * @source
  */
@@ -14,10 +13,10 @@ interface Props {
 }
 
 /**
- * Displays a loading card while the app checks for pending manga from previous sessions.
- *
- * @param props - The component props.
- * @returns The rendered initialization card.
+ * Loading card displayed while checking for pending manga from previous sessions.
+ * Features animated loading indicator and customizable message.
+ * @param props - Component props.
+ * @returns Rendered initialization card with animated entrance.
  * @source
  */
 export default function InitializationCard({ message }: Readonly<Props>) {

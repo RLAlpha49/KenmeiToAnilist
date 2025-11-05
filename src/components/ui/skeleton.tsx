@@ -1,3 +1,9 @@
+/**
+ * @packageDocumentation
+ * @module components/ui/skeleton
+ * @description Skeleton loading placeholder components for various content types.
+ * @source
+ */
 import { cn } from "@/utils/tailwind";
 import React from "react";
 import { Card, CardContent, CardHeader } from "./card";

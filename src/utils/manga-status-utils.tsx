@@ -16,14 +16,13 @@ import {
 } from "lucide-react";
 
 /**
- * Mapping of status to counts of manga entries.
+ * Status to count mapping: record of status strings to manga entry counts.
  * @source
  */
 export type StatusCounts = Record<string, number>;
 
 /**
- * Aggregates manga items by status and returns count for each status.
- *
+ * Aggregates manga items by status; returns count for each status.
  * @param manga - Array of manga items to count.
  * @returns Object mapping status strings to counts.
  * @source
@@ -37,12 +36,8 @@ export function getStatusCounts(manga: KenmeiMangaItem[]): StatusCounts {
 }
 
 /**
- * Returns Tailwind CSS classes for styling a manga status badge.
- *
- * Applies appropriate colors for each status (reading, completed, dropped, plan_to_read, on_hold)
- * with light and dark mode support.
- *
- * @param status - The manga reading status.
+ * Returns Tailwind CSS classes for status badge styling with light and dark mode support.
+ * @param status - The manga reading status (reading, completed, dropped, plan_to_read, on_hold).
  * @returns Tailwind CSS class string for styling.
  * @source
  */
@@ -64,13 +59,9 @@ export function getStatusColor(status: string): string {
 }
 
 /**
- * Returns a React icon element with styling for a manga status.
- *
- * Creates a small badge containing an icon (Clock, CheckCircle2, X, etc.) that visually
- * represents the current status, with colors matching the status.
- *
+ * Returns React icon element for status with status-appropriate styling and colors.
  * @param status - The manga reading status.
- * @returns A React element containing the icon and styling.
+ * @returns React element containing styled icon for the status.
  * @source
  */
 export function getStatusIcon(status: string): React.ReactElement {
@@ -115,13 +106,9 @@ export function getStatusIcon(status: string): React.ReactElement {
 }
 
 /**
- * Formats a status string into a human-readable label.
- *
- * Handles special cases like "plan_to_read" → "Plan to Read" and "on_hold" → "On Hold",
- * and capitalizes other status strings appropriately.
- *
+ * Formats status string into human-readable label (e.g., "plan_to_read" → "Plan to Read").
  * @param status - The status string to format.
- * @returns A formatted, human-readable status label.
+ * @returns Formatted, human-readable status label.
  * @source
  */
 export function formatStatusLabel(status: string): string {

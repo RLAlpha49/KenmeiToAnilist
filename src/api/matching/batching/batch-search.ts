@@ -1,5 +1,5 @@
 /**
- * @file Batched search processing for multiple manga
+ * Batched search processing for multiple manga
  * @module matching/batching/batch-search
  */
 

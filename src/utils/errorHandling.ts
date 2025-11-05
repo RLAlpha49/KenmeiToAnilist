@@ -7,7 +7,6 @@
 /**
  * Custom error class for batch operation cancellations.
  * Used to distinguish intentional cancellations from other errors.
- *
  * @source
  */
 export class CancelledError extends Error {
@@ -18,11 +17,7 @@ export class CancelledError extends Error {
   }
 }
 
-/**
- * Enumerates the different error types used throughout the application.
- *
- * @source
- */
+/** Enumerates the different error types used throughout the application. @source */
 export enum ErrorType {
   UNKNOWN = "unknown",
   VALIDATION = "validation",
@@ -35,11 +30,7 @@ export enum ErrorType {
   SYSTEM = "SYSTEM",
 }
 
-/**
- * Enumerates the recovery actions available for different error types.
- *
- * @source
- */
+/** Enumerates the recovery actions available for different error types. @source */
 export enum ErrorRecoveryAction {
   RETRY = "retry",
   CHECK_CONNECTION = "check_connection",
@@ -49,11 +40,7 @@ export enum ErrorRecoveryAction {
   NONE = "none",
 }
 
-/**
- * Structure for standardized application errors.
- *
- * @source
- */
+/** Structure for standardized application errors. @source */
 export interface AppError {
   type: ErrorType;
   message: string;
@@ -64,17 +51,14 @@ export interface AppError {
 }
 
 /**
- * Creates a standardized application error object.
- *
- * Constructs an AppError with type, message, original error reference, and optional error code.
- * Logs debug information for error tracking.
- *
+ * Creates a standardized application error object with optional recovery hints.
+ * Constructs an AppError with type, message, original error reference, and optional code.
  * @param type - The error type.
  * @param message - The error message.
  * @param originalError - The original error object, if any.
- * @param code - An optional error code for categorization.
- * @param recoveryAction - An optional recovery action hint for the UI.
- * @param recoveryMessage - An optional user-friendly recovery instruction message.
+ * @param code - Optional error code for categorization.
+ * @param recoveryAction - Optional recovery action hint for the UI.
+ * @param recoveryMessage - Optional user-friendly recovery instruction.
  * @returns The constructed AppError object.
  * @source
  */
@@ -105,11 +89,8 @@ export function createError(
 }
 
 /**
- * Handles network errors and converts them to the application error format.
- *
- * Differentiates between various network failure modes (connection errors, timeouts,
- * authentication failures, and server errors) and returns appropriately categorized errors.
- *
+ * Handles network errors and converts them to application error format.
+ * Differentiates between connection errors, timeouts, auth failures, and server errors.
  * @param error - The error to handle.
  * @returns The converted AppError object.
  * @source
@@ -203,7 +184,6 @@ export function handleNetworkError(error: unknown): AppError {
 
 /**
  * Gets a user-friendly message for a recovery action.
- *
  * @param action - The recovery action to get a message for.
  * @returns A user-friendly message describing what the user should do.
  * @source
@@ -227,16 +207,13 @@ export function getRecoveryActionMessage(action: ErrorRecoveryAction): string {
 }
 
 /**
- * Performs a network request with an optional timeout.
- *
- * Uses AbortController to enforce a timeout and automatically rejects if the request
- * takes longer than the specified duration.
- *
+ * Performs a network request with an optional timeout using AbortController.
+ * Automatically rejects if the request takes longer than the specified duration.
  * @param url - The URL to fetch.
  * @param options - Fetch options (default: empty object).
  * @param timeout - Timeout in milliseconds (default: 10000).
  * @returns A promise that resolves to the fetch Response.
- * @throws If the request times out or the response is not ok.
+ * @throws {Error} If the request times out or response is not ok.
  * @source
  */
 export async function fetchWithTimeout(
@@ -275,10 +252,8 @@ export async function fetchWithTimeout(
 
 /**
  * Displays an error notification to the user.
- *
  * @param error - The AppError to display.
- * @remarks
- * This is a placeholder that should be integrated with your UI notification system.
+ * @remarks This is a placeholder that should be integrated with your UI notification system.
  * @source
  */
 export function showErrorNotification(error: AppError): void {
@@ -291,10 +266,7 @@ export function showErrorNotification(error: AppError): void {
 
 /**
  * Safely executes an async operation with error handling.
- *
- * Wraps an async function and returns a result object containing either successful data
- * or an error, eliminating the need for try-catch blocks.
- *
+ * Wraps an async function and returns a result object containing either successful data or an error.
  * @template T - The type of data returned by the async function.
  * @param asyncFn - The async function to execute.
  * @param onError - Optional callback for handling errors.
@@ -318,18 +290,15 @@ export async function safeAsync<T>(
 }
 
 /**
- * Captures an error to Sentry for monitoring and analysis.
- *
- * Wraps error creation with Sentry integration, sending errors to the monitoring
- * service when configured in production or with SENTRY_DSN set.
- *
+ * Captures an error to Sentry for monitoring and analysis in production.
+ * Wraps error creation with Sentry integration, sending errors when configured.
  * @param type - The error type.
  * @param message - The error message.
  * @param originalError - The original error object.
- * @param context - Optional metadata to include with the error (user info, breadcrumbs, etc.).
+ * @param context - Optional metadata to include with the error.
  * @param code - Optional error code for categorization.
  * @param recoveryAction - Optional recovery action hint for the UI.
- * @param recoveryMessage - Optional user-friendly recovery instruction message.
+ * @param recoveryMessage - Optional user-friendly recovery instruction.
  * @returns The constructed AppError object.
  * @source
  */

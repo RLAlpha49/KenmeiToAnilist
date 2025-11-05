@@ -44,8 +44,8 @@ interface ShortcutsPanelProps {
 }
 
 /**
- * Exhaustive mapping of category icons with specific, distinct icons for each category.
- * Type-checked as Record<ShortcutCategory, LucideIcon> to ensure all categories are present.
+ * Exhaustive mapping of category icons for each shortcut category.
+ * Type-checked as Record<ShortcutCategory, LucideIcon> to ensure all categories have icons.
  * @source
  */
 const categoryIcons: Record<ShortcutCategory, LucideIcon> = {
@@ -57,7 +57,11 @@ const categoryIcons: Record<ShortcutCategory, LucideIcon> = {
 };
 
 /**
- * Presentational card for a single shortcut.
+ * Presentational card component for a single keyboard shortcut.
+ * @param props - Component properties.
+ * @param props.shortcutItem - The shortcut data to display.
+ * @returns Shortcut card element with description and key bindings.
+ * @source
  */
 export const ShortcutCard = ({
   shortcutItem,
@@ -122,7 +126,12 @@ export const ShortcutCard = ({
 );
 
 /**
- * Section that displays all shortcuts for a given category.
+ * Section component displaying all shortcuts for a given category.
+ * @param props - Component properties.
+ * @param props.category - The shortcut category to display.
+ * @param props.categoryShortcuts - Array of shortcuts in this category.
+ * @returns Category section with shortcut cards or null if no shortcuts.
+ * @source
  */
 export const ShortcutCategorySection = ({
   category,
@@ -155,6 +164,14 @@ export const ShortcutCategorySection = ({
   );
 };
 
+/**
+ * Modal dialog for displaying keyboard shortcuts with search functionality.
+ * @param props - Component properties.
+ * @param props.isOpen - Whether the panel is visible.
+ * @param props.onClose - Callback invoked when panel should close.
+ * @returns Shortcuts modal or null when closed.
+ * @source
+ */
 export function ShortcutsPanel({
   isOpen,
   onClose,
@@ -162,7 +179,6 @@ export function ShortcutsPanel({
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Move focus to search input when panel opens
   useEffect(() => {
     if (isOpen && searchInputRef.current) {
       // Defer focus to next tick to ensure dialog is fully rendered
@@ -173,10 +189,10 @@ export function ShortcutsPanel({
     }
   }, [isOpen]);
 
-  // Memoize categories array to avoid recomputation on every render
+  // Memoize categories to prevent recomputation
   const allCategories = useMemo(() => Object.values(ShortcutCategory), []);
 
-  // Filter shortcuts based on search query
+  // Filter shortcuts by search query
   const filteredShortcuts = useMemo(() => {
     if (!searchQuery.trim()) {
       return SHORTCUTS;
@@ -193,15 +209,15 @@ export function ShortcutsPanel({
     });
   }, [searchQuery]);
 
-  // Get shortcuts by category from filtered results
+  // Get shortcuts filtered by category
   const getFilteredByCategory = (category: ShortcutCategory) => {
     return filteredShortcuts.filter((s) => s.category === category);
   };
 
-  // Check if any shortcuts match current search
+  // Check if search has results
   const hasResults = filteredShortcuts.length > 0;
 
-  // Handle Escape key to close the panel when focus is within it
+  // Handle Escape key to close panel
   const handleEscapeKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
       e.preventDefault();
@@ -256,7 +272,7 @@ export function ShortcutsPanel({
 
             {/* Shortcuts Display */}
             <ScrollArea className="h-[400px] w-full rounded-lg border border-white/10 bg-white/5 p-4">
-              {/* Live region for search results announcement */}
+              {/* Announcements for search results */}
               {searchQuery && (
                 <output
                   className="sr-only"

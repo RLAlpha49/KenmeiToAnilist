@@ -10,7 +10,11 @@ import { toast } from "sonner";
 import { storage, STORAGE_KEYS } from "@/utils/storage";
 
 /**
- * Update information returned from the update server
+ * Update information returned from the update server.
+ * @property version - Semantic version of the available update.
+ * @property releaseNotes - Markdown-formatted release notes for the update.
+ * @property releaseDate - ISO date string of when the update was released.
+ * @source
  */
 interface UpdateInfo {
   version: string;
@@ -19,10 +23,10 @@ interface UpdateInfo {
 }
 
 /**
- * Hook for managing auto-update functionality.
- * Provides state and methods for checking, downloading, and installing updates.
- *
- * @returns Object containing update state and control methods
+ * Manages auto-update functionality including checking, downloading, and installing updates.
+ * Handles update notifications, download progress, and dismissal persistence via storage.
+ * @returns State and control methods for update management.
+ * @source
  */
 export function useAutoUpdater() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -66,7 +70,9 @@ export function useAutoUpdater() {
   );
 
   /**
-   * Check for available updates with optional prerelease support
+   * Check for available updates with optional prerelease support.
+   * @param allowPrerelease - Whether to include prerelease versions in the check.
+   * @source
    */
   const checkForUpdates = useCallback(
     async (allowPrerelease = false) => {
@@ -122,7 +128,9 @@ export function useAutoUpdater() {
   );
 
   /**
-   * Download the available update
+   * Downloads the available update from the update server.
+   * @throws Updates download state on failure, shows toast notification.
+   * @source
    */
   const downloadUpdate = useCallback(async () => {
     try {
@@ -150,7 +158,8 @@ export function useAutoUpdater() {
   }, []);
 
   /**
-   * Install the downloaded update and restart the app
+   * Installs the downloaded update and restarts the application.
+   * @source
    */
   const installUpdate = useCallback(async () => {
     try {
@@ -178,7 +187,9 @@ export function useAutoUpdater() {
   }, []);
 
   /**
-   * Dismiss the current update notification
+   * Dismisses the current update notification and resets all update state.
+   * Adds the dismissed version to permanent dismissal list in storage.
+   * @source
    */
   const dismissUpdate = useCallback(() => {
     if (updateInfo) {

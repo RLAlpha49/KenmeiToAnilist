@@ -5,9 +5,10 @@
  */
 
 /**
- * Result type for shell operations (e.g., opening external URLs).
- * Used to safely return error messages as strings instead of raw Error objects,
- * preventing exposure of stack traces or sensitive details to the renderer process.
+ * Result type for shell operations.
+ * Returns errors as strings instead of Error objects to prevent stack trace exposure to renderer.
+ * @property success - Whether the operation succeeded.
+ * @property error - Error message if operation failed.
  * @source
  */
 export interface ShellOperationResult {

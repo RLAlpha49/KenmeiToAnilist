@@ -1,5 +1,5 @@
 /**
- * @file Batch processing type definitions
+ * Batch processing type definitions
  * @module matching/batching/types
  */
 

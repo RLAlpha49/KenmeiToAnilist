@@ -7,19 +7,13 @@
 import { ThemeMode } from "@/types/theme-mode";
 import { storage } from "../utils/storage";
 
-/**
- * The key used for storing the theme preference in local storage.
- *
- * @internal
- * @source
- */
+/** Local storage key for theme preference. @source */
 export const THEME_KEY = "theme";
 
 /**
- * Represents the user's theme preferences.
- *
- * @property system - The current system theme mode.
- * @property local - The locally stored theme mode, or null if not set.
+ * User's theme preferences combining system and local settings.
+ * @property system - Current system theme mode.
+ * @property local - Locally stored preference, or null if not set.
  * @source
  */
 export interface ThemePreferences {
@@ -28,9 +22,8 @@ export interface ThemePreferences {
 }
 
 /**
- * Gets the current theme preferences from the system and local storage.
- *
- * @returns An object containing the system and local theme preferences.
+ * Gets current theme preferences from system and local storage.
+ * @returns Object with system theme mode and locally stored preference.
  * @source
  */
 export async function getCurrentTheme(): Promise<ThemePreferences> {
@@ -44,12 +37,10 @@ export async function getCurrentTheme(): Promise<ThemePreferences> {
 }
 
 /**
- * Sets the application theme to the specified mode and updates the DOM and local storage.
- *
- * @param newTheme - The new theme mode to set ("dark", "light", or "system").
- * @returns A promise that resolves to true if dark mode is enabled, false otherwise.
- * @remarks
- * Also dispatches a "themeToggled" event on the document.
+ * Sets application theme mode and updates DOM and storage.
+ * @param newTheme - The theme mode to set ("dark", "light", or "system").
+ * @returns True if dark mode is enabled, false otherwise.
+ * @remarks Dispatches "themeToggled" event on document.
  * @source
  */
 export async function setTheme(newTheme: ThemeMode) {
@@ -66,9 +57,8 @@ export async function setTheme(newTheme: ThemeMode) {
 }
 
 /**
- * Enable dark mode: update system, DOM, and persist preference.
- *
- * @returns True when dark mode is enabled.
+ * Enables dark mode and persists preference.
+ * @returns True when dark mode is active.
  * @source
  */
 export async function enableDarkMode(): Promise<boolean> {
@@ -80,8 +70,7 @@ export async function enableDarkMode(): Promise<boolean> {
 }
 
 /**
- * Enable light mode: update system, DOM, and persist preference.
- *
+ * Enables light mode and persists preference.
  * @returns False when dark mode is disabled.
  * @source
  */
@@ -94,9 +83,8 @@ export async function enableLightMode(): Promise<boolean> {
 }
 
 /**
- * Apply the system theme: query system, update DOM, and persist preference.
- *
- * @returns True if the system theme is dark.
+ * Applies system theme preference and updates DOM and storage.
+ * @returns True if system theme is dark.
  * @source
  */
 export async function applySystemTheme(): Promise<boolean> {
@@ -108,9 +96,8 @@ export async function applySystemTheme(): Promise<boolean> {
 }
 
 /**
- * Toggles the application theme between dark and light modes.
- *
- * @returns A promise that resolves to true if dark mode is enabled, false otherwise.
+ * Toggles theme between dark and light modes.
+ * @returns True if dark mode is enabled, false otherwise.
  * @source
  */
 export async function toggleTheme() {
@@ -121,10 +108,9 @@ export async function toggleTheme() {
 }
 
 /**
- * Syncs the application theme with the locally stored preference or system preference.
- *
- * @returns A promise that resolves when the theme has been synced.
- * @throws If syncing fails, falls back to light theme and logs the error.
+ * Syncs application theme with stored preference or system preference.
+ * Falls back to light theme if sync fails.
+ * @throws Logs error and falls back to light theme if sync fails.
  * @source
  */
 export async function syncThemeWithLocal() {
@@ -148,8 +134,7 @@ export async function syncThemeWithLocal() {
 }
 
 /**
- * Updates the document's class list to reflect the current theme mode.
- *
+ * Updates DOM class list to reflect current theme mode.
  * @param mode - The theme mode ("dark" or "light").
  * @source
  */

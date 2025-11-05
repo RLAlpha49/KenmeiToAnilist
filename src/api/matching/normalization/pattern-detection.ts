@@ -100,7 +100,8 @@ export function checkSeasonPattern(
 }
 
 /**
- * Wrapper for `checkSeasonPattern` that logs detected season pattern matches.
+ * Detects season patterns between titles with debug logging.
+ * Wraps `checkSeasonPattern` to log matches when season/part/volume differences are found.
  * @param kenmeiTitle - The title from Kenmei.
  * @param anilistTitle - The title from AniList.
  * @returns Similarity score 0.95 if only season patterns differ, -1 if no pattern detected.

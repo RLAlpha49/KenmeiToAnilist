@@ -29,7 +29,8 @@ const itemVariants = {
 /**
  * Data management tab content component.
  * Orchestrates rendering of cache, backup, and debug sections.
- *
+ * @param props - Component props from DataManagementProps.
+ * @returns The rendered data management tab.
  * @source
  */
 export function DataManagementTab({

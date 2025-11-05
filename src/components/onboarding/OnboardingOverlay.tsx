@@ -26,6 +26,10 @@ import { OnboardingHighlight } from "@/components/onboarding/OnboardingHighlight
 import { getSpotlightForStep } from "@/config/onboarding-routes";
 import type { OnboardingStep } from "@/contexts/OnboardingContext";
 
+/**
+ * Step icon mappings for visual reference in the onboarding overlay.
+ * @source
+ */
 const STEP_ICONS: Record<OnboardingStep, React.ReactNode> = {
   welcome: <Sparkles className="h-5 w-5" />,
   import: <Upload className="h-5 w-5" />,
@@ -36,16 +40,34 @@ const STEP_ICONS: Record<OnboardingStep, React.ReactNode> = {
   complete: <Check className="h-5 w-5" />,
 };
 
+/**
+ * Props for the OnboardingOverlay component.
+ * @source
+ */
 interface OnboardingOverlayProps {
+  /** Position of the overlay on the screen. Defaults to "bottom-right". */
   position?:
     | "bottom-right"
     | "bottom-left"
     | "top-right"
     | "top-left"
     | "center";
+  /** Whether to display the step progress indicator. Defaults to true. */
   showProgress?: boolean;
 }
 
+/**
+ * Non-blocking overlay component that guides users through the onboarding process.
+ * Features element highlighting, step navigation, and progress tracking.
+ *
+ * Auto-navigates to the correct page for each step and provides:
+ * - Element spotlighting with animated glow effects
+ * - Step progress indicator
+ * - Skip confirmation dialog
+ * - Accessible UI with ARIA labels
+ *
+ * @source
+ */
 export function OnboardingOverlay({
   position = "bottom-right",
   showProgress = true,
@@ -60,7 +82,7 @@ export function OnboardingOverlay({
   } = useOnboarding();
   const [showSkipConfirmDialog, setShowSkipConfirmDialog] = useState(false);
 
-  // Auto-navigate to the correct page for this step
+  // Auto-navigate pages during onboarding steps
   useOnboardingNavigation();
 
   const stepConfig = STEP_CONFIGS[currentStep];
@@ -68,6 +90,7 @@ export function OnboardingOverlay({
   const isWelcomeStep = currentStep === "welcome";
   const spotlight = getSpotlightForStep(currentStep);
 
+  // Position class mapping
   const positionClasses: Record<string, string> = {
     "bottom-right": "bottom-4 right-4",
     "bottom-left": "bottom-4 left-4",
@@ -76,6 +99,7 @@ export function OnboardingOverlay({
     center: "inset-0 flex items-center justify-center",
   };
 
+  // Advance to next step or finish if on last step
   const handleNext = () => {
     if (isLastStep) {
       finishOnboarding();
@@ -84,19 +108,22 @@ export function OnboardingOverlay({
     }
   };
 
+  // Show confirmation before skipping
   const handleSkip = () => {
     setShowSkipConfirmDialog(true);
   };
 
+  // Confirm and dismiss onboarding
   const handleConfirmSkip = () => {
     setShowSkipConfirmDialog(false);
     dismissOnboarding();
   };
 
+  // Calculate progress: index and total steps
   const stepIndex = Object.keys(STEP_CONFIGS).indexOf(currentStep);
   const totalSteps = Object.keys(STEP_CONFIGS).length;
 
-  // Animation variants
+  // Framer Motion animation variants for overlay transitions
   const containerVariants = {
     initial: { opacity: 0, scale: 0.9, y: 20 },
     animate: { opacity: 1, scale: 1, y: 0 },

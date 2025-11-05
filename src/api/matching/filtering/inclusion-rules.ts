@@ -1,6 +1,7 @@
 /**
  * Inclusion rules for filtering manga by match score.
  * @module filtering/inclusion-rules
+ * @source
  */
 
 import type { AniListManga } from "../../anilist/types";
@@ -25,29 +26,13 @@ export interface InclusionResult {
 
 /**
  * Determines if a manga should be included in exact match results.
- *
- * Applies stricter thresholds (0.6+) for exact matching mode.
- * Custom accept rules can boost confidence to guarantee inclusion.
- *
- * Note: Custom accept rules only apply when kenmeiManga context is available.
- * Manual searches that do not provide kenmeiManga will not trigger accept rules.
- * This ensures accept rule evaluation has proper context from the user's library.
- *
- * @param manga - The manga to evaluate.
- * @param score - The match score (0-1).
- * @param searchTitle - The original search title.
- * @param results - Current results array for context.
- * @param kenmeiManga - Optional Kenmei manga for custom rule evaluation.
- * @returns Inclusion decision with potentially adjusted score.
- *
- * @example
- * ```typescript
- * const result = shouldIncludeMangaExact(manga, 0.7, "Naruto", [], kenmeiManga);
- * if (result.include) {
- *   console.log(`Including with score: ${result.adjustedScore}`);
- * }
- * ```
- *
+ * Applies stricter thresholds (0.6+) and custom accept rules for priority inclusion.
+ * @param manga - The manga to evaluate
+ * @param score - The match score (0-1)
+ * @param searchTitle - The original search title
+ * @param results - Current results array for context
+ * @param kenmeiManga - Optional Kenmei manga for custom rule evaluation
+ * @returns Inclusion decision with potentially adjusted score
  * @source
  */
 export function shouldIncludeMangaExact(
@@ -104,28 +89,12 @@ export function shouldIncludeMangaExact(
 
 /**
  * Determines if a manga should be included in regular (non-exact) match results.
- *
- * Applies lenient threshold (0.15+) for general searches.
- * Custom accept rules can boost confidence to guarantee inclusion.
- *
- * Note: Custom accept rules only apply when kenmeiManga context is available.
- * Manual searches that do not provide kenmeiManga will not trigger accept rules.
- * This ensures accept rule evaluation has proper context from the user's library.
- *
- * @param manga - The manga to evaluate.
- * @param score - The match score (0-1).
- * @param results - Current results array for context.
- * @param kenmeiManga - Optional Kenmei manga for custom rule evaluation.
- * @returns Inclusion decision with potentially adjusted score.
- *
- * @example
- * ```typescript
- * const result = shouldIncludeMangaRegular(manga, 0.2, [], kenmeiManga);
- * if (result.include) {
- *   console.log(`Including with score: ${result.adjustedScore}`);
- * }
- * ```
- *
+ * Applies lenient threshold (0.15+) and custom accept rules for priority inclusion.
+ * @param manga - The manga to evaluate
+ * @param score - The match score (0-1)
+ * @param results - Current results array for context
+ * @param kenmeiManga - Optional Kenmei manga for custom rule evaluation
+ * @returns Inclusion decision with potentially adjusted score
  * @source
  */
 export function shouldIncludeMangaRegular(

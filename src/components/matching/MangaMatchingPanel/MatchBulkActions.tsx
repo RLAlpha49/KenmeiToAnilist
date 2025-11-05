@@ -50,11 +50,11 @@ export interface MatchBulkActionsProps {
 /**
  * Displays bulk action buttons for common match operations.
  *
- * Provides quick actions to skip empty matches, re-search no-matches, reset skipped,
- * and accept all pending matches.
+ * Provides quick actions to skip empty matches, re-search no-matches, reset skipped items,
+ * reset matched items, and accept all pending matches. Includes live regions for accessibility.
  *
- * @param props - The component props.
- * @returns The rendered bulk actions component.
+ * @param props - Component props including action counts and callbacks.
+ * @returns Rendered bulk actions container with conditional action cards.
  * @source
  */
 function MatchBulkActionsComponent({
@@ -78,7 +78,7 @@ function MatchBulkActionsComponent({
 
   return (
     <div className="mb-4 flex flex-col space-y-4">
-      {/* Live region for skip empty matches operation */}
+      {/* Live regions announce operation status to screen readers */}
       {isSkippingEmptyMatches && (
         <output className="sr-only" aria-live="polite" aria-atomic="true">
           Skipping {emptyMatchesCount} empty matches...

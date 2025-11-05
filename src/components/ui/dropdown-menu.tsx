@@ -1,9 +1,21 @@
+/**
+ * @packageDocumentation
+ * @module components/ui/dropdown-menu
+ * @description Dropdown menu component with Radix UI for menu triggers and items.
+ * @source
+ */
 import * as React from "react";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react";
 
 import { cn } from "@/utils/tailwind";
 
+/**
+ * Dropdown menu root component.
+ * @param props - Standard dropdown menu props from Radix UI.
+ * @returns Dropdown menu root element.
+ * @source
+ */
 function DropdownMenu({
   ...props
 }: Readonly<React.ComponentProps<typeof DropdownMenuPrimitive.Root>>) {

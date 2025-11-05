@@ -401,14 +401,11 @@ function is500ServerError(error: unknown, errorMessage: string): boolean {
 }
 
 /**
- * Logs detailed error information including type, message, stack trace, and entry details.
- * @param error - The error object to log.
- * @param entry - The entry that was being updated when error occurred.
- * @param operationId - Unique operation identifier for logging correlation.
+ * Infers recovery metadata for error reporting based on error message patterns.
+ * Maps common error keywords to suggested recovery actions and user-friendly messages.
+ * @param errorMessage - Error message to analyze.
+ * @returns Recovery metadata with suggested action, message, and action type.
  * @source
- */
-/**
- * Infer recovery metadata for error reporting based on error message patterns.
  */
 function inferRecoveryMetadata(errorMessage: string): {
   recoveryAction: string;
@@ -464,6 +461,14 @@ function inferRecoveryMetadata(errorMessage: string): {
   };
 }
 
+/**
+ * Logs detailed error information including type, message, and stack trace.
+ * Used for debugging failed update operations.
+ * @param error - The error object to log.
+ * @param entry - The entry that failed.
+ * @param operationId - Unique operation identifier for tracking.
+ * @source
+ */
 function logErrorDetails(
   error: unknown,
   entry: AniListMediaEntry,
@@ -1333,7 +1338,12 @@ function generateSyncReport(
 }
 
 /**
- * Helper to process a single media ID within the batch sync.
+ * Processes a single media ID within a batch sync operation.
+ * Updates progress, handles errors, and invokes batch completion callbacks.
+ * @param mediaIdNum - Media ID to process from the batch.
+ * @param context - Processing context with shared state, callbacks, and configuration.
+ * @returns Promise that resolves when processing completes.
+ * @source
  */
 async function processMediaIdInBatch(
   mediaIdNum: number,

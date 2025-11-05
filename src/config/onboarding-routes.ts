@@ -1,6 +1,10 @@
 import type { OnboardingStep } from "@/contexts/OnboardingContext";
 import type { ElementSpotlight } from "@/components/onboarding/OnboardingHighlight";
 
+/**
+ * Configuration for a single onboarding step: route, spotlight element, and description.
+ * @source
+ */
 export interface StepRouteConfig {
   step: OnboardingStep;
   route: string;
@@ -9,10 +13,8 @@ export interface StepRouteConfig {
 }
 
 /**
- * Maps each onboarding step to:
- * - The route/page where that step should take place
- * - The element to highlight on that page
- * - A description for debugging
+ * Maps onboarding steps to their routes, spotlight elements, and descriptions.
+ * @source
  */
 export const STEP_ROUTE_CONFIG: StepRouteConfig[] = [
   {
@@ -80,11 +82,23 @@ export const STEP_ROUTE_CONFIG: StepRouteConfig[] = [
   },
 ];
 
+/**
+ * Gets the route for a specific onboarding step.
+ * @param step - The onboarding step.
+ * @returns The route path for the step.
+ * @source
+ */
 export function getRouteForStep(step: OnboardingStep): string {
   const config = STEP_ROUTE_CONFIG.find((c) => c.step === step);
   return config?.route ?? "/";
 }
 
+/**
+ * Gets the spotlight element config for a specific onboarding step.
+ * @param step - The onboarding step.
+ * @returns The spotlight config, or undefined if no element should be highlighted.
+ * @source
+ */
 export function getSpotlightForStep(
   step: OnboardingStep,
 ): ElementSpotlight | undefined {

@@ -67,7 +67,7 @@ interface StatsState {
   syncStatus: string;
 }
 
-// Add type for sync stats
+/** Sync statistics data structure. @source */
 interface SyncStats {
   lastSyncTime: string | null;
   entriesSynced: number;
@@ -75,10 +75,10 @@ interface SyncStats {
   totalSyncs: number;
 }
 
-// Type for match status
+/** Match review status type. @source */
 type MatchStatusType = "none" | "pending" | "complete";
 
-// Define interface for match result objects
+/** Match result object structure. @source */
 interface MatchResult {
   status?: string;
   selectedMatch?: {

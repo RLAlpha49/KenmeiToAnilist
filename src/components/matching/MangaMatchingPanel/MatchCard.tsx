@@ -24,6 +24,29 @@ import {
   isOnUserList,
 } from "../../../utils/mediaListHelpers";
 
+/**
+ * Props for the MatchCard component.
+ *
+ * @property match - Manga match result data.
+ * @property uniqueKey - Unique identifier for animation and list rendering.
+ * @property borderColorClass - CSS class for card border color based on status.
+ * @property statusBgColorClass - CSS class for status indicator bar background.
+ * @property glowClass - CSS class for glow effect.
+ * @property formatStatusText - Function to format status text for display.
+ * @property handleOpenExternal - Function to handle external link clicks.
+ * @property handleKeyDown - Function to handle keyboard events on buttons.
+ * @property isAdultContent - Function to determine if manga is adult content.
+ * @property shouldBlurImage - Function to check if image should be blurred.
+ * @property toggleImageBlur - Function to toggle image blur state.
+ * @property onManualSearch - Callback for manual search action.
+ * @property onAcceptMatch - Callback for accept match action.
+ * @property onRejectMatch - Callback for reject match action.
+ * @property onSelectAlternative - Callback for alternative match selection.
+ * @property onResetToPending - Callback for resetting to pending status.
+ * @property isSelected - Whether the card is currently selected.
+ * @property onToggleSelection - Callback for toggling selection state.
+ * @source
+ */
 export interface MatchCardProps {
   match: MangaMatchResult;
   uniqueKey: string;
@@ -50,6 +73,10 @@ export interface MatchCardProps {
   onToggleSelection?: () => void;
 }
 
+/**
+ * Renders alternative manga cover image with adult content handling.
+ * @source
+ */
 const renderAltCover = (
   altCoverImage: string | undefined,
   altIsAdult: boolean,
@@ -141,6 +168,10 @@ const renderAltCover = (
   );
 };
 
+/**
+ * Renders AniList details section for alternative matches.
+ * @source
+ */
 const renderAniListDetails = (
   altManga: AniListManga | undefined | null,
   altFormat: string,
@@ -198,6 +229,10 @@ const renderAniListDetails = (
   );
 };
 
+/**
+ * Renders user's list status if manga is on their AniList.
+ * @source
+ */
 const renderUserListStatus = (
   altMediaListEntry: AniListMediaEntry | UserMediaEntry | undefined | null,
   altChapters: number,
@@ -227,6 +262,10 @@ const renderUserListStatus = (
   );
 };
 
+/**
+ * Builds title entries (English, Romaji, Native, Synonyms) for display.
+ * @source
+ */
 const buildTitleEntries = (
   altManga: AniListManga | undefined | null,
   altPrimaryTitle: string,
@@ -256,6 +295,10 @@ const buildTitleEntries = (
   return altTitleEntries;
 };
 
+/**
+ * Renders source badges (Comick/MangaDex) if result came from alternative sources.
+ * @source
+ */
 const renderPrimarySourceBadges = (
   match: MangaMatchResult,
   sourceBadgeBaseClasses: string,
@@ -296,6 +339,10 @@ const renderPrimarySourceBadges = (
   );
 };
 
+/**
+ * Renders Kenmei external link with validity warning tooltip.
+ * @source
+ */
 const renderKenmeiLink = (
   match: MangaMatchResult,
   kenmeiLinkClasses: string,
@@ -338,6 +385,10 @@ const renderKenmeiLink = (
   );
 };
 
+/**
+ * Renders AniList external link for matched or primary result.
+ * @source
+ */
 const renderAniListLink = (
   match: MangaMatchResult,
   aniListLinkClasses: string,
@@ -371,6 +422,10 @@ const renderAniListLink = (
   );
 };
 
+/**
+ * Renders primary AniList metadata (format, status, chapters, volumes).
+ * @source
+ */
 const renderPrimaryAniListDetails = (
   hasAniListMetadata: boolean,
   primaryAniListMatch: AniListManga | undefined | null,
@@ -429,6 +484,10 @@ const renderPrimaryAniListDetails = (
   );
 };
 
+/**
+ * Renders confidence badge if primary match has valid confidence score.
+ * @source
+ */
 const renderConfidenceBadge = (match: MangaMatchResult) => {
   if (
     !match.anilistMatches ||
@@ -446,6 +505,10 @@ const renderConfidenceBadge = (match: MangaMatchResult) => {
   );
 };
 
+/**
+ * Renders Kenmei status details (status, chapters read, score).
+ * @source
+ */
 const renderKenmeiDetails = (
   match: MangaMatchResult,
   formatStatusText: (status: string | undefined) => string,
@@ -478,6 +541,10 @@ const renderKenmeiDetails = (
   );
 };
 
+/**
+ * Renders colored status badge with appropriate styling for match status.
+ * @source
+ */
 const renderMatchStatusBadge = (
   match: MangaMatchResult,
   formatStatusText: (status: string | undefined) => string,
@@ -506,6 +573,10 @@ const renderMatchStatusBadge = (
   );
 };
 
+/**
+ * Determines if primary match section should be rendered.
+ * @source
+ */
 const shouldShowPrimaryMatch = (match: MangaMatchResult): boolean => {
   return (
     Boolean(match.selectedMatch) ||
@@ -515,6 +586,10 @@ const shouldShowPrimaryMatch = (match: MangaMatchResult): boolean => {
   );
 };
 
+/**
+ * Determines if alternative matches section should be rendered.
+ * @source
+ */
 const shouldShowAlternativeMatches = (match: MangaMatchResult): boolean => {
   return (
     Boolean(match.anilistMatches) &&
@@ -524,6 +599,10 @@ const shouldShowAlternativeMatches = (match: MangaMatchResult): boolean => {
   );
 };
 
+/**
+ * Renders Kenmei header link badge for quick access to Kenmei page.
+ * @source
+ */
 const renderKenmeiHeaderLink = (
   kenmeiHeaderUrl: string | null,
   handleOpenExternal: (url: string) => (e: React.MouseEvent) => void,
@@ -548,6 +627,10 @@ const renderKenmeiHeaderLink = (
   );
 };
 
+/**
+ * Renders skipped badge for items with no match.
+ * @source
+ */
 const renderSkippedBadge = (showSkippedBadge: boolean) => {
   if (!showSkippedBadge) {
     return null;
@@ -560,6 +643,10 @@ const renderSkippedBadge = (showSkippedBadge: boolean) => {
   );
 };
 
+/**
+ * Renders list of alternative title entries.
+ * @source
+ */
 const renderTitleEntries = (
   titleEntries: Array<{ label: string; value: string }>,
 ) => {
@@ -584,6 +671,10 @@ const renderTitleEntries = (
   );
 };
 
+/**
+ * Renders primary list status if manga is on user's AniList.
+ * @source
+ */
 const renderPrimaryListStatus = (
   primaryMediaListEntry:
     | {
@@ -622,6 +713,10 @@ const renderPrimaryListStatus = (
   );
 };
 
+/**
+ * Determines display title based on match status and available metadata.
+ * @source
+ */
 const getDisplayTitle = (
   match: MangaMatchResult,
   primaryDisplayTitle: string,
@@ -638,6 +733,10 @@ const getDisplayTitle = (
   return primaryDisplayTitle;
 };
 
+/**
+ * Renders primary manga cover image with adult content handling and blur toggle.
+ * @source
+ */
 const renderPrimaryCover = (
   primaryCoverImage: string | undefined,
   primaryIsAdult: boolean,
@@ -728,6 +827,24 @@ const renderPrimaryCover = (
   );
 };
 
+/**
+ * Props for individual alternative match item.
+ *
+ * @property altMatch - Alternative manga match data.
+ * @property index - Index of alternative in list.
+ * @property match - Parent match result.
+ * @property isAdultContent - Function to check adult content.
+ * @property shouldBlurImage - Function to check blur state.
+ * @property toggleImageBlur - Function to toggle blur.
+ * @property handleOpenExternal - Function to handle external links.
+ * @property formatStatusText - Function to format status text.
+ * @property onSelectAlternative - Callback for alternative selection.
+ * @property sourceBadgeBaseClasses - CSS classes for source badges.
+ * @property aniListLinkClasses - CSS classes for AniList links.
+ * @property kenmeiLinkClasses - CSS classes for Kenmei links.
+ * @property listStatusBadgeBaseClasses - CSS classes for list status badges.
+ * @source
+ */
 interface AlternativeMatchItemProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   altMatch: any;
@@ -750,6 +867,10 @@ interface AlternativeMatchItemProps {
   listStatusBadgeBaseClasses: string;
 }
 
+/**
+ * Renders single alternative match option with full details and selection action.
+ * @source
+ */
 const AlternativeMatchItemComponent: React.FC<AlternativeMatchItemProps> = ({
   altMatch,
   index,
@@ -1000,6 +1121,10 @@ const AlternativeMatchItemComponent: React.FC<AlternativeMatchItemProps> = ({
 const AlternativeMatchItem = React.memo(AlternativeMatchItemComponent);
 AlternativeMatchItem.displayName = "AlternativeMatchItem";
 
+/**
+ * Computes blur key for primary match based on ID priority.
+ * @source
+ */
 const computePrimaryBlurKey = (
   primaryMatchCandidate: AniListManga | undefined | null,
   match: MangaMatchResult,
@@ -1015,6 +1140,17 @@ const computePrimaryBlurKey = (
   return undefined;
 };
 
+/**
+ * Card component displaying a single manga match with full details and actions.
+ *
+ * Shows primary match information, alternative matches, user list status, and action buttons.
+ * Supports selection, image blur toggle, and external link navigation. Uses Framer Motion
+ * for smooth animations.
+ *
+ * @param props - Complete component configuration.
+ * @returns Animated card with match details and interactive elements.
+ * @source
+ */
 function MatchCard({
   match,
   uniqueKey,

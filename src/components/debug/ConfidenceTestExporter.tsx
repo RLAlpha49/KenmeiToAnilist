@@ -19,7 +19,12 @@ import {
   copyToClipboard,
 } from "@/utils/generateConfidenceTestCommand";
 
+/**
+ * Props for the ConfidenceTestExporter component.
+ * @source
+ */
 export interface ConfidenceTestExporterProps {
+  /** The manga match result to generate a test command for. */
   match: MangaMatchResult;
 }
 
@@ -48,11 +53,13 @@ export function ConfidenceTestExporter({
       setError(null);
       const testCmd = generateConfidenceTestCommand(match);
       await copyToClipboard(testCmd.command);
+      // Show success state briefly before reverting
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       setError(errorMessage);
+      // Auto-dismiss error after 3 seconds
       setTimeout(() => setError(null), 3000);
     }
   };
@@ -64,7 +71,7 @@ export function ConfidenceTestExporter({
     try {
       setError(null);
       const testCmd = generateConfidenceTestCommand(match);
-      // Show in browser console for visibility
+      // Log to browser console for visibility
       console.log("[Confidence Test Command]", testCmd.command);
       console.log("[Description]", testCmd.description);
       alert(`Test Command:\n\n${testCmd.command}`);

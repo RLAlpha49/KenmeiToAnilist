@@ -1,8 +1,20 @@
+/**
+ * @packageDocumentation
+ * @module components/ui/tabs
+ * @description Tab navigation component with Radix UI.
+ * @source
+ */
 import * as React from "react";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
 
 import { cn } from "@/utils/tailwind";
 
+/**
+ * Tab container component wrapping Radix UI tabs primitive.
+ * @param props - Standard tabs props from Radix UI.
+ * @returns Styled tabs container.
+ * @source
+ */
 function Tabs({
   className,
   ...props
@@ -16,6 +28,12 @@ function Tabs({
   );
 }
 
+/**
+ * Tab list component for grouping tab triggers.
+ * @param props - Standard tab list props from Radix UI.
+ * @returns Styled tab list.
+ * @source
+ */
 function TabsList({
   className,
   ...props
@@ -32,6 +50,12 @@ function TabsList({
   );
 }
 
+/**
+ * Tab trigger component for switching between tabs.
+ * @param props - Standard tab trigger props from Radix UI.
+ * @returns Styled tab trigger button.
+ * @source
+ */
 function TabsTrigger({
   className,
   ...props
@@ -48,6 +72,12 @@ function TabsTrigger({
   );
 }
 
+/**
+ * Tab content component for tab panel content.
+ * @param props - Standard tab content props from Radix UI.
+ * @returns Styled tab content panel.
+ * @source
+ */
 function TabsContent({
   className,
   ...props

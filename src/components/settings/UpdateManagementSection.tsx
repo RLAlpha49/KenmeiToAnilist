@@ -13,26 +13,44 @@ import { SettingsSectionShell } from "./SettingsSectionShell";
 import { getAppVersion, compareVersions } from "@/utils/app-version";
 import { cn } from "@/utils/tailwind";
 
+/**
+ * Props for UpdateManagementSection component.
+ * @source
+ */
 interface UpdateManagementSectionProps {
+  /** Current update channel (stable or beta). */
   updateChannel: "stable" | "beta";
+  /** Whether update check is in progress. */
   isCheckingUpdate: boolean;
+  /** Latest available update info or null. */
   updateInfo: { version: string; url: string; isBeta: boolean } | null;
+  /** Error message if update check failed. */
   updateError: string | null;
+  /** Whether update is currently downloading. */
   isDownloading: boolean;
+  /** Download progress percentage (0-100). */
   downloadProgress: number;
+  /** Whether update has been downloaded. */
   isDownloaded: boolean;
+  /** Currently highlighted section ID. */
   highlightedSectionId: string | null;
+  /** Callback when update channel changes. */
   onUpdateChannelChange: (channel: "stable" | "beta") => void;
+  /** Callback to check for updates. */
   onCheckForUpdates: () => void;
+  /** Callback to download update. */
   onDownloadUpdate: () => void;
+  /** Callback to install update. */
   onInstallUpdate: () => void;
+  /** Callback to open external URL. */
   onOpenExternal: (url: string) => (e: React.MouseEvent) => void;
 }
 
 /**
  * Update management section component.
  * Handles checking for updates, downloading, and installing updates.
- *
+ * @param props - Component props.
+ * @returns The rendered update management section.
  * @source
  */
 export function UpdateManagementSection({

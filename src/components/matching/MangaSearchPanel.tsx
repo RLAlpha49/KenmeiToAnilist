@@ -31,7 +31,9 @@ import {
 import { getMatchConfig } from "../../utils/storage";
 
 /**
- * Get CSS classes for source badge based on source type.
+ * Returns CSS classes for source badge based on source type.
+ * @param source - Manga source identifier.
+ * @returns Tailwind classes for styling the badge.
  * @source
  */
 function getSourceBadgeClasses(source: string): string {
@@ -47,13 +49,11 @@ function getSourceBadgeClasses(source: string): string {
 
 /**
  * Props for the MangaSearchPanel component.
- *
- * @property kenmeiManga - The Kenmei manga to search for a match (optional).
+ * @property kenmeiManga - Kenmei manga to search for a match.
  * @property onClose - Callback to close the search panel.
  * @property onSelectMatch - Callback when a manga match is selected.
- * @property token - AniList access token (optional).
- * @property bypassCache - Whether to bypass the cache for searching (optional).
- * @internal
+ * @property token - AniList access token.
+ * @property bypassCache - Whether to bypass the cache for searching.
  * @source
  */
 export interface MangaSearchPanelProps {
@@ -67,8 +67,8 @@ export interface MangaSearchPanelProps {
 /**
  * Panel for searching and selecting AniList manga matches for a given Kenmei manga.
  * Supports manual search and result selection with keyboard navigation.
- * @param props - The props for the MangaSearchPanel component.
- * @returns The rendered manga search panel React element.
+ * @param props - Component props.
+ * @returns Rendered search panel with search input and result list.
  * @source
  */
 export function MangaSearchPanel({

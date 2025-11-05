@@ -1,5 +1,5 @@
 /**
- * @file Main search orchestration - coordinates all search operations
+ * Main search orchestration - coordinates all search operations
  * @module matching/orchestration/search-orchestrator
  */
 
@@ -40,6 +40,7 @@ import {
  * @param specificPage - Optional specific page number (disables pagination)
  * @param kenmeiManga - Optional Kenmei manga context for custom rule evaluation
  * @returns Promise resolving to manga search response with matches
+ *
  * @source
  */
 export async function searchMangaByTitle(

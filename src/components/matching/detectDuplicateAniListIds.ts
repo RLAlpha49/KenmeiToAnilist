@@ -4,11 +4,8 @@ import { DuplicateEntry } from "./DuplicateWarning";
 
 /**
  * Detects duplicate AniList IDs mapped to multiple Kenmei manga titles.
- *
- * Analyzes accepted matches to identify when a single AniList manga entry is mapped to multiple
- * Kenmei manga entries, excluding previously ignored duplicates.
- *
- * @param matches - The list of manga match results to analyze.
+ * Identifies when a single AniList manga entry maps to multiple Kenmei entries, excluding previously ignored duplicates.
+ * @param matches - List of manga match results to analyze.
  * @returns Array of detected duplicate entries with conflicting Kenmei titles.
  * @source
  */

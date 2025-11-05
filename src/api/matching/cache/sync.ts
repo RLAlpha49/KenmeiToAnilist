@@ -10,10 +10,10 @@ import { generateCacheKey } from "./utils";
 import { saveCache } from "./persistence";
 
 /**
- * Processes and merges manga cache data from localStorage into the in-memory cache.
- * Filters out light novels and merges with newer cache entries preferentially.
- * @param cachedMangaData - JSON string containing cached manga data.
- * @returns Number of manga entries successfully loaded from cache.
+ * Processes and merges manga cache from localStorage into the in-memory cache.
+ * Filters out light novels and prefers newer cache entries.
+ * @param cachedMangaData - JSON string of cached manga data.
+ * @returns Number of manga cache entries successfully loaded.
  * @source
  */
 function processMangaCache(cachedMangaData: string): number {
@@ -52,10 +52,10 @@ function processMangaCache(cachedMangaData: string): number {
 }
 
 /**
- * Processes search cache entries and extracts manga data into the manga cache.
- * Generates proper cache keys for each manga title (romaji and English).
- * @param searchEntry - Search cache entry containing manga data and timestamp.
- * @returns Number of manga entries successfully imported from the search cache entry.
+ * Processes search cache entries and extracts manga into the manga cache.
+ * Generates cache keys for each manga title (romaji and English).
+ * @param searchEntry - Search cache entry with manga data and timestamp.
+ * @returns Number of manga entries imported.
  * @source
  */
 function processSearchCacheEntry(searchEntry: {
@@ -114,9 +114,8 @@ function processSearchCacheEntry(searchEntry: {
 
 /**
  * Processes search cache data from localStorage and imports manga into the manga cache.
- * Iterates through all search cache entries extracting manga data.
- * @param cachedSearchData - JSON string containing cached search data.
- * @returns void
+ * Extracts manga from all search cache entries and merges into unified cache.
+ * @param cachedSearchData - JSON string of cached search data.
  * @source
  */
 function processSearchCache(cachedSearchData: string): void {
@@ -144,9 +143,8 @@ function processSearchCache(cachedSearchData: string): void {
 
 /**
  * Synchronizes the in-memory manga cache with client-side localStorage caches.
- * Merges manga cache and extracts manga from search cache into a unified in-memory cache.
- * Safe to call in non-browser environments (checks for globalThis.window).
- * @returns void
+ * Merges manga cache and extracts manga from search cache into unified in-memory cache.
+ * Safe to call in non-browser environments.
  * @source
  */
 export function syncWithClientCache(): void {

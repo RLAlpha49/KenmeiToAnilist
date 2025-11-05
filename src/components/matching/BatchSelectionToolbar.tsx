@@ -17,13 +17,13 @@ import { motion } from "framer-motion";
 
 /**
  * Props for the BatchSelectionToolbar component.
- *
- * @property selectedCount - Number of currently selected matches
- * @property onAccept - Callback to accept all selected matches
- * @property onReject - Callback to reject all selected matches
- * @property onReset - Callback to reset all selected matches to pending
- * @property onClearSelection - Callback to clear current selection
- * @property isProcessing - Optional flag indicating if a batch operation is in progress
+ * @property selectedCount - Number of currently selected matches.
+ * @property onAccept - Callback to accept all selected matches.
+ * @property onReject - Callback to reject all selected matches.
+ * @property onReset - Callback to reset all selected matches to pending.
+ * @property onClearSelection - Callback to clear current selection.
+ * @property isProcessing - Optional flag indicating if a batch operation is in progress.
+ * @source
  */
 export interface BatchSelectionToolbarProps {
   selectedCount: number;
@@ -35,10 +35,11 @@ export interface BatchSelectionToolbarProps {
 }
 
 /**
- * BatchSelectionToolbar component - floating toolbar for batch operations
- *
- * @param props - The props for the BatchSelectionToolbar component
- * @returns The rendered toolbar React element
+ * Floating toolbar for batch selection operations on manga matches.
+ * Displays selection count and provides action buttons to accept, reject, reset, or clear selections.
+ * @param props - Component props including selection count and action callbacks.
+ * @returns Rendered toolbar with animated entrance and accessibility features.
+ * @source
  */
 function BatchSelectionToolbarComponent({
   selectedCount,
@@ -178,6 +179,7 @@ function BatchSelectionToolbarComponent({
 }
 
 /**
- * Memoized BatchSelectionToolbar component for performance optimization
+ * Memoized BatchSelectionToolbar component to prevent unnecessary re-renders.
+ * @source
  */
 export const BatchSelectionToolbar = React.memo(BatchSelectionToolbarComponent);

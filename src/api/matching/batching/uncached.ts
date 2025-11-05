@@ -1,5 +1,5 @@
 /**
- * @file Process uncached manga with concurrency control
+ * Process uncached manga with concurrency control
  * @module matching/batching/uncached
  */
 
@@ -71,7 +71,10 @@ export async function processUncachedManga(
   // Track if we've been cancelled
   let isCancelled = false;
 
-  // Function to check if we're done processing all manga
+  /**
+   * Check if all manga have been processed and resolve completion promise if done.
+   * @source
+   */
   const checkIfDone = () => {
     if ((queue.length === 0 && activeCount === 0) || isCancelled) {
       resolve();
@@ -79,7 +82,12 @@ export async function processUncachedManga(
   };
 
   /**
-   * Search for manga and store results with alternative source information.
+   * Search for manga by title and store results with Comick/MangaDex source information.
+   * @param index - Manga position in original list.
+   * @param manga - Kenmei manga to search for.
+   * @param options - Search configuration, callbacks, and storage.
+   * @throws May throw if cancellation signalled.
+   * @source
    */
   const searchAndStoreManga = async (
     index: number,
@@ -203,7 +211,15 @@ export async function processUncachedManga(
 
   /**
    * Handle errors during manga processing with cancellation detection.
-   * Returns true if error was cancellation, false for regular errors.
+   * @param error - Error thrown during processing.
+   * @param manga - Kenmei manga being processed.
+   * @param index - Manga position in original list.
+   * @param cachedResults - Storage for search results.
+   * @param cachedComickSources - Storage for Comick source info.
+   * @param cachedMangaDexSources - Storage for MangaDex source info.
+   * @param onCancellation - Callback to invoke if cancellation detected.
+   * @returns True if error was due to cancellation, false for regular errors.
+   * @source
    */
   const handleMangaProcessingError = (
     error: unknown,
@@ -233,6 +249,11 @@ export async function processUncachedManga(
   };
 
   // Function to start processing the next manga in the queue
+  /**
+   * Process next manga in queue, enforcing MAX_CONCURRENT concurrency limit.
+   * @returns Promise resolving when next item is processed or queue is empty.
+   * @source
+   */
   const processNext = async () => {
     // Check for cancellation
     try {
