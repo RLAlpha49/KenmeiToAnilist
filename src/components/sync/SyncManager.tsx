@@ -5,9 +5,7 @@
  * Handles progress tracking, error recovery, incremental sync strategy, rate limit handling, and session resumption.
  */
 
-// FIXME: Progress count for incremental updates - currently marks as complete upfront
-// causing incorrect display (e.g., 3/20 at start instead of 0/20). Should complete
-// incremental updates at the end of the sync process.
+// FIXME: Progress count display for incremental updates - currently marks as complete upfront causing incorrect display (e.g., 3/20 at start instead of 0/20). Should complete incremental updates at the end of the sync process. This is not a problem with actually updating entries but with how the progress of how many entries have been updated is displayed.
 
 import React, { useEffect, useMemo, useState } from "react";
 import { SyncProgress, SyncReport } from "../../api/anilist/sync-service";
