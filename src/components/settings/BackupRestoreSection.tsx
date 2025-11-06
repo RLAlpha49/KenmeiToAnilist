@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { highlightText } from "@/utils/textHighlight";
+import { highlightText, truncateToastMessage } from "@/utils/textHighlight";
 import { cn } from "@/utils/tailwind";
 import type { BackupScheduleConfig } from "@/utils/storage";
 
@@ -134,14 +134,24 @@ export function BackupRestoreSection({
             "[BackupRestoreSection] Error fetching backup location:",
             result?.error,
           );
-          toast.error(result?.error || "Failed to load backup location");
+          toast.error("Failed to load backup location", {
+            description: truncateToastMessage(
+              result?.error || "Failed to load backup location",
+              200,
+            ).component,
+          });
         }
       } catch (error) {
         console.error(
           "[BackupRestoreSection] Error fetching backup location:",
           error,
         );
-        toast.error("Failed to load backup location");
+        toast.error("Failed to load backup location", {
+          description: truncateToastMessage(
+            "Failed to load backup location",
+            200,
+          ).component,
+        });
       }
     };
     void fetchDefaultLocation();
@@ -216,7 +226,9 @@ export function BackupRestoreSection({
           "[BackupRestoreSection] Failed to delete backup:",
           result?.error,
         );
-        toast.error(errorMsg);
+        toast.error("Failed to delete backup", {
+          description: truncateToastMessage(errorMsg, 200).component,
+        });
       }
     } catch (error) {
       console.error("[BackupRestoreSection] Error deleting backup:", error);

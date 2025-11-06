@@ -36,6 +36,7 @@ import {
 import { clearRegexCache } from "@/api/matching/filtering";
 import { debounce } from "@/utils/debounce";
 import { useDebugActions } from "@/contexts/DebugContext";
+import { truncateToastMessage } from "@/utils/textHighlight";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -386,7 +387,12 @@ function CustomRulesManagerComponent(): React.JSX.Element {
 
     const validation = validateCustomRule(ruleToValidate);
     if (!validation.valid) {
-      toast.error(validation.error || "Invalid rule");
+      toast.error("Invalid rule", {
+        description: truncateToastMessage(
+          validation.error || "Invalid rule",
+          200,
+        ).component,
+      });
       return;
     }
 

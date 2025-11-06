@@ -4,8 +4,6 @@
  * @description Matching page component for the Kenmei to AniList sync tool. Handles manga matching, review, rematch, and sync preparation.
  */
 
-// TODO: Text for sonner should be truncated at some point to prevent excessively long descriptions from breaking the UI. Consider adding a character limit and ellipsis for long descriptions.
-
 import React, {
   useState,
   useEffect,
@@ -35,6 +33,7 @@ import { UndoRedoManager } from "../utils/undoRedo";
 import { useDebugActions } from "../contexts/DebugContext";
 import { debounce } from "../utils/debounce";
 import { AbortError } from "../utils/chunkedProcessing";
+import { truncateToastMessage } from "../utils/textHighlight";
 import { toast } from "sonner";
 
 // Components
@@ -250,7 +249,10 @@ export function MatchingPage() {
     const metadata = undoRedoManager.undo();
     if (metadata) {
       toast(`Undone: ${metadata.description}`, {
-        description: `${metadata.affectedTitles.join(", ")}`,
+        description: truncateToastMessage(
+          metadata.affectedTitles.join(", "),
+          200,
+        ).component,
       });
       recordEvent({
         type: "match.undo",
@@ -272,7 +274,10 @@ export function MatchingPage() {
     const metadata = undoRedoManager.redo();
     if (metadata) {
       toast(`Redone: ${metadata.description}`, {
-        description: `${metadata.affectedTitles.join(", ")}`,
+        description: truncateToastMessage(
+          metadata.affectedTitles.join(", "),
+          200,
+        ).component,
       });
       recordEvent({
         type: "match.redo",

@@ -25,6 +25,7 @@ import {
   clearPendingMangaStorage,
 } from "../utils/manga-import-utils";
 import { getStatusCounts } from "../utils/manga-status-utils";
+import { truncateToastMessage } from "../utils/textHighlight";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { useDebugActions } from "../contexts/DebugContext";
@@ -73,11 +74,13 @@ export function ImportPage() {
     setError(null);
     setImportSuccess(false);
     toast.success("File loaded", {
-      description:
+      description: truncateToastMessage(
         `${data.manga.length} entries queued for review.` +
-        (previousMatchCount > 0
-          ? " Prior matches will be reapplied automatically."
-          : " We'll keep your Kenmei metadata intact."),
+          (previousMatchCount > 0
+            ? " Prior matches will be reapplied automatically."
+            : " We'll keep your Kenmei metadata intact."),
+        200,
+      ).component,
     });
   };
 
@@ -118,7 +121,7 @@ export function ImportPage() {
 
     toast.error(error.message, {
       id: toastId,
-      description,
+      description: truncateToastMessage(description, 200).component,
     });
   };
 

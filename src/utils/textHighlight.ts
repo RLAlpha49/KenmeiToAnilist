@@ -73,4 +73,102 @@ export const highlightText = (text: string, query: string): React.ReactNode => {
   return React.createElement(React.Fragment, null, ...parts);
 };
 
+/**
+ * Component for displaying truncated text with inline expansion capability.
+ * Used for toast notifications with long descriptions.
+ * @internal
+ */
+const TruncatedToastContent: React.FC<{
+  text: string;
+  maxLength: number;
+  truncatedText: string;
+}> = ({ text, maxLength, truncatedText }) => {
+  const [expanded, setExpanded] = React.useState(false);
+
+  return React.createElement(
+    "div",
+    { className: "flex flex-col gap-1" },
+    React.createElement(
+      "div",
+      { className: expanded ? "" : "line-clamp-3" },
+      expanded ? text : truncatedText,
+    ),
+    React.createElement(
+      "button",
+      {
+        type: "button",
+        onClick: (e: React.MouseEvent) => {
+          e.stopPropagation();
+          setExpanded(!expanded);
+        },
+        className:
+          "text-xs opacity-70 hover:opacity-100 underline transition-opacity",
+      },
+      expanded ? "Show less" : "Show more",
+    ),
+  );
+};
+
+/**
+ * Truncates text for toast descriptions and provides inline expansion capability.
+ * @param text - The text to potentially truncate.
+ * @param maxLength - Maximum character length before truncation (default: 200).
+ * @returns Object containing truncation status, both versions of text, and React component for rendering.
+ *
+ * @source
+ */
+export const truncateToastMessage = (
+  text: string,
+  maxLength: number = 200,
+): {
+  isTruncated: boolean;
+  truncatedText: string;
+  fullText: string;
+  component: React.ReactNode;
+} => {
+  // Early return for whitespace-only strings
+  if (text.trim().length === 0) {
+    return {
+      isTruncated: false,
+      truncatedText: text,
+      fullText: text,
+      component: text,
+    };
+  }
+
+  // Normalize consecutive whitespace (including newlines) to single spaces
+  const normalizedText = text.replace(/\s+/g, " ");
+
+  if (normalizedText.length <= maxLength) {
+    return {
+      isTruncated: false,
+      truncatedText: normalizedText,
+      fullText: normalizedText,
+      component: normalizedText,
+    };
+  }
+
+  // Find last space before maxLength for word boundary truncation
+  let truncateIndex = maxLength;
+  const lastSpaceIndex = normalizedText.lastIndexOf(" ", maxLength);
+
+  if (lastSpaceIndex > 0 && lastSpaceIndex > maxLength - 50) {
+    // Use word boundary if space is close to maxLength
+    truncateIndex = lastSpaceIndex;
+  }
+
+  const truncatedText = normalizedText.slice(0, truncateIndex).trim() + "...";
+
+  return {
+    isTruncated: true,
+    truncatedText,
+    fullText: normalizedText,
+    component: React.createElement(TruncatedToastContent, {
+      text: normalizedText,
+      maxLength,
+      truncatedText,
+    }),
+  };
+};
+
 export { sliceText };

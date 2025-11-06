@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import * as Sentry from "@sentry/electron/renderer";
 import { storage } from "../utils/storage";
 import { captureError, ErrorType } from "../utils/errorHandling";
+import { truncateToastMessage } from "../utils/textHighlight";
 import {
   AuthState,
   APICredentials,
@@ -245,7 +246,10 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     const { clientId, clientSecret, redirectUri } = credentials;
     if (!clientId || !clientSecret || !redirectUri) {
       toast.error(
-        "Credentials incomplete. Please ensure Client ID, Secret & Redirect URI are set.",
+        truncateToastMessage(
+          "Credentials incomplete. Please ensure Client ID, Secret & Redirect URI are set.",
+          200,
+        ).component,
       );
       throw new Error(
         "Incomplete credentials: missing clientId, clientSecret or redirectUri",
@@ -453,7 +457,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
           level: "error",
           metadata: { error: msg },
         });
-        toast.error(msg);
+        toast.error(truncateToastMessage(msg, 200).component);
         setError(msg);
         setStatusMessage(null);
         setIsLoading(false);

@@ -45,6 +45,7 @@ import {
 } from "../utils/storage";
 import { restoreBackup, importBackupFromFile } from "../utils/backup";
 import { motion } from "framer-motion";
+import { truncateToastMessage } from "../utils/textHighlight";
 import { toast } from "sonner";
 import { SettingsHero } from "../components/settings/SettingsHero";
 import { SettingsSearchBar } from "../components/settings/SettingsSearchBar";
@@ -754,7 +755,7 @@ export function SettingsPage() {
       (error: string) => {
         console.error("[Settings] Scheduled backup failed:", error);
         toast.error("Scheduled backup failed", {
-          description: error,
+          description: truncateToastMessage(error, 200).component,
         });
       },
     );
@@ -1340,7 +1341,7 @@ export function SettingsPage() {
           errorMessage,
         );
         toast.error("Failed to update backup schedule", {
-          description: errorMessage,
+          description: truncateToastMessage(errorMessage, 200).component,
         });
         return;
       }
@@ -1362,7 +1363,10 @@ export function SettingsPage() {
       setScheduleConfig(previousConfig);
       console.error("[Settings] Exception updating backup schedule:", error);
       toast.error("Failed to update backup schedule", {
-        description: error instanceof Error ? error.message : "Unknown error",
+        description: truncateToastMessage(
+          error instanceof Error ? error.message : "Unknown error",
+          200,
+        ).component,
       });
     }
   };
@@ -1392,7 +1396,10 @@ export function SettingsPage() {
     } catch (error) {
       console.error("[Settings] Failed to trigger backup:", error);
       toast.error("Failed to create backup", {
-        description: error instanceof Error ? error.message : "Unknown error",
+        description: truncateToastMessage(
+          error instanceof Error ? error.message : "Unknown error",
+          200,
+        ).component,
       });
     } finally {
       setIsTriggeringBackup(false);
