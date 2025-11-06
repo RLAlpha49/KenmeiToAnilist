@@ -7,6 +7,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { AlertTriangle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { highlightText } from "@/utils/textHighlight";
 import { cn } from "@/utils/tailwind";
@@ -113,6 +114,47 @@ export function DebugToolsSection({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2, duration: 0.4 }}
     >
+      {/* Confidence Test Exporter - Always Visible */}
+      <div className="border-border/60 bg-background/40 rounded-2xl border border-dashed p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-semibold">
+                {renderHighlightedText("Confidence test exporter", searchQuery)}
+              </h4>
+              <Badge className="bg-orange-100 text-xs text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
+                Debug Tool
+              </Badge>
+            </div>
+            <p className="text-muted-foreground text-xs">
+              {renderHighlightedText(
+                "Add export buttons on match cards to debug confidence calculations and scoring. This tool is always available and doesn't require the debug menu to be enabled.",
+                searchQuery,
+              )}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground text-xs">
+              {renderHighlightedText("Enable", searchQuery)}
+            </span>
+            <Switch
+              id="confidence-test-exporter-enabled"
+              checked={confidenceTestExporterEnabled}
+              onCheckedChange={(checked) =>
+                onConfidenceTestExporterChange(Boolean(checked))
+              }
+            />
+          </div>
+        </div>
+        <p className="text-muted-foreground mt-3 text-xs">
+          {renderHighlightedText(
+            "When enabled, debug buttons appear next to confidence scores on match cards. Generate and copy test commands for troubleshooting.",
+            searchQuery,
+          )}
+        </p>
+      </div>
+
+      {/* Debug Menu Toggle */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-0.5">
           <h3 className="text-sm font-medium">
@@ -136,6 +178,8 @@ export function DebugToolsSection({
           />
         </div>
       </div>
+
+      {/* Other Debug Tools (when debug menu is enabled) */}
       {isDebugEnabled ? (
         <div className="space-y-4">
           <div className="rounded-md bg-yellow-50 p-3 dark:bg-yellow-900/20">
@@ -245,17 +289,6 @@ export function DebugToolsSection({
                 label: "Enable panel",
                 footer:
                   "Disable to prevent recording IPC traffic and reduce debug data collection. Enable only for troubleshooting.",
-              },
-              {
-                id: "confidence-test-exporter-enabled",
-                title: "Confidence test exporter",
-                description:
-                  "Add export buttons on match cards to debug confidence calculations and scoring. Useful for test case reports.",
-                checked: confidenceTestExporterEnabled,
-                onChange: (v) => onConfidenceTestExporterChange(Boolean(v)),
-                label: "Enable",
-                footer:
-                  "When enabled, debug buttons appear next to confidence scores on match cards. Generate and copy test commands for troubleshooting.",
               },
               {
                 id: "performance-monitor-enabled",

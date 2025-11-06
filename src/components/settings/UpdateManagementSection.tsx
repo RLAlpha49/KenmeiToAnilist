@@ -44,6 +44,10 @@ interface UpdateManagementSectionProps {
   onInstallUpdate: () => void;
   /** Callback to open external URL. */
   onOpenExternal: (url: string) => (e: React.MouseEvent) => void;
+  /** Map of section IDs to their collapsed states. */
+  collapsedSections: Record<string, boolean>;
+  /** Callback to toggle a section's collapsed state. */
+  onToggleSection: (sectionId: string) => void;
 }
 
 /**
@@ -67,6 +71,8 @@ export function UpdateManagementSection({
   onDownloadUpdate,
   onInstallUpdate,
   onOpenExternal,
+  collapsedSections,
+  onToggleSection,
 }: Readonly<UpdateManagementSectionProps>) {
   return (
     <div
@@ -77,6 +83,10 @@ export function UpdateManagementSection({
       )}
     >
       <SettingsSectionShell
+        id="update-management"
+        isCollapsible={true}
+        isCollapsed={collapsedSections["update-management"] ?? false}
+        onCollapsedChange={() => onToggleSection("update-management")}
         icon={RefreshCw}
         title="Check for updates"
         description="Stay current with the latest Kenmei → AniList improvements."

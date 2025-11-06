@@ -45,6 +45,10 @@ interface SyncSettingsTabProps {
   onCustomThresholdToggle: (value: boolean) => void;
   /** Callback to set entire sync config. */
   setSyncConfig: (config: SyncConfig) => void;
+  /** Map of section IDs to their collapsed states. */
+  collapsedSections: Record<string, boolean>;
+  /** Callback to toggle a section's collapsed state. */
+  onToggleSection: (sectionId: string) => void;
 }
 
 /**
@@ -62,6 +66,8 @@ export function SyncSettingsTab({
   onSyncConfigChange,
   onCustomThresholdToggle,
   setSyncConfig,
+  collapsedSections,
+  onToggleSection,
 }: Readonly<SyncSettingsTabProps>) {
   return (
     <motion.div
@@ -71,6 +77,10 @@ export function SyncSettingsTab({
       data-onboarding="sync-settings"
     >
       <SettingsSectionShell
+        id="sync-preferences"
+        isCollapsible={true}
+        isCollapsed={collapsedSections["sync-preferences"] ?? false}
+        onCollapsedChange={() => onToggleSection("sync-preferences")}
         icon={RefreshCw}
         title="Sync preferences"
         description="Control how Kenmei data is synchronized to your AniList library."

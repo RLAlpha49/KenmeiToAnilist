@@ -4,8 +4,6 @@
  * @description Settings page component for the Kenmei to AniList sync tool. Handles authentication, sync preferences, data management, and cache clearing.
  */
 
-// TODO: Sections under the tabs should be collapsible to improve readability and reduce cognitive load. This will allow users to focus on specific settings without being overwhelmed by the full list of options.
-// TODO: Confidence test exporter setting should be outside the debug menu section but still under the debug tools section.
 // FIXME: Setting for matching preferences do not get updated. It does not show the feedback right away that the setting has changed.
 
 import React, {
@@ -18,7 +16,14 @@ import React, {
 import Fuse, { type FuseResult } from "fuse.js";
 import { ErrorMessage } from "../components/ui/error-message";
 import { ErrorType, createError, AppError } from "../utils/errorHandling";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, ChevronsDown, ChevronsUp } from "lucide-react";
+import { Button } from "../components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../components/ui/tooltip";
 import { SettingsSection, SettingsSearchResult } from "../types/settings";
 import { useAuthActions, useAuthState } from "../hooks/useAuth";
 import { useAutoUpdater } from "../hooks/useAutoUpdater";
@@ -55,6 +60,16 @@ import { UpdateManagementSection } from "@/components/settings/UpdateManagementS
  * @source
  */
 export function SettingsPage() {
+  // All settings section IDs that can be collapsed
+  const SECTION_IDS = [
+    "matching-preferences",
+    "sync-preferences",
+    "data-management",
+    "backup-restore",
+    "debug-tools",
+    "update-management",
+  ] as const;
+
   const {
     authState,
     isLoading,
@@ -178,6 +193,11 @@ export function SettingsPage() {
     string | null
   >(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Collapsed sections state
+  const [collapsedSections, setCollapsedSections] = useState<
+    Record<string, boolean>
+  >({});
 
   /**
    * Saves sync configuration with debug event logging.
@@ -777,6 +797,78 @@ export function SettingsPage() {
       );
     }
   }, [updateChannel]);
+
+  // Load collapsed sections state from storage on mount
+  useEffect(() => {
+    try {
+      const savedCollapsedSections = storage.getItem(
+        STORAGE_KEYS.SETTINGS_COLLAPSED_SECTIONS,
+      );
+      if (savedCollapsedSections) {
+        const parsed = JSON.parse(savedCollapsedSections);
+        setCollapsedSections(parsed);
+        console.debug("[Settings] ✅ Loaded collapsed sections state:", parsed);
+      }
+    } catch (err) {
+      console.error(
+        "[Settings] ❌ Failed to load collapsed sections state:",
+        err,
+      );
+    }
+  }, []);
+
+  // Persist collapsed sections state to storage with debouncing
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      try {
+        storage.setItem(
+          STORAGE_KEYS.SETTINGS_COLLAPSED_SECTIONS,
+          JSON.stringify(collapsedSections),
+        );
+        console.debug(
+          "[Settings] 💾 Saved collapsed sections state:",
+          collapsedSections,
+        );
+      } catch (err) {
+        console.error(
+          "[Settings] ❌ Failed to save collapsed sections state:",
+          err,
+        );
+      }
+    }, 500);
+
+    return () => clearTimeout(debounceTimer);
+  }, [collapsedSections]);
+
+  /**
+   * Toggles the collapsed state of a specific settings section.
+   * @param sectionId - The ID of the section to toggle.
+   * @source
+   */
+  const handleToggleSection = useCallback((sectionId: string) => {
+    setCollapsedSections((prev) => ({
+      ...prev,
+      [sectionId]: !prev[sectionId],
+    }));
+  }, []);
+
+  /**
+   * Toggles all settings sections between fully collapsed and fully expanded states.
+   * @source
+   */
+  const handleExpandCollapseAll = useCallback(() => {
+    const allCollapsed = SECTION_IDS.every((id) => collapsedSections[id]);
+
+    setCollapsedSections(
+      SECTION_IDS.reduce(
+        (acc, id) => ({
+          ...acc,
+          [id]: !allCollapsed,
+        }),
+        {},
+      ),
+    );
+  }, [collapsedSections]);
 
   /**
    * Initiates AniList OAuth login flow with either custom or default credentials.
@@ -1460,6 +1552,9 @@ export function SettingsPage() {
     [useCustomCredentials],
   );
 
+  // Computed value for button state
+  const allCollapsed = SECTION_IDS.every((id) => collapsedSections[id]);
+
   return (
     <motion.div
       className="relative mx-auto max-w-[1200px] space-y-8 px-4 pb-12 pt-6 md:px-6"
@@ -1507,9 +1602,41 @@ export function SettingsPage() {
         onSearchChange={handleSearchChange}
       />
 
+      {!searchQuery && (
+        <div className="flex justify-end">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleExpandCollapseAll}
+                  className="text-xs text-slate-600 dark:text-slate-400"
+                >
+                  {allCollapsed ? (
+                    <>
+                      <ChevronsUp className="w-4 h-4 mr-2" />
+                      Expand All
+                    </>
+                  ) : (
+                    <>
+                      <ChevronsDown className="w-4 h-4 mr-2" />
+                      Collapse All
+                    </>
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                {allCollapsed ? "Expand all sections" : "Collapse all sections"}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      )}
+
       {error && (
         <motion.div
-          className="rounded-3xl border border-rose-400/40 bg-rose-500/10 p-4 backdrop-blur-lg"
+          className="p-4 border rounded-3xl border-rose-400/40 bg-rose-500/10 backdrop-blur-lg"
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
@@ -1530,10 +1657,10 @@ export function SettingsPage() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="rounded-3xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100 backdrop-blur-lg"
+          className="px-4 py-3 text-sm border rounded-3xl border-emerald-400/40 bg-emerald-500/10 text-emerald-100 backdrop-blur-lg"
         >
           <div className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4" />
+            <CheckCircle className="w-4 h-4" />
             <span>Selected caches cleared successfully.</span>
           </div>
         </motion.div>
@@ -1585,6 +1712,8 @@ export function SettingsPage() {
         onEventLoggerChange={setEventLoggerEnabled}
         onConfidenceTestExporterChange={setConfidenceTestExporterEnabled}
         onPerformanceMonitorChange={setPerformanceMonitorEnabled}
+        collapsedSections={collapsedSections}
+        onToggleSection={handleToggleSection}
       />
       <UpdateManagementSection
         updateChannel={updateChannel}
@@ -1600,6 +1729,8 @@ export function SettingsPage() {
         onDownloadUpdate={handleDownloadUpdate}
         onInstallUpdate={handleInstallUpdate}
         onOpenExternal={handleOpenExternal}
+        collapsedSections={collapsedSections}
+        onToggleSection={handleToggleSection}
       />
     </motion.div>
   );

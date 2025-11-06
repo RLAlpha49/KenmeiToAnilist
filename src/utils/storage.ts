@@ -422,6 +422,7 @@ export const STORAGE_KEYS = {
   BACKUP_SCHEDULE_CONFIG: "backup_schedule_config",
   READING_HISTORY: "reading_history",
   FAILED_OPERATIONS: "failed_operations",
+  SETTINGS_COLLAPSED_SECTIONS: "settings_collapsed_sections",
 };
 
 /**

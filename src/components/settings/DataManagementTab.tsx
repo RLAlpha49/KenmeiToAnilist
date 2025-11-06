@@ -71,11 +71,17 @@ export function DataManagementTab({
   onEventLoggerChange,
   onConfidenceTestExporterChange,
   onPerformanceMonitorChange,
+  collapsedSections,
+  onToggleSection,
 }: Readonly<DataManagementProps>) {
   return (
     <>
       <motion.div variants={itemVariants} initial="hidden" animate="show">
         <SettingsSectionShell
+          id="data-management"
+          isCollapsible={true}
+          isCollapsed={collapsedSections["data-management"] ?? false}
+          onCollapsedChange={() => onToggleSection("data-management")}
           icon={Database}
           title="Data management"
           description="Control cached data stored locally by the application."
@@ -104,6 +110,10 @@ export function DataManagementTab({
           }
         >
           <SettingsSectionShell
+            id="backup-restore"
+            isCollapsible={true}
+            isCollapsed={collapsedSections["backup-restore"] ?? false}
+            onCollapsedChange={() => onToggleSection("backup-restore")}
             icon={Download}
             title="Backup & restore"
             description="Export and import application data for safe keeping or migration."
@@ -141,6 +151,10 @@ export function DataManagementTab({
           }
         >
           <SettingsSectionShell
+            id="debug-tools"
+            isCollapsible={true}
+            isCollapsed={collapsedSections["debug-tools"] ?? false}
+            onCollapsedChange={() => onToggleSection("debug-tools")}
             icon={Bug}
             title="Debug tools"
             description="Advanced utilities for troubleshooting and development."

@@ -117,4 +117,10 @@ export interface DataManagementProps {
   onConfidenceTestExporterChange: (enabled: boolean) => void;
   /** Callback to toggle performance monitor. */
   onPerformanceMonitorChange: (enabled: boolean) => void;
+
+  // Collapsed sections state
+  /** Map of section IDs to their collapsed states. */
+  collapsedSections: Record<string, boolean>;
+  /** Callback to toggle a section's collapsed state. */
+  onToggleSection: (sectionId: string) => void;
 }

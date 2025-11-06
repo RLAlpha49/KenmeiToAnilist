@@ -38,6 +38,10 @@ interface MatchingSettingsTabProps {
   highlightedSectionId: string | null;
   /** Callback when matching config changes. */
   onMatchConfigChange: (config: MatchConfig, field: string) => void;
+  /** Map of section IDs to their collapsed states. */
+  collapsedSections: Record<string, boolean>;
+  /** Callback to toggle a section's collapsed state. */
+  onToggleSection: (sectionId: string) => void;
 }
 
 /**
@@ -52,6 +56,8 @@ export function MatchingSettingsTab({
   searchQuery,
   highlightedSectionId,
   onMatchConfigChange,
+  collapsedSections,
+  onToggleSection,
 }: Readonly<MatchingSettingsTabProps>) {
   return (
     <motion.div
@@ -61,6 +67,10 @@ export function MatchingSettingsTab({
       data-onboarding="matching-settings"
     >
       <SettingsSectionShell
+        id="matching-preferences"
+        isCollapsible={true}
+        isCollapsed={collapsedSections["matching-preferences"] ?? false}
+        onCollapsedChange={() => onToggleSection("matching-preferences")}
         icon={Filter}
         title="Matching preferences"
         description="Configure how manga from Kenmei are automatically matched to AniList entries."

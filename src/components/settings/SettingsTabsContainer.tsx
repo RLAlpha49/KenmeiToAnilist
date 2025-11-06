@@ -132,6 +132,8 @@ export function SettingsTabsContainer({
   onEventLoggerChange,
   onConfidenceTestExporterChange,
   onPerformanceMonitorChange,
+  collapsedSections,
+  onToggleSection,
 }: Readonly<SettingsTabsContainerProps>) {
   // Render no results message
   const renderNoResults = () => (
@@ -312,6 +314,8 @@ export function SettingsTabsContainer({
           searchQuery={searchQuery}
           highlightedSectionId={highlightedSectionId}
           onMatchConfigChange={onMatchConfigChange}
+          collapsedSections={collapsedSections}
+          onToggleSection={onToggleSection}
         />
       </TabsContent>
 
@@ -324,6 +328,8 @@ export function SettingsTabsContainer({
           onSyncConfigChange={onSyncConfigChange}
           onCustomThresholdToggle={onCustomThresholdToggle}
           setSyncConfig={setSyncConfig}
+          collapsedSections={collapsedSections}
+          onToggleSection={onToggleSection}
         />
       </TabsContent>
 
@@ -366,6 +372,8 @@ export function SettingsTabsContainer({
           onEventLoggerChange={onEventLoggerChange}
           onConfidenceTestExporterChange={onConfidenceTestExporterChange}
           onPerformanceMonitorChange={onPerformanceMonitorChange}
+          collapsedSections={collapsedSections}
+          onToggleSection={onToggleSection}
         />
       </TabsContent>
     </Tabs>
