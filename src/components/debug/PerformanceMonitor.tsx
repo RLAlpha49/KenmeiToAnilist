@@ -4,9 +4,7 @@
  * @description Real-time performance monitoring dashboard showing API latency and memory usage.
  */
 
-// TODO: UI hitches when updating the API latency chart.
-
-import React, { useMemo } from "react";
+import React, { useMemo, useDeferredValue } from "react";
 import {
   LineChart,
   Line,
@@ -143,31 +141,35 @@ function MetricCard({
  * @returns JSX element rendering the performance monitor
  * @source
  */
-export function PerformanceMonitor() {
-  const { performanceMetrics } = useDebugState();
+export const PerformanceMonitor = React.memo(function PerformanceMonitor() {
+  const { performanceMetrics, currentFPS } = useDebugState();
   const [selectedProvider, setSelectedProvider] = React.useState<string>("all");
+
+  // Deferred values for chart data updates
+  const deferredApiSamples = useDeferredValue(
+    performanceMetrics.api.recentSamples,
+  );
+  const deferredMemoryHistory = useDeferredValue(
+    performanceMetrics.memory.history,
+  );
 
   // Get unique providers from recent samples
   const availableProviders = useMemo(() => {
-    const providers = new Set(
-      performanceMetrics.api.recentSamples.map((s) => s.provider),
-    );
+    const providers = new Set(deferredApiSamples.map((s) => s.provider));
     return Array.from(providers).sort((a, b) => a.localeCompare(b));
-  }, [performanceMetrics.api.recentSamples]);
+  }, [deferredApiSamples]);
 
   // Filter samples by selected provider
   const filteredSamples = useMemo(() => {
     if (selectedProvider === "all") {
-      return performanceMetrics.api.recentSamples;
+      return deferredApiSamples;
     }
-    return performanceMetrics.api.recentSamples.filter(
-      (s) => s.provider === selectedProvider,
-    );
-  }, [performanceMetrics.api.recentSamples, selectedProvider]);
+    return deferredApiSamples.filter((s) => s.provider === selectedProvider);
+  }, [deferredApiSamples, selectedProvider]);
 
   // Prepare chart data
   const apiLatencyData = useMemo(() => {
-    const samples = performanceMetrics.api.recentSamples.slice(-20);
+    const samples = deferredApiSamples.slice(-20);
 
     // Build provider-specific latency series with sequential x-axis positions
     const dataPoints: Array<{
@@ -191,31 +193,37 @@ export function PerformanceMonitor() {
     }
 
     return dataPoints;
-  }, [performanceMetrics.api.recentSamples]);
+  }, [deferredApiSamples]);
 
   // Get unique providers for chart lines
   const apiProviders = useMemo(() => {
     const providers = new Set(
-      performanceMetrics.api.recentSamples.map((s) => s.provider.toLowerCase()),
+      deferredApiSamples.map((s) => s.provider.toLowerCase()),
     );
     return Array.from(providers).sort((a, b) => a.localeCompare(b));
-  }, [performanceMetrics.api.recentSamples]);
+  }, [deferredApiSamples]);
 
   // Color palette for providers
-  const providerColors: Record<string, string> = {
-    anilist: "#06b6d4",
-    mangadex: "#f59e0b",
-    comick: "#8b5cf6",
-    default: "#ef4444",
-  };
+  const providerColors = useMemo(
+    () => ({
+      anilist: "#06b6d4",
+      mangadex: "#f59e0b",
+      comick: "#8b5cf6",
+      default: "#ef4444",
+    }),
+    [],
+  );
 
   const getProviderColor = (provider: string): string => {
     const key = provider.toLowerCase();
-    return providerColors[key] || providerColors.default;
+    return (
+      providerColors[key as keyof typeof providerColors] ||
+      providerColors.default
+    );
   };
 
   const memoryData = useMemo(() => {
-    return performanceMetrics.memory.history
+    return deferredMemoryHistory
       .slice(-20)
       .map((sample: MemoryMetrics, index: number) => ({
         name: `${index + 1}`,
@@ -230,7 +238,7 @@ export function PerformanceMonitor() {
           ? Number.parseFloat((sample.shared / 1024).toFixed(1))
           : 0,
       }));
-  }, [performanceMetrics.memory.history]);
+  }, [deferredMemoryHistory]);
 
   // Calculate statistics
   const avgApiLatency = useMemo(() => {
@@ -243,7 +251,7 @@ export function PerformanceMonitor() {
   }, [performanceMetrics.api.recentLatencies]);
 
   const avgMemory = useMemo(() => {
-    const samples = performanceMetrics.memory.history;
+    const samples = deferredMemoryHistory;
     if (samples.length === 0) return "0";
 
     const totalBytes = samples.reduce((acc: number, s: MemoryMetrics) => {
@@ -256,7 +264,7 @@ export function PerformanceMonitor() {
     const avgBytes = totalBytes / samples.length;
     // Convert to MB for display
     return (avgBytes / (1024 * 1024)).toFixed(1);
-  }, [performanceMetrics.memory.history]);
+  }, [deferredMemoryHistory]);
 
   // Determine status based on metrics
   const getApiLatencyStatus = (): MetricCardStatus => {
@@ -267,13 +275,19 @@ export function PerformanceMonitor() {
   };
 
   const getMemoryStatus = (): MetricCardStatus => {
-    const history = performanceMetrics.memory.history;
+    const history = deferredMemoryHistory;
     if (!history.length) return "warning";
     const latest = history.at(-1);
     if (!latest) return "warning";
     const heapMb = latest.heap / 1024;
     if (heapMb > 1500) return "critical";
     if (heapMb > 1000) return "warning";
+    return "good";
+  };
+
+  const getFPSStatus = (): MetricCardStatus => {
+    if (currentFPS < 20) return "critical";
+    if (currentFPS < 30) return "warning";
     return "good";
   };
 
@@ -285,8 +299,8 @@ export function PerformanceMonitor() {
   };
 
   const latestMemorySample =
-    performanceMetrics.memory.history.length > 0
-      ? (performanceMetrics.memory.history.at(-1) ?? null)
+    deferredMemoryHistory.length > 0
+      ? (deferredMemoryHistory.at(-1) ?? null)
       : null;
 
   const memorySnapshot = useMemo(() => {
@@ -377,6 +391,11 @@ export function PerformanceMonitor() {
             label="Memory"
             status={memoryStatus}
             value={`${avgMemory} MB avg`}
+          />
+          <StatusPill
+            label="FPS"
+            status={getFPSStatus()}
+            value={`${currentFPS.toFixed(0)}`}
           />
         </div>
       </div>
@@ -486,7 +505,12 @@ export function PerformanceMonitor() {
             <CardHeader className="pb-3">
               <div className="flex flex-col gap-3">
                 <div>
-                  <CardTitle className="text-sm">Recent API samples</CardTitle>
+                  <CardTitle className="text-sm">
+                    Recent API samples
+                    {/* Note: List is limited to ~100 items by design for performance.
+                        If exceeding several hundred items becomes common, consider
+                        implementing virtualization with react-window or react-virtualized. */}
+                  </CardTitle>
                 </div>
                 {availableProviders.length > 1 && (
                   <div className="flex items-center gap-2">
@@ -773,4 +797,6 @@ export function PerformanceMonitor() {
       </div>
     </div>
   );
-}
+});
+
+PerformanceMonitor.displayName = "PerformanceMonitor";

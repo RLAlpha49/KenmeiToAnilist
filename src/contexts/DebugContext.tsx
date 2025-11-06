@@ -11,6 +11,7 @@ import React, {
   useState,
   useCallback,
   useRef,
+  useMemo,
 } from "react";
 import {
   installConsoleInterceptor,
@@ -21,7 +22,8 @@ import {
   setLogRedactionEnabled as setCollectorLogRedactionEnabled,
 } from "../utils/logging";
 import { exportToJson } from "../utils/exportUtils";
-import { ApiProvider } from "@/api/anilist/types";
+import { throttle } from "@/utils/debounce";
+import { FPSMonitor } from "@/utils/fpsMonitor";
 import {
   getSyncConfig,
   saveSyncConfig,
@@ -77,6 +79,7 @@ interface DebugStateContextValue {
   confidenceTestExporterEnabled: boolean;
   performanceMonitorEnabled: boolean;
   performanceMetrics: PerformanceMetrics;
+  currentFPS: number;
   eventLogEntries: DebugEventEntry[];
   maxEventLogEntries: number;
   ipcEvents: IpcLogEntry[];
@@ -394,6 +397,17 @@ export function DebugProvider({
   const [performanceMetrics, setPerformanceMetrics] =
     useState<PerformanceMetrics>(DEFAULT_PERFORMANCE_METRICS);
   const memoryPollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingApiSamplesRef = useRef<
+    Array<{
+      duration: number;
+      success: boolean;
+      correlationId?: string;
+      provider?: string;
+      endpoint?: string;
+    }>
+  >([]);
+  const fpsMonitorRef = useRef<FPSMonitor | null>(null);
+  const [currentFPS, setCurrentFPS] = useState<number>(60);
 
   const storageDebuggerEnabled = featureToggles.storageDebugger;
   const logViewerEnabled = featureToggles.logViewer;
@@ -785,6 +799,117 @@ export function DebugProvider({
     setPerformanceMonitorEnabled(!featureToggles.performanceMonitor);
   }, [featureToggles.performanceMonitor, setPerformanceMonitorEnabled]);
 
+  const flushPendingApiSamples = useCallback(() => {
+    const samples = pendingApiSamplesRef.current;
+    if (samples.length === 0) return;
+
+    // Collect high-latency events to record after state update
+    const highLatencyEvents: Array<{
+      duration: number;
+      correlationId?: string;
+      provider?: string;
+      endpoint?: string;
+    }> = [];
+
+    setPerformanceMetrics((prev) => {
+      // Validate array before adding
+      if (!Array.isArray(prev.api.recentLatencies)) {
+        console.warn("[DebugContext] recentLatencies is not an array");
+        return prev;
+      }
+
+      const newLatencies = prev.api.recentLatencies.filter(Number.isFinite);
+      let newSamples: ApiLatencySample[] = [...prev.api.recentSamples];
+      let totalRequests = prev.api.totalRequests;
+      let successfulRequests = prev.api.successfulRequests;
+      let failedRequests = prev.api.failedRequests;
+
+      // Process all pending samples
+      for (const sample of samples) {
+        totalRequests += 1;
+        if (sample.success) {
+          successfulRequests += 1;
+        } else {
+          failedRequests += 1;
+        }
+
+        newLatencies.push(sample.duration);
+        // Use lowercase string for provider to ensure consistency in charts
+        const providerKey = String(sample.provider ?? "anilist").toLowerCase();
+        newSamples.push({
+          duration: sample.duration,
+          provider: providerKey,
+          endpoint: sample.endpoint,
+        });
+
+        // Collect high latency events for recording after state update
+        if (sample.duration > 2000) {
+          highLatencyEvents.push({
+            duration: sample.duration,
+            correlationId: sample.correlationId,
+            provider: sample.provider,
+            endpoint: sample.endpoint,
+          });
+        }
+      }
+
+      // Keep last 100 samples
+      const latenciesSliced = newLatencies.slice(-100);
+      newSamples = newSamples.slice(-100);
+
+      // Calculate new average safely
+      const newAverage =
+        latenciesSliced.length > 0
+          ? latenciesSliced.reduce((sum, val) => sum + val, 0) /
+            latenciesSliced.length
+          : 0;
+
+      // Use finite sentinel for min latency to avoid Infinity
+      const currentMin =
+        Number.isFinite(prev.api.minLatency) && prev.api.minLatency < Infinity
+          ? prev.api.minLatency
+          : Number.MAX_SAFE_INTEGER;
+
+      return {
+        ...prev,
+        api: {
+          totalRequests,
+          successfulRequests,
+          failedRequests,
+          averageLatency: Math.round(newAverage * 100) / 100,
+          minLatency: Math.min(currentMin, ...latenciesSliced),
+          maxLatency: Math.max(prev.api.maxLatency, ...latenciesSliced),
+          recentLatencies: latenciesSliced,
+          recentSamples: newSamples,
+          errorRate: (failedRequests / totalRequests) * 100,
+        },
+      };
+    });
+
+    // Record high latency events after state update completes
+    for (const event of highLatencyEvents) {
+      recordEvent({
+        type: "performance.api-latency",
+        message: `High API latency detected: ${event.duration.toFixed(0)}ms`,
+        level: "warn",
+        metadata: {
+          duration: event.duration,
+          correlationId: event.correlationId,
+          provider: event.provider,
+          endpoint: event.endpoint,
+        },
+      });
+    }
+
+    // Clear pending samples after flush
+    pendingApiSamplesRef.current = [];
+  }, [recordEvent]);
+
+  const throttledFlush = useMemo(
+    () => throttle(flushPendingApiSamples, 250),
+    [flushPendingApiSamples],
+  );
+
   const recordApiLatency = useCallback(
     (
       duration: number,
@@ -801,77 +926,19 @@ export function DebugProvider({
         return;
       }
 
-      setPerformanceMetrics((prev) => {
-        // Validate array before adding duration
-        if (!Array.isArray(prev.api.recentLatencies)) {
-          console.warn("[DebugContext] recentLatencies is not an array");
-          return prev;
-        }
-
-        const newTotal = prev.api.totalRequests + 1;
-        const newSuccessful = success
-          ? prev.api.successfulRequests + 1
-          : prev.api.successfulRequests;
-        const newFailed = success
-          ? prev.api.failedRequests
-          : prev.api.failedRequests + 1;
-
-        // Update latencies array (keep last 100), filtering out non-finite values
-        const newLatencies = [
-          ...prev.api.recentLatencies.filter(Number.isFinite),
-          duration,
-        ].slice(-100);
-
-        // Update samples array with provider and endpoint context
-        const newSamples: ApiLatencySample[] = [
-          ...prev.api.recentSamples,
-          {
-            duration,
-            provider: provider || ApiProvider.ANILIST,
-            endpoint,
-          },
-        ].slice(-100);
-
-        // Calculate new average safely
-        const newAverage =
-          newLatencies.length > 0
-            ? newLatencies.reduce((sum, val) => sum + val, 0) /
-              newLatencies.length
-            : 0;
-
-        // Use finite sentinel for min latency to avoid Infinity
-        const currentMin =
-          Number.isFinite(prev.api.minLatency) && prev.api.minLatency < Infinity
-            ? prev.api.minLatency
-            : Number.MAX_SAFE_INTEGER;
-
-        return {
-          ...prev,
-          api: {
-            totalRequests: newTotal,
-            successfulRequests: newSuccessful,
-            failedRequests: newFailed,
-            averageLatency: Math.round(newAverage * 100) / 100,
-            minLatency: Math.min(currentMin, duration),
-            maxLatency: Math.max(prev.api.maxLatency, duration),
-            recentLatencies: newLatencies,
-            recentSamples: newSamples,
-            errorRate: (newFailed / newTotal) * 100,
-          },
-        };
+      // Push sample to pending ref
+      pendingApiSamplesRef.current.push({
+        duration,
+        success,
+        correlationId,
+        provider,
+        endpoint,
       });
 
-      // Record high latency as debug event
-      if (duration > 2000) {
-        recordEvent({
-          type: "performance.api-latency",
-          message: `High API latency detected: ${duration.toFixed(0)}ms`,
-          level: "warn",
-          metadata: { duration, correlationId, provider, endpoint },
-        });
-      }
+      // Schedule throttled flush
+      throttledFlush();
     },
-    [featureToggles.performanceMonitor, recordEvent],
+    [featureToggles.performanceMonitor, throttledFlush],
   );
 
   const recordCacheAccess = useCallback(
@@ -1280,6 +1347,59 @@ export function DebugProvider({
     };
   }, [isDebugEnabled, featureToggles.performanceMonitor, updateMemoryStats]);
 
+  // Monitor FPS when performance monitor is enabled
+  useEffect(() => {
+    if (!isDebugEnabled || !featureToggles.performanceMonitor) {
+      // Cancel throttled flush and clear pending samples on disable
+      throttledFlush.cancel?.();
+      pendingApiSamplesRef.current = [];
+
+      if (fpsMonitorRef.current) {
+        fpsMonitorRef.current.stop();
+        fpsMonitorRef.current = null;
+      }
+      return;
+    }
+
+    const fpsMonitor = new FPSMonitor({
+      threshold: 30,
+      sampleSize: 60,
+      onLowFPS: (fps) => {
+        recordEvent({
+          type: "performance.low-fps",
+          message: `Low FPS detected: ${fps.toFixed(1)}`,
+          level: "warn",
+          metadata: { fps },
+        });
+      },
+    });
+
+    fpsMonitorRef.current = fpsMonitor;
+    fpsMonitor.start();
+
+    // Update FPS state every second
+    const fpsInterval = setInterval(() => {
+      setCurrentFPS(fpsMonitor.getAverageFPS());
+    }, 1000);
+
+    return () => {
+      clearInterval(fpsInterval);
+      // Cancel throttled flush and clear pending samples on unmount
+      throttledFlush.cancel?.();
+      pendingApiSamplesRef.current = [];
+
+      if (fpsMonitorRef.current) {
+        fpsMonitorRef.current.stop();
+        fpsMonitorRef.current = null;
+      }
+    };
+  }, [
+    isDebugEnabled,
+    featureToggles.performanceMonitor,
+    recordEvent,
+    throttledFlush,
+  ]);
+
   // Listen for API performance events
   useEffect(() => {
     if (!isDebugEnabled || !featureToggles.performanceMonitor) return;
@@ -1400,6 +1520,7 @@ export function DebugProvider({
       confidenceTestExporterEnabled: featureToggles.confidenceTestExporter,
       performanceMonitorEnabled,
       performanceMetrics,
+      currentFPS,
       eventLogEntries,
       maxEventLogEntries: MAX_EVENT_LOG_ENTRIES,
       ipcEvents,
@@ -1408,6 +1529,7 @@ export function DebugProvider({
       maxLogEntries: MAX_LOG_ENTRIES,
     }),
     [
+      currentFPS,
       debugMenuOpen,
       eventLogEntries,
       eventLoggerEnabled,

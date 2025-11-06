@@ -53,17 +53,17 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
  * @template T - The function type to throttle.
  * @param func - The function to throttle.
  * @param wait - Milliseconds to throttle invocations to.
- * @returns Throttled function.
+ * @returns Throttled function with optional cancel method.
  * @source
  */
 export function throttle<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number,
-): (...args: Parameters<T>) => void {
+): DebouncedFunction<T> {
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
   let lastArgs: Parameters<T> | null = null;
 
-  return function throttled(...args: Parameters<T>): void {
+  function throttled(...args: Parameters<T>): void {
     lastArgs = args;
 
     if (timeoutId === null) {
@@ -76,7 +76,17 @@ export function throttle<T extends (...args: unknown[]) => unknown>(
         lastArgs = null;
       }, wait);
     }
+  }
+
+  throttled.cancel = (): void => {
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+      lastArgs = null;
+    }
   };
+
+  return throttled;
 }
 
 /**
