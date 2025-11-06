@@ -193,9 +193,15 @@ export function compileMatchResults(
 
   for (const result of existingResults) {
     if (result.kenmeiManga.id) {
-      existingById.set(String(result.kenmeiManga.id), result as MangaMatchResult);
+      existingById.set(
+        String(result.kenmeiManga.id),
+        result as MangaMatchResult,
+      );
     }
-    existingByTitle.set(result.kenmeiManga.title.toLowerCase(), result as MangaMatchResult);
+    existingByTitle.set(
+      result.kenmeiManga.title.toLowerCase(),
+      result as MangaMatchResult,
+    );
   }
 
   // Helper function to preserve status from existing result
@@ -203,8 +209,9 @@ export function compileMatchResults(
     newResult: MangaMatchResult,
     manga: KenmeiManga,
   ): void => {
-    let existingResult =
-      manga.id ? existingById.get(String(manga.id)) : undefined;
+    let existingResult = manga.id
+      ? existingById.get(String(manga.id))
+      : undefined;
     existingResult ??= existingByTitle.get(manga.title.toLowerCase());
 
     if (existingResult?.status && existingResult.status !== "pending") {
@@ -297,13 +304,21 @@ export function handleCancellationResults(
 
   for (const result of existingResults) {
     if (result.kenmeiManga.id) {
-      existingById.set(String(result.kenmeiManga.id), result as MangaMatchResult);
+      existingById.set(
+        String(result.kenmeiManga.id),
+        result as MangaMatchResult,
+      );
     }
-    existingByTitle.set(result.kenmeiManga.title.toLowerCase(), result as MangaMatchResult);
+    existingByTitle.set(
+      result.kenmeiManga.title.toLowerCase(),
+      result as MangaMatchResult,
+    );
   }
 
   // Helper to get existing result by ID or title
-  const getExistingResult = (manga: KenmeiManga): MangaMatchResult | undefined => {
+  const getExistingResult = (
+    manga: KenmeiManga,
+  ): MangaMatchResult | undefined => {
     if (manga.id) {
       const byId = existingById.get(String(manga.id));
       if (byId) return byId;

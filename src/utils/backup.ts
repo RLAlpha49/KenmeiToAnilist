@@ -4,7 +4,7 @@
  * Provides comprehensive backup functionality including history management, validation, and conflict resolution.
  */
 
-// TODO: Fix: "LIST_LOCAL_BACKUPS: Invalid backup location: Backup location contains invalid characters"
+// FIXME: "LIST_LOCAL_BACKUPS: Invalid backup location: Backup location contains invalid characters"
 // TODO: The automatic backup before matching and sync operations should create backups the same way as the "Run Backup Now" button does in settings. So userinput is not required for the backup creation process.
 
 import {

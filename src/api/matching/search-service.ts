@@ -204,7 +204,11 @@ export async function batchMatchManga(
         );
 
         // Categorize manga based on cache status
-        const result = categorizeMangaForBatching(mangaList, searchConfig, updateProgress);
+        const result = categorizeMangaForBatching(
+          mangaList,
+          searchConfig,
+          updateProgress,
+        );
         cachedResults = result.cachedResults;
         cachedComickSources = result.cachedComickSources;
         cachedMangaDexSources = result.cachedMangaDexSources;
@@ -233,7 +237,7 @@ export async function batchMatchManga(
         // This significantly reduces API calls by grouping multiple searches
         let rateLimitRetryCount = 0;
         const MAX_RATE_LIMIT_RETRIES = 3;
-        
+
         while (true) {
           try {
             await processBatchedUncachedManga(
@@ -247,11 +251,16 @@ export async function batchMatchManga(
           } catch (error) {
             // Check if this is a rate limit error (429)
             const isRateLimitError =
-              (error && typeof error === "object" &&
-                ("isRateLimited" in error || "status" in error)) &&
-              ((error as any).isRateLimited === true || (error as any).status === 429);
+              error &&
+              typeof error === "object" &&
+              ("isRateLimited" in error || "status" in error) &&
+              ((error as any).isRateLimited === true ||
+                (error as any).status === 429);
 
-            if (isRateLimitError && rateLimitRetryCount < MAX_RATE_LIMIT_RETRIES) {
+            if (
+              isRateLimitError &&
+              rateLimitRetryCount < MAX_RATE_LIMIT_RETRIES
+            ) {
               rateLimitRetryCount++;
               const retryAfterSeconds = (error as any).retryAfter || 60;
               console.warn(
@@ -262,17 +271,23 @@ export async function batchMatchManga(
               checkCancellation();
 
               // Wait for the rate limit to clear or until wasRateLimitPaused flag is cleared
-              const waitUntil = Date.now() + (retryAfterSeconds * 1000);
+              const waitUntil = Date.now() + retryAfterSeconds * 1000;
               while (Date.now() < waitUntil) {
                 // Check if we should cancel
                 if (shouldCancel?.()) {
-                  throw new CancelledError("Operation cancelled by user during rate limit wait");
+                  throw new CancelledError(
+                    "Operation cancelled by user during rate limit wait",
+                  );
                 }
                 if (abortSignal?.aborted) {
-                  throw new CancelledError("Operation aborted during rate limit wait");
+                  throw new CancelledError(
+                    "Operation aborted during rate limit wait",
+                  );
                 }
                 // Check if rate limit has been cleared via global state
-                if (globalThis.matchingProcessState?.wasRateLimitPaused === false) {
+                if (
+                  globalThis.matchingProcessState?.wasRateLimitPaused === false
+                ) {
                   console.info(
                     "[MangaSearchService] 🟢 Rate limit cleared, retrying batch processing",
                   );

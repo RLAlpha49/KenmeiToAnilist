@@ -217,6 +217,12 @@ export class SelectSearchMatchCommand extends BaseCommand {
 }
 
 /**
+ * Type for bulk state update callback.
+ * @source
+ */
+type OnBulkExecuteCallback = (state: MangaMatchResult[]) => void;
+
+/**
  * Composite command that groups multiple commands into a single undo/redo unit.
  * Useful for batch operations where multiple matches are modified together.
  * When undone/redone, all grouped commands are processed together.
@@ -251,6 +257,61 @@ export class BatchCommand implements Command {
     for (let i = this.commands.length - 1; i >= 0; i--) {
       this.commands[i].undo();
     }
+  }
+
+  getDescription(): string {
+    return this.metadata.description;
+  }
+
+  getMetadata(): CommandMetadata {
+    return this.metadata;
+  }
+}
+
+/**
+ * Command for bulk updates to match results.
+ * Applies an array of match results as a single atomic operation.
+ * Useful for batch operations where the entire state is replaced at once.
+ * This avoids triggering multiple re-renders by using a single updateMatchResults call.
+ * @source
+ */
+export class BulkUpdateCommand implements Command {
+  private readonly metadata: CommandMetadata;
+
+  constructor(
+    private readonly beforeState: MangaMatchResult[],
+    private readonly afterState: MangaMatchResult[],
+    private readonly onExecute: OnBulkExecuteCallback,
+    description: string = "Bulk update",
+  ) {
+    // Collect all affected titles from the after state
+    const affectedTitles = afterState
+      .filter((result, idx) => {
+        const before = beforeState[idx];
+        return before && before.status !== result.status;
+      })
+      .map((r) => r.kenmeiManga.title);
+
+    this.metadata = {
+      type: CommandType.BATCH_OPERATION,
+      timestamp: Date.now(),
+      affectedTitles,
+      description,
+    };
+  }
+
+  /**
+   * Execute the command by applying the "after" state.
+   */
+  execute(): void {
+    this.onExecute(this.afterState);
+  }
+
+  /**
+   * Undo the command by restoring the "before" state.
+   */
+  undo(): void {
+    this.onExecute(this.beforeState);
   }
 
   getDescription(): string {

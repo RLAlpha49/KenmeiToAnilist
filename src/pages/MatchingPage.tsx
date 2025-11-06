@@ -4,8 +4,6 @@
  * @description Matching page component for the Kenmei to AniList sync tool. Handles manga matching, review, rematch, and sync preparation.
  */
 
-// TODO: When canceling a matching process, the unsearched manga should not be reset to pending if they had a different prior status (e.g. skipped).
-// TODO: When doing bulk operations (accept/reject/reset), the entries are being return to match results individually causing the app to hang until all entries are processed.
 // TODO: Text for sonner should be truncated at some point to prevent excessively long descriptions from breaking the UI. Consider adding a character limit and ellipsis for long descriptions.
 
 import React, {
@@ -35,6 +33,8 @@ import { clearCacheForTitles } from "../api/matching/search-service";
 import { useRateLimit } from "../contexts/RateLimitContext";
 import { UndoRedoManager } from "../utils/undoRedo";
 import { useDebugActions } from "../contexts/DebugContext";
+import { debounce } from "../utils/debounce";
+import { AbortError } from "../utils/chunkedProcessing";
 import { toast } from "sonner";
 
 // Components
@@ -142,6 +142,8 @@ export function MatchingPage() {
     current: number;
     total: number;
   } | null>(null);
+  const [batchAbortController, setBatchAbortController] =
+    useState<AbortController | null>(null);
 
   // State for manga data
   const [manga, setManga] = useState<KenmeiManga[]>([]);
@@ -289,6 +291,33 @@ export function MatchingPage() {
   });
   const pendingMangaState = usePendingManga();
 
+  // Create debounced progress updater for batch operations
+  const debouncedProgressUpdate = useMemo(
+    () =>
+      debounce(
+        ((current: number, total: number) => {
+          setBatchOperationProgress({ current, total });
+        }) as (...args: unknown[]) => unknown,
+        100,
+      ),
+    [],
+  );
+
+  // Clean up debounce on unmount
+  useEffect(() => {
+    return () => {
+      debouncedProgressUpdate.cancel();
+    };
+  }, [debouncedProgressUpdate]);
+
+  // Progress callback for batch operations
+  const handleBatchProgress = useCallback(
+    (current: number, total: number) => {
+      debouncedProgressUpdate(current, total);
+    },
+    [debouncedProgressUpdate],
+  );
+
   // Use match handlers
   const matchHandlers = useMatchHandlers(
     matchResults,
@@ -321,114 +350,176 @@ export function MatchingPage() {
     setSelectedMatchIds(new Set());
   }, []);
 
-  const handleBatchAccept = useCallback(() => {
+  const handleBatchAccept = useCallback(async () => {
     const selectedMatches = matchResults.filter((match) =>
       selectedMatchIds.has(match.kenmeiManga.id),
     );
     if (selectedMatches.length > 0) {
-      // Set progress tracking (simulated: 0% -> 50% -> 100%)
+      // Create abort controller and store in state
+      const abortController = new AbortController();
+      setBatchAbortController(abortController);
+
+      // Set initial progress
       setBatchOperationProgress({ current: 0, total: selectedMatches.length });
 
-      // Execute the operation
-      matchHandlers.handleAcceptMatch({
-        isBatchOperation: true,
-        matches: selectedMatches,
-      });
+      try {
+        // Execute the operation with progress tracking
+        await matchHandlers.handleAcceptMatch(
+          {
+            isBatchOperation: true,
+            matches: selectedMatches,
+          },
+          handleBatchProgress,
+          abortController.signal,
+        );
 
-      // Complete progress
-      setBatchOperationProgress({
-        current: selectedMatches.length,
-        total: selectedMatches.length,
-      });
-
-      // Show success toast
-      toast.success(`Accepted ${selectedMatches.length} matches`, {
-        description: "You can undo this action with Ctrl+Z",
-      });
-
-      // Clear progress and selection after a short delay
-      setTimeout(() => {
-        setBatchOperationProgress(null);
-        handleClearSelection();
-      }, 500);
+        // Show success toast
+        toast.success(`Accepted ${selectedMatches.length} matches`, {
+          description: "You can undo this action with Ctrl+Z",
+        });
+      } catch (error) {
+        if (error instanceof AbortError) {
+          toast.info("Batch operation cancelled");
+        } else {
+          console.error("Batch accept error:", error);
+          toast.error("Failed to accept matches");
+        }
+      } finally {
+        // Clear progress and selection after a short delay
+        setTimeout(() => {
+          setBatchOperationProgress(null);
+          setBatchAbortController(null);
+          handleClearSelection();
+        }, 500);
+      }
     }
-  }, [matchResults, selectedMatchIds, matchHandlers, handleClearSelection]);
+  }, [
+    matchResults,
+    selectedMatchIds,
+    matchHandlers,
+    handleClearSelection,
+    handleBatchProgress,
+  ]);
 
   const handleBatchReject = useCallback(() => {
     setShowBatchRejectDialog(true);
   }, []);
 
-  const confirmBatchReject = useCallback(() => {
+  const confirmBatchReject = useCallback(async () => {
     const selectedMatches = matchResults.filter((match) =>
       selectedMatchIds.has(match.kenmeiManga.id),
     );
     if (selectedMatches.length > 0) {
-      // Set progress tracking
+      // Create abort controller and store in state
+      const abortController = new AbortController();
+      setBatchAbortController(abortController);
+
+      // Set initial progress
       setBatchOperationProgress({ current: 0, total: selectedMatches.length });
 
-      // Execute the operation
-      matchHandlers.handleRejectMatch({
-        isBatchOperation: true,
-        matches: selectedMatches,
-      });
+      try {
+        // Execute the operation with progress tracking
+        await matchHandlers.handleRejectMatch(
+          {
+            isBatchOperation: true,
+            matches: selectedMatches,
+          },
+          handleBatchProgress,
+          abortController.signal,
+        );
 
-      // Complete progress
-      setBatchOperationProgress({
-        current: selectedMatches.length,
-        total: selectedMatches.length,
-      });
-
-      // Show success toast
-      toast.success(`Rejected ${selectedMatches.length} matches`, {
-        description: "You can undo this action with Ctrl+Z",
-      });
-
-      // Clear progress and selection after a short delay
-      setTimeout(() => {
-        setBatchOperationProgress(null);
-        handleClearSelection();
-      }, 500);
+        // Show success toast
+        toast.success(`Rejected ${selectedMatches.length} matches`, {
+          description: "You can undo this action with Ctrl+Z",
+        });
+      } catch (error) {
+        if (error instanceof AbortError) {
+          toast.info("Batch operation cancelled");
+        } else {
+          console.error("Batch reject error:", error);
+          toast.error("Failed to reject matches");
+        }
+      } finally {
+        // Clear progress and selection after a short delay
+        setTimeout(() => {
+          setBatchOperationProgress(null);
+          setBatchAbortController(null);
+          handleClearSelection();
+        }, 500);
+      }
     }
     setShowBatchRejectDialog(false);
-  }, [matchResults, selectedMatchIds, matchHandlers, handleClearSelection]);
+  }, [
+    matchResults,
+    selectedMatchIds,
+    matchHandlers,
+    handleClearSelection,
+    handleBatchProgress,
+  ]);
 
   const handleBatchReset = useCallback(() => {
     setShowBatchResetDialog(true);
   }, []);
 
-  const confirmBatchReset = useCallback(() => {
+  const handleCancelBatchOperation = useCallback(() => {
+    batchAbortController?.abort();
+    setBatchAbortController(null);
+    setBatchOperationProgress(null);
+    handleClearSelection();
+    toast.info("Batch operation cancelled");
+  }, [batchAbortController, handleClearSelection]);
+
+  const confirmBatchReset = useCallback(async () => {
     const selectedMatches = matchResults.filter((match) =>
       selectedMatchIds.has(match.kenmeiManga.id),
     );
     if (selectedMatches.length > 0) {
-      // Set progress tracking
+      // Create abort controller and store in state
+      const abortController = new AbortController();
+      setBatchAbortController(abortController);
+
+      // Set initial progress
       setBatchOperationProgress({ current: 0, total: selectedMatches.length });
 
-      // Execute the operation
-      matchHandlers.handleResetToPending({
-        isBatchOperation: true,
-        matches: selectedMatches,
-      });
+      try {
+        // Execute the operation with progress tracking
+        await matchHandlers.handleResetToPending(
+          {
+            isBatchOperation: true,
+            matches: selectedMatches,
+          },
+          handleBatchProgress,
+          abortController.signal,
+        );
 
-      // Complete progress
-      setBatchOperationProgress({
-        current: selectedMatches.length,
-        total: selectedMatches.length,
-      });
-
-      // Show success toast
-      toast.success(`Reset ${selectedMatches.length} matches to pending`, {
-        description: "You can undo this action with Ctrl+Z",
-      });
-
-      // Clear progress and selection after a short delay
-      setTimeout(() => {
-        setBatchOperationProgress(null);
-        handleClearSelection();
-      }, 500);
+        // Show success toast
+        toast.success(`Reset ${selectedMatches.length} matches to pending`, {
+          description: "You can undo this action with Ctrl+Z",
+        });
+      } catch (error) {
+        if (error instanceof AbortError) {
+          toast.info("Batch operation cancelled");
+        } else {
+          console.error("Batch reset error:", error);
+          toast.error("Failed to reset matches");
+        }
+      } finally {
+        // Clear progress and selection after a short delay
+        setTimeout(() => {
+          setBatchOperationProgress(null);
+          setBatchAbortController(null);
+          handleClearSelection();
+        }, 500);
+      }
     }
     setShowBatchResetDialog(false);
-  }, [matchResults, selectedMatchIds, matchHandlers, handleClearSelection]);
+  }, [
+    matchResults,
+    selectedMatchIds,
+    matchHandlers,
+    handleClearSelection,
+    handleBatchProgress,
+  ]);
 
   // Add a ref to track if we've already done initialization
   const hasInitialized = useRef(false);
@@ -1033,9 +1124,9 @@ export function MatchingPage() {
     const headerProps = { ...defaultHeaderProps, ...headerPropsOverride };
 
     return (
-      <div className="relative flex flex-1 w-full h-full">
+      <div className="relative flex h-full w-full flex-1">
         <motion.div
-          className="container flex flex-col h-full max-w-full px-4 py-6 mx-auto md:px-6"
+          className="container mx-auto flex h-full max-w-full flex-col px-4 py-6 md:px-6"
           variants={pageVariants}
           initial="hidden"
           animate="visible"
@@ -1632,7 +1723,7 @@ export function MatchingPage() {
   if (matchingProcess.error?.includes("Authentication Required")) {
     return renderPageShell(
       <motion.div
-        className="relative flex items-center justify-center flex-1"
+        className="relative flex flex-1 items-center justify-center"
         variants={contentVariants}
       >
         <AuthRequiredCard
@@ -1677,9 +1768,9 @@ export function MatchingPage() {
   }
 
   return (
-    <div className="relative flex flex-1 w-full h-full">
+    <div className="relative flex h-full w-full flex-1">
       <motion.div
-        className="container flex flex-col h-full max-w-full px-4 py-6 mx-auto md:px-6"
+        className="container mx-auto flex h-full max-w-full flex-col px-4 py-6 md:px-6"
         variants={pageVariants}
         initial="hidden"
         animate="visible"
@@ -1787,7 +1878,9 @@ export function MatchingPage() {
                   onReject={handleBatchReject}
                   onReset={handleBatchReset}
                   onClearSelection={handleClearSelection}
-                  isProcessing={batchOperationProgress !== null}
+                  progress={batchOperationProgress}
+                  onCancel={handleCancelBatchOperation}
+                  isBatchBusy={batchAbortController !== null}
                 />
               )}
 
@@ -1817,7 +1910,7 @@ export function MatchingPage() {
           ) : (
             <AnimatePresence>
               <EmptyState
-                icon={<FileSearch className="w-10 h-10" />}
+                icon={<FileSearch className="h-10 w-10" />}
                 title="No manga to match"
                 description="No manga data available. Import your Kenmei library to get started."
                 actionLabel="Go to Import"

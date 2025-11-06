@@ -1138,7 +1138,8 @@ export const useMatchingProcess = ({
       detail = "Rate limit cleared. Automatically resuming matching...";
     } else {
       status = "Resuming matching...";
-      detail = "Back to matching remaining manga. We'll continue processing the queue.";
+      detail =
+        "Back to matching remaining manga. We'll continue processing the queue.";
     }
 
     setStatusMessage(status);
