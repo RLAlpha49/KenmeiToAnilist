@@ -4,8 +4,6 @@
  * @description Settings page component for the Kenmei to AniList sync tool. Handles authentication, sync preferences, data management, and cache clearing.
  */
 
-// FIXME: Setting for matching preferences do not get updated. It does not show the feedback right away that the setting has changed.
-
 import React, {
   useState,
   useEffect,
@@ -145,7 +143,7 @@ export function SettingsPage() {
     `http://localhost:${DEFAULT_AUTH_PORT}/callback`,
   );
   const [syncConfig, setSyncConfig] = useState<SyncConfig>(getSyncConfig());
-  const [matchConfig] = useState<MatchConfig>(getMatchConfig());
+  const [matchConfig, setMatchConfig] = useState<MatchConfig>(getMatchConfig());
   const [useCustomThreshold, setUseCustomThreshold] = useState<boolean>(
     typeof syncConfig.autoPauseThreshold === "string" ||
       ![1, 7, 14, 30, 60, 90, 180, 365].includes(
@@ -236,6 +234,7 @@ export function SettingsPage() {
       metadata: { changedField, config },
     });
     saveMatchConfig(config);
+    setMatchConfig(config);
   };
 
   /**
