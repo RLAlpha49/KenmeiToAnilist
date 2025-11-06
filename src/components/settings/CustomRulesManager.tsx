@@ -4,8 +4,6 @@
  * @description Provides UI for creating, editing, and deleting custom skip/accept matching rules.
  */
 
-// TODO: Add experimental note and that this has not been thoroughly tested and may not work as expected.
-
 import React, { useState, useCallback } from "react";
 import { toast } from "sonner";
 import {
@@ -718,9 +716,15 @@ function CustomRulesManagerComponent(): React.JSX.Element {
         <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950">
           <ShieldAlert className="h-4 w-4 text-amber-600" />
           <AlertTitle className="text-amber-900 dark:text-amber-100">
-            Advanced Feature - Use with Caution
+            Advanced Feature - Experimental & Use with Caution
           </AlertTitle>
           <AlertDescription className="space-y-2 text-amber-800 dark:text-amber-200">
+            <p>
+              <strong>⚠️ Experimental Feature:</strong> This custom matching
+              rules feature is experimental and has not been thoroughly tested.
+              It may not work as expected in all scenarios. Please use with
+              caution and report any issues you encounter.
+            </p>
             <p>
               Custom matching rules use regular expressions (regex) to filter
               manga. Incorrect patterns can skip desired manga or cause
