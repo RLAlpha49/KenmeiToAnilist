@@ -233,7 +233,7 @@ export function Root() {
   ]);
 
   return (
-    <BaseLayout>
+    <BaseLayout onOpenShortcutsPanel={handleToggleShortcutsPanel}>
       <Suspense fallback={<PageLoadingFallback />}>
         <Outlet />
       </Suspense>

@@ -4,9 +4,7 @@
  * @description Application header component with logo, navigation, theme toggle, and window controls.
  */
 
-// FIXME: Shortcut panel does not open with the button but works with the keybind.
-
-import React from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import { getPathname } from "@/utils/getPathname";
 import ToggleTheme from "../ToggleTheme";
@@ -87,6 +85,76 @@ export function Header({
   const { openDebugMenu, closeDebugMenu } = useDebugActions();
 
   const location = useLocation();
+
+  // Ripple effect state and ref
+  const rippleRef = useRef<HTMLSpanElement>(null);
+  const rippleTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [rippleState, setRippleState] = useState<{
+    x: number;
+    y: number;
+    size: number;
+  } | null>(null);
+  const [showRipple, setShowRipple] = useState(false);
+
+  const handleShortcutsButtonMouseDown = (
+    e: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    const button = e.currentTarget;
+    const rect = button.getBoundingClientRect();
+
+    // Calculate position relative to button
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Compute ripple diameter to cover the farthest corner from click point
+    const distances = [
+      Math.hypot(x, y), // top-left
+      Math.hypot(rect.width - x, y), // top-right
+      Math.hypot(x, rect.height - y), // bottom-left
+      Math.hypot(rect.width - x, rect.height - y), // bottom-right
+    ];
+    const maxDistance = Math.max(...distances);
+    const size = Math.ceil(maxDistance * 2);
+
+    // Clear any existing timer to prevent stale cleanup
+    if (rippleTimerRef.current) {
+      clearTimeout(rippleTimerRef.current);
+    }
+
+    // Mount ripple with scale-0 first, then trigger entrance animation
+    setRippleState({ x, y, size });
+    setShowRipple(false);
+
+    // Use requestAnimationFrame to ensure DOM has updated before triggering animation
+    requestAnimationFrame(() => {
+      setShowRipple(true);
+    });
+  };
+
+  const handleRippleTransitionEnd = () => {
+    if (!showRipple) {
+      // Only clean up when exiting (showRipple is false)
+      if (rippleTimerRef.current) {
+        clearTimeout(rippleTimerRef.current);
+      }
+      setRippleState(null);
+    }
+  };
+
+  // Trigger ripple exit animation after 600ms (entrance + hold time)
+  useEffect(() => {
+    if (showRipple && rippleState) {
+      rippleTimerRef.current = setTimeout(() => {
+        setShowRipple(false);
+      }, 600);
+
+      return () => {
+        if (rippleTimerRef.current) {
+          clearTimeout(rippleTimerRef.current);
+        }
+      };
+    }
+  }, [showRipple, rippleState]);
 
   // Determine current page pathname for active nav item highlighting
   const pathname = getPathname(location);
@@ -188,10 +256,29 @@ export function Header({
                       variant="ghost"
                       size="icon"
                       onClick={onOpenShortcutsPanel}
-                      className="h-8 w-8 rounded-full"
+                      onMouseDown={handleShortcutsButtonMouseDown}
+                      className="relative h-8 w-8 overflow-hidden rounded-full transition-transform duration-100 active:scale-95"
                       aria-label="View keyboard shortcuts"
                     >
                       <HelpCircle className="h-4 w-4" />
+                      {/* Ripple effect element */}
+                      {rippleState && (
+                        <span
+                          ref={rippleRef}
+                          onTransitionEnd={handleRippleTransitionEnd}
+                          className={`pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-500 ease-out ${
+                            showRipple
+                              ? "scale-100 opacity-100"
+                              : "scale-0 opacity-0"
+                          } bg-white/30 dark:bg-white/20`}
+                          style={{
+                            left: rippleState.x,
+                            top: rippleState.y,
+                            width: `${rippleState.size}px`,
+                            height: `${rippleState.size}px`,
+                          }}
+                        />
+                      )}
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom">

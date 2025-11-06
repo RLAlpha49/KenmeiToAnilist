@@ -1615,12 +1615,12 @@ export function SettingsPage() {
                 >
                   {allCollapsed ? (
                     <>
-                      <ChevronsUp className="w-4 h-4 mr-2" />
+                      <ChevronsUp className="mr-2 h-4 w-4" />
                       Expand All
                     </>
                   ) : (
                     <>
-                      <ChevronsDown className="w-4 h-4 mr-2" />
+                      <ChevronsDown className="mr-2 h-4 w-4" />
                       Collapse All
                     </>
                   )}
@@ -1636,7 +1636,7 @@ export function SettingsPage() {
 
       {error && (
         <motion.div
-          className="p-4 border rounded-3xl border-rose-400/40 bg-rose-500/10 backdrop-blur-lg"
+          className="rounded-3xl border border-rose-400/40 bg-rose-500/10 p-4 backdrop-blur-lg"
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
@@ -1657,10 +1657,10 @@ export function SettingsPage() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="px-4 py-3 text-sm border rounded-3xl border-emerald-400/40 bg-emerald-500/10 text-emerald-100 backdrop-blur-lg"
+          className="rounded-3xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100 backdrop-blur-lg"
         >
           <div className="flex items-center gap-2">
-            <CheckCircle className="w-4 h-4" />
+            <CheckCircle className="h-4 w-4" />
             <span>Selected caches cleared successfully.</span>
           </div>
         </motion.div>
