@@ -24,7 +24,6 @@ import { ApiError, MatchingProgress } from "../types/matching";
 import { captureError, ErrorType } from "../utils/errorHandling";
 import { useTimeEstimate } from "./useTimeEstimate";
 import { usePendingManga } from "./usePendingManga";
-import { createBackup } from "../utils/backup";
 
 /**
  * Manages the manga matching process with batch operations, progress tracking, and pause/resume support.
@@ -376,22 +375,45 @@ export const useMatchingProcess = ({
    */
   const maybeCreateAutomaticBackup = useCallback(
     async (isFreshSession: boolean) => {
-      if (
-        !isFreshSession ||
-        storage.getItem(STORAGE_KEYS.AUTO_BACKUP_ENABLED) !== "true"
-      ) {
+      if (!isFreshSession) {
         return;
       }
 
       try {
+        // Check if Electron context is available
+        if (!globalThis.electronBackup?.getScheduleConfig) {
+          console.warn(
+            "[Matching] ⚠️ Electron backup context not available - skipping automatic backup",
+          );
+          return;
+        }
+
+        // Get schedule config and check if automatic backup before match is enabled
+        const config = await globalThis.electronBackup.getScheduleConfig();
+        if (!config.autoBackupBeforeMatch) {
+          return;
+        }
+
         console.info(
-          "[Matching] 📦 Creating automatic backup before matching...",
+          "[Matching] 📦 Creating automatic silent backup before matching...",
         );
-        await createBackup();
+
+        const result = await globalThis.electronBackup.createNow();
+
+        if (!result.success) {
+          throw new Error(result.error || "Failed to create backup");
+        }
+
+        console.info(
+          `[Matching] ✅ Automatic backup created successfully: ${result.backupId}`,
+        );
         Sentry.addBreadcrumb({
           category: "backup",
           message: "Automatic backup created before matching",
           level: "info",
+          data: {
+            backupId: result.backupId,
+          },
         });
       } catch (backupError) {
         console.warn(

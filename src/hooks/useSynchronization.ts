@@ -39,7 +39,6 @@ import {
   StateInspectorHandle,
 } from "../contexts/DebugContext";
 import { useAuthState } from "./useAuth";
-import { createBackup } from "../utils/backup";
 
 /**
  * Snapshot of an in-progress synchronization session for pause/resume recovery.
@@ -1206,17 +1205,41 @@ export function useSynchronization(): [
    */
   const performAutomaticBackupIfNeeded = async (isResume: boolean) => {
     if (isResume) return;
-    if (storage.getItem(STORAGE_KEYS.AUTO_BACKUP_ENABLED) !== "true") return;
+
+    // Verify Electron backup context is available
+    if (!globalThis.electronBackup?.getScheduleConfig) {
+      console.warn(
+        "[Synchronization] ⚠️ Electron backup context not available - skipping automatic backup",
+      );
+      return;
+    }
+
+    // Get schedule config and check if automatic backup before sync is enabled
+    const config = await globalThis.electronBackup.getScheduleConfig();
+    if (!config.autoBackupBeforeSync) {
+      return;
+    }
 
     try {
       console.info(
-        "[Synchronization] 📦 Creating automatic backup before sync...",
+        "[Synchronization] 📦 Creating automatic silent backup before sync...",
       );
-      await createBackup();
+      const result = await globalThis.electronBackup.createNow();
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to create backup");
+      }
+
+      console.info(
+        `[Synchronization] ✅ Automatic backup created successfully: ${result.backupId}`,
+      );
       Sentry.addBreadcrumb({
         category: "backup",
         message: "Automatic backup created before sync",
         level: "info",
+        data: {
+          backupId: result.backupId,
+        },
       });
     } catch (backupError) {
       console.warn(

@@ -4,9 +4,6 @@
  * Provides comprehensive backup functionality including history management, validation, and conflict resolution.
  */
 
-// FIXME: "LIST_LOCAL_BACKUPS: Invalid backup location: Backup location contains invalid characters"
-// TODO: The automatic backup before matching and sync operations should create backups the same way as the "Run Backup Now" button does in settings. So userinput is not required for the backup creation process.
-
 import {
   storage,
   STORAGE_KEYS,
@@ -101,6 +98,11 @@ interface ValidationResult {
  * Creates a complete backup of application data and triggers file download.
  * Automatically adds entry to backup history and manages history limit.
  * Large backups are exported asynchronously to avoid blocking the UI.
+ *
+ * **Note:** This function is intended for manual user-initiated backups that trigger browser downloads.
+ * For automatic backups before matching/sync operations that don't require user interaction,
+ * use `globalThis.electronBackup.createNow()` instead, which writes directly to the configured backup location.
+ *
  * @returns Unique identifier for the created backup.
  * @throws {Error} If backup creation or export fails.
  * @source
@@ -656,6 +658,11 @@ export async function importBackupFromFile(file: File): Promise<BackupData> {
  * Creates backup data without writing to disk or triggering browser download.
  * Used for scheduled backups that write directly to the app data directory.
  * The caller (IPC handler) is responsible for writing the returned data to disk.
+ *
+ * **Note:** This function is called by the main process IPC handlers (see backup-listeners.ts)
+ * and should not be called directly from renderer code. To create automatic backups from the renderer,
+ * use `globalThis.electronBackup.createNow()` instead.
+ *
  * @returns Object containing backup data, ID, and metadata.
  * @throws {Error} If backup creation fails.
  * @source

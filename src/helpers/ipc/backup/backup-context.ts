@@ -227,8 +227,19 @@ export function exposeBackupContext() {
 
       /**
        * Creates an immediate backup bypassing the scheduler.
-       * Intended for manual "Create Backup Now" operations.
-       * @returns Promise with backup ID on success.
+       * Writes silently to the configured backup location without user interaction.
+       * This is the recommended approach for automatic backups before matching/sync operations.
+       *
+       * Semantically identical to triggerBackup(), but with clearer intent for automatic operations.
+       *
+       * @returns Promise with backup ID on success, or error message on failure.
+       * @example
+       * const result = await globalThis.electronBackup.createNow();
+       * if (result.success) {
+       *   console.log('Backup created:', result.backupId);
+       * } else {
+       *   console.error('Backup failed:', result.error);
+       * }
        * @source
        */
       createNow: () => {

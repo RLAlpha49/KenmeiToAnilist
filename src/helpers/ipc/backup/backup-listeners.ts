@@ -931,14 +931,6 @@ function validateBackupLocationPath(location: string): [boolean, string?] {
   // Normalize the path to resolve any `.` or `..` segments
   const normalized = path.normalize(trimmed);
 
-  // Check if normalization changed the path (indicates traversal attempts)
-  if (normalized !== trimmed) {
-    return [
-      false,
-      "Invalid backup location path - contains relative components",
-    ];
-  }
-
   // Reject paths containing `..` after normalization as a safety check
   if (normalized.includes("..")) {
     return [
@@ -949,20 +941,135 @@ function validateBackupLocationPath(location: string): [boolean, string?] {
 
   // Platform-aware check for invalid characters
   if (process.platform === "win32") {
-    // Windows: reject < > : " | ? * and control characters
-    const windowsInvalidChars = /[<>:"|?*]/;
+    // Windows: reject < > " | ? * (but NOT colons, which are valid in drive letters like C:\)
+    // Check for invalid characters first
+    const windowsInvalidChars = /[<>"|?*]/;
     if (windowsInvalidChars.test(normalized)) {
       return [false, "Backup location contains invalid characters"];
+    }
+
+    // Validate Windows path format: must start with drive letter and colon
+    // Colons should only appear at position 1 (drive letter), e.g., C:\
+    const driveLetterPattern = /^[a-zA-Z]:\\/;
+    if (!driveLetterPattern.test(normalized)) {
+      return [
+        false,
+        String.raw`Invalid Windows path format - must start with drive letter (e.g., C:\)`,
+      ];
+    }
+
+    // Check for additional colons outside the drive letter position
+    const restOfPath = normalized.substring(2); // Skip the drive letter part (e.g., "C:")
+    if (restOfPath.includes(":")) {
+      return [
+        false,
+        "Backup location contains invalid colon character outside drive letter",
+      ];
     }
   }
 
   // Restrict to app userData directory for security
   const userDataPath = app.getPath("userData");
-  if (!normalized.startsWith(userDataPath)) {
+
+  // Windows: case-insensitive comparison; other platforms: case-sensitive
+  const isWithinUserData =
+    process.platform === "win32"
+      ? normalized.toLowerCase().startsWith(userDataPath.toLowerCase())
+      : normalized.startsWith(userDataPath);
+
+  if (!isWithinUserData) {
     return [
       false,
       `Backup location must be within the app's data folder. Please select a directory under: ${userDataPath}`,
     ];
+  }
+
+  return [true];
+}
+
+/**
+ * Extracts the error code from a filesystem error.
+ * @param error - The filesystem error object
+ * @returns The error code (ENOENT, EACCES, or undefined)
+ */
+function getFileSystemErrorCode(
+  error: unknown,
+): "ENOENT" | "EACCES" | undefined {
+  if (error instanceof Error && "code" in error) {
+    if (error.code === "ENOENT") return "ENOENT";
+    if (error.code === "EACCES") return "EACCES";
+  }
+  return undefined;
+}
+
+/**
+ * Checks if a backup location directory exists and is accessible.
+ * Creates the directory if it doesn't exist, and validates read/write permissions.
+ * @param location - The normalized backup location path
+ * @returns Tuple of [isAccessible, errorMessage?]
+ * @source
+ */
+async function checkBackupLocationAccessibility(
+  location: string,
+): Promise<[boolean, string?]> {
+  try {
+    // Try to access the location - will throw if it doesn't exist or lacks permissions
+    await fs.access(location);
+    return [true];
+  } catch (error) {
+    const errorCode = getFileSystemErrorCode(error);
+
+    // Directory doesn't exist - try to create it
+    if (errorCode === "ENOENT") {
+      try {
+        await fs.mkdir(location, { recursive: true });
+        return [true];
+      } catch (mkdirError) {
+        const message =
+          mkdirError instanceof Error ? mkdirError.message : "Unknown error";
+        return [false, `Failed to create backup directory: ${message}`];
+      }
+    }
+
+    // Permission denied
+    if (errorCode === "EACCES") {
+      return [
+        false,
+        `Permission denied - cannot write to backup location. Please choose a folder you have write access to.`,
+      ];
+    }
+
+    // Other filesystem errors
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return [false, `Cannot access backup location: ${message}`];
+  }
+}
+
+/**
+ * Validates a backup filename to ensure it's safe for file operations.
+ * Checks for proper format, traversal attempts, and invalid separators.
+ * @param filename - The filename to validate
+ * @returns Tuple of [isValid, errorMessage?]
+ * @source
+ */
+function validateBackupFilename(filename: string): [boolean, string?] {
+  // Ensure filename is a string
+  if (typeof filename !== "string") {
+    return [false, "Filename must be a string"];
+  }
+
+  // Ensure filename matches backup-*.json pattern
+  if (!filename.startsWith("backup-") || !filename.endsWith(".json")) {
+    return [false, "Invalid backup file format"];
+  }
+
+  // Ensure no directory traversal
+  if (
+    filename.includes("/") ||
+    filename.includes("\\") ||
+    filename.includes("..")
+  ) {
+    return [false, "Invalid backup filename"];
   }
 
   return [true];
@@ -1158,7 +1265,7 @@ export function setupBackupIPC(mainWindow: BrowserWindow): void {
 
   secureHandle(
     BACKUP_CHANNELS.SET_BACKUP_LOCATION,
-    (_event: Electron.IpcMainInvokeEvent, location: unknown) => {
+    async (_event: Electron.IpcMainInvokeEvent, location: unknown) => {
       try {
         // Input validation: ensure location is a string
         if (typeof location !== "string") {
@@ -1186,10 +1293,26 @@ export function setupBackupIPC(mainWindow: BrowserWindow): void {
           return { success: false, error: errorMsg, code };
         }
 
+        // Check accessibility and create directory if needed
+        const normalizedPath = path.normalize(location.trim());
+        const [isAccessible, accessError] =
+          await checkBackupLocationAccessibility(normalizedPath);
+        if (!isAccessible) {
+          console.warn(
+            "[BackupIPC] Backup location is not accessible:",
+            accessError,
+          );
+          // Extract error code from accessibility check
+          let code = "INVALID_PATH";
+          if (accessError?.includes("does not exist")) code = "ENOENT";
+          if (accessError?.includes("Permission denied")) code = "EACCES";
+          return { success: false, error: accessError, code };
+        }
+
         const config = getStoredBackupScheduleConfig();
         const updatedConfig: BackupScheduleConfig = {
           ...config,
-          backupLocation: location.trim(),
+          backupLocation: normalizedPath,
         };
 
         console.debug("[BackupIPC] Updating backup location");
@@ -1239,14 +1362,43 @@ export function setupBackupIPC(mainWindow: BrowserWindow): void {
         const config = getStoredBackupScheduleConfig();
         const location = ensureBackupLocationInitialized(config).backupLocation;
 
+        // Defensive check: ensure location is initialized and not empty
+        if (
+          !location ||
+          typeof location !== "string" ||
+          location.trim().length === 0
+        ) {
+          const errorMsg =
+            "Backup location has not been configured. Please select a backup location in settings.";
+          console.warn(
+            "[BackupIPC] LIST_LOCAL_BACKUPS: Backup location not initialized",
+          );
+          return { success: false, error: errorMsg };
+        }
+
         // Input validation: ensure location is valid after initialization
         const [isValid, errorMsg] = validateBackupLocationPath(location);
         if (!isValid) {
+          const sanitizedLocation = location.substring(0, 50); // Limit for security
           console.warn(
             "[BackupIPC] LIST_LOCAL_BACKUPS: Invalid backup location:",
             errorMsg,
           );
-          return { success: false, error: errorMsg };
+          return {
+            success: false,
+            error: `Invalid backup location: ${sanitizedLocation}. Reason: ${errorMsg}`,
+          };
+        }
+
+        // Check accessibility and surface permission issues early
+        const [isAccessible, accessError] =
+          await checkBackupLocationAccessibility(location);
+        if (!isAccessible) {
+          console.warn(
+            "[BackupIPC] LIST_LOCAL_BACKUPS: Backup location is not accessible:",
+            accessError,
+          );
+          return { success: false, error: accessError };
         }
 
         console.debug("[BackupIPC] Listing backups");
@@ -1268,7 +1420,7 @@ export function setupBackupIPC(mainWindow: BrowserWindow): void {
     BACKUP_CHANNELS.DELETE_BACKUP,
     async (_event: Electron.IpcMainInvokeEvent, filename: unknown) => {
       try {
-        // Input validation: ensure filename is a string
+        // Ensure filename is a string before validation
         if (typeof filename !== "string") {
           console.warn(
             "[BackupIPC] DELETE_BACKUP: Invalid filename type:",
@@ -1277,26 +1429,15 @@ export function setupBackupIPC(mainWindow: BrowserWindow): void {
           return { success: false, error: "Filename must be a string" };
         }
 
-        // Input validation: ensure filename matches backup-*.json pattern
-        if (!filename.startsWith("backup-") || !filename.endsWith(".json")) {
+        // Input validation: validate filename
+        const [isFilenameValid, filenameError] =
+          validateBackupFilename(filename);
+        if (!isFilenameValid) {
           console.warn(
-            "[BackupIPC] DELETE_BACKUP: Invalid filename format:",
-            filename,
+            "[BackupIPC] DELETE_BACKUP: Invalid filename:",
+            filenameError,
           );
-          return { success: false, error: "Invalid backup file format" };
-        }
-
-        // Input validation: ensure no directory traversal
-        if (
-          filename.includes("/") ||
-          filename.includes("\\") ||
-          filename.includes("..")
-        ) {
-          console.warn(
-            "[BackupIPC] DELETE_BACKUP: Directory traversal attempt:",
-            filename,
-          );
-          return { success: false, error: "Invalid backup filename" };
+          return { success: false, error: filenameError };
         }
 
         const config = getStoredBackupScheduleConfig();
@@ -1439,7 +1580,7 @@ export function setupBackupIPC(mainWindow: BrowserWindow): void {
     BACKUP_CHANNELS.READ_LOCAL_BACKUP,
     async (_event: Electron.IpcMainInvokeEvent, filename: unknown) => {
       try {
-        // Input validation: ensure filename is a string
+        // Ensure filename is a string before validation
         if (typeof filename !== "string") {
           console.warn(
             "[BackupIPC] READ_LOCAL_BACKUP: Invalid filename type:",
@@ -1448,26 +1589,15 @@ export function setupBackupIPC(mainWindow: BrowserWindow): void {
           return { success: false, error: "Filename must be a string" };
         }
 
-        // Input validation: ensure filename matches backup-*.json pattern
-        if (!filename.startsWith("backup-") || !filename.endsWith(".json")) {
+        // Input validation: validate filename
+        const [isFilenameValid, filenameError] =
+          validateBackupFilename(filename);
+        if (!isFilenameValid) {
           console.warn(
-            "[BackupIPC] READ_LOCAL_BACKUP: Invalid filename format:",
-            filename,
+            "[BackupIPC] READ_LOCAL_BACKUP: Invalid filename:",
+            filenameError,
           );
-          return { success: false, error: "Invalid backup file format" };
-        }
-
-        // Input validation: ensure no directory traversal
-        if (
-          filename.includes("/") ||
-          filename.includes("\\") ||
-          filename.includes("..")
-        ) {
-          console.warn(
-            "[BackupIPC] READ_LOCAL_BACKUP: Directory traversal attempt:",
-            filename,
-          );
-          return { success: false, error: "Invalid backup filename" };
+          return { success: false, error: filenameError };
         }
 
         const config = getStoredBackupScheduleConfig();
@@ -1518,7 +1648,7 @@ export function setupBackupIPC(mainWindow: BrowserWindow): void {
       options: unknown,
     ) => {
       try {
-        // Input validation: ensure filename is a string
+        // Ensure filename is a string before validation
         if (typeof filename !== "string") {
           console.warn(
             "[BackupIPC] RESTORE_LOCAL_BACKUP: Invalid filename type:",
@@ -1527,26 +1657,18 @@ export function setupBackupIPC(mainWindow: BrowserWindow): void {
           return { success: false, errors: ["Filename must be a string"] };
         }
 
-        // Input validation: ensure filename matches backup-*.json pattern
-        if (!filename.startsWith("backup-") || !filename.endsWith(".json")) {
+        // Input validation: validate filename
+        const [isFilenameValid, filenameError] =
+          validateBackupFilename(filename);
+        if (!isFilenameValid) {
           console.warn(
-            "[BackupIPC] RESTORE_LOCAL_BACKUP: Invalid filename format:",
-            filename,
+            "[BackupIPC] RESTORE_LOCAL_BACKUP: Invalid filename:",
+            filenameError,
           );
-          return { success: false, errors: ["Invalid backup file format"] };
-        }
-
-        // Input validation: ensure no directory traversal
-        if (
-          filename.includes("/") ||
-          filename.includes("\\") ||
-          filename.includes("..")
-        ) {
-          console.warn(
-            "[BackupIPC] RESTORE_LOCAL_BACKUP: Directory traversal attempt:",
-            filename,
-          );
-          return { success: false, errors: ["Invalid backup filename"] };
+          return {
+            success: false,
+            errors: [filenameError || "Invalid filename"],
+          };
         }
 
         const config = getStoredBackupScheduleConfig();
