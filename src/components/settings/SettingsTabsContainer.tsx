@@ -96,9 +96,12 @@ export function SettingsTabsContainer({
   cachesToClear,
   isClearing,
   cacheCleared,
-  isRestoringBackup,
   selectedBackupFile,
   backupValidationError,
+  matchImportFile,
+  matchImportError,
+  isImportingMatches,
+  isRestoringBackup,
   isDebugEnabled,
   storageDebuggerEnabled,
   logViewerEnabled,
@@ -117,6 +120,8 @@ export function SettingsTabsContainer({
   onRestoreBackup,
   onRestoreBackupFile,
   onFileSelect,
+  onMatchImportFileSelect,
+  onImportMatches,
   scheduleConfig,
   nextScheduledBackup,
   lastScheduledBackup,
@@ -338,9 +343,12 @@ export function SettingsTabsContainer({
           cachesToClear={cachesToClear}
           isClearing={isClearing}
           cacheCleared={cacheCleared}
-          isRestoringBackup={isRestoringBackup}
           selectedBackupFile={selectedBackupFile}
           backupValidationError={backupValidationError}
+          matchImportFile={matchImportFile}
+          matchImportError={matchImportError}
+          isImportingMatches={isImportingMatches}
+          isRestoringBackup={isRestoringBackup}
           isDebugEnabled={isDebugEnabled}
           storageDebuggerEnabled={storageDebuggerEnabled}
           logViewerEnabled={logViewerEnabled}
@@ -361,6 +369,8 @@ export function SettingsTabsContainer({
           onRestoreBackup={onRestoreBackup}
           onRestoreBackupFile={onRestoreBackupFile}
           onFileSelect={onFileSelect}
+          onMatchImportFileSelect={onMatchImportFileSelect}
+          onImportMatches={onImportMatches}
           onScheduleConfigChange={onScheduleConfigChange}
           onTriggerBackup={onTriggerBackup}
           onToggleDebug={onToggleDebug}

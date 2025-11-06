@@ -22,6 +22,9 @@ import {
   ExportFormat,
   ExportFilterOptions,
   matchPassesFilter,
+  EXPORT_TEMPLATES,
+  EXPORTABLE_FIELDS,
+  type ExportableFieldId,
 } from "../../utils/exportUtils";
 import { Button } from "../ui/button";
 import {
@@ -87,6 +90,7 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
   size = "default",
 }) => {
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>("csv");
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [statusFilters, setStatusFilters] = useState<Set<MatchStatusType>>(
     new Set(["matched", "manual", "pending", "skipped"]),
   );
@@ -95,6 +99,9 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
   );
   const [includeUnmatched, setIncludeUnmatched] = useState<boolean>(true);
   const [unmatchedOnly, setUnmatchedOnly] = useState<boolean>(false);
+  const [selectedFields, setSelectedFields] = useState<Set<ExportableFieldId>>(
+    new Set(EXPORTABLE_FIELDS.map((f) => f.id)),
+  );
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   // Calculate status counts
@@ -141,6 +148,11 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
         confidenceThreshold: confidenceThreshold ?? undefined,
         includeUnmatched: unmatchedOnly ? undefined : includeUnmatched,
         unmatchedOnly: unmatchedOnly || undefined,
+        fields:
+          selectedFields.size > 0 &&
+          selectedFields.size < EXPORTABLE_FIELDS.length
+            ? Array.from(selectedFields)
+            : undefined,
       };
 
       const filename = await exportMatchResults(
@@ -161,6 +173,7 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
     confidenceThreshold,
     includeUnmatched,
     unmatchedOnly,
+    selectedFields,
     filteredCount,
   ]);
 
@@ -174,6 +187,55 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
       }
       return next;
     });
+  }, []);
+
+  const toggleField = useCallback((fieldId: ExportableFieldId) => {
+    setSelectedFields((prev) => {
+      const next = new Set(prev);
+      if (next.has(fieldId)) {
+        next.delete(fieldId);
+      } else {
+        next.add(fieldId);
+      }
+      return next;
+    });
+  }, []);
+
+  const selectAllFields = useCallback(() => {
+    setSelectedFields(new Set(EXPORTABLE_FIELDS.map((f) => f.id)));
+  }, []);
+
+  const clearAllFields = useCallback(() => {
+    setSelectedFields(new Set());
+  }, []);
+
+  const applyTemplate = useCallback((templateKey: string) => {
+    // Empty string means "Custom" - just clear the template selection
+    if (templateKey === "") {
+      setSelectedTemplate(null);
+      return;
+    }
+
+    const template =
+      EXPORT_TEMPLATES[templateKey as keyof typeof EXPORT_TEMPLATES];
+    if (!template) return;
+
+    setSelectedTemplate(templateKey);
+
+    // Apply template filters
+    if (template.filters.statusFilter) {
+      setStatusFilters(new Set(template.filters.statusFilter));
+    }
+    if (
+      template.filters.confidenceThreshold !== undefined &&
+      template.filters.confidenceThreshold !== null
+    ) {
+      setConfidenceThreshold(template.filters.confidenceThreshold);
+    } else {
+      setConfidenceThreshold(null);
+    }
+    setIncludeUnmatched(template.filters.includeUnmatched ?? true);
+    setUnmatchedOnly(template.filters.unmatchedOnly ?? false);
   }, []);
 
   return (
@@ -206,6 +268,97 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
           </>
         )}
 
+        {/* Quick Templates */}
+        <DropdownMenuLabel>Quick Templates</DropdownMenuLabel>
+        <DropdownMenuRadioGroup
+          value={selectedTemplate || ""}
+          onValueChange={applyTemplate}
+        >
+          <DropdownMenuRadioItem value="" onSelect={(e) => e.preventDefault()}>
+            <div className="mr-2 h-4 w-4" aria-hidden="true" />
+            <div className="flex-1">
+              <p className="text-sm">Custom</p>
+              <p className="text-muted-foreground text-xs">
+                Use current filter settings
+              </p>
+            </div>
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem
+            value="ALL"
+            onSelect={(e) => e.preventDefault()}
+          >
+            <Wand2 className="mr-2 h-4 w-4 text-amber-500" aria-hidden="true" />
+            <div className="flex-1">
+              <p className="text-sm">All Matches</p>
+              <p className="text-muted-foreground text-xs">
+                Export all results without filters
+              </p>
+            </div>
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem
+            value="MATCHED_ONLY"
+            onSelect={(e) => e.preventDefault()}
+          >
+            <CheckCircle2
+              className="mr-2 h-4 w-4 text-emerald-500"
+              aria-hidden="true"
+            />
+            <div className="flex-1">
+              <p className="text-sm">Matched Only</p>
+              <p className="text-muted-foreground text-xs">
+                Only successfully matched entries
+              </p>
+            </div>
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem
+            value="PENDING_ONLY"
+            onSelect={(e) => e.preventDefault()}
+          >
+            <Clock3
+              className="mr-2 h-4 w-4 text-amber-500"
+              aria-hidden="true"
+            />
+            <div className="flex-1">
+              <p className="text-sm">Pending Only</p>
+              <p className="text-muted-foreground text-xs">
+                Only pending matches for review
+              </p>
+            </div>
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem
+            value="UNMATCHED_ONLY"
+            onSelect={(e) => e.preventDefault()}
+          >
+            <XCircle
+              className="mr-2 h-4 w-4 text-rose-500"
+              aria-hidden="true"
+            />
+            <div className="flex-1">
+              <p className="text-sm">Unmatched Only</p>
+              <p className="text-muted-foreground text-xs">
+                Only entries without matches
+              </p>
+            </div>
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem
+            value="HIGH_CONFIDENCE"
+            onSelect={(e) => e.preventDefault()}
+          >
+            <CheckCircle2
+              className="mr-2 h-4 w-4 text-blue-500"
+              aria-hidden="true"
+            />
+            <div className="flex-1">
+              <p className="text-sm">High Confidence (&gt;75%)</p>
+              <p className="text-muted-foreground text-xs">
+                Only high-confidence matches
+              </p>
+            </div>
+          </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
+
+        <DropdownMenuSeparator />
+
         {/* Format Selection */}
         <DropdownMenuLabel>Export Format</DropdownMenuLabel>
         <DropdownMenuRadioGroup
@@ -237,7 +390,63 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
 
         <DropdownMenuSeparator />
 
-        {/* Status Filters */}
+        {/* Fields Selection for CSV/Markdown/JSON */}
+        {(selectedFormat === "csv" ||
+          selectedFormat === "markdown" ||
+          selectedFormat === "json") && (
+          <>
+            <DropdownMenuLabel className="flex items-center justify-between">
+              <span>Export Fields</span>
+              <span className="text-muted-foreground text-xs">
+                {selectedFields.size}/{EXPORTABLE_FIELDS.length}
+              </span>
+            </DropdownMenuLabel>
+
+            {/* Fields grouped by category */}
+            {Array.from(new Set(EXPORTABLE_FIELDS.map((f) => f.group))).map(
+              (group) => (
+                <div key={group}>
+                  <div className="text-muted-foreground px-2 py-1 text-xs font-semibold">
+                    {group}
+                  </div>
+                  {EXPORTABLE_FIELDS.filter((f) => f.group === group).map(
+                    (field) => (
+                      <DropdownMenuCheckboxItem
+                        key={field.id}
+                        checked={selectedFields.has(field.id)}
+                        onCheckedChange={() => toggleField(field.id)}
+                        onSelect={(e) => e.preventDefault()}
+                      >
+                        <span className="text-sm">{field.label}</span>
+                      </DropdownMenuCheckboxItem>
+                    ),
+                  )}
+                </div>
+              ),
+            )}
+
+            {/* Bulk field actions */}
+            <DropdownMenuSeparator />
+            <div className="space-x-1 px-2 py-1.5">
+              <button
+                onClick={selectAllFields}
+                className="inline-block rounded px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50"
+              >
+                All
+              </button>
+              <button
+                onClick={clearAllFields}
+                className="inline-block rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/50"
+              >
+                None
+              </button>
+            </div>
+
+            <DropdownMenuSeparator />
+          </>
+        )}
+
+        <DropdownMenuSeparator />
         <DropdownMenuLabel>Include Status</DropdownMenuLabel>
         <DropdownMenuCheckboxItem
           checked={statusFilters.has("matched")}

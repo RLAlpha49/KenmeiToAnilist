@@ -28,6 +28,7 @@ export enum ErrorType {
   STORAGE = "storage",
   AUTHENTICATION = "AUTHENTICATION",
   SYSTEM = "SYSTEM",
+  IMPORT = "import",
 }
 
 /** Enumerates the recovery actions available for different error types. @source */

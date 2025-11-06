@@ -526,6 +526,38 @@ export function MatchingPage() {
     handleBatchProgress,
   ]);
 
+  const handleImportComplete = useCallback(
+    (result: { imported: number; merged: number; skipped: number }) => {
+      // Reload match results from storage
+      const savedResults = storage.getItem(STORAGE_KEYS.MATCH_RESULTS);
+      if (savedResults) {
+        try {
+          const updatedMatches: MangaMatchResult[] = JSON.parse(savedResults);
+          setMatchResults(updatedMatches);
+
+          // Show success toast with statistics
+          toast.success(
+            `Successfully imported ${result.imported} matches (${result.merged} merged, ${result.skipped} skipped)`,
+            {
+              description: "Your match results have been updated",
+            },
+          );
+
+          // Clear any active filters or search to show all results
+          handleClearSelection();
+          setSearchQuery("");
+        } catch (error) {
+          console.error(
+            "[MatchingPage] Failed to reload match results:",
+            error,
+          );
+          toast.error("Import completed but failed to reload results");
+        }
+      }
+    },
+    [handleClearSelection],
+  );
+
   // Add a ref to track if we've already done initialization
   const hasInitialized = useRef(false);
   const lastGlobalSyncSnapshot = useRef<{
@@ -1794,6 +1826,7 @@ export function MatchingPage() {
           canUndo={canUndo}
           canRedo={canRedo}
           matchResults={matchResults}
+          onImportComplete={handleImportComplete}
         />
 
         {/* Rematch by status options */}

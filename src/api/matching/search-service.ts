@@ -254,15 +254,16 @@ export async function batchMatchManga(
               error &&
               typeof error === "object" &&
               ("isRateLimited" in error || "status" in error) &&
-              ((error as any).isRateLimited === true ||
-                (error as any).status === 429);
+              ((error as { isRateLimited?: boolean }).isRateLimited === true ||
+                (error as { status?: number }).status === 429);
 
             if (
               isRateLimitError &&
               rateLimitRetryCount < MAX_RATE_LIMIT_RETRIES
             ) {
               rateLimitRetryCount++;
-              const retryAfterSeconds = (error as any).retryAfter || 60;
+              const retryAfterSeconds =
+                (error as { retryAfter?: number }).retryAfter || 60;
               console.warn(
                 `[MangaSearchService] ⏸️ Rate limited (429). Retry ${rateLimitRetryCount}/${MAX_RATE_LIMIT_RETRIES} after ${retryAfterSeconds}s`,
               );

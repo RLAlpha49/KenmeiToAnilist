@@ -20,6 +20,7 @@ import {
   TooltipTrigger,
 } from "../ui/tooltip";
 import { ExportMatchesButton } from "./ExportMatchesButton";
+import ImportMatchesButton from "./ImportMatchesButton";
 import { MangaMatchResult } from "../../api/anilist/types";
 
 /**
@@ -52,6 +53,7 @@ type HighlightStat = {
  * @property canUndo - Whether undo is available.
  * @property canRedo - Whether redo is available.
  * @property matchResults - Array of match results for export.
+ * @property onImportComplete - Callback after successful import with statistics.
  * @source
  */
 interface Props {
@@ -76,6 +78,11 @@ interface Props {
   canUndo?: boolean;
   canRedo?: boolean;
   matchResults: MangaMatchResult[];
+  onImportComplete?: (result: {
+    imported: number;
+    merged: number;
+    skipped: number;
+  }) => void;
 }
 
 /**
@@ -100,6 +107,7 @@ export function MatchingPageHeader({
   canUndo = false,
   canRedo = false,
   matchResults,
+  onImportComplete,
 }: Readonly<Props>) {
   const { matched, manual, pending, reviewed, total, completionPercent } =
     statusSummary;
@@ -299,6 +307,15 @@ export function MatchingPageHeader({
 
                 {/* Right group: Data and matching controls */}
                 <div className="flex flex-wrap items-center gap-2">
+                  {/* Import Button - Data import action */}
+                  {matchResultsLength > 0 && onImportComplete && (
+                    <ImportMatchesButton
+                      variant="outline"
+                      size="default"
+                      disabled={matchingProcessIsLoading}
+                      onImportComplete={onImportComplete}
+                    />
+                  )}
                   {/* Export Button - Data action */}
                   {matchResultsLength > 0 && (
                     <ExportMatchesButton

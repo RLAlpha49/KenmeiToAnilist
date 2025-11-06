@@ -6,10 +6,11 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Database, Download, Bug } from "lucide-react";
+import { Database, Download, Bug, FileJson } from "lucide-react";
 import { SettingsSectionShell } from "./SettingsSectionShell";
 import { CacheManagementSection } from "./CacheManagementSection";
 import { BackupRestoreSection } from "./BackupRestoreSection";
+import { MatchImportExportSection } from "./MatchImportExportSection";
 import { DebugToolsSection } from "./DebugToolsSection";
 import type { DataManagementProps } from "./types";
 
@@ -39,6 +40,9 @@ export function DataManagementTab({
   cacheCleared,
   selectedBackupFile,
   backupValidationError,
+  matchImportFile,
+  matchImportError,
+  isImportingMatches,
   isDebugEnabled,
   storageDebuggerEnabled,
   logViewerEnabled,
@@ -60,6 +64,8 @@ export function DataManagementTab({
   onRestoreBackup,
   onRestoreBackupFile,
   onFileSelect,
+  onMatchImportFileSelect,
+  onImportMatches,
   onScheduleConfigChange,
   onTriggerBackup,
   onToggleDebug,
@@ -102,9 +108,41 @@ export function DataManagementTab({
 
       <motion.div variants={itemVariants} initial="hidden" animate="show">
         <div
-          id="data-backup"
+          id="data-match-import"
           className={
-            highlightedSectionId === "data-backup"
+            highlightedSectionId === "data-match-import"
+              ? "rounded-2xl ring-2 ring-blue-500 ring-offset-2 ring-offset-white dark:ring-blue-400 dark:ring-offset-slate-950"
+              : ""
+          }
+        >
+          <SettingsSectionShell
+            id="match-import-export"
+            isCollapsible={true}
+            isCollapsed={collapsedSections["match-import-export"] ?? false}
+            onCollapsedChange={() => onToggleSection("match-import-export")}
+            icon={FileJson}
+            title="Match results import/export"
+            description="Import and export your match data for backup or analysis."
+            accent="from-cyan-500/15 via-blue-500/10 to-transparent"
+            className="mt-6"
+            contentClassName="space-y-4"
+          >
+            <MatchImportExportSection
+              matchImportFile={matchImportFile}
+              matchImportError={matchImportError}
+              isImportingMatches={isImportingMatches}
+              onMatchImportFileSelect={onMatchImportFileSelect}
+              onImportMatches={onImportMatches}
+            />
+          </SettingsSectionShell>
+        </div>
+      </motion.div>
+
+      <motion.div variants={itemVariants} initial="hidden" animate="show">
+        <div
+          id="data-debug"
+          className={
+            highlightedSectionId === "data-debug"
               ? "rounded-2xl ring-2 ring-blue-500 ring-offset-2 ring-offset-white dark:ring-blue-400 dark:ring-offset-slate-950"
               : ""
           }

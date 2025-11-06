@@ -42,6 +42,7 @@ import {
   DEFAULT_BACKUP_SCHEDULE_CONFIG,
 } from "../utils/storage";
 import { restoreBackup, importBackupFromFile } from "../utils/backup";
+import { importMatchResults } from "../utils/exportUtils";
 import { motion } from "framer-motion";
 import { truncateToastMessage } from "../utils/textHighlight";
 import { toast } from "sonner";
@@ -182,6 +183,10 @@ export function SettingsPage() {
     null,
   );
   const [isTriggeringBackup, setIsTriggeringBackup] = useState(false);
+
+  // Match import state
+  const [selectedMatchImportFile, setSelectedMatchImportFile] =
+    useState<File | null>(null);
 
   // Settings search state
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -1419,6 +1424,76 @@ export function SettingsPage() {
   };
 
   /**
+   * Handles file selection for match import.
+   * @source
+   */
+  const handleMatchImportFileSelect = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedMatchImportFile(file);
+      console.debug("[Settings] 📄 Match import file selected:", file.name);
+    }
+  };
+
+  /**
+   * Handles match import from selected file.
+   * Validates the file format and imports matches according to the selected strategy.
+   * @source
+   */
+  const handleImportMatches = async (
+    file: File,
+    strategy: "replace" | "merge" | "skip-duplicates",
+  ) => {
+    try {
+      console.info("[Settings] 📥 Importing matches...", { strategy });
+
+      const stats = await importMatchResults(file, { strategy });
+
+      // Clear selection
+      setSelectedMatchImportFile(null);
+
+      // Show success toast with statistics
+      const { imported, merged, skipped, conflicts } = stats;
+      const summary = [
+        imported > 0 && `${imported} imported`,
+        merged > 0 && `${merged} merged`,
+        skipped > 0 && `${skipped} skipped`,
+        conflicts > 0 && `${conflicts} conflicts`,
+      ]
+        .filter(Boolean)
+        .join(", ");
+
+      toast.success(`Successfully imported matches: ${summary || "completed"}`);
+
+      recordEvent({
+        type: "settings.match-import",
+        message: `Imported ${imported} matches using ${strategy} strategy`,
+        level: "info",
+        metadata: { strategy, ...stats },
+      });
+    } catch (err) {
+      let errorMessage = "Unknown import error";
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === "object" && err !== null && "message" in err) {
+        errorMessage = String((err as { message: unknown }).message);
+      }
+
+      console.error("[Settings] ❌ Match import error:", err);
+      toast.error(`Match import failed: ${errorMessage}`);
+
+      recordEvent({
+        type: "settings.match-import-error",
+        message: `Match import failed: ${errorMessage}`,
+        level: "error",
+        metadata: { error: errorMessage },
+      });
+    }
+  };
+
+  /**
    * Refreshes the page, clearing error states and reloading the view.
    * @source
    */
@@ -1703,6 +1778,11 @@ export function SettingsPage() {
         onRestoreBackup={handleImportBackup}
         onRestoreBackupFile={handleRestoreBackupFile}
         onFileSelect={handleFileSelect}
+        matchImportFile={selectedMatchImportFile}
+        matchImportError={null}
+        isImportingMatches={false}
+        onMatchImportFileSelect={handleMatchImportFileSelect}
+        onImportMatches={handleImportMatches}
         scheduleConfig={scheduleConfig}
         nextScheduledBackup={nextScheduledBackup}
         lastScheduledBackup={lastScheduledBackup}

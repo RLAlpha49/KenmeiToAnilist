@@ -80,9 +80,8 @@ export const highlightText = (text: string, query: string): React.ReactNode => {
  */
 const TruncatedToastContent: React.FC<{
   text: string;
-  maxLength: number;
   truncatedText: string;
-}> = ({ text, maxLength, truncatedText }) => {
+}> = ({ text, truncatedText }) => {
   const [expanded, setExpanded] = React.useState(false);
 
   return React.createElement(
@@ -165,7 +164,6 @@ export const truncateToastMessage = (
     fullText: normalizedText,
     component: React.createElement(TruncatedToastContent, {
       text: normalizedText,
-      maxLength,
       truncatedText,
     }),
   };
