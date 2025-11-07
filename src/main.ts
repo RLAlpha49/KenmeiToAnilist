@@ -63,6 +63,7 @@ try {
     installationId = storedId;
   } else {
     // Generate new UUID v4 for first run
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { randomUUID } = require("node:crypto");
     installationId = randomUUID();
     store.set("installation_id", installationId);

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { buildFuse } from "@/utils/fuzzySearch";
 import {
   SlidersHorizontal,
   Target,
@@ -185,17 +186,31 @@ export function AdvancedFilterPanel({
   // Memoize filtered genres to avoid recomputation on every render
   const filteredGenres = useMemo(() => {
     if (!genreSearch.trim()) return availableGenres;
-    const search = genreSearch.toLowerCase();
-    return availableGenres.filter((genre) =>
-      genre.toLowerCase().includes(search),
+
+    const fuse = buildFuse(
+      availableGenres.map((genre) => ({ name: genre })),
+      ["name"],
+    );
+
+    const results = fuse.search(genreSearch);
+    return results.map(
+      (result: { item: { name: string } }) => result.item.name,
     );
   }, [availableGenres, genreSearch]);
 
   // Memoize filtered tags to avoid recomputation on every render
   const filteredTags = useMemo(() => {
     if (!tagSearch.trim()) return availableTags;
-    const search = tagSearch.toLowerCase();
-    return availableTags.filter((tag) => tag.toLowerCase().includes(search));
+
+    const fuse = buildFuse(
+      availableTags.map((tag) => ({ name: tag })),
+      ["name"],
+    );
+
+    const results = fuse.search(tagSearch);
+    return results.map(
+      (result: { item: { name: string } }) => result.item.name,
+    );
   }, [availableTags, tagSearch]);
 
   // Memoize active filter count for badge display
@@ -253,18 +268,31 @@ export function AdvancedFilterPanel({
     onFiltersChange({ ...filters, tags: newTags });
   };
 
-  // Handle year range change
+  // Handle year range change with validation to ensure min <= max
   const handleYearRangeChange = (min: number | null, max: number | null) => {
-    onFiltersChange({ ...filters, yearRange: { min, max } });
+    // Validate and clamp values if needed
+    let validatedMin = min;
+    let validatedMax = max;
+
+    if (min !== null && max !== null && min > max) {
+      // Swap values if min > max
+      [validatedMin, validatedMax] = [validatedMax, validatedMin];
+    }
+
+    onFiltersChange({
+      ...filters,
+      yearRange: { min: validatedMin, max: validatedMax },
+    });
   };
 
-  // Apply built-in preset filter configuration
+  // Apply built-in preset filter configuration - merge with existing filters to preserve unspecified fields
   const handleBuiltInPresetApply = (preset: BuiltInFilterPreset) => {
-    onFiltersChange(preset.filters);
+    onFiltersChange({ ...filters, ...preset.filters });
   };
 
-  // Apply user preset
+  // Apply user preset - merge with existing filters to preserve unspecified fields
   const handleUserPresetApply = (preset: FilterPreset) => {
+    onFiltersChange({ ...filters, ...preset.filters });
     onApplyPreset(preset);
   };
 
@@ -585,12 +613,12 @@ export function AdvancedFilterPanel({
                 </div>
 
                 {/* Genre search */}
-                <input
+                <Input
                   type="text"
                   placeholder="Search genres..."
                   value={genreSearch}
                   onChange={(e) => setGenreSearch(e.target.value)}
-                  className="w-full rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:placeholder:text-slate-500"
+                  aria-label="Search genres"
                 />
 
                 {/* Genre list */}
@@ -661,6 +689,7 @@ export function AdvancedFilterPanel({
                   value={tagSearch}
                   onChange={(e) => setTagSearch(e.target.value)}
                   className="h-8 text-sm"
+                  aria-label="Search tags"
                 />
 
                 {/* Tag list */}

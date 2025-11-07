@@ -12,9 +12,20 @@ import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "../ui/dialog";
+import { Textarea } from "../ui/textarea";
 import { cn } from "@/utils/tailwind";
-import { Copy, Search, Trash2, Filter } from "lucide-react";
+import { Copy, Search, Trash2, Filter, Check } from "lucide-react";
 import { sanitizeForDebug } from "@/utils/debugSanitizer";
+import { highlightText } from "@/utils/textHighlight";
+import { buildFuse, FUSE_PRESET_LOOSE } from "@/utils/fuzzySearch";
 import type { IpcLogEntry } from "@/types/debug";
 
 /** Direction options for IPC message filtering. @source */
@@ -22,6 +33,13 @@ const DIRECTIONS = ["sent", "received"] as const;
 
 /** Direction filter type derived from DIRECTIONS array. @source */
 type DirectionFilter = (typeof DIRECTIONS)[number];
+
+/**
+ * Typed constant for custom IPC filter event.
+ * Used to dispatch filter changes from external components.
+ * @source
+ */
+const IPC_SET_FILTER_EVENT = "debug:ipc:set-filter" as const;
 
 /**
  * Metadata mapping for IPC message directions with styling.
@@ -72,7 +90,7 @@ const DEFAULT_DIRECTION_FILTER: Record<DirectionFilter, boolean> = {
  * Maximum characters to display inline before payload preview is truncated.
  * @source
  */
-const PREVIEW_MAX_CHARS = 2000;
+const PREVIEW_MAX_CHARS = 1000;
 
 /**
  * Formats an ISO timestamp to locale date and time string.
@@ -97,48 +115,6 @@ function formatTimestamp(timestamp: string): string {
 function formatDuration(duration?: number): string | null {
   if (typeof duration !== "number") return null;
   return `${duration.toFixed(2)} ms`;
-}
-
-/**
- * Highlights matching text segments in a string with styled marks.
- * Case-insensitive search with yellow background highlighting.
- * @param text - Text to search within
- * @param query - Search query string
- * @returns JSX with highlighted segments or original text
- * @source
- */
-function highlight(text: string, query: string): React.ReactNode {
-  if (!query) return text;
-  const lower = text.toLowerCase();
-  const target = query.toLowerCase();
-  const parts: React.ReactNode[] = [];
-  let cursor = 0;
-  let index = lower.indexOf(target);
-  let key = 0;
-
-  while (index !== -1) {
-    if (index > cursor) {
-      parts.push(text.slice(cursor, index));
-    }
-    const segment = text.slice(index, index + target.length);
-    parts.push(
-      <mark
-        key={`match-${key}`}
-        className="rounded bg-yellow-200/80 px-1 text-yellow-900 dark:bg-yellow-500/30 dark:text-yellow-100"
-      >
-        {segment}
-      </mark>,
-    );
-    key += 1;
-    cursor = index + target.length;
-    index = lower.indexOf(target, cursor);
-  }
-
-  if (cursor < text.length) {
-    parts.push(text.slice(cursor));
-  }
-
-  return parts.length ? <>{parts}</> : text;
 }
 
 /**
@@ -224,18 +200,6 @@ function matchesDirection(
 }
 
 /**
- * Checks if an IPC log entry matches the channel filter (case-insensitive).
- * @param entry - IPC log entry
- * @param channelFilter - Channel name to filter by
- * @returns True if entry matches channel or no channel filter is active
- * @source
- */
-function matchesChannel(entry: IpcLogEntry, channelFilter: string): boolean {
-  if (!channelFilter) return true;
-  return entry.channel.toLowerCase().includes(channelFilter.toLowerCase());
-}
-
-/**
  * IPC traffic viewer for monitoring renderer ↔ main process messages.
  * Displays, filters, and inspects IPC logs with direction, channel, and search filters.
  * @returns JSX element rendering the IPC viewer panel
@@ -250,13 +214,16 @@ export function IpcViewer(): React.ReactElement {
   const [directionFilters, setDirectionFilters] = useState<
     Record<DirectionFilter, boolean>
   >(DEFAULT_DIRECTION_FILTER);
+  const [clipboardFallbackOpen, setClipboardFallbackOpen] = useState(false);
+  const [clipboardFallbackText, setClipboardFallbackText] = useState("");
   const DEFAULT_WINDOW = 100;
   const [visibleCount, setVisibleCount] = useState<number>(DEFAULT_WINDOW);
 
   // Listen for custom events from PerformanceMonitor to set filter
   useEffect(() => {
-    const handleSetFilter = (event: CustomEvent) => {
-      const detail = event.detail as { channel?: string } | undefined;
+    const handleSetFilter = (event: Event) => {
+      const customEvent = event as CustomEvent<{ channel?: string }>;
+      const detail = customEvent.detail;
       if (detail?.channel) {
         // Set channel filter when custom event is triggered
         setChannelFilter(detail.channel);
@@ -264,27 +231,44 @@ export function IpcViewer(): React.ReactElement {
       }
     };
 
-    globalThis.addEventListener(
-      "debug:ipc:set-filter" as unknown as string,
-      handleSetFilter as EventListener,
-    );
+    globalThis.addEventListener(IPC_SET_FILTER_EVENT, handleSetFilter);
 
     return () => {
-      globalThis.removeEventListener(
-        "debug:ipc:set-filter" as unknown as string,
-        handleSetFilter as EventListener,
-      );
+      globalThis.removeEventListener(IPC_SET_FILTER_EVENT, handleSetFilter);
     };
   }, []);
 
   const filteredEntries = useMemo(() => {
-    return ipcEvents.filter(
+    // Step 1: Apply direction and search filters
+    const directionAndSearchFiltered = ipcEvents.filter(
       (entry) =>
         matchesDirection(entry, directionFilters) &&
-        matchesChannel(entry, channelFilter) &&
         includesQuery(entry, searchTerm),
     );
-  }, [ipcEvents, directionFilters, channelFilter, searchTerm]);
+
+    // Step 2: Apply channel filtering - first try exact/substring match, then fallback to fuzzy
+    if (!channelFilter.trim()) {
+      return directionAndSearchFiltered;
+    }
+
+    const filterLower = channelFilter.toLowerCase();
+    const exactMatches = directionAndSearchFiltered.filter((entry) =>
+      entry.channel.toLowerCase().includes(filterLower),
+    );
+
+    // If we found matches with substring search, return them
+    if (exactMatches.length > 0) {
+      return exactMatches;
+    }
+
+    // Fallback to fuzzy search if no substring matches found
+    const fuse = buildFuse(directionAndSearchFiltered, ["channel"], {
+      ...FUSE_PRESET_LOOSE,
+    });
+
+    const results = fuse.search(channelFilter);
+    return results.map((result: { item: IpcLogEntry }) => result.item);
+  }, [ipcEvents, directionFilters, searchTerm, channelFilter]);
 
   const availableChannels = useMemo(() => {
     const set = new Set<string>();
@@ -314,11 +298,45 @@ export function IpcViewer(): React.ReactElement {
       const sanitized = logRedactionEnabled
         ? sanitizeForDebug(entry, { redactSensitive: true })
         : entry;
-      await navigator.clipboard.writeText(JSON.stringify(sanitized, null, 2));
+      const text = JSON.stringify(sanitized, null, 2);
+      await navigator.clipboard.writeText(text);
       toast.success("Entry copied to clipboard");
     } catch (error) {
-      toast.error("Unable to copy entry");
-      console.error("Failed to copy IPC log entry", error);
+      // Fallback 1: use hidden textarea if clipboard API fails
+      try {
+        const textarea = document.createElement("textarea");
+        const sanitized = logRedactionEnabled
+          ? sanitizeForDebug(entry, { redactSensitive: true })
+          : entry;
+        textarea.value = JSON.stringify(sanitized, null, 2);
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        const success = document.execCommand("copy");
+        textarea.remove();
+
+        if (success) {
+          toast.success("Entry copied to clipboard");
+        } else {
+          throw new Error("execCommand failed");
+        }
+      } catch (fallbackError) {
+        // Fallback 2: Show modal with textarea for manual selection
+        console.error("Failed to copy IPC log entry", error, fallbackError);
+        try {
+          const sanitized = logRedactionEnabled
+            ? sanitizeForDebug(entry, { redactSensitive: true })
+            : entry;
+          setClipboardFallbackText(JSON.stringify(sanitized, null, 2));
+          setClipboardFallbackOpen(true);
+        } catch (modalError) {
+          console.error("Failed to set clipboard fallback modal", modalError);
+          toast.error(
+            "Unable to copy: clipboard access denied. Try enabling clipboard permissions or use HTTPS.",
+          );
+        }
+      }
     }
   };
 
@@ -472,6 +490,51 @@ export function IpcViewer(): React.ReactElement {
           )}
         </div>
       </ScrollArea>
+
+      {/* Clipboard fallback modal */}
+      <Dialog
+        open={clipboardFallbackOpen}
+        onOpenChange={setClipboardFallbackOpen}
+      >
+        <DialogContent className="max-h-96 max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Copy IPC Entry (Clipboard Unavailable)</DialogTitle>
+            <DialogDescription>
+              Your system clipboard is not accessible. Select all text below and
+              copy it manually, or click &quot;Select All&quot; to prepare for copying.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            readOnly
+            value={clipboardFallbackText}
+            className="max-h-64 min-h-48 font-mono text-xs"
+            onFocus={(e) => e.currentTarget.select()}
+          />
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                const textarea = document.querySelector(
+                  "textarea[readonly]",
+                ) as HTMLTextAreaElement;
+                if (textarea) {
+                  textarea.select();
+                  textarea.focus();
+                }
+              }}
+            >
+              <Check className="mr-2 h-4 w-4" />
+              Select All
+            </Button>
+            <Button
+              variant="default"
+              onClick={() => setClipboardFallbackOpen(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -601,7 +664,7 @@ const IpcEntry = React.memo(function IpcEntry({
 
       <div className="mt-3 space-y-2 text-sm">
         <div className="bg-muted/10 wrap-break-word max-h-48 overflow-auto whitespace-pre-wrap rounded p-2 font-mono text-[13px] leading-relaxed">
-          {highlight(previewText, searchTerm)}
+          {highlightText(previewText, searchTerm)}
         </div>
         {isTooLong && (
           <div className="flex items-center gap-2">

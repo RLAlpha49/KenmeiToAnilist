@@ -17,6 +17,8 @@ export interface StatisticsFilters {
   genres: string[];
   /** Selected formats (MANGA, NOVEL, etc.) */
   formats: string[];
+  /** Selected tags to filter by */
+  tags: string[];
   /** Selected match statuses (matched, pending, etc.) */
   statuses: MatchStatus[];
   /** Custom date range */
@@ -81,6 +83,7 @@ export interface FilteredStatisticsData {
 export const DEFAULT_STATISTICS_FILTERS: StatisticsFilters = {
   genres: [],
   formats: [],
+  tags: [],
   statuses: [],
   dateRange: {
     start: null,

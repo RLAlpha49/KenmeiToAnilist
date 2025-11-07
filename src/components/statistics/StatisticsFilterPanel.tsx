@@ -1,4 +1,6 @@
 import React, { useState, useMemo } from "react";
+import { buildFuse } from "@/utils/fuzzySearch";
+import { formatLabel, statusLabel } from "@/components/matching/labels";
 import {
   SlidersHorizontal,
   Target,
@@ -18,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Collapsible,
   CollapsibleTrigger,
@@ -27,6 +30,19 @@ import { RangeSlider } from "@/components/ui/slider";
 import type { StatisticsFilters } from "@/types/statistics";
 import type { MatchStatus } from "@/api/anilist/types";
 import { DEFAULT_STATISTICS_FILTERS } from "@/types/statistics";
+
+/**
+ * Converts a Date to YYYY-MM-DD format using local date components.
+ * Avoids toISOString() which can display the wrong calendar date in some time zones.
+ * @param date - The date to format.
+ * @returns Date string in YYYY-MM-DD format for use in date input value.
+ */
+const toDateInputValue = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 /**
  * Props for the StatisticsFilterPanel component.
@@ -44,6 +60,7 @@ interface StatisticsFilterPanelProps {
   availableGenres: string[];
   availableFormats: string[];
   availableStatuses: MatchStatus[];
+  availableTags: string[];
   matchCount: number;
 }
 
@@ -124,16 +141,20 @@ export function StatisticsFilterPanel({
   availableGenres,
   availableFormats,
   availableStatuses,
+  availableTags,
   matchCount,
 }: Readonly<StatisticsFilterPanelProps>): React.ReactElement {
   const [isOpen, setIsOpen] = useState(false);
   const [genreSearch, setGenreSearch] = useState("");
+  const [formatSearch, setFormatSearch] = useState("");
+  const [tagSearch, setTagSearch] = useState("");
 
   // Calculate active filter count
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (filters.genres.length > 0) count++;
     if (filters.formats.length > 0) count++;
+    if (filters.tags.length > 0) count++;
     if (filters.statuses.length > 0) count++;
     if (filters.dateRange.start || filters.dateRange.end) count++;
     if (filters.confidenceRange.min > 0 || filters.confidenceRange.max < 100)
@@ -143,11 +164,48 @@ export function StatisticsFilterPanel({
 
   // Filter genres by search
   const filteredGenres = useMemo(() => {
-    if (!genreSearch) return availableGenres;
-    return availableGenres.filter((genre) =>
-      genre.toLowerCase().includes(genreSearch.toLowerCase()),
+    if (!genreSearch.trim()) return availableGenres;
+
+    const fuse = buildFuse(
+      availableGenres.map((genre) => ({ name: genre })),
+      ["name"],
+    );
+
+    const results = fuse.search(genreSearch);
+    return results.map(
+      (result: { item: { name: string } }) => result.item.name,
     );
   }, [availableGenres, genreSearch]);
+
+  // Filter formats by search
+  const filteredFormats = useMemo(() => {
+    if (!formatSearch.trim()) return availableFormats;
+
+    const fuse = buildFuse(
+      availableFormats.map((format) => ({ name: format })),
+      ["name"],
+    );
+
+    const results = fuse.search(formatSearch);
+    return results.map(
+      (result: { item: { name: string } }) => result.item.name,
+    );
+  }, [availableFormats, formatSearch]);
+
+  // Filter tags by search
+  const filteredTags = useMemo(() => {
+    if (!tagSearch.trim()) return availableTags;
+
+    const fuse = buildFuse(
+      availableTags.map((tag) => ({ name: tag })),
+      ["name"],
+    );
+
+    const results = fuse.search(tagSearch);
+    return results.map(
+      (result: { item: { name: string } }) => result.item.name,
+    );
+  }, [availableTags, tagSearch]);
 
   // Handle filter changes
   const handleConfidenceChange = (value: { min: number; max: number }) => {
@@ -175,12 +233,28 @@ export function StatisticsFilterPanel({
     onFiltersChange({ ...filters, statuses: newStatuses });
   };
 
+  const handleTagToggle = (tag: string) => {
+    const newTags = filters.tags.includes(tag)
+      ? filters.tags.filter((t) => t !== tag)
+      : [...filters.tags, tag];
+    onFiltersChange({ ...filters, tags: newTags });
+  };
+
   const handleDateRangeChange = (
     type: "start" | "end",
     value: string | null,
   ) => {
     const newDateRange = { ...filters.dateRange };
-    newDateRange[type] = value ? new Date(value) : null;
+    if (value) {
+      // Parse date string (format: "YYYY-MM-DD") using local components to avoid timezone shifts
+      const [yearStr, monthStr, dayStr] = value.split("-");
+      const year = Number.parseInt(yearStr, 10);
+      const month = Number.parseInt(monthStr, 10) - 1; // Month is 0-indexed
+      const day = Number.parseInt(dayStr, 10);
+      newDateRange[type] = new Date(year, month, day);
+    } else {
+      newDateRange[type] = null;
+    }
     onFiltersChange({ ...filters, dateRange: newDateRange });
   };
 
@@ -192,51 +266,49 @@ export function StatisticsFilterPanel({
     onFiltersChange({ ...filters, genres: [] });
   };
 
+  const handleSelectAllTags = () => {
+    onFiltersChange({ ...filters, tags: [...availableTags] });
+  };
+
+  const handleClearAllTags = () => {
+    onFiltersChange({ ...filters, tags: [] });
+  };
+
   const handleClearAllFilters = () => {
     onFiltersChange(DEFAULT_STATISTICS_FILTERS);
     setGenreSearch("");
+    setFormatSearch("");
+    setTagSearch("");
   };
 
   const handlePresetClick = (preset: FilterPreset) => {
     onFiltersChange({ ...filters, ...preset.filters });
   };
 
-  // Format status label
-  const statusLabel = (status: MatchStatus): string => {
-    const labels: Record<MatchStatus, string> = {
-      matched: "Matched",
-      pending: "Pending",
-      manual: "Manual",
-      skipped: "Skipped",
-    };
-    return labels[status] || status;
-  };
-
-  // Format format label
-  const formatLabel = (format: string): string => {
-    return format.charAt(0) + format.slice(1).toLowerCase();
-  };
-
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <Card className="overflow-hidden rounded-2xl border-slate-200/50 bg-white/80 shadow-lg backdrop-blur-md dark:border-slate-800/50 dark:bg-slate-900/80">
-        <CollapsibleTrigger asChild>
-          <CardHeader className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="bg-linear-to-br rounded-full from-blue-500 to-purple-600 p-2">
-                  <SlidersHorizontal className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl font-bold text-slate-900 dark:text-white">
-                    Advanced Filters
-                  </CardTitle>
-                  <CardDescription className="text-sm text-slate-600 dark:text-slate-400">
-                    Refine your statistics with powerful filters
-                  </CardDescription>
-                </div>
+        <CardHeader className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-linear-to-br rounded-full from-blue-500 to-purple-600 p-2">
+                <SlidersHorizontal className="h-5 w-5 text-white" />
               </div>
-              <div className="flex items-center gap-2">
+              <div>
+                <CardTitle className="text-xl font-bold text-slate-900 dark:text-white">
+                  Advanced Filters
+                </CardTitle>
+                <CardDescription className="text-sm text-slate-600 dark:text-slate-400">
+                  Refine your statistics with powerful filters
+                </CardDescription>
+              </div>
+            </div>
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                aria-label="Toggle advanced filters"
+                className="flex cursor-pointer items-center gap-2 rounded-md p-1 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
                 {activeFilterCount > 0 && (
                   <Badge
                     variant="default"
@@ -250,10 +322,10 @@ export function StatisticsFilterPanel({
                     isOpen ? "rotate-90" : ""
                   }`}
                 />
-              </div>
-            </div>
-          </CardHeader>
-        </CollapsibleTrigger>
+              </button>
+            </CollapsibleTrigger>
+          </div>
+        </CardHeader>
 
         <CollapsibleContent>
           <CardContent className="space-y-6 pt-0">
@@ -329,7 +401,7 @@ export function StatisticsFilterPanel({
                     type="date"
                     value={
                       filters.dateRange.start
-                        ? filters.dateRange.start.toISOString().split("T")[0]
+                        ? toDateInputValue(filters.dateRange.start)
                         : ""
                     }
                     onChange={(e) =>
@@ -350,7 +422,7 @@ export function StatisticsFilterPanel({
                     type="date"
                     value={
                       filters.dateRange.end
-                        ? filters.dateRange.end.toISOString().split("T")[0]
+                        ? toDateInputValue(filters.dateRange.end)
                         : ""
                     }
                     onChange={(e) =>
@@ -368,22 +440,35 @@ export function StatisticsFilterPanel({
                 <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   Format
                 </div>
+                <Input
+                  type="text"
+                  placeholder="Search formats..."
+                  value={formatSearch}
+                  onChange={(e) => setFormatSearch(e.target.value)}
+                  aria-label="Search formats"
+                />
                 <div className="space-y-2">
-                  {availableFormats.map((format) => (
-                    <div key={format} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`format-${format}`}
-                        checked={filters.formats.includes(format)}
-                        onCheckedChange={() => handleFormatToggle(format)}
-                      />
-                      <label
-                        htmlFor={`format-${format}`}
-                        className="cursor-pointer text-sm text-slate-700 dark:text-slate-300"
-                      >
-                        {formatLabel(format)}
-                      </label>
-                    </div>
-                  ))}
+                  {filteredFormats.length > 0 ? (
+                    filteredFormats.map((format) => (
+                      <div key={format} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`format-${format}`}
+                          checked={filters.formats.includes(format)}
+                          onCheckedChange={() => handleFormatToggle(format)}
+                        />
+                        <label
+                          htmlFor={`format-${format}`}
+                          className="cursor-pointer text-sm text-slate-700 dark:text-slate-300"
+                        >
+                          {formatLabel(format)}
+                        </label>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-center text-xs text-slate-500 dark:text-slate-400">
+                      No formats found
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -423,12 +508,12 @@ export function StatisticsFilterPanel({
                 </div>
 
                 {/* Genre search */}
-                <input
+                <Input
                   type="text"
                   placeholder="Search genres..."
                   value={genreSearch}
                   onChange={(e) => setGenreSearch(e.target.value)}
-                  className="w-full rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:placeholder:text-slate-500"
+                  aria-label="Search genres"
                 />
 
                 {/* Genre list */}
@@ -452,6 +537,76 @@ export function StatisticsFilterPanel({
                   ) : (
                     <p className="text-center text-xs text-slate-500 dark:text-slate-400">
                       No genres found
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Tags Filter */}
+            {availableTags.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      Tags
+                    </div>
+                    {filters.tags.length > 0 && (
+                      <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">
+                        ({filters.tags.length} selected)
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSelectAllTags}
+                      className="h-6 text-xs"
+                    >
+                      Select All
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleClearAllTags}
+                      className="h-6 text-xs"
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Tag search */}
+                <Input
+                  type="text"
+                  placeholder="Search tags..."
+                  value={tagSearch}
+                  onChange={(e) => setTagSearch(e.target.value)}
+                  aria-label="Search tags"
+                />
+
+                {/* Tag list */}
+                <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
+                  {filteredTags.length > 0 ? (
+                    filteredTags.map((tag) => (
+                      <div key={tag} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`tag-${tag}`}
+                          checked={filters.tags.includes(tag)}
+                          onCheckedChange={() => handleTagToggle(tag)}
+                        />
+                        <label
+                          htmlFor={`tag-${tag}`}
+                          className="cursor-pointer text-sm text-slate-700 dark:text-slate-300"
+                        >
+                          {tag}
+                        </label>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-center text-xs text-slate-500 dark:text-slate-400">
+                      No tags found
                     </p>
                   )}
                 </div>

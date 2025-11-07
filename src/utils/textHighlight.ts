@@ -7,6 +7,37 @@
 import React from "react";
 
 /**
+ * Size-capped cache for memoizing highlight results.
+ * Stores up to 100 recently computed highlights to avoid redundant processing.
+ * Uses FIFO eviction when the cache reaches capacity.
+ * @internal
+ */
+const highlightCache = new Map<string, React.ReactNode>();
+const CACHE_SIZE_LIMIT = 100;
+
+/**
+ * Fast 32-bit FNV-1a hash function for text content.
+ * Provides low-collision hashing for cache key generation.
+ * @param text - The text to hash.
+ * @returns 32-bit hash value as hex string.
+ * @internal
+ */
+const hashText = (text: string): string => {
+  let hash = 2166136261; // FNV offset basis for 32-bit
+  let i = 0;
+  while (i < text.length) {
+    const codePoint = text.codePointAt(i) ?? 0;
+    hash ^= codePoint;
+    hash +=
+      (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+    hash = hash >>> 0; // Keep as 32-bit unsigned
+    // Skip extra step for surrogate pairs (code points > 0xFFFF are encoded as surrogate pairs in UTF-16)
+    i += codePoint > 0xffff ? 2 : 1;
+  }
+  return hash.toString(16);
+};
+
+/**
  * Extracts substring between start and end indices.
  * @param text - The source text.
  * @param start - Start index (inclusive).
@@ -21,6 +52,9 @@ const sliceText = (text: string, start: number, end: number): string => {
 
 /**
  * Highlights all case-insensitive occurrences of query in text with yellow mark styling.
+ * Results are memoized by a cache key incorporating text hash and query to avoid redundant
+ * processing on repeated calls with the same inputs and prevent collisions from same-length
+ * but different text strings.
  * @param text - The text to highlight.
  * @param query - The search query to find and highlight.
  * @returns React nodes array containing text and mark elements; original text if query empty.
@@ -29,6 +63,16 @@ const sliceText = (text: string, start: number, end: number): string => {
 export const highlightText = (text: string, query: string): React.ReactNode => {
   if (!query.trim()) {
     return text;
+  }
+
+  // Create cache key incorporating text hash, length, and query for low-collision lookup
+  const cacheKey = `${hashText(text)}|${text.length}|${query.toLowerCase()}`;
+  if (highlightCache.has(cacheKey)) {
+    const cachedResult = highlightCache.get(cacheKey)!;
+    // Move to end of Map by deleting and re-setting to make eviction closer to LRU
+    highlightCache.delete(cacheKey);
+    highlightCache.set(cacheKey, cachedResult);
+    return cachedResult;
   }
 
   const lowerText = text.toLowerCase();
@@ -70,7 +114,18 @@ export const highlightText = (text: string, query: string): React.ReactNode => {
     parts.push(sliceText(text, lastIndex, text.length));
   }
 
-  return React.createElement(React.Fragment, null, ...parts);
+  const result = React.createElement(React.Fragment, null, ...parts);
+
+  // Store in cache, evicting oldest entry if cache is full
+  if (highlightCache.size >= CACHE_SIZE_LIMIT) {
+    const firstKey = highlightCache.keys().next().value;
+    if (firstKey) {
+      highlightCache.delete(firstKey);
+    }
+  }
+  highlightCache.set(cacheKey, result);
+
+  return result;
 };
 
 /**
@@ -110,6 +165,7 @@ const TruncatedToastContent: React.FC<{
 
 /**
  * Truncates text for toast descriptions and provides inline expansion capability.
+ * Preserves single newlines while collapsing multiple spaces/tabs to single spaces.
  * @param text - The text to potentially truncate.
  * @param maxLength - Maximum character length before truncation (default: 200).
  * @returns Object containing truncation status, both versions of text, and React component for rendering.
@@ -135,8 +191,10 @@ export const truncateToastMessage = (
     };
   }
 
-  // Normalize consecutive whitespace (including newlines) to single spaces
-  const normalizedText = text.replace(/\s+/g, " ");
+  // Normalize consecutive spaces/tabs to single spaces, but preserve newlines
+  const normalizedText = text
+    .replaceAll(/[ \t]+/g, " ") // Collapse spaces and tabs
+    .replaceAll(/\n\n+/g, "\n"); // Collapse multiple newlines to single newline
 
   if (normalizedText.length <= maxLength) {
     return {

@@ -6,6 +6,7 @@
 
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { buildFuse } from "@/utils/fuzzySearch";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +31,7 @@ import {
   SHORTCUTS,
   ShortcutCategory,
   formatShortcutKey,
+  humanizeScope,
 } from "@/utils/shortcuts";
 
 /**
@@ -80,7 +82,7 @@ export const ShortcutCard = ({
       </p>
       {shortcutItem.scope && shortcutItem.scope !== "global" && (
         <Badge variant="outline" className="w-fit text-xs">
-          {shortcutItem.scope}
+          {humanizeScope(shortcutItem.scope)}
         </Badge>
       )}
     </div>
@@ -179,14 +181,17 @@ export function ShortcutsPanel({
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // Manage autofocus: focus after a small delay when dialog opens
   useEffect(() => {
-    if (isOpen && searchInputRef.current) {
-      // Defer focus to next tick to ensure dialog is fully rendered
-      const timer = setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 0);
-      return () => clearTimeout(timer);
+    if (isOpen) {
+      const timer = globalThis.setTimeout(() => {
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+        }
+      }, 100);
+      return () => globalThis.clearTimeout(timer);
     }
+    return undefined;
   }, [isOpen]);
 
   // Memoize categories to prevent recomputation
@@ -198,15 +203,20 @@ export function ShortcutsPanel({
       return SHORTCUTS;
     }
 
-    const query = searchQuery.toLowerCase();
-    return SHORTCUTS.filter((shortcut) => {
-      const keyString = formatShortcutKey(shortcut.keys).toLowerCase();
-      return (
-        shortcut.description.toLowerCase().includes(query) ||
-        keyString.includes(query) ||
-        shortcut.action.toLowerCase().includes(query)
-      );
-    });
+    // Precompute keyLabel for each shortcut to enable string-based search
+    const shortcutsWithKeyLabels = SHORTCUTS.map((shortcut) => ({
+      ...shortcut,
+      keyLabel: formatShortcutKey(shortcut.keys),
+    }));
+
+    const fuse = buildFuse(shortcutsWithKeyLabels, [
+      { name: "description", weight: 0.5 },
+      { name: "action", weight: 0.3 },
+      { name: "keyLabel", weight: 0.2 },
+    ]);
+
+    const results = fuse.search(searchQuery);
+    return results.map((result) => result.item);
   }, [searchQuery]);
 
   // Get shortcuts filtered by category
@@ -265,8 +275,8 @@ export function ShortcutsPanel({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 aria-label="Search shortcuts"
+                aria-describedby="shortcuts-search-status"
                 aria-controls="shortcuts-list"
-                autoFocus
               />
             </div>
 
@@ -275,6 +285,7 @@ export function ShortcutsPanel({
               {/* Announcements for search results */}
               {searchQuery && (
                 <output
+                  id="shortcuts-search-status"
                   className="sr-only"
                   aria-live="polite"
                   aria-atomic="true"

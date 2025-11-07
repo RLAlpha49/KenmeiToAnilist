@@ -4,6 +4,7 @@
  * @description React component for searching and selecting AniList manga matches for a given Kenmei manga, with manual search and result selection features.
  */
 import React, { useState, useRef, useEffect } from "react";
+import { buildFuse, FUSE_PRESET_BALANCED } from "@/utils/fuzzySearch";
 import {
   Search,
   X,
@@ -45,6 +46,57 @@ function getSourceBadgeClasses(source: string): string {
     default:
       return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300";
   }
+}
+
+/**
+ * Re-ranks search results based on fuzzy matching similarity to the Kenmei manga title.
+ * Uses Fuse.js to calculate relevance scores and reorder results accordingly.
+ * @param results - Array of MangaMatch results from the API
+ * @param kenmeiTitle - The original Kenmei manga title to match against
+ * @returns Re-ranked MangaMatch array ordered by relevance score
+ */
+function reRankSearchResults(
+  results: MangaMatch[],
+  kenmeiTitle: string,
+): MangaMatch[] {
+  // Early return for empty results or empty title
+  if (results.length === 0 || !kenmeiTitle.trim()) {
+    return results;
+  }
+
+  // Create Fuse instance with configuration optimized for manga title matching
+  const fuse = buildFuse(
+    results,
+    [
+      { name: "manga.title.romaji", weight: 0.4 },
+      { name: "manga.title.english", weight: 0.4 },
+      { name: "manga.synonyms", weight: 0.2 },
+    ],
+    {
+      ...FUSE_PRESET_BALANCED,
+      ignoreLocation: true,
+    },
+  );
+
+  // Perform fuzzy search on the Kenmei title
+  const fuseResults = fuse.search(kenmeiTitle.trim());
+
+  // If Fuse returns no results, fallback to original results to avoid empty display
+  if (fuseResults.length === 0) {
+    console.debug(
+      `[SearchPanel] ⚠️ Fuse re-ranking returned no results for "${kenmeiTitle}", falling back to original results`,
+    );
+    return results;
+  }
+
+  // Extract and return the re-ranked MangaMatch items
+  const reRankedResults = fuseResults.map((result) => result.item);
+
+  console.debug(
+    `[SearchPanel] 🔄 Re-ranked ${results.length} results, top match score: ${(fuseResults[0].score || 0).toFixed(3)}`,
+  );
+
+  return reRankedResults;
 }
 
 /**
@@ -175,10 +227,15 @@ export function MangaSearchPanel({
         idResults[0],
       );
 
-      const idMatches: MangaMatch[] = idResults.map((manga) => ({
+      let idMatches: MangaMatch[] = idResults.map((manga) => ({
         manga,
         confidence: 100,
       }));
+
+      // Apply re-ranking if kenmeiManga title is available
+      if (kenmeiManga?.title) {
+        idMatches = reRankSearchResults(idMatches, kenmeiManga.title);
+      }
 
       updateSearchResults(idMatches, pageNum, {
         hasNextPage: false,
@@ -223,7 +280,7 @@ export function MangaSearchPanel({
       pageNum,
     );
 
-    const results = searchResponse.matches;
+    let results = searchResponse.matches as MangaMatch[];
     const pageInfo = searchResponse.pageInfo;
     const endTime = performance.now();
 
@@ -233,6 +290,11 @@ export function MangaSearchPanel({
     console.info(
       `[SearchPanel] 🔎 Search returned ${results.length} results for "${query}"`,
     );
+
+    // Apply re-ranking if kenmeiManga title is available
+    if (kenmeiManga?.title) {
+      results = reRankSearchResults(results, kenmeiManga.title);
+    }
 
     logSearchResults(results, query);
     updateSearchResults(results, pageNum, pageInfo);

@@ -12,6 +12,18 @@ import type { ReadingHistory, ReadingHistoryEntry } from "./storage";
 import { getLocalDateString } from "./storage";
 
 /**
+ * Standardized date key format for statistics (yyyy-MM-dd).
+ * All date keys in statistics use the local date string format to ensure consistency.
+ * @param timestamp - Unix timestamp in milliseconds.
+ * @returns Date key in yyyy-MM-dd format.
+ * @source
+ */
+export function getDateKey(timestamp: number): string {
+  // Delegates to getLocalDateString which guarantees yyyy-MM-dd format
+  return getLocalDateString(timestamp);
+}
+
+/**
  * Time range options for filtering and analyzing statistics.
  * @source
  */
@@ -19,11 +31,14 @@ export type TimeRange = "7d" | "30d" | "90d" | "all";
 
 /**
  * Minimal match representation for statistics visualization containing only required chart fields.
+ * Optionally includes confidence score if known at normalization time.
  * @source
  */
 export type SelectedMatchLite = {
   readonly format?: string;
   readonly genres: string[];
+  readonly tags: string[];
+  readonly confidence?: number;
 };
 
 /**
@@ -85,7 +100,8 @@ export function parseMatchDate(raw: unknown): Date | undefined {
 }
 
 /**
- * Builds minimal selectedMatch with format and genres fields only from raw object.
+ * Builds minimal selectedMatch with format, genres, tags, and optional confidence fields from raw object.
+ * Extracts confidence score if present in the raw match data.
  * @param raw - Raw object to build from.
  * @returns SelectedMatchLite or undefined if no valid fields present.
  * @source
@@ -104,11 +120,32 @@ export function buildSelectedMatch(
     ? obj.genres.filter((g) => typeof g === "string")
     : [];
 
-  if (!format && genres.length === 0) return undefined;
+  // Extract tags from tag objects
+  const tags = Array.isArray(obj.tags)
+    ? obj.tags
+        .map((t) =>
+          typeof t === "object" && t !== null && "name" in t
+            ? (t as { name: string }).name
+            : "",
+        )
+        .filter((name) => name.trim() !== "")
+    : [];
+
+  // Extract confidence score if present
+  const confidence =
+    typeof obj.confidence === "number" &&
+    obj.confidence >= 0 &&
+    obj.confidence <= 100
+      ? obj.confidence
+      : undefined;
+
+  if (!format && genres.length === 0 && tags.length === 0) return undefined;
 
   return {
     format,
     genres,
+    tags,
+    ...(confidence !== undefined && { confidence }),
   };
 }
 
@@ -244,6 +281,7 @@ export function filterHistoryByTimeRange(
 
 /**
  * Establishes baseline chapters per manga from latest snapshot before range cutoff to prevent inflated first-day deltas.
+ * Explicitly sorts entries by timestamp descending (newest first) to ensure correct baseline extraction.
  * @param history - Complete reading history.
  * @param cutoffTimestamp - Cutoff time in milliseconds.
  * @returns Map of mangaId to baseline chapters.
@@ -256,10 +294,13 @@ function getPreRangeBaseline(
 ): Map<string | number, number> {
   const baseline = new Map<string | number, number>();
 
+  // Sort entries by timestamp descending (newest first) to find most recent baseline
+  const sorted = [...history.entries].sort((a, b) => b.timestamp - a.timestamp);
+
   // Find most recent snapshot for each manga with timestamp < cutoff
-  for (const entry of history.entries) {
+  for (const entry of sorted) {
     if (entry.timestamp < cutoffTimestamp) {
-      // Only update if this is newer than current baseline (entries are sorted newest first)
+      // Only update if this is newer than current baseline
       const current = baseline.get(entry.mangaId);
       if (current === undefined) {
         baseline.set(entry.mangaId, entry.chaptersRead);
@@ -305,7 +346,7 @@ export function computeReadingTrends(
   const previousChapters = new Map<string | number, number>(preRangeBaseline);
 
   for (const entry of sorted) {
-    const date = getLocalDateString(entry.timestamp);
+    const date = getDateKey(entry.timestamp);
     const prev = previousChapters.get(entry.mangaId) ?? 0;
     const delta = Math.max(0, entry.chaptersRead - prev);
 
@@ -374,7 +415,7 @@ export function computeReadingVelocity(
     const delta = Math.max(0, entry.chaptersRead - prev);
     if (delta > 0) {
       totalChapters += delta;
-      const date = getLocalDateString(entry.timestamp);
+      const date = getDateKey(entry.timestamp);
       activeDates.add(date);
     }
     previousChapters.set(entry.mangaId, entry.chaptersRead);
@@ -525,6 +566,14 @@ export function applyStatisticsFilters(
     });
   }
 
+  // Filter by tags
+  if (filters.tags.length > 0) {
+    filteredMatches = filteredMatches.filter((match) => {
+      const tags = match.selectedMatch?.tags ?? [];
+      return filters.tags.some((filterTag) => tags.includes(filterTag));
+    });
+  }
+
   // Filter by statuses
   if (filters.statuses.length > 0) {
     filteredMatches = filteredMatches.filter((match) =>
@@ -554,19 +603,20 @@ export function applyStatisticsFilters(
   }
 
   // Filter by confidence range
+  // Try to read confidence from selectedMatch first, fall back to max of all anilistMatches
   if (filters.confidenceRange.min > 0 || filters.confidenceRange.max < 100) {
     filteredMatches = filteredMatches.filter((match) => {
-      if (!match.anilistMatches || match.anilistMatches.length === 0) {
-        return filters.confidenceRange.min === 0;
-      }
-      // Use selected match's confidence if available, otherwise fall back to first match
       let confidence = 0;
-      if (match.selectedMatch && "confidence" in match.selectedMatch) {
+      // Prefer selectedMatch confidence if available
+      if (match.selectedMatch?.confidence !== undefined) {
+        confidence = match.selectedMatch.confidence;
+      } else if (match.anilistMatches && match.anilistMatches.length > 0) {
+        // Use maximum confidence across all anilist matches
+        const validConfidences = match.anilistMatches
+          .map((m) => m.confidence ?? 0)
+          .filter((c) => typeof c === "number" && c >= 0);
         confidence =
-          (match.selectedMatch as { confidence?: number }).confidence ?? 0;
-      } else {
-        const firstMatch = match.anilistMatches[0];
-        confidence = firstMatch.confidence ? firstMatch.confidence : 0;
+          validConfidences.length > 0 ? Math.max(...validConfidences) : 0;
       }
       return (
         confidence >= filters.confidenceRange.min &&
@@ -655,10 +705,12 @@ export function extractAvailableFilterOptions(
   genres: string[];
   formats: string[];
   statuses: MatchStatus[];
+  tags: string[];
 } {
   const genresSet = new Set<string>();
   const formatsSet = new Set<string>();
   const statusesSet = new Set<MatchStatus>();
+  const tagsSet = new Set<string>();
 
   for (const match of matchResults) {
     // Extract genres
@@ -673,6 +725,12 @@ export function extractAvailableFilterOptions(
       formatsSet.add(format);
     }
 
+    // Extract tags
+    const tags = match.selectedMatch?.tags ?? [];
+    for (const tag of tags) {
+      tagsSet.add(tag);
+    }
+
     // Extract status
     statusesSet.add(match.status);
   }
@@ -680,9 +738,30 @@ export function extractAvailableFilterOptions(
   return {
     genres: Array.from(genresSet).sort((a, b) => a.localeCompare(b)),
     formats: Array.from(formatsSet).sort((a, b) => a.localeCompare(b)),
-    statuses: Array.from(statusesSet),
+    statuses: Array.from(statusesSet).sort((a, b) => a.localeCompare(b)),
+    tags: Array.from(tagsSet).sort((a, b) => a.localeCompare(b)),
   };
 }
+
+/**
+ * Overload for status-based drill-down: value must be a MatchStatus.
+ */
+export function computeDrillDownData(
+  matchResults: NormalizedMatchForStats[],
+  type: "status",
+  value: MatchStatus,
+  readingHistory: ReadingHistory,
+): import("@/types/statistics").DrillDownData;
+
+/**
+ * Overload for non-status drill-downs: value is a string.
+ */
+export function computeDrillDownData(
+  matchResults: NormalizedMatchForStats[],
+  type: "genre" | "format" | "date",
+  value: string,
+  readingHistory: ReadingHistory,
+): import("@/types/statistics").DrillDownData;
 
 /**
  * Computes drill-down data for a specific filter dimension.
@@ -729,7 +808,7 @@ export function computeDrillDownData(
       // For date drill-down, filter by specific date
       filtered = matchResults.filter((match) => {
         if (!match.matchDate) return false;
-        const matchDateStr = getLocalDateString(match.matchDate.getTime());
+        const matchDateStr = getDateKey(match.matchDate.getTime());
         return matchDateStr === value;
       });
       break;
@@ -741,9 +820,22 @@ export function computeDrillDownData(
     const mangaHistory = readingHistory.entries.filter(
       (entry) => String(entry.mangaId) === mangaId,
     );
-    const chapters =
-      mangaHistory.length > 0 ? mangaHistory.at(-1)!.chaptersRead : 0;
-    const confidence = match.anilistMatches?.[0]?.confidence ?? 0;
+
+    // Sort by timestamp and get the latest entry to ensure correct chapter count
+    const latestEntry =
+      mangaHistory.length > 0
+        ? mangaHistory.toSorted((a, b) => a.timestamp - b.timestamp).at(-1)
+        : null;
+    const chapters = latestEntry?.chaptersRead ?? 0;
+
+    // Compute confidence as selectedMatch.confidence or max across all AniList matches
+    const selectedConfidence = match.selectedMatch?.confidence;
+    const allConfidences = (
+      match.anilistMatches?.map((m) => m.confidence ?? 0) || [0]
+    ).filter(Number.isFinite);
+    const maxConfidence =
+      allConfidences.length > 0 ? Math.max(...allConfidences) : 0;
+    const confidence = selectedConfidence ?? maxConfidence;
 
     return {
       title: match.kenmeiManga.title,
@@ -785,7 +877,7 @@ export function computeDailyDeltasByManga(
   );
 
   for (const entry of sortedEntries) {
-    const date = getLocalDateString(entry.timestamp);
+    const date = getDateKey(entry.timestamp);
     const mangaId = entry.mangaId;
     const prevChapters = prevChaptersPerManga.get(mangaId) ?? 0;
     const delta = Math.max(0, entry.chaptersRead - prevChapters);

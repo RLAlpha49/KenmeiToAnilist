@@ -5,12 +5,63 @@
  */
 
 import Fuse from "fuse.js";
+import type { IFuseOptions } from "fuse.js";
 import type { MangaMatchResult } from "@/api/anilist/types";
 import type {
   QuerySyntaxToken,
   AdvancedMatchFilters,
 } from "@/types/matchingFilters";
 import { DEFAULT_ADVANCED_FILTERS } from "@/types/matchingFilters";
+
+/**
+ * Default Fuse.js options for consistent fuzzy search behavior across components.
+ * Tuned for balanced fuzzy matching with reasonable performance.
+ * @source
+ */
+export const defaultFuseOptions = {
+  threshold: 0.3, // Balance between fuzzy and strict matching
+  distance: 100, // Allow some character distance
+  includeScore: true,
+  minMatchCharLength: 2, // Require minimum 2 characters before matching
+  ignoreLocation: true, // Search anywhere in the string, not just start
+};
+
+/**
+ * Named Fuse.js preset configurations for standardized threshold behavior across components.
+ * Use these presets when calling buildFuse() to ensure consistent fuzzy search behavior.
+ * @source
+ */
+export const FUSE_PRESET_STRICT = { threshold: 0.2 } as const; // Highly strict matching
+export const FUSE_PRESET_BALANCED = { threshold: 0.3 } as const; // Balanced (default)
+export const FUSE_PRESET_LOOSE = { threshold: 0.4 } as const; // Permissive matching
+
+/**
+ * Builds a configured Fuse.js instance with default or custom options.
+ *
+ * Note: For custom field extraction logic, use the top-level `getFn` option via overrides
+ * rather than passing getFn in individual keys. Keys should only contain 'name' and optional 'weight'.
+ *
+ * Important: `useExtendedSearch` defaults to false. To enable Fuse's extended search syntax
+ * (e.g., `'word1 -word2 | phrase'`), explicitly pass `useExtendedSearch: true` in overrides.
+ *
+ * @template T - The data type being searched.
+ * @param list - Array of items to search.
+ * @param keys - Search key definitions (string name or { name: string; weight?: number }).
+ * @param overrides - Optional overrides for default Fuse options (can include top-level getFn and useExtendedSearch).
+ * @returns Configured Fuse instance.
+ * @source
+ */
+export function buildFuse<T>(
+  list: T[],
+  keys: (string | { name: string; weight?: number })[],
+  overrides?: Partial<IFuseOptions<T>>,
+): Fuse<T> {
+  return new Fuse(list, {
+    ...defaultFuseOptions,
+    keys,
+    ...overrides,
+  });
+}
 
 /**
  * Creates a configured Fuse.js instance for manga search.
@@ -21,25 +72,29 @@ import { DEFAULT_ADVANCED_FILTERS } from "@/types/matchingFilters";
  * - English title (30%)
  * - Synonyms (10%)
  *
+ * **Important**: This function explicitly enables `useExtendedSearch` for fuzzy query syntax support
+ * (e.g., 'foo bar' searches for both terms). Callers should be aware that search results will
+ * respect this extended syntax behavior.
+ *
  * @param matches - Array of manga match results to search.
- * @returns Configured Fuse instance.
+ * @returns Configured Fuse instance with extended search enabled.
  * @source
  */
 export function createMangaFuseInstance(
   matches: MangaMatchResult[],
 ): Fuse<MangaMatchResult> {
-  return new Fuse(matches, {
-    keys: [
+  return buildFuse(
+    matches,
+    [
       { name: "kenmeiManga.title", weight: 0.5 },
       { name: "selectedMatch.title.romaji", weight: 0.3 },
       { name: "selectedMatch.title.english", weight: 0.3 },
       { name: "selectedMatch.synonyms", weight: 0.1 },
     ],
-    threshold: 0.35, // Balance between fuzzy and strict
-    distance: 100, // Allow some character distance
-    includeScore: true,
-    useExtendedSearch: true,
-  });
+    {
+      useExtendedSearch: true, // Enable extended search syntax support for query parsing
+    },
+  );
 }
 
 /**

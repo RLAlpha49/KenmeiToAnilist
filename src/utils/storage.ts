@@ -44,7 +44,6 @@ export interface KenmeiManga {
  */
 export interface KenmeiData {
   manga?: KenmeiManga[];
-  // Add other data properties as needed
 }
 
 /**

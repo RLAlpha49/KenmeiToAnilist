@@ -214,9 +214,19 @@ export const SHORTCUTS: Shortcut[] = [
 ];
 
 /**
- * Formats key combination into human-readable string with platform-specific key names (Ctrl vs Cmd on Mac).
+ * Formats key combination into human-readable string with platform-specific key names.
+ *
+ * **Important**: `ctrl` and `meta` modifiers are treated equivalently for labeling purposes.
+ * If both are set, only "Ctrl" (or "Cmd" on macOS) will appear in the output, regardless of
+ * which modifier(s) are actually set. For precise control over labeling on specific platforms,
+ * consider using a single modifier flag rather than relying on the automatic platform detection.
+ *
+ * Platform handling:
+ * - **macOS/iOS**: Displays "Cmd" instead of "Ctrl"
+ * - **Other platforms**: Displays "Ctrl"
+ *
  * @param key - The key combination to format.
- * @returns Human-readable shortcut string (e.g., "Ctrl+Z").
+ * @returns Human-readable shortcut string (e.g., "Ctrl+Z", "Cmd+Shift+S").
  * @source
  */
 export function formatShortcutKey(key: ShortcutKey): string {
@@ -330,6 +340,24 @@ export function matchesShortcut(
  */
 export function getShortcutsByCategory(category: ShortcutCategory): Shortcut[] {
   return SHORTCUTS.filter((shortcut) => shortcut.category === category);
+}
+
+/**
+ * Humanizes a scope value for display in UI.
+ * Converts machine-readable scope names to human-friendly labels.
+ * @param scope - The raw scope value (e.g., "matching-page", "context-aware").
+ * @returns Human-friendly label (e.g., "Matching Page", "Context-Aware").
+ * @source
+ */
+export function humanizeScope(scope?: string): string {
+  if (!scope || scope === "global") {
+    return "Global";
+  }
+
+  return scope
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 }
 
 /**

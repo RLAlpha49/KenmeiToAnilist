@@ -114,6 +114,79 @@ function adaptMatchesForExport(
 }
 
 /**
+ * Compares filters against defaults to determine if any filters are actively applied.
+ * Uses deep comparison to handle nested objects like dateRange and confidenceRange.
+ * @param filters - Current filter state to check
+ * @param defaults - Default filter state to compare against
+ * @returns True if filters differ from defaults in any way
+ */
+function areFiltersActive(
+  filters: StatisticsFilters,
+  defaults: StatisticsFilters,
+): boolean {
+  // Check genres
+  if (
+    filters.genres.length !== defaults.genres.length ||
+    filters.genres.some((g) => !defaults.genres.includes(g))
+  ) {
+    return true;
+  }
+
+  // Check formats
+  if (
+    filters.formats.length !== defaults.formats.length ||
+    filters.formats.some((f) => !defaults.formats.includes(f))
+  ) {
+    return true;
+  }
+
+  // Check tags
+  if (
+    filters.tags.length !== defaults.tags.length ||
+    filters.tags.some((t) => !defaults.tags.includes(t))
+  ) {
+    return true;
+  }
+
+  // Check statuses
+  if (
+    filters.statuses.length !== defaults.statuses.length ||
+    filters.statuses.some((s) => !defaults.statuses.includes(s))
+  ) {
+    return true;
+  }
+
+  // Check dateRange
+  if (
+    filters.dateRange.start !== defaults.dateRange.start ||
+    filters.dateRange.end !== defaults.dateRange.end
+  ) {
+    return true;
+  }
+
+  // Check confidenceRange
+  if (
+    filters.confidenceRange.min !== defaults.confidenceRange.min ||
+    filters.confidenceRange.max !== defaults.confidenceRange.max
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Generates a short error ID for referencing in user-facing error messages.
+ * Format: ERR-{timestamp}-{random hex}
+ * @returns Short error ID string (e.g., "ERR-a1b2c3")
+ */
+function generateErrorId(): string {
+  const timestamp = Date.now().toString(16).slice(-3);
+  const random = Math.random().toString(16).slice(2, 5);
+  return `ERR-${timestamp}${random}`.toUpperCase();
+}
+
+/**
  * StatisticsPage component – visual analytics for import, match, and sync data.
  * Displays comprehensive statistics with charts, filters, and data export capabilities.
  * @returns Rendered statistics dashboard.
@@ -128,9 +201,11 @@ export function StatisticsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
-  const [readingHistory, setReadingHistory] = useState<ReadingHistory | null>(
-    null,
-  );
+  const [readingHistory, setReadingHistory] = useState<ReadingHistory>({
+    entries: [],
+    lastUpdated: 0,
+    version: 1,
+  });
   const [selectedTimeRange, setSelectedTimeRange] = useState<TimeRange>("30d");
   const [statisticsFilters, setStatisticsFilters] = useState<StatisticsFilters>(
     DEFAULT_STATISTICS_FILTERS,
@@ -168,13 +243,16 @@ export function StatisticsPage() {
 
       setLastRefreshedAt(new Date().toISOString());
     } catch (error) {
+      const errorId = generateErrorId();
       captureError(
         ErrorType.STORAGE,
         "Failed to load statistics",
         error instanceof Error ? error : new Error(String(error)),
-        {},
+        { errorId },
       );
-      toast.error("Unable to load statistics. Please try again.");
+      toast.error(
+        `Unable to load statistics. Please try again. (ref: ${errorId})`,
+      );
     }
   }, []);
 
@@ -242,12 +320,6 @@ export function StatisticsPage() {
    * @source
    */
   const filteredData = useMemo(() => {
-    if (!readingHistory) {
-      return {
-        matchResults,
-        readingHistory: { entries: [], lastUpdated: 0, version: 1 },
-      };
-    }
     return applyStatisticsFilters(
       matchResults,
       readingHistory,
@@ -269,7 +341,7 @@ export function StatisticsPage() {
    * @source
    */
   const comparisonDatasets = useMemo(() => {
-    if (!comparisonMode.enabled || !filteredData.readingHistory) {
+    if (!comparisonMode.enabled) {
       return null;
     }
     // Guard: don't compute comparison if ranges are identical
@@ -334,8 +406,8 @@ export function StatisticsPage() {
         title: item.title,
         chapters: item.chapters,
         status: item.status,
-        confidence: item.confidence ?? "N/A",
-        format: item.format ?? "N/A",
+        confidence: item.confidence ?? null,
+        format: item.format ?? null,
       }));
 
       // Export as JSON by default
@@ -349,17 +421,19 @@ export function StatisticsPage() {
       const file = exportToJson(payload, `drill-down-${drillDownData.type}`);
       toast.success(`Drill-down data exported to ${file}`);
     } catch (error) {
+      const errorId = generateErrorId();
       captureError(
         ErrorType.SYSTEM,
         "Failed to export drill-down data",
         error instanceof Error ? error : new Error(String(error)),
         {
+          errorId,
           type: drillDownData?.type,
           value: drillDownData?.value,
           count: drillDownData?.data?.length,
         },
       );
-      toast.error("Failed to export drill-down data");
+      toast.error(`Failed to export drill-down data (ref: ${errorId})`);
     }
   }, [drillDownData]);
 
@@ -446,6 +520,7 @@ export function StatisticsPage() {
             availableGenres={filterOptions.genres}
             availableFormats={filterOptions.formats}
             availableStatuses={filterOptions.statuses}
+            availableTags={filterOptions.tags}
             matchCount={filteredData.matchResults.length}
           />
         </motion.div>
@@ -660,18 +735,10 @@ export function StatisticsPage() {
                   disabled={!hasAnyData}
                   appliedFilters={statisticsFilters}
                   comparisonMode={comparisonMode}
-                  isFiltered={Object.values(statisticsFilters).some((value) => {
-                    if (Array.isArray(value)) return value.length > 0;
-                    if (typeof value === "object" && value) {
-                      return Object.values(value).some(
-                        (v) =>
-                          v !== null &&
-                          v !== undefined &&
-                          (typeof v === "number" ? v !== 0 && v !== 100 : v),
-                      );
-                    }
-                    return false;
-                  })}
+                  isFiltered={areFiltersActive(
+                    statisticsFilters,
+                    DEFAULT_STATISTICS_FILTERS,
+                  )}
                 />
                 {hasAnyData && (
                   <>
