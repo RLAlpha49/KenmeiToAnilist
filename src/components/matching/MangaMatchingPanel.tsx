@@ -31,6 +31,9 @@ import {
   saveMatchConfig,
   getMatchFilters,
   saveMatchFilters,
+  getFilterPresets,
+  addFilterPreset,
+  deleteFilterPreset,
 } from "../../utils/storage";
 
 // Import filtering utilities
@@ -39,11 +42,21 @@ import {
   extractUniqueGenres,
   extractUniqueFormats,
   extractUniqueStatuses,
+  extractUniqueTags,
+  extractYearRange,
 } from "../sync/filtering";
 import {
   DEFAULT_ADVANCED_FILTERS,
   type AdvancedMatchFilters,
+  type FilterPreset,
 } from "../../types/matchingFilters";
+
+// Import fuzzy search utilities
+import {
+  fuzzySearchManga,
+  parseQuerySyntax,
+  applyQueryToFilters,
+} from "../../utils/fuzzySearch";
 
 // Import shadcn UI components
 import {
@@ -157,6 +170,8 @@ export function MangaMatchingPanel({
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedMatchFilters>(
     DEFAULT_ADVANCED_FILTERS,
   );
+  const [userPresets, setUserPresets] = useState<FilterPreset[]>([]);
+  const [useFuzzySearch, setUseFuzzySearch] = useState(true);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const lastExternalSearchQuery = useRef<string | undefined>(undefined);
@@ -210,6 +225,15 @@ export function MangaMatchingPanel({
       setAdvancedFilters(savedFilters);
     };
     loadAdvancedFilters();
+  }, []);
+
+  // Load user presets from storage
+  useEffect(() => {
+    const loadUserPresets = () => {
+      const presets = getFilterPresets();
+      setUserPresets(presets);
+    };
+    loadUserPresets();
   }, []);
 
   // Save advanced filters to storage (debounced)
@@ -337,7 +361,7 @@ export function MangaMatchingPanel({
   // Handler for removing individual filters
   const handleRemoveFilter = useCallback(
     (
-      filterType: "confidence" | "format" | "genre" | "status",
+      filterType: "confidence" | "format" | "genre" | "status" | "year" | "tag",
       value?: string,
     ) => {
       setAdvancedFilters((prev) => {
@@ -358,6 +382,13 @@ export function MangaMatchingPanel({
                 (s) => s !== value,
               ),
             };
+          case "year":
+            return { ...prev, yearRange: { min: null, max: null } };
+          case "tag":
+            return {
+              ...prev,
+              tags: (prev.tags || []).filter((t) => t !== value),
+            };
           default:
             return prev;
         }
@@ -370,6 +401,36 @@ export function MangaMatchingPanel({
   const handleClearAllFilters = useCallback(() => {
     setAdvancedFilters(DEFAULT_ADVANCED_FILTERS);
     setCurrentPage(1);
+  }, []);
+
+  // Handler for saving a preset
+  const handleSavePreset = useCallback(
+    (name: string, description?: string) => {
+      const newPreset = addFilterPreset({
+        name,
+        description,
+        filters: advancedFilters,
+      });
+      setUserPresets((prev) => [...prev, newPreset]);
+      console.log("[MangaMatchingPanel] Saved filter preset:", name);
+    },
+    [advancedFilters],
+  );
+
+  // Handler for applying a preset
+  const handleApplyPreset = useCallback((preset: FilterPreset) => {
+    setAdvancedFilters(preset.filters);
+    setCurrentPage(1);
+    console.log("[MangaMatchingPanel] Applied filter preset:", preset.name);
+  }, []);
+
+  // Handler for deleting a preset
+  const handleDeletePreset = useCallback((presetId: string) => {
+    const success = deleteFilterPreset(presetId);
+    if (success) {
+      setUserPresets((prev) => prev.filter((p) => p.id !== presetId));
+      console.log("[MangaMatchingPanel] Deleted filter preset:", presetId);
+    }
   }, []);
 
   // Process matches to filter out Light Novels from alternatives
@@ -431,6 +492,14 @@ export function MangaMatchingPanel({
     () => extractUniqueStatuses(processedMatches),
     [processedMatches],
   );
+  const availableTags = useMemo(
+    () => extractUniqueTags(processedMatches, advancedFilters.tags),
+    [processedMatches, advancedFilters.tags],
+  );
+  const yearRange = useMemo(
+    () => extractYearRange(processedMatches),
+    [processedMatches],
+  );
 
   // Apply filters in order: status → advanced → search
   const filteredMatches = useMemo(() => {
@@ -452,22 +521,66 @@ export function MangaMatchingPanel({
 
     // Finally apply search term
     if (searchTerm) {
-      filtered = filtered.filter(
-        (match) =>
-          match.kenmeiManga.title
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          match.selectedMatch?.title?.english
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          match.selectedMatch?.title?.romaji
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase()),
-      );
+      // Check if search contains query syntax
+      const tokens = parseQuerySyntax(searchTerm);
+      const hasFieldTokens = tokens.some((t) => t.type === "field");
+      const textTokens = tokens.filter((t) => t.type === "text");
+
+      if (hasFieldTokens) {
+        // Apply query syntax to filters (temporarily)
+        const queryFilters = applyQueryToFilters(tokens, advancedFilters);
+        filtered = filterByAdvancedCriteria(filtered, queryFilters);
+
+        // Apply text token matching if present
+        if (textTokens.length > 0) {
+          const textQuery = textTokens.map((t) => t.value).join(" ");
+          if (useFuzzySearch) {
+            // Use fuzzy search for text tokens
+            filtered = fuzzySearchManga(textQuery, filtered);
+          } else {
+            // Fallback to substring search for text tokens (case-insensitive)
+            filtered = filtered.filter(
+              (match) =>
+                match.kenmeiManga.title
+                  .toLowerCase()
+                  .includes(textQuery.toLowerCase()) ||
+                match.selectedMatch?.title?.english
+                  ?.toLowerCase()
+                  .includes(textQuery.toLowerCase()) ||
+                match.selectedMatch?.title?.romaji
+                  ?.toLowerCase()
+                  .includes(textQuery.toLowerCase()),
+            );
+          }
+        }
+      } else if (useFuzzySearch) {
+        // Use fuzzy search for plain text
+        filtered = fuzzySearchManga(searchTerm, filtered);
+      } else {
+        // Fallback to simple substring search
+        filtered = filtered.filter(
+          (match) =>
+            match.kenmeiManga.title
+              .toLowerCase()
+              .includes(searchTerm.toLowerCase()) ||
+            match.selectedMatch?.title?.english
+              ?.toLowerCase()
+              .includes(searchTerm.toLowerCase()) ||
+            match.selectedMatch?.title?.romaji
+              ?.toLowerCase()
+              .includes(searchTerm.toLowerCase()),
+        );
+      }
     }
 
     return filtered;
-  }, [processedMatches, statusFilters, advancedFilters, searchTerm]);
+  }, [
+    processedMatches,
+    statusFilters,
+    advancedFilters,
+    searchTerm,
+    useFuzzySearch,
+  ]);
 
   // Sort the filtered matches
   const sortedMatches = [...filteredMatches].sort((a, b) => {
@@ -1057,6 +1170,27 @@ export function MangaMatchingPanel({
 
           <CollapsibleContent>
             <CardContent className="relative z-10 space-y-4 pb-5">
+              {/* Fuzzy Search Toggle */}
+              <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/50 p-3 dark:border-slate-700 dark:bg-slate-800/30">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-indigo-500" />
+                  <label
+                    htmlFor="fuzzy-search-toggle"
+                    className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                  >
+                    Fuzzy Search
+                  </label>
+                </div>
+                <input
+                  id="fuzzy-search-toggle"
+                  type="checkbox"
+                  checked={useFuzzySearch}
+                  onChange={(e) => setUseFuzzySearch(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:border-slate-600"
+                  title="Enable fuzzy matching for more flexible search results"
+                />
+              </div>
+
               {/* Advanced Filter Panel */}
               <AdvancedFilterPanel
                 filters={advancedFilters}
@@ -1064,7 +1198,13 @@ export function MangaMatchingPanel({
                 availableGenres={availableGenres}
                 availableFormats={availableFormats}
                 availableStatuses={availableStatuses}
+                availableTags={availableTags}
+                yearRange={yearRange}
                 matchCount={filteredMatches.length}
+                userPresets={userPresets}
+                onSavePreset={handleSavePreset}
+                onApplyPreset={handleApplyPreset}
+                onDeletePreset={handleDeletePreset}
               />
 
               {/* Alternative Search Settings */}

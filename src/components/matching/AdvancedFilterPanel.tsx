@@ -6,6 +6,9 @@ import {
   Book,
   TrendingUp,
   ChevronRight,
+  Star,
+  Trash2,
+  Save,
 } from "lucide-react";
 import {
   Card,
@@ -14,16 +17,29 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Collapsible,
   CollapsibleTrigger,
   CollapsibleContent,
 } from "@/components/ui/collapsible";
 import { RangeSlider } from "@/components/ui/slider";
-import type { AdvancedMatchFilters } from "@/types/matchingFilters";
+import type {
+  AdvancedMatchFilters,
+  FilterPreset,
+} from "@/types/matchingFilters";
 import { formatLabel, statusLabel } from "./labels";
 
 /**
@@ -33,7 +49,13 @@ import { formatLabel, statusLabel } from "./labels";
  * @property availableGenres - List of available genres to filter by.
  * @property availableFormats - List of available formats to filter by.
  * @property availableStatuses - List of available publication statuses to filter by.
+ * @property availableTags - List of available tags to filter by.
+ * @property yearRange - Min/max years in dataset.
  * @property matchCount - Total number of matches to display.
+ * @property userPresets - User-created filter presets.
+ * @property onSavePreset - Callback to save current filters as preset.
+ * @property onApplyPreset - Callback to apply a preset.
+ * @property onDeletePreset - Callback to delete a preset.
  * @source
  */
 interface AdvancedFilterPanelProps {
@@ -42,11 +64,17 @@ interface AdvancedFilterPanelProps {
   availableGenres: string[];
   availableFormats: string[];
   availableStatuses: string[];
+  availableTags: string[];
+  yearRange: { min: number | null; max: number | null };
   matchCount: number;
+  userPresets: FilterPreset[];
+  onSavePreset: (name: string, description?: string) => void;
+  onApplyPreset: (preset: FilterPreset) => void;
+  onDeletePreset: (presetId: string) => void;
 }
 
 /**
- * Filter preset configuration for quick-apply filtering.
+ * Built-in filter preset configuration for quick-apply filtering.
  * @property id - Unique identifier for the preset.
  * @property name - Display name of the preset.
  * @property description - Tooltip description of what the preset filters for.
@@ -54,7 +82,7 @@ interface AdvancedFilterPanelProps {
  * @property filters - Filter values to apply when selected.
  * @source
  */
-interface FilterPreset {
+interface BuiltInFilterPreset {
   id: string;
   name: string;
   description: string;
@@ -67,7 +95,7 @@ interface FilterPreset {
  * Includes presets for high confidence, low confidence, specific formats, and statuses.
  * @source
  */
-const FILTER_PRESETS: FilterPreset[] = [
+const BUILT_IN_PRESETS: BuiltInFilterPreset[] = [
   {
     id: "high-confidence",
     name: "High Confidence",
@@ -78,6 +106,8 @@ const FILTER_PRESETS: FilterPreset[] = [
       formats: [],
       genres: [],
       publicationStatuses: [],
+      yearRange: { min: null, max: null },
+      tags: [],
     },
   },
   {
@@ -90,6 +120,8 @@ const FILTER_PRESETS: FilterPreset[] = [
       formats: [],
       genres: [],
       publicationStatuses: [],
+      yearRange: { min: null, max: null },
+      tags: [],
     },
   },
   {
@@ -102,6 +134,8 @@ const FILTER_PRESETS: FilterPreset[] = [
       formats: ["MANGA"],
       genres: [],
       publicationStatuses: [],
+      yearRange: { min: null, max: null },
+      tags: [],
     },
   },
   {
@@ -114,6 +148,8 @@ const FILTER_PRESETS: FilterPreset[] = [
       formats: [],
       genres: [],
       publicationStatuses: ["RELEASING"],
+      yearRange: { min: null, max: null },
+      tags: [],
     },
   },
 ];
@@ -131,10 +167,20 @@ export function AdvancedFilterPanel({
   availableGenres,
   availableFormats,
   availableStatuses,
+  availableTags,
+  yearRange,
   matchCount,
+  userPresets,
+  onSavePreset,
+  onApplyPreset,
+  onDeletePreset,
 }: Readonly<AdvancedFilterPanelProps>) {
   const [isOpen, setIsOpen] = useState(false);
   const [genreSearch, setGenreSearch] = useState("");
+  const [tagSearch, setTagSearch] = useState("");
+  const [showPresetDialog, setShowPresetDialog] = useState(false);
+  const [presetName, setPresetName] = useState("");
+  const [presetDescription, setPresetDescription] = useState("");
 
   // Memoize filtered genres to avoid recomputation on every render
   const filteredGenres = useMemo(() => {
@@ -145,15 +191,27 @@ export function AdvancedFilterPanel({
     );
   }, [availableGenres, genreSearch]);
 
+  // Memoize filtered tags to avoid recomputation on every render
+  const filteredTags = useMemo(() => {
+    if (!tagSearch.trim()) return availableTags;
+    const search = tagSearch.toLowerCase();
+    return availableTags.filter((tag) => tag.toLowerCase().includes(search));
+  }, [availableTags, tagSearch]);
+
   // Memoize active filter count for badge display
   const activeFilterCount = useMemo(() => {
     const isDefaultConfidence =
       filters.confidence.min === 0 && filters.confidence.max === 100;
+    const hasYearRange =
+      filters.yearRange &&
+      (filters.yearRange.min !== null || filters.yearRange.max !== null);
     return (
       (isDefaultConfidence ? 0 : 1) +
       filters.formats.length +
       filters.genres.length +
-      filters.publicationStatuses.length
+      filters.publicationStatuses.length +
+      (hasYearRange ? 1 : 0) +
+      (filters.tags?.length || 0)
     );
   }, [filters]);
 
@@ -186,9 +244,45 @@ export function AdvancedFilterPanel({
     onFiltersChange({ ...filters, publicationStatuses: newStatuses });
   };
 
-  // Apply preset filter configuration
-  const handlePresetApply = (preset: FilterPreset) => {
+  // Add or remove tag filter
+  const handleTagToggle = (tag: string) => {
+    const currentTags = filters.tags || [];
+    const newTags = currentTags.includes(tag)
+      ? currentTags.filter((t) => t !== tag)
+      : [...currentTags, tag];
+    onFiltersChange({ ...filters, tags: newTags });
+  };
+
+  // Handle year range change
+  const handleYearRangeChange = (min: number | null, max: number | null) => {
+    onFiltersChange({ ...filters, yearRange: { min, max } });
+  };
+
+  // Apply built-in preset filter configuration
+  const handleBuiltInPresetApply = (preset: BuiltInFilterPreset) => {
     onFiltersChange(preset.filters);
+  };
+
+  // Apply user preset
+  const handleUserPresetApply = (preset: FilterPreset) => {
+    onApplyPreset(preset);
+  };
+
+  // Save current filters as preset
+  const handleSavePreset = () => {
+    if (presetName.trim()) {
+      onSavePreset(presetName.trim(), presetDescription.trim() || undefined);
+      setPresetName("");
+      setPresetDescription("");
+      setShowPresetDialog(false);
+    }
+  };
+
+  // Delete preset with confirmation
+  const handleDeletePreset = (presetId: string, presetName: string) => {
+    if (globalThis.confirm(`Delete preset "${presetName}"?`)) {
+      onDeletePreset(presetId);
+    }
   };
 
   // Reset all filters to default state
@@ -198,6 +292,8 @@ export function AdvancedFilterPanel({
       formats: [],
       genres: [],
       publicationStatuses: [],
+      yearRange: { min: null, max: null },
+      tags: [],
     });
   };
 
@@ -209,6 +305,16 @@ export function AdvancedFilterPanel({
   // Deselect all genres
   const handleClearAllGenres = () => {
     onFiltersChange({ ...filters, genres: [] });
+  };
+
+  // Select all tags at once
+  const handleSelectAllTags = () => {
+    onFiltersChange({ ...filters, tags: availableTags });
+  };
+
+  // Deselect all tags
+  const handleClearAllTags = () => {
+    onFiltersChange({ ...filters, tags: [] });
   };
 
   return (
@@ -248,23 +354,71 @@ export function AdvancedFilterPanel({
           </div>
 
           {/* Filter presets */}
-          <div className="flex flex-wrap gap-2 pt-3">
-            {FILTER_PRESETS.map((preset) => {
-              const PresetIcon = preset.icon;
-              return (
-                <Button
-                  key={preset.id}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePresetApply(preset)}
-                  className="h-7 gap-1.5 text-xs"
-                  title={preset.description}
-                >
-                  <PresetIcon className="h-3 w-3" />
-                  {preset.name}
-                </Button>
-              );
-            })}
+          <div className="space-y-3 pt-3">
+            {/* Built-in presets */}
+            <div className="flex flex-wrap gap-2">
+              {BUILT_IN_PRESETS.map((preset) => {
+                const PresetIcon = preset.icon;
+                return (
+                  <Button
+                    key={preset.id}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBuiltInPresetApply(preset)}
+                    className="h-7 gap-1.5 text-xs"
+                    title={preset.description}
+                  >
+                    <PresetIcon className="h-3 w-3" />
+                    {preset.name}
+                  </Button>
+                );
+              })}
+            </div>
+
+            {/* User presets */}
+            {userPresets.length > 0 && (
+              <>
+                <div className="border-t border-slate-200 dark:border-slate-700" />
+                <div className="flex flex-wrap gap-2">
+                  {userPresets.map((preset) => (
+                    <div key={preset.id} className="group relative">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleUserPresetApply(preset)}
+                        className="h-7 gap-1.5 pr-8 text-xs"
+                        title={preset.description || preset.name}
+                      >
+                        <Star className="h-3 w-3" />
+                        {preset.name}
+                      </Button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeletePreset(preset.id, preset.name);
+                        }}
+                        className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5 opacity-0 transition-opacity hover:bg-slate-200 group-hover:opacity-100 dark:hover:bg-slate-700"
+                        aria-label={`Delete ${preset.name}`}
+                      >
+                        <Trash2 className="h-3 w-3 text-slate-500 dark:text-slate-400" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Save preset button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowPresetDialog(true)}
+              className="h-7 gap-1.5 text-xs"
+            >
+              <Save className="h-3 w-3" />
+              Save Current Filters
+            </Button>
           </div>
         </CardHeader>
 
@@ -287,6 +441,87 @@ export function AdvancedFilterPanel({
                 value={filters.confidence}
                 onChange={handleConfidenceChange}
               />
+            </div>
+
+            {/* Year Range Filter */}
+            <div className="space-y-3">
+              <div>
+                <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Publication Year
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Filter by year of publication
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <label
+                    htmlFor="year-min"
+                    className="mb-1 block text-xs text-slate-500 dark:text-slate-400"
+                  >
+                    From
+                  </label>
+                  <Input
+                    id="year-min"
+                    type="number"
+                    min={yearRange.min || 1900}
+                    max={yearRange.max || new Date().getFullYear()}
+                    value={filters.yearRange?.min ?? ""}
+                    onChange={(e) =>
+                      handleYearRangeChange(
+                        e.target.value
+                          ? Number.parseInt(e.target.value, 10)
+                          : null,
+                        filters.yearRange?.max ?? null,
+                      )
+                    }
+                    placeholder="Min"
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label
+                    htmlFor="year-max"
+                    className="mb-1 block text-xs text-slate-500 dark:text-slate-400"
+                  >
+                    To
+                  </label>
+                  <Input
+                    id="year-max"
+                    type="number"
+                    min={yearRange.min || 1900}
+                    max={yearRange.max || new Date().getFullYear()}
+                    value={filters.yearRange?.max ?? ""}
+                    onChange={(e) =>
+                      handleYearRangeChange(
+                        filters.yearRange?.min ?? null,
+                        e.target.value
+                          ? Number.parseInt(e.target.value, 10)
+                          : null,
+                      )
+                    }
+                    placeholder="Max"
+                    className="h-8 text-sm"
+                  />
+                </div>
+              </div>
+              {(filters.yearRange?.min !== null ||
+                filters.yearRange?.max !== null) && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    Showing: {filters.yearRange?.min || "Any"} -{" "}
+                    {filters.yearRange?.max || "Any"}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleYearRangeChange(null, null)}
+                    className="h-6 text-xs"
+                  >
+                    Clear
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Format Filter */}
@@ -385,6 +620,76 @@ export function AdvancedFilterPanel({
               </div>
             )}
 
+            {/* Tags Filter */}
+            {availableTags.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      Tags
+                    </div>
+                    {(filters.tags?.length || 0) > 0 && (
+                      <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">
+                        ({filters.tags?.length || 0} selected)
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSelectAllTags}
+                      className="h-6 text-xs"
+                    >
+                      Select All
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleClearAllTags}
+                      className="h-6 text-xs"
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Tag search */}
+                <Input
+                  type="text"
+                  placeholder="Search tags..."
+                  value={tagSearch}
+                  onChange={(e) => setTagSearch(e.target.value)}
+                  className="h-8 text-sm"
+                />
+
+                {/* Tag list */}
+                <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
+                  {filteredTags.length > 0 ? (
+                    filteredTags.map((tag) => (
+                      <div key={tag} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`tag-${tag}`}
+                          checked={filters.tags?.includes(tag) || false}
+                          onCheckedChange={() => handleTagToggle(tag)}
+                        />
+                        <label
+                          htmlFor={`tag-${tag}`}
+                          className="cursor-pointer text-sm text-slate-700 dark:text-slate-300"
+                        >
+                          {tag}
+                        </label>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-center text-xs text-slate-500 dark:text-slate-400">
+                      No tags found
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Publication Status Filter */}
             {availableStatuses.length > 0 && (
               <div className="space-y-3">
@@ -428,6 +733,66 @@ export function AdvancedFilterPanel({
           </CardContent>
         </CollapsibleContent>
       </Collapsible>
+
+      {/* Preset Save Dialog */}
+      <Dialog open={showPresetDialog} onOpenChange={setShowPresetDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save Filter Preset</DialogTitle>
+            <DialogDescription>
+              Save your current filter configuration for quick access later.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label
+                htmlFor="preset-name"
+                className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                Preset Name *
+              </label>
+              <Input
+                id="preset-name"
+                value={presetName}
+                onChange={(e) => setPresetName(e.target.value)}
+                placeholder="e.g., High Quality Action"
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="preset-description"
+                className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                Description (optional)
+              </label>
+              <Textarea
+                id="preset-description"
+                value={presetDescription}
+                onChange={(e) => setPresetDescription(e.target.value)}
+                placeholder="Describe what this preset filters for..."
+                rows={3}
+                className="w-full resize-none"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowPresetDialog(false);
+                setPresetName("");
+                setPresetDescription("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSavePreset} disabled={!presetName.trim()}>
+              Save Preset
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { AdvancedMatchFilters } from "@/types/matchingFilters";
-import { formatLabel, statusLabel } from "./labels";
+import { formatLabel, statusLabel, yearRangeLabel } from "./labels";
 
 /**
  * Props for the FilterChips component.
@@ -15,7 +15,7 @@ import { formatLabel, statusLabel } from "./labels";
 interface FilterChipsProps {
   filters: AdvancedMatchFilters;
   onRemoveFilter: (
-    filterType: "confidence" | "format" | "genre" | "status",
+    filterType: "confidence" | "format" | "genre" | "status" | "year" | "tag",
     value?: string,
   ) => void;
   onClearAll: () => void;
@@ -37,12 +37,19 @@ export function FilterChips({
   const isDefaultConfidence =
     filters.confidence.min === 0 && filters.confidence.max === 100;
 
+  // Check if year range is set
+  const hasYearRange =
+    filters.yearRange &&
+    (filters.yearRange.min !== null || filters.yearRange.max !== null);
+
   // Count total active filters
   const activeFilterCount =
     (isDefaultConfidence ? 0 : 1) +
     filters.formats.length +
     filters.genres.length +
-    filters.publicationStatuses.length;
+    filters.publicationStatuses.length +
+    (hasYearRange ? 1 : 0) +
+    (filters.tags?.length || 0);
 
   // Return early if no active filters
   if (activeFilterCount === 0) {
@@ -52,6 +59,10 @@ export function FilterChips({
   // Limit displayed genres to prevent overflow
   const displayedGenres = filters.genres.slice(0, 5);
   const remainingGenresCount = filters.genres.length - displayedGenres.length;
+
+  // Limit displayed tags to prevent overflow
+  const displayedTags = filters.tags?.slice(0, 5) || [];
+  const remainingTagsCount = (filters.tags?.length || 0) - displayedTags.length;
 
   return (
     <div className="animate-in fade-in slide-in-from-top-2 rounded-lg border border-slate-200 bg-slate-50/50 p-3 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-800/30">
@@ -70,6 +81,24 @@ export function FilterChips({
               onClick={() => onRemoveFilter("confidence")}
               aria-label="Remove confidence filter"
               className="rounded-full p-0.5 transition-colors hover:bg-blue-200 dark:hover:bg-blue-800/60"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        )}
+
+        {/* Year Range Chip */}
+        {hasYearRange && filters.yearRange && (
+          <Badge
+            variant="secondary"
+            className="gap-1.5 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:hover:bg-amber-900/60"
+          >
+            <span>Year: {yearRangeLabel(filters.yearRange)}</span>
+            <button
+              type="button"
+              onClick={() => onRemoveFilter("year")}
+              aria-label="Remove year filter"
+              className="rounded-full p-0.5 transition-colors hover:bg-amber-200 dark:hover:bg-amber-800/60"
             >
               <X className="h-3 w-3" />
             </button>
@@ -121,6 +150,35 @@ export function FilterChips({
             className="rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300"
           >
             +{remainingGenresCount} more
+          </Badge>
+        )}
+
+        {/* Tag Chips */}
+        {displayedTags.map((tag) => (
+          <Badge
+            key={tag}
+            variant="secondary"
+            className="gap-1.5 rounded-full bg-teal-100 text-teal-700 hover:bg-teal-200 dark:bg-teal-900/40 dark:text-teal-300 dark:hover:bg-teal-900/60"
+          >
+            <span>{tag}</span>
+            <button
+              type="button"
+              onClick={() => onRemoveFilter("tag", tag)}
+              aria-label={`Remove ${tag} tag filter`}
+              className="rounded-full p-0.5 transition-colors hover:bg-teal-200 dark:hover:bg-teal-800/60"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        ))}
+
+        {/* Remaining tags badge */}
+        {remainingTagsCount > 0 && (
+          <Badge
+            variant="secondary"
+            className="rounded-full bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300"
+          >
+            +{remainingTagsCount} more
           </Badge>
         )}
 

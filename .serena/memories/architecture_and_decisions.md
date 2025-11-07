@@ -108,20 +108,6 @@ Exposes 5 domain contexts:
 
 **Error Handling**: `src/utils/errorHandling.ts`
 
-```typescript
-enum ErrorType {
-  UNKNOWN,
-  VALIDATION,
-  NETWORK,
-  AUTH,
-  SERVER,
-  CLIENT,
-  STORAGE,
-  AUTHENTICATION,
-  SYSTEM,
-}
-```
-
 ## Routing Architecture
 
 **Pattern**: TanStack Router with memory history (no URLs for Electron)

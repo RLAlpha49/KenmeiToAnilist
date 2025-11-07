@@ -3,7 +3,10 @@
  * @module storage
  * @description Storage utilities for Kenmei data, sync configuration, and match results. Provides abstraction over localStorage and electron-store for persistence and migration.
  */
-import type { AdvancedMatchFilters } from "../types/matchingFilters";
+import type {
+  AdvancedMatchFilters,
+  FilterPreset,
+} from "../types/matchingFilters";
 import { DEFAULT_ADVANCED_FILTERS } from "../types/matchingFilters";
 
 declare global {
@@ -409,6 +412,7 @@ export const STORAGE_KEYS = {
   SYNC_STATS: "sync_stats",
   MATCH_CONFIG: "match_config",
   MATCH_FILTERS: "match_filters",
+  MATCH_FILTER_PRESETS: "match_filter_presets",
   IGNORED_DUPLICATES: "ignored_duplicates",
   ACTIVE_SYNC_SNAPSHOT: "active_sync_snapshot",
   ANILIST_SEARCH_CACHE: "anilist_search_cache",
@@ -1082,12 +1086,44 @@ export function getMatchFilters(): AdvancedMatchFilters {
     const formats = validateStringArray(parsed.formats);
     const genres = validateStringArray(parsed.genres);
     const publicationStatuses = validateStringArray(parsed.publicationStatuses);
+    const tags = validateStringArray(parsed.tags);
+
+    // Validate and sanitize yearRange
+    const yearRange: { min: number | null; max: number | null } = {
+      min: null,
+      max: null,
+    };
+    if (parsed.yearRange) {
+      const minYear =
+        typeof parsed.yearRange.min === "number" ? parsed.yearRange.min : null;
+      const maxYear =
+        typeof parsed.yearRange.max === "number" ? parsed.yearRange.max : null;
+
+      // Clamp to reasonable range
+      if (minYear !== null) {
+        yearRange.min = Math.max(1900, Math.min(2100, minYear));
+      }
+      if (maxYear !== null) {
+        yearRange.max = Math.max(1900, Math.min(2100, maxYear));
+      }
+
+      // Ensure min <= max if both are set
+      if (
+        yearRange.min !== null &&
+        yearRange.max !== null &&
+        yearRange.min > yearRange.max
+      ) {
+        [yearRange.min, yearRange.max] = [yearRange.max, yearRange.min];
+      }
+    }
 
     return {
       confidence: { min: minConfidence, max: maxConfidence },
       formats,
       genres,
       publicationStatuses,
+      yearRange,
+      tags,
     };
   } catch (error) {
     console.error("[Storage] Failed to load match filters:", error);
@@ -1107,6 +1143,132 @@ export function saveMatchFilters(filters: AdvancedMatchFilters): void {
   } catch (error) {
     console.error("[Storage] Failed to save match filters:", error);
   }
+}
+
+/**
+ * Retrieves user-created filter presets.
+ * @returns Array of filter presets, empty array if none found or error.
+ * @source
+ */
+export function getFilterPresets(): FilterPreset[] {
+  try {
+    const saved = storage.getItem(STORAGE_KEYS.MATCH_FILTER_PRESETS);
+    if (!saved) {
+      return [];
+    }
+
+    const parsed = JSON.parse(saved);
+    if (!Array.isArray(parsed)) {
+      console.error("[Storage] Filter presets is not an array");
+      return [];
+    }
+
+    // Validate each preset structure
+    const validPresets = parsed.filter((preset): preset is FilterPreset => {
+      return (
+        typeof preset === "object" &&
+        typeof preset.id === "string" &&
+        typeof preset.name === "string" &&
+        typeof preset.filters === "object" &&
+        typeof preset.createdAt === "string" &&
+        typeof preset.updatedAt === "string"
+      );
+    });
+
+    return validPresets;
+  } catch (error) {
+    console.error("[Storage] Failed to load filter presets:", error);
+    return [];
+  }
+}
+
+/**
+ * Saves filter presets array.
+ * @param presets - Array of filter presets to save.
+ * @source
+ */
+export function saveFilterPresets(presets: FilterPreset[]): void {
+  try {
+    storage.setItem(STORAGE_KEYS.MATCH_FILTER_PRESETS, JSON.stringify(presets));
+    console.debug("[Storage] Saved filter presets:", presets.length);
+  } catch (error) {
+    console.error("[Storage] Failed to save filter presets:", error);
+  }
+}
+
+/**
+ * Adds a new filter preset.
+ * @param preset - Preset data without id and timestamps.
+ * @returns The created preset with id and timestamps.
+ * @source
+ */
+export function addFilterPreset(
+  preset: Omit<FilterPreset, "id" | "createdAt" | "updatedAt">,
+): FilterPreset {
+  const presets = getFilterPresets();
+  const now = new Date().toISOString();
+  const newPreset: FilterPreset = {
+    ...preset,
+    id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  presets.push(newPreset);
+  saveFilterPresets(presets);
+
+  console.debug("[Storage] Added filter preset:", newPreset.name);
+  return newPreset;
+}
+
+/**
+ * Updates an existing filter preset.
+ * @param presetId - ID of preset to update.
+ * @param updates - Partial preset data to update.
+ * @returns True if updated successfully, false if not found.
+ * @source
+ */
+export function updateFilterPreset(
+  presetId: string,
+  updates: Partial<Omit<FilterPreset, "id" | "createdAt" | "updatedAt">>,
+): boolean {
+  const presets = getFilterPresets();
+  const index = presets.findIndex((p) => p.id === presetId);
+
+  if (index === -1) {
+    console.error("[Storage] Filter preset not found:", presetId);
+    return false;
+  }
+
+  presets[index] = {
+    ...presets[index],
+    ...updates,
+    updatedAt: new Date().toISOString(),
+  };
+
+  saveFilterPresets(presets);
+  console.debug("[Storage] Updated filter preset:", presetId);
+  return true;
+}
+
+/**
+ * Deletes a filter preset.
+ * @param presetId - ID of preset to delete.
+ * @returns True if deleted successfully, false if not found.
+ * @source
+ */
+export function deleteFilterPreset(presetId: string): boolean {
+  const presets = getFilterPresets();
+  const filtered = presets.filter((p) => p.id !== presetId);
+
+  if (filtered.length === presets.length) {
+    console.error("[Storage] Filter preset not found:", presetId);
+    return false;
+  }
+
+  saveFilterPresets(filtered);
+  console.debug("[Storage] Deleted filter preset:", presetId);
+  return true;
 }
 
 /**

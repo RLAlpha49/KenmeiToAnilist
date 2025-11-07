@@ -223,8 +223,9 @@ export function filterByAdvancedCriteria(
     // Filter by genres (match if ANY selected genre is present): if no data and filters require genres, reject
     if (filters.genres.length > 0) {
       const genres = matchData?.genres || [];
+      const genresLower = new Set(genres.map((g) => g.toLowerCase()));
       const hasMatchingGenre = filters.genres.some((filterGenre) =>
-        genres.includes(filterGenre),
+        genresLower.has(filterGenre.toLowerCase()),
       );
       if (!hasMatchingGenre) {
         return false;
@@ -237,6 +238,43 @@ export function filterByAdvancedCriteria(
         !matchData?.status ||
         !filters.publicationStatuses.includes(matchData.status)
       ) {
+        return false;
+      }
+    }
+
+    // Filter by year range
+    if (
+      filters.yearRange &&
+      (filters.yearRange.min !== null || filters.yearRange.max !== null)
+    ) {
+      const year = matchData?.startDate?.year;
+
+      // If year filter is active but no year data, exclude
+      if (!year) {
+        return false;
+      }
+
+      // Check min year
+      if (filters.yearRange.min !== null && year < filters.yearRange.min) {
+        return false;
+      }
+
+      // Check max year
+      if (filters.yearRange.max !== null && year > filters.yearRange.max) {
+        return false;
+      }
+    }
+
+    // Filter by tags (match if ANY selected tag is present)
+    if (filters.tags && filters.tags.length > 0) {
+      const tags = matchData?.tags || [];
+      const tagNamesLower = new Set(tags.map((t) => t.name.toLowerCase()));
+      const hasMatchingTag = filters.tags.some((filterTag) =>
+        tagNamesLower.has(filterTag.toLowerCase()),
+      );
+
+      // If tag filter is active but no matching tags, exclude
+      if (!hasMatchingTag) {
         return false;
       }
     }
@@ -305,4 +343,79 @@ export function extractUniqueStatuses(matches: MangaMatchResult[]): string[] {
   }
 
   return Array.from(statusSet).sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Extract unique tags from manga match results for filter options.
+ * Limits to top 100 most common tags for performance, but always includes selected tags.
+ * @param matches - Array of manga match results.
+ * @param selectedTags - Array of currently selected tags to ensure they remain visible.
+ * @returns Array of unique tag names, sorted alphabetically.
+ */
+export function extractUniqueTags(
+  matches: MangaMatchResult[],
+  selectedTags?: string[],
+): string[] {
+  const tagCountMap = new Map<string, number>();
+
+  for (const match of matches) {
+    const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
+    const tags = matchData?.tags || [];
+
+    for (const tag of tags) {
+      if (tag.name) {
+        tagCountMap.set(tag.name, (tagCountMap.get(tag.name) || 0) + 1);
+      }
+    }
+  }
+
+  // Sort by frequency (most common first), then alphabetically
+  const sortedTags = Array.from(tagCountMap.entries())
+    .sort((a, b) => {
+      if (b[1] !== a[1]) {
+        return b[1] - a[1]; // Sort by frequency descending
+      }
+      return a[0].localeCompare(b[0]); // Then alphabetically
+    })
+    .map((entry) => entry[0]);
+
+  // Return top 100 tags, but ensure selected tags are always included
+  const top100 = sortedTags.slice(0, 100);
+  const selectedTagsSet = new Set(selectedTags || []);
+  const missingSelectedTags = top100
+    .filter((tag) => !selectedTagsSet.has(tag))
+    .concat(Array.from(selectedTagsSet).filter((tag) => !top100.includes(tag)))
+    .sort((a, b) => a.localeCompare(b));
+
+  // Combine top 100 with any missing selected tags
+  return Array.from(new Set([...top100, ...missingSelectedTags]));
+}
+
+/**
+ * Extract year range from manga match results.
+ * @param matches - Array of manga match results.
+ * @returns Object with min and max years found, or null if no years found.
+ */
+export function extractYearRange(matches: MangaMatchResult[]): {
+  min: number | null;
+  max: number | null;
+} {
+  let minYear: number | null = null;
+  let maxYear: number | null = null;
+
+  for (const match of matches) {
+    const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
+    const year = matchData?.startDate?.year;
+
+    if (year) {
+      if (minYear === null || year < minYear) {
+        minYear = year;
+      }
+      if (maxYear === null || year > maxYear) {
+        maxYear = year;
+      }
+    }
+  }
+
+  return { min: minYear, max: maxYear };
 }

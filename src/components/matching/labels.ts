@@ -45,3 +45,25 @@ export function statusLabel(status: string): string {
       return status;
   }
 }
+
+/**
+ * Formats year range to human-readable label.
+ * @param yearRange - Year range object with min and max values.
+ * @returns Formatted year range string.
+ * @source
+ */
+export function yearRangeLabel(yearRange: {
+  min: number | null;
+  max: number | null;
+}): string {
+  if (yearRange.min !== null && yearRange.max !== null) {
+    return `${yearRange.min}-${yearRange.max}`;
+  }
+  if (yearRange.min !== null) {
+    return `${yearRange.min}+`;
+  }
+  if (yearRange.max !== null) {
+    return `<${yearRange.max}`;
+  }
+  return "Any year";
+}
