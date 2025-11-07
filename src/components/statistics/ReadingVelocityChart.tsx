@@ -5,7 +5,14 @@
  */
 
 import React, { type FC, useMemo } from "react";
-import { Gauge, TrendingUp, Calendar, AlertCircle } from "lucide-react";
+import {
+  Gauge,
+  TrendingUp,
+  Calendar,
+  AlertCircle,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/utils/tailwind";
 import type { ReadingHistory } from "@/utils/storage";
@@ -20,6 +27,8 @@ interface ReadingVelocityChartProps {
   readonly history: ReadingHistory;
   readonly timeRange: TimeRange;
   readonly className?: string;
+  readonly comparisonData?: ReturnType<typeof computeReadingVelocity>;
+  readonly comparisonLabel?: string;
 }
 
 /**
@@ -33,6 +42,8 @@ export const ReadingVelocityChart: FC<ReadingVelocityChartProps> = ({
   history,
   timeRange,
   className,
+  comparisonData,
+  comparisonLabel,
 }) => {
   // Compute velocity data with memoization
   const velocityData = useMemo(() => {
@@ -97,6 +108,48 @@ export const ReadingVelocityChart: FC<ReadingVelocityChartProps> = ({
                 <div className="mt-2 text-sm font-medium text-blue-600 dark:text-blue-400">
                   chapters/day
                 </div>
+                {comparisonData && (
+                  <div className="mt-3 border-t border-blue-200 pt-2 dark:border-blue-800">
+                    <div className="text-xs text-blue-600 dark:text-blue-400">
+                      {comparisonLabel}: {comparisonData.perDay}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                        {perDay > comparisonData.perDay ? "+" : ""}
+                        {(perDay - comparisonData.perDay).toFixed(2)}
+                      </div>
+                      {comparisonData.perDay > 0 && (
+                        <div className="flex items-center gap-1">
+                          {perDay > comparisonData.perDay ? (
+                            <>
+                              <ArrowUp className="h-3 w-3 text-green-600 dark:text-green-400" />
+                              <span className="text-xs font-medium text-green-600 dark:text-green-400">
+                                {(
+                                  ((perDay - comparisonData.perDay) /
+                                    comparisonData.perDay) *
+                                  100
+                                ).toFixed(1)}
+                                %
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <ArrowDown className="h-3 w-3 text-red-600 dark:text-red-400" />
+                              <span className="text-xs font-medium text-red-600 dark:text-red-400">
+                                {(
+                                  ((perDay - comparisonData.perDay) /
+                                    comparisonData.perDay) *
+                                  100
+                                ).toFixed(1)}
+                                %
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -112,6 +165,48 @@ export const ReadingVelocityChart: FC<ReadingVelocityChartProps> = ({
                 <div className="mt-2 text-sm font-medium text-purple-600 dark:text-purple-400">
                   chapters/week
                 </div>
+                {comparisonData && (
+                  <div className="mt-3 border-t border-purple-200 pt-2 dark:border-purple-800">
+                    <div className="text-xs text-purple-600 dark:text-purple-400">
+                      {comparisonLabel}: {comparisonData.perWeek}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-xs font-medium text-purple-700 dark:text-purple-300">
+                        {perWeek > comparisonData.perWeek ? "+" : ""}
+                        {(perWeek - comparisonData.perWeek).toFixed(2)}
+                      </div>
+                      {comparisonData.perWeek > 0 && (
+                        <div className="flex items-center gap-1">
+                          {perWeek > comparisonData.perWeek ? (
+                            <>
+                              <ArrowUp className="h-3 w-3 text-green-600 dark:text-green-400" />
+                              <span className="text-xs font-medium text-green-600 dark:text-green-400">
+                                {(
+                                  ((perWeek - comparisonData.perWeek) /
+                                    comparisonData.perWeek) *
+                                  100
+                                ).toFixed(1)}
+                                %
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <ArrowDown className="h-3 w-3 text-red-600 dark:text-red-400" />
+                              <span className="text-xs font-medium text-red-600 dark:text-red-400">
+                                {(
+                                  ((perWeek - comparisonData.perWeek) /
+                                    comparisonData.perWeek) *
+                                  100
+                                ).toFixed(1)}
+                                %
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -127,6 +222,48 @@ export const ReadingVelocityChart: FC<ReadingVelocityChartProps> = ({
                 <div className="mt-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">
                   chapters/month
                 </div>
+                {comparisonData && (
+                  <div className="mt-3 border-t border-emerald-200 pt-2 dark:border-emerald-800">
+                    <div className="text-xs text-emerald-600 dark:text-emerald-400">
+                      {comparisonLabel}: {comparisonData.perMonth}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                        {perMonth > comparisonData.perMonth ? "+" : ""}
+                        {(perMonth - comparisonData.perMonth).toFixed(2)}
+                      </div>
+                      {comparisonData.perMonth > 0 && (
+                        <div className="flex items-center gap-1">
+                          {perMonth > comparisonData.perMonth ? (
+                            <>
+                              <ArrowUp className="h-3 w-3 text-green-600 dark:text-green-400" />
+                              <span className="text-xs font-medium text-green-600 dark:text-green-400">
+                                {(
+                                  ((perMonth - comparisonData.perMonth) /
+                                    comparisonData.perMonth) *
+                                  100
+                                ).toFixed(1)}
+                                %
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <ArrowDown className="h-3 w-3 text-red-600 dark:text-red-400" />
+                              <span className="text-xs font-medium text-red-600 dark:text-red-400">
+                                {(
+                                  ((perMonth - comparisonData.perMonth) /
+                                    comparisonData.perMonth) *
+                                  100
+                                ).toFixed(1)}
+                                %
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

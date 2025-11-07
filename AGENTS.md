@@ -11,21 +11,38 @@
 5. Use `think_about_task_adherence` before committing changes
 6. Use `think_about_whether_you_are_done` to verify completion
 
-**KEY**: Use Serena tools for discovery, not `read_file`. Memories are for context only—NOT documentation summaries.
+**KEY**: Use Serena tools for discovery, not reading files unless necessary. Memories are for context only—NOT documentation summaries.
 
-## Essential Resources
+## 📚 Context7 Integration
 
-- `docs/guides/ARCHITECTURE.md` - Architecture overview
-- `docs/guides/STORAGE_IMPLEMENTATION.md` - Storage details
-- `docs/guides/API_REFERENCE.md` - AniList API integration
+**Always `use context7`** when I need code generation, setup or configuration steps, or
+library/API documentation. This means you should automatically use the Context7 MCP
+tools to resolve library id and get library docs without me having to explicitly ask.
+
+## Serena Modes & Adaptive Behavior
+
+**Default modes:** `["planning", "interactive", "editing"]`
+
+Always assume the default modes are active to ensure modes are correctly set and you don't forget to change them.
+
+Always use the `switch_modes` tool to adapt modes based on task complexity:
+
+| Task Type               | Modes                                                         | When to Use                                          |
+| ----------------------- | ------------------------------------------------------------- | ---------------------------------------------------- |
+| **Trivial fixes**       | `["one-shot", "editing"]`                                     | Skip planning overhead, make & verify immediately    |
+| **Small edits**         | `["interactive", "editing"]`                                  | Still ask questions, skip detailed planning          |
+| **Medium features**     | `["planning", "interactive", "editing"]`                      | Brief 3–6 item plan, explore, edit incrementally     |
+| **Large/risky changes** | `["planning", "interactive", "editing"]` + extra verification | Thorough planning & verification at every checkpoint |
+
+**Thinking Tools — Use at Relevant Checkpoints:**
+
+- **`think_about_collected_information`** → After exploring code, verify context is sufficient before editing
+- **`think_about_task_adherence`** → Before making changes, confirm the approach is still correct
+- **`think_about_whether_you_are_done`** → After completing work, verify all requirements are met
+
+_Use these thinking tools whenever applicable, not just for the largest changes._
 
 ## Serena Tools
-
-### Thinking Tools (Reflection & Verification)
-
-- **`think_about_collected_information`**: Verify gathered context is sufficient and relevant
-- **`think_about_task_adherence`**: Ensure you're still on track before making edits
-- **`think_about_whether_you_are_done`**: Verify all requirements are met after completing
 
 ### Exploration Tools (Code Discovery)
 
@@ -35,38 +52,7 @@
 - **`list_dir`**: Understand project structure
 - **`find_file`**: Search files by glob pattern
 
-**Best Practice**: Always explore with these tools BEFORE using `read_file`. Saves tokens and time.
-
-## Critical Patterns to Follow
-
-### 1. Storage Operations
-
-**NEVER** access localStorage or electron-store directly. Use `src/utils/storage.ts` abstraction:
-
-```typescript
-import { storage, STORAGE_KEYS } from "@/utils/storage";
-storage.setItem(STORAGE_KEYS.KENMEI_DATA, JSON.stringify(data));
-const data = storage.getItem(STORAGE_KEYS.KENMEI_DATA);
-```
-
-### 2. IPC Communication
-
-**Security violation** to use `ipcRenderer` in renderer. Use exposed context APIs instead:
-
-```typescript
-// ✅ Correct
-await globalThis.electronStore.setItem(key, value);
-const token = await globalThis.electronAuth.getAccessToken(code);
-```
-
-### 3. Error Handling
-
-Use `createError()` from `src/utils/errorHandling.ts`:
-
-```typescript
-import { createError, ErrorType } from "@/utils/errorHandling";
-throw createError(ErrorType.NETWORK, "Failed to fetch", error, "NETWORK_UNAVAILABLE");
-```
+**Best Practice**: Always explore with these tools BEFORE reading files. Saves tokens and time.
 
 ## Memory Strategy
 
@@ -82,8 +68,6 @@ Use memories for context only:
 
 - ✅ Always activate project before using Serena tools
 - ✅ Use Serena tools for code exploration before reading files
+- ✅ Switch modes based on task complexity
+- ✅ Use serena thinking tools at relevant checkpoints
 - ✅ Write memories only for essential context, not documentation summaries
-- ✅ Always use storage abstraction (never direct localStorage)
-- ✅ Never use ipcRenderer directly (use exposed contexts)
-- ✅ Check rate limits before bulk API operations
-- ✅ Follow rules of hooks (React Compiler enforces)

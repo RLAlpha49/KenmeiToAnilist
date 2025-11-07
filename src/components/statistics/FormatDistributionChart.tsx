@@ -16,6 +16,7 @@ import {
 } from "recharts";
 import { BookOpen, AlertCircle } from "lucide-react";
 import { cn } from "@/utils/tailwind";
+import { computeDrillDownData } from "@/utils/statisticsAdapter";
 
 /**
  * Minimal match result shape containing only selectedMatch for format extraction.
@@ -33,6 +34,14 @@ interface FormatDistributionChartProps {
   readonly matchResults?: Array<MinimalMatchResult> | null;
   /** Optional className override for layout control. */
   readonly className?: string;
+  /** Callback for drill-down clicks on format slices. */
+  readonly onDrillDown?: (
+    data: import("@/types/statistics").DrillDownData,
+  ) => void;
+  /** Full match results for drill-down data building. */
+  readonly filteredMatchResults?: import("@/utils/statisticsAdapter").NormalizedMatchForStats[];
+  /** Reading history for drill-down data computation. */
+  readonly readingHistory?: import("@/utils/storage").ReadingHistory;
 }
 
 /**
@@ -147,6 +156,12 @@ export const FormatDistributionChart: FC<FormatDistributionChartProps> =
     matchResults,
     // eslint-disable-next-line react/prop-types
     className,
+    // eslint-disable-next-line react/prop-types
+    onDrillDown,
+    // eslint-disable-next-line react/prop-types
+    filteredMatchResults,
+    // eslint-disable-next-line react/prop-types
+    readingHistory,
   }) {
     const data = useMemo(() => buildFormatData(matchResults), [matchResults]);
     const total = useMemo(
@@ -205,6 +220,27 @@ export const FormatDistributionChart: FC<FormatDistributionChartProps> =
                   label={(entry: PieLabelPayload) =>
                     `${(entry.value ?? 0).toLocaleString()}`
                   }
+                  cursor={onDrillDown ? "pointer" : "default"}
+                  onClick={(entry) => {
+                    if (
+                      onDrillDown &&
+                      filteredMatchResults &&
+                      readingHistory &&
+                      entry
+                    ) {
+                      const raw = (entry as { payload?: { raw?: string } })
+                        ?.payload?.raw;
+                      if (!raw) return;
+                      onDrillDown(
+                        computeDrillDownData(
+                          filteredMatchResults,
+                          "format",
+                          raw,
+                          readingHistory,
+                        ),
+                      );
+                    }
+                  }}
                 >
                   {data.map((entry) => (
                     <Cell key={entry.raw} fill={entry.color} />

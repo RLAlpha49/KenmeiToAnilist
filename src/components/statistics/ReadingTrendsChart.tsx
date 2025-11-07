@@ -15,13 +15,17 @@ import {
   YAxis,
   Tooltip,
   Legend,
+  Brush,
 } from "recharts";
 import { TrendingUp, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/utils/tailwind";
 import type { ReadingHistory } from "@/utils/storage";
 import type { TimeRange } from "@/utils/statisticsAdapter";
-import { computeReadingTrends } from "@/utils/statisticsAdapter";
+import {
+  computeReadingTrends,
+  computeDailyDeltasByManga,
+} from "@/utils/statisticsAdapter";
 
 /**
  * Props for ReadingTrendsChart component.
@@ -31,6 +35,17 @@ interface ReadingTrendsChartProps {
   readonly history: ReadingHistory;
   readonly timeRange: TimeRange;
   readonly className?: string;
+  readonly onDrillDown?: (
+    data: import("@/types/statistics").DrillDownData,
+  ) => void;
+  readonly matchResults?: import("@/utils/statisticsAdapter").NormalizedMatchForStats[];
+  readonly comparisonData?: Array<{
+    date: string;
+    chapters: number;
+    count: number;
+  }>;
+  readonly comparisonLabel?: string;
+  readonly enableZoom?: boolean;
 }
 
 /**
@@ -44,10 +59,24 @@ export const ReadingTrendsChart: FC<ReadingTrendsChartProps> = ({
   history,
   timeRange,
   className,
+  onDrillDown,
+  matchResults,
+  comparisonData,
+  comparisonLabel,
+  enableZoom,
 }) => {
   // Compute trend data with memoization
   const trendData = useMemo(() => {
     const trends = computeReadingTrends(history, timeRange);
+
+    // Determine if dataset spans more than 365 days for year inclusion
+    const shouldIncludeYear =
+      trends.length > 1
+        ? (new Date(trends.at(-1)!.date).getTime() -
+            new Date(trends[0].date).getTime()) /
+            (1000 * 60 * 60 * 24) >
+          365
+        : false;
 
     // Format dates for display
     return trends.map(({ date, chapters, count }) => {
@@ -55,6 +84,7 @@ export const ReadingTrendsChart: FC<ReadingTrendsChartProps> = ({
       const formatted = dateObj.toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
+        ...(shouldIncludeYear && { year: "2-digit" }),
       });
 
       return {
@@ -98,6 +128,63 @@ export const ReadingTrendsChart: FC<ReadingTrendsChartProps> = ({
   }, [timeRange]);
 
   const hasData = trendData.length > 0;
+
+  // Merge comparison data with primary trend data by fullDate
+  const mergedTrendData = useMemo(() => {
+    if (!comparisonData) return trendData;
+
+    const comparisonMap = new Map<
+      string,
+      { chapters: number; count: number }
+    >();
+    for (const item of comparisonData) {
+      comparisonMap.set(item.date, {
+        chapters: item.chapters,
+        count: item.count,
+      });
+    }
+
+    return trendData.map((primary) => ({
+      ...primary,
+      comparisonChapters: comparisonMap.get(primary.fullDate)?.chapters ?? 0,
+    }));
+  }, [trendData, comparisonData]);
+
+  // Pre-compute daily deltas (chapters read per manga per day)
+  const dailyDeltaMap = useMemo(
+    () => computeDailyDeltasByManga(history),
+    [history],
+  );
+
+  const handleLineClick =
+    onDrillDown && matchResults
+      ? (fullDate: string) => {
+          const deltasForDate = dailyDeltaMap.get(fullDate);
+          const filtered = matchResults
+            .filter((match) => {
+              const delta = deltasForDate?.get(match.kenmeiManga.id);
+              return delta !== undefined && delta > 0;
+            })
+            .map((match) => {
+              const delta = deltasForDate?.get(match.kenmeiManga.id) ?? 0;
+              return {
+                title: match.kenmeiManga.title,
+                chapters: delta,
+                status: match.status,
+                confidence: match.anilistMatches?.[0]?.confidence,
+                format: match.selectedMatch?.format,
+              };
+            })
+            .sort((a, b) => b.chapters - a.chapters)
+            .slice(0, 100);
+
+          onDrillDown({
+            type: "date",
+            value: fullDate,
+            data: filtered,
+          });
+        }
+      : undefined;
 
   return (
     <div
@@ -155,8 +242,23 @@ export const ReadingTrendsChart: FC<ReadingTrendsChartProps> = ({
       {hasData ? (
         <ResponsiveContainer width="100%" height={350}>
           <LineChart
-            data={trendData}
+            data={mergedTrendData}
             margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+            onClick={(state) => {
+              if (onDrillDown && matchResults && state) {
+                const payload = (
+                  state as {
+                    activePayload?: Array<{
+                      payload?: Record<string, unknown>;
+                    }>;
+                  }
+                ).activePayload?.[0]?.payload;
+                const fullDate = payload?.fullDate as string | undefined;
+                if (fullDate && handleLineClick) {
+                  handleLineClick(fullDate);
+                }
+              }
+            }}
           >
             <defs>
               <linearGradient id="trendsGradient" x1="0" x2="0" y1="0" y2="1">
@@ -192,7 +294,13 @@ export const ReadingTrendsChart: FC<ReadingTrendsChartProps> = ({
                 fontSize: "12px",
               }}
               labelClassName="font-semibold text-slate-900"
-              formatter={(value: number) => [`${value} chapters`, "Read"]}
+              formatter={(value: number, name: string) => {
+                if (name === "Chapters Read")
+                  return [`${value} chapters`, name];
+                if (name === (comparisonLabel || "Comparison"))
+                  return [`${value} chapters`, name];
+                return [value, name];
+              }}
             />
             <Legend wrapperStyle={{ fontSize: "12px" }} iconType="line" />
             <Area
@@ -207,11 +315,31 @@ export const ReadingTrendsChart: FC<ReadingTrendsChartProps> = ({
               dataKey="chapters"
               stroke="#3b82f6"
               strokeWidth={2}
-              dot={{ fill: "#3b82f6", r: 4 }}
+              dot={{
+                fill: "#3b82f6",
+                r: 4,
+                cursor: handleLineClick ? "pointer" : "default",
+              }}
               activeDot={{ r: 6 }}
               name="Chapters Read"
               isAnimationActive={false}
             />
+            {comparisonData && (
+              <Line
+                type="monotone"
+                dataKey="comparisonChapters"
+                stroke="#f59e0b"
+                strokeWidth={2}
+                strokeDasharray="4 4"
+                dot={{ fill: "#f59e0b", r: 4 }}
+                activeDot={{ r: 6 }}
+                name={comparisonLabel || "Comparison"}
+                isAnimationActive={false}
+              />
+            )}
+            {enableZoom && trendData.length > 10 && (
+              <Brush dataKey="date" height={30} stroke="#3b82f6" />
+            )}
           </LineChart>
         </ResponsiveContainer>
       ) : (

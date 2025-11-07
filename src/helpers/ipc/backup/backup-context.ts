@@ -233,13 +233,6 @@ export function exposeBackupContext() {
        * Semantically identical to triggerBackup(), but with clearer intent for automatic operations.
        *
        * @returns Promise with backup ID on success, or error message on failure.
-       * @example
-       * const result = await globalThis.electronBackup.createNow();
-       * if (result.success) {
-       *   console.log('Backup created:', result.backupId);
-       * } else {
-       *   console.error('Backup failed:', result.error);
-       * }
        * @source
        */
       createNow: () => {

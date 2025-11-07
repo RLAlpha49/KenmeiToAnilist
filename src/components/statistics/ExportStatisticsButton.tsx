@@ -18,7 +18,7 @@ import {
 import { toast } from "sonner";
 import type { ImportStats } from "@/utils/storage";
 import type { SyncStats } from "@/types/sync";
-import type { MatchForExport } from "@/utils/exportUtils";
+import type { MatchForExport } from "@/types/matching";
 import {
   flattenMatchResult,
   exportToJson,
@@ -58,6 +58,12 @@ interface ExportStatisticsButtonProps {
   readonly size?: "default" | "sm" | "lg";
   /** Optional button variant override. */
   readonly variant?: "default" | "outline" | "ghost";
+  /** Applied filters to include in export metadata. */
+  readonly appliedFilters?: import("@/types/statistics").StatisticsFilters;
+  /** Comparison mode state to include in export metadata. */
+  readonly comparisonMode?: import("@/types/statistics").ComparisonMode;
+  /** Flag indicating if data is filtered. */
+  readonly isFiltered?: boolean;
 }
 
 /**
@@ -191,6 +197,9 @@ export function ExportStatisticsButton({
   disabled = false,
   size = "default",
   variant = "outline",
+  appliedFilters,
+  comparisonMode,
+  isFiltered,
 }: Readonly<ExportStatisticsButtonProps>) {
   const [format, setFormat] = useState<StatisticsExportFormat>("json");
   const [sections, setSections] = useState<Set<ExportSection>>(
@@ -213,15 +222,22 @@ export function ExportStatisticsButton({
   }, []);
 
   const buildJsonPayload = useCallback(() => {
-    const metadata = buildExportMetadata(
+    const baseMetadata = buildExportMetadata(
       "json",
       matchResults.length,
       undefined,
       Array.from(sections),
     );
 
+    const enrichedMetadata = {
+      ...baseMetadata,
+      ...(appliedFilters && { filters: appliedFilters }),
+      ...(comparisonMode?.enabled && { comparison: comparisonMode }),
+      ...(isFiltered && { isFiltered: true }),
+    };
+
     const payload: Record<string, unknown> = {
-      metadata,
+      metadata: enrichedMetadata,
       generatedAt: new Date().toISOString(),
     };
 
@@ -238,7 +254,15 @@ export function ExportStatisticsButton({
     }
 
     return payload;
-  }, [importStats, syncStats, matchResults, sections]);
+  }, [
+    importStats,
+    syncStats,
+    matchResults,
+    sections,
+    appliedFilters,
+    comparisonMode,
+    isFiltered,
+  ]);
 
   const buildTabularRows = useCallback((): ExportRow[] => {
     const rows = buildSummaryRows(importStats, syncStats, sections);
@@ -267,7 +291,7 @@ export function ExportStatisticsButton({
       }
 
       if (format === "markdown") {
-        const metadata = buildExportMetadata(
+        const baseMetadata = buildExportMetadata(
           "markdown",
           totalEntries,
           undefined,
@@ -276,6 +300,17 @@ export function ExportStatisticsButton({
 
         // Build structured data for markdown sections
         const markdownData: Record<string, unknown> = {};
+
+        // Include enriched metadata in the data structure for consumer reference
+        if (appliedFilters) {
+          markdownData.appliedFilters = appliedFilters;
+        }
+        if (comparisonMode?.enabled) {
+          markdownData.comparisonMode = comparisonMode;
+        }
+        if (isFiltered) {
+          markdownData.isFiltered = true;
+        }
 
         if (sections.has("import") && importStats) {
           markdownData.importStats = importStats;
@@ -290,7 +325,7 @@ export function ExportStatisticsButton({
           markdownData.matchResults = flattened;
         }
 
-        const file = exportToMarkdown(markdownData, "statistics", metadata);
+        const file = exportToMarkdown(markdownData, "statistics", baseMetadata);
         toast.success(`Statistics exported to ${file}`);
         setOpen(false);
         return;
@@ -304,17 +339,68 @@ export function ExportStatisticsButton({
       }
 
       // Add metadata to CSV
-      const metadata = buildExportMetadata(
+      const baseMetadata = buildExportMetadata(
         "csv",
         totalEntries,
         undefined,
         sectionArray,
       );
 
+      const enrichedMetadata = {
+        ...baseMetadata,
+        ...(appliedFilters && { filters: appliedFilters }),
+        ...(comparisonMode?.enabled && { comparison: comparisonMode }),
+        ...(isFiltered && { isFiltered: true }),
+      };
+
       const withMetadata = [
-        { comment: `Exported: ${metadata.exportedAt}` },
-        { comment: `App Version: v${metadata.appVersion}` },
+        { comment: `Exported: ${enrichedMetadata.exportedAt}` },
+        { comment: `App Version: v${enrichedMetadata.appVersion}` },
         { comment: `Sections: ${sectionArray.join(", ")}` },
+        ...(appliedFilters
+          ? [
+              { comment: "" },
+              { comment: "Filters Applied:" },
+              {
+                comment:
+                  appliedFilters.genres.length > 0
+                    ? `  Genres: ${appliedFilters.genres.join(", ")}`
+                    : "  Genres: None",
+              },
+              {
+                comment:
+                  appliedFilters.formats.length > 0
+                    ? `  Formats: ${appliedFilters.formats.join(", ")}`
+                    : "  Formats: None",
+              },
+              {
+                comment:
+                  appliedFilters.statuses.length > 0
+                    ? `  Statuses: ${appliedFilters.statuses.join(", ")}`
+                    : "  Statuses: None",
+              },
+              {
+                comment:
+                  appliedFilters.dateRange.start || appliedFilters.dateRange.end
+                    ? `  Date Range: ${appliedFilters.dateRange.start?.toISOString().split("T")[0] ?? "N/A"} to ${appliedFilters.dateRange.end?.toISOString().split("T")[0] ?? "N/A"}`
+                    : "  Date Range: None",
+              },
+              {
+                comment: `  Confidence: ${appliedFilters.confidenceRange.min} - ${appliedFilters.confidenceRange.max}`,
+              },
+            ]
+          : []),
+        ...(comparisonMode?.enabled
+          ? [
+              { comment: "" },
+              { comment: "Comparison Mode:" },
+              { comment: `  Primary Range: ${comparisonMode.primaryRange}` },
+              {
+                comment: `  Secondary Range: ${comparisonMode.secondaryRange}`,
+              },
+              { comment: `  Metric: ${comparisonMode.metric}` },
+            ]
+          : []),
         { comment: "" },
         ...rows,
       ];
@@ -348,7 +434,9 @@ export function ExportStatisticsButton({
           className="gap-2"
         >
           <Download className="h-4 w-4" aria-hidden="true" />
-          <span>Export Statistics</span>
+          <span>
+            {isFiltered ? "Export Filtered Statistics" : "Export Statistics"}
+          </span>
           <span className="text-muted-foreground text-xs font-medium">
             {sections.size} dataset{sections.size === 1 ? "" : "s"}
           </span>
@@ -387,6 +475,49 @@ export function ExportStatisticsButton({
         </DropdownMenuRadioGroup>
 
         <DropdownMenuSeparator />
+
+        {/* Filter Summary Section */}
+        {isFiltered && appliedFilters && (
+          <>
+            <DropdownMenuLabel className="flex items-center gap-2 text-xs">
+              <span className="font-medium">Applied Filters</span>
+            </DropdownMenuLabel>
+            {appliedFilters.genres.length > 0 && (
+              <div className="px-2 py-1 text-xs text-slate-600 dark:text-slate-400">
+                Genres: {appliedFilters.genres.join(", ")}
+              </div>
+            )}
+            {appliedFilters.formats.length > 0 && (
+              <div className="px-2 py-1 text-xs text-slate-600 dark:text-slate-400">
+                Formats: {appliedFilters.formats.join(", ")}
+              </div>
+            )}
+            {appliedFilters.statuses.length > 0 && (
+              <div className="px-2 py-1 text-xs text-slate-600 dark:text-slate-400">
+                Statuses: {appliedFilters.statuses.join(", ")}
+              </div>
+            )}
+            {(appliedFilters.dateRange.start ||
+              appliedFilters.dateRange.end) && (
+              <div className="px-2 py-1 text-xs text-slate-600 dark:text-slate-400">
+                Date Range:{" "}
+                {appliedFilters.dateRange.start?.toISOString().split("T")[0] ??
+                  "N/A"}{" "}
+                to{" "}
+                {appliedFilters.dateRange.end?.toISOString().split("T")[0] ??
+                  "N/A"}
+              </div>
+            )}
+            {(appliedFilters.confidenceRange.min > 0 ||
+              appliedFilters.confidenceRange.max < 100) && (
+              <div className="px-2 py-1 text-xs text-slate-600 dark:text-slate-400">
+                Confidence: {appliedFilters.confidenceRange.min} -{" "}
+                {appliedFilters.confidenceRange.max}
+              </div>
+            )}
+            <DropdownMenuSeparator />
+          </>
+        )}
 
         <DropdownMenuLabel className="flex items-center gap-2">
           <ListChecks className="h-4 w-4 text-slate-500" aria-hidden="true" />

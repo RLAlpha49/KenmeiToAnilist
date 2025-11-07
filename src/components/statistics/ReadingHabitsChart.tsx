@@ -29,6 +29,8 @@ interface ReadingHabitsChartProps {
   readonly history: ReadingHistory;
   readonly timeRange: TimeRange;
   readonly className?: string;
+  readonly comparisonData?: ReturnType<typeof computeReadingHabits>;
+  readonly comparisonLabel?: string;
 }
 
 /**
@@ -42,6 +44,8 @@ export const ReadingHabitsChart: FC<ReadingHabitsChartProps> = ({
   history,
   timeRange,
   className,
+  comparisonData,
+  comparisonLabel,
 }) => {
   // Compute habit data with memoization
   const habitData = useMemo(() => {
@@ -67,6 +71,29 @@ export const ReadingHabitsChart: FC<ReadingHabitsChartProps> = ({
   const activeHours = useMemo(() => {
     return byTimeOfDay.filter((item) => item.chapters > 0);
   }, [byTimeOfDay]);
+
+  // Merge comparison data for day of week if available
+  const dayOfWeekChartData = useMemo(() => {
+    if (!comparisonData) return byDayOfWeek;
+    return byDayOfWeek.map((current, idx) => ({
+      ...current,
+      comparisonChapters: comparisonData.byDayOfWeek[idx]?.chapters || 0,
+    }));
+  }, [byDayOfWeek, comparisonData]);
+
+  // Merge comparison data for time of day if available
+  const timeOfDayChartData = useMemo(() => {
+    if (!comparisonData) return activeHours;
+    return activeHours.map((current) => {
+      const comparisonHour = comparisonData.byTimeOfDay.find(
+        (h) => h.hour === current.hour,
+      );
+      return {
+        ...current,
+        comparisonChapters: comparisonHour?.chapters || 0,
+      };
+    });
+  }, [activeHours, comparisonData]);
 
   const hasData =
     byDayOfWeek.some((d) => d.chapters > 0) || activeHours.length > 0;
@@ -96,17 +123,140 @@ export const ReadingHabitsChart: FC<ReadingHabitsChartProps> = ({
           </div>
         </div>
         {hasData && (
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-3">
+            {/* Dual Peak Day Badges */}
             {peakDay && (
-              <Badge variant="secondary" className="text-sm">
-                Peak day: {peakDay}
-              </Badge>
+              <div className="flex items-center gap-2">
+                {comparisonData?.peakDay ? (
+                  <Badge variant="secondary" className="text-sm">
+                    <span className="font-medium text-emerald-700 dark:text-emerald-300">
+                      {peakDay}
+                    </span>
+                    <span className="mx-1 text-slate-500">/</span>
+                    <span className="text-gray-600 dark:text-gray-400">
+                      {comparisonData.peakDay}
+                    </span>
+                    <span className="ml-1 text-xs text-slate-500">
+                      (Primary / Comparison)
+                    </span>
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-sm">
+                    Peak day: {peakDay}
+                  </Badge>
+                )}
+              </div>
             )}
+
+            {/* Dual Peak Hour Badges */}
             {peakHour && (
-              <Badge variant="secondary" className="text-sm">
-                Peak hour: {peakHour}
-              </Badge>
+              <div className="flex items-center gap-2">
+                {comparisonData?.peakHour ? (
+                  <Badge variant="secondary" className="text-sm">
+                    <span className="font-medium text-emerald-700 dark:text-emerald-300">
+                      {peakHour}
+                    </span>
+                    <span className="mx-1 text-slate-500">/</span>
+                    <span className="text-gray-600 dark:text-gray-400">
+                      {comparisonData.peakHour}
+                    </span>
+                    <span className="ml-1 text-xs text-slate-500">
+                      (Primary / Comparison)
+                    </span>
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-sm">
+                    Peak hour: {peakHour}
+                  </Badge>
+                )}
+              </div>
             )}
+
+            {/* Insights Summary */}
+            {comparisonData &&
+              (peakDay !== comparisonData.peakDay ||
+                peakHour !== comparisonData.peakHour) && (
+                <div className="mt-2 space-y-1 text-xs text-slate-600 dark:text-slate-400">
+                  {peakDay !== comparisonData.peakDay &&
+                    comparisonData.peakDay && (
+                      <p>
+                        📊 Your peak reading day shifted from{" "}
+                        <span className="font-medium text-slate-700 dark:text-slate-300">
+                          {comparisonData.peakDay}
+                        </span>{" "}
+                        to{" "}
+                        <span className="font-medium text-emerald-700 dark:text-emerald-300">
+                          {peakDay}
+                        </span>
+                        {(() => {
+                          // Find chapter counts for peak days
+                          const currentPeakDayChapters =
+                            byDayOfWeek.find((d) => d.day === peakDay)
+                              ?.chapters ?? 0;
+                          const comparisonPeakDayChapters =
+                            comparisonData.byDayOfWeek.find(
+                              (d) => d.day === comparisonData.peakDay,
+                            )?.chapters ?? 0;
+                          if (comparisonPeakDayChapters > 0) {
+                            const percentChange =
+                              ((currentPeakDayChapters -
+                                comparisonPeakDayChapters) /
+                                comparisonPeakDayChapters) *
+                              100;
+                            return (
+                              <>
+                                {" "}
+                                ({percentChange >= 0 ? "+" : ""}
+                                {percentChange.toFixed(1)}%)
+                              </>
+                            );
+                          }
+                          return null;
+                        })()}
+                        .
+                      </p>
+                    )}
+                  {peakHour !== comparisonData.peakHour &&
+                    comparisonData.peakHour && (
+                      <p>
+                        ⏰ Your peak reading hour shifted from{" "}
+                        <span className="font-medium text-slate-700 dark:text-slate-300">
+                          {comparisonData.peakHour}
+                        </span>{" "}
+                        to{" "}
+                        <span className="font-medium text-emerald-700 dark:text-emerald-300">
+                          {peakHour}
+                        </span>
+                        {(() => {
+                          // Find chapter counts for peak hours
+                          const currentPeakHourChapters =
+                            byTimeOfDay.find((h) => h.hour === peakHour)
+                              ?.chapters ?? 0;
+                          const comparisonPeakHourChapters =
+                            comparisonData.byTimeOfDay.find(
+                              (h) => h.hour === comparisonData.peakHour,
+                            )?.chapters ?? 0;
+                          if (comparisonPeakHourChapters > 0) {
+                            const percentChange =
+                              ((currentPeakHourChapters -
+                                comparisonPeakHourChapters) /
+                                comparisonPeakHourChapters) *
+                              100;
+                            return (
+                              <>
+                                {" "}
+                                ({percentChange >= 0 ? "+" : ""}
+                                {percentChange.toFixed(1)}%)
+                              </>
+                            );
+                          }
+                          return null;
+                        })()}
+                        .
+                      </p>
+                    )}
+                </div>
+              )}
           </div>
         )}
       </div>
@@ -121,7 +271,7 @@ export const ReadingHabitsChart: FC<ReadingHabitsChartProps> = ({
               </h4>
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart
-                  data={byDayOfWeek}
+                  data={dayOfWeekChartData}
                   layout="vertical"
                   margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
                 >
@@ -153,7 +303,18 @@ export const ReadingHabitsChart: FC<ReadingHabitsChartProps> = ({
                     fill="#10b981"
                     radius={[0, 8, 8, 0]}
                     isAnimationActive={false}
+                    name="Current Period"
                   />
+                  {comparisonData && (
+                    <Bar
+                      dataKey="comparisonChapters"
+                      fill="#9ca3af"
+                      radius={[0, 8, 8, 0]}
+                      isAnimationActive={false}
+                      name={comparisonLabel || "Comparison"}
+                      opacity={0.6}
+                    />
+                  )}
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -167,7 +328,7 @@ export const ReadingHabitsChart: FC<ReadingHabitsChartProps> = ({
               </h4>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart
-                  data={activeHours}
+                  data={timeOfDayChartData}
                   layout="vertical"
                   margin={{ top: 5, right: 30, left: 60, bottom: 5 }}
                 >
@@ -199,7 +360,18 @@ export const ReadingHabitsChart: FC<ReadingHabitsChartProps> = ({
                     fill="#3b82f6"
                     radius={[0, 8, 8, 0]}
                     isAnimationActive={false}
+                    name="Current Period"
                   />
+                  {comparisonData && (
+                    <Bar
+                      dataKey="comparisonChapters"
+                      fill="#9ca3af"
+                      radius={[0, 8, 8, 0]}
+                      isAnimationActive={false}
+                      name={comparisonLabel || "Comparison"}
+                      opacity={0.6}
+                    />
+                  )}
                 </BarChart>
               </ResponsiveContainer>
             </div>

@@ -490,3 +490,317 @@ export function computeReadingHabits(
     peakHour,
   };
 }
+
+/**
+ * Applies statistics filters to match results and reading history.
+ * @param matchResults - Array of normalized match results.
+ * @param readingHistory - Reading history data.
+ * @param filters - Statistics filters to apply.
+ * @returns Filtered match results and reading history.
+ * @source
+ */
+export function applyStatisticsFilters(
+  matchResults: NormalizedMatchForStats[],
+  readingHistory: ReadingHistory,
+  filters: import("@/types/statistics").StatisticsFilters,
+): {
+  matchResults: NormalizedMatchForStats[];
+  readingHistory: ReadingHistory;
+} {
+  let filteredMatches = matchResults;
+
+  // Filter by genres
+  if (filters.genres.length > 0) {
+    filteredMatches = filteredMatches.filter((match) => {
+      const genres = match.selectedMatch?.genres ?? [];
+      return filters.genres.some((filterGenre) => genres.includes(filterGenre));
+    });
+  }
+
+  // Filter by formats
+  if (filters.formats.length > 0) {
+    filteredMatches = filteredMatches.filter((match) => {
+      const format = match.selectedMatch?.format;
+      return format && filters.formats.includes(format);
+    });
+  }
+
+  // Filter by statuses
+  if (filters.statuses.length > 0) {
+    filteredMatches = filteredMatches.filter((match) =>
+      filters.statuses.includes(match.status),
+    );
+  }
+
+  // Filter by date range
+  if (filters.dateRange.start || filters.dateRange.end) {
+    filteredMatches = filteredMatches.filter((match) => {
+      if (!match.matchDate) return false;
+      const matchTime = match.matchDate.getTime();
+      if (
+        filters.dateRange.start &&
+        matchTime < filters.dateRange.start.getTime()
+      ) {
+        return false;
+      }
+      if (
+        filters.dateRange.end &&
+        matchTime > filters.dateRange.end.getTime()
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  // Filter by confidence range
+  if (filters.confidenceRange.min > 0 || filters.confidenceRange.max < 100) {
+    filteredMatches = filteredMatches.filter((match) => {
+      if (!match.anilistMatches || match.anilistMatches.length === 0) {
+        return filters.confidenceRange.min === 0;
+      }
+      // Use selected match's confidence if available, otherwise fall back to first match
+      let confidence = 0;
+      if (match.selectedMatch && "confidence" in match.selectedMatch) {
+        confidence =
+          (match.selectedMatch as { confidence?: number }).confidence ?? 0;
+      } else {
+        const firstMatch = match.anilistMatches[0];
+        confidence = firstMatch.confidence ? firstMatch.confidence : 0;
+      }
+      return (
+        confidence >= filters.confidenceRange.min &&
+        confidence <= filters.confidenceRange.max
+      );
+    });
+  }
+
+  // Cross-reference reading history with filtered matches
+  const filteredMangaIds = new Set(
+    filteredMatches.map((m) => String(m.kenmeiManga.id)),
+  );
+  const filteredEntries = readingHistory.entries.filter((entry) =>
+    filteredMangaIds.has(String(entry.mangaId)),
+  );
+  const filteredHistory: ReadingHistory = {
+    entries: filteredEntries,
+    lastUpdated: readingHistory.lastUpdated,
+    version: readingHistory.version,
+  };
+
+  return {
+    matchResults: filteredMatches,
+    readingHistory: filteredHistory,
+  };
+}
+
+/**
+ * Builds comparison datasets for two time ranges.
+ * @param readingHistory - Reading history data.
+ * @param primaryRange - First time period to compare.
+ * @param secondaryRange - Second time period to compare.
+ * @returns Primary and secondary datasets with labels.
+ * @source
+ */
+export function buildComparisonDatasets(
+  readingHistory: ReadingHistory,
+  primaryRange: TimeRange,
+  secondaryRange: TimeRange,
+): {
+  primary: {
+    trends: ReturnType<typeof computeReadingTrends>;
+    velocity: ReturnType<typeof computeReadingVelocity>;
+    habits: ReturnType<typeof computeReadingHabits>;
+  };
+  secondary: {
+    trends: ReturnType<typeof computeReadingTrends>;
+    velocity: ReturnType<typeof computeReadingVelocity>;
+    habits: ReturnType<typeof computeReadingHabits>;
+  };
+  primaryLabel: string;
+  secondaryLabel: string;
+} {
+  const rangeLabels: Record<TimeRange, string> = {
+    "7d": "Last 7 days",
+    "30d": "Last 30 days",
+    "90d": "Last 90 days",
+    all: "All time",
+  };
+
+  return {
+    primary: {
+      trends: computeReadingTrends(readingHistory, primaryRange),
+      velocity: computeReadingVelocity(readingHistory, primaryRange),
+      habits: computeReadingHabits(readingHistory, primaryRange),
+    },
+    secondary: {
+      trends: computeReadingTrends(readingHistory, secondaryRange),
+      velocity: computeReadingVelocity(readingHistory, secondaryRange),
+      habits: computeReadingHabits(readingHistory, secondaryRange),
+    },
+    primaryLabel: rangeLabels[primaryRange],
+    secondaryLabel: rangeLabels[secondaryRange],
+  };
+}
+
+/**
+ * Extracts available filter options from match results.
+ * @param matchResults - Array of normalized match results.
+ * @returns Available genres, formats, and statuses.
+ * @source
+ */
+export function extractAvailableFilterOptions(
+  matchResults: NormalizedMatchForStats[],
+): {
+  genres: string[];
+  formats: string[];
+  statuses: MatchStatus[];
+} {
+  const genresSet = new Set<string>();
+  const formatsSet = new Set<string>();
+  const statusesSet = new Set<MatchStatus>();
+
+  for (const match of matchResults) {
+    // Extract genres
+    const genres = match.selectedMatch?.genres ?? [];
+    for (const genre of genres) {
+      genresSet.add(genre);
+    }
+
+    // Extract format
+    const format = match.selectedMatch?.format;
+    if (format) {
+      formatsSet.add(format);
+    }
+
+    // Extract status
+    statusesSet.add(match.status);
+  }
+
+  return {
+    genres: Array.from(genresSet).sort((a, b) => a.localeCompare(b)),
+    formats: Array.from(formatsSet).sort((a, b) => a.localeCompare(b)),
+    statuses: Array.from(statusesSet),
+  };
+}
+
+/**
+ * Computes drill-down data for a specific filter dimension.
+ *
+ * @param matchResults - Filtered match results.
+ * @param type - Type of drill-down:
+ *   - 'genre': Filters by selected match genres
+ *   - 'format': Filters by selected match format
+ *   - 'status': Filters by match status (pending/matched/manual) - NOTE: Different from kenmeiManga.status (reading status)
+ *   - 'date': Filters by match date
+ * @param value - Specific value to drill down into.
+ * @param readingHistory - Reading history for chapter counts.
+ * @returns Drill-down data with detailed breakdown.
+ *
+ * @note The 'status' drill-down type filters by match status (the result of the matching process),
+ *       not by reading status (kenmeiManga.status like "reading", "completed", etc).
+ *       For reading status drill-downs, StatusDistributionChart currently handles this separately.
+ * @source
+ */
+export function computeDrillDownData(
+  matchResults: NormalizedMatchForStats[],
+  type: "genre" | "format" | "status" | "date",
+  value: string,
+  readingHistory: ReadingHistory,
+): import("@/types/statistics").DrillDownData {
+  let filtered: NormalizedMatchForStats[] = [];
+
+  switch (type) {
+    case "genre":
+      filtered = matchResults.filter((match) => {
+        const genres = match.selectedMatch?.genres ?? [];
+        return genres.includes(value);
+      });
+      break;
+    case "format":
+      filtered = matchResults.filter(
+        (match) => match.selectedMatch?.format === value,
+      );
+      break;
+    case "status":
+      filtered = matchResults.filter((match) => match.status === value);
+      break;
+    case "date":
+      // For date drill-down, filter by specific date
+      filtered = matchResults.filter((match) => {
+        if (!match.matchDate) return false;
+        const matchDateStr = getLocalDateString(match.matchDate.getTime());
+        return matchDateStr === value;
+      });
+      break;
+  }
+
+  // Build detailed data
+  const data = filtered.map((match) => {
+    const mangaId = String(match.kenmeiManga.id);
+    const mangaHistory = readingHistory.entries.filter(
+      (entry) => String(entry.mangaId) === mangaId,
+    );
+    const chapters =
+      mangaHistory.length > 0 ? mangaHistory.at(-1)!.chaptersRead : 0;
+    const confidence = match.anilistMatches?.[0]?.confidence ?? 0;
+
+    return {
+      title: match.kenmeiManga.title,
+      chapters,
+      status: match.status,
+      confidence,
+      format: match.selectedMatch?.format,
+    };
+  });
+
+  // Sort by chapters read (descending) and limit to top 100
+  data.sort((a, b) => b.chapters - a.chapters);
+  const limitedData = data.slice(0, 100);
+
+  return {
+    type,
+    value,
+    data: limitedData,
+  };
+}
+
+/**
+ * Computes daily chapter reading deltas by manga across reading history.
+ * Tracks progress change per manga per day, excluding days with no progress.
+ *
+ * @param history - Reading history with chronologically sorted entries
+ * @returns Map of date -> Map of mangaId -> daily delta (chapters read that day)
+ * @source
+ */
+export function computeDailyDeltasByManga(
+  history: ReadingHistory,
+): Map<string, Map<string | number, number>> {
+  const dailyDeltaMap = new Map<string, Map<string | number, number>>();
+  const prevChaptersPerManga = new Map<string | number, number>();
+
+  // Sort entries by timestamp to ensure chronological order
+  const sortedEntries = [...history.entries].sort(
+    (a, b) => a.timestamp - b.timestamp,
+  );
+
+  for (const entry of sortedEntries) {
+    const date = getLocalDateString(entry.timestamp);
+    const mangaId = entry.mangaId;
+    const prevChapters = prevChaptersPerManga.get(mangaId) ?? 0;
+    const delta = Math.max(0, entry.chaptersRead - prevChapters);
+
+    // Only record if there's progress that day
+    if (delta > 0) {
+      if (!dailyDeltaMap.has(date)) {
+        dailyDeltaMap.set(date, new Map());
+      }
+      dailyDeltaMap.get(date)!.set(mangaId, delta);
+    }
+
+    // Update previous chapters for next iteration
+    prevChaptersPerManga.set(mangaId, entry.chaptersRead);
+  }
+
+  return dailyDeltaMap;
+}

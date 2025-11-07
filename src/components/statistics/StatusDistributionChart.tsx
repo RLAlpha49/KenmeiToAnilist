@@ -57,6 +57,12 @@ export interface StatusDistributionChartProps {
   readonly data?: Record<string, number> | null;
   /** Optional className override for the container. */
   readonly className?: string;
+  /** Callback for drill-down clicks on status slices. */
+  readonly onDrillDown?: (
+    data: import("@/types/statistics").DrillDownData,
+  ) => void;
+  /** Full match results for drill-down data building. */
+  readonly matchResults?: import("@/utils/statisticsAdapter").NormalizedMatchForStats[];
 }
 
 /**
@@ -83,6 +89,10 @@ export const StatusDistributionChart: FC<StatusDistributionChartProps> =
     data,
     // eslint-disable-next-line react/prop-types
     className,
+    // eslint-disable-next-line react/prop-types
+    onDrillDown,
+    // eslint-disable-next-line react/prop-types
+    matchResults,
   }) {
     const chartData = useMemo<ChartDatum[]>(() => {
       if (!data) return [];
@@ -195,6 +205,39 @@ export const StatusDistributionChart: FC<StatusDistributionChartProps> =
                         outerRadius={100}
                         paddingAngle={2}
                         labelLine={false}
+                        cursor={onDrillDown ? "pointer" : "default"}
+                        onClick={(entry) => {
+                          if (onDrillDown && matchResults && entry) {
+                            // Filter by kenmeiManga.status (reading status: reading, completed, etc)
+                            // This differs from computeDrillDownData which filters by match status (pending/matched/manual)
+                            const payload = entry as {
+                              payload?: { rawKey?: string };
+                              rawKey?: string;
+                            };
+                            const rawKey =
+                              payload.payload?.rawKey ?? payload.rawKey;
+                            if (!rawKey) return;
+                            // eslint-disable-next-line react/prop-types
+                            const filtered = matchResults.filter(
+                              (match) => match.kenmeiManga.status === rawKey,
+                            );
+                            onDrillDown({
+                              type: "status",
+                              value: rawKey,
+                              data: filtered
+                                .map((match) => ({
+                                  title: match.kenmeiManga.title,
+                                  chapters: match.kenmeiManga.chapters_read,
+                                  status: match.kenmeiManga.status,
+                                  confidence:
+                                    match.anilistMatches?.[0]?.confidence,
+                                  format: match.selectedMatch?.format,
+                                }))
+                                .sort((a, b) => b.chapters - a.chapters)
+                                .slice(0, 100),
+                            });
+                          }
+                        }}
                         label={(props: Record<string, unknown>) =>
                           // eslint-disable-next-line react/prop-types
                           `${Math.round(((props.percent as number) ?? 0) * 100)}%`

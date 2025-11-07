@@ -28,6 +28,9 @@ import {
   ReadingVelocityChart,
   TimeRangeSelector,
 } from "@/components/statistics";
+import { StatisticsFilterPanel } from "@/components/statistics/StatisticsFilterPanel";
+import { ComparisonToggle } from "@/components/statistics/ComparisonToggle";
+import { DrillDownModal } from "@/components/statistics/DrillDownModal";
 import type { SyncStats } from "@/types/sync";
 import { ExportStatisticsButton } from "@/components/statistics/ExportStatisticsButton";
 import {
@@ -45,7 +48,18 @@ import {
   parseSyncStats,
   type NormalizedMatchForStats,
   type TimeRange,
+  applyStatisticsFilters,
+  buildComparisonDatasets,
+  extractAvailableFilterOptions,
 } from "@/utils/statisticsAdapter";
+import { exportToJson } from "@/utils/exportUtils";
+import type { MatchForExport } from "@/types/matching";
+import type {
+  StatisticsFilters,
+  ComparisonMode,
+  DrillDownData,
+} from "@/types/statistics";
+import { DEFAULT_STATISTICS_FILTERS } from "@/types/statistics";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -81,6 +95,23 @@ const itemVariants: Variants = {
 };
 
 /**
+ * Adapts NormalizedMatchForStats to MatchForExport for export functionality.
+ * @param matches - Array of normalized match results from statistics filtering
+ * @returns Array of flattened match results suitable for export
+ */
+function adaptMatchesForExport(
+  matches: NormalizedMatchForStats[],
+): MatchForExport[] {
+  return matches.map((match) => ({
+    kenmeiManga: match.kenmeiManga,
+    anilistMatches: match.anilistMatches,
+    selectedMatch: match.selectedMatch,
+    status: match.status,
+    matchDate: match.matchDate,
+  }));
+}
+
+/**
  * StatisticsPage component – visual analytics for import, match, and sync data.
  * Displays comprehensive statistics with charts, filters, and data export capabilities.
  * @returns Rendered statistics dashboard.
@@ -99,6 +130,19 @@ export function StatisticsPage() {
     null,
   );
   const [selectedTimeRange, setSelectedTimeRange] = useState<TimeRange>("30d");
+  const [statisticsFilters, setStatisticsFilters] = useState<StatisticsFilters>(
+    DEFAULT_STATISTICS_FILTERS,
+  );
+  const [comparisonMode, setComparisonMode] = useState<ComparisonMode>({
+    enabled: false,
+    primaryRange: "30d",
+    secondaryRange: "30d",
+    metric: "chapters",
+  });
+  const [drillDownData, setDrillDownData] = useState<DrillDownData | null>(
+    null,
+  );
+  const [drillDownOpen, setDrillDownOpen] = useState(false);
 
   /**
    * Loads all statistics data from storage and normalizes for display.
@@ -172,6 +216,123 @@ export function StatisticsPage() {
   }, []);
 
   /**
+   * Computes filtered data based on applied statistics filters.
+   * @source
+   */
+  const filteredData = useMemo(() => {
+    if (!readingHistory) {
+      return {
+        matchResults,
+        readingHistory: { entries: [], lastUpdated: 0, version: 1 },
+      };
+    }
+    return applyStatisticsFilters(
+      matchResults,
+      readingHistory,
+      statisticsFilters,
+    );
+  }, [matchResults, readingHistory, statisticsFilters]);
+
+  /**
+   * Extracts available filter options from match results.
+   * @source
+   */
+  const filterOptions = useMemo(() => {
+    return extractAvailableFilterOptions(matchResults);
+  }, [matchResults]);
+
+  /**
+   * Computes comparison datasets when comparison mode is enabled.
+   * Returns null if ranges are identical (no meaningful comparison possible).
+   * @source
+   */
+  const comparisonDatasets = useMemo(() => {
+    if (!comparisonMode.enabled || !filteredData.readingHistory) {
+      return null;
+    }
+    // Guard: don't compute comparison if ranges are identical
+    if (comparisonMode.primaryRange === comparisonMode.secondaryRange) {
+      return null;
+    }
+    return buildComparisonDatasets(
+      filteredData.readingHistory,
+      comparisonMode.primaryRange,
+      comparisonMode.secondaryRange,
+    );
+  }, [comparisonMode, filteredData.readingHistory]);
+
+  /**
+   * Adapts filtered match results to MatchForExport format for export button.
+   * @source
+   */
+  const adaptedMatchesForExport = useMemo(
+    () => adaptMatchesForExport(filteredData.matchResults),
+    [filteredData.matchResults],
+  );
+
+  /**
+   * Handles filter changes from the filter panel.
+   * @param filters - New filter state.
+   * @source
+   */
+  const handleFiltersChange = useCallback((filters: StatisticsFilters) => {
+    setStatisticsFilters(filters);
+    console.debug("[Statistics] Filters updated:", filters);
+  }, []);
+
+  /**
+   * Handles comparison mode changes.
+   * @param mode - New comparison mode state.
+   * @source
+   */
+  const handleComparisonChange = useCallback((mode: ComparisonMode) => {
+    setComparisonMode(mode);
+    console.debug("[Statistics] Comparison mode updated:", mode);
+  }, []);
+
+  /**
+   * Handles drill-down clicks from charts.
+   * @param data - Drill-down data to display.
+   * @source
+   */
+  const handleDrillDown = useCallback((data: DrillDownData) => {
+    setDrillDownData(data);
+    setDrillDownOpen(true);
+  }, []);
+
+  /**
+   * Handles export of drill-down data as CSV or JSON.
+   * @source
+   */
+  const handleDrillDownExport = useCallback(async () => {
+    if (!drillDownData) return;
+
+    try {
+      const exportData = drillDownData.data.map((item) => ({
+        title: item.title,
+        chapters: item.chapters,
+        status: item.status,
+        confidence: item.confidence ?? "N/A",
+        format: item.format ?? "N/A",
+      }));
+
+      // Export as JSON by default
+      const payload = {
+        drillDownType: drillDownData.type,
+        drillDownValue: drillDownData.value,
+        exportedAt: new Date().toISOString(),
+        data: exportData,
+      };
+
+      const file = exportToJson(payload, `drill-down-${drillDownData.type}`);
+      toast.success(`Drill-down data exported to ${file}`);
+    } catch (error) {
+      console.error("[DrillDownExport] ❌ Export failed", error);
+      toast.error("Failed to export drill-down data");
+    }
+  }, [drillDownData]);
+
+  /**
    * Computes hero metrics including total imports, matched, and pending counts.
    * @source
    */
@@ -196,16 +357,19 @@ export function StatisticsPage() {
   );
 
   /**
-   * Determines if there is any data available to display.
+   * Determines if there is any data available to display in the current filtered scope.
    * @source
    */
   const hasAnyData = useMemo(() => {
     const hasImport = (importStats?.total ?? 0) > 0;
-    const hasMatches = matchResults.length > 0;
+    const hasFilteredMatches = filteredData.matchResults.length > 0;
     const hasSync = !!(syncStats && syncStats.totalSyncs > 0);
-    const hasHistory = !!(readingHistory && readingHistory.entries.length > 0);
-    return hasImport || hasMatches || hasSync || hasHistory;
-  }, [importStats, matchResults, syncStats, readingHistory]);
+    const hasFilteredHistory = !!(
+      filteredData.readingHistory &&
+      filteredData.readingHistory.entries.length > 0
+    );
+    return hasImport || hasFilteredMatches || hasSync || hasFilteredHistory;
+  }, [importStats, filteredData, syncStats]);
 
   /**
    * Generates skeleton card keys for loading state.
@@ -243,24 +407,52 @@ export function StatisticsPage() {
         animate="show"
         className="space-y-6"
       >
+        {/* Row 0: Filter Panel */}
+        <motion.div variants={itemVariants}>
+          <StatisticsFilterPanel
+            filters={statisticsFilters}
+            onFiltersChange={handleFiltersChange}
+            availableGenres={filterOptions.genres}
+            availableFormats={filterOptions.formats}
+            availableStatuses={filterOptions.statuses}
+            matchCount={filteredData.matchResults.length}
+          />
+        </motion.div>
+
         {/* Row 1: Status and Format Distribution */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <motion.div variants={itemVariants}>
-            <StatusDistributionChart data={importStats?.statusCounts ?? null} />
+            <StatusDistributionChart
+              data={importStats?.statusCounts ?? null}
+              onDrillDown={handleDrillDown}
+              matchResults={filteredData.matchResults}
+            />
           </motion.div>
           <motion.div variants={itemVariants}>
-            <FormatDistributionChart matchResults={matchResults} />
+            <FormatDistributionChart
+              matchResults={filteredData.matchResults}
+              onDrillDown={handleDrillDown}
+              filteredMatchResults={filteredData.matchResults}
+              readingHistory={filteredData.readingHistory}
+            />
           </motion.div>
         </div>
 
         {/* Row 2: Chapters Read Distribution (Horizontal) */}
         <motion.div variants={itemVariants}>
-          <ChaptersReadDistributionChart matchResults={matchResults} />
+          <ChaptersReadDistributionChart
+            matchResults={filteredData.matchResults}
+          />
         </motion.div>
 
         {/* Row 3: Top Genres */}
         <motion.div variants={itemVariants}>
-          <TopGenresChart matchResults={matchResults} />
+          <TopGenresChart
+            matchResults={filteredData.matchResults}
+            onDrillDown={handleDrillDown}
+            filteredMatchResults={filteredData.matchResults}
+            readingHistory={filteredData.readingHistory}
+          />
         </motion.div>
 
         {/* Row 4: Match Progress */}
@@ -276,42 +468,59 @@ export function StatisticsPage() {
         {/* Row 6: Reading Trends */}
         <motion.div variants={itemVariants}>
           <ReadingTrendsChart
-            history={
-              readingHistory || {
-                entries: [],
-                lastUpdated: Date.now(),
-                version: 1,
-              }
-            }
+            history={filteredData.readingHistory}
             timeRange={selectedTimeRange}
+            enableZoom={true}
+            matchResults={filteredData.matchResults}
+            onDrillDown={
+              comparisonMode.metric === "chapters" ? handleDrillDown : undefined
+            }
+            comparisonData={
+              comparisonMode.enabled && comparisonMode.metric === "chapters"
+                ? comparisonDatasets?.secondary.trends
+                : undefined
+            }
+            comparisonLabel={
+              comparisonMode.enabled && comparisonMode.metric === "chapters"
+                ? comparisonDatasets?.secondaryLabel
+                : undefined
+            }
           />
         </motion.div>
 
         {/* Row 7: Reading Velocity */}
         <motion.div variants={itemVariants}>
           <ReadingVelocityChart
-            history={
-              readingHistory || {
-                entries: [],
-                lastUpdated: Date.now(),
-                version: 1,
-              }
-            }
+            history={filteredData.readingHistory}
             timeRange={selectedTimeRange}
+            comparisonData={
+              comparisonMode.enabled && comparisonMode.metric === "velocity"
+                ? comparisonDatasets?.secondary.velocity
+                : undefined
+            }
+            comparisonLabel={
+              comparisonMode.enabled && comparisonMode.metric === "velocity"
+                ? comparisonDatasets?.secondaryLabel
+                : undefined
+            }
           />
         </motion.div>
 
         {/* Row 8: Reading Habits */}
         <motion.div variants={itemVariants}>
           <ReadingHabitsChart
-            history={
-              readingHistory || {
-                entries: [],
-                lastUpdated: Date.now(),
-                version: 1,
-              }
-            }
+            history={filteredData.readingHistory}
             timeRange={selectedTimeRange}
+            comparisonData={
+              comparisonMode.enabled && comparisonMode.metric === "habits"
+                ? comparisonDatasets?.secondary.habits
+                : undefined
+            }
+            comparisonLabel={
+              comparisonMode.enabled && comparisonMode.metric === "habits"
+                ? comparisonDatasets?.secondaryLabel
+                : undefined
+            }
           />
         </motion.div>
       </motion.section>
@@ -412,14 +621,35 @@ export function StatisticsPage() {
               <ExportStatisticsButton
                 importStats={importStats}
                 syncStats={syncStats}
-                matchResults={matchResults}
+                matchResults={adaptedMatchesForExport}
                 disabled={!hasAnyData}
+                appliedFilters={statisticsFilters}
+                comparisonMode={comparisonMode}
+                isFiltered={Object.values(statisticsFilters).some((value) => {
+                  if (Array.isArray(value)) return value.length > 0;
+                  if (typeof value === "object" && value) {
+                    return Object.values(value).some(
+                      (v) =>
+                        v !== null &&
+                        v !== undefined &&
+                        (typeof v === "number" ? v !== 0 && v !== 100 : v),
+                    );
+                  }
+                  return false;
+                })}
               />
               {hasAnyData && (
-                <TimeRangeSelector
-                  value={selectedTimeRange}
-                  onChange={handleTimeRangeChange}
-                />
+                <>
+                  <TimeRangeSelector
+                    value={selectedTimeRange}
+                    onChange={handleTimeRangeChange}
+                  />
+                  <ComparisonToggle
+                    comparisonMode={comparisonMode}
+                    onComparisonChange={handleComparisonChange}
+                    disabled={!hasAnyData}
+                  />
+                </>
               )}
             </div>
           </div>
@@ -427,6 +657,14 @@ export function StatisticsPage() {
       </motion.section>
 
       {content}
+
+      {/* Drill-Down Modal */}
+      <DrillDownModal
+        open={drillDownOpen}
+        onOpenChange={setDrillDownOpen}
+        drillDownData={drillDownData}
+        onExport={handleDrillDownExport}
+      />
     </main>
   );
 }

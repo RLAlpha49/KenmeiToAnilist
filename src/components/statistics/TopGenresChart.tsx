@@ -17,6 +17,7 @@ import {
 } from "recharts";
 import { Sparkles, AlertCircle } from "lucide-react";
 import { cn } from "@/utils/tailwind";
+import { computeDrillDownData } from "@/utils/statisticsAdapter";
 
 /**
  * Minimal match result shape containing only selectedMatch for genre extraction.
@@ -34,6 +35,14 @@ interface TopGenresChartProps {
   readonly matchResults?: Array<MinimalMatchResult> | null;
   /** Optional className override for the container. */
   readonly className?: string;
+  /** Callback for drill-down clicks on genre bars. */
+  readonly onDrillDown?: (
+    data: import("@/types/statistics").DrillDownData,
+  ) => void;
+  /** Full match results for drill-down data building. */
+  readonly filteredMatchResults?: import("@/utils/statisticsAdapter").NormalizedMatchForStats[];
+  /** Reading history for drill-down data computation. */
+  readonly readingHistory?: import("@/utils/storage").ReadingHistory;
 }
 
 /**
@@ -65,6 +74,12 @@ export const TopGenresChart: FC<TopGenresChartProps> = React.memo(
     matchResults,
     // eslint-disable-next-line react/prop-types
     className,
+    // eslint-disable-next-line react/prop-types
+    onDrillDown,
+    // eslint-disable-next-line react/prop-types
+    filteredMatchResults,
+    // eslint-disable-next-line react/prop-types
+    readingHistory,
   }) {
     const { data, uniqueCount } = useMemo(() => {
       // eslint-disable-next-line react/prop-types
@@ -175,6 +190,27 @@ export const TopGenresChart: FC<TopGenresChartProps> = React.memo(
                   fill="url(#genreGradient)"
                   radius={[8, 8, 8, 8]}
                   animationDuration={800}
+                  cursor={onDrillDown ? "pointer" : "default"}
+                  onClick={(data) => {
+                    if (
+                      onDrillDown &&
+                      filteredMatchResults &&
+                      readingHistory &&
+                      data
+                    ) {
+                      const genre = (data as { payload?: { genre?: string } })
+                        ?.payload?.genre;
+                      if (!genre) return;
+                      onDrillDown(
+                        computeDrillDownData(
+                          filteredMatchResults,
+                          "genre",
+                          genre,
+                          readingHistory,
+                        ),
+                      );
+                    }
+                  }}
                 />
               </BarChart>
             </ResponsiveContainer>
