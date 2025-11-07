@@ -87,6 +87,8 @@ import { ViewControls } from "../components/sync/ViewControls";
 import { SkeletonCard, SkeletonList } from "../components/ui/skeleton";
 import EmptyState from "../components/ui/empty-state";
 import { SyncResumeNotification } from "../components/sync/SyncResumeNotification";
+import { SyncErrorBoundary } from "../components/sync/SyncErrorBoundary";
+import { captureError, ErrorType } from "../utils/errorHandling";
 
 /**
  * Sync page component for the Kenmei to AniList sync tool.
@@ -250,7 +252,12 @@ export function SyncPage() {
       );
       setMangaMatches(savedResults as MangaMatchResult[]);
     } else {
-      console.error("[SyncPage] No match results found in storage");
+      captureError(
+        ErrorType.STORAGE,
+        "No match results found in storage",
+        new Error("No match results"),
+        {},
+      );
     }
     setIsInitialMangaLoad(false);
   }, []);
@@ -292,9 +299,11 @@ export function SyncPage() {
             `[SyncPage] Retried failed operations: ${succeeded} succeeded`,
           );
         } catch (err) {
-          console.error(
-            "[SyncPage] Error during auto-retry on reconnect:",
-            err,
+          captureError(
+            ErrorType.NETWORK,
+            "Error during auto-retry on reconnect",
+            err instanceof Error ? err : new Error(String(err)),
+            {},
           );
         } finally {
           // Reset gate after completion
@@ -437,7 +446,12 @@ export function SyncPage() {
     const err = error;
     if (err.name === "AbortError") return;
 
-    console.error("[SyncPage] Failed to load user library:", err);
+    captureError(
+      ErrorType.NETWORK,
+      "Failed to load user library",
+      err instanceof Error ? err : new Error(String(err)),
+      { token: !!token },
+    );
     console.debug(
       "[SyncPage] Error object structure:",
       JSON.stringify(err, null, 2),
@@ -729,7 +743,12 @@ export function SyncPage() {
         console.log("Operation still failed");
       }
     } catch (error) {
-      console.error("Error retrying operation:", error);
+      captureError(
+        ErrorType.UNKNOWN,
+        "Error retrying operation",
+        error instanceof Error ? error : new Error(String(error)),
+        { operationId },
+      );
     } finally {
       setRetryingOperations((prev) => {
         const next = new Set(prev);
@@ -748,7 +767,12 @@ export function SyncPage() {
       const succeeded = await retryAllFailedOperations();
       console.log(`Retried all operations: ${succeeded} succeeded`);
     } catch (error) {
-      console.error("Error retrying all operations:", error);
+      captureError(
+        ErrorType.UNKNOWN,
+        "Error retrying all operations",
+        error instanceof Error ? error : new Error(String(error)),
+        {},
+      );
     }
   };
 
@@ -759,6 +783,42 @@ export function SyncPage() {
    */
   const handleClearOperation = (operationId: string) => {
     clearFailedOperation(operationId);
+  };
+
+  /**
+   * Handles sync reset from error boundary.
+   * @source
+   */
+  const handleSyncReset = () => {
+    actions.reset();
+    setViewMode("preview");
+    setRetryingOperations(new Set());
+  };
+
+  /**
+   * Handles retrying failed operations from error boundary.
+   * @source
+   */
+  const handleRetryFailedFromBoundary = async () => {
+    try {
+      await handleRetryAll();
+    } catch (error) {
+      captureError(
+        ErrorType.UNKNOWN,
+        "Failed to retry operations from error boundary",
+        error instanceof Error ? error : new Error(String(error)),
+        {},
+      );
+    }
+  };
+
+  /**
+   * Handles canceling sync from error boundary.
+   * @source
+   */
+  const handleCancelSyncFromBoundary = () => {
+    actions.cancelSync();
+    setViewMode("preview");
   };
 
   /**
@@ -2094,19 +2154,25 @@ export function SyncPage() {
 
   return (
     <div className="relative min-h-0 overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute left-[8%] top-[-10%] h-64 w-64 rounded-full bg-blue-200/50 blur-3xl dark:bg-blue-500/20" />
-        <div className="absolute right-[-12%] top-1/3 h-80 w-80 rounded-full bg-indigo-200/40 blur-3xl dark:bg-indigo-500/15" />
-        <div className="h-104 w-160 bg-linear-to-t absolute bottom-[-20%] left-1/2 -translate-x-1/2 from-slate-100 via-transparent to-transparent opacity-80 dark:from-slate-900/40" />
-      </div>
-      <motion.div
-        className="container relative z-10 py-10"
-        initial="hidden"
-        animate="visible"
-        variants={pageVariants}
+      <SyncErrorBoundary
+        onReset={handleSyncReset}
+        onRetryFailed={handleRetryFailedFromBoundary}
+        onCancelSync={handleCancelSyncFromBoundary}
       >
-        <AnimatePresence mode="wait">{renderContent()}</AnimatePresence>
-      </motion.div>
+        <div className="pointer-events-none absolute inset-0 -z-10">
+          <div className="absolute left-[8%] top-[-10%] h-64 w-64 rounded-full bg-blue-200/50 blur-3xl dark:bg-blue-500/20" />
+          <div className="absolute right-[-12%] top-1/3 h-80 w-80 rounded-full bg-indigo-200/40 blur-3xl dark:bg-indigo-500/15" />
+          <div className="h-104 w-160 bg-linear-to-t absolute bottom-[-20%] left-1/2 -translate-x-1/2 from-slate-100 via-transparent to-transparent opacity-80 dark:from-slate-900/40" />
+        </div>
+        <motion.div
+          className="container relative z-10 py-10"
+          initial="hidden"
+          animate="visible"
+          variants={pageVariants}
+        >
+          <AnimatePresence mode="wait">{renderContent()}</AnimatePresence>
+        </motion.div>
+      </SyncErrorBoundary>
     </div>
   );
 }

@@ -7,6 +7,7 @@
  */
 import * as Sentry from "@sentry/electron/renderer";
 import { initializeStorage } from "@/utils/storage";
+import { installConsoleInterceptor } from "@/utils/logging";
 
 /**
  * Initialize Sentry error tracking if DSN is configured.
@@ -19,8 +20,61 @@ if (sentryDsn) {
     dsn: sentryDsn,
     environment: import.meta.env.MODE,
     release: import.meta.env.VITE_APP_VERSION,
+    integrations: [Sentry.browserTracingIntegration()],
+    tracesSampleRate: 0.1,
+    beforeSend(event) {
+      // Sanitize sensitive data
+      if (event.request?.headers) {
+        delete event.request.headers["Authorization"];
+        delete event.request.headers["Cookie"];
+      }
+      if (event.extra) {
+        delete event.extra.token;
+        delete event.extra.apiKey;
+      }
+      return event;
+    },
+    ignoreErrors: [
+      "ResizeObserver loop",
+      "Non-Error promise rejection",
+      "Network request failed",
+      "Failed to fetch",
+    ],
   });
 }
+
+/**
+ * Install console interceptor to capture all console output for debugging.
+ * Gated behind VITE_CAPTURE_CONSOLE environment flag.
+ * Enabled by default in production, can be enabled in development via VITE_CAPTURE_CONSOLE=1.
+ * @source
+ */
+let cleanupConsoleInterceptor: (() => void) | null = null;
+
+// Determine if console interceptor should be enabled
+const shouldCaptureConsole =
+  import.meta.env.MODE === "production" ||
+  import.meta.env.VITE_CAPTURE_CONSOLE === "1";
+
+if (shouldCaptureConsole) {
+  try {
+    cleanupConsoleInterceptor = installConsoleInterceptor();
+    if (import.meta.env.MODE !== "production") {
+      console.debug(
+        "[Renderer] 🔍 Console interceptor enabled via VITE_CAPTURE_CONSOLE",
+      );
+    }
+  } catch (error) {
+    console.warn("[Renderer] ⚠️ Failed to install console interceptor:", error);
+  }
+}
+
+// Always register cleanup on unload
+window.addEventListener("unload", () => {
+  if (cleanupConsoleInterceptor) {
+    cleanupConsoleInterceptor();
+  }
+});
 
 /**
  * Initialize the storage abstraction layer.

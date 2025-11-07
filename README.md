@@ -105,7 +105,6 @@ VITE_ANILIST_CLIENT_SECRET=your-client-secret
 - **[IPC Architecture](./docs/guides/IPC_ARCHITECTURE.md)** – Inter-process communication patterns, context bridge, and sequence diagrams
 - **[Storage Implementation Guide](./docs/guides/STORAGE_IMPLEMENTATION.md)** – Three‑layer storage architecture details
 - **[AniList API Reference](./docs/guides/API_REFERENCE.md)** – GraphQL operations, auth, rate limiting, error handling
-- **[Auto-Update System](./docs/guides/AUTO_UPDATE.md)** – Update system architecture, configuration, and development guide
 
 ### Generated API (TypeDoc)
 

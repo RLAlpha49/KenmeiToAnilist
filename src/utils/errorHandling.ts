@@ -26,8 +26,7 @@ export enum ErrorType {
   SERVER = "server",
   CLIENT = "client",
   STORAGE = "storage",
-  AUTHENTICATION = "AUTHENTICATION",
-  SYSTEM = "SYSTEM",
+  SYSTEM = "system",
   IMPORT = "import",
 }
 
@@ -71,6 +70,7 @@ export function createError(
   recoveryAction?: ErrorRecoveryAction,
   recoveryMessage?: string,
 ): AppError {
+  console.error(message);
   console.debug(
     "[ErrorHandling] 🔍 Creating error: " +
       type +

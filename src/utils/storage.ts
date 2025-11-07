@@ -8,6 +8,7 @@ import type {
   FilterPreset,
 } from "../types/matchingFilters";
 import { DEFAULT_ADVANCED_FILTERS } from "../types/matchingFilters";
+import { captureError, ErrorType } from "./errorHandling";
 
 declare global {
   interface Window {
@@ -123,7 +124,12 @@ export const storage = {
 
       return value;
     } catch (error) {
-      console.error(`[Storage] Error getting item from storage: ${key}`, error);
+      captureError(
+        ErrorType.STORAGE,
+        `Error reading from storage key: ${key}`,
+        error instanceof Error ? error : new Error(String(error)),
+        { key, operation: "read" },
+      );
       return null;
     }
   },
@@ -157,16 +163,20 @@ export const storage = {
       // Also store in electronStore if available
       if (globalThis.electronStore) {
         globalThis.electronStore.setItem(key, value).catch((error) => {
-          console.error(
-            `[Storage] ❌ Error storing ${key} in electron-store:`,
-            error,
+          captureError(
+            ErrorType.SYSTEM,
+            `Error writing to electron-store: ${key}`,
+            error instanceof Error ? error : new Error(String(error)),
+            { key, operation: "write", target: "electron-store" },
           );
         });
       }
     } catch (error) {
-      console.error(
-        `[Storage] ❌ Error setting item in storage: ${key}`,
-        error,
+      captureError(
+        ErrorType.STORAGE,
+        `Error writing to storage key: ${key}`,
+        error instanceof Error ? error : new Error(String(error)),
+        { key, operation: "write", valueSize: value.length },
       );
     }
   },
@@ -189,16 +199,20 @@ export const storage = {
       // Also remove from electronStore if available
       if (globalThis.electronStore) {
         globalThis.electronStore.removeItem(key).catch((error) => {
-          console.error(
-            `[Storage] ❌ Error removing ${key} from electron-store:`,
-            error,
+          captureError(
+            ErrorType.SYSTEM,
+            `Error deleting from electron-store: ${key}`,
+            error instanceof Error ? error : new Error(String(error)),
+            { key, operation: "delete", target: "electron-store" },
           );
         });
       }
     } catch (error) {
-      console.error(
-        `[Storage] ❌ Error removing item from storage: ${key}`,
-        error,
+      captureError(
+        ErrorType.STORAGE,
+        `Error deleting storage key: ${key}`,
+        error instanceof Error ? error : new Error(String(error)),
+        { key, operation: "delete" },
       );
     }
   },
@@ -223,13 +237,18 @@ export const storage = {
       // Also clear electronStore if available
       if (globalThis.electronStore) {
         globalThis.electronStore.clear().catch((error) => {
-          console.error("[Storage] ❌ Error clearing electron-store:", error);
+          console.warn("[Storage] ❌ Error clearing electron-store:", error);
         });
       }
 
       console.info(`[Storage] ✅ Cleared ${keyCount} keys from storage`);
     } catch (error) {
-      console.error("[Storage] ❌ Error clearing storage", error);
+      captureError(
+        ErrorType.STORAGE,
+        "Error clearing all storage layers",
+        error instanceof Error ? error : new Error(String(error)),
+        { operation: "clear" },
+      );
     }
   },
 
@@ -266,7 +285,12 @@ export const storage = {
 
       console.debug(`[Storage] ✅ Async set complete: ${key}`);
     } catch (error) {
-      console.error(`[Storage] ❌ Error async setting item ${key}:`, error);
+      captureError(
+        ErrorType.STORAGE,
+        `Error async setting item: ${key}`,
+        error instanceof Error ? error : new Error(String(error)),
+        { key, operation: "write-async", valueSize: value.length },
+      );
       throw error;
     }
   },
@@ -292,11 +316,13 @@ export const storage = {
         }
         return value;
       } catch (error) {
-        console.error(
-          `[Storage] ❌ Error retrieving ${key} from electron-store:`,
-          error,
+        captureError(
+          ErrorType.SYSTEM,
+          `Error reading from electron-store: ${key}`,
+          error instanceof Error ? error : new Error(String(error)),
+          { key, operation: "read-async", target: "electron-store" },
         );
-        console.debug("[Storage] 🔍 Falling back to localStorage");
+        console.debug(`[Storage] 🔍 Falling back to localStorage for: ${key}`);
         // fallback to localStorage
         return localStorage.getItem(key);
       }
@@ -372,6 +398,12 @@ export async function initializeStorage(): Promise<void> {
         }
       } catch (error) {
         console.error(`[Storage] ⚠️ Failed to sync key ${key}:`, error);
+        captureError(
+          ErrorType.STORAGE,
+          `Error syncing storage key from electron-store: ${key}`,
+          error instanceof Error ? error : new Error(String(error)),
+          { key, operation: "sync" },
+        );
       }
     }
 
@@ -384,7 +416,12 @@ export async function initializeStorage(): Promise<void> {
         syncCount++;
       }
     } catch (error) {
-      console.error("[Storage] ⚠️ Failed to sync authState:", error);
+      captureError(
+        ErrorType.STORAGE,
+        "Error syncing authState from electron-store",
+        error instanceof Error ? error : new Error(String(error)),
+        { key: "authState", operation: "sync" },
+      );
     }
 
     console.info(
@@ -394,7 +431,12 @@ export async function initializeStorage(): Promise<void> {
     // Ensure onboarding keys are properly initialized
     await ensureOnboardingKeysInitialized();
   } catch (error) {
-    console.error("[Storage] ❌ Storage initialization failed:", error);
+    captureError(
+      ErrorType.STORAGE,
+      "Error during storage initialization",
+      error instanceof Error ? error : new Error(String(error)),
+      { operation: "initialize" },
+    );
   }
 }
 
@@ -824,9 +866,14 @@ export function getSavedMatchResults(): MatchResult[] | null {
     console.debug("[Storage] 🔍 No match results found");
     return null;
   } catch (error) {
-    console.error(
-      "[Storage] ❌ Error retrieving saved match results from storage",
-      error,
+    captureError(
+      ErrorType.STORAGE,
+      "Error parsing saved match results",
+      error instanceof Error ? error : new Error(String(error)),
+      {
+        operation: "read-match-results",
+        isParseError: error instanceof SyntaxError,
+      },
     );
     return null;
   }

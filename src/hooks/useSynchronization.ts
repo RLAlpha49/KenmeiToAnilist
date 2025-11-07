@@ -306,9 +306,11 @@ const saveSnapshotToStorage = (snapshot: SyncResumeSnapshot | null): void => {
       JSON.stringify(snapshot),
     );
   } catch (error) {
-    console.error(
-      "[Synchronization] ❌ Failed to persist sync snapshot:",
-      error,
+    captureError(
+      ErrorType.STORAGE,
+      "Failed to persist sync snapshot",
+      error instanceof Error ? error : new Error(String(error)),
+      { operation: "persist-snapshot" },
     );
   }
 };
@@ -1922,7 +1924,7 @@ export function useSynchronization(): [
           );
           // Capture error for monitoring
           captureError(
-            ErrorType.AUTHENTICATION,
+            ErrorType.AUTH,
             "Cannot retry: access token unavailable",
             new Error("Cannot retry: access token unavailable"),
             {
@@ -2042,7 +2044,7 @@ export function useSynchronization(): [
         "[Synchronization] Cannot retry all operations: access token is missing or empty",
       );
       captureError(
-        ErrorType.AUTHENTICATION,
+        ErrorType.AUTH,
         "Cannot retry all: access token unavailable",
         new Error("Cannot retry all: access token unavailable"),
         {

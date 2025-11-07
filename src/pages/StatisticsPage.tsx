@@ -63,6 +63,8 @@ import { DEFAULT_STATISTICS_FILTERS } from "@/types/statistics";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { StatisticsErrorBoundary } from "@/components/statistics/StatisticsErrorBoundary";
+import { captureError, ErrorType } from "@/utils/errorHandling";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0, y: 16 },
@@ -166,7 +168,12 @@ export function StatisticsPage() {
 
       setLastRefreshedAt(new Date().toISOString());
     } catch (error) {
-      console.error("[Statistics] ❌ Failed to load statistics", error);
+      captureError(
+        ErrorType.STORAGE,
+        "Failed to load statistics",
+        error instanceof Error ? error : new Error(String(error)),
+        {},
+      );
       toast.error("Unable to load statistics. Please try again.");
     }
   }, []);
@@ -204,6 +211,21 @@ export function StatisticsPage() {
     setIsRefreshing(false);
     toast.success("Statistics refreshed");
   }, [isRefreshing, loadStatistics]);
+
+  /**
+   * Handles clearing filters from error boundary.
+   * @source
+   */
+  const handleClearFiltersFromBoundary = useCallback(() => {
+    setStatisticsFilters(DEFAULT_STATISTICS_FILTERS);
+    setComparisonMode({
+      enabled: false,
+      primaryRange: "30d",
+      secondaryRange: "30d",
+      metric: "chapters",
+    });
+    toast.success("Filters cleared");
+  }, []);
 
   /**
    * Handles time range selection for filtered statistics views.
@@ -327,7 +349,16 @@ export function StatisticsPage() {
       const file = exportToJson(payload, `drill-down-${drillDownData.type}`);
       toast.success(`Drill-down data exported to ${file}`);
     } catch (error) {
-      console.error("[DrillDownExport] ❌ Export failed", error);
+      captureError(
+        ErrorType.SYSTEM,
+        "Failed to export drill-down data",
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          type: drillDownData?.type,
+          value: drillDownData?.value,
+          count: drillDownData?.data?.length,
+        },
+      );
       toast.error("Failed to export drill-down data");
     }
   }, [drillDownData]);
@@ -548,123 +579,128 @@ export function StatisticsPage() {
 
   return (
     <main className="container mx-auto px-4 py-10">
-      <motion.section
-        variants={containerVariants}
-        initial="hidden"
-        animate="show"
-        className="mb-10"
+      <StatisticsErrorBoundary
+        onRefresh={handleRefresh}
+        onClearFilters={handleClearFiltersFromBoundary}
       >
-        <motion.div
-          variants={itemVariants}
-          className="flex flex-col gap-6 rounded-3xl border border-slate-200 bg-white/90 p-8 shadow-lg backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80"
+        <motion.section
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="mb-10"
         >
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <div className="mb-3 flex items-center gap-3">
-                <span className="bg-linear-to-r inline-flex h-12 w-12 items-center justify-center rounded-2xl from-blue-500/20 via-purple-500/20 to-fuchsia-500/20 text-blue-500 dark:text-blue-300">
-                  <BarChart3 className="h-6 w-6" aria-hidden="true" />
-                </span>
-                <div>
-                  <h1 className="text-3xl font-semibold tracking-tight">
-                    Library Statistics
-                  </h1>
-                  <p className="text-muted-foreground mt-1 text-sm">
-                    Comprehensive insights into your Kenmei to AniList
-                    migration.
-                  </p>
+          <motion.div
+            variants={itemVariants}
+            className="flex flex-col gap-6 rounded-3xl border border-slate-200 bg-white/90 p-8 shadow-lg backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <div className="mb-3 flex items-center gap-3">
+                  <span className="bg-linear-to-r inline-flex h-12 w-12 items-center justify-center rounded-2xl from-blue-500/20 via-purple-500/20 to-fuchsia-500/20 text-blue-500 dark:text-blue-300">
+                    <BarChart3 className="h-6 w-6" aria-hidden="true" />
+                  </span>
+                  <div>
+                    <h1 className="text-3xl font-semibold tracking-tight">
+                      Library Statistics
+                    </h1>
+                    <p className="text-muted-foreground mt-1 text-sm">
+                      Comprehensive insights into your Kenmei to AniList
+                      migration.
+                    </p>
+                  </div>
+                </div>
+                <div className="text-muted-foreground flex flex-wrap gap-2 text-sm">
+                  <Badge
+                    variant="secondary"
+                    className="bg-blue-500/15 text-blue-600 dark:text-blue-300"
+                  >
+                    Total imported: {heroMetrics.totalImported.toLocaleString()}
+                  </Badge>
+                  <Badge
+                    variant="secondary"
+                    className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-300"
+                  >
+                    Matched: {heroMetrics.matchedCount.toLocaleString()}
+                  </Badge>
+                  <Badge
+                    variant="secondary"
+                    className="bg-amber-500/15 text-amber-600 dark:text-amber-300"
+                  >
+                    Pending: {heroMetrics.pendingCount.toLocaleString()}
+                  </Badge>
+                  <Badge
+                    variant="secondary"
+                    className="bg-purple-500/15 text-purple-600 dark:text-purple-300"
+                  >
+                    Last updated: {lastUpdatedLabel}
+                  </Badge>
                 </div>
               </div>
-              <div className="text-muted-foreground flex flex-wrap gap-2 text-sm">
-                <Badge
-                  variant="secondary"
-                  className="bg-blue-500/15 text-blue-600 dark:text-blue-300"
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  variant="ghost"
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className="gap-2"
                 >
-                  Total imported: {heroMetrics.totalImported.toLocaleString()}
-                </Badge>
-                <Badge
-                  variant="secondary"
-                  className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-300"
-                >
-                  Matched: {heroMetrics.matchedCount.toLocaleString()}
-                </Badge>
-                <Badge
-                  variant="secondary"
-                  className="bg-amber-500/15 text-amber-600 dark:text-amber-300"
-                >
-                  Pending: {heroMetrics.pendingCount.toLocaleString()}
-                </Badge>
-                <Badge
-                  variant="secondary"
-                  className="bg-purple-500/15 text-purple-600 dark:text-purple-300"
-                >
-                  Last updated: {lastUpdatedLabel}
-                </Badge>
+                  {isRefreshing ? (
+                    <Loader2
+                      className="h-4 w-4 animate-spin"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                  )}
+                  Refresh
+                </Button>
+                <ExportStatisticsButton
+                  importStats={importStats}
+                  syncStats={syncStats}
+                  matchResults={adaptedMatchesForExport}
+                  disabled={!hasAnyData}
+                  appliedFilters={statisticsFilters}
+                  comparisonMode={comparisonMode}
+                  isFiltered={Object.values(statisticsFilters).some((value) => {
+                    if (Array.isArray(value)) return value.length > 0;
+                    if (typeof value === "object" && value) {
+                      return Object.values(value).some(
+                        (v) =>
+                          v !== null &&
+                          v !== undefined &&
+                          (typeof v === "number" ? v !== 0 && v !== 100 : v),
+                      );
+                    }
+                    return false;
+                  })}
+                />
+                {hasAnyData && (
+                  <>
+                    <TimeRangeSelector
+                      value={selectedTimeRange}
+                      onChange={handleTimeRangeChange}
+                    />
+                    <ComparisonToggle
+                      comparisonMode={comparisonMode}
+                      onComparisonChange={handleComparisonChange}
+                      disabled={!hasAnyData}
+                    />
+                  </>
+                )}
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <Button
-                variant="ghost"
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                className="gap-2"
-              >
-                {isRefreshing ? (
-                  <Loader2
-                    className="h-4 w-4 animate-spin"
-                    aria-hidden="true"
-                  />
-                ) : (
-                  <RefreshCw className="h-4 w-4" aria-hidden="true" />
-                )}
-                Refresh
-              </Button>
-              <ExportStatisticsButton
-                importStats={importStats}
-                syncStats={syncStats}
-                matchResults={adaptedMatchesForExport}
-                disabled={!hasAnyData}
-                appliedFilters={statisticsFilters}
-                comparisonMode={comparisonMode}
-                isFiltered={Object.values(statisticsFilters).some((value) => {
-                  if (Array.isArray(value)) return value.length > 0;
-                  if (typeof value === "object" && value) {
-                    return Object.values(value).some(
-                      (v) =>
-                        v !== null &&
-                        v !== undefined &&
-                        (typeof v === "number" ? v !== 0 && v !== 100 : v),
-                    );
-                  }
-                  return false;
-                })}
-              />
-              {hasAnyData && (
-                <>
-                  <TimeRangeSelector
-                    value={selectedTimeRange}
-                    onChange={handleTimeRangeChange}
-                  />
-                  <ComparisonToggle
-                    comparisonMode={comparisonMode}
-                    onComparisonChange={handleComparisonChange}
-                    disabled={!hasAnyData}
-                  />
-                </>
-              )}
-            </div>
-          </div>
-        </motion.div>
-      </motion.section>
+          </motion.div>
+        </motion.section>
 
-      {content}
+        {content}
 
-      {/* Drill-Down Modal */}
-      <DrillDownModal
-        open={drillDownOpen}
-        onOpenChange={setDrillDownOpen}
-        drillDownData={drillDownData}
-        onExport={handleDrillDownExport}
-      />
+        {/* Drill-Down Modal */}
+        <DrillDownModal
+          open={drillDownOpen}
+          onOpenChange={setDrillDownOpen}
+          drillDownData={drillDownData}
+          onExport={handleDrillDownExport}
+        />
+      </StatisticsErrorBoundary>
     </main>
   );
 }

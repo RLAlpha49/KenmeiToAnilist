@@ -14,12 +14,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { AlertTriangle, RotateCcw, Home } from "lucide-react";
+import * as Sentry from "@sentry/electron/renderer";
 
 interface Props {
   /** Child components to render or fallback UI on error. */
   children: ReactNode;
   /** Optional custom fallback UI to display when an error is caught. */
   fallback?: ReactNode;
+  /** Optional callback to handle errors when they occur. */
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
+  /** Optional callback to customize recovery behavior. */
+  recoveryAction?: () => void;
 }
 
 interface State {
@@ -77,6 +82,21 @@ export class ErrorBoundary extends Component<Props, State> {
       errorInfo,
     });
 
+    // Capture to Sentry with React context
+    Sentry.captureException(error, {
+      contexts: {
+        react: {
+          componentStack: errorInfo.componentStack,
+        },
+      },
+      fingerprint: ["{{ default }}", error.message],
+    });
+
+    // Call onError callback if provided
+    if (this.props.onError) {
+      this.props.onError(error, errorInfo);
+    }
+
     // Dispatch error to debug context if available
     try {
       const debugEvent = new CustomEvent("debug:log", {
@@ -101,6 +121,11 @@ export class ErrorBoundary extends Component<Props, State> {
    * @source
    */
   handleReset = (): void => {
+    // Call custom recovery action if provided
+    if (this.props.recoveryAction) {
+      this.props.recoveryAction();
+    }
+
     this.setState({
       hasError: false,
       error: null,

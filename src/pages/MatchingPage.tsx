@@ -35,8 +35,10 @@ import { debounce } from "../utils/debounce";
 import { AbortError } from "../utils/chunkedProcessing";
 import { truncateToastMessage } from "../utils/textHighlight";
 import { toast } from "sonner";
+import { captureError, ErrorType } from "../utils/errorHandling";
 
 // Components
+import { MatchingErrorBoundary } from "../components/matching/MatchingErrorBoundary";
 import { RematchOptions } from "../components/matching/RematchOptions";
 import { CacheClearingNotification } from "../components/matching/CacheClearingNotification";
 import { SearchModal } from "../components/matching/SearchModal";
@@ -333,6 +335,48 @@ export function MatchingPage() {
     matchingProcess.setBypassCache,
     undoRedoManager,
   );
+
+  // Error boundary handlers
+  const handleMatchingReset = useCallback(() => {
+    setMatchResults([]);
+    setSelectedMatchIds(new Set());
+    setBatchOperationProgress(null);
+    undoRedoManager.clear();
+    setCanUndo(false);
+    setCanRedo(false);
+    matchingProcess.setError?.(null);
+
+    // Reload from storage
+    try {
+      const savedResults = getSavedMatchResults();
+      if (savedResults) {
+        setMatchResults(savedResults as MangaMatchResult[]);
+      }
+      toast.success("Matching state reset successfully");
+    } catch (error) {
+      captureError(
+        ErrorType.STORAGE,
+        "Failed to reload match results after reset",
+        error instanceof Error ? error : new Error(String(error)),
+        {},
+      );
+    }
+  }, [matchingProcess, undoRedoManager]);
+
+  const handleClearMatchingCache = useCallback(() => {
+    try {
+      const titles = matchResults.map((m) => m.kenmeiManga.title);
+      clearCacheForTitles(titles);
+      toast.success("Matching cache cleared successfully");
+    } catch (error) {
+      captureError(
+        ErrorType.STORAGE,
+        "Failed to clear matching cache",
+        error instanceof Error ? error : new Error(String(error)),
+        { titleCount: matchResults.length },
+      );
+    }
+  }, [matchResults]);
 
   // Batch selection handlers
   const handleToggleSelection = useCallback((matchId: number) => {
@@ -1806,248 +1850,253 @@ export function MatchingPage() {
 
   return (
     <div className="relative flex h-full w-full flex-1">
-      <motion.div
-        className="container mx-auto flex h-full max-w-full flex-col px-4 py-6 md:px-6"
-        variants={pageVariants}
-        initial="hidden"
-        animate="visible"
+      <MatchingErrorBoundary
+        onReset={handleMatchingReset}
+        onClearCache={handleClearMatchingCache}
       >
-        <MatchingPageHeader
-          headerVariants={headerVariants}
-          matchResultsLength={matchResults.length}
-          showRematchOptions={showRematchOptions}
-          setShowRematchOptions={setShowRematchOptions}
-          matchingProcessIsLoading={matchingProcess.isLoading}
-          rateLimitIsRateLimited={rateLimitState.isRateLimited}
-          statusSummary={matchStatusSummary}
-          pendingBacklog={pendingMangaState.pendingManga.length}
-          handleUndo={handleUndo}
-          handleRedo={handleRedo}
-          canUndo={canUndo}
-          canRedo={canRedo}
-          matchResults={matchResults}
-          onImportComplete={handleImportComplete}
-        />
+        <motion.div
+          className="container mx-auto flex h-full max-w-full flex-col px-4 py-6 md:px-6"
+          variants={pageVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <MatchingPageHeader
+            headerVariants={headerVariants}
+            matchResultsLength={matchResults.length}
+            showRematchOptions={showRematchOptions}
+            setShowRematchOptions={setShowRematchOptions}
+            matchingProcessIsLoading={matchingProcess.isLoading}
+            rateLimitIsRateLimited={rateLimitState.isRateLimited}
+            statusSummary={matchStatusSummary}
+            pendingBacklog={pendingMangaState.pendingManga.length}
+            handleUndo={handleUndo}
+            handleRedo={handleRedo}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            matchResults={matchResults}
+            onImportComplete={handleImportComplete}
+          />
 
-        {/* Rematch by status options */}
-        <AnimatePresence>
-          {showRematchOptions &&
-            !matchingProcess.isLoading &&
-            matchResults.length > 0 && (
-              <RematchOptions
-                selectedStatuses={selectedStatuses}
-                onChangeSelectedStatuses={setSelectedStatuses}
-                matchResults={matchResults}
-                rematchWarning={rematchWarning}
-                onRematchByStatus={handleRematchByStatus}
-                onCloseOptions={() => setShowRematchOptions(false)}
-              />
-            )}
-        </AnimatePresence>
-
-        {/* Duplicate AniList ID Warning */}
-        <AnimatePresence>
-          {showDuplicateWarning && duplicateEntries.length > 0 && (
-            <DuplicateWarning
-              duplicates={duplicateEntries}
-              onDismiss={() => setShowDuplicateWarning(false)}
-              onSearchAnilist={(title) => setSearchQuery(title)}
-              onIgnoreDuplicate={(anilistId, anilistTitle) => {
-                addIgnoredDuplicate(anilistId, anilistTitle);
-                // Refresh duplicates to remove the ignored one
-                const updatedDuplicates =
-                  detectDuplicateAniListIds(matchResults);
-                setDuplicateEntries(updatedDuplicates);
-                // Hide warning if no duplicates remain
-                if (updatedDuplicates.length === 0) {
-                  setShowDuplicateWarning(false);
-                }
-              }}
-            />
-          )}
-        </AnimatePresence>
-
-        {/* Initialization state - only show if not already loading and we have pending manga */}
-        {matchingProcess.isInitializing &&
-          !matchingProcess.isLoading &&
-          pendingMangaState.pendingManga.length > 0 && <InitializationCard />}
-
-        {/* Resume message when we have pending manga but aren't already in the loading state */}
-        {resumeState.needsProcessing &&
-          !matchingProcess.isLoading &&
-          !matchingProcess.isInitializing && (
-            <MatchingResume
-              pendingMangaCount={resumeState.unprocessedCount}
-              onResumeMatching={() => {
-                console.info(
-                  "[MatchingPage] Resume matching clicked - ensuring unprocessed manga are processed",
-                );
-
-                if (resumeState.unprocessedManga.length > 0) {
-                  pendingMangaState.savePendingManga(
-                    resumeState.unprocessedManga,
-                  );
-                  setTimeout(() => {
-                    matchingProcess.handleResumeMatching(
-                      matchResults,
-                      setMatchResults,
-                    );
-                  }, 100);
-                } else {
-                  pendingMangaState.savePendingManga([]);
-                  matchingProcess.setError(
-                    "All manga have already been processed. No additional matching is needed.",
-                  );
-                }
-              }}
-              onCancelResume={matchingProcess.handleCancelResume}
-            />
-          )}
-
-        {/* Main content */}
-        <motion.div className="relative flex-1" variants={contentVariants}>
-          {matchResults.length > 0 ? (
-            <>
-              {/* Batch Selection Toolbar */}
-              {selectedMatchIds.size > 0 && (
-                <BatchSelectionToolbar
-                  selectedCount={selectedMatchIds.size}
-                  onAccept={handleBatchAccept}
-                  onReject={handleBatchReject}
-                  onReset={handleBatchReset}
-                  onClearSelection={handleClearSelection}
-                  progress={batchOperationProgress}
-                  onCancel={handleCancelBatchOperation}
-                  isBatchBusy={batchAbortController !== null}
+          {/* Rematch by status options */}
+          <AnimatePresence>
+            {showRematchOptions &&
+              !matchingProcess.isLoading &&
+              matchResults.length > 0 && (
+                <RematchOptions
+                  selectedStatuses={selectedStatuses}
+                  onChangeSelectedStatuses={setSelectedStatuses}
+                  matchResults={matchResults}
+                  rematchWarning={rematchWarning}
+                  onRematchByStatus={handleRematchByStatus}
+                  onCloseOptions={() => setShowRematchOptions(false)}
                 />
               )}
+          </AnimatePresence>
 
-              <MatchingPanel
-                matches={matchResults}
-                onManualSearch={matchHandlers.handleManualSearch}
-                onAcceptMatch={matchHandlers.handleAcceptMatch}
-                onRejectMatch={matchHandlers.handleRejectMatch}
-                onSelectAlternative={matchHandlers.handleSelectAlternative}
-                onResetToPending={matchHandlers.handleResetToPending}
-                searchQuery={searchQuery}
-                onSetMatchedToPending={handleSetAllMatchedToPending}
-                disableSetMatchedToPending={
-                  matchingProcess.isLoading || rateLimitState.isRateLimited
-                }
-                onProceedToSync={handleProceedToSync}
-                onBackToImport={() => {
-                  pendingMangaState.savePendingManga([]);
-                  navigate({ to: "/import" });
+          {/* Duplicate AniList ID Warning */}
+          <AnimatePresence>
+            {showDuplicateWarning && duplicateEntries.length > 0 && (
+              <DuplicateWarning
+                duplicates={duplicateEntries}
+                onDismiss={() => setShowDuplicateWarning(false)}
+                onSearchAnilist={(title) => setSearchQuery(title)}
+                onIgnoreDuplicate={(anilistId, anilistTitle) => {
+                  addIgnoredDuplicate(anilistId, anilistTitle);
+                  // Refresh duplicates to remove the ignored one
+                  const updatedDuplicates =
+                    detectDuplicateAniListIds(matchResults);
+                  setDuplicateEntries(updatedDuplicates);
+                  // Hide warning if no duplicates remain
+                  if (updatedDuplicates.length === 0) {
+                    setShowDuplicateWarning(false);
+                  }
                 }}
-                selectedMatchIds={selectedMatchIds}
-                onToggleSelection={handleToggleSelection}
-                onSelectAll={handleSelectAll}
-                onClearSelection={handleClearSelection}
-              />
-            </>
-          ) : (
-            <AnimatePresence>
-              <EmptyState
-                icon={<FileSearch className="h-10 w-10" />}
-                title="No manga to match"
-                description="No manga data available. Import your Kenmei library to get started."
-                actionLabel="Go to Import"
-                onAction={() => {
-                  pendingMangaState.savePendingManga([]);
-                  navigate({ to: "/import" });
-                }}
-                variant="info"
-              />
-            </AnimatePresence>
-          )}
-        </motion.div>
-
-        {/* Search Modal */}
-        <SearchModal
-          isOpen={isSearchOpen}
-          searchTarget={searchTarget}
-          accessToken={authState.accessToken || ""}
-          bypassCache={true}
-          onClose={() => {
-            setIsSearchOpen(false);
-            setSearchTarget(undefined);
-            matchingProcess.setBypassCache(false);
-          }}
-          onSelectMatch={matchHandlers.handleSelectSearchMatch}
-        />
-
-        {/* Batch Reject Confirmation Dialog */}
-        <AlertDialog
-          open={showBatchRejectDialog}
-          onOpenChange={setShowBatchRejectDialog}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Reject Selected Matches?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will reject {selectedMatchIds.size} selected matches. You
-                can undo this action with Ctrl+Z.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={confirmBatchReject}
-                className="bg-rose-600 hover:bg-rose-700 focus:ring-rose-600"
-              >
-                Confirm Reject
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        {/* Batch Reset Confirmation Dialog */}
-        <AlertDialog
-          open={showBatchResetDialog}
-          onOpenChange={setShowBatchResetDialog}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                Reset Selected Matches to Pending?
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                This will reset {selectedMatchIds.size} matches to pending
-                status. You can undo this action with Ctrl+Z.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={confirmBatchReset}
-                className="bg-orange-600 hover:bg-orange-700 focus:ring-orange-600"
-              >
-                Confirm Reset
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        {/* Cache Clearing Notification */}
-        {matchingProcess.isCacheClearing && (
-          <CacheClearingNotification
-            cacheClearingCount={matchingProcess.cacheClearingCount}
-          />
-        )}
-
-        {/* Error display when we have an error but also have results */}
-        <AnimatePresence>
-          {matchingProcess.error &&
-            !matchingProcess.error.includes("Authentication Required") &&
-            matchResults.length > 0 &&
-            !rateLimitState.isRateLimited && (
-              <MatchingErrorToast
-                error={matchingProcess.error}
-                onDismiss={() => matchingProcess.setError(null)}
               />
             )}
-        </AnimatePresence>
-      </motion.div>
+          </AnimatePresence>
+
+          {/* Initialization state - only show if not already loading and we have pending manga */}
+          {matchingProcess.isInitializing &&
+            !matchingProcess.isLoading &&
+            pendingMangaState.pendingManga.length > 0 && <InitializationCard />}
+
+          {/* Resume message when we have pending manga but aren't already in the loading state */}
+          {resumeState.needsProcessing &&
+            !matchingProcess.isLoading &&
+            !matchingProcess.isInitializing && (
+              <MatchingResume
+                pendingMangaCount={resumeState.unprocessedCount}
+                onResumeMatching={() => {
+                  console.info(
+                    "[MatchingPage] Resume matching clicked - ensuring unprocessed manga are processed",
+                  );
+
+                  if (resumeState.unprocessedManga.length > 0) {
+                    pendingMangaState.savePendingManga(
+                      resumeState.unprocessedManga,
+                    );
+                    setTimeout(() => {
+                      matchingProcess.handleResumeMatching(
+                        matchResults,
+                        setMatchResults,
+                      );
+                    }, 100);
+                  } else {
+                    pendingMangaState.savePendingManga([]);
+                    matchingProcess.setError(
+                      "All manga have already been processed. No additional matching is needed.",
+                    );
+                  }
+                }}
+                onCancelResume={matchingProcess.handleCancelResume}
+              />
+            )}
+
+          {/* Main content */}
+          <motion.div className="relative flex-1" variants={contentVariants}>
+            {matchResults.length > 0 ? (
+              <>
+                {/* Batch Selection Toolbar */}
+                {selectedMatchIds.size > 0 && (
+                  <BatchSelectionToolbar
+                    selectedCount={selectedMatchIds.size}
+                    onAccept={handleBatchAccept}
+                    onReject={handleBatchReject}
+                    onReset={handleBatchReset}
+                    onClearSelection={handleClearSelection}
+                    progress={batchOperationProgress}
+                    onCancel={handleCancelBatchOperation}
+                    isBatchBusy={batchAbortController !== null}
+                  />
+                )}
+
+                <MatchingPanel
+                  matches={matchResults}
+                  onManualSearch={matchHandlers.handleManualSearch}
+                  onAcceptMatch={matchHandlers.handleAcceptMatch}
+                  onRejectMatch={matchHandlers.handleRejectMatch}
+                  onSelectAlternative={matchHandlers.handleSelectAlternative}
+                  onResetToPending={matchHandlers.handleResetToPending}
+                  searchQuery={searchQuery}
+                  onSetMatchedToPending={handleSetAllMatchedToPending}
+                  disableSetMatchedToPending={
+                    matchingProcess.isLoading || rateLimitState.isRateLimited
+                  }
+                  onProceedToSync={handleProceedToSync}
+                  onBackToImport={() => {
+                    pendingMangaState.savePendingManga([]);
+                    navigate({ to: "/import" });
+                  }}
+                  selectedMatchIds={selectedMatchIds}
+                  onToggleSelection={handleToggleSelection}
+                  onSelectAll={handleSelectAll}
+                  onClearSelection={handleClearSelection}
+                />
+              </>
+            ) : (
+              <AnimatePresence>
+                <EmptyState
+                  icon={<FileSearch className="h-10 w-10" />}
+                  title="No manga to match"
+                  description="No manga data available. Import your Kenmei library to get started."
+                  actionLabel="Go to Import"
+                  onAction={() => {
+                    pendingMangaState.savePendingManga([]);
+                    navigate({ to: "/import" });
+                  }}
+                  variant="info"
+                />
+              </AnimatePresence>
+            )}
+          </motion.div>
+
+          {/* Search Modal */}
+          <SearchModal
+            isOpen={isSearchOpen}
+            searchTarget={searchTarget}
+            accessToken={authState.accessToken || ""}
+            bypassCache={true}
+            onClose={() => {
+              setIsSearchOpen(false);
+              setSearchTarget(undefined);
+              matchingProcess.setBypassCache(false);
+            }}
+            onSelectMatch={matchHandlers.handleSelectSearchMatch}
+          />
+
+          {/* Batch Reject Confirmation Dialog */}
+          <AlertDialog
+            open={showBatchRejectDialog}
+            onOpenChange={setShowBatchRejectDialog}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Reject Selected Matches?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will reject {selectedMatchIds.size} selected matches. You
+                  can undo this action with Ctrl+Z.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={confirmBatchReject}
+                  className="bg-rose-600 hover:bg-rose-700 focus:ring-rose-600"
+                >
+                  Confirm Reject
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {/* Batch Reset Confirmation Dialog */}
+          <AlertDialog
+            open={showBatchResetDialog}
+            onOpenChange={setShowBatchResetDialog}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Reset Selected Matches to Pending?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will reset {selectedMatchIds.size} matches to pending
+                  status. You can undo this action with Ctrl+Z.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={confirmBatchReset}
+                  className="bg-orange-600 hover:bg-orange-700 focus:ring-orange-600"
+                >
+                  Confirm Reset
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {/* Cache Clearing Notification */}
+          {matchingProcess.isCacheClearing && (
+            <CacheClearingNotification
+              cacheClearingCount={matchingProcess.cacheClearingCount}
+            />
+          )}
+
+          {/* Error display when we have an error but also have results */}
+          <AnimatePresence>
+            {matchingProcess.error &&
+              !matchingProcess.error.includes("Authentication Required") &&
+              matchResults.length > 0 &&
+              !rateLimitState.isRateLimited && (
+                <MatchingErrorToast
+                  error={matchingProcess.error}
+                  onDismiss={() => matchingProcess.setError(null)}
+                />
+              )}
+          </AnimatePresence>
+        </motion.div>
+      </MatchingErrorBoundary>
     </div>
   );
 }

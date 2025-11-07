@@ -23,15 +23,12 @@ import { withGroupAsync } from "@/utils/logging";
 import { storage, STORAGE_KEYS } from "@/utils/storage";
 import { calculateBackoff } from "@/utils/retry";
 import { isTransientError as checkIsTransientError } from "@/utils/network";
-
-/**
- * HTTP error with status information.
- * @source
- */
-interface HttpError extends Error {
-  status: number;
-  statusText: string;
-}
+import {
+  createError,
+  captureError,
+  ErrorType,
+  ErrorRecoveryAction,
+} from "@/utils/errorHandling";
 
 /**
  * Rate limit error indicating request quota exceeded.
@@ -123,12 +120,19 @@ function initializeSearchCache(): void {
       globalThis.dispatchEvent(event);
       console.debug(`[AniListClient] 📤 Dispatched cache initialization event`);
     } catch (e) {
-      console.error("[AniListClient] ❌ Failed to dispatch cache event", e);
+      captureError(
+        ErrorType.SYSTEM,
+        "Failed to dispatch cache initialization event",
+        e instanceof Error ? e : new Error(String(e)),
+        { count: loadedCount },
+      );
     }
   } catch (error) {
-    console.error(
-      "[AniListClient] ❌ Error loading search cache from storage:",
-      error,
+    captureError(
+      ErrorType.STORAGE,
+      "Error loading search cache from storage",
+      error instanceof Error ? error : new Error(String(error)),
+      { operation: "loadSearchCache" },
     );
   }
 }
@@ -145,9 +149,11 @@ function persistSearchCacheInternal(): void {
       `[AniListClient] 💾 Persisted search cache (${serialized.length} bytes)`,
     );
   } catch (error) {
-    console.error(
-      "[AniListClient] ❌ Error saving search cache to storage:",
-      error,
+    captureError(
+      ErrorType.STORAGE,
+      "Error saving search cache to storage",
+      error instanceof Error ? error : new Error(String(error)),
+      { operation: "persistSearchCache" },
     );
   }
 }
@@ -255,10 +261,22 @@ async function handleElectronRequest<T>(
     succeeded = true;
     return response as AniListResponse<T>;
   } catch (error) {
-    console.error(
-      `[AniListClient] ❌ [${requestId}] Error during AniList API request:`,
-      error,
+    // Extract operation name for context
+    const endpoint = extractOperationEndpoint({
+      body: JSON.stringify({ query }),
+    } as RequestInit);
+
+    // Capture error in Sentry with context
+    captureError(
+      ErrorType.NETWORK,
+      `AniList IPC request failed: ${endpoint}`,
+      error instanceof Error ? error : new Error(String(error)),
+      {
+        requestId,
+        endpoint,
+      },
     );
+
     throw error;
   } finally {
     const duration = performance.now() - startTime;
@@ -326,11 +344,6 @@ async function processHttpError(
     errorData = { raw: errorText };
   }
 
-  console.error(
-    `[AniListClient] ❌ [${requestId}] HTTP Error ${response.status}:`,
-    errorData,
-  );
-
   // Check for rate limiting
   if (response.status === 429) {
     const retryAfter = response.headers.get("Retry-After");
@@ -347,33 +360,64 @@ async function processHttpError(
         }),
       );
     } catch (e) {
-      console.error(
-        "[AniListClient] ❌ Failed to dispatch rate limit event:",
-        e,
+      const rateLimitError = new Error(
+        `Failed to dispatch rate limit event: ${String(e)}`,
+      );
+      captureError(
+        ErrorType.SYSTEM,
+        "Failed to dispatch rate limit event",
+        rateLimitError,
+        { requestId, status: response.status },
       );
     }
 
-    const error = {
+    const message = `Rate limit exceeded. Please retry after ${retrySeconds} seconds.`;
+    const error = createError(ErrorType.NETWORK, message, new Error(message), {
+      requestId,
       status: response.status,
       statusText: response.statusText,
-      message: `Rate limit exceeded. Please retry after ${retrySeconds} seconds.`,
       retryAfter: retrySeconds,
       isRateLimited: true,
       ...errorData,
-    };
+    });
+    error.recoveryAction = ErrorRecoveryAction.WAIT_RATE_LIMIT;
+    error.recoveryMessage = `Retry after ${retrySeconds} seconds`;
 
-    console.warn(
-      `⏳ [${requestId}] Rate limited, retry after ${retrySeconds}s`,
-    );
+    captureError(ErrorType.NETWORK, message, new Error(message), {
+      requestId,
+      status: 429,
+      retryAfter: retrySeconds,
+    });
+
     throw error;
   }
 
-  const error = new Error(
-    `HTTP Error ${response.status}: ${response.statusText}`,
-  ) as HttpError;
-  error.status = response.status;
-  error.statusText = response.statusText;
-  Object.assign(error, errorData);
+  // Map HTTP status codes to ErrorType
+  let errorType: ErrorType;
+  if (response.status === 401 || response.status === 403) {
+    errorType = ErrorType.AUTH;
+  } else if (response.status >= 500) {
+    errorType = ErrorType.SERVER;
+  } else if (response.status >= 400) {
+    errorType = ErrorType.CLIENT;
+  } else {
+    errorType = ErrorType.NETWORK;
+  }
+
+  const message = `HTTP Error ${response.status}: ${response.statusText}`;
+  const error = createError(errorType, message, new Error(message), {
+    requestId,
+    status: response.status,
+    statusText: response.statusText,
+    ...errorData,
+  });
+
+  captureError(errorType, message, new Error(message), {
+    requestId,
+    status: response.status,
+    statusText: response.statusText,
+  });
+
   throw error;
 }
 
@@ -498,10 +542,7 @@ function handleFailureResponse(
   duration: number,
   error: unknown,
 ): never {
-  console.error(
-    `[AniListClient] ❌ [${requestId}] Error during AniList API request:`,
-    error,
-  );
+  const endpoint = extractOperationEndpoint(options);
 
   if (typeof globalThis.dispatchEvent === "function") {
     globalThis.dispatchEvent(
@@ -511,11 +552,22 @@ function handleFailureResponse(
           succeeded: false,
           requestId,
           provider: ApiProvider.ANILIST,
-          endpoint: extractOperationEndpoint(options),
+          endpoint,
         },
       }),
     );
   }
+
+  captureError(
+    ErrorType.NETWORK,
+    `AniList API request failed: ${endpoint}`,
+    error instanceof Error ? error : new Error(String(error)),
+    {
+      requestId,
+      endpoint,
+      durationMs: duration,
+    },
+  );
 
   throw error;
 }
@@ -797,22 +849,36 @@ async function executeSearchQuery(
 
     // Validate response structure
     if (!response?.data) {
-      console.error(
-        `[AniListClient] ❌ Invalid API response for ${searchType.toLowerCase()} "${search}":`,
-        response,
+      const error = createError(
+        ErrorType.VALIDATION,
+        `Invalid API response for ${searchType.toLowerCase()} "${search}": missing data property`,
+        new Error("Missing data property in API response"),
       );
-      throw new Error(`Invalid API response: missing data property`);
+      captureError(
+        ErrorType.VALIDATION,
+        `Invalid API response for ${searchType.toLowerCase()}`,
+        new Error("Missing data property in API response"),
+        { searchType, search },
+      );
+      throw error;
     }
 
     // Handle nested data structure
     const responseData = response.data.data ?? response.data;
 
     if (!responseData.Page) {
-      console.error(
+      const error = createError(
+        ErrorType.VALIDATION,
         `Invalid API response for ${searchType.toLowerCase()} "${search}": missing Page property`,
-        responseData,
+        new Error("Missing Page property in API response"),
       );
-      throw new Error(`Invalid API response: missing Page property`);
+      captureError(
+        ErrorType.VALIDATION,
+        `Invalid API response for ${searchType.toLowerCase()}`,
+        new Error("Missing Page property in API response"),
+        { searchType, search },
+      );
+      throw error;
     }
 
     const result = { Page: responseData.Page };
@@ -1099,7 +1165,12 @@ ${queryParts.join("\n")}
 
         return results;
       } catch (error) {
-        console.error(`[AniListClient] ❌ Error in batch search:`, error);
+        captureError(
+          ErrorType.NETWORK,
+          `Error in batch search for ${searches.length} queries`,
+          error instanceof Error ? error : new Error(String(error)),
+          { queryCount: searches.length },
+        );
 
         // Return empty results for all searches on error
         const emptyResults = new Map<
@@ -1366,7 +1437,17 @@ export async function getUserMangaList(
 ): Promise<UserMediaList> {
   return withGroupAsync(`[AniListClient] Get User Manga List`, async () => {
     if (!token) {
-      throw new Error("Access token required to fetch user manga list");
+      const error = createError(
+        ErrorType.AUTH,
+        "Access token required to fetch user manga list",
+        new Error("Missing access token"),
+      );
+      captureError(
+        ErrorType.AUTH,
+        "Access token required to fetch user manga list",
+        new Error("Missing access token"),
+      );
+      throw error;
     }
 
     try {
@@ -1378,7 +1459,17 @@ export async function getUserMangaList(
       );
 
       if (!viewerId) {
-        throw new Error("Failed to get your AniList user ID");
+        const error = createError(
+          ErrorType.VALIDATION,
+          "Failed to get your AniList user ID",
+          new Error("User ID resolution failed"),
+        );
+        captureError(
+          ErrorType.VALIDATION,
+          "Failed to get AniList user ID",
+          new Error("User ID resolution failed"),
+        );
+        throw error;
       }
 
       // Fetch all manga lists using multiple chunks if needed
@@ -1389,13 +1480,13 @@ export async function getUserMangaList(
         noRetry,
       );
     } catch (error: unknown) {
-      console.error(
-        "[AniListClient] ❌ Error fetching user manga list:",
-        error,
-      );
-
       // Early return if error is not an object
       if (!error || typeof error !== "object") {
+        captureError(
+          ErrorType.UNKNOWN,
+          "Unknown error fetching user manga list",
+          error instanceof Error ? error : new Error(String(error)),
+        );
         throw error;
       }
 
@@ -1596,8 +1687,11 @@ function handleChunkError(
 
     // Check if this was a rate limit error
     if (errorObj.status === 429 || errorObj.isRateLimited) {
-      console.warn(
-        `Chunk ${currentChunk} request was rate limited, propagating error`,
+      captureError(
+        ErrorType.NETWORK,
+        `Rate limit encountered on chunk ${currentChunk}`,
+        error instanceof Error ? error : new Error(String(error)),
+        { chunk: currentChunk, isRateLimit: true },
       );
       // Propagate rate limit error to be handled by the UI
       throw error;
@@ -1605,9 +1699,11 @@ function handleChunkError(
   }
 
   // For other errors, log and continue if we have some data
-  console.error(
-    `[AniListClient] ❌ Error fetching chunk ${currentChunk}:`,
-    error,
+  captureError(
+    ErrorType.NETWORK,
+    `Error fetching chunk ${currentChunk}`,
+    error instanceof Error ? error : new Error(String(error)),
+    { chunk: currentChunk, hasData: Object.keys(mediaMap).length > 0 },
   );
 
   // If we have no data, propagate the error
@@ -1762,9 +1858,15 @@ async function fetchCompleteUserMediaList(
         );
         return mediaMap;
       } catch (error) {
-        console.error(
-          `[AniListClient] ❌ Error fetching manga list in chunks:`,
-          error,
+        captureError(
+          ErrorType.NETWORK,
+          `Error fetching manga list in chunks (processed ${totalEntriesProcessed} entries so far)`,
+          error instanceof Error ? error : new Error(String(error)),
+          {
+            userId,
+            processedEntries: totalEntriesProcessed,
+            lastChunk: currentChunk,
+          },
         );
 
         // If we got any entries, return what we have

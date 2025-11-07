@@ -41,6 +41,40 @@ console.info(
 );
 
 /**
+ * Initialize electron-store for persistent cross-process preferences.
+ * Uses a typed facade to avoid `any` and maintain type safety.
+ * Must be initialized before Sentry setup to generate installation ID.
+ * @source
+ */
+const store = new Store() as unknown as {
+  get: (key: string) => unknown;
+  set: (key: string, value: unknown) => void;
+};
+
+/**
+ * Generate or retrieve a stable anonymous installation ID.
+ * Used to group errors by installation in Sentry without identifying the user.
+ * @source
+ */
+let installationId: string;
+try {
+  const storedId = store.get("installation_id");
+  if (typeof storedId === "string" && storedId.length > 0) {
+    installationId = storedId;
+  } else {
+    // Generate new UUID v4 for first run
+    const { randomUUID } = require("node:crypto");
+    installationId = randomUUID();
+    store.set("installation_id", installationId);
+    console.debug(`[Main] 🔍 Generated new installation ID: ${installationId}`);
+  }
+} catch (err) {
+  console.warn("[Main] ⚠️ Failed to load/generate installation ID:", err);
+  // Fallback to app version if storage fails
+  installationId = "unknown";
+}
+
+/**
  * Initialize Sentry error tracking in production environments only.
  * Captures unhandled errors and sends them to Sentry for monitoring.
  * @source
@@ -52,7 +86,39 @@ if (sentryDsn && isProduction) {
     dsn: sentryDsn,
     environment: process.env.NODE_ENV,
     release: app.getVersion(),
+    integrations: [
+      Sentry.onUncaughtExceptionIntegration(),
+      Sentry.onUnhandledRejectionIntegration(),
+    ],
+    tracesSampleRate: 0.1,
+    beforeSend(event) {
+      // Sanitize sensitive data
+      if (event.request?.headers) {
+        delete event.request.headers["Authorization"];
+        delete event.request.headers["Cookie"];
+      }
+      if (event.extra) {
+        delete event.extra.token;
+        delete event.extra.apiKey;
+      }
+      // Add app metadata
+      event.contexts = event.contexts || {};
+      event.contexts.app = {
+        electron_version: process.versions.electron,
+        platform: process.platform,
+        arch: process.arch,
+      };
+      return event;
+    },
   });
+
+  // Set user context with stable installation ID
+  Sentry.setUser({
+    id: installationId,
+    appVersion: app.getVersion(),
+    platform: process.platform,
+  });
+
   console.debug("[Main] 🔍 Sentry initialized");
 } else if (isProduction) {
   console.debug("[Main] 🔍 Sentry DSN not configured, skipping initialization");
@@ -109,6 +175,13 @@ autoUpdater.on("error", (error) => {
     tags: {
       component: "auto-updater",
     },
+    contexts: {
+      autoUpdater: {
+        autoDownload: autoUpdater.autoDownload,
+        allowPrerelease: autoUpdater.allowPrerelease,
+        currentVersion: app.getVersion(),
+      },
+    },
   });
 });
 
@@ -116,16 +189,6 @@ if (!isProduction) {
   console.debug("[Main] 🔍 Auto-updater configured");
 }
 endGroup();
-
-/**
- * Initialize electron-store for persistent cross-process preferences.
- * Uses a typed facade to avoid `any` and maintain type safety.
- * @source
- */
-const store = new Store() as unknown as {
-  get: (key: string) => unknown;
-  set: (key: string, value: unknown) => void;
-};
 
 /**
  * Restore persisted auto-updater preferences from storage.

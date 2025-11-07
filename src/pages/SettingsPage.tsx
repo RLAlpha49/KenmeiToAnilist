@@ -516,7 +516,7 @@ export function SettingsPage() {
   // Update error state when auth error changes
   useEffect(() => {
     if (authError) {
-      setError(createError(ErrorType.AUTHENTICATION, authError));
+      setError(createError(ErrorType.AUTH, authError));
     } else {
       setError(null);
     }
@@ -906,7 +906,7 @@ export function SettingsPage() {
       console.error("[Settings] ❌ Login failed:", err);
       setError(
         createError(
-          ErrorType.AUTHENTICATION,
+          ErrorType.AUTH,
           err instanceof Error
             ? err.message
             : "Failed to authenticate with AniList. Please try again.",
@@ -928,7 +928,7 @@ export function SettingsPage() {
       console.error("[Settings] ❌ Failed to cancel authentication:", err);
       setError(
         createError(
-          ErrorType.AUTHENTICATION,
+          ErrorType.AUTH,
           err instanceof Error
             ? err.message
             : "Failed to cancel authentication. Please try again.",
@@ -1726,9 +1726,7 @@ export function SettingsPage() {
             message={error.message}
             type={error.type}
             dismiss={dismissError}
-            retry={
-              error.type === ErrorType.AUTHENTICATION ? handleLogin : undefined
-            }
+            retry={error.type === ErrorType.AUTH ? handleLogin : undefined}
           />
         </motion.div>
       )}
