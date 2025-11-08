@@ -276,23 +276,37 @@ export function DrillDownModal({
           {onExport && (
             <div className="flex items-center gap-3">
               <Label className="text-sm font-medium">Export Format:</Label>
-              <RadioGroup value={selectedFormat} onValueChange={(value) => setSelectedFormat(value as ExportFormat)}>
+              <RadioGroup
+                value={selectedFormat}
+                onValueChange={(value) =>
+                  setSelectedFormat(value as ExportFormat)
+                }
+              >
                 <div className="flex items-center gap-4">
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="json" id="format-json" />
-                    <Label htmlFor="format-json" className="cursor-pointer text-sm font-normal">
+                    <Label
+                      htmlFor="format-json"
+                      className="cursor-pointer text-sm font-normal"
+                    >
                       JSON
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="csv" id="format-csv" />
-                    <Label htmlFor="format-csv" className="cursor-pointer text-sm font-normal">
+                    <Label
+                      htmlFor="format-csv"
+                      className="cursor-pointer text-sm font-normal"
+                    >
                       CSV
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="markdown" id="format-markdown" />
-                    <Label htmlFor="format-markdown" className="cursor-pointer text-sm font-normal">
+                    <Label
+                      htmlFor="format-markdown"
+                      className="cursor-pointer text-sm font-normal"
+                    >
                       Markdown
                     </Label>
                   </div>

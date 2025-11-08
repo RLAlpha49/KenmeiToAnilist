@@ -14,7 +14,13 @@ import React, {
 import { toast } from "sonner";
 import * as Sentry from "@sentry/electron/renderer";
 import { storage } from "../utils/storage";
-import { captureError, ErrorType } from "../utils/errorHandling";
+import {
+  captureError,
+  ErrorType,
+  createError,
+  showErrorNotification,
+  ErrorRecoveryAction,
+} from "../utils/errorHandling";
 import { truncateToastMessage } from "../utils/textHighlight";
 import {
   AuthState,
@@ -321,6 +327,23 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
           stage: "profile_fetch",
         },
       );
+
+      // Show recovery notification for profile fetch failure
+      showErrorNotification(
+        createError(
+          ErrorType.AUTH,
+          "Could not load your AniList profile",
+          profileError,
+          "PROFILE_FETCH_FAILED",
+          ErrorRecoveryAction.RETRY,
+          "We couldn't load your AniList profile. Check your connection and try again.",
+        ),
+        {
+          onRetry: () => handleUserProfile(accessToken),
+          duration: 8000,
+        },
+      );
+
       // Still authenticated but with limited info - use defaults
       setAuthState((prevState) => ({
         ...prevState,
@@ -634,6 +657,20 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     try {
       // Check if online before attempting to refresh token
       if (!isOnline) {
+        // Show recovery notification for offline state
+        showErrorNotification(
+          createError(
+            ErrorType.NETWORK,
+            "Cannot refresh token while offline",
+            new Error("Offline"),
+            "AUTH_OFFLINE",
+            ErrorRecoveryAction.CHECK_CONNECTION,
+            "Your internet connection is offline. Connect to the internet and try again.",
+          ),
+          {
+            duration: 8000,
+          },
+        );
         throw new Error(
           "Cannot refresh token while offline. Please check your internet connection.",
         );
@@ -692,6 +729,36 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
       captureError(ErrorType.AUTH, "Token refresh failed", err, {
         stage: "token_refresh",
       });
+
+      // Show enhanced error notification with recovery action
+      // Note: logout callback used inline to avoid forward reference issues
+      showErrorNotification(
+        createError(
+          ErrorType.AUTH,
+          msg,
+          err,
+          "TOKEN_REFRESH_FAILED",
+          ErrorRecoveryAction.REFRESH_TOKEN,
+          "Your session has expired. Please log in again to continue.",
+        ),
+        {
+          onRetry: () => {
+            // Logout to clear stale state, user must re-authenticate
+            setAuthState({
+              isAuthenticated: false,
+              accessToken: undefined,
+              credentialSource: "default",
+            });
+            setError(null);
+            setStatusMessage(null);
+            setIsLoading(false);
+            localStorage.removeItem("authState");
+            sessionStorage.removeItem("pendingAuthFlow");
+          },
+          duration: 10000,
+        },
+      );
+
       recordEvent({
         type: "auth.refresh",
         message: `Token refresh failed: ${msg}`,
@@ -711,6 +778,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     openOAuthWindow,
     recordEvent,
     storeCredentialsAndBuildUrl,
+    isOnline,
   ]);
 
   // Login function
@@ -719,6 +787,20 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
       try {
         // Check if online before attempting to authenticate
         if (!isOnline) {
+          // Show recovery notification for offline state
+          showErrorNotification(
+            createError(
+              ErrorType.NETWORK,
+              "Cannot authenticate while offline",
+              new Error("Offline"),
+              "AUTH_OFFLINE",
+              ErrorRecoveryAction.CHECK_CONNECTION,
+              "Connect to the internet and try again.",
+            ),
+            {
+              duration: 8000,
+            },
+          );
           throw new Error(
             "Cannot authenticate while offline. Please check your internet connection.",
           );
@@ -845,6 +927,23 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
           credentialSource: credentials.source,
           stage: "login",
         });
+
+        // Show enhanced error notification with recovery action
+        showErrorNotification(
+          createError(
+            ErrorType.AUTH,
+            msg,
+            err,
+            "LOGIN_FAILED",
+            ErrorRecoveryAction.RETRY,
+            "Check your credentials and internet connection, then try logging in again.",
+          ),
+          {
+            onRetry: () => login(credentials),
+            duration: 10000,
+          },
+        );
+
         toast.error(msg);
         setError(msg);
         setStatusMessage(null);

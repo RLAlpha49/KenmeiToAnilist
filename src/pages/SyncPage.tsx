@@ -88,7 +88,13 @@ import { SkeletonCard, SkeletonList } from "../components/ui/skeleton";
 import EmptyState from "../components/ui/empty-state";
 import { SyncResumeNotification } from "../components/sync/SyncResumeNotification";
 import { SyncErrorBoundary } from "../components/sync/SyncErrorBoundary";
-import { captureError, ErrorType } from "../utils/errorHandling";
+import {
+  captureError,
+  ErrorType,
+  createError,
+  showErrorNotification,
+  ErrorRecoveryAction,
+} from "../utils/errorHandling";
 
 /**
  * Sync page component for the Kenmei to AniList sync tool.
@@ -474,12 +480,29 @@ export function SyncPage() {
     }
 
     // Default error handling
-    setLibraryError(
+    const errorMessage =
       err.message ||
-        "Failed to load your AniList library. Synchronization can still proceed, but comparison data will not be shown.",
-    );
+      "Failed to load your AniList library. Synchronization can still proceed, but comparison data will not be shown.";
+
+    setLibraryError(errorMessage);
     setUserLibrary({});
     setLibraryLoading(false);
+
+    // Show recovery notification for library fetch failures
+    showErrorNotification(
+      createError(
+        ErrorType.NETWORK,
+        "Failed to load AniList library",
+        err instanceof Error ? err : new Error(String(err)),
+        "LIBRARY_FETCH_FAILED",
+        ErrorRecoveryAction.RETRY,
+        "Your sync can still proceed, but comparison data won't be shown. Click retry to load your library.",
+      ),
+      {
+        onRetry: () => fetchLibrary(0),
+        duration: 8000,
+      },
+    );
   };
 
   // Fetch the user's AniList library for comparison
@@ -728,8 +751,64 @@ export function SyncPage() {
   };
 
   /**
+   * Checks if an error message indicates a logical conflict.
+   * @param errorMsg - The error message to check.
+   * @returns True if the error indicates a conflict.
+   * @source
+   */
+  const isConflictError = (errorMsg: string): boolean => {
+    const normalized = errorMsg.toLowerCase();
+    return (
+      normalized.includes("conflict") ||
+      normalized.includes("differs") ||
+      normalized.includes("outdated") ||
+      normalized.includes("mismatch")
+    );
+  };
+
+  /**
+   * Shows appropriate error notification based on conflict detection.
+   * @param operationId - Optional operation ID for retry callback.
+   * @param error - The error that occurred.
+   * @source
+   */
+  const showSyncRetryError = (
+    operationId: string | null,
+    error: unknown,
+  ): void => {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    const isConflict = isConflictError(errorMsg);
+
+    showErrorNotification(
+      createError(
+        isConflict ? ErrorType.SERVER : ErrorType.NETWORK,
+        isConflict
+          ? "This entry conflicts with AniList's current state"
+          : "Failed to retry sync operation",
+        error instanceof Error ? error : new Error(String(error)),
+        isConflict ? "SYNC_CONFLICT" : "SYNC_RETRY_FAILED",
+        isConflict ? ErrorRecoveryAction.NONE : ErrorRecoveryAction.RETRY,
+        isConflict
+          ? "The entry has changed on AniList since this sync started. Open the item to review the current state and resolve the conflict."
+          : "The operation could not be retried. You can try again or skip this entry.",
+      ),
+      {
+        ...(isConflict
+          ? { duration: 8000 }
+          : {
+              onRetry: operationId
+                ? () => handleRetryOperation(operationId)
+                : handleRetryAll,
+              duration: 6000,
+            }),
+      },
+    );
+  };
+
+  /**
    * Handles retrying a single failed sync operation.
    * Updates retry state and calls the retry handler.
+   * Detects logical conflicts and displays conflict-specific recovery guidance.
    * @param operationId - The ID of the failed operation to retry.
    * @source
    */
@@ -741,14 +820,53 @@ export function SyncPage() {
         console.log("Operation succeeded");
       } else {
         console.log("Operation still failed");
+
+        // Get the failed operation to check error details for conflicts
+        const failedOp = failedOperations.find((op) => op.id === operationId);
+        const errorMsg = failedOp?.error || "";
+
+        if (isConflictError(errorMsg)) {
+          // Show conflict-specific error with NONE action (no auto-retry)
+          showErrorNotification(
+            createError(
+              ErrorType.UNKNOWN,
+              "This entry conflicts with AniList's current state",
+              new Error("Sync conflict detected"),
+              "SYNC_CONFLICT",
+              ErrorRecoveryAction.NONE,
+              "The entry has changed on AniList since this sync started. Open the item to review the current state and resolve the conflict.",
+            ),
+            { duration: 8000 },
+          );
+        } else {
+          // Show error notification for general failed retry
+          showErrorNotification(
+            createError(
+              ErrorType.UNKNOWN,
+              "Failed to retry sync operation",
+              new Error("Retry operation failed"),
+              "SYNC_RETRY_FAILED",
+              ErrorRecoveryAction.RETRY,
+              "The operation could not be retried. You can try again or skip this entry.",
+            ),
+            {
+              onRetry: () => handleRetryOperation(operationId),
+              duration: 6000,
+            },
+          );
+        }
       }
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
       captureError(
         ErrorType.UNKNOWN,
-        "Error retrying operation",
+        isConflictError(errorMsg)
+          ? "Sync conflict detected"
+          : "Error retrying operation",
         error instanceof Error ? error : new Error(String(error)),
         { operationId },
       );
+      showSyncRetryError(operationId, error);
     } finally {
       setRetryingOperations((prev) => {
         const next = new Set(prev);
@@ -759,7 +877,38 @@ export function SyncPage() {
   };
 
   /**
+   * Shows appropriate error notification for batch retry based on conflict detection.
+   * @param error - The error that occurred.
+   * @source
+   */
+  const showBatchRetryError = (error: unknown): void => {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    const isConflict = isConflictError(errorMsg);
+
+    showErrorNotification(
+      createError(
+        isConflict ? ErrorType.SERVER : ErrorType.NETWORK,
+        isConflict
+          ? "Some entries conflict with AniList's current state"
+          : "Failed to retry all operations",
+        error instanceof Error ? error : new Error(String(error)),
+        isConflict ? "SYNC_BATCH_CONFLICT" : "SYNC_RETRY_ALL_FAILED",
+        isConflict ? ErrorRecoveryAction.NONE : ErrorRecoveryAction.RETRY,
+        isConflict
+          ? "Some entries have changed on AniList. Review the failed operations individually to resolve conflicts."
+          : "Some operations could not be retried. Check your connection and try again.",
+      ),
+      {
+        ...(isConflict
+          ? { duration: 8000 }
+          : { onRetry: handleRetryAll, duration: 6000 }),
+      },
+    );
+  };
+
+  /**
    * Handles retrying all failed sync operations at once.
+   * Detects conflicts and displays appropriate recovery messaging.
    * @source
    */
   const handleRetryAll = async () => {
@@ -767,12 +916,15 @@ export function SyncPage() {
       const succeeded = await retryAllFailedOperations();
       console.log(`Retried all operations: ${succeeded} succeeded`);
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
       captureError(
         ErrorType.UNKNOWN,
-        "Error retrying all operations",
+        isConflictError(errorMsg)
+          ? "Sync conflicts detected"
+          : "Error retrying all operations",
         error instanceof Error ? error : new Error(String(error)),
-        {},
       );
+      showBatchRetryError(error);
     }
   };
 

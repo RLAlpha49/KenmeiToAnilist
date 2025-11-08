@@ -4,6 +4,8 @@
  * @description Error handling utilities for the application, including error types, error creation, network error handling, async safety, and user notifications.
  */
 
+import React from "react";
+
 /**
  * Custom error class for batch operation cancellations.
  * Used to distinguish intentional cancellations from other errors.
@@ -49,6 +51,29 @@ export interface AppError {
   recoveryAction?: ErrorRecoveryAction;
   recoveryMessage?: string;
 }
+
+/**
+ * Options for displaying error notifications with recovery actions.
+ * @source
+ */
+export interface ErrorNotificationOptions {
+  /** Callback to execute when user clicks retry button */
+  onRetry?: () => void | Promise<void>;
+  /** Callback to execute when user dismisses the notification */
+  onDismiss?: () => void;
+  /** Toast ID for updating existing toasts */
+  toastId?: string | number;
+  /** Custom toast duration in milliseconds */
+  duration?: number;
+}
+
+/**
+ * Mapping of error types to USER_GUIDE help link anchors.
+ * @source
+ */
+type HelpLinkConfig = {
+  [K in ErrorType]: string;
+};
 
 /**
  * Creates a standardized application error object with optional recovery hints.
@@ -148,6 +173,17 @@ export function handleNetworkError(error: unknown): AppError {
       );
     }
 
+    if (status === 429) {
+      return createError(
+        ErrorType.SERVER,
+        "API rate limit exceeded. Please wait before trying again.",
+        error,
+        "RATE_LIMITED",
+        ErrorRecoveryAction.WAIT_RATE_LIMIT,
+        "Too many requests. Please wait a moment before retrying.",
+      );
+    }
+
     if (status >= 500) {
       return createError(
         ErrorType.SERVER,
@@ -208,6 +244,130 @@ export function getRecoveryActionMessage(action: ErrorRecoveryAction): string {
 }
 
 /**
+ * Generates a help link URL based on error type.
+ * Maps error types to relevant USER_GUIDE sections.
+ * Returns a resolvable URL to documentation (GitHub or in-app).
+ * @param errorType - The error type to get help for.
+ * @returns The full URL to the help section, or null if no help available.
+ * @source
+ */
+export function getHelpLinkForErrorType(errorType: ErrorType): string | null {
+  const helpLinkConfig: HelpLinkConfig = {
+    [ErrorType.VALIDATION]: "#handling-import-errors",
+    [ErrorType.IMPORT]: "#handling-import-errors",
+    [ErrorType.AUTH]: "#anilist-authentication",
+    [ErrorType.NETWORK]: "#troubleshooting",
+    [ErrorType.SERVER]: "#synchronizing-to-anilist",
+    [ErrorType.STORAGE]: "#troubleshooting",
+    [ErrorType.SYSTEM]: "#getting-help",
+    [ErrorType.CLIENT]: "#getting-help",
+    [ErrorType.UNKNOWN]: "#getting-help",
+  };
+
+  const anchor = helpLinkConfig[errorType];
+  if (!anchor) return null;
+
+  // Construct URL to USER_GUIDE documentation
+  // In production, this points to the GitHub repository
+  // Users can also access via in-app route if available
+  const baseUrl =
+    "https://github.com/RLAlpha49/KenmeiToAnilist/blob/master/docs/guides/USER_GUIDE.md";
+  return `${baseUrl}${anchor}`;
+}
+
+/**
+ * Generates a Sonner toast action button configuration for recovery actions.
+ * @param action - The recovery action to create a button for.
+ * @param onRetry - Optional callback for retry actions.
+ * @returns A Sonner action config object, or null if no action button should be shown.
+ * @source
+ */
+export function getRecoveryActionButton(
+  action: ErrorRecoveryAction,
+  onRetry?: () => void | Promise<void>,
+): { label: string; onClick: () => void } | null {
+  switch (action) {
+    case ErrorRecoveryAction.RETRY:
+      if (!onRetry) return null;
+      return {
+        label: "Retry",
+        onClick: () => {
+          // Handle both sync and async callbacks
+          const result = onRetry();
+          if (result instanceof Promise) {
+            result.catch((error) => {
+              console.error("[ErrorHandling] Retry failed:", error);
+            });
+          }
+        },
+      };
+
+    case ErrorRecoveryAction.CHECK_CONNECTION:
+      return {
+        label: "Check Connection",
+        onClick: () => {
+          // Try to use Electron's shell.openExternal for better reliability
+          import("electron")
+            .then((electron) => {
+              // Access shell from the module
+              const shell = electron.shell;
+              if (shell && typeof shell.openExternal === "function") {
+                shell.openExternal("https://www.google.com");
+              } else if (globalThis.window?.open) {
+                // Fallback to window.open if shell is not available
+                globalThis.window.open("https://www.google.com", "_blank");
+              }
+            })
+            .catch(() => {
+              // If import fails, fall back to window.open
+              if (globalThis.window?.open) {
+                globalThis.window.open("https://www.google.com", "_blank");
+              }
+            });
+        },
+      };
+
+    case ErrorRecoveryAction.REFRESH_TOKEN:
+      if (!onRetry) return null;
+      return {
+        label: "Re-authenticate",
+        onClick: () => {
+          // Handle both sync and async callbacks
+          const result = onRetry();
+          if (result instanceof Promise) {
+            result.catch((error) => {
+              console.error("[ErrorHandling] Re-authentication failed:", error);
+            });
+          }
+        },
+      };
+
+    case ErrorRecoveryAction.CONTACT_SUPPORT:
+      return {
+        label: "Get Help",
+        onClick: () => {
+          try {
+            const helpLink = getHelpLinkForErrorType(ErrorType.UNKNOWN);
+            if (helpLink && globalThis.window?.open) {
+              globalThis.window.open(helpLink, "_blank");
+            }
+          } catch (error) {
+            console.error("[ErrorHandling] Failed to open help link:", error);
+          }
+        },
+      };
+
+    case ErrorRecoveryAction.WAIT_RATE_LIMIT:
+      // Rate limit errors are handled by specialized notification
+      return null;
+
+    case ErrorRecoveryAction.NONE:
+    default:
+      return null;
+  }
+}
+
+/**
  * Performs a network request with an optional timeout using AbortController.
  * Automatically rejects if the request takes longer than the specified duration.
  * @param url - The URL to fetch.
@@ -252,17 +412,166 @@ export async function fetchWithTimeout(
 }
 
 /**
- * Displays an error notification to the user.
+ * Displays an error notification to the user with optional recovery actions.
+ * Uses Sonner toast for rich notification with retry buttons and interactive help links.
  * @param error - The AppError to display.
- * @remarks This is a placeholder that should be integrated with your UI notification system.
+ * @param options - Optional configuration for the notification.
+ * @remarks Builds React elements for description to render clickable help links.
  * @source
  */
-export function showErrorNotification(error: AppError): void {
+export function showErrorNotification(
+  error: AppError,
+  options?: ErrorNotificationOptions,
+): void {
   console.error("[ErrorHandling] Error notification:", error.message, error);
 
-  if (globalThis.window !== undefined) {
-    alert(`Error: ${error.message}`);
-  }
+  // Import toast at runtime to avoid circular dependencies
+  import("sonner")
+    .then(({ toast }) => {
+      // Build React element description with recovery message and interactive help link
+      let description: React.ReactNode | undefined;
+
+      const helpLink = getHelpLinkForErrorType(error.type);
+      if (error.recoveryMessage || helpLink) {
+        description = React.createElement(
+          "div",
+          { style: { display: "flex", flexDirection: "column", gap: "8px" } },
+          error.recoveryMessage &&
+            React.createElement(
+              "p",
+              { style: { margin: 0 } },
+              error.recoveryMessage,
+            ),
+          helpLink &&
+            React.createElement(
+              "a",
+              {
+                href: helpLink,
+                target: "_blank",
+                rel: "noopener noreferrer",
+                style: {
+                  color: "inherit",
+                  textDecoration: "underline",
+                  cursor: "pointer",
+                  fontSize: "0.9em",
+                  margin: 0,
+                },
+              },
+              "📖 View troubleshooting guide",
+            ),
+        );
+      }
+
+      // Get recovery action button if available
+      const actionButton = error.recoveryAction
+        ? getRecoveryActionButton(error.recoveryAction, options?.onRetry)
+        : null;
+
+      // Determine toast duration based on error type
+      const defaultDuration =
+        error.type === ErrorType.VALIDATION ? 5000 : 10000;
+      const duration = options?.duration ?? defaultDuration;
+
+      // Show the error toast
+      toast.error(error.message, {
+        description,
+        action: actionButton || undefined,
+        duration,
+        id: options?.toastId,
+        onDismiss: options?.onDismiss,
+      });
+    })
+    .catch((toastError) => {
+      // Fallback if toast import fails
+      console.error(
+        "[ErrorHandling] Failed to show toast notification:",
+        toastError,
+      );
+      if (globalThis.window !== undefined) {
+        const message = error.recoveryMessage
+          ? `${error.message}\n\n${error.recoveryMessage}`
+          : error.message;
+        alert(`Error: ${message}`);
+      }
+    });
+}
+
+/**
+ * Displays a rate limit notification with countdown timer.
+ * Shows a custom toast with disabled retry button that enables after the wait period elapses.
+ * @param retryAfterSeconds - Number of seconds to wait before retry is enabled.
+ * @param message - User-facing message to display.
+ * @param onComplete - Callback invoked when countdown completes.
+ * @remarks Used specifically for HTTP 429 rate limit errors to guide users to wait.
+ * @source
+ */
+export function showRateLimitNotification(
+  retryAfterSeconds: number,
+  message: string,
+  onComplete: () => void,
+): void {
+  console.warn(
+    `[ErrorHandling] Rate limit detected. Waiting ${retryAfterSeconds}s before retry.`,
+  );
+
+  import("sonner")
+    .then(({ toast }) => {
+      let secondsRemaining = retryAfterSeconds;
+
+      // Create a custom description element with countdown
+      const createCountdownDescription = (remaining: number) => {
+        return React.createElement(
+          "div",
+          { style: { display: "flex", flexDirection: "column", gap: "8px" } },
+          React.createElement("p", { style: { margin: 0 } }, message),
+          React.createElement(
+            "p",
+            { style: { margin: 0, fontSize: "0.9em", opacity: 0.8 } },
+            `Retry available in ${remaining}s...`,
+          ),
+        );
+      };
+
+      // Show initial toast
+      const toastId = toast.loading("Rate limit active", {
+        description: createCountdownDescription(secondsRemaining),
+        duration: retryAfterSeconds * 1000 + 2000, // Duration + buffer
+      });
+
+      // Update countdown every second
+      const intervalId = setInterval(() => {
+        secondsRemaining -= 1;
+
+        if (secondsRemaining <= 0) {
+          clearInterval(intervalId);
+
+          // Show completion toast with retry button
+          toast.success("Rate limit lifted - Retry now available", {
+            id: toastId,
+            description:
+              "You can now retry your request. Click the button or try again manually.",
+            action: {
+              label: "Retry Now",
+              onClick: onComplete,
+            },
+            duration: 8000,
+          });
+        } else {
+          // Update toast with new countdown
+          toast.loading("Rate limit active", {
+            id: toastId,
+            description: createCountdownDescription(secondsRemaining),
+            duration: retryAfterSeconds * 1000 + 2000,
+          });
+        }
+      }, 1000);
+    })
+    .catch((toastError) => {
+      console.error(
+        "[ErrorHandling] Failed to show rate limit notification:",
+        toastError,
+      );
+    });
 }
 
 /**

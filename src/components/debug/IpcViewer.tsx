@@ -501,7 +501,8 @@ export function IpcViewer(): React.ReactElement {
             <DialogTitle>Copy IPC Entry (Clipboard Unavailable)</DialogTitle>
             <DialogDescription>
               Your system clipboard is not accessible. Select all text below and
-              copy it manually, or click &quot;Select All&quot; to prepare for copying.
+              copy it manually, or click &quot;Select All&quot; to prepare for
+              copying.
             </DialogDescription>
           </DialogHeader>
           <Textarea

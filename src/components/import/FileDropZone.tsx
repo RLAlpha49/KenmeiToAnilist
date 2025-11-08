@@ -7,7 +7,12 @@ import React, { useState, useRef } from "react";
 import { UploadCloud, File, FileText } from "lucide-react";
 import { Button } from "../ui/button";
 import { KenmeiData } from "../../types/kenmei";
-import { createError, ErrorType, AppError } from "../../utils/errorHandling";
+import {
+  createError,
+  ErrorType,
+  ErrorRecoveryAction,
+  AppError,
+} from "../../utils/errorHandling";
 import { parseKenmeiCsvExport } from "../../api/kenmei/parser";
 import { Progress } from "../ui/progress";
 
@@ -115,6 +120,10 @@ export function FileDropZone({
         createError(
           ErrorType.VALIDATION,
           "Invalid file format. Please upload a CSV file.",
+          undefined,
+          "INVALID_FORMAT",
+          ErrorRecoveryAction.NONE,
+          "Please export a fresh CSV file from Kenmei and try again. Ensure you're using the latest Kenmei version.",
         ),
       );
       return;
@@ -128,6 +137,10 @@ export function FileDropZone({
         createError(
           ErrorType.VALIDATION,
           "File is too large. Maximum size is 10MB.",
+          undefined,
+          "FILE_TOO_LARGE",
+          ErrorRecoveryAction.NONE,
+          "Try exporting a smaller date range from Kenmei, or split your library into multiple imports.",
         ),
       );
       return;
@@ -147,6 +160,10 @@ export function FileDropZone({
               createError(
                 ErrorType.VALIDATION,
                 "No manga entries found in the CSV file. Please check the file format.",
+                undefined,
+                "NO_ENTRIES",
+                ErrorRecoveryAction.NONE,
+                "Verify your CSV contains manga data. Check the export settings in Kenmei.",
               ),
             );
             return;
@@ -178,6 +195,10 @@ export function FileDropZone({
             createError(
               ErrorType.VALIDATION,
               "Failed to parse CSV file. Please ensure it's a valid Kenmei export file.",
+              err,
+              "PARSE_FAILED",
+              ErrorRecoveryAction.NONE,
+              "Ensure the file is UTF-8 encoded and hasn't been modified. Re-export from Kenmei if needed.",
             ),
           );
         }
@@ -187,8 +208,12 @@ export function FileDropZone({
         setIsLoading(false);
         onError(
           createError(
-            ErrorType.UNKNOWN,
+            ErrorType.VALIDATION,
             "Error reading file. Please try again.",
+            undefined,
+            "READ_FAILED",
+            ErrorRecoveryAction.RETRY,
+            "This might be a temporary issue. Try selecting the file again.",
           ),
         );
       });

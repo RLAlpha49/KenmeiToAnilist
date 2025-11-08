@@ -7,7 +7,13 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { ErrorMessage } from "../components/ui/error-message";
-import { ErrorType, AppError, createError } from "../utils/errorHandling";
+import {
+  ErrorType,
+  AppError,
+  createError,
+  showErrorNotification,
+  ErrorRecoveryAction,
+} from "../utils/errorHandling";
 import { KenmeiData } from "../types/kenmei";
 import { saveKenmeiData, getSavedMatchResults } from "../utils/storage";
 import { useOnboarding } from "../contexts/OnboardingContext";
@@ -85,7 +91,29 @@ export function ImportPage() {
   };
 
   /**
-   * Handles import errors by logging, recording debug event, and displaying toast notification.
+   * Handles import errors by logging, recording debug event, and displaying enhanced error notification.
+   * @param error - The application error object to handle.
+   * @param toastId - Optional ID of an existing toast to replace with error message.
+   * @source
+   */
+  const getRetryCallback = (
+    error: AppError,
+  ): (() => void | Promise<void>) | undefined => {
+    switch (error.type) {
+      case ErrorType.VALIDATION:
+        // Validation errors cannot be retried - user must fix the file
+        return undefined;
+      case ErrorType.STORAGE:
+      case ErrorType.NETWORK:
+        // Network and storage errors can be retried
+        return () => handleImport();
+      default:
+        return undefined;
+    }
+  };
+
+  /**
+   * Handles import errors by logging, recording debug event, and displaying enhanced error notification.
    * @param error - The application error object to handle.
    * @param toastId - Optional ID of an existing toast to replace with error message.
    * @source
@@ -106,22 +134,12 @@ export function ImportPage() {
     setError(error);
     setImportData(null);
     setImportSuccess(false);
-    const descriptions: Partial<Record<ErrorType, string>> = {
-      [ErrorType.VALIDATION]:
-        "The file format looks off. Please double-check the export steps and try again.",
-      [ErrorType.STORAGE]:
-        "We couldn't persist the import locally. Make sure storage permissions are available and retry.",
-      [ErrorType.NETWORK]:
-        "A network hiccup interrupted the import. Check your connection and try again.",
-    };
 
-    const description =
-      descriptions[error.type] ||
-      "Please try again in a moment. If the issue persists, export a fresh file from Kenmei.";
-
-    toast.error(error.message, {
-      id: toastId,
-      description: truncateToastMessage(description, 200).component,
+    // Use enhanced error notification with recovery actions
+    showErrorNotification(error, {
+      toastId,
+      onRetry: getRetryCallback(error),
+      duration: 8000,
     });
   };
 
@@ -233,6 +251,10 @@ export function ImportPage() {
         createError(
           ErrorType.STORAGE,
           "Failed to save import data. Please try again.",
+          err,
+          "STORAGE_WRITE_FAILED",
+          ErrorRecoveryAction.RETRY,
+          "Click retry to attempt saving again.",
         ),
         loadingToastId,
       );

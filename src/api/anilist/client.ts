@@ -336,14 +336,6 @@ async function processHttpError(
   requestId: string,
   response: Response,
 ): Promise<never> {
-  const errorText = await response.text();
-  let errorData;
-  try {
-    errorData = JSON.parse(errorText);
-  } catch {
-    errorData = { raw: errorText };
-  }
-
   // Check for rate limiting
   if (response.status === 429) {
     const retryAfter = response.headers.get("Retry-After");
@@ -372,16 +364,14 @@ async function processHttpError(
     }
 
     const message = `Rate limit exceeded. Please retry after ${retrySeconds} seconds.`;
-    const error = createError(ErrorType.NETWORK, message, new Error(message), {
-      requestId,
-      status: response.status,
-      statusText: response.statusText,
-      retryAfter: retrySeconds,
-      isRateLimited: true,
-      ...errorData,
-    });
-    error.recoveryAction = ErrorRecoveryAction.WAIT_RATE_LIMIT;
-    error.recoveryMessage = `Retry after ${retrySeconds} seconds`;
+    const error = createError(
+      ErrorType.NETWORK,
+      message,
+      new Error(message),
+      "RATE_LIMIT_EXCEEDED",
+      ErrorRecoveryAction.WAIT_RATE_LIMIT,
+      `Retry after ${retrySeconds} seconds`,
+    );
 
     captureError(ErrorType.NETWORK, message, new Error(message), {
       requestId,
@@ -405,12 +395,12 @@ async function processHttpError(
   }
 
   const message = `HTTP Error ${response.status}: ${response.statusText}`;
-  const error = createError(errorType, message, new Error(message), {
-    requestId,
-    status: response.status,
-    statusText: response.statusText,
-    ...errorData,
-  });
+  const error = createError(
+    errorType,
+    message,
+    new Error(message),
+    `HTTP_${response.status}`,
+  );
 
   captureError(errorType, message, new Error(message), {
     requestId,
