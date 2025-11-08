@@ -163,6 +163,164 @@ export function createMangaMatchResult(
 }
 
 /**
+ * Process matching using Web Workers for parallel execution.
+ * Returns null if workers are unavailable or fail.
+ */
+async function processWithWorkers(
+  mangaList: KenmeiManga[],
+  cachedResults: Record<number, AniListManga[]>,
+  matchConfig: ReturnType<typeof getMatchConfig>,
+  options: {
+    cachedComickSources: ComickSourceStorage;
+    cachedMangaDexSources: MangaDexSourceStorage;
+    checkCancellation: () => void;
+    updateProgress: (index: number, title?: string) => void;
+    preserveExistingStatus: (
+      result: MangaMatchResult,
+      manga: KenmeiManga,
+    ) => void;
+  },
+): Promise<MangaMatchResult[] | null> {
+  try {
+    const { executeMatchingWithWorkers } = await import("@/workers");
+
+    // Build candidates map for worker execution and track accept rule matches
+    // Use index-based keys to avoid collision when manga.id is undefined
+    const candidatesMap = new Map<string, AniListManga[]>();
+    const candidatesWithAcceptRule = new Map<string, Set<number>>(); // index -> Set of AniList IDs with accept rule
+
+    for (let i = 0; i < mangaList.length; i++) {
+      const manga = mangaList[i];
+      let potentialMatches = cachedResults[i] || [];
+
+      // Apply filtering rules
+      potentialMatches = applyMatchFiltering(
+        potentialMatches,
+        manga.title,
+        matchConfig,
+        manga,
+      );
+
+      // Track which candidates had accept rule matches for this manga
+      const acceptRuleMatches = new Set<number>();
+      for (const match of potentialMatches) {
+        // Access the __acceptRuleMatch marker if present
+        if ((match as any).__acceptRuleMatch) {
+          acceptRuleMatches.add(match.id);
+        }
+      }
+      if (acceptRuleMatches.size > 0) {
+        candidatesWithAcceptRule.set(String(i), acceptRuleMatches);
+      }
+
+      // Strip off the __acceptRuleMatch marker before sending to worker
+      const cleanedMatches = potentialMatches.map((match) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { __acceptRuleMatch, ...rest } = match as any;
+        return rest as AniListManga;
+      });
+      // Use index as key instead of manga.id
+      candidatesMap.set(String(i), cleanedMatches);
+    }
+
+    // Execute matching in parallel using workers
+    // Cast MatchConfig to Partial<MatchEngineConfig> for worker execution
+    const execution = executeMatchingWithWorkers(
+      mangaList,
+      candidatesMap,
+      matchConfig as any,
+      (current, _total, title) => {
+        if (current % 10 === 0) {
+          options.checkCancellation();
+        }
+        options.updateProgress(current - 1, title);
+      },
+      true,
+    );
+
+    let workerResults: MangaMatchResult[];
+    try {
+      workerResults = await execution.promise;
+    } catch (error) {
+      // Cancel the execution on error
+      execution.cancel();
+      throw error;
+    }
+
+    // Merge worker results with source information and apply accept rule confidence boost
+    const results: MangaMatchResult[] = [];
+    for (let i = 0; i < workerResults.length; i++) {
+      const workerResult = workerResults[i];
+      const manga = mangaList[i];
+      const comickSourceMap = options.cachedComickSources[i] || new Map();
+      const mangaDexSourceMap = options.cachedMangaDexSources[i] || new Map();
+
+      // Add source information to the result
+      let enrichedResult: MangaMatchResult = {
+        ...workerResult,
+        anilistMatches: (workerResult.anilistMatches || []).map((match) => {
+          const matchId = match.id;
+          return {
+            ...match,
+            comickSource:
+              matchId === undefined ? undefined : comickSourceMap.get(matchId),
+            mangaDexSource:
+              matchId === undefined
+                ? undefined
+                : mangaDexSourceMap.get(matchId),
+          };
+        }),
+      };
+
+      // Apply accept rule confidence floor boost if applicable
+      // Use index-based key to match candidatesWithAcceptRule
+      const acceptRuleIds = candidatesWithAcceptRule.get(String(i));
+      if (acceptRuleIds && acceptRuleIds.size > 0) {
+        enrichedResult = {
+          ...enrichedResult,
+          anilistMatches:
+            enrichedResult.anilistMatches?.map((match) => {
+              if (match.id !== undefined && acceptRuleIds.has(match.id)) {
+                // Determine if this is an exact match
+                const isExactMatch =
+                  manga.title.toLowerCase() ===
+                    match.manga?.title?.romaji?.toLowerCase() ||
+                  manga.title.toLowerCase() ===
+                    match.manga?.title?.english?.toLowerCase();
+
+                const minConfidence = isExactMatch
+                  ? ACCEPT_RULE_CONFIDENCE_FLOOR_EXACT
+                  : ACCEPT_RULE_CONFIDENCE_FLOOR_REGULAR;
+
+                if (match.confidence < minConfidence) {
+                  console.debug(
+                    `[ProcessWithWorkers] ⭐ Boosting confidence from ${(match.confidence * 100).toFixed(0)}% to ${(minConfidence * 100).toFixed(0)}% for "${match.manga?.title?.romaji || match.manga?.title?.english}" (accept rule match)`,
+                  );
+                  return {
+                    ...match,
+                    confidence: minConfidence,
+                  };
+                }
+              }
+              return match;
+            }) || [],
+        };
+      }
+
+      // Preserve status from existing result
+      options.preserveExistingStatus(enrichedResult, mangaList[i]);
+
+      results[i] = enrichedResult;
+    }
+
+    return results;
+  } catch (error) {
+    console.warn("[CompileResults] Worker execution failed:", error);
+    return null;
+  }
+}
+
+/**
  * Compile final match results from cached data with confidence scores.
  *
  * Applies filtering, creates match results with confidence scores, and includes source info.
@@ -173,17 +331,19 @@ export function createMangaMatchResult(
  * @param cachedMangaDexSources - MangaDex source information by index.
  * @param checkCancellation - Cancellation check function.
  * @param updateProgress - Progress update callback.
+ * @param useWorkers - Whether to use Web Workers for parallel processing (default: true).
  * @returns Array of complete match results.
  * @source
  */
-export function compileMatchResults(
+export async function compileMatchResults(
   mangaList: KenmeiManga[],
   cachedResults: Record<number, AniListManga[]>,
   cachedComickSources: ComickSourceStorage,
   cachedMangaDexSources: MangaDexSourceStorage,
   checkCancellation: () => void,
   updateProgress: (index: number, title?: string) => void,
-): MangaMatchResult[] {
+  useWorkers = true,
+): Promise<MangaMatchResult[]> {
   const results: MangaMatchResult[] = [];
 
   // Load existing match results to preserve statuses
@@ -240,6 +400,29 @@ export function compileMatchResults(
 
   // Fill in the results for manga we have matches for
   const matchConfig = getMatchConfig();
+
+  // Try using workers for parallel processing if enabled
+  if (useWorkers) {
+    const workerResults = await processWithWorkers(
+      mangaList,
+      cachedResults,
+      matchConfig,
+      {
+        cachedComickSources,
+        cachedMangaDexSources,
+        checkCancellation,
+        updateProgress,
+        preserveExistingStatus,
+      },
+    );
+
+    if (workerResults) {
+      return workerResults.filter((result) => result !== null);
+    }
+    // Fall through to synchronous processing if workers failed
+  }
+
+  // Fallback: Synchronous processing on main thread
   for (let i = 0; i < mangaList.length; i++) {
     // Check for cancellation periodically
     if (i % 10 === 0) {

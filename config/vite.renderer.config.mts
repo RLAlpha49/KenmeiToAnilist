@@ -132,6 +132,11 @@ export default defineConfig(() => ({
             return "vendor";
           }
 
+          // Worker chunks
+          if (normalizedId.includes("/workers/matching-worker")) {
+            return "worker-matching";
+          }
+
           // App chunks by feature
           const appChunks = [
             { match: "/components/ui/", name: "app-ui-components" },

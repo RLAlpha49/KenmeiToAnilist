@@ -2,6 +2,9 @@
  * @packageDocumentation
  * @module match-engine
  * @description Enhanced manga matching engine for AniList integration. Provides robust title matching between Kenmei entries and AniList manga.
+ *
+ * **Worker Compatibility:** This module is designed to work in both main thread and Web Worker contexts.
+ * All functions are pure and do not rely on DOM APIs or global state, making them safe for worker execution.
  */
 
 import { KenmeiManga } from "../kenmei/types";

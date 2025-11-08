@@ -11,6 +11,7 @@ import type { KenmeiManga } from "@/api/kenmei/types";
 import type {
   SearchServiceConfig,
   MangaSearchResponse,
+  MangaMatch,
 } from "./orchestration/types";
 import type {
   ComickSourceStorage,
@@ -31,6 +32,55 @@ import { findBestMatches } from "./match-engine";
 import { getMangaByIds } from "@/api/anilist/client";
 import { withGroupAsync } from "@/utils/logging";
 import { CancelledError, captureError, ErrorType } from "@/utils/errorHandling";
+
+/**
+ * Attempt to execute matching using workers with automatic fallback.
+ *
+ * @param kenmeiManga - Manga to match
+ * @param potentialMatches - Array of potential AniList matches
+ * @param config - Match engine configuration
+ * @param useWorkers - Whether to attempt worker usage
+ * @returns Promise resolving to match result, or null if workers unavailable
+ */
+async function tryMatchWithWorkers(
+  kenmeiManga: KenmeiManga,
+  potentialMatches: MangaMatch[],
+  config: Partial<SearchServiceConfig>,
+  useWorkers = true,
+): Promise<MangaMatchResult | null> {
+  if (!useWorkers) return null;
+
+  try {
+    const { executeMatchingWithWorkers } = await import("@/workers");
+
+    // Build candidates map for worker
+    const candidatesMap = new Map<string, AniListManga[]>();
+    candidatesMap.set(
+      String(kenmeiManga.id),
+      potentialMatches.map((match) => match.manga),
+    );
+
+    // Execute matching with workers
+    const execution = executeMatchingWithWorkers(
+      [kenmeiManga],
+      candidatesMap,
+      config.matchConfig || {},
+    );
+
+    const workerResults = await execution.promise;
+
+    if (workerResults && workerResults.length > 0) {
+      return workerResults[0];
+    }
+  } catch (error) {
+    console.warn(
+      "[MangaSearchService] Worker execution failed for single manga, falling back to main thread:",
+      error,
+    );
+  }
+
+  return null;
+}
 
 /**
  * Searches AniList for manga by title with caching and rate limiting.
@@ -117,7 +167,19 @@ export async function matchSingleManga(
     }
   }
 
-  // Fall back to the match engine for more complex matching or no exact matches
+  // Try using workers for parallel processing if enabled
+  const workerResult = await tryMatchWithWorkers(
+    kenmeiManga,
+    potentialMatches,
+    searchConfig,
+    searchConfig.useWorkers,
+  );
+
+  if (workerResult) {
+    return workerResult;
+  }
+
+  // Fallback: Use main thread
   return findBestMatches(
     kenmeiManga,
     potentialMatches.map((match) => match.manga),
@@ -326,13 +388,14 @@ export async function batchMatchManga(
         );
 
         // Compile final results
-        const finalResults = compileMatchResults(
+        const finalResults = await compileMatchResults(
           mangaList,
           cachedResults,
           cachedComickSources,
           cachedMangaDexSources,
           checkCancellation,
           updateProgress,
+          searchConfig.useWorkers,
         );
 
         console.info(

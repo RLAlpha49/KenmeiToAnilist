@@ -93,8 +93,8 @@ export const useMatchHandlers = (
           // Fallback 2: Try finding by case-insensitive title match
           index = matchResults.findIndex(
             (m) =>
-              m.kenmeiManga.title.toLowerCase() ===
-              kenmeiManga.title.toLowerCase(),
+              m.kenmeiManga.title?.toLowerCase() ===
+              kenmeiManga.title?.toLowerCase(),
           );
 
           if (index === -1) {
@@ -146,8 +146,8 @@ export const useMatchHandlers = (
       if (idx === -1) {
         idx = prev.findIndex(
           (m) =>
-            m.kenmeiManga.title.toLowerCase() ===
-            state.kenmeiManga.title.toLowerCase(),
+            m.kenmeiManga.title?.toLowerCase() ===
+            state.kenmeiManga.title?.toLowerCase(),
         );
       }
 

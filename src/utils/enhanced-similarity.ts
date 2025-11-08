@@ -2,6 +2,9 @@
  * @packageDocumentation
  * @module enhanced-similarity
  * @description Enhanced title similarity calculation for manga matching with improved normalization and multiple scoring algorithms.
+ *
+ * **Worker Compatibility:** This module is designed to work in both main thread and Web Worker contexts.
+ * Each context maintains its own independent LRU caches for optimal performance without cache contention.
  */
 
 import * as stringSimilarity from "string-similarity";

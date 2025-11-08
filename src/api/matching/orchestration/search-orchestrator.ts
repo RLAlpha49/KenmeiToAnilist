@@ -21,6 +21,7 @@ import {
   executeMangaDexFallback,
   mergeSourceResults,
 } from "../sources";
+import { executeMatchingWithWorkers } from "@/workers";
 
 /**
  * Search for manga by title with rate limiting and caching.
@@ -108,8 +109,38 @@ export async function searchMangaByTitle(
     searchConfig,
     kenmeiManga,
   );
+
+  // Apply worker-based scoring if enabled and we have results to score
+  let scoredResults = rankedResults;
+  if (searchConfig.useWorkers && rankedResults.length > 0 && kenmeiManga) {
+    try {
+      const candidatesMap = new Map<string, typeof rankedResults>();
+      // Use index-based key to avoid collision with undefined manga.id
+      candidatesMap.set("0", rankedResults);
+      const execution = executeMatchingWithWorkers(
+        [kenmeiManga],
+        candidatesMap,
+        searchConfig.matchConfig,
+      );
+      const workerResults = await execution.promise;
+      if (
+        workerResults &&
+        workerResults.length > 0 &&
+        workerResults[0]?.anilistMatches
+      ) {
+        // Extract the AniListManga objects from the scored matches
+        scoredResults = workerResults[0].anilistMatches.map(
+          (match) => match.manga,
+        );
+      }
+    } catch {
+      // Fallback to sync results if worker execution fails
+      scoredResults = rankedResults;
+    }
+  }
+
   let filteredResults = applyContentFiltering(
-    rankedResults,
+    scoredResults,
     title,
     searchConfig,
   );

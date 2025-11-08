@@ -35,6 +35,12 @@ export interface SearchServiceConfig {
   enableComickSearch?: boolean;
   /** Enable searching via MangaDex source */
   enableMangaDexSearch?: boolean;
+  /**
+   * Enable Web Worker-based matching for improved performance on large batches.
+   * Workers execute CPU-intensive similarity calculations in parallel threads.
+   * @default true
+   */
+  useWorkers?: boolean;
 }
 
 /**
@@ -112,4 +118,5 @@ export const DEFAULT_SEARCH_CONFIG: SearchServiceConfig = {
   singlePageSearch: false,
   enableComickSearch: false,
   enableMangaDexSearch: false,
+  useWorkers: true,
 };
