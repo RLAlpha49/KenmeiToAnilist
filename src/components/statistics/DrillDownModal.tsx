@@ -23,7 +23,10 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import type { DrillDownData } from "@/types/statistics";
+import type { ExportFormat } from "@/utils/exportUtils";
 
 /**
  * Props for DrillDownModal component.
@@ -33,7 +36,7 @@ interface DrillDownModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   drillDownData: DrillDownData | null;
-  onExport?: () => void;
+  onExport?: (format: ExportFormat, rows: Record<string, unknown>[]) => void;
 }
 
 /**
@@ -65,6 +68,7 @@ export function DrillDownModal({
   const [sortColumn, setSortColumn] = useState<SortableColumn | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedFormat, setSelectedFormat] = useState<ExportFormat>("json");
   const itemsPerPage = 50;
 
   // Filter and sort data
@@ -109,6 +113,17 @@ export function DrillDownModal({
     currentPage * itemsPerPage,
   );
 
+  // Derive export rows from processed data (filtered and sorted)
+  const exportRows = useMemo(() => {
+    return processedData.map((item) => ({
+      title: item.title,
+      chapters: item.chapters,
+      status: item.status,
+      confidence: item.confidence ?? null,
+      format: item.format ?? null,
+    }));
+  }, [processedData]);
+
   // Handle sort toggle
   const handleSort = (column: SortableColumn) => {
     if (sortColumn === column) {
@@ -132,6 +147,7 @@ export function DrillDownModal({
       setSortColumn(null);
       setSortDirection(null);
       setCurrentPage(1);
+      setSelectedFormat("json");
     }
     onOpenChange(newOpen);
   };
@@ -229,25 +245,60 @@ export function DrillDownModal({
         )}
 
         {/* Search and Export */}
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search manga titles..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page on search
-              }}
-              className="w-full rounded-md border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800"
-            />
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search manga titles..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1); // Reset to first page on search
+                }}
+                className="w-full rounded-md border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800"
+              />
+            </div>
+            {onExport && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onExport(selectedFormat, exportRows)}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export as {selectedFormat.toUpperCase()}
+              </Button>
+            )}
           </div>
+
+          {/* Format Selector */}
           {onExport && (
-            <Button variant="outline" size="sm" onClick={onExport}>
-              <Download className="mr-2 h-4 w-4" />
-              Export
-            </Button>
+            <div className="flex items-center gap-3">
+              <Label className="text-sm font-medium">Export Format:</Label>
+              <RadioGroup value={selectedFormat} onValueChange={(value) => setSelectedFormat(value as ExportFormat)}>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="json" id="format-json" />
+                    <Label htmlFor="format-json" className="cursor-pointer text-sm font-normal">
+                      JSON
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="csv" id="format-csv" />
+                    <Label htmlFor="format-csv" className="cursor-pointer text-sm font-normal">
+                      CSV
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="markdown" id="format-markdown" />
+                    <Label htmlFor="format-markdown" className="cursor-pointer text-sm font-normal">
+                      Markdown
+                    </Label>
+                  </div>
+                </div>
+              </RadioGroup>
+            </div>
           )}
         </div>
 

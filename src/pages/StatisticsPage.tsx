@@ -52,7 +52,13 @@ import {
   buildComparisonDatasets,
   extractAvailableFilterOptions,
 } from "@/utils/statisticsAdapter";
-import { exportToJson } from "@/utils/exportUtils";
+import {
+  exportToJson,
+  exportToCSV,
+  exportToMarkdown,
+  buildExportMetadata,
+  type ExportFormat,
+} from "@/utils/exportUtils";
 import type { MatchForExport } from "@/types/matching";
 import type {
   StatisticsFilters,
@@ -395,47 +401,71 @@ export function StatisticsPage() {
   }, []);
 
   /**
-   * Handles export of drill-down data as CSV or JSON.
+   * Handles export of drill-down data in selected format (JSON, CSV, or Markdown).
+   * Uses filtered and sorted rows from the modal's processed data.
    * @source
    */
-  const handleDrillDownExport = useCallback(async () => {
-    if (!drillDownData) return;
+  const handleDrillDownExport = useCallback(
+    async (format: ExportFormat, rows: Record<string, unknown>[]) => {
+      if (!drillDownData || !rows) return;
 
-    try {
-      const exportData = drillDownData.data.map((item) => ({
-        title: item.title,
-        chapters: item.chapters,
-        status: item.status,
-        confidence: item.confidence ?? null,
-        format: item.format ?? null,
-      }));
+      try {
+        // Build export metadata
+        const metadata = buildExportMetadata(format, rows.length, undefined, [
+          drillDownData.type,
+          drillDownData.value,
+        ]);
 
-      // Export as JSON by default
-      const payload = {
-        drillDownType: drillDownData.type,
-        drillDownValue: drillDownData.value,
-        exportedAt: new Date().toISOString(),
-        data: exportData,
-      };
+        const baseFilename = `drill-down-${drillDownData.type}-${drillDownData.value}`;
+        let file: string;
 
-      const file = exportToJson(payload, `drill-down-${drillDownData.type}`);
-      toast.success(`Drill-down data exported to ${file}`);
-    } catch (error) {
-      const errorId = generateErrorId();
-      captureError(
-        ErrorType.SYSTEM,
-        "Failed to export drill-down data",
-        error instanceof Error ? error : new Error(String(error)),
-        {
-          errorId,
-          type: drillDownData?.type,
-          value: drillDownData?.value,
-          count: drillDownData?.data?.length,
-        },
-      );
-      toast.error(`Failed to export drill-down data (ref: ${errorId})`);
-    }
-  }, [drillDownData]);
+        switch (format) {
+          case "json": {
+            const payload = {
+              drillDownType: drillDownData.type,
+              drillDownValue: drillDownData.value,
+              exportedAt: new Date().toISOString(),
+              data: rows,
+            };
+            file = exportToJson(
+              payload as Record<string, unknown>,
+              baseFilename,
+            );
+            break;
+          }
+          case "csv": {
+            file = await exportToCSV(rows, baseFilename);
+            break;
+          }
+          case "markdown": {
+            file = exportToMarkdown(rows, baseFilename, metadata);
+            break;
+          }
+          default:
+            throw new Error(`Unsupported export format: ${format}`);
+        }
+
+        toast.success(
+          `Drill-down data exported as ${format.toUpperCase()} to ${file}`,
+        );
+      } catch (error) {
+        const errorId = generateErrorId();
+        captureError(
+          ErrorType.SYSTEM,
+          "Failed to export drill-down data",
+          error instanceof Error ? error : new Error(String(error)),
+          {
+            errorId,
+            type: drillDownData?.type,
+            value: drillDownData?.value,
+            count: rows?.length,
+          },
+        );
+        toast.error(`Failed to export drill-down data (ref: ${errorId})`);
+      }
+    },
+    [drillDownData],
+  );
 
   /**
    * Computes hero metrics including total imports, matched, and pending counts.
