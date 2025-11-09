@@ -6,6 +6,7 @@
 import type { KenmeiManga, KenmeiStatus } from "@/api/kenmei/types";
 import type { AniListManga, MangaMatchResult } from "@/api/anilist/types";
 import type { MatchEngineConfig } from "@/api/matching/match-engine";
+import type { AdvancedMatchFilters } from "@/types/matchingFilters";
 
 /**
  * Message sent to worker to initiate a batch matching operation.
@@ -118,6 +119,63 @@ export interface CSVCompleteMessage {
 }
 
 /**
+ * Message sent to worker to apply advanced filters to matches.
+ * Worker will efficiently filter the match array based on the provided criteria.
+ */
+export interface AdvancedFilterMessage {
+  type: "ADVANCED_FILTER";
+  payload: {
+    taskId: string;
+    matches: MangaMatchResult[];
+    filters: AdvancedMatchFilters;
+  };
+}
+
+/**
+ * Message sent from worker containing filtered match results and metadata.
+ * Includes performance timing and optional debugging information.
+ */
+export interface AdvancedFilterResultMessage {
+  type: "ADVANCED_FILTER_RESULT";
+  payload: {
+    taskId: string;
+    /**
+     * Array of filtered match results
+     */
+    filteredMatches: MangaMatchResult[];
+    /**
+     * Count statistics for UI display
+     */
+    stats: {
+      totalMatches: number;
+      filteredCount: number;
+      confidenceFiltered: number;
+      formatFiltered: number;
+      genreFiltered: number;
+      statusFiltered: number;
+      yearFiltered: number;
+      tagFiltered: number;
+    };
+    /**
+     * Performance timing information
+     */
+    timing: {
+      processingTimeMs: number;
+      filterApplicationTimeMs: number;
+    };
+    /**
+     * Optional debug information (when debug mode enabled)
+     */
+    debug?: {
+      mismatchReasons: Array<{
+        matchId: number;
+        reason: string;
+      }>;
+    };
+  };
+}
+
+/**
  * Union type of all possible worker messages.
  */
 export type WorkerMessage =
@@ -128,7 +186,19 @@ export type WorkerMessage =
   | ErrorMessage
   | CSVStartMessage
   | CSVChunkMessage
-  | CSVCompleteMessage;
+  | CSVCompleteMessage
+  | AdvancedFilterMessage
+  | AdvancedFilterResultMessage;
+
+/**
+ * Union type of all possible messages sent TO the worker.
+ */
+export type WorkerInboundMessage =
+  | MatchBatchMessage
+  | CancelMessage
+  | CSVStartMessage
+  | CSVChunkMessage
+  | AdvancedFilterMessage;
 
 /**
  * Internal task tracking structure for the worker pool.

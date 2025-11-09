@@ -25,6 +25,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/utils/tailwind";
 
+// Import the advanced filter hook for worker-based filtering
+import { useAdvancedFilter } from "@/hooks/useAdvancedFilter";
+
 // Import storage utilities
 import {
   getMatchConfig,
@@ -501,10 +504,9 @@ export function MangaMatchingPanel({
     [processedMatches],
   );
 
-  // Apply filters in order: status → advanced → search
-  const filteredMatches = useMemo(() => {
-    // First apply status filters
-    let filtered: MangaMatchResult[] = processedMatches.filter((match) => {
+  // Apply status filters first (fast, main thread)
+  const statusFilteredMatches = useMemo(() => {
+    return processedMatches.filter((match) => {
       if (match.kenmeiManga.id === undefined) return false;
 
       const statusMatch =
@@ -515,9 +517,18 @@ export function MangaMatchingPanel({
 
       return statusMatch;
     });
+  }, [processedMatches, statusFilters]);
 
-    // Then apply advanced filters
-    filtered = filterByAdvancedCriteria(filtered, advancedFilters);
+  // Apply advanced filters using worker (with debouncing)
+  const { filteredMatches: advancedFilteredMatches } = useAdvancedFilter(
+    statusFilteredMatches,
+    advancedFilters,
+    300, // 300ms debounce
+  );
+
+  // Apply filters in order: status ✓ → advanced ✓ → search
+  const filteredMatches = useMemo(() => {
+    let filtered = advancedFilteredMatches;
 
     // Finally apply search term
     if (searchTerm) {
@@ -574,13 +585,7 @@ export function MangaMatchingPanel({
     }
 
     return filtered;
-  }, [
-    processedMatches,
-    statusFilters,
-    advancedFilters,
-    searchTerm,
-    useFuzzySearch,
-  ]);
+  }, [advancedFilteredMatches, searchTerm, advancedFilters, useFuzzySearch]);
 
   // Sort the filtered matches
   const sortedMatches = [...filteredMatches].sort((a, b) => {

@@ -212,12 +212,23 @@ export class WorkerPool {
         break;
 
       case "RESULT":
-      case "CSV_COMPLETE": {
+      case "CSV_COMPLETE":
+      case "ADVANCED_FILTER_RESULT": {
         const payload = (message as any).payload;
-        const result =
-          message.type === "CSV_COMPLETE"
-            ? { manga: payload.manga, stats: payload.stats }
-            : { results: payload.results };
+        let result: Record<string, unknown>;
+
+        if (message.type === "CSV_COMPLETE") {
+          result = { manga: payload.manga, stats: payload.stats };
+        } else if (message.type === "ADVANCED_FILTER_RESULT") {
+          result = {
+            filteredMatches: payload.filteredMatches,
+            stats: payload.stats,
+            timing: payload.timing,
+          };
+        } else {
+          result = { results: payload.results };
+        }
+
         task.resolve(result);
         this.completeTask(taskId);
         console.info(

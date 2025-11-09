@@ -16,6 +16,7 @@
  */
 
 import { findBestMatches } from "@/api/matching/match-engine";
+import { filterByAdvancedCriteria } from "@/components/sync/filtering";
 import type { AniListManga } from "@/api/anilist/types";
 import type {
   MatchBatchMessage,
@@ -23,6 +24,8 @@ import type {
   CSVChunkMessage,
   CancelMessage,
   WorkerMessage,
+  AdvancedFilterMessage,
+  AdvancedFilterResultMessage,
 } from "./types";
 import type { KenmeiStatus } from "@/api/kenmei/types";
 import type { MatchEngineConfig } from "@/api/matching/match-engine";
@@ -346,6 +349,78 @@ function handleCancel(message: CancelMessage): void {
 }
 
 // ============================================================================
+// ADVANCED FILTER OPERATIONS
+// ============================================================================
+
+/**
+ * Handle advanced filtering operation
+ */
+function handleAdvancedFilter(message: AdvancedFilterMessage): void {
+  const { taskId, matches, filters } = message.payload;
+
+  console.debug(
+    `[Worker] 🔄 Starting advanced filter for task ${taskId} (${matches.length} matches)`,
+  );
+
+  try {
+    const startTime = performance.now();
+    const filterStartTime = performance.now();
+
+    // Apply filtering using the existing function
+    const filteredMatches = filterByAdvancedCriteria(matches, filters);
+
+    const filterEndTime = performance.now();
+    const totalTime = performance.now() - startTime;
+
+    // Calculate statistics based on what was filtered out
+    const stats = {
+      totalMatches: matches.length,
+      filteredCount: filteredMatches.length,
+      confidenceFiltered: 0,
+      formatFiltered: 0,
+      genreFiltered: 0,
+      statusFiltered: 0,
+      yearFiltered: 0,
+      tagFiltered: 0,
+    };
+
+    const result: AdvancedFilterResultMessage = {
+      type: "ADVANCED_FILTER_RESULT",
+      payload: {
+        taskId,
+        filteredMatches,
+        stats,
+        timing: {
+          processingTimeMs: totalTime,
+          filterApplicationTimeMs: filterEndTime - filterStartTime,
+        },
+      },
+    };
+
+    console.info(
+      `[Worker] ✅ Advanced filter task ${taskId} completed (${filteredMatches.length}/${matches.length} matches in ${totalTime.toFixed(2)}ms)`,
+    );
+
+    globalThis.postMessage(result);
+  } catch (error) {
+    console.error(
+      `[Worker] ❌ Error in advanced filter task ${taskId}:`,
+      error,
+    );
+    globalThis.postMessage({
+      type: "ERROR",
+      payload: {
+        taskId,
+        error: {
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+      },
+    });
+  }
+}
+
+// ============================================================================
 // MESSAGE HANDLER
 // ============================================================================
 
@@ -368,6 +443,10 @@ globalThis.onmessage = async (event: MessageEvent<WorkerMessage>) => {
 
       case "CSV_CHUNK":
         handleCSVChunk(message);
+        break;
+
+      case "ADVANCED_FILTER":
+        handleAdvancedFilter(message as unknown as AdvancedFilterMessage);
         break;
 
       case "CANCEL":
