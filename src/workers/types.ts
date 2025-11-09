@@ -176,6 +176,74 @@ export interface AdvancedFilterResultMessage {
 }
 
 /**
+ * Represents a cached normalization result for a title string.
+ * Includes the normalized form and the algorithm that produced it.
+ */
+export interface NormalizedTitleCache {
+  [algorithm: string]: string;
+}
+
+/**
+ * Message sent to worker to normalize title strings across multiple algorithms.
+ * Seeds similarity caches off-thread for large manga libraries.
+ */
+export interface TitleNormalizationMessage {
+  type: "TITLE_NORMALIZATION";
+  payload: {
+    taskId: string;
+    titles: string[];
+    algorithms: Array<"normalizeForMatching" | "processTitle">;
+  };
+}
+
+/**
+ * Progress message for title normalization, sent from worker.
+ * Reports progress by algorithm for UI feedback.
+ */
+export interface TitleNormalizationProgressMessage {
+  type: "TITLE_NORMALIZATION_PROGRESS";
+  payload: {
+    taskId: string;
+    algorithm: string;
+    current: number;
+    total: number;
+  };
+}
+
+/**
+ * Message sent from worker containing normalized title cache results.
+ * Includes per-algorithm cache payloads and optional delta information.
+ */
+export interface TitleNormalizationResultMessage {
+  type: "TITLE_NORMALIZATION_RESULT";
+  payload: {
+    taskId: string;
+    /**
+     * Cache keyed by algorithm name, each mapping original titles to normalized forms
+     */
+    caches: {
+      [algorithm: string]: Record<string, string>;
+    };
+    /**
+     * Performance timing information
+     */
+    timing: {
+      processingTimeMs: number;
+      totalTitlesProcessed: number;
+    };
+    /**
+     * Optional delta information for incremental cache updates
+     */
+    deltas?: {
+      [algorithm: string]: {
+        added: Record<string, string>;
+        modified: Record<string, string>;
+      };
+    };
+  };
+}
+
+/**
  * Union type of all possible worker messages.
  */
 export type WorkerMessage =
@@ -188,7 +256,9 @@ export type WorkerMessage =
   | CSVChunkMessage
   | CSVCompleteMessage
   | AdvancedFilterMessage
-  | AdvancedFilterResultMessage;
+  | AdvancedFilterResultMessage
+  | TitleNormalizationProgressMessage
+  | TitleNormalizationResultMessage;
 
 /**
  * Union type of all possible messages sent TO the worker.
@@ -198,7 +268,8 @@ export type WorkerInboundMessage =
   | CancelMessage
   | CSVStartMessage
   | CSVChunkMessage
-  | AdvancedFilterMessage;
+  | AdvancedFilterMessage
+  | TitleNormalizationMessage;
 
 /**
  * Internal task tracking structure for the worker pool.

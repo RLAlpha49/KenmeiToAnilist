@@ -5,15 +5,43 @@
  */
 
 import { AniListManga } from "../../anilist/types";
+import { getCacheWarmer } from "./cache-warmer";
 
 /**
- * Normalizes a title string for consistent matching.
+ * Direct normalization for matching - checks cache first, then computes.
  * Converts to lowercase, removes punctuation and special characters, normalizes whitespace.
  * @param str - The title string to normalize.
  * @returns Normalized title (lowercase, no punctuation, single spaces).
  * @source
  */
 export function normalizeForMatching(str: string): string {
+  // Try to get from cache first
+  const cacheWarmer = getCacheWarmer();
+  const cached = cacheWarmer.getNormalizedTitle(
+    str,
+    "normalizeForMatching",
+    normalizeForMatchingDirect,
+  );
+  if (cached) {
+    console.debug(
+      `[TitleNormalizer] ✅ Cache HIT for normalizeForMatching: "${str}" → "${cached}"`,
+    );
+    return cached;
+  }
+
+  // Cache miss - compute directly
+  const result = normalizeForMatchingDirect(str);
+  console.debug(
+    `[TitleNormalizer] ⚠️ Cache MISS for normalizeForMatching: "${str}" → "${result}"`,
+  );
+  return result;
+}
+
+/**
+ * Direct implementation of normalize-for-matching (no cache).
+ * @internal
+ */
+function normalizeForMatchingDirect(str: string): string {
   return str
     .toLowerCase()
     .replaceAll("-", "") // Remove dashes consistently with processTitle logic
@@ -25,12 +53,39 @@ export function normalizeForMatching(str: string): string {
 
 /**
  * Processes a title by removing parentheses and normalizing special characters.
- * Handles Unicode quotes and common spacing issues.
+ * Handles Unicode quotes and common spacing issues. Checks cache first.
  * @param title - The title to process.
  * @returns Processed title with cleaned formatting and normalized quotes.
  * @source
  */
 export function processTitle(title: string): string {
+  // Try to get from cache first
+  const cacheWarmer = getCacheWarmer();
+  const cached = cacheWarmer.getNormalizedTitle(
+    title,
+    "processTitle",
+    processTitleDirect,
+  );
+  if (cached) {
+    console.debug(
+      `[TitleNormalizer] ✅ Cache HIT for processTitle: "${title}" → "${cached}"`,
+    );
+    return cached;
+  }
+
+  // Cache miss - compute directly
+  const result = processTitleDirect(title);
+  console.debug(
+    `[TitleNormalizer] ⚠️ Cache MISS for processTitle: "${title}" → "${result}"`,
+  );
+  return result;
+}
+
+/**
+ * Direct implementation of processTitle (no cache).
+ * @internal
+ */
+function processTitleDirect(title: string): string {
   const withoutParentheses = title.replaceAll(/\s*\([^()]*\)\s*/g, " ");
 
   return withoutParentheses
@@ -46,7 +101,7 @@ export function processTitle(title: string): string {
 
 /**
  * Creates normalized title variants from manga data for matching.
- * Processes English, Romaji, Native, and Synonym titles with source attribution.
+ * Processes English, Romaji, Native, and Synonym titles with source attribution. Uses cache.
  * @param manga - The manga data to extract titles from.
  * @returns Array of title objects with normalized text, source label, and original form.
  * @source
@@ -59,9 +114,10 @@ export function createNormalizedTitles(
   const pushTitle = (title: string | null | undefined, source: string) => {
     if (!title) return;
 
-    const processedTitle = processTitle(title);
+    // Get from cache if available
+    const processedTitle = processTitle(title); // This now uses cache
     allTitles.push({
-      text: normalizeForMatching(processedTitle),
+      text: normalizeForMatching(processedTitle), // This now uses cache
       source,
       original: processedTitle,
     });
@@ -81,7 +137,7 @@ export function createNormalizedTitles(
 }
 
 /**
- * Collects all raw (non-normalized) title strings from manga data.
+ * Collects all raw (non-normalized) title strings from manga data. Uses cache for consistency.
  * Includes English, Romaji, Native titles and all synonyms.
  * @param manga - The manga data to collect titles from.
  * @returns Array of all title strings in their original form.
@@ -89,21 +145,26 @@ export function createNormalizedTitles(
  */
 export function collectMangaTitles(manga: AniListManga): string[] {
   const titles: string[] = [];
+  const cacheWarmer = getCacheWarmer();
 
-  if (manga.title.english) {
-    titles.push(manga.title.english);
-  }
-  if (manga.title.romaji) {
-    titles.push(manga.title.romaji);
-  }
-  if (manga.title.native) {
-    titles.push(manga.title.native);
-  }
+  const addTitle = (rawTitle: string | null | undefined) => {
+    if (!rawTitle) return;
+    // Cache the raw title for consistency
+    cacheWarmer.getNormalizedTitle(
+      rawTitle,
+      "collectMangaTitles",
+      () => rawTitle,
+    );
+    titles.push(rawTitle);
+  };
+
+  addTitle(manga.title.english);
+  addTitle(manga.title.romaji);
+  addTitle(manga.title.native);
+
   if (manga.synonyms && Array.isArray(manga.synonyms)) {
     for (const synonym of manga.synonyms) {
-      if (synonym) {
-        titles.push(synonym);
-      }
+      addTitle(synonym);
     }
   }
 
@@ -112,7 +173,7 @@ export function collectMangaTitles(manga: AniListManga): string[] {
 
 /**
  * Checks if the difference between two titles is solely due to articles (a, an, the).
- * Useful for matching titles that differ only in article usage.
+ * Useful for matching titles that differ only in article usage. Uses cache.
  * @param title1 - First title to compare.
  * @param title2 - Second title to compare.
  * @returns True if titles are identical except for article presence/absence.
@@ -124,7 +185,7 @@ export function isDifferenceOnlyArticles(
 ): boolean {
   const articles = new Set(["a", "an", "the"]);
 
-  // Normalize both titles
+  // Normalize both titles (now uses cache)
   const norm1 = normalizeForMatching(title1)
     .split(/\s+/)
     .filter((word) => word.length > 0);

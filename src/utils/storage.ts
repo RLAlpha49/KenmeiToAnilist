@@ -457,6 +457,7 @@ export const STORAGE_KEYS = {
   IGNORED_DUPLICATES: "ignored_duplicates",
   ACTIVE_SYNC_SNAPSHOT: "active_sync_snapshot",
   ANILIST_SEARCH_CACHE: "anilist_search_cache",
+  TITLE_NORMALIZATION_CACHE: "title_normalization_cache",
   UPDATE_DISMISSED_VERSIONS: "update_dismissed_versions",
   UPDATE_CHANNEL: "update_channel",
   ONBOARDING_COMPLETED: "onboarding_completed",
@@ -550,6 +551,38 @@ export type CustomRule = {
 export type CustomRulesConfig = {
   skipRules: CustomRule[];
   acceptRules: CustomRule[];
+};
+
+/**
+ * Title normalization cache storing per-algorithm normalized forms.
+ * Maps original titles to their normalized versions for each algorithm.
+ * @source
+ */
+export interface TitleNormalizationCache {
+  /**
+   * Per-algorithm caches mapping original titles to normalized forms
+   */
+  caches: {
+    [algorithm: string]: Record<string, string>;
+  };
+  /**
+   * Timestamp when cache was last updated
+   */
+  lastUpdated: number;
+  /**
+   * Schema version for future migrations
+   */
+  version: number;
+}
+
+/**
+ * Default empty title normalization cache.
+ * @source
+ */
+export const DEFAULT_TITLE_NORMALIZATION_CACHE: TitleNormalizationCache = {
+  caches: {},
+  lastUpdated: Date.now(),
+  version: 1,
 };
 
 export type MatchConfig = {
@@ -2276,5 +2309,120 @@ export function cleanupStaleSyncSnapshot(): void {
   } catch (error) {
     console.error("[Storage] Error cleaning up sync snapshot:", error);
     storage.removeItem(STORAGE_KEYS.ACTIVE_SYNC_SNAPSHOT);
+  }
+}
+
+/**
+ * Retrieves the title normalization cache from storage.
+ * @returns The normalization cache or default empty cache if not found.
+ * @source
+ */
+export function getTitleNormalizationCache(): TitleNormalizationCache {
+  try {
+    const cached = storage.getItem(STORAGE_KEYS.TITLE_NORMALIZATION_CACHE);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      console.debug(
+        `[Storage] 📖 Retrieved title normalization cache with ${Object.keys(parsed.caches || {}).length} algorithms`,
+      );
+      return parsed;
+    }
+    console.debug(
+      "[Storage] 📖 No title normalization cache found, returning empty",
+    );
+    return DEFAULT_TITLE_NORMALIZATION_CACHE;
+  } catch (error) {
+    console.error(
+      "[Storage] ❌ Error retrieving title normalization cache",
+      error,
+    );
+    return DEFAULT_TITLE_NORMALIZATION_CACHE;
+  }
+}
+
+/**
+ * Saves the title normalization cache to storage.
+ * Applies worker-produced deltas to update the cache incrementally.
+ * @param cache - The cache to save.
+ * @source
+ */
+export function saveTitleNormalizationCache(
+  cache: TitleNormalizationCache,
+): void {
+  try {
+    storage.setItem(
+      STORAGE_KEYS.TITLE_NORMALIZATION_CACHE,
+      JSON.stringify(cache),
+    );
+    console.info(
+      `[Storage] 💾 Saved title normalization cache with ${Object.keys(cache.caches).length} algorithms`,
+    );
+  } catch (error) {
+    console.error("[Storage] ❌ Error saving title normalization cache", error);
+  }
+}
+
+/**
+ * Merges worker-produced deltas into the canonical normalization cache.
+ * Applies added and modified entries from each algorithm.
+ * @param deltas - Delta entries by algorithm.
+ * @source
+ */
+export function applyNormalizationCacheDeltas(
+  deltas?: Record<
+    string,
+    {
+      added: Record<string, string>;
+      modified: Record<string, string>;
+    }
+  >,
+): void {
+  if (!deltas || Object.keys(deltas).length === 0) {
+    console.debug("[Storage] 📖 No deltas to apply to normalization cache");
+    return;
+  }
+
+  try {
+    const cache = getTitleNormalizationCache();
+
+    for (const [algorithm, delta] of Object.entries(deltas)) {
+      if (!cache.caches[algorithm]) {
+        cache.caches[algorithm] = {};
+      }
+
+      // Apply additions
+      Object.assign(cache.caches[algorithm], delta.added);
+
+      // Apply modifications
+      Object.assign(cache.caches[algorithm], delta.modified);
+    }
+
+    cache.lastUpdated = Date.now();
+    saveTitleNormalizationCache(cache);
+
+    console.info(
+      `[Storage] ✅ Applied normalization cache deltas for ${Object.keys(deltas).length} algorithms`,
+    );
+  } catch (error) {
+    console.error(
+      "[Storage] ❌ Error applying normalization cache deltas",
+      error,
+    );
+  }
+}
+
+/**
+ * Clears the title normalization cache.
+ * @source
+ */
+export function clearTitleNormalizationCache(): void {
+  try {
+    storage.removeItem(STORAGE_KEYS.TITLE_NORMALIZATION_CACHE);
+    console.info("[Storage] 🧹 Cleared title normalization cache");
+  } catch (error) {
+    console.error(
+      "[Storage] ❌ Error clearing title normalization cache",
+      error,
+    );
   }
 }

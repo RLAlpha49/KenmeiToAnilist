@@ -23,3 +23,7 @@ export {
   checkSeasonPattern,
   checkSeasonPatterns,
 } from "./pattern-detection";
+
+// Cache warmer service
+export { TitleNormalizationCacheWarmer, getCacheWarmer } from "./cache-warmer";
+export type { NormalizationCacheResult } from "@/workers";

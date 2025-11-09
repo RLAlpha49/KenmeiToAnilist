@@ -39,7 +39,7 @@ export interface WorkerPoolConfig {
  */
 interface WorkerTask {
   taskId: string;
-  type: "matching" | "csv";
+  type: "matching" | "csv" | "normalization";
   resolve: (result: any) => void;
   reject: (error: Error) => void;
   cancelled: boolean;
@@ -206,6 +206,7 @@ export class WorkerPool {
 
     switch (message.type) {
       case "PROGRESS":
+      case "TITLE_NORMALIZATION_PROGRESS":
         if (task.onProgress) {
           task.onProgress(message);
         }
@@ -213,7 +214,8 @@ export class WorkerPool {
 
       case "RESULT":
       case "CSV_COMPLETE":
-      case "ADVANCED_FILTER_RESULT": {
+      case "ADVANCED_FILTER_RESULT":
+      case "TITLE_NORMALIZATION_RESULT": {
         const payload = (message as any).payload;
         let result: Record<string, unknown>;
 
@@ -223,6 +225,12 @@ export class WorkerPool {
           result = {
             filteredMatches: payload.filteredMatches,
             stats: payload.stats,
+            timing: payload.timing,
+          };
+        } else if (message.type === "TITLE_NORMALIZATION_RESULT") {
+          result = {
+            caches: payload.caches,
+            deltas: payload.deltas,
             timing: payload.timing,
           };
         } else {

@@ -36,6 +36,7 @@ import { AbortError } from "../utils/chunkedProcessing";
 import { truncateToastMessage } from "../utils/textHighlight";
 import { toast } from "sonner";
 import { captureError, ErrorType } from "../utils/errorHandling";
+import { getCacheWarmer } from "../api/matching/normalization";
 
 // Components
 import { MatchingErrorBoundary } from "../components/matching/MatchingErrorBoundary";
@@ -663,6 +664,36 @@ export function MatchingPage() {
     setCanRedo(undoRedoManager.canRedo());
   }, [matchResults, undoRedoManager]);
 
+  // Warmup title normalization caches when unprocessed manga is loaded
+  useEffect(() => {
+    if (
+      resumeState.unprocessedManga &&
+      resumeState.unprocessedManga.length > 0
+    ) {
+      console.info(
+        `[MatchingPage] 🔥 Starting cache warmup for ${resumeState.unprocessedManga.length} unprocessed titles`,
+      );
+      const cacheWarmer = getCacheWarmer();
+      const titles = resumeState.unprocessedManga.map((m) => m.title);
+      cacheWarmer
+        .warmupCachesInBackground(
+          titles,
+          ["normalizeForMatching", "processTitle"],
+          (algorithm, current, total) => {
+            console.debug(
+              `[MatchingPage] 📊 Cache warmup progress - ${algorithm}: ${current}/${total}`,
+            );
+          },
+        )
+        .catch((error) => {
+          console.warn(
+            "[MatchingPage] ⚠️ Cache warmup failed, but continuing:",
+            error,
+          );
+        });
+    }
+  }, [resumeState.unprocessedManga]);
+
   // Add keyboard shortcuts for undo/redo
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -752,9 +783,6 @@ export function MatchingPage() {
   // Add debug effect for matching results
   useEffect(() => {
     if (matchResults.length > 0) {
-      console.debug(
-        "[MatchingPage] matchResults updated - Current status counts:",
-      );
       const statusCounts = {
         matched: matchResults.filter((m) => m.status === "matched").length,
         pending: matchResults.filter((m) => m.status === "pending").length,

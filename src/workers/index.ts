@@ -11,6 +11,10 @@
 
 export { MatchingWorkerPool } from "./matching-worker-pool";
 export { CSVWorkerPool, getCSVWorkerPool } from "./csv-worker-pool";
+export {
+  TitleNormalizationWorkerPool,
+  getTitleNormalizationPool,
+} from "./title-normalization-worker-pool";
 export { WorkerPool } from "./worker-pool";
 export {
   executeMatchingWithWorkers,
@@ -30,9 +34,16 @@ export type {
   CSVStartMessage,
   CSVChunkMessage,
   CSVCompleteMessage,
+  TitleNormalizationMessage,
+  TitleNormalizationProgressMessage,
+  TitleNormalizationResultMessage,
 } from "./types";
 export type { CancellableExecution } from "./utils";
 export type { CSVWorkerPoolConfig } from "./csv-worker-pool";
+export type {
+  NormalizationCacheResult,
+  NormalizationProgressCallback,
+} from "./title-normalization-worker-pool";
 
 // Re-export from pool module to avoid circular dependency
 export { getWorkerPool, workerPool } from "./pool";

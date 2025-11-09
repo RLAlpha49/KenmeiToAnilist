@@ -35,6 +35,7 @@ import { truncateToastMessage } from "../utils/textHighlight";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { useDebugActions } from "../contexts/DebugContext";
+import { getCacheWarmer } from "../api/matching/normalization";
 
 /**
  * Import page component for the Kenmei to AniList sync tool.
@@ -239,6 +240,29 @@ export function ImportPage() {
 
       // Mark import step as complete
       completeStep("import");
+
+      // Start warming up title normalization caches in background
+      console.info(
+        "[Import] 🔥 Starting cache warmup for normalization algorithms",
+      );
+      const cacheWarmer = getCacheWarmer();
+      const titles = validMergedManga.map((m) => m.title);
+      cacheWarmer
+        .warmupCachesInBackground(
+          titles,
+          ["normalizeForMatching", "processTitle"],
+          (algorithm, current, total) => {
+            console.debug(
+              `[Import] 📊 Cache warmup progress - ${algorithm}: ${current}/${total}`,
+            );
+          },
+        )
+        .catch((error) => {
+          console.warn(
+            "[Import] ⚠️ Cache warmup failed, but continuing:",
+            error,
+          );
+        });
 
       // Redirect to the review page after a short delay
       setTimeout(() => {
