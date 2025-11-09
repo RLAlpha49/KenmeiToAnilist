@@ -13,8 +13,8 @@
  * - Cancellation support
  */
 
-import { getGenericWorkerPool } from "./worker-pool";
-import type { DuplicateDetectionMessage } from "./types";
+import { getGenericWorkerPool } from "../core/worker-pool";
+import type { DuplicateDetectionMessage } from "../core/types";
 import type { MangaMatchResult } from "@/api/anilist/types";
 import { detectDuplicateAniListIds } from "@/components/matching/detectDuplicateAniListIds";
 import { getIgnoredDuplicates } from "@/utils/storage";

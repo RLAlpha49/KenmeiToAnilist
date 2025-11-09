@@ -7,8 +7,8 @@
  * @module workers/title-normalization-worker-pool
  */
 
-import type { TitleNormalizationMessage } from "./types";
-import { getGenericWorkerPool } from "./worker-pool";
+import type { TitleNormalizationMessage } from "../core/types";
+import { getGenericWorkerPool } from "../core/worker-pool";
 
 /**
  * Interface for normalized cache results from worker.
@@ -166,14 +166,21 @@ export class TitleNormalizationWorkerPool {
         },
         cancelled: false,
         onProgress: (message: unknown) => {
-          const msgWithType = message as { type?: string; payload?: { algorithm?: string; current?: number; total?: number } };
+          const msgWithType = message as {
+            type?: string;
+            payload?: { algorithm?: string; current?: number; total?: number };
+          };
           if (
             msgWithType.type === "TITLE_NORMALIZATION_PROGRESS" &&
             progressCallback &&
             msgWithType.payload
           ) {
             const { algorithm, current, total } = msgWithType.payload;
-            if (typeof algorithm === "string" && typeof current === "number" && typeof total === "number") {
+            if (
+              typeof algorithm === "string" &&
+              typeof current === "number" &&
+              typeof total === "number"
+            ) {
               console.debug(
                 `[TitleNormalizationWorkerPool] 📊 Progress for task ${effectiveTaskId} - ${algorithm}: ${current}/${total}`,
               );

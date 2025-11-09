@@ -13,8 +13,8 @@
  * - Performance metrics
  */
 
-import { getGenericWorkerPool } from "./worker-pool";
-import type { DataTablePreparationMessage } from "./types";
+import { getGenericWorkerPool } from "../core/worker-pool";
+import type { DataTablePreparationMessage } from "../core/types";
 import type { KenmeiMangaItem } from "@/types/kenmei";
 
 /**

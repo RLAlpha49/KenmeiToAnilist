@@ -1,9 +1,9 @@
-import { getGenericWorkerPool } from "./worker-pool";
+import { getGenericWorkerPool } from "../core/worker-pool";
 import type {
   WorkerPoolConfig,
   BatchSyncMessage,
   PreparedSyncOperation,
-} from "./types";
+} from "../core/types";
 import type { AniListMediaEntry } from "@/api/anilist/types";
 
 /**

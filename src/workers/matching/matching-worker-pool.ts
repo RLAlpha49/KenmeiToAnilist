@@ -7,12 +7,12 @@
  * @module workers/matching-worker-pool
  */
 
-import type { WorkerPoolConfig, MatchBatchExecution } from "./types";
+import type { WorkerPoolConfig, MatchBatchExecution } from "../core/types";
 import type { KenmeiManga } from "@/api/kenmei/types";
 import type { AniListManga, MangaMatchResult } from "@/api/anilist/types";
 import type { MatchEngineConfig } from "@/api/matching/match-engine";
 import { findBestMatches } from "@/api/matching/match-engine";
-import { getGenericWorkerPool } from "./worker-pool";
+import { getGenericWorkerPool } from "../core/worker-pool";
 
 function generateUUID(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replaceAll(
@@ -143,7 +143,9 @@ export class MatchingWorkerPool {
         config,
         resolve: (result: unknown) => {
           // Adapt raw payload to expected shape: extract results array
-          const adaptedResult = (result as { results?: MangaMatchResult[] }).results || (result as MangaMatchResult[]);
+          const adaptedResult =
+            (result as { results?: MangaMatchResult[] }).results ||
+            (result as MangaMatchResult[]);
           resolve(adaptedResult);
         },
         reject,
@@ -151,7 +153,14 @@ export class MatchingWorkerPool {
         progressCallback,
         onProgress: (message: unknown) => {
           // Adapt generic message to typed callback
-          const msgWithType = message as { type?: string; payload?: { current?: number; total?: number; currentTitle?: string } };
+          const msgWithType = message as {
+            type?: string;
+            payload?: {
+              current?: number;
+              total?: number;
+              currentTitle?: string;
+            };
+          };
           if (
             msgWithType.type === "PROGRESS" &&
             progressCallback &&

@@ -10,8 +10,8 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { getFilterWorkerPool } from "@/workers/filter-worker-pool";
-import type { FilterOperationResult } from "@/workers/filter-worker-pool";
+import { getFilterWorkerPool } from "@/workers";
+import type { FilterOperationResult } from "@/workers";
 import type { MangaMatchResult } from "@/api/anilist/types";
 import type { AdvancedMatchFilters } from "@/types/matchingFilters";
 

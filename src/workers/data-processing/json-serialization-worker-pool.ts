@@ -7,8 +7,11 @@
  * @module workers/json-serialization-worker-pool
  */
 
-import type { JSONSerializeMessage, JSONDeserializeMessage } from "./types";
-import { getGenericWorkerPool } from "./worker-pool";
+import type {
+  JSONSerializeMessage,
+  JSONDeserializeMessage,
+} from "../core/types";
+import { getGenericWorkerPool } from "../core/worker-pool";
 
 function generateUUID(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replaceAll(

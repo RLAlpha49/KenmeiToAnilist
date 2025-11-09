@@ -205,7 +205,10 @@ async function processWithWorkers(
       const acceptRuleMatches = new Set<number>();
       for (const match of potentialMatches) {
         // Access the __acceptRuleMatch marker if present
-        if ((match as AniListManga & { __acceptRuleMatch?: CustomRule }).__acceptRuleMatch) {
+        if (
+          (match as AniListManga & { __acceptRuleMatch?: CustomRule })
+            .__acceptRuleMatch
+        ) {
           acceptRuleMatches.add(match.id);
         }
       }
@@ -216,7 +219,9 @@ async function processWithWorkers(
       // Strip off the __acceptRuleMatch marker before sending to worker
       const cleanedMatches = potentialMatches.map((match) => {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { __acceptRuleMatch, ...rest } = match as AniListManga & { __acceptRuleMatch?: CustomRule };
+        const { __acceptRuleMatch, ...rest } = match as AniListManga & {
+          __acceptRuleMatch?: CustomRule;
+        };
         return rest as AniListManga;
       });
       // Use index as key instead of manga.id

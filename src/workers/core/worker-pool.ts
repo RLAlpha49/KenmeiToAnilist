@@ -208,7 +208,8 @@ export class WorkerPool {
       return;
     }
 
-    const taskId = (message.payload as Record<string, unknown>).taskId as string;
+    const taskId = (message.payload as Record<string, unknown>)
+      .taskId as string;
     const task = this.tasks.get(taskId);
 
     if (!task) {
@@ -247,7 +248,8 @@ export class WorkerPool {
       }
 
       case "ERROR": {
-        const payload = (message as unknown as Record<string, unknown>).payload as Record<string, unknown>;
+        const payload = (message as unknown as Record<string, unknown>)
+          .payload as Record<string, unknown>;
         const errorDetails = payload.error as Record<string, unknown>;
         const error = new Error(errorDetails.message as string);
         // Attach additional error properties from worker
@@ -258,7 +260,9 @@ export class WorkerPool {
           error.stack = errorDetails.stack as string;
         }
         if (errorDetails.causeMessage) {
-          (error as Error & { cause: Error }).cause = new Error(errorDetails.causeMessage as string);
+          (error as Error & { cause: Error }).cause = new Error(
+            errorDetails.causeMessage as string,
+          );
         }
         task.reject(error);
         this.completeTask(taskId);
@@ -326,7 +330,8 @@ export class WorkerPool {
   private extractMessageResult(
     message: WorkerMessage,
   ): Record<string, unknown> {
-    return (message as unknown as Record<string, Record<string, unknown>>).payload;
+    return (message as unknown as Record<string, Record<string, unknown>>)
+      .payload;
   } /**
    * Handle worker errors
    */

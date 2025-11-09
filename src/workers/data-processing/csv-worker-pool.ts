@@ -11,9 +11,9 @@ import type {
   CSVStartMessage,
   CSVChunkMessage,
   ProgressMessage,
-} from "./types";
+} from "../core/types";
 import type { KenmeiManga, KenmeiStatus } from "@/api/kenmei/types";
-import { getGenericWorkerPool } from "./worker-pool";
+import { getGenericWorkerPool } from "../core/worker-pool";
 
 function generateUUID(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replaceAll(
@@ -186,7 +186,15 @@ export class CSVWorkerPool {
     }
 
     // Wrap resolve to adapt raw payload to expected CSV result shape
-    const wrappedResolve = (result: { taskId: string; manga?: KenmeiManga[]; stats?: { totalParsed: number; processingTimeMs: number; bytesProcessed: number } }) => {
+    const wrappedResolve = (result: {
+      taskId: string;
+      manga?: KenmeiManga[];
+      stats?: {
+        totalParsed: number;
+        processingTimeMs: number;
+        bytesProcessed: number;
+      };
+    }) => {
       // CSV_COMPLETE and CSV_CANCELLED return raw payload
       // For CSV_COMPLETE: { taskId, manga, stats }
       // For CSV_CANCELLED: { taskId }
@@ -216,7 +224,9 @@ export class CSVWorkerPool {
       resolve: wrappedResolve as (result: Record<string, unknown>) => void,
       reject,
       cancelled: false,
-      onProgress: onProgress as ((message: import("./types").WorkerMessage) => void) | undefined,
+      onProgress: onProgress as
+        | ((message: import("../core/types").WorkerMessage) => void)
+        | undefined,
       workerIndex,
     };
 

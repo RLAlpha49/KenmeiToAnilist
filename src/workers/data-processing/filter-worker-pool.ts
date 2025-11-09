@@ -11,8 +11,8 @@
  * - Performance metrics
  */
 
-import { getGenericWorkerPool } from "./worker-pool";
-import type { AdvancedFilterMessage } from "./types";
+import { getGenericWorkerPool } from "../core/worker-pool";
+import type { AdvancedFilterMessage } from "../core/types";
 import type { MangaMatchResult } from "@/api/anilist/types";
 import type { AdvancedMatchFilters } from "@/types/matchingFilters";
 import { filterByAdvancedCriteria } from "@/components/sync/filtering";

@@ -410,7 +410,10 @@ function handleCancel(message: CancelMessage): void {
 /**
  * Check if a match fails the confidence filter
  */
-function failsConfidenceFilter(match: MangaMatchResult, filters: AdvancedMatchFilters): boolean {
+function failsConfidenceFilter(
+  match: MangaMatchResult,
+  filters: AdvancedMatchFilters,
+): boolean {
   let confidence = 0;
 
   if (match.selectedMatch && match.anilistMatches) {
@@ -430,7 +433,10 @@ function failsConfidenceFilter(match: MangaMatchResult, filters: AdvancedMatchFi
 /**
  * Check if a match fails the format filter
  */
-function failsFormatFilter(match: MangaMatchResult, filters: AdvancedMatchFilters): boolean {
+function failsFormatFilter(
+  match: MangaMatchResult,
+  filters: AdvancedMatchFilters,
+): boolean {
   if (filters.formats.length === 0) {
     return false;
   }
@@ -441,7 +447,10 @@ function failsFormatFilter(match: MangaMatchResult, filters: AdvancedMatchFilter
 /**
  * Check if a match fails the genre filter
  */
-function failsGenreFilter(match: MangaMatchResult, filters: AdvancedMatchFilters): boolean {
+function failsGenreFilter(
+  match: MangaMatchResult,
+  filters: AdvancedMatchFilters,
+): boolean {
   if (filters.genres.length === 0) {
     return false;
   }
@@ -456,7 +465,10 @@ function failsGenreFilter(match: MangaMatchResult, filters: AdvancedMatchFilters
 /**
  * Check if a match fails the publication status filter
  */
-function failsStatusFilter(match: MangaMatchResult, filters: AdvancedMatchFilters): boolean {
+function failsStatusFilter(
+  match: MangaMatchResult,
+  filters: AdvancedMatchFilters,
+): boolean {
   if (filters.publicationStatuses.length === 0) {
     return false;
   }
@@ -470,7 +482,10 @@ function failsStatusFilter(match: MangaMatchResult, filters: AdvancedMatchFilter
 /**
  * Check if a match fails the year filter
  */
-function failsYearFilter(match: MangaMatchResult, filters: AdvancedMatchFilters): boolean {
+function failsYearFilter(
+  match: MangaMatchResult,
+  filters: AdvancedMatchFilters,
+): boolean {
   if (!filters.yearRange) {
     return false;
   }
@@ -483,23 +498,30 @@ function failsYearFilter(match: MangaMatchResult, filters: AdvancedMatchFilters)
   if (year === undefined) {
     return true;
   }
-  if ((filters.yearRange.min) !== null && year < (filters.yearRange.min)) {
+  if (filters.yearRange.min !== null && year < filters.yearRange.min) {
     return true;
   }
-  return (filters.yearRange.max) !== null && year > (filters.yearRange.max);
+  return filters.yearRange.max !== null && year > filters.yearRange.max;
 }
 
 /**
  * Check if a match fails the tag filter
  */
-function failsTagFilter(match: MangaMatchResult, filters: AdvancedMatchFilters): boolean {
+function failsTagFilter(
+  match: MangaMatchResult,
+  filters: AdvancedMatchFilters,
+): boolean {
   const tagsFilter = filters.tags ?? [];
   if (!tagsFilter || tagsFilter.length === 0) {
     return false;
   }
   const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
   const tags = matchData?.tags || [];
-  const tagNames = new Set(tags.map((t: { id: number; name: string; category?: string }) => t.name.toLowerCase()));
+  const tagNames = new Set(
+    tags.map((t: { id: number; name: string; category?: string }) =>
+      t.name.toLowerCase(),
+    ),
+  );
   return !tagsFilter.some((ft: string) => tagNames.has(ft.toLowerCase()));
 }
 
@@ -1966,10 +1988,17 @@ globalThis.onmessage = async (event: MessageEvent<WorkerInboundMessage>) => {
         break;
 
       default: {
-        console.warn(`[Worker] Unknown message type: ${(message as unknown as Record<string, unknown>).type}`);
+        console.warn(
+          `[Worker] Unknown message type: ${(message as unknown as Record<string, unknown>).type}`,
+        );
         // Send error response for unknown message types
         const msg = message as unknown as Record<string, unknown>;
-        if ("payload" in msg && typeof msg.payload === "object" && msg.payload !== null && "taskId" in msg.payload) {
+        if (
+          "payload" in msg &&
+          typeof msg.payload === "object" &&
+          msg.payload !== null &&
+          "taskId" in msg.payload
+        ) {
           const payload = msg.payload as Record<string, unknown>;
           globalThis.postMessage({
             type: "ERROR",
@@ -1987,7 +2016,12 @@ globalThis.onmessage = async (event: MessageEvent<WorkerInboundMessage>) => {
   } catch (error) {
     console.error("[Worker] Unhandled error in worker:", error);
     const msg = message as unknown as Record<string, unknown>;
-    if ("payload" in msg && typeof msg.payload === "object" && msg.payload !== null && "taskId" in msg.payload) {
+    if (
+      "payload" in msg &&
+      typeof msg.payload === "object" &&
+      msg.payload !== null &&
+      "taskId" in msg.payload
+    ) {
       const payload = msg.payload as Record<string, unknown>;
       globalThis.postMessage({
         type: "ERROR",

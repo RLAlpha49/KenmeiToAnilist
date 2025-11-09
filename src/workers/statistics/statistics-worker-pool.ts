@@ -11,7 +11,7 @@ import type {
 } from "@/utils/statisticsAdapter";
 import type { ReadingHistory } from "@/utils/storage";
 import type { StatisticsFilters, ComparisonMode } from "@/types/statistics";
-import { getGenericWorkerPool } from "./worker-pool";
+import { getGenericWorkerPool } from "../core/worker-pool";
 
 /**
  * Generate a UUID v4 string
@@ -223,7 +223,14 @@ export class StatisticsAggregationWorkerPool {
         taskId: mainTaskId,
         type: "statistics" as const,
         resolve: (result: unknown) => {
-          const typedResult = result as StatisticsAggregationResult & { comparisonDatasets?: unknown; timing?: { filteringTimeMs: number; aggregationTimeMs: number; totalTimeMs: number } };
+          const typedResult = result as StatisticsAggregationResult & {
+            comparisonDatasets?: unknown;
+            timing?: {
+              filteringTimeMs: number;
+              aggregationTimeMs: number;
+              totalTimeMs: number;
+            };
+          };
           resolve({
             filteredData: typedResult.filteredData,
             filterOptions: typedResult.filterOptions,
@@ -251,8 +258,16 @@ export class StatisticsAggregationWorkerPool {
               stage,
               progress,
               message: progressMessage,
-            } = msgWithType.payload as { stage?: string; progress?: number; message?: string };
-            if (typeof stage === "string" && typeof progress === "number" && typeof progressMessage === "string") {
+            } = msgWithType.payload as {
+              stage?: string;
+              progress?: number;
+              message?: string;
+            };
+            if (
+              typeof stage === "string" &&
+              typeof progress === "number" &&
+              typeof progressMessage === "string"
+            ) {
               progressCallback(stage, progress, progressMessage);
             }
           }

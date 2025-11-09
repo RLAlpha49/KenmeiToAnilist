@@ -200,13 +200,19 @@ export async function executeMatchingOnMainThread(
  */
 export async function areWorkersAvailable(): Promise<number> {
   const matchingPool = getWorkerPool();
-  const { getCSVWorkerPool } = await import("./csv-worker-pool");
-  const { getFilterWorkerPool } = await import("./filter-worker-pool");
-   
-  const {
-    getTitleNormalizationPool,
-  } = await import("./title-normalization-worker-pool");
-  const { getStatisticsWorkerPool } = await import("./statistics-worker-pool");
+  const { getCSVWorkerPool } = await import(
+    "../data-processing/csv-worker-pool"
+  );
+  const { getFilterWorkerPool } = await import(
+    "../data-processing/filter-worker-pool"
+  );
+
+  const { getTitleNormalizationPool } = await import(
+    "../statistics/title-normalization-worker-pool"
+  );
+  const { getStatisticsWorkerPool } = await import(
+    "../statistics/statistics-worker-pool"
+  );
 
   // Get available worker counts from each pool
   const counts = [

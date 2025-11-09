@@ -12,7 +12,7 @@ import {
 import { AniListMediaEntry } from "./types";
 import { storage, STORAGE_KEYS } from "../../utils/storage";
 import { withGroupAsync } from "../../utils/logging";
-import { BatchSyncWorkerPool } from "../../workers/batch-sync-worker-pool";
+import { BatchSyncWorkerPool } from "@/workers";
 
 /**
  * Type alias for GraphQL mutation variables mapping.
@@ -1499,7 +1499,12 @@ export async function syncMangaBatch(
       try {
         await pool.executeBatchSyncPreprocessing(
           entries,
-          (phase, processed, total, currentMediaId) => {
+          (
+            phase: string,
+            processed: number,
+            total: number,
+            currentMediaId?: number,
+          ) => {
             // Update progress during pre-processing phase
             const progress: SyncProgress = {
               ...initialProgress,

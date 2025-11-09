@@ -14,7 +14,7 @@ import {
   AppError,
   CancelledError,
 } from "../../utils/errorHandling";
-import { getCSVWorkerPool } from "../../workers/csv-worker-pool";
+import { getCSVWorkerPool } from "@/workers";
 import { Progress } from "../ui/progress";
 
 /**
@@ -157,7 +157,9 @@ export function FileDropZone({
       const { taskId, promise } = workerPool.startParsing(
         content,
         { defaultStatus: "plan_to_read" as const },
-        (progress) => {
+        (progress: {
+          payload: { processedBytes?: number; totalBytes?: number };
+        }) => {
           // Update progress bar based on worker progress (byte-based)
           if (progress.payload.processedBytes && progress.payload.totalBytes) {
             const byteProgress =
@@ -183,7 +185,8 @@ export function FileDropZone({
       const kenmeiData: KenmeiData = {
         version: "1.0.0",
         exported_at: new Date().toISOString(),
-        manga: manga.map((item) => ({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        manga: manga.map((item: any) => ({
           title: item.title,
           status: item.status,
           score: item.score,

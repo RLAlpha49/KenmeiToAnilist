@@ -9,39 +9,57 @@
  * @module workers
  */
 
-export { MatchingWorkerPool } from "./matching-worker-pool";
-export { BatchSyncWorkerPool } from "./batch-sync-worker-pool";
-export { CSVWorkerPool, getCSVWorkerPool } from "./csv-worker-pool";
-export {
-  TitleNormalizationWorkerPool,
-  getTitleNormalizationPool,
-} from "./title-normalization-worker-pool";
-export {
-  StatisticsAggregationWorkerPool,
-  getStatisticsWorkerPool,
-} from "./statistics-worker-pool";
-export {
-  ReadingHistoryWorkerPool,
-  getReadingHistoryWorkerPool,
-} from "./reading-history-worker-pool";
-export {
-  JSONSerializationWorkerPool,
-  getJSONSerializationWorkerPool,
-} from "./json-serialization-worker-pool";
-export {
-  DuplicateDetectionWorkerPool,
-  getDuplicateDetectionWorkerPool,
-} from "./duplicate-worker-pool";
-export {
-  DataTableWorkerPool,
-  getDataTableWorkerPool,
-} from "./data-table-worker-pool";
-export { WorkerPool } from "./worker-pool";
+// Core infrastructure
+export { WorkerPool } from "./core/worker-pool";
 export {
   executeMatchingWithWorkers,
   executeMatchingOnMainThread,
   areWorkersAvailable,
-} from "./utils";
+} from "./core/utils";
+export { getWorkerPool, workerPool } from "./core/pool";
+export { getGenericWorkerPool } from "./core/worker-pool";
+
+// Matching operations
+export { MatchingWorkerPool } from "./matching/matching-worker-pool";
+export { BatchSyncWorkerPool } from "./matching/batch-sync-worker-pool";
+
+// Data processing
+export {
+  CSVWorkerPool,
+  getCSVWorkerPool,
+} from "./data-processing/csv-worker-pool";
+export {
+  JSONSerializationWorkerPool,
+  getJSONSerializationWorkerPool,
+} from "./data-processing/json-serialization-worker-pool";
+export { getFilterWorkerPool } from "./data-processing/filter-worker-pool";
+export type { FilterOperationResult } from "./data-processing/filter-worker-pool";
+
+// Statistics and analysis
+export {
+  TitleNormalizationWorkerPool,
+  getTitleNormalizationPool,
+} from "./statistics/title-normalization-worker-pool";
+export {
+  StatisticsAggregationWorkerPool,
+  getStatisticsWorkerPool,
+} from "./statistics/statistics-worker-pool";
+export {
+  ReadingHistoryWorkerPool,
+  getReadingHistoryWorkerPool,
+} from "./statistics/reading-history-worker-pool";
+export {
+  DuplicateDetectionWorkerPool,
+  getDuplicateDetectionWorkerPool,
+} from "./statistics/duplicate-worker-pool";
+
+// UI
+export {
+  DataTableWorkerPool,
+  getDataTableWorkerPool,
+} from "./ui/data-table-worker-pool";
+
+// Type exports
 export type {
   WorkerMessage,
   MatchBatchMessage,
@@ -69,25 +87,20 @@ export type {
   BatchSyncProgressMessage,
   BatchSyncResultMessage,
   PreparedSyncOperation,
-} from "./types";
-export type { StatisticsAggregationResult } from "./statistics-worker-pool";
-export type { ReadingHistoryFilterResult } from "./reading-history-worker-pool";
-export type { CancellableExecution } from "./utils";
-export type { CSVWorkerPoolConfig } from "./csv-worker-pool";
+} from "./core/types";
+
+export type { StatisticsAggregationResult } from "./statistics/statistics-worker-pool";
+export type { ReadingHistoryFilterResult } from "./statistics/reading-history-worker-pool";
+export type { CancellableExecution } from "./core/utils";
+export type { CSVWorkerPoolConfig } from "./data-processing/csv-worker-pool";
 export type {
   NormalizationCacheResult,
   NormalizationProgressCallback,
-} from "./title-normalization-worker-pool";
-export type { JSONSerializationWorkerPoolConfig } from "./json-serialization-worker-pool";
-export type { DuplicateDetectionResult } from "./duplicate-worker-pool";
+} from "./statistics/title-normalization-worker-pool";
+export type { JSONSerializationWorkerPoolConfig } from "./data-processing/json-serialization-worker-pool";
+export type { DuplicateDetectionResult } from "./statistics/duplicate-worker-pool";
 export type {
   DataTablePreparationResult,
   PreparedTableRow,
-} from "./data-table-worker-pool";
-export type { BatchSyncExecution } from "./batch-sync-worker-pool";
-
-// Re-export from pool module to avoid circular dependency
-export { getWorkerPool, workerPool } from "./pool";
-
-// Re-export generic pool for internal use by specialized pools
-export { getGenericWorkerPool } from "./worker-pool";
+} from "./ui/data-table-worker-pool";
+export type { BatchSyncExecution } from "./matching/batch-sync-worker-pool";

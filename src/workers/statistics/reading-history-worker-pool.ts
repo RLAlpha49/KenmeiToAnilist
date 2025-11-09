@@ -9,7 +9,7 @@
  */
 
 import type { ReadingHistory, ReadingHistoryEntry } from "@/utils/storage";
-import { getGenericWorkerPool } from "./worker-pool";
+import { getGenericWorkerPool } from "../core/worker-pool";
 
 /**
  * Generate a UUID v4 string
