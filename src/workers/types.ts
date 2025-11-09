@@ -244,6 +244,186 @@ export interface TitleNormalizationResultMessage {
 }
 
 /**
+ * Message sent to worker to aggregate statistics data.
+ * Worker will perform filtering, normalization, and aggregation off-thread.
+ */
+export interface StatisticsAggregationMessage {
+  type: "STATISTICS_AGGREGATION";
+  payload: {
+    taskId: string;
+    matchResults: Array<{
+      readonly kenmeiManga: {
+        id: string | number;
+        title: string;
+        status: string;
+        score: number;
+        chapters_read: number;
+        volumes_read: number;
+        notes: string;
+        created_at: string;
+        updated_at: string;
+        last_read_at?: string;
+      };
+      readonly anilistMatches?: Array<{ confidence?: number }>;
+      readonly selectedMatch?: {
+        readonly format?: string;
+        readonly genres: string[];
+        readonly tags: string[];
+        readonly confidence?: number;
+      };
+      readonly status: string;
+      readonly matchDate?: string | number | Date;
+    }>;
+    readingHistory: {
+      entries: Array<{
+        mangaId: string | number;
+        chaptersRead: number;
+        timestamp: number;
+      }>;
+      lastUpdated: number;
+      version: number;
+    };
+    filters: {
+      genres: string[];
+      formats: string[];
+      tags: string[];
+      statuses: string[];
+      dateRange: { start: Date | null; end: Date | null };
+      confidenceRange: { min: number; max: number };
+    };
+    comparisonMode: {
+      enabled: boolean;
+      primaryRange: string;
+      secondaryRange: string;
+      metric: string;
+    };
+    selectedTimeRange: "7d" | "30d" | "90d" | "all";
+  };
+}
+
+/**
+ * Progress message for statistics aggregation, sent from worker.
+ * Reports progress by aggregation stage for UI feedback.
+ */
+export interface StatisticsAggregationProgressMessage {
+  type: "STATISTICS_AGGREGATION_PROGRESS";
+  payload: {
+    taskId: string;
+    stage: "filtering" | "comparison" | "trends" | "habits" | "complete";
+    progress: number; // 0-100
+    message: string;
+  };
+}
+
+/**
+ * Message sent from worker containing aggregated statistics results.
+ * Includes all chart data, filter options, and performance metrics.
+ */
+export interface StatisticsAggregationResultMessage {
+  type: "STATISTICS_AGGREGATION_RESULT";
+  payload: {
+    taskId: string;
+    /**
+     * Filtered match results and history
+     */
+    filteredData: {
+      matchResults: Array<{
+        readonly kenmeiManga: {
+          id: string | number;
+          title: string;
+          status: string;
+          score: number;
+          chapters_read: number;
+          volumes_read: number;
+          notes: string;
+          created_at: string;
+          updated_at: string;
+          last_read_at?: string;
+        };
+        readonly anilistMatches?: Array<{ confidence?: number }>;
+        readonly selectedMatch?: {
+          readonly format?: string;
+          readonly genres: string[];
+          readonly tags: string[];
+          readonly confidence?: number;
+        };
+        readonly status: string;
+        readonly matchDate?: string | number | Date;
+      }>;
+      readingHistory: {
+        entries: Array<{
+          mangaId: string | number;
+          chaptersRead: number;
+          timestamp: number;
+        }>;
+        lastUpdated: number;
+        version: number;
+      };
+    };
+    /**
+     * Available filter options extracted from data
+     */
+    filterOptions: {
+      genres: string[];
+      formats: string[];
+      statuses: string[];
+      tags: string[];
+    };
+    /**
+     * Comparison datasets if comparison mode is enabled
+     */
+    comparisonDatasets: {
+      primary: {
+        trends: Array<{ date: string; chapters: number; count: number }>;
+        velocity: {
+          perDay: number;
+          perWeek: number;
+          perMonth: number;
+          totalChapters: number;
+          activeDays: number;
+        };
+        habits: {
+          byDayOfWeek: Array<{ day: string; chapters: number }>;
+          byTimeOfDay: Array<{ hour: string; chapters: number }>;
+          peakDay: string | null;
+          peakHour: string | null;
+        };
+      };
+      secondary: {
+        trends: Array<{ date: string; chapters: number; count: number }>;
+        velocity: {
+          perDay: number;
+          perWeek: number;
+          perMonth: number;
+          totalChapters: number;
+          activeDays: number;
+        };
+        habits: {
+          byDayOfWeek: Array<{ day: string; chapters: number }>;
+          byTimeOfDay: Array<{ hour: string; chapters: number }>;
+          peakDay: string | null;
+          peakHour: string | null;
+        };
+      };
+      primaryLabel: string;
+      secondaryLabel: string;
+    } | null;
+    /**
+     * Cache key for memoization
+     */
+    cacheKey: string;
+    /**
+     * Performance timing information
+     */
+    timing: {
+      filteringTimeMs: number;
+      aggregationTimeMs: number;
+      totalTimeMs: number;
+    };
+  };
+}
+
+/**
  * Union type of all possible worker messages.
  */
 export type WorkerMessage =
@@ -258,7 +438,9 @@ export type WorkerMessage =
   | AdvancedFilterMessage
   | AdvancedFilterResultMessage
   | TitleNormalizationProgressMessage
-  | TitleNormalizationResultMessage;
+  | TitleNormalizationResultMessage
+  | StatisticsAggregationProgressMessage
+  | StatisticsAggregationResultMessage;
 
 /**
  * Union type of all possible messages sent TO the worker.
@@ -269,7 +451,8 @@ export type WorkerInboundMessage =
   | CSVStartMessage
   | CSVChunkMessage
   | AdvancedFilterMessage
-  | TitleNormalizationMessage;
+  | TitleNormalizationMessage
+  | StatisticsAggregationMessage;
 
 /**
  * Internal task tracking structure for the worker pool.

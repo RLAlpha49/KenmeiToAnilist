@@ -31,6 +31,8 @@ import type {
   TitleNormalizationMessage,
   TitleNormalizationProgressMessage,
   TitleNormalizationResultMessage,
+  StatisticsAggregationMessage,
+  StatisticsAggregationResultMessage,
 } from "./types";
 import type { KenmeiStatus } from "@/api/kenmei/types";
 import type { MatchEngineConfig } from "@/api/matching/match-engine";
@@ -606,6 +608,150 @@ function handleTitleNormalization(message: TitleNormalizationMessage): void {
 // ============================================================================
 
 /**
+ * Handle statistics aggregation message from main thread
+ * Performs filtering, normalization, and aggregation of match/history data
+ */
+async function handleStatisticsAggregation(
+  message: StatisticsAggregationMessage,
+): Promise<void> {
+  const {
+    taskId,
+    matchResults,
+    readingHistory,
+    filters,
+    comparisonMode,
+    selectedTimeRange,
+  } = message.payload;
+
+  activeTasks.add(taskId);
+
+  console.debug(
+    `[Worker] 📊 Starting statistics aggregation for task ${taskId} (${matchResults.length} matches)`,
+  );
+
+  try {
+    const startTime = performance.now();
+
+    // Dynamically import statistics adapter functions
+    const {
+      applyStatisticsFilters,
+      buildComparisonDatasets,
+      extractAvailableFilterOptions,
+    } = await import("@/utils/statisticsAdapter");
+
+    // Check for cancellation
+    if (!activeTasks.has(taskId)) {
+      console.warn(
+        `[Worker] ⚠️ Statistics aggregation task ${taskId} was cancelled before filtering`,
+      );
+      return;
+    }
+
+    const filterStartTime = performance.now();
+
+    // Apply filters
+    const filteredData = applyStatisticsFilters(
+      matchResults as any,
+      readingHistory as any,
+      filters as any,
+    );
+
+    const filteringTimeMs = performance.now() - filterStartTime;
+
+    // Check for cancellation
+    if (!activeTasks.has(taskId)) {
+      console.warn(
+        `[Worker] ⚠️ Statistics aggregation task ${taskId} was cancelled after filtering`,
+      );
+      return;
+    }
+
+    const aggregationStartTime = performance.now();
+
+    // Extract available filter options
+    const filterOptions = extractAvailableFilterOptions(matchResults as any);
+
+    // Build comparison datasets if enabled
+    const comparisonDatasets =
+      comparisonMode.enabled &&
+      comparisonMode.primaryRange !== comparisonMode.secondaryRange
+        ? buildComparisonDatasets(
+            filteredData.readingHistory,
+            comparisonMode.primaryRange as any,
+            comparisonMode.secondaryRange as any,
+          )
+        : null;
+
+    const aggregationTimeMs = performance.now() - aggregationStartTime;
+    const totalTimeMs = performance.now() - startTime;
+
+    // Generate cache key (browser compatible string hashing)
+    const filterStr = JSON.stringify(filters);
+    const comparisonStr = JSON.stringify(comparisonMode);
+    const timeStr = selectedTimeRange;
+    const keyStr = `stats:${filterStr}:${comparisonStr}:${timeStr}`;
+    let hash = 0;
+    for (let i = 0; i < keyStr.length; i++) {
+      const char = keyStr.codePointAt(i);
+      if (char === undefined) continue;
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    const cacheKey = `stats:${Math.abs(hash)}`;
+
+    // Check for cancellation one final time
+    if (!activeTasks.has(taskId)) {
+      console.warn(
+        `[Worker] ⚠️ Statistics aggregation task ${taskId} was cancelled before completion`,
+      );
+      return;
+    }
+
+    const resultMsg: StatisticsAggregationResultMessage = {
+      type: "STATISTICS_AGGREGATION_RESULT",
+      payload: {
+        taskId,
+        filteredData: {
+          matchResults: filteredData.matchResults as any,
+          readingHistory: filteredData.readingHistory,
+        },
+        filterOptions,
+        comparisonDatasets,
+        cacheKey,
+        timing: {
+          filteringTimeMs,
+          aggregationTimeMs,
+          totalTimeMs,
+        },
+      },
+    };
+
+    console.info(
+      `[Worker] ✅ Statistics aggregation task ${taskId} completed (${totalTimeMs.toFixed(2)}ms)`,
+    );
+
+    globalThis.postMessage(resultMsg);
+  } catch (error) {
+    console.error(
+      `[Worker] ❌ Error in statistics aggregation task ${taskId}:`,
+      error,
+    );
+    globalThis.postMessage({
+      type: "ERROR",
+      payload: {
+        taskId,
+        error: {
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+      },
+    });
+  } finally {
+    activeTasks.delete(taskId);
+  }
+}
+
+/**
  * Central message handler that dispatches to specific handlers based on message type.
  * Provides unified error handling for all operation types.
  */
@@ -633,6 +779,12 @@ globalThis.onmessage = async (event: MessageEvent<WorkerInboundMessage>) => {
       case "TITLE_NORMALIZATION":
         handleTitleNormalization(
           message as unknown as TitleNormalizationMessage,
+        );
+        break;
+
+      case "STATISTICS_AGGREGATION":
+        await handleStatisticsAggregation(
+          message as unknown as StatisticsAggregationMessage,
         );
         break;
 

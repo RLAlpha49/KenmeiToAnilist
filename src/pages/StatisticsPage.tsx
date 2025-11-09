@@ -48,9 +48,6 @@ import {
   parseSyncStats,
   type NormalizedMatchForStats,
   type TimeRange,
-  applyStatisticsFilters,
-  buildComparisonDatasets,
-  extractAvailableFilterOptions,
 } from "@/utils/statisticsAdapter";
 import {
   exportToJson,
@@ -71,6 +68,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatisticsErrorBoundary } from "@/components/statistics/StatisticsErrorBoundary";
 import { captureError, ErrorType } from "@/utils/errorHandling";
+import { useStatisticsAggregation } from "@/hooks/useStatisticsAggregation";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0, y: 16 },
@@ -322,44 +320,30 @@ export function StatisticsPage() {
   }, []);
 
   /**
-   * Computes filtered data based on applied statistics filters.
+   * Aggregates statistics using worker pool with caching
+   * Replaces manual filtering and aggregation memos
    * @source
    */
-  const filteredData = useMemo(() => {
-    return applyStatisticsFilters(
-      matchResults,
-      readingHistory,
-      statisticsFilters,
-    );
-  }, [matchResults, readingHistory, statisticsFilters]);
+  const { aggregationResult } = useStatisticsAggregation(
+    matchResults,
+    readingHistory,
+    statisticsFilters,
+    comparisonMode,
+    selectedTimeRange,
+  );
 
-  /**
-   * Extracts available filter options from match results.
-   * @source
-   */
-  const filterOptions = useMemo(() => {
-    return extractAvailableFilterOptions(matchResults);
-  }, [matchResults]);
-
-  /**
-   * Computes comparison datasets when comparison mode is enabled.
-   * Returns null if ranges are identical (no meaningful comparison possible).
-   * @source
-   */
-  const comparisonDatasets = useMemo(() => {
-    if (!comparisonMode.enabled) {
-      return null;
-    }
-    // Guard: don't compute comparison if ranges are identical
-    if (comparisonMode.primaryRange === comparisonMode.secondaryRange) {
-      return null;
-    }
-    return buildComparisonDatasets(
-      filteredData.readingHistory,
-      comparisonMode.primaryRange,
-      comparisonMode.secondaryRange,
-    );
-  }, [comparisonMode, filteredData.readingHistory]);
+  // Fallback to original behavior if hook not ready or error
+  const filteredData = aggregationResult?.filteredData || {
+    matchResults,
+    readingHistory,
+  };
+  const filterOptions = aggregationResult?.filterOptions || {
+    genres: [],
+    formats: [],
+    statuses: [],
+    tags: [],
+  };
+  const comparisonDatasets = aggregationResult?.comparisonDatasets ?? null;
 
   /**
    * Adapts filtered match results to MatchForExport format for export button.
@@ -549,7 +533,9 @@ export function StatisticsPage() {
             onFiltersChange={handleFiltersChange}
             availableGenres={filterOptions.genres}
             availableFormats={filterOptions.formats}
-            availableStatuses={filterOptions.statuses}
+            availableStatuses={
+              filterOptions.statuses as import("@/api/anilist/types").MatchStatus[]
+            }
             availableTags={filterOptions.tags}
             matchCount={filteredData.matchResults.length}
           />

@@ -15,6 +15,10 @@ export {
   TitleNormalizationWorkerPool,
   getTitleNormalizationPool,
 } from "./title-normalization-worker-pool";
+export {
+  StatisticsAggregationWorkerPool,
+  getStatisticsWorkerPool,
+} from "./statistics-worker-pool";
 export { WorkerPool } from "./worker-pool";
 export {
   executeMatchingWithWorkers,
@@ -38,6 +42,7 @@ export type {
   TitleNormalizationProgressMessage,
   TitleNormalizationResultMessage,
 } from "./types";
+export type { StatisticsAggregationResult } from "./statistics-worker-pool";
 export type { CancellableExecution } from "./utils";
 export type { CSVWorkerPoolConfig } from "./csv-worker-pool";
 export type {
