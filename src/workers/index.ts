@@ -23,6 +23,10 @@ export {
   ReadingHistoryWorkerPool,
   getReadingHistoryWorkerPool,
 } from "./reading-history-worker-pool";
+export {
+  JSONSerializationWorkerPool,
+  getJSONSerializationWorkerPool,
+} from "./json-serialization-worker-pool";
 export { WorkerPool } from "./worker-pool";
 export {
   executeMatchingWithWorkers,
@@ -48,6 +52,10 @@ export type {
   ReadingHistoryFilterMessage,
   ReadingHistoryFilterProgressMessage,
   ReadingHistoryFilterResultMessage,
+  JSONSerializeMessage,
+  JSONDeserializeMessage,
+  JSONSerializeResultMessage,
+  JSONDeserializeResultMessage,
 } from "./types";
 export type { StatisticsAggregationResult } from "./statistics-worker-pool";
 export type { ReadingHistoryFilterResult } from "./reading-history-worker-pool";
@@ -57,6 +65,7 @@ export type {
   NormalizationCacheResult,
   NormalizationProgressCallback,
 } from "./title-normalization-worker-pool";
+export type { JSONSerializationWorkerPoolConfig } from "./json-serialization-worker-pool";
 
 // Re-export from pool module to avoid circular dependency
 export { getWorkerPool, workerPool } from "./pool";

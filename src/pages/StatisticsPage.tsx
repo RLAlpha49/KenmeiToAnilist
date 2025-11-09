@@ -446,7 +446,7 @@ export function StatisticsPage() {
               exportedAt: new Date().toISOString(),
               data: rows,
             };
-            file = exportToJson(
+            file = await exportToJson(
               payload as Record<string, unknown>,
               baseFilename,
             );

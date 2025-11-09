@@ -284,7 +284,7 @@ export function ExportStatisticsButton({
 
       if (format === "json") {
         const payload = buildJsonPayload();
-        const file = exportToJson(payload, "statistics");
+        const file = await exportToJson(payload, "statistics");
         toast.success(`Statistics exported to ${file}`);
         setOpen(false);
         return;

@@ -456,7 +456,9 @@ export type WorkerMessage =
   | StatisticsAggregationProgressMessage
   | StatisticsAggregationResultMessage
   | ReadingHistoryFilterProgressMessage
-  | ReadingHistoryFilterResultMessage;
+  | ReadingHistoryFilterResultMessage
+  | JSONSerializeResultMessage
+  | JSONDeserializeResultMessage;
 
 /**
  * Message sent to worker to filter and aggregate reading history.
@@ -553,6 +555,88 @@ export interface ReadingHistoryFilterResultMessage {
 }
 
 /**
+ * Message sent to worker to serialize data to JSON string.
+ * Offloads heavy JSON.stringify operations to worker thread.
+ */
+export interface JSONSerializeMessage {
+  type: "JSON_SERIALIZE";
+  payload: {
+    taskId: string;
+    data: unknown;
+    /**
+     * Optional replacer function to filter properties during serialization
+     */
+    replacerKeys?: string[];
+    /**
+     * Optional space parameter for pretty-printing (0-10)
+     */
+    space?: number;
+  };
+}
+
+/**
+ * Message sent from worker containing serialized JSON string.
+ * Includes performance timing and optional compression metadata.
+ */
+export interface JSONSerializeResultMessage {
+  type: "JSON_SERIALIZE_RESULT";
+  payload: {
+    taskId: string;
+    /**
+     * The serialized JSON string
+     */
+    json: string;
+    /**
+     * Size in bytes of the serialized data
+     */
+    sizeBytes: number;
+    /**
+     * Performance timing information
+     */
+    timing: {
+      serializationTimeMs: number;
+    };
+  };
+}
+
+/**
+ * Message sent to worker to deserialize JSON string.
+ * Offloads heavy JSON.parse operations to worker thread.
+ */
+export interface JSONDeserializeMessage {
+  type: "JSON_DESERIALIZE";
+  payload: {
+    taskId: string;
+    json: string;
+    /**
+     * Optional reviver function to transform parsed values
+     */
+    reviverKeys?: string[];
+  };
+}
+
+/**
+ * Message sent from worker containing deserialized data.
+ * Includes performance timing and optional validation metadata.
+ */
+export interface JSONDeserializeResultMessage {
+  type: "JSON_DESERIALIZE_RESULT";
+  payload: {
+    taskId: string;
+    /**
+     * The deserialized data
+     */
+    data: unknown;
+    /**
+     * Performance timing information
+     */
+    timing: {
+      deserializationTimeMs: number;
+    };
+  };
+}
+
+/**
  * Union type of all possible messages sent TO the worker.
  */
 export type WorkerInboundMessage =
@@ -563,7 +647,9 @@ export type WorkerInboundMessage =
   | AdvancedFilterMessage
   | TitleNormalizationMessage
   | StatisticsAggregationMessage
-  | ReadingHistoryFilterMessage;
+  | ReadingHistoryFilterMessage
+  | JSONSerializeMessage
+  | JSONDeserializeMessage;
 
 /**
  * Internal task tracking structure for the worker pool.

@@ -171,12 +171,12 @@ interface DebugActionsContextValue {
   ) => void;
   updateMemoryStats: (stats: MemoryMetrics) => void;
   resetPerformanceMetrics: () => void;
-  exportPerformanceReport: () => void;
+  exportPerformanceReport: () => Promise<void>;
   recordEvent: (entry: DebugEventRecord, options?: RecordEventOptions) => void;
   clearEventLog: () => void;
   clearIpcEvents: () => void;
   clearLogs: () => void;
-  exportLogs: () => void;
+  exportLogs: () => Promise<void>;
 }
 
 /**
@@ -1024,7 +1024,7 @@ export function DebugProvider({
     });
   }, [recordEvent]);
 
-  const exportPerformanceReport = useCallback(() => {
+  const exportPerformanceReport = useCallback(async () => {
     try {
       const sessionDuration = Date.now() - performanceMetrics.sessionStartTime;
       const payload = {
@@ -1034,7 +1034,7 @@ export function DebugProvider({
         metrics: performanceMetrics,
       };
 
-      exportToJson(payload, "kenmei-performance-report");
+      await exportToJson(payload, "kenmei-performance-report");
       recordEvent({
         type: "debug.performance-monitor",
         message: "Performance report exported",
@@ -1274,7 +1274,7 @@ export function DebugProvider({
     });
   }, [recordEvent]);
 
-  const exportLogs = useCallback(() => {
+  const exportLogs = useCallback(async () => {
     const entries = logCollector.getEntries();
     if (!entries.length) {
       console.warn("No debug logs available to export");
@@ -1291,7 +1291,7 @@ export function DebugProvider({
         logs: serialiseLogEntries(entries),
       };
 
-      exportToJson(payload, "kenmei-debug-logs");
+      await exportToJson(payload, "kenmei-debug-logs");
       recordEvent({
         type: "debug.log-viewer",
         message: "Console logs exported",

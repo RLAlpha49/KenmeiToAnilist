@@ -565,7 +565,7 @@ export function EventLogger(): React.ReactElement {
     });
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!filteredEvents.length) {
       toast.info("Nothing to export for current filters");
       return;
@@ -581,7 +581,7 @@ export function EventLogger(): React.ReactElement {
         },
         events: filteredEvents,
       };
-      exportToJson(payload, "kenmei-event-log");
+      await exportToJson(payload, "kenmei-event-log");
       toast.success("Exported filtered events");
       recordEvent({
         type: "debug.event-logger",

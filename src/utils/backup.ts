@@ -158,17 +158,17 @@ export async function createBackup(): Promise<string> {
 
     // Export to JSON file asynchronously to avoid blocking UI for large payloads
     // Yield to the event loop before starting export
-    await new Promise((resolve) => {
-      setTimeout(() => {
+    await new Promise<void>((resolve, reject) => {
+      setTimeout(async () => {
         try {
-          exportToJson(
+          await exportToJson(
             backupData as unknown as Record<string, unknown>,
             "backup",
           );
-          resolve(undefined);
+          resolve();
         } catch (error) {
           console.error("[Backup] Failed to export JSON:", error);
-          throw error;
+          reject(error);
         }
       }, 0);
     });

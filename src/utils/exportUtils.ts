@@ -10,6 +10,7 @@ import { storage, STORAGE_KEYS, type MatchResult } from "./storage";
 import type { MatchForExport } from "../types/matching";
 import { getAppVersion } from "./app-version";
 import { createError, ErrorType } from "./errorHandling";
+import { getJSONSerializationWorkerPool } from "../workers";
 
 /**
  * Dynamically imports papaparse library for CSV operations.
@@ -241,17 +242,22 @@ export type ExportableFieldId = (typeof EXPORTABLE_FIELDS)[number]["id"];
  * Exports data as JSON file with automatic timestamp and sanitized filename; triggers browser download.
  * @param data - The data to export (object or array for JSON stringification).
  * @param baseFilename - Base filename (without extension); will be sanitized for filesystem safety.
- * @returns Full filename used for download (including timestamp and extension).
+ * @returns Promise resolving to full filename used for download (including timestamp and extension).
  * @throws If JSON stringification fails or document.body unavailable.
  * @internal
  * @source
  */
-export function exportToJson(
+export async function exportToJson(
   data: Record<string, unknown> | unknown[],
   baseFilename: string,
-): string {
-  // Serialize to pretty-printed JSON
-  const json = JSON.stringify(data, null, 2);
+): Promise<string> {
+  // Serialize using worker pool for performance
+  const pool = getJSONSerializationWorkerPool();
+  const { json, sizeBytes } = await pool.serialize(data, { space: 2 });
+
+  console.info(
+    `[Export] 📦 Serialized JSON: ${sizeBytes} bytes using worker pool`,
+  );
 
   // Create blob and download link
   const blob = new Blob([json], { type: "application/json" });
@@ -892,7 +898,7 @@ export async function exportMatchResults(
         };
       }
 
-      filename = exportToJson(
+      filename = await exportToJson(
         payload as Record<string, unknown>,
         "match-results",
       );
@@ -965,9 +971,10 @@ export async function exportMatchResults(
 /**
  * Exports sync error logs to JSON file; extracts errors from sync report if present.
  * @param report - The sync report containing errors to export.
+ * @returns Promise that resolves when export is complete.
  * @source
  */
-export function exportSyncErrorLog(report: SyncReport): void {
+export async function exportSyncErrorLog(report: SyncReport): Promise<void> {
   if (!report?.errors?.length) {
     console.warn("[Export] ⚠️ No errors to export");
     return;
@@ -985,7 +992,7 @@ export function exportSyncErrorLog(report: SyncReport): void {
       failedUpdates: report.failedUpdates,
       errors: report.errors,
     };
-    exportToJson(
+    await exportToJson(
       errorLog as unknown as Record<string, unknown>,
       "anilist-sync-errors",
     );
@@ -998,9 +1005,10 @@ export function exportSyncErrorLog(report: SyncReport): void {
 /**
  * Exports complete sync report to JSON file; downloads all entries and outcomes.
  * @param report - The sync report to export.
+ * @returns Promise that resolves when export is complete.
  * @source
  */
-export function exportSyncReport(report: SyncReport): void {
+export async function exportSyncReport(report: SyncReport): Promise<void> {
   if (!report) {
     console.warn("[Export] ⚠️ No report to export");
     return;
@@ -1011,7 +1019,7 @@ export function exportSyncReport(report: SyncReport): void {
   );
 
   try {
-    exportToJson(
+    await exportToJson(
       report as unknown as Record<string, unknown>,
       "anilist-sync-report",
     );
@@ -1372,7 +1380,12 @@ export async function parseImportFile(file: File): Promise<ImportedMatchData> {
   // Parse JSON
   let data: unknown;
   try {
-    data = JSON.parse(fileContent);
+    const pool = getJSONSerializationWorkerPool();
+    const { data: parsedData } = await pool.deserialize(fileContent);
+    data = parsedData;
+    console.info(
+      `[Import] 📦 Deserialized JSON using worker pool: ${fileContent.length} bytes`,
+    );
   } catch (error) {
     throw createError(
       ErrorType.IMPORT,

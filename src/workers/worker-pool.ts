@@ -233,7 +233,9 @@ export class WorkerPool {
       case "CSV_CANCELLED":
       case "ADVANCED_FILTER_RESULT":
       case "TITLE_NORMALIZATION_RESULT":
-      case "STATISTICS_AGGREGATION_RESULT": {
+      case "STATISTICS_AGGREGATION_RESULT":
+      case "JSON_SERIALIZE_RESULT":
+      case "JSON_DESERIALIZE_RESULT": {
         const result = this.extractMessageResult(message);
         task.resolve(result);
         this.completeTask(taskId);
@@ -289,6 +291,8 @@ export class WorkerPool {
       message.type === "ADVANCED_FILTER_RESULT" ||
       message.type === "TITLE_NORMALIZATION_RESULT" ||
       message.type === "STATISTICS_AGGREGATION_RESULT" ||
+      message.type === "JSON_SERIALIZE_RESULT" ||
+      message.type === "JSON_DESERIALIZE_RESULT" ||
       message.type === "ERROR";
 
     if (!isTerminalMessage) {
