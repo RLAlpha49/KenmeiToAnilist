@@ -69,6 +69,7 @@ import { Badge } from "@/components/ui/badge";
 import { StatisticsErrorBoundary } from "@/components/statistics/StatisticsErrorBoundary";
 import { captureError, ErrorType } from "@/utils/errorHandling";
 import { useStatisticsAggregation } from "@/hooks/useStatisticsAggregation";
+import { useReadingHistoryFilter } from "@/hooks/useReadingHistoryFilter";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0, y: 16 },
@@ -331,6 +332,40 @@ export function StatisticsPage() {
     comparisonMode,
     selectedTimeRange,
   );
+
+  /**
+   * Helper function to convert TimeRange to date range for reading history filtering
+   */
+  const getDateRangeFromTimeRange = useCallback((range: TimeRange) => {
+    const now = Date.now();
+    const ranges = {
+      "7d": 7 * 24 * 60 * 60 * 1000,
+      "30d": 30 * 24 * 60 * 60 * 1000,
+      "90d": 90 * 24 * 60 * 60 * 1000,
+    };
+
+    const msBack = range === "all" ? Infinity : ranges[range];
+    const start = msBack === Infinity ? 0 : now - msBack;
+    return { start, end: now };
+  }, []);
+
+  /**
+   * Filters reading history for the current time range using worker pool
+   * Can be used to optimize chart rendering with pre-filtered and aggregated data
+   */
+  const { filterResult: historyFilterResult } = useReadingHistoryFilter(
+    readingHistory,
+    getDateRangeFromTimeRange(selectedTimeRange),
+    "daily", // Use daily aggregation for charts
+  );
+
+  // Use the filtered result for chart optimization
+  // This enables zero-copy passing of pre-aggregated data
+  if (historyFilterResult?.aggregatedData) {
+    console.debug(
+      `[Statistics] History filter complete: ${historyFilterResult.stats.totalEntries} entries aggregated`,
+    );
+  }
 
   // Fallback to original behavior if hook not ready or error
   const filteredData = aggregationResult?.filteredData || {

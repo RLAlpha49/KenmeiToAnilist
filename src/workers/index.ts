@@ -19,6 +19,10 @@ export {
   StatisticsAggregationWorkerPool,
   getStatisticsWorkerPool,
 } from "./statistics-worker-pool";
+export {
+  ReadingHistoryWorkerPool,
+  getReadingHistoryWorkerPool,
+} from "./reading-history-worker-pool";
 export { WorkerPool } from "./worker-pool";
 export {
   executeMatchingWithWorkers,
@@ -41,8 +45,12 @@ export type {
   TitleNormalizationMessage,
   TitleNormalizationProgressMessage,
   TitleNormalizationResultMessage,
+  ReadingHistoryFilterMessage,
+  ReadingHistoryFilterProgressMessage,
+  ReadingHistoryFilterResultMessage,
 } from "./types";
 export type { StatisticsAggregationResult } from "./statistics-worker-pool";
+export type { ReadingHistoryFilterResult } from "./reading-history-worker-pool";
 export type { CancellableExecution } from "./utils";
 export type { CSVWorkerPoolConfig } from "./csv-worker-pool";
 export type {

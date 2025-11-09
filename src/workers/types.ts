@@ -454,7 +454,103 @@ export type WorkerMessage =
   | TitleNormalizationProgressMessage
   | TitleNormalizationResultMessage
   | StatisticsAggregationProgressMessage
-  | StatisticsAggregationResultMessage;
+  | StatisticsAggregationResultMessage
+  | ReadingHistoryFilterProgressMessage
+  | ReadingHistoryFilterResultMessage;
+
+/**
+ * Message sent to worker to filter and aggregate reading history.
+ * Worker will apply time range filters and compute summary statistics.
+ */
+export interface ReadingHistoryFilterMessage {
+  type: "READING_HISTORY_FILTER";
+  payload: {
+    taskId: string;
+    history: {
+      entries: Array<{
+        timestamp: number;
+        mangaId: string | number;
+        title: string;
+        chaptersRead: number;
+        status: string;
+        anilistId?: number;
+      }>;
+      lastUpdated: number;
+      version: number;
+    };
+    dateRange: {
+      start: number; // Unix timestamp in milliseconds
+      end: number; // Unix timestamp in milliseconds
+    };
+    aggregationType?: "daily" | "weekly" | "none"; // Optional aggregation (default: "none")
+  };
+}
+
+/**
+ * Progress message for reading history filtering, sent from worker.
+ * Reports progress by stage for UI feedback.
+ */
+export interface ReadingHistoryFilterProgressMessage {
+  type: "READING_HISTORY_FILTER_PROGRESS";
+  payload: {
+    taskId: string;
+    stage: "filtering" | "aggregation" | "complete";
+    progress: number; // 0-100
+    message: string;
+  };
+}
+
+/**
+ * Message sent from worker containing filtered reading history and statistics.
+ * Includes filtered entries, summary stats, and performance metrics.
+ */
+export interface ReadingHistoryFilterResultMessage {
+  type: "READING_HISTORY_FILTER_RESULT";
+  payload: {
+    taskId: string;
+    /**
+     * Filtered history entries within the date range
+     */
+    filteredEntries: Array<{
+      timestamp: number;
+      mangaId: string | number;
+      title: string;
+      chaptersRead: number;
+      status: string;
+      anilistId?: number;
+    }>;
+    /**
+     * Summary statistics for the filtered period
+     */
+    stats: {
+      totalEntries: number;
+      totalChaptersRead: number;
+      uniqueMangaCount: number;
+      dateRange: {
+        start: number;
+        end: number;
+      };
+      activeDays: number;
+      averageChaptersPerDay: number;
+    };
+    /**
+     * Optional aggregated data (when aggregationType specified)
+     */
+    aggregatedData?: Array<{
+      date: string; // ISO date string
+      chaptersRead: number;
+      entriesCount: number;
+    }>;
+    /**
+     * Performance timing information
+     */
+    timing: {
+      filteringTimeMs: number;
+      aggregationTimeMs?: number;
+      totalTimeMs: number;
+    };
+  };
+}
 
 /**
  * Union type of all possible messages sent TO the worker.
@@ -466,7 +562,8 @@ export type WorkerInboundMessage =
   | CSVChunkMessage
   | AdvancedFilterMessage
   | TitleNormalizationMessage
-  | StatisticsAggregationMessage;
+  | StatisticsAggregationMessage
+  | ReadingHistoryFilterMessage;
 
 /**
  * Internal task tracking structure for the worker pool.
