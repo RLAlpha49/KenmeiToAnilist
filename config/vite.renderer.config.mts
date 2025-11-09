@@ -38,6 +38,9 @@ export default defineConfig(() => ({
         })
       : null,
   ].filter(Boolean),
+  worker: {
+    format: "es",
+  },
   resolve: {
     preserveSymlinks: true,
     alias: {
@@ -132,19 +135,15 @@ export default defineConfig(() => ({
             return "vendor";
           }
 
-          // Worker chunks
-          if (normalizedId.includes("/workers/matching-worker")) {
-            return "worker-matching";
-          }
-
           // App chunks by feature
           const appChunks = [
             { match: "/components/ui/", name: "app-ui-components" },
-            { match: "/components/debug/", name: "app-debug" }, // Lazy loaded
+            { match: "/components/debug/", name: "app-debug" },
             { match: "/components/import/", name: "app-import" },
             { match: "/components/matching/", name: "app-matching" },
             { match: "/components/sync/", name: "app-sync" },
-            { match: "/components/statistics/", name: "app-statistics" }, // Lazy loaded with StatisticsPage
+            { match: "/components/statistics/", name: "app-statistics" },
+            { match: "/components/settings/", name: "app-settings" },
             { match: "/contexts/", name: "app-context" },
             { match: "/helpers/", name: "app-helpers" },
             { match: "/hooks/", name: "app-hooks" },

@@ -21,6 +21,7 @@ import type { KenmeiManga } from "@/api/kenmei/types";
 import type { AniListManga, MangaMatchResult } from "@/api/anilist/types";
 import type { MatchEngineConfig } from "@/api/matching/match-engine";
 import { findBestMatches } from "@/api/matching/match-engine";
+import MatchingWorker from "./matching-worker?worker";
 
 /**
  * Worker pool manager that distributes matching work across multiple workers.
@@ -71,10 +72,8 @@ export class MatchingWorkerPool {
       console.info("[WorkerPool] 📦 Initializing worker pool...");
       for (let i = 0; i < this.config.maxWorkers; i++) {
         try {
-          const worker = new Worker(
-            new URL("./matching-worker.ts", import.meta.url),
-            { type: "module" },
-          );
+          // Use imported worker constructor (Vite ?worker pattern)
+          const worker = new MatchingWorker();
 
           // Set up message handler
           worker.onmessage = (event: MessageEvent<WorkerMessage>) => {
@@ -82,7 +81,7 @@ export class MatchingWorkerPool {
           };
 
           // Set up error handler
-          worker.onerror = (error) => {
+          worker.onerror = (error: ErrorEvent) => {
             console.error(`[WorkerPool] ❌ Worker ${i} error:`, error);
             this.handleWorkerError(i, error);
           };
@@ -591,13 +590,16 @@ export class MatchingWorkerPool {
     // Call the progress callback with current progress
     try {
       task.progressCallback(
-        message.payload.current,
-        message.payload.total,
+        message.payload.current ?? 0,
+        message.payload.total ?? 0,
         message.payload.currentTitle,
       );
 
       // Log progress at intervals to reduce spam
-      if (message.payload.current % 50 === 0 || message.payload.current === 1) {
+      if (
+        (message.payload.current ?? 0) % 50 === 0 ||
+        message.payload.current === 1
+      ) {
         console.debug(
           `[WorkerPool] 🔄 Task ${message.payload.taskId} progress: ${message.payload.current}/${message.payload.total} (${message.payload.currentTitle})`,
         );
@@ -678,16 +680,14 @@ export class MatchingWorkerPool {
 
     // Try to spawn a replacement worker
     try {
-      const newWorker = new Worker(
-        new URL("./matching-worker.ts", import.meta.url),
-        { type: "module" },
-      );
+      // Use imported worker constructor (Vite ?worker pattern)
+      const newWorker = new MatchingWorker();
 
       newWorker.onmessage = (event: MessageEvent<WorkerMessage>) => {
         this.handleWorkerMessage(workerIndex, event.data);
       };
 
-      newWorker.onerror = (error) => {
+      newWorker.onerror = (error: ErrorEvent) => {
         console.error(`Replacement worker ${workerIndex} error:`, error);
         this.handleWorkerError(workerIndex, error);
       };

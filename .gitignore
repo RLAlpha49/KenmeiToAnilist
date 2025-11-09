@@ -8,3 +8,4 @@ documentation/
 .husky/*.log
 /.vite/bundle-analysis.html
 TODO.md
+.plans/

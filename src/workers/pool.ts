@@ -5,7 +5,7 @@
  * @module workers/pool
  */
 
-import { MatchingWorkerPool } from "./worker-pool";
+import { MatchingWorkerPool } from "./matching-worker-pool";
 
 // Singleton worker pool instance
 let workerPoolInstance: MatchingWorkerPool | null = null;

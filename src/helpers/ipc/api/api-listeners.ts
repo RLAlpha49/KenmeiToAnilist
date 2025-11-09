@@ -689,10 +689,7 @@ export function setupAniListAPI(mainWindow: BrowserWindow) {
                 console.debug(
                   `[ApiIPC] Using cached search results for: ${variables.search}`,
                 );
-                return {
-                  success: true,
-                  data: searchCache[cacheKey].data,
-                };
+                return searchCache[cacheKey].data;
               }
             }
 
@@ -721,16 +718,10 @@ export function setupAniListAPI(mainWindow: BrowserWindow) {
               }
             }
 
-            return {
-              success: true,
-              data: response,
-            };
+            return response;
           } catch (error) {
             console.error("[ApiIPC] Error in anilist:request:", error);
-            return {
-              success: false,
-              error,
-            };
+            throw error;
           }
         },
       );

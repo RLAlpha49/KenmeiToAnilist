@@ -5,11 +5,25 @@
  * @source
  */
 
+/// <reference types="vite/client" />
+
 /** Development server URL injected by Forge's Vite plugin. Used to load dev bundles in development mode. @source */
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
 
 /** Vite bundle name injected by Forge's Vite plugin. Used to locate bundled assets. @source */
 declare const MAIN_WINDOW_VITE_NAME: string;
+
+/**
+ * Vite worker import declarations.
+ * Allows importing web workers with the ?worker query parameter pattern.
+ * @source
+ */
+declare module "*.ts?worker" {
+  const workerConstructor: {
+    new (): Worker;
+  };
+  export default workerConstructor;
+}
 
 import type { APICredentials, TokenExchangeResponse } from "./types/auth";
 import type { TokenExchangeParams } from "./types/api";
@@ -236,9 +250,6 @@ declare global {
 
       /** AniList API client ID for OAuth. @source */
       readonly VITE_ANILIST_CLIENT_ID: string;
-
-      /** AniList API client secret for OAuth. @source */
-      readonly VITE_ANILIST_CLIENT_SECRET: string;
 
       /** Application version from package.json. @source */
       readonly VITE_APP_VERSION?: string;

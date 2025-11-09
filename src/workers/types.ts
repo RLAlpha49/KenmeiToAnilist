@@ -3,7 +3,7 @@
  * Defines message types and interfaces for worker-based matching operations.
  */
 
-import type { KenmeiManga } from "@/api/kenmei/types";
+import type { KenmeiManga, KenmeiStatus } from "@/api/kenmei/types";
 import type { AniListManga, MangaMatchResult } from "@/api/anilist/types";
 import type { MatchEngineConfig } from "@/api/matching/match-engine";
 
@@ -32,14 +32,19 @@ export interface CancelMessage {
 
 /**
  * Message sent from worker to report progress on a task.
+ * Supports both count-based progress (for matching) and byte-based progress (for CSV).
  */
 export interface ProgressMessage {
   type: "PROGRESS";
   payload: {
     taskId: string;
-    current: number;
-    total: number;
-    currentTitle: string;
+    // For matching worker (count-based)
+    current?: number;
+    total?: number;
+    currentTitle?: string;
+    // For CSV worker (byte-based)
+    processedBytes?: number;
+    totalBytes?: number;
   };
 }
 
@@ -69,6 +74,50 @@ export interface ErrorMessage {
 }
 
 /**
+ * Message sent to worker to start a CSV parsing operation.
+ */
+export interface CSVStartMessage {
+  type: "CSV_START";
+  payload: {
+    taskId: string;
+    totalSize: number;
+    options: {
+      defaultStatus: KenmeiStatus;
+    };
+  };
+}
+
+/**
+ * Message sent to worker containing a chunk of CSV data to parse.
+ */
+export interface CSVChunkMessage {
+  type: "CSV_CHUNK";
+  payload: {
+    taskId: string;
+    chunk: string;
+    chunkIndex: number;
+    isLastChunk: boolean;
+  };
+}
+
+/**
+ * Message sent from worker when CSV parsing completes successfully.
+ * Includes parsed manga entries and parsing statistics.
+ */
+export interface CSVCompleteMessage {
+  type: "CSV_COMPLETE";
+  payload: {
+    taskId: string;
+    manga: KenmeiManga[];
+    stats: {
+      totalParsed: number;
+      processingTimeMs: number;
+      bytesProcessed: number;
+    };
+  };
+}
+
+/**
  * Union type of all possible worker messages.
  */
 export type WorkerMessage =
@@ -76,7 +125,10 @@ export type WorkerMessage =
   | CancelMessage
   | ProgressMessage
   | ResultMessage
-  | ErrorMessage;
+  | ErrorMessage
+  | CSVStartMessage
+  | CSVChunkMessage
+  | CSVCompleteMessage;
 
 /**
  * Internal task tracking structure for the worker pool.

@@ -633,8 +633,7 @@ export function captureError(
   // Only capture to Sentry in production or when SENTRY_DSN is configured
   if (
     globalThis.window !== undefined &&
-    (process.env.NODE_ENV === "production" ||
-      process.env.VITE_SENTRY_DSN ||
+    (import.meta.env.MODE === "production" ||
       import.meta.env.VITE_SENTRY_DSN)
   ) {
     // Dynamic import to avoid hard dependency on Sentry
