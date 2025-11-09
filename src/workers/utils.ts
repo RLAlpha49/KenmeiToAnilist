@@ -198,14 +198,15 @@ export async function executeMatchingOnMainThread(
  * }
  * ```
  */
-export function areWorkersAvailable(): number {
+export async function areWorkersAvailable(): Promise<number> {
   const matchingPool = getWorkerPool();
-  const { getCSVWorkerPool } = require("./csv-worker-pool");
-  const { getFilterWorkerPool } = require("./filter-worker-pool");
+  const { getCSVWorkerPool } = await import("./csv-worker-pool");
+  const { getFilterWorkerPool } = await import("./filter-worker-pool");
+   
   const {
     getTitleNormalizationPool,
-  } = require("./title-normalization-worker-pool");
-  const { getStatisticsWorkerPool } = require("./statistics-worker-pool");
+  } = await import("./title-normalization-worker-pool");
+  const { getStatisticsWorkerPool } = await import("./statistics-worker-pool");
 
   // Get available worker counts from each pool
   const counts = [

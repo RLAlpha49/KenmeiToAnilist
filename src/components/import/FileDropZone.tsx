@@ -172,7 +172,7 @@ export function FileDropZone({
       // Store taskId for potential cancellation
       setCurrentTaskId(taskId);
 
-      const { manga, stats: _stats } = await promise;
+      const { manga } = await promise;
 
       if (!manga || manga.length === 0) {
         throw new Error(

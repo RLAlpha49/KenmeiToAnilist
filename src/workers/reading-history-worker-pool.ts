@@ -226,6 +226,7 @@ export class ReadingHistoryWorkerPool {
         workerIndex,
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (pool as any).registerTask?.(mainTaskId, task);
 
       // Dispatch task to worker

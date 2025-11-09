@@ -222,13 +222,14 @@ export class StatisticsAggregationWorkerPool {
       const task = {
         taskId: mainTaskId,
         type: "statistics" as const,
-        resolve: (result: any) => {
+        resolve: (result: unknown) => {
+          const typedResult = result as StatisticsAggregationResult & { comparisonDatasets?: unknown; timing?: { filteringTimeMs: number; aggregationTimeMs: number; totalTimeMs: number } };
           resolve({
-            filteredData: result.filteredData,
-            filterOptions: result.filterOptions,
-            comparisonDatasets: result.comparisonDatasets || null,
-            cacheKey: result.cacheKey,
-            timing: result.timing || {
+            filteredData: typedResult.filteredData,
+            filterOptions: typedResult.filterOptions,
+            comparisonDatasets: typedResult.comparisonDatasets || null,
+            cacheKey: typedResult.cacheKey,
+            timing: typedResult.timing || {
               filteringTimeMs: 0,
               aggregationTimeMs: 0,
               totalTimeMs: 0,
@@ -238,24 +239,28 @@ export class StatisticsAggregationWorkerPool {
         reject,
         cancelled: false,
         progressCallback,
-        onProgress: (message: any) => {
+        onProgress: (message: unknown) => {
           // Adapt STATISTICS_AGGREGATION_PROGRESS message to typed callback
+          const msgWithType = message as { type?: string; payload?: unknown };
           if (
-            message.type === "STATISTICS_AGGREGATION_PROGRESS" &&
+            msgWithType.type === "STATISTICS_AGGREGATION_PROGRESS" &&
             progressCallback &&
-            message.payload
+            msgWithType.payload
           ) {
             const {
               stage,
               progress,
               message: progressMessage,
-            } = message.payload;
-            progressCallback(stage, progress, progressMessage);
+            } = msgWithType.payload as { stage?: string; progress?: number; message?: string };
+            if (typeof stage === "string" && typeof progress === "number" && typeof progressMessage === "string") {
+              progressCallback(stage, progress, progressMessage);
+            }
           }
         },
         workerIndex,
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (pool as any).registerTask?.(mainTaskId, task);
 
       // Dispatch task to worker

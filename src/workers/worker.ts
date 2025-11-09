@@ -56,6 +56,7 @@ import type {
 } from "./types";
 import type { KenmeiStatus } from "@/api/kenmei/types";
 import type { MatchEngineConfig } from "@/api/matching/match-engine";
+import type { AdvancedMatchFilters } from "@/types/matchingFilters";
 
 /**
  * Parser state for CSV operations
@@ -409,12 +410,12 @@ function handleCancel(message: CancelMessage): void {
 /**
  * Check if a match fails the confidence filter
  */
-function failsConfidenceFilter(match: any, filters: any): boolean {
+function failsConfidenceFilter(match: MangaMatchResult, filters: AdvancedMatchFilters): boolean {
   let confidence = 0;
 
   if (match.selectedMatch && match.anilistMatches) {
     const selectedEntry = match.anilistMatches.find(
-      (m: any) => m.manga?.id === match.selectedMatch?.id,
+      (m) => m.manga?.id === match.selectedMatch?.id,
     );
     confidence = selectedEntry?.confidence ?? 0;
   } else if (match.anilistMatches?.length) {
@@ -429,7 +430,7 @@ function failsConfidenceFilter(match: any, filters: any): boolean {
 /**
  * Check if a match fails the format filter
  */
-function failsFormatFilter(match: any, filters: any): boolean {
+function failsFormatFilter(match: MangaMatchResult, filters: AdvancedMatchFilters): boolean {
   if (filters.formats.length === 0) {
     return false;
   }
@@ -440,7 +441,7 @@ function failsFormatFilter(match: any, filters: any): boolean {
 /**
  * Check if a match fails the genre filter
  */
-function failsGenreFilter(match: any, filters: any): boolean {
+function failsGenreFilter(match: MangaMatchResult, filters: AdvancedMatchFilters): boolean {
   if (filters.genres.length === 0) {
     return false;
   }
@@ -455,7 +456,7 @@ function failsGenreFilter(match: any, filters: any): boolean {
 /**
  * Check if a match fails the publication status filter
  */
-function failsStatusFilter(match: any, filters: any): boolean {
+function failsStatusFilter(match: MangaMatchResult, filters: AdvancedMatchFilters): boolean {
   if (filters.publicationStatuses.length === 0) {
     return false;
   }
@@ -469,7 +470,7 @@ function failsStatusFilter(match: any, filters: any): boolean {
 /**
  * Check if a match fails the year filter
  */
-function failsYearFilter(match: any, filters: any): boolean {
+function failsYearFilter(match: MangaMatchResult, filters: AdvancedMatchFilters): boolean {
   if (!filters.yearRange) {
     return false;
   }
@@ -482,32 +483,33 @@ function failsYearFilter(match: any, filters: any): boolean {
   if (year === undefined) {
     return true;
   }
-  if (filters.yearRange.min !== null && year < filters.yearRange.min) {
+  if ((filters.yearRange.min) !== null && year < (filters.yearRange.min)) {
     return true;
   }
-  return filters.yearRange.max !== null && year > filters.yearRange.max;
+  return (filters.yearRange.max) !== null && year > (filters.yearRange.max);
 }
 
 /**
  * Check if a match fails the tag filter
  */
-function failsTagFilter(match: any, filters: any): boolean {
-  if (!filters.tags || filters.tags.length === 0) {
+function failsTagFilter(match: MangaMatchResult, filters: AdvancedMatchFilters): boolean {
+  const tagsFilter = filters.tags ?? [];
+  if (!tagsFilter || tagsFilter.length === 0) {
     return false;
   }
   const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
   const tags = matchData?.tags || [];
-  const tagNames = new Set(tags.map((t: any) => t.name.toLowerCase()));
-  return !filters.tags.some((ft: string) => tagNames.has(ft.toLowerCase()));
+  const tagNames = new Set(tags.map((t: { id: number; name: string; category?: string }) => t.name.toLowerCase()));
+  return !tagsFilter.some((ft: string) => tagNames.has(ft.toLowerCase()));
 }
 
 /**
  * Compute filter statistics by analyzing excluded matches
  */
 function computeFilterStats(
-  matches: any[],
-  filteredMatches: any[],
-  filters: any,
+  matches: MangaMatchResult[],
+  filteredMatches: MangaMatchResult[],
+  filters: AdvancedMatchFilters,
 ): Record<string, number> {
   const filteredMatchIds = new Set(
     filteredMatches.map((m) => m.kenmeiManga.id),
@@ -1024,10 +1026,12 @@ async function handleStatisticsAggregation(
     const filterStartTime = performance.now();
 
     // Apply filters
+    // Type assertion needed because message payload structure differs from NormalizedMatchForStats
+    // but is compatible at runtime
     const filteredData = applyStatisticsFilters(
-      matchResults as any,
-      readingHistory as any,
-      filters as any,
+      matchResults as unknown as import("@/utils/statisticsAdapter").NormalizedMatchForStats[],
+      readingHistory as unknown as import("@/utils/storage").ReadingHistory,
+      filters as unknown as import("@/types/statistics").StatisticsFilters,
     );
 
     const filteringTimeMs = performance.now() - filterStartTime;
@@ -1043,7 +1047,9 @@ async function handleStatisticsAggregation(
     const aggregationStartTime = performance.now();
 
     // Extract available filter options
-    const filterOptions = extractAvailableFilterOptions(matchResults as any);
+    const filterOptions = extractAvailableFilterOptions(
+      filteredData.matchResults,
+    );
 
     // Build comparison datasets if enabled
     const comparisonDatasets =
@@ -1051,8 +1057,8 @@ async function handleStatisticsAggregation(
       comparisonMode.primaryRange !== comparisonMode.secondaryRange
         ? buildComparisonDatasets(
             filteredData.readingHistory,
-            comparisonMode.primaryRange as any,
-            comparisonMode.secondaryRange as any,
+            comparisonMode.primaryRange as import("@/utils/statisticsAdapter").TimeRange,
+            comparisonMode.secondaryRange as import("@/utils/statisticsAdapter").TimeRange,
           )
         : null;
 
@@ -1086,7 +1092,7 @@ async function handleStatisticsAggregation(
       payload: {
         taskId,
         filteredData: {
-          matchResults: filteredData.matchResults as any,
+          matchResults: filteredData.matchResults,
           readingHistory: filteredData.readingHistory,
         },
         filterOptions,
@@ -1959,28 +1965,34 @@ globalThis.onmessage = async (event: MessageEvent<WorkerInboundMessage>) => {
         handleCancel(message);
         break;
 
-      default:
-        console.warn(`[Worker] Unknown message type: ${(message as any).type}`);
+      default: {
+        console.warn(`[Worker] Unknown message type: ${(message as unknown as Record<string, unknown>).type}`);
         // Send error response for unknown message types
-        if ("payload" in message && "taskId" in (message as any).payload) {
+        const msg = message as unknown as Record<string, unknown>;
+        if ("payload" in msg && typeof msg.payload === "object" && msg.payload !== null && "taskId" in msg.payload) {
+          const payload = msg.payload as Record<string, unknown>;
           globalThis.postMessage({
             type: "ERROR",
             payload: {
-              taskId: (message as any).payload.taskId,
+              taskId: payload.taskId,
               error: {
-                message: `Unknown message type: ${(message as any).type}`,
+                message: `Unknown message type: ${msg.type}`,
               },
             },
           });
         }
+        break;
+      }
     }
   } catch (error) {
     console.error("[Worker] Unhandled error in worker:", error);
-    if ("payload" in message && "taskId" in (message as any).payload) {
+    const msg = message as unknown as Record<string, unknown>;
+    if ("payload" in msg && typeof msg.payload === "object" && msg.payload !== null && "taskId" in msg.payload) {
+      const payload = msg.payload as Record<string, unknown>;
       globalThis.postMessage({
         type: "ERROR",
         payload: {
-          taskId: (message as any).payload.taskId,
+          taskId: payload.taskId,
           error: getErrorDetails(error),
         },
       });

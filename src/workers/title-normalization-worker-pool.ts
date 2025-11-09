@@ -143,14 +143,15 @@ export class TitleNormalizationWorkerPool {
       const task = {
         taskId: effectiveTaskId,
         type: "normalization" as const,
-        resolve: (result: any) => {
+        resolve: (result: unknown) => {
+          const typedResult = result as Partial<NormalizationCacheResult>;
           console.info(
             `[TitleNormalizationWorkerPool] ✅ Task ${effectiveTaskId} resolved with result`,
           );
           resolve({
-            caches: result.caches || {},
-            deltas: result.deltas,
-            timing: result.timing || {
+            caches: typedResult.caches || {},
+            deltas: typedResult.deltas,
+            timing: typedResult.timing || {
               processingTimeMs: 0,
               totalTitlesProcessed: 0,
             },
@@ -164,16 +165,20 @@ export class TitleNormalizationWorkerPool {
           reject(error);
         },
         cancelled: false,
-        onProgress: (message: any) => {
+        onProgress: (message: unknown) => {
+          const msgWithType = message as { type?: string; payload?: { algorithm?: string; current?: number; total?: number } };
           if (
-            message.type === "TITLE_NORMALIZATION_PROGRESS" &&
-            progressCallback
+            msgWithType.type === "TITLE_NORMALIZATION_PROGRESS" &&
+            progressCallback &&
+            msgWithType.payload
           ) {
-            const payload = message.payload;
-            console.debug(
-              `[TitleNormalizationWorkerPool] 📊 Progress for task ${effectiveTaskId} - ${payload.algorithm}: ${payload.current}/${payload.total}`,
-            );
-            progressCallback(payload.algorithm, payload.current, payload.total);
+            const { algorithm, current, total } = msgWithType.payload;
+            if (typeof algorithm === "string" && typeof current === "number" && typeof total === "number") {
+              console.debug(
+                `[TitleNormalizationWorkerPool] 📊 Progress for task ${effectiveTaskId} - ${algorithm}: ${current}/${total}`,
+              );
+              progressCallback(algorithm, current, total);
+            }
           }
         },
         workerIndex,

@@ -40,11 +40,12 @@ export interface WorkerPoolConfig {
 interface WorkerTask {
   taskId: string;
   type: "matching" | "csv" | "normalization";
-  resolve: (result: any) => void;
+  resolve: (result: Record<string, unknown>) => void;
   reject: (error: Error) => void;
   cancelled: boolean;
   workerIndex?: number;
-  onProgress?: (message: any) => void;
+  onProgress?: (message: WorkerMessage) => void;
+  cancelTimeoutHandle?: NodeJS.Timeout;
 }
 
 /**
@@ -207,7 +208,7 @@ export class WorkerPool {
       return;
     }
 
-    const taskId = (message.payload as any).taskId;
+    const taskId = (message.payload as Record<string, unknown>).taskId as string;
     const task = this.tasks.get(taskId);
 
     if (!task) {
@@ -246,18 +247,18 @@ export class WorkerPool {
       }
 
       case "ERROR": {
-        const payload = (message as any).payload;
-        const errorDetails = payload.error;
-        const error = new Error(errorDetails.message);
+        const payload = (message as unknown as Record<string, unknown>).payload as Record<string, unknown>;
+        const errorDetails = payload.error as Record<string, unknown>;
+        const error = new Error(errorDetails.message as string);
         // Attach additional error properties from worker
         if (errorDetails.name) {
-          error.name = errorDetails.name;
+          error.name = errorDetails.name as string;
         }
         if (errorDetails.stack) {
-          error.stack = errorDetails.stack;
+          error.stack = errorDetails.stack as string;
         }
         if (errorDetails.causeMessage) {
-          (error as any).cause = new Error(errorDetails.causeMessage);
+          (error as Error & { cause: Error }).cause = new Error(errorDetails.causeMessage as string);
         }
         task.reject(error);
         this.completeTask(taskId);
@@ -280,8 +281,8 @@ export class WorkerPool {
     message: WorkerMessage,
   ): void {
     // Clear any pending cancel timeout
-    if ((task as any).cancelTimeoutHandle) {
-      clearTimeout((task as any).cancelTimeoutHandle);
+    if (task.cancelTimeoutHandle) {
+      clearTimeout(task.cancelTimeoutHandle);
     }
 
     const isTerminalMessage =
@@ -325,7 +326,7 @@ export class WorkerPool {
   private extractMessageResult(
     message: WorkerMessage,
   ): Record<string, unknown> {
-    return (message as any).payload;
+    return (message as unknown as Record<string, Record<string, unknown>>).payload;
   } /**
    * Handle worker errors
    */
@@ -400,7 +401,7 @@ export class WorkerPool {
       }, 5000);
 
       // Store timeout handle for potential cleanup
-      (task as any).cancelTimeoutHandle = timeoutHandle;
+      task.cancelTimeoutHandle = timeoutHandle;
     }
   }
 

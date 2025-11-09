@@ -179,6 +179,7 @@ export class DuplicateDetectionWorkerPool {
         },
       );
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       pool.registerTask(taskId, task as unknown as any);
 
       // Send message to the worker

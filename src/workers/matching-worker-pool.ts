@@ -141,21 +141,25 @@ export class MatchingWorkerPool {
         kenmeiManga: kenmeiMangaList,
         anilistCandidates: Array.from(anilistMangaMap),
         config,
-        resolve: (result: any) => {
+        resolve: (result: unknown) => {
           // Adapt raw payload to expected shape: extract results array
-          resolve(result.results || result);
+          const adaptedResult = (result as { results?: MangaMatchResult[] }).results || (result as MangaMatchResult[]);
+          resolve(adaptedResult);
         },
         reject,
         cancelled: false,
         progressCallback,
-        onProgress: (message: any) => {
+        onProgress: (message: unknown) => {
           // Adapt generic message to typed callback
+          const msgWithType = message as { type?: string; payload?: { current?: number; total?: number; currentTitle?: string } };
           if (
-            message.type === "PROGRESS" &&
+            msgWithType.type === "PROGRESS" &&
             progressCallback &&
-            message.payload
+            msgWithType.payload &&
+            typeof msgWithType.payload.current === "number" &&
+            typeof msgWithType.payload.total === "number"
           ) {
-            const { current, total, currentTitle } = message.payload;
+            const { current, total, currentTitle } = msgWithType.payload;
             progressCallback(current, total, currentTitle);
           }
         },

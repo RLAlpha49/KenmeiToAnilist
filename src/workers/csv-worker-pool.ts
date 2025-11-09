@@ -163,7 +163,7 @@ export class CSVWorkerPool {
    * Internal helper to dispatch to worker after pool is ready
    */
   private dispatchToWorker(
-    pool: any,
+    pool: ReturnType<typeof getGenericWorkerPool>,
     taskId: string,
     fileContent: string,
     onProgress: ((progress: ProgressMessage) => void) | undefined,
@@ -186,11 +186,11 @@ export class CSVWorkerPool {
     }
 
     // Wrap resolve to adapt raw payload to expected CSV result shape
-    const wrappedResolve = (result: any) => {
+    const wrappedResolve = (result: { taskId: string; manga?: KenmeiManga[]; stats?: { totalParsed: number; processingTimeMs: number; bytesProcessed: number } }) => {
       // CSV_COMPLETE and CSV_CANCELLED return raw payload
       // For CSV_COMPLETE: { taskId, manga, stats }
       // For CSV_CANCELLED: { taskId }
-      if (result.manga) {
+      if (result.manga && result.stats) {
         // CSV_COMPLETE case
         resolve({
           manga: result.manga,
@@ -213,10 +213,10 @@ export class CSVWorkerPool {
     const task = {
       taskId,
       type: "csv" as const,
-      resolve: wrappedResolve,
+      resolve: wrappedResolve as (result: Record<string, unknown>) => void,
       reject,
       cancelled: false,
-      onProgress,
+      onProgress: onProgress as ((message: import("./types").WorkerMessage) => void) | undefined,
       workerIndex,
     };
 
