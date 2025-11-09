@@ -12,6 +12,7 @@ import {
 import { AniListMediaEntry } from "./types";
 import { storage, STORAGE_KEYS } from "../../utils/storage";
 import { withGroupAsync } from "../../utils/logging";
+import { BatchSyncWorkerPool } from "../../workers/batch-sync-worker-pool";
 
 /**
  * Type alias for GraphQL mutation variables mapping.
@@ -560,6 +561,27 @@ const MAX_REQUESTS_PER_MINUTE = 28;
  * @source
  */
 const REQUEST_INTERVAL = 60000 / MAX_REQUESTS_PER_MINUTE; // Time between requests
+
+/**
+ * Singleton instance of the batch sync worker pool.
+ * Manages pre-processing of batch sync entries using web workers.
+ * @source
+ */
+let batchSyncWorkerPool: BatchSyncWorkerPool | null = null;
+
+/**
+ * Get or create the batch sync worker pool singleton.
+ * @returns The batch sync worker pool instance
+ * @source
+ */
+function getBatchSyncWorkerPool(): BatchSyncWorkerPool {
+  batchSyncWorkerPool ??= new BatchSyncWorkerPool({
+    maxWorkers: 4,
+    enableWorkers: true,
+    fallbackToMainThread: true,
+  });
+  return batchSyncWorkerPool;
+}
 
 /**
  * Result of a single manga sync/update operation with rate limit information.
@@ -1453,6 +1475,57 @@ export async function syncMangaBatch(
     `[AniListSync] Batch Sync (${entries.length} entries)`,
     async () => {
       const errors: { mediaId: number; error: string }[] = [];
+
+      // Initialize progress
+      const initialProgress: SyncProgress = {
+        total: entries.length,
+        completed: 0,
+        successful: 0,
+        failed: 0,
+        skipped: 0,
+        currentEntry: null,
+        currentStep: null,
+        totalSteps: null,
+        rateLimited: false,
+        retryAfter: null,
+      };
+
+      if (onProgress) onProgress({ ...initialProgress });
+
+      // Use worker pool for pre-processing
+      const pool = getBatchSyncWorkerPool();
+      await pool.initialize();
+
+      try {
+        await pool.executeBatchSyncPreprocessing(
+          entries,
+          (phase, processed, total, currentMediaId) => {
+            // Update progress during pre-processing phase
+            const progress: SyncProgress = {
+              ...initialProgress,
+              completed: processed,
+              total: total,
+            };
+            if (currentMediaId) {
+              const entry = entries.find((e) => e.mediaId === currentMediaId);
+              if (entry) {
+                progress.currentEntry = {
+                  mediaId: currentMediaId,
+                  title: entry.title || "Unknown",
+                  coverImage: entry.coverImage || "",
+                };
+              }
+            }
+            if (onProgress) onProgress(progress);
+          },
+        );
+      } catch (error) {
+        console.error(
+          "[AniListSync] ⚠️  Pre-processing failed, continuing with direct sync:",
+          error,
+        );
+        // Pre-processing failure is not fatal - continue with direct sync
+      }
 
       // Organize entries by media ID for handling incremental sync properly
       const entriesByMediaId = organizeEntriesByMediaId(entries);

@@ -10,6 +10,7 @@
  */
 
 export { MatchingWorkerPool } from "./matching-worker-pool";
+export { BatchSyncWorkerPool } from "./batch-sync-worker-pool";
 export { CSVWorkerPool, getCSVWorkerPool } from "./csv-worker-pool";
 export {
   TitleNormalizationWorkerPool,
@@ -64,6 +65,10 @@ export type {
   JSONDeserializeMessage,
   JSONSerializeResultMessage,
   JSONDeserializeResultMessage,
+  BatchSyncMessage,
+  BatchSyncProgressMessage,
+  BatchSyncResultMessage,
+  PreparedSyncOperation,
 } from "./types";
 export type { StatisticsAggregationResult } from "./statistics-worker-pool";
 export type { ReadingHistoryFilterResult } from "./reading-history-worker-pool";
@@ -79,6 +84,7 @@ export type {
   DataTablePreparationResult,
   PreparedTableRow,
 } from "./data-table-worker-pool";
+export type { BatchSyncExecution } from "./batch-sync-worker-pool";
 
 // Re-export from pool module to avoid circular dependency
 export { getWorkerPool, workerPool } from "./pool";

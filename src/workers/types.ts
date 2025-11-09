@@ -4,7 +4,11 @@
  */
 
 import type { KenmeiManga, KenmeiStatus } from "@/api/kenmei/types";
-import type { AniListManga, MangaMatchResult } from "@/api/anilist/types";
+import type {
+  AniListManga,
+  MangaMatchResult,
+  AniListMediaEntry,
+} from "@/api/anilist/types";
 import type { MatchEngineConfig } from "@/api/matching/match-engine";
 import type { AdvancedMatchFilters } from "@/types/matchingFilters";
 
@@ -437,6 +441,64 @@ export interface StatisticsAggregationResultMessage {
 }
 
 /**
+ * Represents a prepared sync operation ready for API execution.
+ */
+export interface PreparedSyncOperation {
+  mediaId: number;
+  entries: AniListMediaEntry[];
+  steps: number[];
+  variables: Record<string, unknown>[];
+  estimatedApiCalls: number;
+}
+
+/**
+ * Message sent to worker to organize and prepare batch sync entries.
+ * Worker performs pre-processing: organizing, step calculation, and variable building.
+ */
+export interface BatchSyncMessage {
+  type: "BATCH_SYNC";
+  payload: {
+    taskId: string;
+    entries: AniListMediaEntry[];
+    rateLimitConfig?: {
+      maxRequestsPerMinute: number;
+      requestInterval: number;
+    };
+  };
+}
+
+/**
+ * Progress message for batch sync operations, sent from worker.
+ * Reports progress during the organizing phase.
+ */
+export interface BatchSyncProgressMessage {
+  type: "BATCH_SYNC_PROGRESS";
+  payload: {
+    taskId: string;
+    phase: "organizing" | "building" | "ready";
+    processed: number;
+    total: number;
+    currentMediaId?: number;
+  };
+}
+
+/**
+ * Result message from batch sync worker containing prepared operations.
+ */
+export interface BatchSyncResultMessage {
+  type: "BATCH_SYNC_RESULT";
+  payload: {
+    taskId: string;
+    operations: PreparedSyncOperation[];
+    totalApiCallsEstimate: number;
+    failedEntries: Array<{
+      mediaId: number;
+      error: string;
+    }>;
+  };
+}
+
+/**
  * Union type of all possible worker messages.
  */
 export type WorkerMessage =
@@ -462,7 +524,9 @@ export type WorkerMessage =
   | DuplicateDetectionProgressMessage
   | DuplicateDetectionResultMessage
   | DataTablePreparationProgressMessage
-  | DataTablePreparationResultMessage;
+  | DataTablePreparationResultMessage
+  | BatchSyncProgressMessage
+  | BatchSyncResultMessage;
 
 /**
  * Message sent to worker to filter and aggregate reading history.
@@ -878,7 +942,8 @@ export type WorkerInboundMessage =
   | JSONSerializeMessage
   | JSONDeserializeMessage
   | DuplicateDetectionMessage
-  | DataTablePreparationMessage;
+  | DataTablePreparationMessage
+  | BatchSyncMessage;
 
 /**
  * Internal task tracking structure for the worker pool.
