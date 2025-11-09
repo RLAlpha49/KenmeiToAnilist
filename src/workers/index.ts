@@ -1,17 +1,17 @@
 /**
  * Workers module - Web Worker-based parallel processing for manga matching and CSV parsing.
  *
- * Provides worker pools for executing CPU-intensive operations in parallel:
- * - Matching worker pool for manga matching operations
- * - CSV worker pool for CSV parsing and processing
+ * Provides a worker pool that efficiently handles CPU-intensive operations:
  *
- * Both keep the main thread responsive during large batch operations.
+ * The single shared worker pool (4 workers by default) serves all operations,
+ * maximizing resource utilization and keeping the main thread responsive.
  *
  * @module workers
  */
 
 export { MatchingWorkerPool } from "./matching-worker-pool";
 export { CSVWorkerPool, getCSVWorkerPool } from "./csv-worker-pool";
+export { WorkerPool } from "./worker-pool";
 export {
   executeMatchingWithWorkers,
   executeMatchingOnMainThread,

@@ -47,7 +47,9 @@ export function FileDropZone({
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null,
+  );
 
   /**
    * Handles drag-over event to highlight drop zone.
@@ -127,9 +129,7 @@ export function FileDropZone({
     try {
       // Validate file type
       if (!file.name.toLowerCase().endsWith(".csv")) {
-        throw new Error(
-          "Invalid file format. Please upload a CSV file."
-        );
+        throw new Error("Invalid file format. Please upload a CSV file.");
       }
 
       // Check file size (max 10MB)
@@ -160,11 +160,13 @@ export function FileDropZone({
         (progress) => {
           // Update progress bar based on worker progress (byte-based)
           if (progress.payload.processedBytes && progress.payload.totalBytes) {
-            const byteProgress = (progress.payload.processedBytes / progress.payload.totalBytes) * 100;
+            const byteProgress =
+              (progress.payload.processedBytes / progress.payload.totalBytes) *
+              100;
             const clampedProgress = Math.min(100, Math.max(0, byteProgress));
             setLoadingProgress(clampedProgress);
           }
-        }
+        },
       );
 
       // Store taskId for potential cancellation
@@ -174,7 +176,7 @@ export function FileDropZone({
 
       if (!manga || manga.length === 0) {
         throw new Error(
-          "No manga entries found in the CSV file. Please check the file format."
+          "No manga entries found in the CSV file. Please check the file format.",
         );
       }
 
