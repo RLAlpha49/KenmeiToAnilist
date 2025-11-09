@@ -215,7 +215,8 @@ export class WorkerPool {
       case "RESULT":
       case "CSV_COMPLETE":
       case "ADVANCED_FILTER_RESULT":
-      case "TITLE_NORMALIZATION_RESULT": {
+      case "TITLE_NORMALIZATION_RESULT":
+      case "STATISTICS_AGGREGATION_RESULT": {
         const payload = (message as any).payload;
         let result: Record<string, unknown>;
 
@@ -231,6 +232,14 @@ export class WorkerPool {
           result = {
             caches: payload.caches,
             deltas: payload.deltas,
+            timing: payload.timing,
+          };
+        } else if (message.type === "STATISTICS_AGGREGATION_RESULT") {
+          result = {
+            filteredData: payload.filteredData,
+            filterOptions: payload.filterOptions,
+            comparisonDatasets: payload.comparisonDatasets,
+            cacheKey: payload.cacheKey,
             timing: payload.timing,
           };
         } else {
