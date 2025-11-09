@@ -27,6 +27,10 @@ export {
   JSONSerializationWorkerPool,
   getJSONSerializationWorkerPool,
 } from "./json-serialization-worker-pool";
+export {
+  DuplicateDetectionWorkerPool,
+  getDuplicateDetectionWorkerPool,
+} from "./duplicate-worker-pool";
 export { WorkerPool } from "./worker-pool";
 export {
   executeMatchingWithWorkers,
@@ -66,6 +70,7 @@ export type {
   NormalizationProgressCallback,
 } from "./title-normalization-worker-pool";
 export type { JSONSerializationWorkerPoolConfig } from "./json-serialization-worker-pool";
+export type { DuplicateDetectionResult } from "./duplicate-worker-pool";
 
 // Re-export from pool module to avoid circular dependency
 export { getWorkerPool, workerPool } from "./pool";

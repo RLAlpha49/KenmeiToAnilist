@@ -458,7 +458,9 @@ export type WorkerMessage =
   | ReadingHistoryFilterProgressMessage
   | ReadingHistoryFilterResultMessage
   | JSONSerializeResultMessage
-  | JSONDeserializeResultMessage;
+  | JSONDeserializeResultMessage
+  | DuplicateDetectionProgressMessage
+  | DuplicateDetectionResultMessage;
 
 /**
  * Message sent to worker to filter and aggregate reading history.
@@ -637,6 +639,68 @@ export interface JSONDeserializeResultMessage {
 }
 
 /**
+ * Duplicate entry detected during duplicate detection.
+ * Represents an AniList ID mapped to multiple Kenmei titles.
+ */
+export interface DuplicateDetectionEntry {
+  anilistId: number;
+  anilistTitle: string;
+  matchIndices: number[];
+  kenmeiTitles: string[];
+}
+
+/**
+ * Message sent to worker to detect duplicate AniList IDs in match results.
+ * Worker will analyze matches and identify instances where the same AniList ID
+ * is mapped to multiple Kenmei manga titles.
+ */
+export interface DuplicateDetectionMessage {
+  type: "DUPLICATE_DETECTION";
+  payload: {
+    taskId: string;
+    matches: MangaMatchResult[];
+    ignoredDuplicateIds: number[];
+    chunkSize?: number;
+  };
+}
+
+/**
+ * Progress message for duplicate detection, sent from worker.
+ * Reports progress by number of comparisons processed.
+ */
+export interface DuplicateDetectionProgressMessage {
+  type: "DUPLICATE_DETECTION_PROGRESS";
+  payload: {
+    taskId: string;
+    current: number;
+    total: number;
+    message: string;
+  };
+}
+
+/**
+ * Message sent from worker containing detected duplicate results.
+ * Includes groups of duplicate entries and performance metrics.
+ */
+export interface DuplicateDetectionResultMessage {
+  type: "DUPLICATE_DETECTION_RESULT";
+  payload: {
+    taskId: string;
+    /**
+     * Array of detected duplicate groups
+     */
+    duplicates: DuplicateDetectionEntry[];
+    /**
+     * Performance timing information
+     */
+    timing: {
+      processingTimeMs: number;
+      comparisonCount: number;
+    };
+  };
+}
+
+/**
  * Union type of all possible messages sent TO the worker.
  */
 export type WorkerInboundMessage =
@@ -649,7 +713,8 @@ export type WorkerInboundMessage =
   | StatisticsAggregationMessage
   | ReadingHistoryFilterMessage
   | JSONSerializeMessage
-  | JSONDeserializeMessage;
+  | JSONDeserializeMessage
+  | DuplicateDetectionMessage;
 
 /**
  * Internal task tracking structure for the worker pool.

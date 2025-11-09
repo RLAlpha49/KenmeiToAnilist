@@ -66,6 +66,7 @@ import {
   DuplicateEntry,
 } from "../components/matching/DuplicateWarning";
 import { detectDuplicateAniListIds } from "../components/matching/detectDuplicateAniListIds";
+import { getDuplicateDetectionWorkerPool } from "../workers";
 import { LoadingView } from "../components/matching/LoadingView";
 import { SkeletonCard } from "../components/ui/skeleton";
 import EmptyState from "../components/ui/empty-state";
@@ -795,20 +796,61 @@ export function MatchingPage() {
 
   // Effect to detect duplicate AniList IDs
   useEffect(() => {
-    if (matchResults.length > 0) {
-      const duplicates = detectDuplicateAniListIds(matchResults);
-      setDuplicateEntries(duplicates);
-
-      // Show warning if duplicates are found and warning wasn't already dismissed
-      if (duplicates.length > 0) {
-        setShowDuplicateWarning(true);
-      } else {
-        setShowDuplicateWarning(false);
-      }
-    } else {
+    if (matchResults.length === 0) {
       setDuplicateEntries([]);
       setShowDuplicateWarning(false);
+      return;
     }
+
+    let isMounted = true;
+
+    const detectDuplicates = async () => {
+      try {
+        const pool = getDuplicateDetectionWorkerPool();
+        await pool.initialize();
+        const result = await pool.detectDuplicates(matchResults);
+
+        if (!isMounted) return;
+
+        // Convert worker result format to DuplicateEntry format
+        const duplicates: DuplicateEntry[] = result.duplicates.map((dup) => ({
+          anilistId: dup.anilistId,
+          anilistTitle: dup.anilistTitle,
+          kenmeiTitles: dup.kenmeiTitles,
+        }));
+
+        setDuplicateEntries(duplicates);
+
+        // Show warning if duplicates are found and warning wasn't already dismissed
+        if (duplicates.length > 0) {
+          setShowDuplicateWarning(true);
+        } else {
+          setShowDuplicateWarning(false);
+        }
+
+        // Log worker execution info for debugging
+        console.debug(
+          `[MatchingPage] Duplicate detection completed: ${duplicates.length} groups found (${result.executedOnWorker ? "worker" : "main thread"}, ${result.timing.processingTimeMs.toFixed(2)}ms)`,
+        );
+      } catch (error) {
+        console.error(
+          "[MatchingPage] Error during duplicate detection:",
+          error,
+        );
+        // Fall back to main thread implementation
+        const duplicates = detectDuplicateAniListIds(matchResults);
+        if (isMounted) {
+          setDuplicateEntries(duplicates);
+          setShowDuplicateWarning(duplicates.length > 0);
+        }
+      }
+    };
+
+    detectDuplicates();
+
+    return () => {
+      isMounted = false;
+    };
   }, [matchResults]);
 
   /**
@@ -829,6 +871,52 @@ export function MatchingPage() {
       return false;
     }
     return true;
+  };
+
+  /**
+   * Handles ignoring a duplicate AniList entry and refreshes the duplicate list
+   */
+  const handleIgnoreDuplicate = async (
+    anilistId: number,
+    anilistTitle: string,
+  ): Promise<void> => {
+    try {
+      addIgnoredDuplicate(anilistId, anilistTitle);
+
+      // Refresh duplicates using worker
+      const pool = getDuplicateDetectionWorkerPool();
+      await pool.initialize();
+      const result = await pool.detectDuplicates(matchResults);
+
+      // Convert worker result format to DuplicateEntry format
+      const updatedDuplicates: DuplicateEntry[] = result.duplicates.map(
+        (dup) => ({
+          anilistId: dup.anilistId,
+          anilistTitle: dup.anilistTitle,
+          kenmeiTitles: dup.kenmeiTitles,
+        }),
+      );
+
+      setDuplicateEntries(updatedDuplicates);
+
+      // Hide warning if no duplicates remain
+      if (updatedDuplicates.length === 0) {
+        setShowDuplicateWarning(false);
+      }
+
+      console.info(
+        `[MatchingPage] Ignored duplicate ${anilistId} (${anilistTitle}), ${updatedDuplicates.length} duplicates remaining`,
+      );
+    } catch (error) {
+      console.error("[MatchingPage] Error ignoring duplicate:", error);
+      // Fall back to main thread implementation
+      addIgnoredDuplicate(anilistId, anilistTitle);
+      const updatedDuplicates = detectDuplicateAniListIds(matchResults);
+      setDuplicateEntries(updatedDuplicates);
+      if (updatedDuplicates.length === 0) {
+        setShowDuplicateWarning(false);
+      }
+    }
   };
 
   /**
@@ -1928,17 +2016,7 @@ export function MatchingPage() {
                 duplicates={duplicateEntries}
                 onDismiss={() => setShowDuplicateWarning(false)}
                 onSearchAnilist={(title) => setSearchQuery(title)}
-                onIgnoreDuplicate={(anilistId, anilistTitle) => {
-                  addIgnoredDuplicate(anilistId, anilistTitle);
-                  // Refresh duplicates to remove the ignored one
-                  const updatedDuplicates =
-                    detectDuplicateAniListIds(matchResults);
-                  setDuplicateEntries(updatedDuplicates);
-                  // Hide warning if no duplicates remain
-                  if (updatedDuplicates.length === 0) {
-                    setShowDuplicateWarning(false);
-                  }
-                }}
+                onIgnoreDuplicate={handleIgnoreDuplicate}
               />
             )}
           </AnimatePresence>
