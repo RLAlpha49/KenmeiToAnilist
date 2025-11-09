@@ -11,7 +11,7 @@
  * - Performance metrics
  */
 
-import { getWorkerPool } from "./worker-pool";
+import { getGenericWorkerPool } from "./worker-pool";
 import type { AdvancedFilterMessage } from "./types";
 import type { MangaMatchResult } from "@/api/anilist/types";
 import type { AdvancedMatchFilters } from "@/types/matchingFilters";
@@ -72,6 +72,172 @@ function generateTaskId(): string {
 }
 
 /**
+ * Check if a match fails the confidence filter
+ */
+function failsConfidenceFilter(
+  match: MangaMatchResult,
+  filters: AdvancedMatchFilters,
+): boolean {
+  let confidence = 0;
+
+  if (match.selectedMatch && match.anilistMatches) {
+    const selectedEntry = match.anilistMatches.find(
+      (m) => m.manga?.id === match.selectedMatch?.id,
+    );
+    confidence = selectedEntry?.confidence ?? 0;
+  } else if (match.anilistMatches?.length) {
+    confidence = match.anilistMatches[0].confidence ?? 0;
+  }
+
+  return (
+    confidence < filters.confidence.min || confidence > filters.confidence.max
+  );
+}
+
+/**
+ * Check if a match fails the format filter
+ */
+function failsFormatFilter(
+  match: MangaMatchResult,
+  filters: AdvancedMatchFilters,
+): boolean {
+  if (filters.formats.length === 0) {
+    return false;
+  }
+  const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
+  return !matchData?.format || !filters.formats.includes(matchData.format);
+}
+
+/**
+ * Check if a match fails the genre filter
+ */
+function failsGenreFilter(
+  match: MangaMatchResult,
+  filters: AdvancedMatchFilters,
+): boolean {
+  if (filters.genres.length === 0) {
+    return false;
+  }
+  const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
+  const genres = matchData?.genres || [];
+  const genresLower = new Set(genres.map((g) => g.toLowerCase()));
+  return !filters.genres.some((fg) => genresLower.has(fg.toLowerCase()));
+}
+
+/**
+ * Check if a match fails the publication status filter
+ */
+function failsStatusFilter(
+  match: MangaMatchResult,
+  filters: AdvancedMatchFilters,
+): boolean {
+  if (filters.publicationStatuses.length === 0) {
+    return false;
+  }
+  const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
+  return (
+    !matchData?.status ||
+    !filters.publicationStatuses.includes(matchData.status)
+  );
+}
+
+/**
+ * Check if a match fails the year filter
+ */
+function failsYearFilter(
+  match: MangaMatchResult,
+  filters: AdvancedMatchFilters,
+): boolean {
+  if (!filters.yearRange) {
+    return false;
+  }
+  if (filters.yearRange.min === null && filters.yearRange.max === null) {
+    return false;
+  }
+  const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
+  const year = matchData?.startDate?.year;
+
+  if (year === undefined) {
+    return true;
+  }
+  if (filters.yearRange.min !== null && year < filters.yearRange.min) {
+    return true;
+  }
+  return filters.yearRange.max !== null && year > filters.yearRange.max;
+}
+
+/**
+ * Check if a match fails the tag filter
+ */
+function failsTagFilter(
+  match: MangaMatchResult,
+  filters: AdvancedMatchFilters,
+): boolean {
+  if (!filters.tags || filters.tags.length === 0) {
+    return false;
+  }
+  const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
+  const tags = matchData?.tags || [];
+  const tagNames = new Set(tags.map((t) => t.name.toLowerCase()));
+  return !filters.tags.some((ft) => tagNames.has(ft.toLowerCase()));
+}
+
+/**
+ * Compute filter statistics by analyzing excluded matches
+ */
+function computeFilterStats(
+  matches: MangaMatchResult[],
+  filteredMatches: MangaMatchResult[],
+  filters: AdvancedMatchFilters,
+): Record<string, number> {
+  const filteredMatchIds = new Set(
+    filteredMatches.map((m) => m.kenmeiManga.id),
+  );
+  const excludedMatches = matches.filter(
+    (m) => !filteredMatchIds.has(m.kenmeiManga.id),
+  );
+
+  let confidenceFiltered = 0;
+  let formatFiltered = 0;
+  let genreFiltered = 0;
+  let statusFiltered = 0;
+  let yearFiltered = 0;
+  let tagFiltered = 0;
+
+  for (const match of excludedMatches) {
+    if (failsConfidenceFilter(match, filters)) {
+      confidenceFiltered++;
+    }
+    if (failsFormatFilter(match, filters)) {
+      formatFiltered++;
+    }
+    if (failsGenreFilter(match, filters)) {
+      genreFiltered++;
+    }
+    if (failsStatusFilter(match, filters)) {
+      statusFiltered++;
+    }
+    if (failsYearFilter(match, filters)) {
+      yearFiltered++;
+    }
+    if (failsTagFilter(match, filters)) {
+      tagFiltered++;
+    }
+  }
+
+  return {
+    totalMatches: matches.length,
+    filteredCount: filteredMatches.length,
+    confidenceFiltered,
+    formatFiltered,
+    genreFiltered,
+    statusFiltered,
+    yearFiltered,
+    tagFiltered,
+  };
+}
+
+/**
  * Advanced filter worker pool manager
  */
 export class AdvancedFilterWorkerPool {
@@ -91,7 +257,7 @@ export class AdvancedFilterWorkerPool {
     }
 
     try {
-      const pool = getWorkerPool();
+      const pool = getGenericWorkerPool();
       await pool.initialize();
       this.initialized = true;
       console.info("[AdvancedFilterWorkerPool] Pool initialized");
@@ -121,7 +287,7 @@ export class AdvancedFilterWorkerPool {
     }
 
     try {
-      const pool = getWorkerPool();
+      const pool = getGenericWorkerPool();
 
       // Check if workers are available
       if (!pool.isAvailable()) {
@@ -146,7 +312,7 @@ export class AdvancedFilterWorkerPool {
    * Execute filtering on a worker via the MatchingWorkerPool API
    */
   private async executeOnWorker(
-    pool: ReturnType<typeof getWorkerPool>,
+    pool: ReturnType<typeof getGenericWorkerPool>,
     taskId: string,
     matches: MangaMatchResult[],
     filters: AdvancedMatchFilters,
@@ -213,6 +379,12 @@ export class AdvancedFilterWorkerPool {
       // Set timeout for task completion (30 seconds)
       const timeout = setTimeout(() => {
         pool.cancelTask(taskId);
+        // Reject the promise with a TimeoutError to notify caller
+        task.reject(
+          new Error(
+            `[AdvancedFilterWorkerPool] Filter task ${taskId} timed out after 30s`,
+          ),
+        );
         console.warn(
           `[AdvancedFilterWorkerPool] Filter task ${taskId} timed out after 30s`,
         );
@@ -253,15 +425,17 @@ export class AdvancedFilterWorkerPool {
     const totalTime = performance.now() - startTime;
 
     // Calculate statistics based on what was filtered out
+    const statsRecord = computeFilterStats(matches, filteredMatches, filters);
+
     const stats = {
-      totalMatches: matches.length,
-      filteredCount: filteredMatches.length,
-      confidenceFiltered: 0,
-      formatFiltered: 0,
-      genreFiltered: 0,
-      statusFiltered: 0,
-      yearFiltered: 0,
-      tagFiltered: 0,
+      totalMatches: statsRecord.totalMatches,
+      filteredCount: statsRecord.filteredCount,
+      confidenceFiltered: statsRecord.confidenceFiltered,
+      formatFiltered: statsRecord.formatFiltered,
+      genreFiltered: statsRecord.genreFiltered,
+      statusFiltered: statsRecord.statusFiltered,
+      yearFiltered: statsRecord.yearFiltered,
+      tagFiltered: statsRecord.tagFiltered,
     };
 
     return {
@@ -287,12 +461,20 @@ export class AdvancedFilterWorkerPool {
   }
 
   /**
+   * Get the number of currently available workers
+   */
+  getAvailableWorkerCount(): number {
+    const pool = getGenericWorkerPool();
+    return this.initialized ? pool.getAvailableWorkerCount() : 0;
+  }
+
+  /**
    * Terminate the pool
    */
   terminate(): void {
     if (this.initialized) {
       try {
-        const pool = getWorkerPool();
+        const pool = getGenericWorkerPool();
         pool.terminate();
         this.initialized = false;
       } catch (error) {

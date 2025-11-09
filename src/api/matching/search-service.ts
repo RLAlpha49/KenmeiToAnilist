@@ -56,7 +56,7 @@ async function tryMatchWithWorkers(
     // Build candidates map for worker
     const candidatesMap = new Map<string, AniListManga[]>();
     candidatesMap.set(
-      String(kenmeiManga.id),
+      "0",
       potentialMatches.map((match) => match.manga),
     );
 

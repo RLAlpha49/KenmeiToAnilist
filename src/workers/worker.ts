@@ -19,6 +19,7 @@
 
 import { findBestMatches } from "@/api/matching/match-engine";
 import { filterByAdvancedCriteria } from "@/components/sync/filtering";
+import { normalizationAlgorithmsMap } from "@/utils/normalization";
 import type { AniListManga } from "@/api/anilist/types";
 import type {
   MatchBatchMessage,
@@ -56,41 +57,32 @@ interface CSVParserState {
 const activeTasks = new Set<string>();
 
 /**
+ * Extract detailed error information from an Error or unknown value
+ */
+function getErrorDetails(error: unknown): {
+  message: string;
+  name?: string;
+  stack?: string;
+  causeMessage?: string;
+} {
+  if (error instanceof Error) {
+    return {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+      causeMessage:
+        error.cause instanceof Error ? error.cause.message : undefined,
+    };
+  }
+  return {
+    message: String(error),
+  };
+}
+
+/**
  * CSV-specific task states indexed by taskId
  */
 const csvParserStates = new Map<string, CSVParserState>();
-
-/**
- * Title normalization algorithms - replicated from deleted worker file
- */
-function normalizeForMatching(str: string): string {
-  return str
-    .toLowerCase()
-    .replaceAll("-", "")
-    .replaceAll(/[^\w\s]/g, "")
-    .replaceAll(/\s+/g, " ")
-    .replaceAll("_", " ")
-    .trim();
-}
-
-function processTitle(title: string): string {
-  const withoutParentheses = title.replaceAll(/\s*\([^()]*\)\s*/g, " ");
-
-  return withoutParentheses
-    .replaceAll("-", " ")
-    .replaceAll("\u2018", "'")
-    .replaceAll("\u2019", "'")
-    .replaceAll("\u201C", '"')
-    .replaceAll("\u201D", '"')
-    .replaceAll("_", " ")
-    .replaceAll(/\s{2,}/g, " ")
-    .trim();
-}
-
-const normalizationAlgorithmsMap: Record<string, (title: string) => string> = {
-  normalizeForMatching,
-  processTitle,
-};
 
 // ============================================================================
 // MATCHING OPERATIONS
@@ -178,10 +170,7 @@ async function handleMatchBatch(message: MatchBatchMessage): Promise<void> {
       type: "ERROR",
       payload: {
         taskId,
-        error: {
-          message: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-        },
+        error: getErrorDetails(error),
       },
     });
   } finally {
@@ -343,10 +332,7 @@ function handleCSVChunk(message: CSVChunkMessage): void {
             type: "ERROR",
             payload: {
               taskId,
-              error: {
-                message: error instanceof Error ? error.message : String(error),
-                stack: error instanceof Error ? error.stack : undefined,
-              },
+              error: getErrorDetails(error),
             },
           });
           activeTasks.delete(taskId);
@@ -362,10 +348,7 @@ function handleCSVChunk(message: CSVChunkMessage): void {
       type: "ERROR",
       payload: {
         taskId,
-        error: {
-          message: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-        },
+        error: getErrorDetails(error),
       },
     });
     activeTasks.delete(taskId);
@@ -383,13 +366,176 @@ function handleCSVChunk(message: CSVChunkMessage): void {
 function handleCancel(message: CancelMessage): void {
   const { taskId } = message.payload;
   console.debug(`[Worker] ⏹️ Cancel requested for task ${taskId}`);
+
+  // Check if a CSV task is active for this taskId
+  const csvState = csvParserStates.get(taskId);
+  const hadCSVTask = !!csvState;
+
   activeTasks.delete(taskId);
   csvParserStates.delete(taskId);
+
+  // If CSV task was active, send terminal event to UI
+  if (hadCSVTask) {
+    self.postMessage({
+      type: "CSV_CANCELLED",
+      payload: { taskId },
+    });
+  }
 }
 
 // ============================================================================
 // ADVANCED FILTER OPERATIONS
 // ============================================================================
+
+/**
+ * Check if a match fails the confidence filter
+ */
+function failsConfidenceFilter(match: any, filters: any): boolean {
+  let confidence = 0;
+
+  if (match.selectedMatch && match.anilistMatches) {
+    const selectedEntry = match.anilistMatches.find(
+      (m: any) => m.manga?.id === match.selectedMatch?.id,
+    );
+    confidence = selectedEntry?.confidence ?? 0;
+  } else if (match.anilistMatches?.length) {
+    confidence = match.anilistMatches[0].confidence ?? 0;
+  }
+
+  return (
+    confidence < filters.confidence.min || confidence > filters.confidence.max
+  );
+}
+
+/**
+ * Check if a match fails the format filter
+ */
+function failsFormatFilter(match: any, filters: any): boolean {
+  if (filters.formats.length === 0) {
+    return false;
+  }
+  const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
+  return !matchData?.format || !filters.formats.includes(matchData.format);
+}
+
+/**
+ * Check if a match fails the genre filter
+ */
+function failsGenreFilter(match: any, filters: any): boolean {
+  if (filters.genres.length === 0) {
+    return false;
+  }
+  const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
+  const genres = matchData?.genres || [];
+  const genresLower = new Set(genres.map((g: string) => g.toLowerCase()));
+  return !filters.genres.some((fg: string) =>
+    genresLower.has(fg.toLowerCase()),
+  );
+}
+
+/**
+ * Check if a match fails the publication status filter
+ */
+function failsStatusFilter(match: any, filters: any): boolean {
+  if (filters.publicationStatuses.length === 0) {
+    return false;
+  }
+  const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
+  return (
+    !matchData?.status ||
+    !filters.publicationStatuses.includes(matchData.status)
+  );
+}
+
+/**
+ * Check if a match fails the year filter
+ */
+function failsYearFilter(match: any, filters: any): boolean {
+  if (!filters.yearRange) {
+    return false;
+  }
+  if (filters.yearRange.min === null && filters.yearRange.max === null) {
+    return false;
+  }
+  const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
+  const year = matchData?.startDate?.year;
+
+  if (year === undefined) {
+    return true;
+  }
+  if (filters.yearRange.min !== null && year < filters.yearRange.min) {
+    return true;
+  }
+  return filters.yearRange.max !== null && year > filters.yearRange.max;
+}
+
+/**
+ * Check if a match fails the tag filter
+ */
+function failsTagFilter(match: any, filters: any): boolean {
+  if (!filters.tags || filters.tags.length === 0) {
+    return false;
+  }
+  const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
+  const tags = matchData?.tags || [];
+  const tagNames = new Set(tags.map((t: any) => t.name.toLowerCase()));
+  return !filters.tags.some((ft: string) => tagNames.has(ft.toLowerCase()));
+}
+
+/**
+ * Compute filter statistics by analyzing excluded matches
+ */
+function computeFilterStats(
+  matches: any[],
+  filteredMatches: any[],
+  filters: any,
+): Record<string, number> {
+  const filteredMatchIds = new Set(
+    filteredMatches.map((m) => m.kenmeiManga.id),
+  );
+  const excludedMatches = matches.filter(
+    (m) => !filteredMatchIds.has(m.kenmeiManga.id),
+  );
+
+  let confidenceFiltered = 0;
+  let formatFiltered = 0;
+  let genreFiltered = 0;
+  let statusFiltered = 0;
+  let yearFiltered = 0;
+  let tagFiltered = 0;
+
+  for (const match of excludedMatches) {
+    if (failsConfidenceFilter(match, filters)) {
+      confidenceFiltered++;
+    }
+    if (failsFormatFilter(match, filters)) {
+      formatFiltered++;
+    }
+    if (failsGenreFilter(match, filters)) {
+      genreFiltered++;
+    }
+    if (failsStatusFilter(match, filters)) {
+      statusFiltered++;
+    }
+    if (failsYearFilter(match, filters)) {
+      yearFiltered++;
+    }
+    if (failsTagFilter(match, filters)) {
+      tagFiltered++;
+    }
+  }
+
+  return {
+    totalMatches: matches.length,
+    filteredCount: filteredMatches.length,
+    confidenceFiltered,
+    formatFiltered,
+    genreFiltered,
+    statusFiltered,
+    yearFiltered,
+    tagFiltered,
+  };
+}
 
 /**
  * Handle advanced filtering operation
@@ -412,15 +558,17 @@ function handleAdvancedFilter(message: AdvancedFilterMessage): void {
     const totalTime = performance.now() - startTime;
 
     // Calculate statistics based on what was filtered out
+    const statsRecord = computeFilterStats(matches, filteredMatches, filters);
+
     const stats = {
-      totalMatches: matches.length,
-      filteredCount: filteredMatches.length,
-      confidenceFiltered: 0,
-      formatFiltered: 0,
-      genreFiltered: 0,
-      statusFiltered: 0,
-      yearFiltered: 0,
-      tagFiltered: 0,
+      totalMatches: statsRecord.totalMatches,
+      filteredCount: statsRecord.filteredCount,
+      confidenceFiltered: statsRecord.confidenceFiltered,
+      formatFiltered: statsRecord.formatFiltered,
+      genreFiltered: statsRecord.genreFiltered,
+      statusFiltered: statsRecord.statusFiltered,
+      yearFiltered: statsRecord.yearFiltered,
+      tagFiltered: statsRecord.tagFiltered,
     };
 
     const result: AdvancedFilterResultMessage = {
@@ -592,10 +740,7 @@ function handleTitleNormalization(message: TitleNormalizationMessage): void {
       type: "ERROR",
       payload: {
         taskId,
-        error: {
-          message: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-        },
+        error: getErrorDetails(error),
       },
     });
   } finally {
@@ -740,10 +885,7 @@ async function handleStatisticsAggregation(
       type: "ERROR",
       payload: {
         taskId,
-        error: {
-          message: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-        },
+        error: getErrorDetails(error),
       },
     });
   } finally {
@@ -814,10 +956,7 @@ globalThis.onmessage = async (event: MessageEvent<WorkerInboundMessage>) => {
         type: "ERROR",
         payload: {
           taskId: (message as any).payload.taskId,
-          error: {
-            message: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined,
-          },
+          error: getErrorDetails(error),
         },
       });
     }

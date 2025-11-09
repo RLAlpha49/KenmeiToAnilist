@@ -116,7 +116,7 @@ export function executeMatchingWithWorkers(
       // Always use the upfront taskId - it's guaranteed to be valid
       // For sync fallback (no pool), this is a safe no-op
       if (pool) {
-        pool.cancelTask(taskId);
+        pool.cancelBatch(taskId);
       }
     },
   };
@@ -183,7 +183,7 @@ export async function executeMatchingOnMainThread(
  *
  * If you need to explicitly wait for worker initialization, use `awaitWorkerReady()`.
  *
- * @returns True if workers are currently available and ready for use
+ * @returns Minimum number of available workers across all pools (returns 0 if pools unavailable)
  *
  * @example
  * ```typescript
@@ -198,9 +198,26 @@ export async function executeMatchingOnMainThread(
  * }
  * ```
  */
-export function areWorkersAvailable(): boolean {
-  const pool = getWorkerPool();
-  return pool.isAvailable();
+export function areWorkersAvailable(): number {
+  const matchingPool = getWorkerPool();
+  const { getCSVWorkerPool } = require("./csv-worker-pool");
+  const { getFilterWorkerPool } = require("./filter-worker-pool");
+  const {
+    getTitleNormalizationPool,
+  } = require("./title-normalization-worker-pool");
+  const { getStatisticsWorkerPool } = require("./statistics-worker-pool");
+
+  // Get available worker counts from each pool
+  const counts = [
+    matchingPool.getAvailableWorkerCount?.() ?? 0,
+    getCSVWorkerPool?.()?.getAvailableWorkerCount?.() ?? 0,
+    getFilterWorkerPool?.()?.getAvailableWorkerCount?.() ?? 0,
+    getTitleNormalizationPool?.()?.getAvailableWorkerCount?.() ?? 0,
+    getStatisticsWorkerPool?.()?.getAvailableWorkerCount?.() ?? 0,
+  ];
+
+  // Return the minimum available count (bottleneck is the most constrained pool)
+  return Math.min(...counts);
 }
 
 /**

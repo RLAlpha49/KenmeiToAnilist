@@ -13,7 +13,7 @@ import type {
   ProgressMessage,
 } from "./types";
 import type { KenmeiManga, KenmeiStatus } from "@/api/kenmei/types";
-import { getWorkerPool } from "./worker-pool";
+import { getGenericWorkerPool } from "./worker-pool";
 
 function generateUUID(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replaceAll(
@@ -60,7 +60,7 @@ export class CSVWorkerPool {
     if (this.initialized) {
       return;
     }
-    const pool = getWorkerPool();
+    const pool = getGenericWorkerPool();
     await pool.initialize();
     this.initialized = true;
   }
@@ -69,8 +69,16 @@ export class CSVWorkerPool {
    * Check if pool is available
    */
   isAvailable(): boolean {
-    const pool = getWorkerPool();
+    const pool = getGenericWorkerPool();
     return this.initialized && pool.isAvailable();
+  }
+
+  /**
+   * Get the number of currently available workers
+   */
+  getAvailableWorkerCount(): number {
+    const pool = getGenericWorkerPool();
+    return this.initialized ? pool.getAvailableWorkerCount() : 0;
   }
 
   /**
@@ -113,7 +121,7 @@ export class CSVWorkerPool {
     options: { defaultStatus?: KenmeiStatus } = {},
   ): Promise<CSVResult> {
     return new Promise<CSVResult>((resolve, reject) => {
-      const pool = getWorkerPool();
+      const pool = getGenericWorkerPool();
 
       // Ensure pool is initialized before checking availability
       if (!pool.isAvailable()) {
@@ -177,9 +185,28 @@ export class CSVWorkerPool {
       return;
     }
 
-    // Wrap resolve/reject to handle CSV result format
+    // Wrap resolve to adapt raw payload to expected CSV result shape
     const wrappedResolve = (result: any) => {
-      resolve(result);
+      // CSV_COMPLETE and CSV_CANCELLED return raw payload
+      // For CSV_COMPLETE: { taskId, manga, stats }
+      // For CSV_CANCELLED: { taskId }
+      if (result.manga) {
+        // CSV_COMPLETE case
+        resolve({
+          manga: result.manga,
+          stats: result.stats,
+        });
+      } else {
+        // CSV_CANCELLED case - return empty result
+        resolve({
+          manga: [],
+          stats: {
+            totalParsed: 0,
+            processingTimeMs: 0,
+            bytesProcessed: 0,
+          },
+        });
+      }
     };
 
     // Register task
@@ -271,7 +298,7 @@ export class CSVWorkerPool {
    * Cancel a parsing task
    */
   cancelTask(taskId: string): void {
-    const pool = getWorkerPool();
+    const pool = getGenericWorkerPool();
     pool.cancelTask(taskId);
   }
 
@@ -283,7 +310,7 @@ export class CSVWorkerPool {
     activeWorkers: number;
     activeTasks: number;
   } {
-    const pool = getWorkerPool();
+    const pool = getGenericWorkerPool();
     return pool.getStats();
   }
 
@@ -291,7 +318,7 @@ export class CSVWorkerPool {
    * Terminate the pool
    */
   terminate(): void {
-    const pool = getWorkerPool();
+    const pool = getGenericWorkerPool();
     pool.terminate();
   }
 }

@@ -69,7 +69,9 @@ export interface ErrorMessage {
     taskId: string;
     error: {
       message: string;
+      name?: string;
       stack?: string;
+      causeMessage?: string;
     };
   };
 }
@@ -115,6 +117,17 @@ export interface CSVCompleteMessage {
       processingTimeMs: number;
       bytesProcessed: number;
     };
+  };
+}
+
+/**
+ * Message sent from worker when a CSV parsing operation is cancelled.
+ * Signals that the CSV task state has been cleaned up and parsing has stopped.
+ */
+export interface CSVCancelledMessage {
+  type: "CSV_CANCELLED";
+  payload: {
+    taskId: string;
   };
 }
 
@@ -435,6 +448,7 @@ export type WorkerMessage =
   | CSVStartMessage
   | CSVChunkMessage
   | CSVCompleteMessage
+  | CSVCancelledMessage
   | AdvancedFilterMessage
   | AdvancedFilterResultMessage
   | TitleNormalizationProgressMessage

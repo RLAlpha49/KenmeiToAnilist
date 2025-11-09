@@ -12,7 +12,7 @@ import type { KenmeiManga } from "@/api/kenmei/types";
 import type { AniListManga, MangaMatchResult } from "@/api/anilist/types";
 import type { MatchEngineConfig } from "@/api/matching/match-engine";
 import { findBestMatches } from "@/api/matching/match-engine";
-import { getWorkerPool } from "./worker-pool";
+import { getGenericWorkerPool } from "./worker-pool";
 
 function generateUUID(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replaceAll(
@@ -47,7 +47,7 @@ export class MatchingWorkerPool {
     if (this.initialized) {
       return;
     }
-    const pool = getWorkerPool({
+    const pool = getGenericWorkerPool({
       maxWorkers: this.config.maxWorkers,
       enableWorkers: this.config.enableWorkers,
       fallbackToMainThread: this.config.fallbackToMainThread,
@@ -60,8 +60,16 @@ export class MatchingWorkerPool {
    * Check if pool is available
    */
   isAvailable(): boolean {
-    const pool = getWorkerPool();
+    const pool = getGenericWorkerPool();
     return this.initialized && pool.isAvailable();
+  }
+
+  /**
+   * Get the number of currently available workers in the pool
+   */
+  getAvailableWorkerCount(): number {
+    const pool = getGenericWorkerPool();
+    return this.initialized ? pool.getAvailableWorkerCount() : 0;
   }
 
   /**
@@ -78,7 +86,7 @@ export class MatchingWorkerPool {
     ) => void,
     taskId?: string,
   ): Promise<MatchBatchExecution> {
-    const pool = getWorkerPool();
+    const pool = getGenericWorkerPool();
 
     // Ensure pool is initialized
     if (!pool.isAvailable()) {
@@ -133,10 +141,24 @@ export class MatchingWorkerPool {
         kenmeiManga: kenmeiMangaList,
         anilistCandidates: Array.from(anilistMangaMap),
         config,
-        resolve,
+        resolve: (result: any) => {
+          // Adapt raw payload to expected shape: extract results array
+          resolve(result.results || result);
+        },
         reject,
         cancelled: false,
         progressCallback,
+        onProgress: (message: any) => {
+          // Adapt generic message to typed callback
+          if (
+            message.type === "PROGRESS" &&
+            progressCallback &&
+            message.payload
+          ) {
+            const { current, total, currentTitle } = message.payload;
+            progressCallback(current, total, currentTitle);
+          }
+        },
         workerIndex,
       };
 
@@ -195,7 +217,7 @@ export class MatchingWorkerPool {
    * Cancel a batch operation
    */
   cancelBatch(taskId: string): void {
-    const pool = getWorkerPool();
+    const pool = getGenericWorkerPool();
     pool.cancelTask(taskId);
   }
 
@@ -207,7 +229,7 @@ export class MatchingWorkerPool {
     activeWorkers: number;
     activeTasks: number;
   } {
-    const pool = getWorkerPool();
+    const pool = getGenericWorkerPool();
     return pool.getStats();
   }
 
@@ -215,7 +237,7 @@ export class MatchingWorkerPool {
    * Terminate the pool
    */
   terminate(): void {
-    const pool = getWorkerPool();
+    const pool = getGenericWorkerPool();
     pool.terminate();
   }
 }

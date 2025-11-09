@@ -8,7 +8,7 @@
  */
 
 import type { TitleNormalizationMessage } from "./types";
-import { getWorkerPool } from "./worker-pool";
+import { getGenericWorkerPool } from "./worker-pool";
 
 /**
  * Interface for normalized cache results from worker.
@@ -55,7 +55,7 @@ export class TitleNormalizationWorkerPool {
       return;
     }
     console.info("[TitleNormalizationWorkerPool] 🔧 Initializing pool...");
-    const pool = getWorkerPool();
+    const pool = getGenericWorkerPool();
     await pool.initialize();
     this.initialized = true;
     console.info("[TitleNormalizationWorkerPool] ✅ Pool initialized");
@@ -65,7 +65,7 @@ export class TitleNormalizationWorkerPool {
    * Check if pool is available
    */
   isAvailable(): boolean {
-    const pool = getWorkerPool();
+    const pool = getGenericWorkerPool();
     const available = this.initialized && pool.isAvailable();
     if (!available) {
       console.warn(
@@ -97,7 +97,7 @@ export class TitleNormalizationWorkerPool {
       await this.initialize();
     }
 
-    const pool = getWorkerPool();
+    const pool = getGenericWorkerPool();
     const effectiveTaskId = taskId || this.generateTaskId();
 
     console.info(
@@ -148,9 +148,12 @@ export class TitleNormalizationWorkerPool {
             `[TitleNormalizationWorkerPool] ✅ Task ${effectiveTaskId} resolved with result`,
           );
           resolve({
-            caches: result.caches,
+            caches: result.caches || {},
             deltas: result.deltas,
-            timing: result.timing,
+            timing: result.timing || {
+              processingTimeMs: 0,
+              totalTitlesProcessed: 0,
+            },
           });
         },
         reject: (error: Error) => {
@@ -216,7 +219,7 @@ export class TitleNormalizationWorkerPool {
     console.info(
       `[TitleNormalizationWorkerPool] ⏹️ Cancelling normalization task: ${taskId}`,
     );
-    const pool = getWorkerPool();
+    const pool = getGenericWorkerPool();
     pool.cancelTask(taskId);
     console.debug(
       `[TitleNormalizationWorkerPool] ✓ Cancel request sent for ${taskId}`,
@@ -228,6 +231,14 @@ export class TitleNormalizationWorkerPool {
    */
   private generateTaskId(): string {
     return `title-norm-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  }
+
+  /**
+   * Get the number of currently available workers
+   */
+  getAvailableWorkerCount(): number {
+    const pool = getGenericWorkerPool();
+    return this.initialized ? pool.getAvailableWorkerCount() : 0;
   }
 }
 

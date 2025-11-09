@@ -52,3 +52,6 @@ export type {
 
 // Re-export from pool module to avoid circular dependency
 export { getWorkerPool, workerPool } from "./pool";
+
+// Re-export generic pool for internal use by specialized pools
+export { getGenericWorkerPool } from "./worker-pool";

@@ -138,6 +138,16 @@ export class WorkerPool {
   }
 
   /**
+   * Get the number of currently available (not busy) workers
+   */
+  getAvailableWorkerCount(): number {
+    if (!this.initialized || this.useFallback || this.workers.length === 0) {
+      return 0;
+    }
+    return this.workerBusy.filter((busy) => !busy).length;
+  }
+
+  /**
    * Select an available worker
    */
   selectWorker(): number {
@@ -204,6 +214,12 @@ export class WorkerPool {
       return;
     }
 
+    // If task is cancelled, handle terminal messages and skip non-terminal
+    if (task.cancelled) {
+      this.handleCancelledTaskMessage(taskId, task, workerIndex, message);
+      return;
+    }
+
     switch (message.type) {
       case "PROGRESS":
       case "TITLE_NORMALIZATION_PROGRESS":
@@ -214,38 +230,11 @@ export class WorkerPool {
 
       case "RESULT":
       case "CSV_COMPLETE":
+      case "CSV_CANCELLED":
       case "ADVANCED_FILTER_RESULT":
       case "TITLE_NORMALIZATION_RESULT":
       case "STATISTICS_AGGREGATION_RESULT": {
-        const payload = (message as any).payload;
-        let result: Record<string, unknown>;
-
-        if (message.type === "CSV_COMPLETE") {
-          result = { manga: payload.manga, stats: payload.stats };
-        } else if (message.type === "ADVANCED_FILTER_RESULT") {
-          result = {
-            filteredMatches: payload.filteredMatches,
-            stats: payload.stats,
-            timing: payload.timing,
-          };
-        } else if (message.type === "TITLE_NORMALIZATION_RESULT") {
-          result = {
-            caches: payload.caches,
-            deltas: payload.deltas,
-            timing: payload.timing,
-          };
-        } else if (message.type === "STATISTICS_AGGREGATION_RESULT") {
-          result = {
-            filteredData: payload.filteredData,
-            filterOptions: payload.filterOptions,
-            comparisonDatasets: payload.comparisonDatasets,
-            cacheKey: payload.cacheKey,
-            timing: payload.timing,
-          };
-        } else {
-          result = { results: payload.results };
-        }
-
+        const result = this.extractMessageResult(message);
         task.resolve(result);
         this.completeTask(taskId);
         console.info(
@@ -256,10 +245,22 @@ export class WorkerPool {
 
       case "ERROR": {
         const payload = (message as any).payload;
-        task.reject(new Error(`Worker error: ${payload.error.message}`));
+        const errorDetails = payload.error;
+        const error = new Error(errorDetails.message);
+        // Attach additional error properties from worker
+        if (errorDetails.name) {
+          error.name = errorDetails.name;
+        }
+        if (errorDetails.stack) {
+          error.stack = errorDetails.stack;
+        }
+        if (errorDetails.causeMessage) {
+          (error as any).cause = new Error(errorDetails.causeMessage);
+        }
+        task.reject(error);
         this.completeTask(taskId);
         console.error(
-          `[WorkerPool] ❌ Worker ${workerIndex} error: ${payload.error.message}`,
+          `[WorkerPool] ❌ Worker ${workerIndex} error: ${errorDetails.message}`,
         );
         break;
       }
@@ -267,6 +268,61 @@ export class WorkerPool {
   }
 
   /**
+   * Handle messages from cancelled tasks
+   * Treats terminal messages as completion and skips non-terminal
+   */
+  private handleCancelledTaskMessage(
+    taskId: string,
+    task: WorkerTask,
+    workerIndex: number,
+    message: WorkerMessage,
+  ): void {
+    // Clear any pending cancel timeout
+    if ((task as any).cancelTimeoutHandle) {
+      clearTimeout((task as any).cancelTimeoutHandle);
+    }
+
+    const isTerminalMessage =
+      message.type === "RESULT" ||
+      message.type === "CSV_COMPLETE" ||
+      message.type === "CSV_CANCELLED" ||
+      message.type === "ADVANCED_FILTER_RESULT" ||
+      message.type === "TITLE_NORMALIZATION_RESULT" ||
+      message.type === "STATISTICS_AGGREGATION_RESULT" ||
+      message.type === "ERROR";
+
+    if (!isTerminalMessage) {
+      // Non-terminal message from cancelled task, skip and wait for terminal
+      return;
+    }
+
+    // Process terminal message
+    if (message.type === "ERROR") {
+      console.debug(
+        `[WorkerPool] 📋 Cancelled task ${taskId} received error, discarding`,
+      );
+    } else {
+      console.debug(
+        `[WorkerPool] 📋 Cancelled task ${taskId} received result, discarding`,
+      );
+    }
+
+    this.completeTask(taskId);
+  }
+
+  /**
+   * Extract and format result from worker message
+   */
+  /**
+   * Extract raw message payload without shape-specific adaptation.
+   * Each feature-specific pool wrapper is responsible for adapting the payload
+   * to its expected shape, maintaining clean separation of concerns.
+   */
+  private extractMessageResult(
+    message: WorkerMessage,
+  ): Record<string, unknown> {
+    return (message as any).payload;
+  } /**
    * Handle worker errors
    */
   private handleWorkerError(workerIndex: number, error: ErrorEvent): void {
@@ -307,15 +363,40 @@ export class WorkerPool {
 
   /**
    * Cancel a task
+   * Sets a cancelled flag and posts a CANCEL message but does not complete yet.
+   * Task will be completed when terminal message is received or timeout fires.
    */
   cancelTask(taskId: string): void {
     const task = this.tasks.get(taskId);
     if (task?.workerIndex !== undefined) {
+      // Mark task as cancelled
+      task.cancelled = true;
+
+      // Post CANCEL message to worker
       this.workers[task.workerIndex].postMessage({
         type: "CANCEL",
         payload: { taskId },
       });
-      this.completeTask(taskId);
+
+      // Set a timeout fallback to ensure task doesn't hang indefinitely
+      // If no terminal message within 5 seconds, force completion
+      const timeoutHandle = setTimeout(() => {
+        const stillExistingTask = this.tasks.get(taskId);
+        if (stillExistingTask) {
+          stillExistingTask.reject(
+            new Error(
+              `Task ${taskId} cancelled and timed out waiting for worker response`,
+            ),
+          );
+          this.completeTask(taskId);
+          console.warn(
+            `[WorkerPool] ⏱️ Cancelled task ${taskId} timed out after 5s, forcing completion`,
+          );
+        }
+      }, 5000);
+
+      // Store timeout handle for potential cleanup
+      (task as any).cancelTimeoutHandle = timeoutHandle;
     }
   }
 
@@ -354,14 +435,18 @@ export class WorkerPool {
 let workerPoolInstance: WorkerPool | null = null;
 
 /**
- * Get or create the worker pool singleton
+ * Get or create the generic worker pool singleton
+ * @internal Use this for low-level worker pool access. Most code should use pool.ts exports.
  */
-export function getWorkerPool(config?: Partial<WorkerPoolConfig>): WorkerPool {
+export function getGenericWorkerPool(
+  config?: Partial<WorkerPoolConfig>,
+): WorkerPool {
   workerPoolInstance ??= new WorkerPool(config);
   return workerPoolInstance;
 }
 
 /**
  * Get the singleton instance
+ * @internal Low-level access to the generic pool
  */
-export const workerPool = getWorkerPool();
+export const workerPool = getGenericWorkerPool();

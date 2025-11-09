@@ -11,7 +11,7 @@ import type {
 } from "@/utils/statisticsAdapter";
 import type { ReadingHistory } from "@/utils/storage";
 import type { StatisticsFilters, ComparisonMode } from "@/types/statistics";
-import { getWorkerPool } from "./worker-pool";
+import { getGenericWorkerPool } from "./worker-pool";
 
 /**
  * Generate a UUID v4 string
@@ -129,7 +129,7 @@ export class StatisticsAggregationWorkerPool {
     if (this.initialized) {
       return;
     }
-    const pool = getWorkerPool({
+    const pool = getGenericWorkerPool({
       maxWorkers: this.config.maxWorkers,
       enableWorkers: this.config.enableWorkers,
       fallbackToMainThread: this.config.fallbackToMainThread,
@@ -161,7 +161,7 @@ export class StatisticsAggregationWorkerPool {
     }
 
     const mainTaskId = taskId || generateUUID();
-    const pool = getWorkerPool({
+    const pool = getGenericWorkerPool({
       maxWorkers: this.config.maxWorkers,
       enableWorkers: this.config.enableWorkers,
       fallbackToMainThread: this.config.fallbackToMainThread,
@@ -222,10 +222,37 @@ export class StatisticsAggregationWorkerPool {
       const task = {
         taskId: mainTaskId,
         type: "statistics" as const,
-        resolve,
+        resolve: (result: any) => {
+          resolve({
+            filteredData: result.filteredData,
+            filterOptions: result.filterOptions,
+            comparisonDatasets: result.comparisonDatasets || null,
+            cacheKey: result.cacheKey,
+            timing: result.timing || {
+              filteringTimeMs: 0,
+              aggregationTimeMs: 0,
+              totalTimeMs: 0,
+            },
+          });
+        },
         reject,
         cancelled: false,
         progressCallback,
+        onProgress: (message: any) => {
+          // Adapt STATISTICS_AGGREGATION_PROGRESS message to typed callback
+          if (
+            message.type === "STATISTICS_AGGREGATION_PROGRESS" &&
+            progressCallback &&
+            message.payload
+          ) {
+            const {
+              stage,
+              progress,
+              message: progressMessage,
+            } = message.payload;
+            progressCallback(stage, progress, progressMessage);
+          }
+        },
         workerIndex,
       };
 
@@ -342,8 +369,9 @@ export class StatisticsAggregationWorkerPool {
   /**
    * Cancel an aggregation operation
    */
-  cancelAggregation(_taskId: string): void {
-    // No-op for now; will be implemented in phase 2 with worker support
+  cancelAggregation(taskId: string): void {
+    const pool = getGenericWorkerPool();
+    pool.cancelTask(taskId);
   }
 
   /**
@@ -354,11 +382,8 @@ export class StatisticsAggregationWorkerPool {
     activeWorkers: number;
     activeTasks: number;
   } {
-    return {
-      totalWorkers: 0,
-      activeWorkers: 0,
-      activeTasks: 0,
-    };
+    const pool = getGenericWorkerPool();
+    return pool.getStats();
   }
 
   /**
@@ -366,6 +391,14 @@ export class StatisticsAggregationWorkerPool {
    */
   terminate(): void {
     // No-op for now
+  }
+
+  /**
+   * Get the number of currently available workers
+   */
+  getAvailableWorkerCount(): number {
+    const pool = getGenericWorkerPool();
+    return pool.getAvailableWorkerCount();
   }
 }
 
