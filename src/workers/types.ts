@@ -460,7 +460,9 @@ export type WorkerMessage =
   | JSONSerializeResultMessage
   | JSONDeserializeResultMessage
   | DuplicateDetectionProgressMessage
-  | DuplicateDetectionResultMessage;
+  | DuplicateDetectionResultMessage
+  | DataTablePreparationProgressMessage
+  | DataTablePreparationResultMessage;
 
 /**
  * Message sent to worker to filter and aggregate reading history.
@@ -701,6 +703,167 @@ export interface DuplicateDetectionResultMessage {
 }
 
 /**
+ * Precomputed cell data for a table row.
+ * Contains formatted values and computed metadata.
+ */
+export interface DataTableCellData {
+  /**
+   * Raw value from the manga item
+   */
+  value: string | number | undefined;
+
+  /**
+   * Formatted/displayed value
+   */
+  displayValue: string;
+
+  /**
+   * Computed row height in pixels for virtualization
+   */
+  rowHeight: number;
+}
+
+/**
+ * Message sent to worker to prepare a slice of data for table display.
+ * Worker precomputes derived columns, formats data, and computes row metadata.
+ */
+export interface DataTablePreparationMessage {
+  type: "DATA_TABLE_PREPARATION";
+  payload: {
+    taskId: string;
+    /**
+     * The manga data to prepare
+     */
+    data: Array<{
+      title: string;
+      status: string;
+      score?: number;
+      chapters_read?: number;
+      volumes_read?: number;
+      url?: string;
+      source?: string;
+      notes?: string;
+      last_read_at?: string;
+      created_at?: string;
+      updated_at?: string;
+    }>;
+    /**
+     * Viewport parameters for slicing
+     */
+    viewport: {
+      /**
+       * Starting index for the slice
+       */
+      startIndex: number;
+
+      /**
+       * Ending index for the slice
+       */
+      endIndex: number;
+
+      /**
+       * Items per page (for pagination context)
+       */
+      itemsPerPage: number;
+    };
+    /**
+     * Which columns are currently displayed
+     */
+    columnVisibility: {
+      score: boolean;
+      chapters: boolean;
+      volumes: boolean;
+      lastRead: boolean;
+    };
+    /**
+     * Current sort state
+     */
+    sortState?: {
+      column: string;
+      direction: "asc" | "desc";
+    };
+  };
+}
+
+/**
+ * Progress message for data table preparation, sent from worker.
+ * Reports progress during preprocessing.
+ */
+export interface DataTablePreparationProgressMessage {
+  type: "DATA_TABLE_PREPARATION_PROGRESS";
+  payload: {
+    taskId: string;
+    stage: "formatting" | "computing-metadata" | "complete";
+    progress: number; // 0-100
+    message: string;
+  };
+}
+
+/**
+ * Message sent from worker containing prepared table data.
+ * Includes precomputed cells, row metadata, and performance metrics.
+ */
+export interface DataTablePreparationResultMessage {
+  type: "DATA_TABLE_PREPARATION_RESULT";
+  payload: {
+    taskId: string;
+    /**
+     * Virtualized data slice with precomputed values
+     */
+    preparedData: Array<{
+      /**
+       * Original manga data
+       */
+      original: {
+        title: string;
+        status: string;
+        score?: number;
+        chapters_read?: number;
+        volumes_read?: number;
+        url?: string;
+        source?: string;
+        notes?: string;
+        last_read_at?: string;
+        created_at?: string;
+        updated_at?: string;
+      };
+
+      /**
+       * Precomputed formatted values for display
+       */
+      formattedValues: {
+        status: string;
+        score: string;
+        chapters: string;
+        volumes: string;
+        lastRead: string;
+      };
+
+      /**
+       * Computed row height for virtualization
+       */
+      rowHeight: number;
+    }>;
+    /**
+     * Index information
+     */
+    indexInfo: {
+      startIndex: number;
+      endIndex: number;
+      totalCount: number;
+    };
+    /**
+     * Performance timing information
+     */
+    timing: {
+      formattingTimeMs: number;
+      metadataComputationTimeMs: number;
+      totalTimeMs: number;
+    };
+  };
+}
+
+/**
  * Union type of all possible messages sent TO the worker.
  */
 export type WorkerInboundMessage =
@@ -714,7 +877,8 @@ export type WorkerInboundMessage =
   | ReadingHistoryFilterMessage
   | JSONSerializeMessage
   | JSONDeserializeMessage
-  | DuplicateDetectionMessage;
+  | DuplicateDetectionMessage
+  | DataTablePreparationMessage;
 
 /**
  * Internal task tracking structure for the worker pool.

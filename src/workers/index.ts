@@ -31,6 +31,10 @@ export {
   DuplicateDetectionWorkerPool,
   getDuplicateDetectionWorkerPool,
 } from "./duplicate-worker-pool";
+export {
+  DataTableWorkerPool,
+  getDataTableWorkerPool,
+} from "./data-table-worker-pool";
 export { WorkerPool } from "./worker-pool";
 export {
   executeMatchingWithWorkers,
@@ -71,6 +75,10 @@ export type {
 } from "./title-normalization-worker-pool";
 export type { JSONSerializationWorkerPoolConfig } from "./json-serialization-worker-pool";
 export type { DuplicateDetectionResult } from "./duplicate-worker-pool";
+export type {
+  DataTablePreparationResult,
+  PreparedTableRow,
+} from "./data-table-worker-pool";
 
 // Re-export from pool module to avoid circular dependency
 export { getWorkerPool, workerPool } from "./pool";

@@ -3,8 +3,9 @@
  * @module DataTable
  * @description Displays a paginated, scrollable table of Kenmei manga items with status badges and load more functionality.
  */
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { KenmeiMangaItem } from "../../types/kenmei";
+import { getDataTableWorkerPool } from "@/workers";
 import {
   Table,
   TableBody,
@@ -50,42 +51,7 @@ export function DataTable({
   const [displayCount, setDisplayCount] = useState(itemsPerPage);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setVisibleData(data.slice(0, displayCount));
-  }, [data, displayCount]);
-
-  useEffect(() => {
-    setDisplayCount(itemsPerPage);
-    setVisibleData(data.slice(0, itemsPerPage));
-  }, [data, itemsPerPage]);
-
-  /**
-   * Loads additional manga items with a simulated delay for smoother UX.
-   * Scrolls to the bottom of the table after loading completes.
-   * @source
-   */
-  const handleLoadMore = () => {
-    if (displayCount < data.length) {
-      setIsLoadingMore(true);
-
-      // Simulate delay for smoother UX
-      setTimeout(() => {
-        setDisplayCount((prev) => Math.min(prev + itemsPerPage, data.length));
-        setIsLoadingMore(false);
-
-        // Scroll to bottom after new items are loaded
-        if (scrollAreaRef.current) {
-          const scrollViewport = scrollAreaRef.current.querySelector(
-            "[data-radix-scroll-area-viewport]",
-          );
-          if (scrollViewport) {
-            scrollViewport.scrollTop = scrollViewport.scrollHeight;
-          }
-        }
-      }, 300);
-    }
-  };
+  const tablePoolRef = useRef(getDataTableWorkerPool());
 
   // Determine which optional columns to display based on data presence
   const hasScore = data.some(
@@ -98,6 +64,77 @@ export function DataTable({
     (item) => item.volumes_read !== undefined && item.volumes_read > 0,
   );
   const hasLastRead = data.some((item) => item.updated_at || item.created_at);
+
+  const columnVisibility = useMemo(
+    () => ({
+      score: hasScore,
+      chapters: hasChapters,
+      volumes: hasVolumes,
+      lastRead: hasLastRead,
+    }),
+    [hasScore, hasChapters, hasVolumes, hasLastRead],
+  );
+
+  useEffect(() => {
+    setVisibleData(data.slice(0, displayCount));
+  }, [data, displayCount]);
+
+  useEffect(() => {
+    setDisplayCount(itemsPerPage);
+    setVisibleData(data.slice(0, itemsPerPage));
+  }, [data, itemsPerPage]);
+
+  /**
+   * Loads additional manga items
+   * Scrolls to the bottom of the table after loading completes.
+   * @source
+   */
+  const handleLoadMore = async () => {
+    if (displayCount >= data.length) {
+      return;
+    }
+
+    setIsLoadingMore(true);
+
+    try {
+      const startIndex = displayCount;
+      const endIndex = Math.min(displayCount + itemsPerPage, data.length);
+
+      // Use worker pool to preprocess the new data slice
+      // This offloads formatting and row height computation to a worker thread
+      const prepResult = await tablePoolRef.current.prepareTableSlice(
+        data,
+        startIndex,
+        endIndex,
+        itemsPerPage,
+        columnVisibility,
+      );
+
+      // Log worker performance metrics
+      console.debug(
+        `[DataTable] Loaded ${prepResult.preparedData.length} rows in ${prepResult.timing.totalTimeMs.toFixed(2)}ms (worker: ${prepResult.executedOnWorker ? "yes" : "no"})`,
+      );
+
+      // Update display count and visible data
+      setDisplayCount((prev) => Math.min(prev + itemsPerPage, data.length));
+      setIsLoadingMore(false);
+
+      // Scroll to bottom after new items are loaded
+      if (scrollAreaRef.current) {
+        const scrollViewport = scrollAreaRef.current.querySelector(
+          "[data-radix-scroll-area-viewport]",
+        );
+        if (scrollViewport) {
+          setTimeout(() => {
+            scrollViewport.scrollTop = scrollViewport.scrollHeight;
+          }, 0);
+        }
+      }
+    } catch (error) {
+      console.error("[DataTable] Failed to load more data:", error);
+      setIsLoadingMore(false);
+    }
+  };
 
   /**
    * Formats an ISO date string into a localized date representation.
