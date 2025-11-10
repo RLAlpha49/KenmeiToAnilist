@@ -1,14 +1,6 @@
 /**
- * Advanced Filter Worker Pool
- *
- * Manages filtering operations through the shared worker pool.
- * Provides a convenient API for applying filters to match arrays.
- *
- * Features:
- * - Leverages existing worker pool infrastructure
- * - Task queuing and execution
- * - Error handling with main thread fallback
- * - Performance metrics
+ * Provides worker-pool-backed advanced filtering for manga match results with main-thread fallback.
+ * @source
  */
 
 import { getGenericWorkerPool } from "../core/worker-pool";
@@ -18,17 +10,14 @@ import type { AdvancedMatchFilters } from "@/types/matchingFilters";
 import { filterByAdvancedCriteria } from "@/components/sync/filtering";
 
 /**
- * Result from a filter operation
+ * Result of applying advanced filters to match results.
+ * @source
  */
 export interface FilterOperationResult {
-  /**
-   * The filtered matches
-   */
+  /** Filtered matches that satisfy all active filters. */
   filteredMatches: MangaMatchResult[];
 
-  /**
-   * Statistics about the filtering operation
-   */
+  /** Aggregated counts describing filter impact. */
   stats: {
     totalMatches: number;
     filteredCount: number;
@@ -40,22 +29,16 @@ export interface FilterOperationResult {
     tagFiltered: number;
   };
 
-  /**
-   * Performance timing information
-   */
+  /** Timing metrics for processing and filter application. */
   timing: {
     processingTimeMs: number;
     filterApplicationTimeMs: number;
   };
 
-  /**
-   * Whether this was executed on a worker or main thread
-   */
+  /** Indicates whether execution used a worker or the main thread. */
   executedOnWorker: boolean;
 
-  /**
-   * Optional debug information
-   */
+  /** Optional debug information about filtered matches. */
   debug?: {
     mismatchReasons: Array<{
       matchId: number;
@@ -65,14 +48,17 @@ export interface FilterOperationResult {
 }
 
 /**
- * Generate a unique task ID
+ * Generates a unique task id for filter operations.
+ * @returns A unique task id string.
+ * @source
  */
 function generateTaskId(): string {
   return `filter_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 }
 
 /**
- * Check if a match fails the confidence filter
+ * Returns true when a match falls outside the configured confidence range.
+ * @source
  */
 function failsConfidenceFilter(
   match: MangaMatchResult,
@@ -95,7 +81,8 @@ function failsConfidenceFilter(
 }
 
 /**
- * Check if a match fails the format filter
+ * Returns true when a match does not satisfy allowed formats.
+ * @source
  */
 function failsFormatFilter(
   match: MangaMatchResult,
@@ -109,7 +96,8 @@ function failsFormatFilter(
 }
 
 /**
- * Check if a match fails the genre filter
+ * Returns true when a match is missing any required genres.
+ * @source
  */
 function failsGenreFilter(
   match: MangaMatchResult,
@@ -125,7 +113,8 @@ function failsGenreFilter(
 }
 
 /**
- * Check if a match fails the publication status filter
+ * Returns true when a match does not match required publication statuses.
+ * @source
  */
 function failsStatusFilter(
   match: MangaMatchResult,
@@ -142,7 +131,8 @@ function failsStatusFilter(
 }
 
 /**
- * Check if a match fails the year filter
+ * Returns true when a match falls outside the configured year range.
+ * @source
  */
 function failsYearFilter(
   match: MangaMatchResult,
@@ -167,7 +157,8 @@ function failsYearFilter(
 }
 
 /**
- * Check if a match fails the tag filter
+ * Returns true when a match does not include required tags.
+ * @source
  */
 function failsTagFilter(
   match: MangaMatchResult,
@@ -183,7 +174,8 @@ function failsTagFilter(
 }
 
 /**
- * Compute filter statistics by analyzing excluded matches
+ * Computes aggregated statistics explaining how filters affected the result set.
+ * @source
  */
 function computeFilterStats(
   matches: MangaMatchResult[],
@@ -238,7 +230,8 @@ function computeFilterStats(
 }
 
 /**
- * Advanced filter worker pool manager
+ * Manages advanced filter tasks using the shared worker pool with robust fallbacks.
+ * @source
  */
 export class AdvancedFilterWorkerPool {
   private initialized = false;
@@ -249,7 +242,8 @@ export class AdvancedFilterWorkerPool {
   }
 
   /**
-   * Initialize the pool
+   * Initializes the worker-backed filtering environment once.
+   * @source
    */
   async initialize(): Promise<void> {
     if (this.initialized) {
@@ -272,8 +266,11 @@ export class AdvancedFilterWorkerPool {
   }
 
   /**
-   * Apply advanced filters to matches
-   * Executes on worker if available, falls back to main thread
+   * Applies advanced filters to matches using workers when available, falling back to main thread.
+   * @param matches - Candidate match results to filter.
+   * @param filters - Advanced filter configuration.
+   * @returns Filter operation result with stats and timing.
+   * @source
    */
   async filterMatches(
     matches: MangaMatchResult[],
@@ -309,7 +306,13 @@ export class AdvancedFilterWorkerPool {
   }
 
   /**
-   * Execute filtering on a worker via the MatchingWorkerPool API
+   * Executes filtering on a worker via the generic worker pool API.
+   * @param pool - Shared worker pool instance.
+   * @param taskId - Unique task id.
+   * @param matches - Matches to filter.
+   * @param filters - Filters to apply.
+   * @returns Filter operation result from worker.
+   * @source
    */
   private async executeOnWorker(
     pool: ReturnType<typeof getGenericWorkerPool>,
@@ -410,7 +413,11 @@ export class AdvancedFilterWorkerPool {
   }
 
   /**
-   * Execute filtering on main thread (fallback)
+   * Executes advanced filtering on the main thread when workers are unavailable.
+   * @param matches - Matches to filter.
+   * @param filters - Filters to apply.
+   * @returns Filter operation result computed on main thread.
+   * @source
    */
   private executeOnMainThread(
     matches: MangaMatchResult[],
@@ -451,7 +458,9 @@ export class AdvancedFilterWorkerPool {
   }
 
   /**
-   * Get pool statistics
+   * Returns basic initialization state for the filter worker pool.
+   * @returns Object indicating whether the pool is initialized.
+   * @source
    */
   getStats(): {
     initialized: boolean;
@@ -462,7 +471,9 @@ export class AdvancedFilterWorkerPool {
   }
 
   /**
-   * Get the number of currently available workers
+   * Returns the number of available workers for filter tasks.
+   * @returns Count of idle workers.
+   * @source
    */
   getAvailableWorkerCount(): number {
     const pool = getGenericWorkerPool();
@@ -470,7 +481,8 @@ export class AdvancedFilterWorkerPool {
   }
 
   /**
-   * Terminate the pool
+   * Terminates the underlying shared worker pool used for filtering.
+   * @source
    */
   terminate(): void {
     if (this.initialized) {
@@ -489,12 +501,16 @@ export class AdvancedFilterWorkerPool {
 }
 
 /**
- * Global singleton instance
+ * Global singleton instance for the advanced filter worker pool.
+ * @source
  */
 let filterPoolInstance: AdvancedFilterWorkerPool | null = null;
 
 /**
- * Get or create the singleton filter worker pool
+ * Returns the shared advanced filter worker pool instance, lazily creating it.
+ * @param maxWorkers - Optional maximum workers used on first creation.
+ * @returns Advanced filter worker pool singleton.
+ * @source
  */
 export function getFilterWorkerPool(
   maxWorkers?: number,

@@ -1,6 +1,6 @@
 /**
- * Type definitions for Web Worker communication protocol.
- * Defines message types and interfaces for worker-based matching operations.
+ * Shared worker communication contracts for matching, CSV, analytics and related operations.
+ * @source
  */
 
 import type { KenmeiManga, KenmeiStatus } from "@/api/kenmei/types";
@@ -13,7 +13,8 @@ import type { MatchEngineConfig } from "@/api/matching/match-engine";
 import type { AdvancedMatchFilters } from "@/types/matchingFilters";
 
 /**
- * Message sent to worker to initiate a batch matching operation.
+ * Inbound request to start a batch matching operation in the worker.
+ * @source
  */
 export interface MatchBatchMessage {
   type: "MATCH_BATCH";
@@ -26,7 +27,8 @@ export interface MatchBatchMessage {
 }
 
 /**
- * Message sent to worker to cancel an in-progress task.
+ * Inbound request to cancel an in-progress worker task.
+ * @source
  */
 export interface CancelMessage {
   type: "CANCEL";
@@ -36,8 +38,8 @@ export interface CancelMessage {
 }
 
 /**
- * Message sent from worker to report progress on a task.
- * Supports both count-based progress (for matching) and byte-based progress (for CSV).
+ * Outbound progress update from the worker for matching or CSV tasks.
+ * @source
  */
 export interface ProgressMessage {
   type: "PROGRESS";
@@ -54,7 +56,8 @@ export interface ProgressMessage {
 }
 
 /**
- * Message sent from worker when a task completes successfully.
+ * Outbound result payload for a successfully completed worker task.
+ * @source
  */
 export interface ResultMessage {
   type: "RESULT";
@@ -65,7 +68,8 @@ export interface ResultMessage {
 }
 
 /**
- * Message sent from worker when a task encounters an error.
+ * Outbound error payload for a failed worker task.
+ * @source
  */
 export interface ErrorMessage {
   type: "ERROR";
@@ -81,7 +85,8 @@ export interface ErrorMessage {
 }
 
 /**
- * Message sent to worker to start a CSV parsing operation.
+ * Inbound request to start a CSV parsing operation.
+ * @source
  */
 export interface CSVStartMessage {
   type: "CSV_START";
@@ -95,7 +100,8 @@ export interface CSVStartMessage {
 }
 
 /**
- * Message sent to worker containing a chunk of CSV data to parse.
+ * Inbound CSV data chunk for incremental parsing.
+ * @source
  */
 export interface CSVChunkMessage {
   type: "CSV_CHUNK";
@@ -108,8 +114,8 @@ export interface CSVChunkMessage {
 }
 
 /**
- * Message sent from worker when CSV parsing completes successfully.
- * Includes parsed manga entries and parsing statistics.
+ * Outbound result for completed CSV parsing, including entries and stats.
+ * @source
  */
 export interface CSVCompleteMessage {
   type: "CSV_COMPLETE";
@@ -125,8 +131,8 @@ export interface CSVCompleteMessage {
 }
 
 /**
- * Message sent from worker when a CSV parsing operation is cancelled.
- * Signals that the CSV task state has been cleaned up and parsing has stopped.
+ * Outbound signal that a CSV parsing task was cancelled and cleaned up.
+ * @source
  */
 export interface CSVCancelledMessage {
   type: "CSV_CANCELLED";
@@ -136,8 +142,8 @@ export interface CSVCancelledMessage {
 }
 
 /**
- * Message sent to worker to apply advanced filters to matches.
- * Worker will efficiently filter the match array based on the provided criteria.
+ * Inbound request to apply advanced match filters in the worker.
+ * @source
  */
 export interface AdvancedFilterMessage {
   type: "ADVANCED_FILTER";
@@ -149,8 +155,8 @@ export interface AdvancedFilterMessage {
 }
 
 /**
- * Message sent from worker containing filtered match results and metadata.
- * Includes performance timing and optional debugging information.
+ * Outbound filtered match results with stats and optional debug data.
+ * @source
  */
 export interface AdvancedFilterResultMessage {
   type: "ADVANCED_FILTER_RESULT";
@@ -193,16 +199,16 @@ export interface AdvancedFilterResultMessage {
 }
 
 /**
- * Represents a cached normalization result for a title string.
- * Includes the normalized form and the algorithm that produced it.
+ * Cache of normalized title variants keyed by normalization algorithm.
+ * @source
  */
 export interface NormalizedTitleCache {
   [algorithm: string]: string;
 }
 
 /**
- * Message sent to worker to normalize title strings across multiple algorithms.
- * Seeds similarity caches off-thread for large manga libraries.
+ * Inbound request to normalize titles with one or more algorithms.
+ * @source
  */
 export interface TitleNormalizationMessage {
   type: "TITLE_NORMALIZATION";
@@ -214,8 +220,8 @@ export interface TitleNormalizationMessage {
 }
 
 /**
- * Progress message for title normalization, sent from worker.
- * Reports progress by algorithm for UI feedback.
+ * Outbound progress update for title normalization work.
+ * @source
  */
 export interface TitleNormalizationProgressMessage {
   type: "TITLE_NORMALIZATION_PROGRESS";
@@ -228,8 +234,8 @@ export interface TitleNormalizationProgressMessage {
 }
 
 /**
- * Message sent from worker containing normalized title cache results.
- * Includes per-algorithm cache payloads and optional delta information.
+ * Outbound normalized title cache payload with optional deltas.
+ * @source
  */
 export interface TitleNormalizationResultMessage {
   type: "TITLE_NORMALIZATION_RESULT";
@@ -261,8 +267,8 @@ export interface TitleNormalizationResultMessage {
 }
 
 /**
- * Message sent to worker to aggregate statistics data.
- * Worker will perform filtering, normalization, and aggregation off-thread.
+ * Inbound request to aggregate statistics off-thread.
+ * @source
  */
 export interface StatisticsAggregationMessage {
   type: "STATISTICS_AGGREGATION";
@@ -319,8 +325,8 @@ export interface StatisticsAggregationMessage {
 }
 
 /**
- * Progress message for statistics aggregation, sent from worker.
- * Reports progress by aggregation stage for UI feedback.
+ * Outbound progress update for statistics aggregation stages.
+ * @source
  */
 export interface StatisticsAggregationProgressMessage {
   type: "STATISTICS_AGGREGATION_PROGRESS";
@@ -333,8 +339,8 @@ export interface StatisticsAggregationProgressMessage {
 }
 
 /**
- * Message sent from worker containing aggregated statistics results.
- * Includes all chart data, filter options, and performance metrics.
+ * Outbound aggregated statistics data with filters, charts, and timings.
+ * @source
  */
 export interface StatisticsAggregationResultMessage {
   type: "STATISTICS_AGGREGATION_RESULT";
@@ -441,7 +447,8 @@ export interface StatisticsAggregationResultMessage {
 }
 
 /**
- * Represents a prepared sync operation ready for API execution.
+ * Prepared batch sync operation description used by the API layer.
+ * @source
  */
 export interface PreparedSyncOperation {
   mediaId: number;
@@ -452,8 +459,8 @@ export interface PreparedSyncOperation {
 }
 
 /**
- * Message sent to worker to organize and prepare batch sync entries.
- * Worker performs pre-processing: organizing, step calculation, and variable building.
+ * Inbound request to build prepared batch sync operations.
+ * @source
  */
 export interface BatchSyncMessage {
   type: "BATCH_SYNC";
@@ -468,8 +475,8 @@ export interface BatchSyncMessage {
 }
 
 /**
- * Progress message for batch sync operations, sent from worker.
- * Reports progress during the organizing phase.
+ * Outbound progress update for batch sync preparation phases.
+ * @source
  */
 export interface BatchSyncProgressMessage {
   type: "BATCH_SYNC_PROGRESS";
@@ -483,7 +490,8 @@ export interface BatchSyncProgressMessage {
 }
 
 /**
- * Result message from batch sync worker containing prepared operations.
+ * Outbound prepared batch sync operations and failure details.
+ * @source
  */
 export interface BatchSyncResultMessage {
   type: "BATCH_SYNC_RESULT";
@@ -499,7 +507,8 @@ export interface BatchSyncResultMessage {
 }
 
 /**
- * Union type of all possible worker messages.
+ * Discriminated union of all supported worker message variants.
+ * @source
  */
 export type WorkerMessage =
   | MatchBatchMessage
@@ -529,8 +538,8 @@ export type WorkerMessage =
   | BatchSyncResultMessage;
 
 /**
- * Message sent to worker to filter and aggregate reading history.
- * Worker will apply time range filters and compute summary statistics.
+ * Inbound request to filter and aggregate reading history.
+ * @source
  */
 export interface ReadingHistoryFilterMessage {
   type: "READING_HISTORY_FILTER";
@@ -557,8 +566,8 @@ export interface ReadingHistoryFilterMessage {
 }
 
 /**
- * Progress message for reading history filtering, sent from worker.
- * Reports progress by stage for UI feedback.
+ * Outbound progress update for reading history filtering.
+ * @source
  */
 export interface ReadingHistoryFilterProgressMessage {
   type: "READING_HISTORY_FILTER_PROGRESS";
@@ -571,8 +580,8 @@ export interface ReadingHistoryFilterProgressMessage {
 }
 
 /**
- * Message sent from worker containing filtered reading history and statistics.
- * Includes filtered entries, summary stats, and performance metrics.
+ * Outbound filtered reading history, summary stats, and timings.
+ * @source
  */
 export interface ReadingHistoryFilterResultMessage {
   type: "READING_HISTORY_FILTER_RESULT";
@@ -623,8 +632,8 @@ export interface ReadingHistoryFilterResultMessage {
 }
 
 /**
- * Message sent to worker to serialize data to JSON string.
- * Offloads heavy JSON.stringify operations to worker thread.
+ * Inbound request to serialize data to JSON in the worker.
+ * @source
  */
 export interface JSONSerializeMessage {
   type: "JSON_SERIALIZE";
@@ -643,8 +652,8 @@ export interface JSONSerializeMessage {
 }
 
 /**
- * Message sent from worker containing serialized JSON string.
- * Includes performance timing and optional compression metadata.
+ * Outbound serialized JSON result and timing metrics.
+ * @source
  */
 export interface JSONSerializeResultMessage {
   type: "JSON_SERIALIZE_RESULT";
@@ -668,8 +677,8 @@ export interface JSONSerializeResultMessage {
 }
 
 /**
- * Message sent to worker to deserialize JSON string.
- * Offloads heavy JSON.parse operations to worker thread.
+ * Inbound request to deserialize JSON in the worker.
+ * @source
  */
 export interface JSONDeserializeMessage {
   type: "JSON_DESERIALIZE";
@@ -684,8 +693,8 @@ export interface JSONDeserializeMessage {
 }
 
 /**
- * Message sent from worker containing deserialized data.
- * Includes performance timing and optional validation metadata.
+ * Outbound deserialized data result and timing metrics.
+ * @source
  */
 export interface JSONDeserializeResultMessage {
   type: "JSON_DESERIALIZE_RESULT";
@@ -705,8 +714,8 @@ export interface JSONDeserializeResultMessage {
 }
 
 /**
- * Duplicate entry detected during duplicate detection.
- * Represents an AniList ID mapped to multiple Kenmei titles.
+ * Description of a detected duplicate AniList mapping.
+ * @source
  */
 export interface DuplicateDetectionEntry {
   anilistId: number;
@@ -716,9 +725,8 @@ export interface DuplicateDetectionEntry {
 }
 
 /**
- * Message sent to worker to detect duplicate AniList IDs in match results.
- * Worker will analyze matches and identify instances where the same AniList ID
- * is mapped to multiple Kenmei manga titles.
+ * Inbound request to detect duplicate AniList IDs across matches.
+ * @source
  */
 export interface DuplicateDetectionMessage {
   type: "DUPLICATE_DETECTION";
@@ -731,8 +739,8 @@ export interface DuplicateDetectionMessage {
 }
 
 /**
- * Progress message for duplicate detection, sent from worker.
- * Reports progress by number of comparisons processed.
+ * Outbound progress update for duplicate detection comparisons.
+ * @source
  */
 export interface DuplicateDetectionProgressMessage {
   type: "DUPLICATE_DETECTION_PROGRESS";
@@ -745,8 +753,8 @@ export interface DuplicateDetectionProgressMessage {
 }
 
 /**
- * Message sent from worker containing detected duplicate results.
- * Includes groups of duplicate entries and performance metrics.
+ * Outbound duplicate detection results with groups and timings.
+ * @source
  */
 export interface DuplicateDetectionResultMessage {
   type: "DUPLICATE_DETECTION_RESULT";
@@ -767,8 +775,8 @@ export interface DuplicateDetectionResultMessage {
 }
 
 /**
- * Precomputed cell data for a table row.
- * Contains formatted values and computed metadata.
+ * Precomputed table cell metadata for a single row.
+ * @source
  */
 export interface DataTableCellData {
   /**
@@ -788,8 +796,8 @@ export interface DataTableCellData {
 }
 
 /**
- * Message sent to worker to prepare a slice of data for table display.
- * Worker precomputes derived columns, formats data, and computes row metadata.
+ * Inbound request to prepare paged/virtualized table data.
+ * @source
  */
 export interface DataTablePreparationMessage {
   type: "DATA_TABLE_PREPARATION";
@@ -850,8 +858,8 @@ export interface DataTablePreparationMessage {
 }
 
 /**
- * Progress message for data table preparation, sent from worker.
- * Reports progress during preprocessing.
+ * Outbound progress update for data table preparation.
+ * @source
  */
 export interface DataTablePreparationProgressMessage {
   type: "DATA_TABLE_PREPARATION_PROGRESS";
@@ -864,8 +872,8 @@ export interface DataTablePreparationProgressMessage {
 }
 
 /**
- * Message sent from worker containing prepared table data.
- * Includes precomputed cells, row metadata, and performance metrics.
+ * Outbound prepared table data including metadata and timings.
+ * @source
  */
 export interface DataTablePreparationResultMessage {
   type: "DATA_TABLE_PREPARATION_RESULT";
@@ -928,7 +936,8 @@ export interface DataTablePreparationResultMessage {
 }
 
 /**
- * Union type of all possible messages sent TO the worker.
+ * Discriminated union of all messages accepted by the worker.
+ * @source
  */
 export type WorkerInboundMessage =
   | MatchBatchMessage
@@ -946,7 +955,8 @@ export type WorkerInboundMessage =
   | BatchSyncMessage;
 
 /**
- * Internal task tracking structure for the worker pool.
+ * Internal task tracking structure used by the matching worker pool.
+ * @source
  */
 export interface WorkerTask {
   taskId: string;
@@ -968,7 +978,8 @@ export interface WorkerTask {
 }
 
 /**
- * Configuration options for the worker pool.
+ * Configuration options controlling worker pool capacity and fallbacks.
+ * @source
  */
 export interface WorkerPoolConfig {
   /**
@@ -992,8 +1003,8 @@ export interface WorkerPoolConfig {
 }
 
 /**
- * Return value of executeMatchBatch operation.
- * Includes the main task ID, associated chunk task IDs, and result promise.
+ * Return value of executeMatchBatch, including task IDs and result promise.
+ * @source
  */
 export interface MatchBatchExecution {
   /**

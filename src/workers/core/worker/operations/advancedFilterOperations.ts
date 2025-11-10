@@ -6,6 +6,13 @@ import type {
 } from "../../types";
 import type { AdvancedMatchFilters } from "@/types/matchingFilters";
 
+/**
+ * Returns whether a match violates the configured confidence range.
+ * @param match - The manga match result to evaluate.
+ * @param filters - Advanced filters including confidence bounds.
+ * @returns True if confidence is outside the allowed range.
+ * @source
+ */
 function failsConfidenceFilter(
   match: MangaMatchResult,
   filters: AdvancedMatchFilters,
@@ -26,6 +33,13 @@ function failsConfidenceFilter(
   );
 }
 
+/**
+ * Returns whether a match violates the allowed formats filter.
+ * @param match - The manga match result to evaluate.
+ * @param filters - Advanced filters including allowed formats.
+ * @returns True if no acceptable format is present.
+ * @source
+ */
 function failsFormatFilter(
   match: MangaMatchResult,
   filters: AdvancedMatchFilters,
@@ -37,6 +51,13 @@ function failsFormatFilter(
   return !matchData?.format || !filters.formats.includes(matchData.format);
 }
 
+/**
+ * Returns whether a match violates the allowed genres filter.
+ * @param match - The manga match result to evaluate.
+ * @param filters - Advanced filters including required genres.
+ * @returns True if no required genre is present.
+ * @source
+ */
 function failsGenreFilter(
   match: MangaMatchResult,
   filters: AdvancedMatchFilters,
@@ -52,6 +73,13 @@ function failsGenreFilter(
   );
 }
 
+/**
+ * Returns whether a match violates the allowed publication statuses.
+ * @param match - The manga match result to evaluate.
+ * @param filters - Advanced filters including allowed statuses.
+ * @returns True if status is not permitted.
+ * @source
+ */
 function failsStatusFilter(
   match: MangaMatchResult,
   filters: AdvancedMatchFilters,
@@ -66,6 +94,13 @@ function failsStatusFilter(
   );
 }
 
+/**
+ * Returns whether a match violates the configured release year range.
+ * @param match - The manga match result to evaluate.
+ * @param filters - Advanced filters including year bounds.
+ * @returns True if year is outside the allowed range or missing.
+ * @source
+ */
 function failsYearFilter(
   match: MangaMatchResult,
   filters: AdvancedMatchFilters,
@@ -88,6 +123,13 @@ function failsYearFilter(
   return filters.yearRange.max !== null && year > filters.yearRange.max;
 }
 
+/**
+ * Returns whether a match violates the allowed tags filter.
+ * @param match - The manga match result to evaluate.
+ * @param filters - Advanced filters including tag constraints.
+ * @returns True if no required tag is present.
+ * @source
+ */
 function failsTagFilter(
   match: MangaMatchResult,
   filters: AdvancedMatchFilters,
@@ -106,6 +148,14 @@ function failsTagFilter(
   return !tagsFilter.some((ft: string) => tagNames.has(ft.toLowerCase()));
 }
 
+/**
+ * Computes per-criteria statistics for matches excluded by advanced filters.
+ * @param matches - All matches before filtering.
+ * @param filteredMatches - Matches that passed all filters.
+ * @param filters - The advanced match filters applied.
+ * @returns Counts per filter type and overall totals.
+ * @source
+ */
 function computeFilterStats(
   matches: MangaMatchResult[],
   filteredMatches: MangaMatchResult[],
@@ -158,6 +208,12 @@ function computeFilterStats(
   };
 }
 
+/**
+ * Applies advanced filters in a worker and posts filtered results and stats.
+ * @param message - Worker message containing matches and filter criteria.
+ * @returns Void; posts result message via globalThis.postMessage.
+ * @source
+ */
 export function handleAdvancedFilter(message: AdvancedFilterMessage): void {
   const { taskId, matches, filters } = message.payload;
 

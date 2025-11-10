@@ -7,14 +7,17 @@ import type {
 import type { AniListMediaEntry } from "@/api/anilist/types";
 
 /**
- * UUID generator for task tracking
+ * Generates a unique ID for batch sync tasks.
+ * @returns A unique task identifier.
+ * @source
  */
 function generateUUID(): string {
   return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
 /**
- * Result of a batch sync worker execution
+ * Describes an in-flight batch sync task.
+ * @source
  */
 export interface BatchSyncExecution {
   taskId: string;
@@ -22,7 +25,8 @@ export interface BatchSyncExecution {
 }
 
 /**
- * Batch Sync Worker Pool - coordinates pre-processing via workers
+ * Manages batch sync pre-processing using the shared worker pool.
+ * @source
  */
 export class BatchSyncWorkerPool {
   private readonly config: WorkerPoolConfig;
@@ -37,7 +41,9 @@ export class BatchSyncWorkerPool {
   }
 
   /**
-   * Initialize the pool (delegates to unified pool)
+   * Initializes the shared worker pool for batch sync operations.
+   * @returns A promise that resolves when initialization is complete.
+   * @source
    */
   async initialize(): Promise<void> {
     if (this.initialized) {
@@ -53,7 +59,9 @@ export class BatchSyncWorkerPool {
   }
 
   /**
-   * Check if pool is available
+   * Indicates whether the worker pool is initialized and usable.
+   * @returns True if the pool is initialized and available.
+   * @source
    */
   isAvailable(): boolean {
     const pool = getGenericWorkerPool();
@@ -61,7 +69,9 @@ export class BatchSyncWorkerPool {
   }
 
   /**
-   * Get the number of currently available workers in the pool
+   * Retrieves the number of currently available workers.
+   * @returns Count of available workers or 0 if uninitialized.
+   * @source
    */
   getAvailableWorkerCount(): number {
     const pool = getGenericWorkerPool();
@@ -69,13 +79,12 @@ export class BatchSyncWorkerPool {
   }
 
   /**
-   * Execute batch sync pre-processing.
-   * Organizes entries, calculates steps, and builds GraphQL variables.
-   *
-   * @param entries - Array of entries to prepare for sync
-   * @param onProgress - Optional callback for progress updates
-   * @param taskId - Optional task ID for tracking
-   * @returns Promise resolving to prepared operations
+   * Executes batch sync pre-processing using a worker or the main thread.
+   * @param entries - Entries to prepare for synchronization.
+   * @param onProgress - Optional callback for progress updates.
+   * @param taskId - Optional external task identifier.
+   * @returns Promise resolving to prepared sync operations.
+   * @source
    */
   async executeBatchSyncPreprocessing(
     entries: AniListMediaEntry[],
@@ -172,8 +181,10 @@ export class BatchSyncWorkerPool {
   }
 
   /**
-   * Execute batch sync pre-processing on main thread (fallback).
-   * Uses simple sequential organization without true incremental sync.
+   * Executes batch sync pre-processing on the main thread as a fallback.
+   * @param entries - Entries to prepare when workers are unavailable.
+   * @returns Promise resolving to prepared sync operations.
+   * @source
    */
   private async executeBatchSyncMainThread(
     entries: AniListMediaEntry[],
@@ -215,7 +226,9 @@ export class BatchSyncWorkerPool {
   }
 
   /**
-   * Cancel a batch sync operation
+   * Cancels a batch sync task in the worker pool.
+   * @param taskId - Identifier of the task to cancel.
+   * @source
    */
   cancelBatchSync(taskId: string): void {
     const pool = getGenericWorkerPool();
@@ -223,7 +236,9 @@ export class BatchSyncWorkerPool {
   }
 
   /**
-   * Get pool statistics
+   * Returns current pool statistics.
+   * @returns Aggregate worker and task metrics.
+   * @source
    */
   getStats(): {
     totalWorkers: number;
@@ -235,7 +250,8 @@ export class BatchSyncWorkerPool {
   }
 
   /**
-   * Terminate the pool
+   * Terminates the shared worker pool.
+   * @source
    */
   terminate(): void {
     const pool = getGenericWorkerPool();

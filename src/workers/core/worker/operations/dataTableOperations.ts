@@ -6,8 +6,11 @@ import type {
 import { getErrorDetails } from "../errorUtils";
 
 /**
- * Handle data table preparation message from main thread.
- * Precomputes formatted values and row metadata for efficient virtualization.
+ * Prepares data table slice for virtualization (formatting and row metadata).
+ * @param message - Worker message with table data, viewport, and column visibility.
+ * @param activeTasks - Set tracking active task IDs.
+ * @returns Void; posts progress and result messages.
+ * @source
  */
 export function handleDataTablePreparation(
   message: DataTablePreparationMessage,

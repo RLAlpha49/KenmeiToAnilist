@@ -1,8 +1,8 @@
 /**
- * Worker pool singleton management module.
- * Extracted into separate module to avoid circular dependencies.
- *
- * @module workers/pool
+ * @packageDocumentation
+ * @module pool
+ * @description Manages the singleton matching worker pool to avoid circular dependencies and centralize initialization.
+ * @source
  */
 
 import { MatchingWorkerPool } from "../matching/matching-worker-pool";

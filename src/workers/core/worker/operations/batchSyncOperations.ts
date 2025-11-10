@@ -8,11 +8,10 @@ import type {
 import { getErrorDetails } from "../errorUtils";
 
 /**
- * Determine incremental steps needed for an entry based on what changed.
- * Follows 3-step incremental process:
- * Step 1: Update progress (chapters/episodes read)
- * Step 2: Update score/status
- * Step 3: Update notes/metadata
+ * Determines which incremental sync steps are required for an entry.
+ * @param entry - The AniList media entry to evaluate.
+ * @returns Step numbers indicating required updates.
+ * @source
  */
 function getIncrementalStepsForEntry(entry: AniListMediaEntry): number[] {
   const steps: number[] = [];
@@ -36,8 +35,10 @@ function getIncrementalStepsForEntry(entry: AniListMediaEntry): number[] {
 }
 
 /**
- * Organize entries by media ID and expand with incremental steps.
- * Returns a map of mediaId -> array of entries with step metadata.
+ * Groups entries by media ID and materializes incremental steps.
+ * @param entries - Flat array of AniList media entries to organize.
+ * @returns Map of mediaId to step-expanded entries.
+ * @source
  */
 function organizeEntriesByMediaIdForWorker(
   entries: AniListMediaEntry[],
@@ -68,8 +69,11 @@ function organizeEntriesByMediaIdForWorker(
 }
 
 /**
- * Build GraphQL variables for an entry and step.
- * Simplified version for worker - delegates to step-specific builders.
+ * Builds GraphQL variables for a given entry and sync step.
+ * @param entry - The AniList media entry to build variables for.
+ * @param step - The sync step number determining which fields to include.
+ * @returns Variables object for the specified step.
+ * @source
  */
 function buildGraphQLVariablesForEntry(
   entry: AniListMediaEntry,
@@ -97,8 +101,11 @@ function buildGraphQLVariablesForEntry(
 }
 
 /**
- * Handle batch sync pre-processing in worker.
- * Organizes entries, calculates steps, and builds GraphQL variables.
+ * Prepares batch sync operations in a worker (grouping, steps, variables).
+ * @param message - Worker message containing entries to sync.
+ * @param activeTasks - Set tracking active task IDs for cancellation.
+ * @returns Promise that posts result and progress messages.
+ * @source
  */
 export async function handleBatchSync(
   message: BatchSyncMessage,

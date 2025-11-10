@@ -6,6 +6,15 @@ import type {
 } from "../../types";
 import { getErrorDetails } from "../errorUtils";
 
+/**
+ * Normalizes titles using a specific algorithm.
+ * @param algorithm - Normalization algorithm to apply.
+ * @param titles - Titles to normalize.
+ * @param taskId - Task ID for progress reporting.
+ * @returns Cache and added mappings.
+ * @throws {Error} If the algorithm is unknown.
+ * @source
+ */
 function normalizeForAlgorithm(
   algorithm: string,
   titles: string[],
@@ -53,6 +62,13 @@ function normalizeForAlgorithm(
   return { cache, added };
 }
 
+/**
+ * Runs title normalization for one or more algorithms in a worker.
+ * @param message - Worker message with titles and algorithms.
+ * @param activeTasks - Set tracking active task IDs.
+ * @returns Void; posts TITLE_NORMALIZATION_RESULT or ERROR.
+ * @source
+ */
 export function handleTitleNormalization(
   message: TitleNormalizationMessage,
   activeTasks: Set<string>,

@@ -1,17 +1,14 @@
 /**
- * Title Normalization Worker Pool
- *
- * Manages off-thread title normalization to seed similarity caches during
- * first-run normalization for large manga libraries.
- *
- * @module workers/title-normalization-worker-pool
+ * Manages off-thread title normalization to seed and update similarity caches.
+ * @source
  */
 
 import type { TitleNormalizationMessage } from "../core/types";
 import { getGenericWorkerPool } from "../core/worker-pool";
 
 /**
- * Interface for normalized cache results from worker.
+ * Normalized title cache result produced by the worker.
+ * @source
  */
 export interface NormalizationCacheResult {
   caches: Record<string, Record<string, string>>;
@@ -28,7 +25,8 @@ export interface NormalizationCacheResult {
 }
 
 /**
- * Callback function for progress updates during normalization.
+ * Callback invoked with per-algorithm normalization progress.
+ * @source
  */
 export type NormalizationProgressCallback = (
   algorithm: string,
@@ -37,17 +35,16 @@ export type NormalizationProgressCallback = (
 ) => void;
 
 /**
- * Title Normalization Worker Pool
- *
- * Provides API for seeding title normalization caches off-thread.
- * Results include per-algorithm normalized title caches and optional deltas
- * for incremental cache updates.
+ * Coordinates title normalization tasks via the generic worker pool.
+ * Provides cache seeding and incremental update support.
+ * @source
  */
 export class TitleNormalizationWorkerPool {
   private initialized = false;
 
   /**
-   * Initialize the pool (delegates to unified pool)
+   * Initializes the worker pool for title normalization.
+   * @source
    */
   async initialize(): Promise<void> {
     if (this.initialized) {
@@ -62,7 +59,9 @@ export class TitleNormalizationWorkerPool {
   }
 
   /**
-   * Check if pool is available
+   * Indicates whether the underlying pool is initialized and has workers.
+   * @returns True if normalization workers are available.
+   * @source
    */
   isAvailable(): boolean {
     const pool = getGenericWorkerPool();
@@ -76,13 +75,13 @@ export class TitleNormalizationWorkerPool {
   }
 
   /**
-   * Normalize a list of titles using specified algorithms off-thread.
-   *
-   * @param titles - List of titles to normalize
-   * @param algorithms - Normalization algorithms to apply
-   * @param progressCallback - Optional callback for progress updates by algorithm
-   * @param taskId - Optional task ID for tracking/cancellation
-   * @returns Promise resolving to normalized caches and deltas
+   * Normalizes titles using specified algorithms on a worker.
+   * @param titles - Titles to normalize.
+   * @param algorithms - Algorithms to apply for normalization.
+   * @param progressCallback - Optional callback for progress updates.
+   * @param taskId - Optional task identifier.
+   * @returns Normalization cache result with timing and deltas.
+   * @source
    */
   async normalizeTitles(
     titles: string[],
@@ -223,9 +222,9 @@ export class TitleNormalizationWorkerPool {
   }
 
   /**
-   * Cancel an in-progress normalization task.
-   *
-   * @param taskId - Task ID to cancel
+   * Cancels an in-progress normalization task.
+   * @param taskId - Identifier of the task to cancel.
+   * @source
    */
   cancel(taskId: string): void {
     console.info(
@@ -239,14 +238,18 @@ export class TitleNormalizationWorkerPool {
   }
 
   /**
-   * Generate a unique task ID.
+   * Generates a unique task identifier for title normalization tasks.
+   * @returns Task ID string.
+   * @source
    */
   private generateTaskId(): string {
     return `title-norm-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   }
 
   /**
-   * Get the number of currently available workers
+   * Returns the number of currently available workers.
+   * @returns Count of available workers.
+   * @source
    */
   getAvailableWorkerCount(): number {
     const pool = getGenericWorkerPool();
@@ -255,12 +258,15 @@ export class TitleNormalizationWorkerPool {
 }
 
 /**
- * Singleton instance of title normalization worker pool
+ * Singleton instance of the title normalization worker pool.
+ * @source
  */
 let titleNormalizationPool: TitleNormalizationWorkerPool | null = null;
 
 /**
- * Get or create the title normalization worker pool singleton.
+ * Returns the singleton title normalization worker pool, creating it if needed.
+ * @returns Shared title normalization worker pool.
+ * @source
  */
 export function getTitleNormalizationPool(): TitleNormalizationWorkerPool {
   if (!titleNormalizationPool) {

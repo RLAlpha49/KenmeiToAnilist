@@ -1,8 +1,6 @@
 /**
- * Statistics Aggregation Worker Pool
- *
- * Manages off-thread statistics aggregation to accelerate statistics page rendering.
- * Handles filtering, normalization, and aggregation of match and reading history data.
+ * Manages off-thread statistics aggregation for efficient statistics page rendering.
+ * @source
  */
 
 import type {
@@ -14,7 +12,9 @@ import type { StatisticsFilters, ComparisonMode } from "@/types/statistics";
 import { getGenericWorkerPool } from "../core/worker-pool";
 
 /**
- * Generate a UUID v4 string
+ * Generates a UUID v4-style identifier for aggregation tasks.
+ * @returns Generated UUID string.
+ * @source
  */
 function generateUUID(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replaceAll(
@@ -28,7 +28,8 @@ function generateUUID(): string {
 }
 
 /**
- * Result returned from statistics aggregation
+ * Result of a statistics aggregation operation including data, options, and timing.
+ * @source
  */
 export interface StatisticsAggregationResult {
   filteredData: {
@@ -86,8 +87,8 @@ export interface StatisticsAggregationResult {
 }
 
 /**
- * Singleton worker pool for statistics aggregation
- * Currently uses main thread fallback; future enhancement will add Web Worker support
+ * Singleton-backed worker pool for statistics aggregation with main-thread fallback.
+ * @source
  */
 export class StatisticsAggregationWorkerPool {
   private static instance: StatisticsAggregationWorkerPool | null = null;
@@ -111,7 +112,10 @@ export class StatisticsAggregationWorkerPool {
   }
 
   /**
-   * Get singleton instance
+   * Returns the singleton instance, creating it on first use.
+   * @param config - Optional worker pool configuration.
+   * @returns Shared statistics aggregation worker pool.
+   * @source
    */
   static getInstance(config?: {
     maxWorkers?: number;
@@ -123,7 +127,8 @@ export class StatisticsAggregationWorkerPool {
   }
 
   /**
-   * Initialize the pool
+   * Initializes the underlying generic worker pool.
+   * @source
    */
   async initialize(): Promise<void> {
     if (this.initialized) {
@@ -139,8 +144,16 @@ export class StatisticsAggregationWorkerPool {
   }
 
   /**
-   * Execute statistics aggregation operation
-   * Dispatches to worker pool or falls back to main thread
+   * Aggregates statistics using workers when available, otherwise on the main thread.
+   * @param matchResults - Normalized match results for statistics.
+   * @param readingHistory - Reading history to correlate.
+   * @param filters - Active statistics filter configuration.
+   * @param comparisonMode - Comparison mode configuration.
+   * @param selectedTimeRange - Selected time range for aggregation.
+   * @param progressCallback - Optional callback for progress updates.
+   * @param taskId - Optional task identifier.
+   * @returns Aggregation result with datasets, cache key, and timing.
+   * @source
    */
   async aggregateStatistics(
     matchResults: NormalizedMatchForStats[],
@@ -298,7 +311,14 @@ export class StatisticsAggregationWorkerPool {
   }
 
   /**
-   * Execute statistics aggregation on main thread
+   * Aggregates statistics on the main thread using statistics adapter utilities.
+   * @param matchResults - Normalized match results.
+   * @param readingHistory - Reading history dataset.
+   * @param filters - Filters to apply.
+   * @param comparisonMode - Comparison mode configuration.
+   * @param selectedTimeRange - Selected time range.
+   * @returns Aggregation result including filter options and comparison datasets.
+   * @source
    */
   private async aggregateStatisticsMainThread(
     matchResults: NormalizedMatchForStats[],
@@ -362,7 +382,12 @@ export class StatisticsAggregationWorkerPool {
   }
 
   /**
-   * Generate a cache key for memoization
+   * Generates a stable cache key for a given filter and comparison configuration.
+   * @param filters - Statistics filters applied.
+   * @param comparisonMode - Comparison mode settings.
+   * @param selectedTimeRange - Selected time range value.
+   * @returns Cache key string.
+   * @source
    */
   private generateCacheKey(
     filters: StatisticsFilters,
@@ -387,7 +412,9 @@ export class StatisticsAggregationWorkerPool {
   }
 
   /**
-   * Cancel an aggregation operation
+   * Cancels an in-flight statistics aggregation task.
+   * @param taskId - Identifier of the worker task to cancel.
+   * @source
    */
   cancelAggregation(taskId: string): void {
     const pool = getGenericWorkerPool();
@@ -395,7 +422,9 @@ export class StatisticsAggregationWorkerPool {
   }
 
   /**
-   * Get pool statistics
+   * Returns statistics for the underlying generic worker pool.
+   * @returns Pool statistics including workers and tasks.
+   * @source
    */
   getStats(): {
     totalWorkers: number;
@@ -407,14 +436,17 @@ export class StatisticsAggregationWorkerPool {
   }
 
   /**
-   * Terminate the pool
+   * Terminates the worker pool if needed. Currently a no-op.
+   * @source
    */
   terminate(): void {
     // No-op for now
   }
 
   /**
-   * Get the number of currently available workers
+   * Returns the number of currently available workers.
+   * @returns Count of available workers.
+   * @source
    */
   getAvailableWorkerCount(): number {
     const pool = getGenericWorkerPool();
@@ -423,7 +455,9 @@ export class StatisticsAggregationWorkerPool {
 }
 
 /**
- * Get singleton instance
+ * Returns the singleton statistics aggregation worker pool instance.
+ * @returns Shared statistics aggregation worker pool.
+ * @source
  */
 export function getStatisticsWorkerPool(): StatisticsAggregationWorkerPool {
   return StatisticsAggregationWorkerPool.getInstance();

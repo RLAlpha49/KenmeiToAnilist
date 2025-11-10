@@ -6,7 +6,10 @@ import type {
 import { getErrorDetails } from "../errorUtils";
 
 /**
- * Normalize a date to midnight UTC (for daily aggregation)
+ * Normalizes a timestamp to a YYYY-MM-DD UTC date string.
+ * @param timestamp - Milliseconds since epoch.
+ * @returns ISO date string.
+ * @source
  */
 function normalizeDateToDay(timestamp: number): string {
   const date = new Date(timestamp);
@@ -14,7 +17,10 @@ function normalizeDateToDay(timestamp: number): string {
 }
 
 /**
- * Get week start date (Monday) for weekly aggregation
+ * Computes the Monday (week start) for a timestamp.
+ * @param timestamp - Milliseconds since epoch.
+ * @returns ISO date string for the week start.
+ * @source
  */
 function getWeekStart(timestamp: number): string {
   const date = new Date(timestamp);
@@ -27,7 +33,11 @@ function getWeekStart(timestamp: number): string {
 }
 
 /**
- * Filter and aggregate reading history by date range
+ * Filters and optionally aggregates reading history within a date range.
+ * @param message - Worker message with history data and aggregation settings.
+ * @param activeTasks - Set tracking active task IDs.
+ * @returns Void; posts READING_HISTORY_FILTER_RESULT or ERROR.
+ * @source
  */
 export function handleReadingHistoryFilter(
   message: ReadingHistoryFilterMessage,

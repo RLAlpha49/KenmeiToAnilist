@@ -1,16 +1,7 @@
 /**
- * Data Table Worker Pool
- *
- * Manages data table preparation operations through the shared worker pool.
- * Preprocesses large DataTable slices in a worker to avoid UI stalls during "Load More" operations.
- *
- * Features:
- * - Virtualized data slicing and preprocessing
- * - Precomputed row heights for smooth virtualization
- * - Formatted values (status, scores, dates) prepared off-thread
- * - Task queuing and execution
- * - Error handling with main thread fallback
- * - Performance metrics
+ * Manages data table preparation via the shared worker pool to keep UI rendering responsive.
+ * Preprocesses virtualized slices, formatted values, and row heights off the main thread where possible.
+ * @source
  */
 
 import { getGenericWorkerPool } from "../core/worker-pool";
@@ -18,16 +9,19 @@ import type { DataTablePreparationMessage } from "../core/types";
 import type { KenmeiMangaItem } from "@/types/kenmei";
 
 /**
- * Precomputed data prepared for table display
+ * Precomputed values and metadata for a single table row prepared for display.
+ * @source
  */
 export interface PreparedTableRow {
   /**
-   * Original manga data
+   * Original manga item backing this row.
+   * @source
    */
   original: KenmeiMangaItem;
 
   /**
-   * Precomputed formatted values for display
+   * Precomputed formatted values used for visible columns.
+   * @source
    */
   formattedValues: {
     status: string;
@@ -38,22 +32,26 @@ export interface PreparedTableRow {
   };
 
   /**
-   * Computed row height for virtualization
+   * Computed row height used by the virtualized table.
+   * @source
    */
   rowHeight: number;
 }
 
 /**
- * Result from a data table preparation operation
+ * Result of preparing a data table slice, including metadata and timing.
+ * @source
  */
 export interface DataTablePreparationResult {
   /**
-   * The prepared data slice with precomputed values
+   * The prepared row slice with precomputed display values.
+   * @source
    */
   preparedData: PreparedTableRow[];
 
   /**
-   * Index information for the slice
+   * Index range and total count for the prepared slice.
+   * @source
    */
   indexInfo: {
     startIndex: number;
@@ -62,7 +60,8 @@ export interface DataTablePreparationResult {
   };
 
   /**
-   * Performance timing information
+   * Timing breakdown for preparation steps.
+   * @source
    */
   timing: {
     formattingTimeMs: number;
@@ -71,20 +70,23 @@ export interface DataTablePreparationResult {
   };
 
   /**
-   * Whether this was executed on a worker or main thread
+   * Indicates whether computation ran on a worker.
+   * @source
    */
   executedOnWorker: boolean;
 }
 
 /**
- * Generate a unique task ID
+ * Generates a unique task identifier for table preparation tasks.
+ * @source
  */
 function generateTaskId(): string {
   return `table_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 }
 
 /**
- * Data table worker pool manager
+ * Coordinates worker-based and main-thread preparation of data table slices.
+ * @source
  */
 export class DataTableWorkerPool {
   private initialized = false;
@@ -95,7 +97,8 @@ export class DataTableWorkerPool {
   }
 
   /**
-   * Initialize the pool
+   * Initializes the shared worker pool or enables main-thread fallback.
+   * @source
    */
   async initialize(): Promise<void> {
     if (this.initialized) {
@@ -115,8 +118,14 @@ export class DataTableWorkerPool {
   }
 
   /**
-   * Prepare a slice of table data for display
-   * Executes on worker if available, falls back to main thread
+   * Prepares a table data slice, preferring workers and falling back to the main thread.
+   * @param data - Full manga dataset to slice from.
+   * @param startIndex - Inclusive start index of the slice.
+   * @param endIndex - Exclusive end index of the slice.
+   * @param itemsPerPage - Number of items targeted per page/viewport.
+   * @param columnVisibility - Flags controlling which column values are precomputed.
+   * @returns Preparation result with formatted rows and metadata.
+   * @source
    */
   async prepareTableSlice(
     data: KenmeiMangaItem[],
@@ -178,7 +187,9 @@ export class DataTableWorkerPool {
   }
 
   /**
-   * Execute data table preparation on a worker
+   * Executes table preparation on a worker from the generic pool.
+   * Rejects and triggers fallback on worker errors or timeouts.
+   * @source
    */
   private async executeOnWorker(
     pool: ReturnType<typeof getGenericWorkerPool>,
@@ -294,7 +305,8 @@ export class DataTableWorkerPool {
   }
 
   /**
-   * Execute data table preparation on main thread (fallback)
+   * Prepares table rows on the main thread as a safe fallback when workers are unavailable.
+   * @source
    */
   private executeOnMainThread(
     data: KenmeiMangaItem[],
@@ -401,7 +413,8 @@ export class DataTableWorkerPool {
   }
 
   /**
-   * Get pool statistics
+   * Returns basic internal pool state used for diagnostics.
+   * @source
    */
   getStats(): {
     initialized: boolean;
@@ -412,7 +425,8 @@ export class DataTableWorkerPool {
   }
 
   /**
-   * Get the number of currently available workers
+   * Returns the number of available workers in the generic pool.
+   * @source
    */
   getAvailableWorkerCount(): number {
     const pool = getGenericWorkerPool();
@@ -420,7 +434,8 @@ export class DataTableWorkerPool {
   }
 
   /**
-   * Terminate the pool
+   * Shuts down the underlying worker pool and clears initialization state.
+   * @source
    */
   terminate(): void {
     if (this.initialized) {
@@ -436,12 +451,15 @@ export class DataTableWorkerPool {
 }
 
 /**
- * Global singleton instance
+ * Global singleton instance for `DataTableWorkerPool`.
+ * @source
  */
 let tablePoolInstance: DataTableWorkerPool | null = null;
 
 /**
- * Get or create the singleton data table worker pool
+ * Returns the shared `DataTableWorkerPool` instance, creating it if needed.
+ * @param maxWorkers - Optional override for the maximum workers when first created.
+ * @source
  */
 export function getDataTableWorkerPool(
   maxWorkers?: number,

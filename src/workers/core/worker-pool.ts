@@ -1,18 +1,14 @@
 /**
- * Worker Pool Manager
- *
- * Manages a single pool of generic workers that can handle both CSV parsing
- * and manga matching operations. This ensures efficient resource utilization
- * by sharing a fixed number of workers across all CPU-intensive tasks.
- *
- * @module workers/worker-pool
+ * Manages a shared pool of generic workers for CPU-intensive tasks with fallback behavior.
+ * @source
  */
 
 import type { WorkerMessage } from "./types";
 import Worker from "./worker?worker";
 
 /**
- * Configuration for the worker pool
+ * Configuration for the worker pool behavior and limits.
+ * @source
  */
 export interface WorkerPoolConfig {
   /**
@@ -35,7 +31,8 @@ export interface WorkerPoolConfig {
 }
 
 /**
- * Generic task for any worker operation
+ * Internal tracking metadata for a single worker task.
+ * @source
  */
 interface WorkerTask {
   taskId: string;
@@ -49,7 +46,8 @@ interface WorkerTask {
 }
 
 /**
- * Worker pool that manages all workers for the entire application
+ * Coordinates worker lifecycle, task routing, cancellation, and fallbacks.
+ * @source
  */
 export class WorkerPool {
   private workers: Worker[] = [];
@@ -73,7 +71,8 @@ export class WorkerPool {
   }
 
   /**
-   * Initialize the worker pool
+   * Lazily creates workers and enables main-thread fallback on failure.
+   * @source
    */
   async initialize(): Promise<void> {
     if (this.initialized) {
@@ -132,14 +131,16 @@ export class WorkerPool {
   }
 
   /**
-   * Check if workers are available
+   * Returns true when workers are initialized and not using fallback.
+   * @source
    */
   isAvailable(): boolean {
     return this.initialized && !this.useFallback && this.workers.length > 0;
   }
 
   /**
-   * Get the number of currently available (not busy) workers
+   * Returns the count of idle workers currently available for new tasks.
+   * @source
    */
   getAvailableWorkerCount(): number {
     if (!this.initialized || this.useFallback || this.workers.length === 0) {
@@ -149,7 +150,8 @@ export class WorkerPool {
   }
 
   /**
-   * Select an available worker
+   * Selects the index of a free worker or -1 if none available.
+   * @source
    */
   selectWorker(): number {
     for (let i = 0; i < this.workers.length; i++) {
@@ -161,7 +163,8 @@ export class WorkerPool {
   }
 
   /**
-   * Get a worker by index and mark it busy
+   * Returns a worker by index and marks it busy.
+   * @source
    */
   getWorker(index: number): Worker | null {
     if (index < 0 || index >= this.workers.length || this.workerBusy[index]) {
@@ -172,14 +175,16 @@ export class WorkerPool {
   }
 
   /**
-   * Register a task for tracking
+   * Registers a task so responses can be routed correctly.
+   * @source
    */
   registerTask(taskId: string, task: WorkerTask): void {
     this.tasks.set(taskId, task);
   }
 
   /**
-   * Mark a task as completed
+   * Clears tracking for a task and frees its worker.
+   * @source
    */
   completeTask(taskId: string): WorkerTask | undefined {
     const task = this.tasks.get(taskId);
@@ -191,14 +196,16 @@ export class WorkerPool {
   }
 
   /**
-   * Get a task by ID
+   * Retrieves a tracked task by its ID.
+   * @source
    */
   getTask(taskId: string): WorkerTask | undefined {
     return this.tasks.get(taskId);
   }
 
   /**
-   * Handle messages from workers
+   * Routes worker messages to the appropriate task handlers.
+   * @source
    */
   private handleWorkerMessage(
     workerIndex: number,
@@ -275,8 +282,8 @@ export class WorkerPool {
   }
 
   /**
-   * Handle messages from cancelled tasks
-   * Treats terminal messages as completion and skips non-terminal
+   * Handles messages for cancelled tasks, discarding payloads while cleaning up.
+   * @source
    */
   private handleCancelledTaskMessage(
     taskId: string,
@@ -323,9 +330,8 @@ export class WorkerPool {
    * Extract and format result from worker message
    */
   /**
-   * Extract raw message payload without shape-specific adaptation.
-   * Each feature-specific pool wrapper is responsible for adapting the payload
-   * to its expected shape, maintaining clean separation of concerns.
+   * Extracts the raw payload object for consumers to shape as needed.
+   * @source
    */
   private extractMessageResult(
     message: WorkerMessage,
@@ -333,7 +339,8 @@ export class WorkerPool {
     return (message as unknown as Record<string, Record<string, unknown>>)
       .payload;
   } /**
-   * Handle worker errors
+   * Rejects affected tasks and attempts to spawn a replacement worker.
+   * @source
    */
   private handleWorkerError(workerIndex: number, error: ErrorEvent): void {
     const failedTasks: string[] = [];
@@ -372,9 +379,8 @@ export class WorkerPool {
   }
 
   /**
-   * Cancel a task
-   * Sets a cancelled flag and posts a CANCEL message but does not complete yet.
-   * Task will be completed when terminal message is received or timeout fires.
+   * Requests cancellation for a task and forces completion on timeout.
+   * @source
    */
   cancelTask(taskId: string): void {
     const task = this.tasks.get(taskId);
@@ -411,7 +417,8 @@ export class WorkerPool {
   }
 
   /**
-   * Get pool statistics
+   * Returns snapshot metrics for workers and active tasks.
+   * @source
    */
   getStats(): {
     totalWorkers: number;
@@ -426,7 +433,8 @@ export class WorkerPool {
   }
 
   /**
-   * Terminate all workers
+   * Terminates all workers and clears internal state.
+   * @source
    */
   terminate(): void {
     for (const worker of this.workers) {
@@ -440,13 +448,15 @@ export class WorkerPool {
 }
 
 /**
- * Global singleton instance
+ * Global singleton instance for the generic worker pool.
+ * @source
  */
 let workerPoolInstance: WorkerPool | null = null;
 
 /**
- * Get or create the generic worker pool singleton
- * @internal Use this for low-level worker pool access. Most code should use pool.ts exports.
+ * Returns the shared generic worker pool instance.
+ * @internal Prefer using higher-level helpers where available.
+ * @source
  */
 export function getGenericWorkerPool(
   config?: Partial<WorkerPoolConfig>,
@@ -456,7 +466,8 @@ export function getGenericWorkerPool(
 }
 
 /**
- * Get the singleton instance
- * @internal Low-level access to the generic pool
+ * Eagerly created singleton for low-level generic pool access.
+ * @internal
+ * @source
  */
 export const workerPool = getGenericWorkerPool();

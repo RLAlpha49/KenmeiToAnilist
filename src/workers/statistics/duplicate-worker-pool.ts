@@ -1,16 +1,6 @@
 /**
- * Duplicate Detection Worker Pool
- *
- * Manages duplicate AniList ID detection through the shared worker pool.
- * Provides a convenient API for detecting when a single AniList manga entry
- * is mapped to multiple Kenmei manga titles.
- *
- * Features:
- * - Leverages existing worker pool infrastructure
- * - Task queuing and execution
- * - Error handling with main thread fallback
- * - Performance metrics
- * - Cancellation support
+ * Manages duplicate AniList ID detection using the shared worker pool.
+ * @source
  */
 
 import { getGenericWorkerPool } from "../core/worker-pool";
@@ -20,7 +10,8 @@ import { detectDuplicateAniListIds } from "@/components/matching/detectDuplicate
 import { getIgnoredDuplicates } from "@/utils/storage";
 
 /**
- * Duplicate entry result from detection
+ * Represents a detected duplicate AniList entry across Kenmei titles.
+ * @source
  */
 export interface DuplicateDetectionEntry {
   anilistId: number;
@@ -30,7 +21,8 @@ export interface DuplicateDetectionEntry {
 }
 
 /**
- * Result from a duplicate detection operation
+ * Result of a duplicate detection operation including timing and execution context.
+ * @source
  */
 export interface DuplicateDetectionResult {
   /**
@@ -53,14 +45,17 @@ export interface DuplicateDetectionResult {
 }
 
 /**
- * Generate a unique task ID
+ * Generates a unique task identifier for duplicate detection tasks.
+ * @returns A unique task ID string.
+ * @source
  */
 function generateTaskId(): string {
   return `dup_detection_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 }
 
 /**
- * Advanced duplicate detection worker pool manager
+ * Coordinates duplicate detection tasks across workers with main-thread fallback.
+ * @source
  */
 export class DuplicateDetectionWorkerPool {
   private initialized = false;
@@ -71,7 +66,8 @@ export class DuplicateDetectionWorkerPool {
   }
 
   /**
-   * Initialize the pool
+   * Initializes the worker pool or prepares main-thread fallback.
+   * @source
    */
   async initialize(): Promise<void> {
     if (this.initialized) {
@@ -94,8 +90,11 @@ export class DuplicateDetectionWorkerPool {
   }
 
   /**
-   * Detect duplicate AniList IDs in matches
-   * Executes on worker if available, falls back to main thread
+   * Detects duplicate AniList IDs from matches using workers when available.
+   * Falls back to main thread when worker execution is not possible.
+   * @param matches - Candidate matches to evaluate.
+   * @returns Duplicate detection result with timing metadata.
+   * @source
    */
   async detectDuplicates(
     matches: MangaMatchResult[],
@@ -130,7 +129,12 @@ export class DuplicateDetectionWorkerPool {
   }
 
   /**
-   * Execute duplicate detection on a worker
+   * Executes duplicate detection on a worker thread via the generic pool.
+   * @param pool - The shared worker pool instance.
+   * @param taskId - Unique identifier for the dispatched task.
+   * @param matches - Candidate matches to process.
+   * @returns Duplicate detection result when the worker completes.
+   * @source
    */
   private async executeOnWorker(
     pool: ReturnType<typeof getGenericWorkerPool>,
@@ -230,7 +234,10 @@ export class DuplicateDetectionWorkerPool {
   }
 
   /**
-   * Execute duplicate detection on main thread (fallback)
+   * Executes duplicate detection on the main thread as a fallback.
+   * @param matches - Candidate matches to process.
+   * @returns Duplicate detection result computed on the main thread.
+   * @source
    */
   private executeOnMainThread(
     matches: MangaMatchResult[],
@@ -264,7 +271,9 @@ export class DuplicateDetectionWorkerPool {
   }
 
   /**
-   * Get pool statistics
+   * Returns basic initialization status for the worker pool.
+   * @returns Initialization state snapshot.
+   * @source
    */
   getStats(): {
     initialized: boolean;
@@ -275,7 +284,9 @@ export class DuplicateDetectionWorkerPool {
   }
 
   /**
-   * Get the number of currently available workers
+   * Returns the number of currently available workers in the pool.
+   * @returns Count of available workers.
+   * @source
    */
   getAvailableWorkerCount(): number {
     const pool = getGenericWorkerPool();
@@ -283,7 +294,8 @@ export class DuplicateDetectionWorkerPool {
   }
 
   /**
-   * Terminate the pool
+   * Terminates all workers in the pool and resets initialization state.
+   * @source
    */
   terminate(): void {
     if (this.initialized) {
@@ -302,12 +314,16 @@ export class DuplicateDetectionWorkerPool {
 }
 
 /**
- * Global singleton instance
+ * Global singleton instance of the duplicate detection worker pool.
+ * @source
  */
 let duplicateDetectionPoolInstance: DuplicateDetectionWorkerPool | null = null;
 
 /**
- * Get or create the singleton duplicate detection worker pool
+ * Returns the singleton duplicate detection worker pool, creating it if needed.
+ * @param maxWorkers - Optional max worker count for initial creation.
+ * @returns Shared duplicate detection worker pool instance.
+ * @source
  */
 export function getDuplicateDetectionWorkerPool(
   maxWorkers?: number,

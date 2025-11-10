@@ -1,10 +1,6 @@
 /**
- * JSON Serialization Worker Pool Wrapper
- *
- * Provides API for offloading heavy JSON.parse/stringify operations to workers.
- * This optimizes import/export functionality by freeing the main thread.
- *
- * @module workers/json-serialization-worker-pool
+ * Provides worker-pool-backed JSON serialization and deserialization for heavy operations.
+ * @source
  */
 
 import type {
@@ -13,6 +9,11 @@ import type {
 } from "../core/types";
 import { getGenericWorkerPool } from "../core/worker-pool";
 
+/**
+ * Generates a random UUID for JSON tasks.
+ * @returns A UUID string.
+ * @source
+ */
 function generateUUID(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replaceAll(
     /[xy]/g,
@@ -24,31 +25,45 @@ function generateUUID(): string {
   );
 }
 
+/**
+ * Configuration for the JSON serialization worker pool.
+ * @source
+ */
 export interface JSONSerializationWorkerPoolConfig {
   maxWorkers?: number;
   enableWorkers?: boolean;
   fallbackToMainThread?: boolean;
 }
 
+/**
+ * Result of a JSON serialization operation.
+ * @source
+ */
 interface SerializationResult {
   json: string;
   sizeBytes: number;
   timingMs: number;
 }
 
+/**
+ * Result of a JSON deserialization operation.
+ * @source
+ */
 interface DeserializationResult {
   data: unknown;
   timingMs: number;
 }
 
 /**
- * Wrapper around unified pool for JSON serialization/deserialization operations
+ * Manages JSON serialization and deserialization tasks using the shared worker pool.
+ * @source
  */
 export class JSONSerializationWorkerPool {
   private initialized = false;
 
   /**
-   * Initialize the pool (delegates to unified pool)
+   * Initializes the underlying generic worker pool once.
+   * @source
    */
   async initialize(): Promise<void> {
     if (this.initialized) {
@@ -60,7 +75,9 @@ export class JSONSerializationWorkerPool {
   }
 
   /**
-   * Check if pool is available
+   * Indicates whether the JSON worker pool is initialized and available.
+   * @returns True if the pool is initialized and usable.
+   * @source
    */
   isAvailable(): boolean {
     const pool = getGenericWorkerPool();
@@ -68,7 +85,9 @@ export class JSONSerializationWorkerPool {
   }
 
   /**
-   * Get the number of currently available workers
+   * Returns the number of currently available workers for JSON tasks.
+   * @returns Count of idle workers.
+   * @source
    */
   getAvailableWorkerCount(): number {
     const pool = getGenericWorkerPool();
@@ -76,7 +95,11 @@ export class JSONSerializationWorkerPool {
   }
 
   /**
-   * Start serializing data to JSON with taskId exposed for cancellation
+   * Starts a JSON serialization task and exposes its id for tracking or cancellation.
+   * @param data - Data to serialize.
+   * @param options - Optional serialization options.
+   * @returns Task id and promise resolving to serialization result.
+   * @source
    */
   startSerializing(
     data: unknown,
@@ -88,7 +111,11 @@ export class JSONSerializationWorkerPool {
   }
 
   /**
-   * Serialize data to JSON string using the unified worker pool
+   * Serializes data to JSON using the worker pool or main-thread fallback.
+   * @param data - Data to serialize.
+   * @param options - Optional serialization settings.
+   * @returns Serialization result.
+   * @source
    */
   async serialize(
     data: unknown,
@@ -99,7 +126,12 @@ export class JSONSerializationWorkerPool {
   }
 
   /**
-   * Dispatch serialization to the unified pool
+   * Dispatches serialization to the shared worker pool with main-thread fallback.
+   * @param taskId - Unique task id.
+   * @param data - Data to serialize.
+   * @param options - Serialization options.
+   * @returns Promise resolving to serialization result.
+   * @source
    */
   private dispatchSerialization(
     taskId: string,
@@ -144,7 +176,11 @@ export class JSONSerializationWorkerPool {
   }
 
   /**
-   * Start deserializing JSON string with taskId exposed for cancellation
+   * Starts a JSON deserialization task and exposes its id for tracking or cancellation.
+   * @param json - JSON string to deserialize.
+   * @param options - Optional deserialization options.
+   * @returns Task id and promise resolving to deserialization result.
+   * @source
    */
   startDeserializing(
     json: string,
@@ -156,7 +192,11 @@ export class JSONSerializationWorkerPool {
   }
 
   /**
-   * Deserialize JSON string using the unified worker pool
+   * Deserializes JSON using the worker pool or main-thread fallback.
+   * @param json - JSON string to deserialize.
+   * @param options - Optional deserialization options.
+   * @returns Deserialization result.
+   * @source
    */
   async deserialize(
     json: string,
@@ -167,7 +207,12 @@ export class JSONSerializationWorkerPool {
   }
 
   /**
-   * Dispatch deserialization to the unified pool
+   * Dispatches deserialization to the shared worker pool with main-thread fallback.
+   * @param taskId - Unique task id.
+   * @param json - JSON string payload.
+   * @param options - Deserialization options.
+   * @returns Promise resolving to deserialization result.
+   * @source
    */
   private dispatchDeserialization(
     taskId: string,
@@ -214,7 +259,16 @@ export class JSONSerializationWorkerPool {
   }
 
   /**
-   * Internal helper to dispatch to worker after pool is ready
+   * Sends a JSON task to a selected worker and adapts its response into typed results.
+   * Falls back to main-thread execution when no worker is available.
+   * @param pool - Shared worker pool instance.
+   * @param taskId - Unique task id.
+   * @param operation - Whether to serialize or deserialize.
+   * @param payload - Data or JSON string to process.
+   * @param options - Operation-specific options.
+   * @param resolve - Resolver for the caller promise.
+   * @param reject - Reject handler for errors.
+   * @source
    */
   private dispatchToWorker(
     pool: ReturnType<typeof getGenericWorkerPool>,
@@ -334,7 +388,11 @@ export class JSONSerializationWorkerPool {
   }
 
   /**
-   * Serialize on main thread (fallback)
+   * Serializes data on the main thread as a fallback.
+   * @param data - Data to serialize.
+   * @param options - Optional serialization settings.
+   * @returns Serialization result.
+   * @source
    */
   private async serializeMainThread(
     data: unknown,
@@ -369,7 +427,11 @@ export class JSONSerializationWorkerPool {
   }
 
   /**
-   * Deserialize on main thread (fallback)
+   * Deserializes JSON on the main thread as a fallback.
+   * @param json - JSON string to parse.
+   * @param options - Optional deserialization settings.
+   * @returns Deserialization result.
+   * @source
    */
   private async deserializeMainThread(
     json: string,
@@ -403,7 +465,9 @@ export class JSONSerializationWorkerPool {
   }
 
   /**
-   * Cancel a task
+   * Cancels an in-flight JSON serialization or deserialization task.
+   * @param taskId - Id of the task to cancel.
+   * @source
    */
   cancelTask(taskId: string): void {
     const pool = getGenericWorkerPool();
@@ -411,7 +475,9 @@ export class JSONSerializationWorkerPool {
   }
 
   /**
-   * Get pool statistics
+   * Returns statistics for the shared worker pool.
+   * @returns Pool metrics including workers and active tasks.
+   * @source
    */
   getStats(): {
     totalWorkers: number;
@@ -423,7 +489,8 @@ export class JSONSerializationWorkerPool {
   }
 
   /**
-   * Terminate the pool
+   * Terminates all workers in the shared pool.
+   * @source
    */
   terminate(): void {
     const pool = getGenericWorkerPool();
@@ -432,14 +499,22 @@ export class JSONSerializationWorkerPool {
 }
 
 /**
- * Global JSON serialization worker pool instance
+ * Global singleton instance of the JSON serialization worker pool.
+ * @source
  */
 let jsonSerializationWorkerPoolInstance: JSONSerializationWorkerPool | null =
   null;
+/**
+ * Tracks initialization to avoid duplicate pool setup.
+ * @source
+ */
 let initializePromise: Promise<void> | null = null;
 
 /**
- * Get or create JSON serialization worker pool
+ * Returns the shared JSON serialization worker pool singleton, initializing it lazily.
+ * @param config - Optional config (currently unused).
+ * @returns JSON serialization worker pool instance.
+ * @source
  */
 export function getJSONSerializationWorkerPool(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

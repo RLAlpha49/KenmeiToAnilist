@@ -1,18 +1,15 @@
 /**
- * Reading History Worker Pool
- *
- * Manages off-thread reading history filtering and aggregation to keep
- * statistics filters responsive even with large reading histories.
- *
- * Supports optional aggregation by day or week and returns filtered entries
- * with comprehensive statistics.
+ * Manages off-thread reading history filtering and aggregation to keep statistics responsive.
+ * @source
  */
 
 import type { ReadingHistory, ReadingHistoryEntry } from "@/utils/storage";
 import { getGenericWorkerPool } from "../core/worker-pool";
 
 /**
- * Generate a UUID v4 string
+ * Generates a UUID v4-style identifier for worker tasks.
+ * @returns Generated UUID string.
+ * @source
  */
 function generateUUID(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replaceAll(
@@ -26,7 +23,8 @@ function generateUUID(): string {
 }
 
 /**
- * Statistics computed from filtered reading history
+ * Summary statistics computed from filtered reading history data.
+ * @source
  */
 export interface ReadingHistoryStats {
   totalEntries: number;
@@ -41,7 +39,8 @@ export interface ReadingHistoryStats {
 }
 
 /**
- * Result returned from reading history filtering
+ * Result of a reading history filtering and aggregation operation.
+ * @source
  */
 export interface ReadingHistoryFilterResult {
   filteredEntries: ReadingHistoryEntry[];
@@ -59,7 +58,8 @@ export interface ReadingHistoryFilterResult {
 }
 
 /**
- * Singleton worker pool for reading history filtering and aggregation
+ * Singleton-backed worker pool for reading history filtering and aggregation.
+ * @source
  */
 export class ReadingHistoryWorkerPool {
   private static instance: ReadingHistoryWorkerPool | null = null;
@@ -83,7 +83,10 @@ export class ReadingHistoryWorkerPool {
   }
 
   /**
-   * Get singleton instance
+   * Returns the singleton instance, creating it on first access.
+   * @param config - Optional worker pool configuration.
+   * @returns Shared worker pool instance.
+   * @source
    */
   static getInstance(config?: {
     maxWorkers?: number;
@@ -95,7 +98,8 @@ export class ReadingHistoryWorkerPool {
   }
 
   /**
-   * Initialize the pool
+   * Initializes the underlying generic worker pool.
+   * @source
    */
   async initialize(): Promise<void> {
     if (this.initialized) {
@@ -111,8 +115,15 @@ export class ReadingHistoryWorkerPool {
   }
 
   /**
-   * Execute reading history filtering operation
-   * Dispatches to worker pool or falls back to main thread
+   * Filters and optionally aggregates reading history using workers when available.
+   * Falls back to main thread if workers are unavailable or disabled.
+   * @param history - Reading history to filter.
+   * @param dateRange - Inclusive date range to consider.
+   * @param aggregationType - Aggregation granularity or "none".
+   * @param progressCallback - Optional callback for progress updates.
+   * @param taskId - Optional existing task identifier.
+   * @returns Filtered result including stats and timing.
+   * @source
    */
   async filterReadingHistory(
     history: ReadingHistory,
@@ -250,7 +261,13 @@ export class ReadingHistoryWorkerPool {
   }
 
   /**
-   * Execute reading history filtering on main thread
+   * Filters and aggregates reading history on the main thread.
+   * @param history - Reading history to process.
+   * @param startMs - Start timestamp in milliseconds.
+   * @param endMs - End timestamp in milliseconds.
+   * @param aggregationType - Aggregation granularity or "none".
+   * @returns Filter result with stats and timing.
+   * @source
    */
   private async filterReadingHistoryMainThread(
     history: ReadingHistory,
@@ -369,7 +386,9 @@ export class ReadingHistoryWorkerPool {
   }
 
   /**
-   * Cancel a filtering operation
+   * Cancels an in-flight filtering operation by task ID.
+   * @param taskId - Identifier of the worker task to cancel.
+   * @source
    */
   cancelFilter(taskId: string): void {
     const pool = getGenericWorkerPool();
@@ -377,7 +396,9 @@ export class ReadingHistoryWorkerPool {
   }
 
   /**
-   * Get pool statistics
+   * Returns statistics for the underlying generic worker pool.
+   * @returns Pool statistics including workers and active tasks.
+   * @source
    */
   getStats(): {
     totalWorkers: number;
@@ -389,14 +410,17 @@ export class ReadingHistoryWorkerPool {
   }
 
   /**
-   * Terminate the pool
+   * Terminates the worker pool if needed. Currently a no-op.
+   * @source
    */
   terminate(): void {
     // No-op for now
   }
 
   /**
-   * Get the number of currently available workers
+   * Returns the number of currently available workers.
+   * @returns Count of available workers.
+   * @source
    */
   getAvailableWorkerCount(): number {
     const pool = getGenericWorkerPool();
@@ -405,7 +429,9 @@ export class ReadingHistoryWorkerPool {
 }
 
 /**
- * Get singleton instance
+ * Returns the singleton reading history worker pool instance.
+ * @returns Shared reading history worker pool.
+ * @source
  */
 export function getReadingHistoryWorkerPool(): ReadingHistoryWorkerPool {
   return ReadingHistoryWorkerPool.getInstance();

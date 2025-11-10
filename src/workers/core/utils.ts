@@ -1,10 +1,6 @@
 /**
- * Utility functions for worker-based matching with fallback support.
- *
- * Provides a simple API for executing matching operations that automatically
- * uses workers when available and falls back to main thread execution otherwise.
- *
- * @module workers/utils
+ * Helpers for worker-backed matching with seamless main-thread fallback.
+ * @source
  */
 
 import { getWorkerPool } from "./pool";
@@ -14,7 +10,8 @@ import type { AniListManga, MangaMatchResult } from "@/api/anilist/types";
 import type { MatchEngineConfig } from "@/api/matching/match-engine";
 
 /**
- * Result of executing matching operations, including a cancel function.
+ * Result wrapper for a cancellable matching execution.
+ * @source
  */
 export interface CancellableExecution {
   /**
@@ -34,32 +31,14 @@ export interface CancellableExecution {
 }
 
 /**
- * Execute matching for a batch of manga, using workers if available.
- *
- * This is a convenience function that handles worker availability checking
- * and provides seamless fallback to main thread execution. Returns an object
- * with a promise and a cancel function for cancellation support.
- *
- * @param kenmeiMangaList - List of Kenmei manga to match
- * @param anilistCandidatesMap - Map of manga IDs to their AniList candidates
- * @param config - Matching engine configuration
- * @param progressCallback - Optional callback for progress updates
- * @param useWorkers - Whether to attempt using workers (default: true)
- * @returns Object with promise and cancel function
- *
- * @example
- * ```typescript
- * const execution = executeMatchingWithWorkers(
- *   mangaList,
- *   candidatesMap,
- *   matchConfig,
- *   (current, total, title) => {
- *     console.log(`${current}/${total}: ${title}`);
- *   }
- * );
- * const results = await execution.promise;
- * // or cancel with: execution.cancel();
- * ```
+ * Executes batch matching via workers when possible, falling back to main thread.
+ * @param kenmeiMangaList - Kenmei manga to match.
+ * @param anilistCandidatesMap - Candidate AniList entries keyed by ID.
+ * @param config - Matching engine configuration overrides.
+ * @param progressCallback - Optional progress callback.
+ * @param useWorkers - Whether to try workers (default: true).
+ * @returns Cancellable execution descriptor.
+ * @source
  */
 export function executeMatchingWithWorkers(
   kenmeiMangaList: KenmeiManga[],
@@ -123,16 +102,13 @@ export function executeMatchingWithWorkers(
 }
 
 /**
- * Execute matching on the main thread (synchronous fallback).
- *
- * This function mimics the worker behavior but executes on the main thread.
- * Used as a fallback when workers are unavailable or disabled.
- *
- * @param kenmeiMangaList - List of Kenmei manga to match
- * @param anilistCandidatesMap - Map of manga IDs to their AniList candidates
- * @param config - Matching engine configuration
- * @param progressCallback - Optional callback for progress updates
- * @returns Promise resolving to match results
+ * Executes batch matching on the main thread as a fallback.
+ * @param kenmeiMangaList - Kenmei manga to match.
+ * @param anilistCandidatesMap - Candidate AniList entries keyed by index.
+ * @param config - Matching engine configuration overrides.
+ * @param progressCallback - Optional progress callback.
+ * @returns Promise resolving to match results.
+ * @source
  */
 export async function executeMatchingOnMainThread(
   kenmeiMangaList: KenmeiManga[],
@@ -173,30 +149,10 @@ export async function executeMatchingOnMainThread(
 }
 
 /**
- * Check if workers are available and initialized.
- *
- * **Important**: This function returns the current availability state. It may return `false`
- * during worker pool initialization, even though workers will become available shortly.
- *
- * **Recommended Usage**: For most use cases, call `executeMatchingWithWorkers()` directly.
- * It handles initialization internally and falls back to main thread execution if needed.
- *
- * If you need to explicitly wait for worker initialization, use `awaitWorkerReady()`.
- *
- * @returns Minimum number of available workers across all pools (returns 0 if pools unavailable)
- *
- * @example
- * ```typescript
- * // Recommended: Call executeMatchingWithWorkers directly
- * const execution = executeMatchingWithWorkers(mangaList, candidatesMap, config);
- * const results = await execution.promise;
- *
- * // Alternative: Check availability with explicit wait
- * await awaitWorkerReady();
- * if (areWorkersAvailable()) {
- *   // Safe to use workers
- * }
- * ```
+ * Returns the minimum available worker count across all pools.
+ * Note: reflects current state; prefer executeMatchingWithWorkers for typical use.
+ * @returns Minimum number of available workers (0 if unavailable).
+ * @source
  */
 export async function areWorkersAvailable(): Promise<number> {
   const matchingPool = getWorkerPool();
@@ -228,23 +184,8 @@ export async function areWorkersAvailable(): Promise<number> {
 }
 
 /**
- * Wait for the worker pool to be fully initialized and ready.
- *
- * This is useful if you want to explicitly ensure workers are ready before
- * checking `areWorkersAvailable()` or making assumptions about worker availability.
- *
- * In most cases, you don't need this—just call `executeMatchingWithWorkers()` directly,
- * which handles initialization automatically.
- *
- * @returns Promise that resolves once workers are initialized (or fallback is ready)
- *
- * @example
- * ```typescript
- * await awaitWorkerReady();
- * if (areWorkersAvailable()) {
- *   // Now safe to rely on workers
- * }
- * ```
+ * Waits until the worker pool is initialized or fallback is configured.
+ * @source
  */
 export async function awaitWorkerReady(): Promise<void> {
   const pool = getWorkerPool();

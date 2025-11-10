@@ -5,8 +5,11 @@ import type {
 import { getErrorDetails } from "../errorUtils";
 
 /**
- * Handle statistics aggregation message from main thread
- * Performs filtering, normalization, and aggregation of match/history data
+ * Aggregates statistics for matches and reading history in a worker.
+ * @param message - Worker message with results, history, filters, and comparison mode.
+ * @param activeTasks - Set tracking active task IDs.
+ * @returns Promise that posts STATISTICS_AGGREGATION_RESULT or ERROR.
+ * @source
  */
 export async function handleStatisticsAggregation(
   message: StatisticsAggregationMessage,

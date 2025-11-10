@@ -7,7 +7,12 @@ import type {
 import { getErrorDetails } from "../errorUtils";
 
 /**
- * Build a map of AniList IDs to their associated match information
+ * Builds a map of AniList IDs to associated match indices and titles.
+ * @param matches - Match results to analyze.
+ * @param taskId - Task ID for cancellation checks.
+ * @param activeTasks - Set tracking active task IDs.
+ * @returns Map and comparison count.
+ * @source
  */
 function buildAniListIdMap(
   matches: MangaMatchResult[],
@@ -63,7 +68,11 @@ function buildAniListIdMap(
 }
 
 /**
- * Extract duplicate entries from the AniList ID map
+ * Extracts duplicate groups from the AniList ID map.
+ * @param anilistIdMap - Map of AniList IDs to match metadata.
+ * @param ignoredIds - AniList IDs to exclude from consideration.
+ * @returns Duplicate groups.
+ * @source
  */
 function extractDuplicates(
   anilistIdMap: Map<
@@ -87,8 +96,11 @@ function extractDuplicates(
 }
 
 /**
- * Handle duplicate detection on matches
- * Identifies when a single AniList ID is mapped to multiple Kenmei manga titles
+ * Detects duplicate mappings where one AniList ID maps to multiple Kenmei titles.
+ * @param message - Worker message with matches and detection settings.
+ * @param activeTasks - Set tracking active task IDs.
+ * @returns Void; posts DUPLICATE_DETECTION_RESULT or ERROR.
+ * @source
  */
 export function handleDuplicateDetection(
   message: DuplicateDetectionMessage,

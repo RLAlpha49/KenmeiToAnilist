@@ -2,8 +2,16 @@ import type { CSVParserState } from "../types";
 import type { CSVStartMessage, CSVChunkMessage } from "../../types";
 import { getErrorDetails } from "../errorUtils";
 
+/** Active CSV parser states indexed by task ID. @source */
 export const csvParserStates = new Map<string, CSVParserState>();
 
+/**
+ * Initializes a new CSV parsing task and parser state.
+ * @param message - Worker message with task metadata and CSV options.
+ * @param activeTasks - Set tracking active task IDs.
+ * @returns Void; posts initial PROGRESS message.
+ * @source
+ */
 export function handleCSVStart(
   message: CSVStartMessage,
   activeTasks: Set<string>,
@@ -43,6 +51,13 @@ export function handleCSVStart(
   });
 }
 
+/**
+ * Accumulates CSV chunk data and updates progress tracking.
+ * @param chunk - Text chunk of CSV data to accumulate.
+ * @param state - Current parser state to update.
+ * @returns Void; posts PROGRESS message.
+ * @source
+ */
 function processCSVChunk(chunk: string, state: CSVParserState): void {
   state.csvBuffer += chunk;
   state.processedBytes += chunk.length;
@@ -61,6 +76,12 @@ function processCSVChunk(chunk: string, state: CSVParserState): void {
   );
 }
 
+/**
+ * Parses the complete CSV buffer and posts parsed manga data.
+ * @param state - Parser state containing accumulated CSV buffer.
+ * @returns Promise that posts CSV_COMPLETE or throws on parse error.
+ * @source
+ */
 async function finalizeCSVParsing(state: CSVParserState): Promise<void> {
   try {
     const { parseKenmeiCsvExport } = await import("@/api/kenmei/parser");
@@ -100,6 +121,13 @@ async function finalizeCSVParsing(state: CSVParserState): Promise<void> {
   }
 }
 
+/**
+ * Handles CSV chunk messages; appends data and finalizes on last chunk.
+ * @param message - Worker message containing CSV chunk data.
+ * @param activeTasks - Set tracking active task IDs.
+ * @returns Void; posts PROGRESS, CSV_COMPLETE, or ERROR.
+ * @source
+ */
 export function handleCSVChunk(
   message: CSVChunkMessage,
   activeTasks: Set<string>,

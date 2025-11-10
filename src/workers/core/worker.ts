@@ -1,20 +1,6 @@
 /**
- * Unified Web Worker
- *
- * A single, centralized worker implementation that handles all types of worker operations:
- * - Manga matching operations (MATCH_BATCH)
- * - CSV parsing operations (CSV_START, CSV_CHUNK, CSV_COMPLETE)
- * - Advanced filter operations (ADVANCED_FILTER)
- * - Title normalization operations (TITLE_NORMALIZATION)
- * - Task cancellation (CANCEL)
- *
- * This eliminates code duplication by consolidating task tracking, error handling,
- * cancellation logic, and message dispatching into a single worker implementation.
- *
- * Message handlers are type-specific but follow a consistent pattern,
- * allowing easy addition of new message types without duplicating infrastructure code.
- *
- * @module workers/worker
+ * Central worker entrypoint that routes all supported operations and errors through a unified handler.
+ * @source
  */
 
 import type {
@@ -48,8 +34,8 @@ import { handleBatchSync } from "./worker/operations/batchSyncOperations";
 const activeTasks = new Set<string>();
 
 /**
- * Central message handler that dispatches to specific handlers based on message type.
- * Provides unified error handling for all operation types.
+ * Dispatches inbound worker messages to operation-specific handlers with shared error handling.
+ * @source
  */
 globalThis.onmessage = async (event: MessageEvent<WorkerInboundMessage>) => {
   const message = event.data;

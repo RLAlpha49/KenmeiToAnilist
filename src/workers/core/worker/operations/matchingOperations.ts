@@ -4,6 +4,13 @@ import type { MatchBatchMessage } from "../../types";
 import type { MatchEngineConfig } from "@/api/matching/match-engine";
 import { getErrorDetails } from "../errorUtils";
 
+/**
+ * Performs batch matching of Kenmei manga against AniList candidates.
+ * @param message - Worker message with manga list and candidate map.
+ * @param activeTasks - Set tracking active task IDs.
+ * @returns Promise that posts RESULT or ERROR.
+ * @source
+ */
 export async function handleMatchBatch(
   message: MatchBatchMessage,
   activeTasks: Set<string>,

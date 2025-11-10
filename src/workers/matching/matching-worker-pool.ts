@@ -14,6 +14,11 @@ import type { MatchEngineConfig } from "@/api/matching/match-engine";
 import { findBestMatches } from "@/api/matching/match-engine";
 import { getGenericWorkerPool } from "../core/worker-pool";
 
+/**
+ * Generates a RFC4122-like UUID for matching tasks.
+ * @returns A unique task identifier.
+ * @source
+ */
 function generateUUID(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replaceAll(
     /[xy]/g,
@@ -26,7 +31,8 @@ function generateUUID(): string {
 }
 
 /**
- * Wrapper around unified pool for matching operations
+ * Manages manga matching operations using the shared worker pool.
+ * @source
  */
 export class MatchingWorkerPool {
   private readonly config: WorkerPoolConfig;
@@ -41,7 +47,9 @@ export class MatchingWorkerPool {
   }
 
   /**
-   * Initialize the pool (delegates to unified pool)
+   * Initializes the shared worker pool for matching operations.
+   * @returns A promise that resolves when initialization is complete.
+   * @source
    */
   async initialize(): Promise<void> {
     if (this.initialized) {
@@ -57,7 +65,9 @@ export class MatchingWorkerPool {
   }
 
   /**
-   * Check if pool is available
+   * Indicates whether the worker pool is initialized and usable.
+   * @returns True if the pool is initialized and available.
+   * @source
    */
   isAvailable(): boolean {
     const pool = getGenericWorkerPool();
@@ -65,7 +75,9 @@ export class MatchingWorkerPool {
   }
 
   /**
-   * Get the number of currently available workers in the pool
+   * Retrieves the number of currently available workers.
+   * @returns Count of available workers or 0 if uninitialized.
+   * @source
    */
   getAvailableWorkerCount(): number {
     const pool = getGenericWorkerPool();
@@ -73,7 +85,14 @@ export class MatchingWorkerPool {
   }
 
   /**
-   * Execute a batch matching operation
+   * Executes a batch manga matching operation using a worker or the main thread.
+   * @param kenmeiMangaList - Source manga entries from Kenmei.
+   * @param anilistMangaMap - Candidate AniList manga grouped by key.
+   * @param config - Partial matching engine configuration.
+   * @param progressCallback - Optional progress callback for UI updates.
+   * @param taskId - Optional external task identifier.
+   * @returns Batch execution handle with aggregated promise.
+   * @source
    */
   async executeMatchBatch(
     kenmeiMangaList: KenmeiManga[],
@@ -201,7 +220,12 @@ export class MatchingWorkerPool {
   }
 
   /**
-   * Execute matching on main thread (fallback)
+   * Executes batch matching on the main thread as a fallback.
+   * @param kenmeiMangaList - Source manga entries from Kenmei.
+   * @param anilistMangaMap - Candidate AniList manga grouped by key.
+   * @param config - Partial matching engine configuration.
+   * @returns Promise resolving to raw match results.
+   * @source
    */
   private async executeMatchBatchMainThread(
     kenmeiMangaList: KenmeiManga[],
@@ -227,7 +251,9 @@ export class MatchingWorkerPool {
   }
 
   /**
-   * Cancel a batch operation
+   * Cancels a matching batch task in the worker pool.
+   * @param taskId - Identifier of the task to cancel.
+   * @source
    */
   cancelBatch(taskId: string): void {
     const pool = getGenericWorkerPool();
@@ -235,7 +261,9 @@ export class MatchingWorkerPool {
   }
 
   /**
-   * Get pool statistics
+   * Returns current pool statistics.
+   * @returns Aggregate worker and task metrics.
+   * @source
    */
   getStats(): {
     totalWorkers: number;
@@ -247,7 +275,8 @@ export class MatchingWorkerPool {
   }
 
   /**
-   * Terminate the pool
+   * Terminates the shared worker pool.
+   * @source
    */
   terminate(): void {
     const pool = getGenericWorkerPool();

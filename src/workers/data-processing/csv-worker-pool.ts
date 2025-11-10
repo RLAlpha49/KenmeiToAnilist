@@ -1,10 +1,6 @@
 /**
- * CSV Worker Pool Wrapper
- *
- * Provides a familiar API for CSV parsing operations while using
- * the unified worker pool under the hood to share workers with matching.
- *
- * @module workers/csv-worker-pool
+ * Provides a unified worker-pool-based API for CSV parsing used by Kenmei export workflows.
+ * @source
  */
 
 import type {
@@ -15,6 +11,11 @@ import type {
 import type { KenmeiManga, KenmeiStatus } from "@/api/kenmei/types";
 import { getGenericWorkerPool } from "../core/worker-pool";
 
+/**
+ * Generates a random UUID for worker tasks.
+ * @returns A UUID string.
+ * @source
+ */
 function generateUUID(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replaceAll(
     /[xy]/g,
@@ -26,6 +27,10 @@ function generateUUID(): string {
   );
 }
 
+/**
+ * Configuration for CSV worker pool behavior.
+ * @source
+ */
 export interface CSVWorkerPoolConfig {
   maxWorkers?: number;
   chunkSize?: number;
@@ -33,6 +38,10 @@ export interface CSVWorkerPoolConfig {
   fallbackToMainThread?: boolean;
 }
 
+/**
+ * Result payload returned by CSV parsing operations.
+ * @source
+ */
 interface CSVResult {
   manga: KenmeiManga[];
   stats: {
@@ -43,7 +52,8 @@ interface CSVResult {
 }
 
 /**
- * Wrapper around unified pool for CSV parsing operations
+ * Manages CSV parsing tasks backed by the shared generic worker pool with main-thread fallback.
+ * @source
  */
 export class CSVWorkerPool {
   private readonly chunkSize: number;
@@ -54,7 +64,8 @@ export class CSVWorkerPool {
   }
 
   /**
-   * Initialize the pool (delegates to unified pool)
+   * Initializes the shared worker pool once for CSV parsing.
+   * @source
    */
   async initialize(): Promise<void> {
     if (this.initialized) {
@@ -66,7 +77,9 @@ export class CSVWorkerPool {
   }
 
   /**
-   * Check if pool is available
+   * Indicates whether the CSV worker pool is initialized and usable.
+   * @returns True if the pool is initialized and available.
+   * @source
    */
   isAvailable(): boolean {
     const pool = getGenericWorkerPool();
@@ -74,7 +87,9 @@ export class CSVWorkerPool {
   }
 
   /**
-   * Get the number of currently available workers
+   * Returns the number of currently available workers for CSV tasks.
+   * @returns Count of idle workers.
+   * @source
    */
   getAvailableWorkerCount(): number {
     const pool = getGenericWorkerPool();
@@ -82,7 +97,12 @@ export class CSVWorkerPool {
   }
 
   /**
-   * Start parsing CSV file with taskId exposed for cancellation
+   * Starts CSV parsing and exposes a task id for tracking and cancellation.
+   * @param fileContent - CSV file contents.
+   * @param options - Optional parsing options including default status.
+   * @param onProgress - Optional callback for progress updates.
+   * @returns The task id and result promise.
+   * @source
    */
   startParsing(
     fileContent: string,
@@ -100,7 +120,12 @@ export class CSVWorkerPool {
   }
 
   /**
-   * Parse CSV file using the unified worker pool
+   * Parses a CSV file via the worker pool, returning structured results.
+   * @param fileContent - CSV file contents.
+   * @param options - Optional parsing options including default status.
+   * @param onProgress - Optional callback for progress updates.
+   * @returns Parsed manga and stats.
+   * @source
    */
   async parseCSVFile(
     fileContent: string,
@@ -112,7 +137,13 @@ export class CSVWorkerPool {
   }
 
   /**
-   * Dispatch CSV parsing to the unified pool
+   * Dispatches CSV parsing to the shared worker pool with main-thread fallback.
+   * @param taskId - Unique id for the parsing task.
+   * @param fileContent - CSV file contents.
+   * @param onProgress - Optional callback for progress updates.
+   * @param options - Optional parsing options.
+   * @returns Promise resolving with CSV parsing result.
+   * @source
    */
   private dispatchParsing(
     taskId: string,
@@ -160,7 +191,9 @@ export class CSVWorkerPool {
   }
 
   /**
-   * Internal helper to dispatch to worker after pool is ready
+   * Sends a CSV task to a selected worker and wires completion, cancellation, and progress handlers.
+   * Falls back to main-thread parsing if no worker is available.
+   * @source
    */
   private dispatchToWorker(
     pool: ReturnType<typeof getGenericWorkerPool>,
@@ -274,7 +307,11 @@ export class CSVWorkerPool {
   }
 
   /**
-   * Parse CSV on main thread (fallback)
+   * Parses CSV on the main thread as a fallback when workers are unavailable.
+   * @param fileContent - CSV contents to parse.
+   * @param options - Optional parsing options.
+   * @returns Parsed manga and stats.
+   * @source
    */
   private async parseCSVMainThread(
     fileContent: string,
@@ -305,7 +342,9 @@ export class CSVWorkerPool {
   }
 
   /**
-   * Cancel a parsing task
+   * Cancels an in-flight CSV parsing task.
+   * @param taskId - The id of the task to cancel.
+   * @source
    */
   cancelTask(taskId: string): void {
     const pool = getGenericWorkerPool();
@@ -313,7 +352,9 @@ export class CSVWorkerPool {
   }
 
   /**
-   * Get pool statistics
+   * Returns current statistics for the shared worker pool.
+   * @returns Pool metrics including workers and active tasks.
+   * @source
    */
   getStats(): {
     totalWorkers: number;
@@ -325,7 +366,8 @@ export class CSVWorkerPool {
   }
 
   /**
-   * Terminate the pool
+   * Terminates all workers in the shared pool.
+   * @source
    */
   terminate(): void {
     const pool = getGenericWorkerPool();
@@ -334,13 +376,21 @@ export class CSVWorkerPool {
 }
 
 /**
- * Global CSV worker pool instance
+ * Global singleton instance of the CSV worker pool.
+ * @source
  */
 let csvWorkerPoolInstance: CSVWorkerPool | null = null;
+/**
+ * Tracks in-flight initialization to prevent duplicate setup.
+ * @source
+ */
 let initializePromise: Promise<void> | null = null;
 
 /**
- * Get or create CSV worker pool
+ * Returns the shared CSV worker pool instance, initializing it lazily.
+ * @param config - Optional configuration applied on first creation.
+ * @returns The CSV worker pool singleton.
+ * @source
  */
 export function getCSVWorkerPool(config?: CSVWorkerPoolConfig): CSVWorkerPool {
   csvWorkerPoolInstance ??= new CSVWorkerPool(config);

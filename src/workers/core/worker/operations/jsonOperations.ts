@@ -2,8 +2,11 @@ import type { JSONSerializeMessage, JSONDeserializeMessage } from "../../types";
 import { getErrorDetails } from "../errorUtils";
 
 /**
- * Handle JSON serialization operation.
- * Offloads JSON.stringify to worker thread for heavy payloads.
+ * Serializes data to JSON in a worker for heavy payloads.
+ * @param message - Worker message with data to serialize.
+ * @param activeTasks - Set tracking active task IDs.
+ * @returns Void; posts JSON_SERIALIZE_RESULT or ERROR.
+ * @source
  */
 export function handleJsonSerialize(
   message: JSONSerializeMessage,
@@ -63,8 +66,11 @@ export function handleJsonSerialize(
 }
 
 /**
- * Handle JSON deserialization operation.
- * Offloads JSON.parse to worker thread for heavy payloads.
+ * Deserializes JSON in a worker for heavy payloads.
+ * @param message - Worker message with JSON string to deserialize.
+ * @param activeTasks - Set tracking active task IDs.
+ * @returns Void; posts JSON_DESERIALIZE_RESULT or ERROR.
+ * @source
  */
 export function handleJsonDeserialize(
   message: JSONDeserializeMessage,
