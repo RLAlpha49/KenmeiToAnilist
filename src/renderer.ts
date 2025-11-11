@@ -90,5 +90,26 @@ try {
   // App continues with fallback in-memory storage if initialization fails
 }
 
-// Load and render the React application after storage is ready
+/**
+ * Initialize worker pools in the background (non-blocking).
+ * Workers load in parallel with the UI rendering to improve performance.
+ * Uses void operator to start async initialization without blocking React rendering.
+ *
+ * @source
+ */
+void (async () => {
+  try {
+    const { initializeWorkerPoolsAsync } = await import("@/workers");
+    await initializeWorkerPoolsAsync();
+  } catch (error) {
+    console.warn(
+      "[Renderer] ⚠️ Worker pool initialization failed (will fall back to main thread):",
+      error instanceof Error ? error.message : String(error),
+    );
+    // Non-critical: if workers fail, the app falls back to main thread execution
+  }
+})();
+
+// Load and render the React application immediately after storage is ready
+// Workers will continue initializing in the background without blocking rendering
 import("@/App");

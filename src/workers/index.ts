@@ -14,6 +14,9 @@ export {
 export { getWorkerPool, workerPool } from "./core/pool";
 export { getGenericWorkerPool } from "./core/worker-pool";
 
+// Worker initialization
+export { initializeWorkerPoolsAsync } from "./init";
+
 // Matching operations
 export { MatchingWorkerPool } from "./matching/matching-worker-pool";
 export { BatchSyncWorkerPool } from "./matching/batch-sync-worker-pool";
