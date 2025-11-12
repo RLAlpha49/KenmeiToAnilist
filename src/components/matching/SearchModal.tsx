@@ -152,7 +152,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({
             transition={{ duration: 0.2 }}
           ></motion.div>
 
-          <motion.dialog
+          <motion.div
+            role="dialog"
             aria-modal="true"
             aria-labelledby="search-modal-title"
             aria-describedby="search-description"
@@ -181,7 +182,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                 bypassCache={bypassCache}
               />
             </div>
-          </motion.dialog>
+          </motion.div>
         </div>
       )}
     </AnimatePresence>,

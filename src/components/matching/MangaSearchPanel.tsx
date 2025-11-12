@@ -631,9 +631,7 @@ export function MangaSearchPanel({
               className="mb-3 h-9 w-9 text-blue-500"
               aria-hidden="true"
             />
-            {searchQuery.trim()
-              ? "No results just yet—try refining your keywords or searching by AniList ID."
-              : "Start by typing a title or AniList ID to discover the best match."}
+            Start by typing a title or AniList ID to discover the best match.
           </div>
         )}
 
