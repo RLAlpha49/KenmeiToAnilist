@@ -17,6 +17,10 @@ import { batchSearchManga } from "@/api/anilist/client";
 import { withGroupAsync } from "@/utils/logging";
 import { CancelledError } from "@/utils/errorHandling";
 import { ANILIST_RATE_LIMIT_PER_MINUTE } from "@/config/anilist";
+import {
+  executeComickFallback,
+  executeMangaDexFallback,
+} from "../sources";
 
 /**
  * Batch size for parallel manga searches (10 = AniList 60 req/min limit).
@@ -277,37 +281,42 @@ async function performFallbackSearches(
         updateProgress,
       } = options;
 
-      const { searchMangaByTitle } = await import("../search-service");
-
       for (const { manga, index } of items) {
         await withGroupAsync(
-          `[MangaSearchService] Fallback: "${manga.title}"`,
+          `[MangaSearchService] Fallback: "${manga.title}" (Alternative Sources Only)`,
           async () => {
             try {
               ensureNotCancelled(abortSignal, checkCancellation);
 
-              const response = await searchMangaByTitle(
+              // Search ONLY alternative sources (Comick, MangaDex)
+              // Skip AniList individual search since we already did batch search
+              let finalResults: AniListManga[] = [];
+
+              const comickFallback = await executeComickFallback(
                 manga.title,
                 token,
+                [],
                 searchConfig,
-                abortSignal,
-                undefined,
-                manga,
+              );
+
+              const mangaDexFallback = await executeMangaDexFallback(
+                manga.title,
+                token,
+                comickFallback.results,
+                searchConfig,
               );
 
               ensureNotCancelled(abortSignal, checkCancellation);
 
-              const matches = response.matches ?? [];
-              storage.cachedResults[index] = matches.map(
-                (match) => match.manga,
-              );
+              finalResults = mangaDexFallback.results;
 
-              const { comick, mangaDex } = collectAlternativeSources(matches);
-              storage.cachedComickSources[index] = comick;
-              storage.cachedMangaDexSources[index] = mangaDex;
+              // Store combined results from alternative sources
+              storage.cachedResults[index] = finalResults;
+              storage.cachedComickSources[index] = comickFallback.comickSourceMap;
+              storage.cachedMangaDexSources[index] = mangaDexFallback.mangaDexSourceMap;
 
               console.debug(
-                `[MangaSearchService] 🔁 Alternative search produced ${matches.length} matches for "${manga.title}"`,
+                `[MangaSearchService] 🔁 Alternative sources found ${finalResults.length} matches for "${manga.title}" (Comick: ${comickFallback.comickSourceMap.size}, MangaDex: ${mangaDexFallback.mangaDexSourceMap.size})`,
               );
             } catch (error) {
               console.error(
