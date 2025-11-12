@@ -9,12 +9,17 @@ import { Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import type { Variants } from "framer-motion";
 import { toast } from "sonner";
+import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
   RefreshCw,
   ArrowRight,
   AlertCircle,
   Loader2,
+  BookOpen,
+  CheckCircle2,
+  Activity,
+  Clock,
 } from "lucide-react";
 import {
   StatusDistributionChart,
@@ -65,7 +70,6 @@ import type {
 import { DEFAULT_STATISTICS_FILTERS } from "@/types/statistics";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { StatisticsErrorBoundary } from "@/components/statistics/StatisticsErrorBoundary";
 import { captureError, ErrorType } from "@/utils/errorHandling";
 import { useStatisticsAggregation } from "@/hooks/useStatisticsAggregation";
@@ -190,6 +194,16 @@ function generateErrorId(): string {
   const random = Math.random().toString(16).slice(2, 5);
   return `ERR-${timestamp}${random}`.toUpperCase();
 }
+
+type OverviewCard = {
+  key: string;
+  label: string;
+  value: string;
+  helper?: string;
+  icon: LucideIcon;
+  accent: string;
+  iconClass: string;
+};
 
 /**
  * StatisticsPage component – visual analytics for import, match, and sync data.
@@ -500,7 +514,8 @@ export function StatisticsPage() {
     const pendingCount = matchResults.filter(
       (match) => match.status === "pending",
     ).length;
-    return { totalImported, matchedCount, pendingCount };
+    const matchRate = totalImported > 0 ? matchedCount / totalImported : 0;
+    return { totalImported, matchedCount, pendingCount, matchRate };
   }, [importStats, matchResults]);
 
   /**
@@ -511,6 +526,84 @@ export function StatisticsPage() {
     () => formatRelativeTime(lastRefreshedAt),
     [lastRefreshedAt],
   );
+
+  const lastSyncLabel = useMemo(
+    () => formatRelativeTime(syncStats?.lastSyncTime ?? null),
+    [syncStats?.lastSyncTime],
+  );
+
+  const overviewCards = useMemo<OverviewCard[]>(() => {
+    const percentFormatter = new Intl.NumberFormat(undefined, {
+      style: "percent",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 1,
+    });
+
+    const numberFormatter = new Intl.NumberFormat(undefined, {
+      maximumFractionDigits: 1,
+    });
+
+    const totalChaptersRead =
+      historyFilterResult?.stats?.totalChaptersRead ?? 0;
+    const averageChaptersPerDay =
+      historyFilterResult?.stats?.averageChaptersPerDay ?? 0;
+
+    const matchRateValue = heroMetrics.totalImported
+      ? percentFormatter.format(heroMetrics.matchRate)
+      : "—";
+
+    return [
+      {
+        key: "imported",
+        label: "Imported Titles",
+        value: heroMetrics.totalImported.toLocaleString(),
+        helper: `Pending: ${heroMetrics.pendingCount.toLocaleString()}`,
+        icon: BookOpen,
+        accent: "from-blue-500/15 via-sky-500/10 to-indigo-500/10",
+        iconClass: "text-blue-600 dark:text-blue-300",
+      },
+      {
+        key: "match-rate",
+        label: "Match Completion",
+        value: matchRateValue,
+        helper: heroMetrics.totalImported
+          ? `${heroMetrics.matchedCount.toLocaleString()} matched`
+          : "Awaiting import",
+        icon: CheckCircle2,
+        accent: "from-emerald-500/15 via-teal-500/10 to-lime-500/10",
+        iconClass: "text-emerald-600 dark:text-emerald-300",
+      },
+      {
+        key: "reading",
+        label: "Chapters Logged",
+        value: totalChaptersRead.toLocaleString(),
+        helper: totalChaptersRead
+          ? `${numberFormatter.format(averageChaptersPerDay)} per day`
+          : "No activity yet",
+        icon: Activity,
+        accent: "from-fuchsia-500/15 via-purple-500/10 to-pink-500/10",
+        iconClass: "text-fuchsia-600 dark:text-fuchsia-300",
+      },
+      {
+        key: "syncs",
+        label: "Sync Activity",
+        value: (syncStats?.totalSyncs ?? 0).toLocaleString(),
+        helper: `Last sync: ${lastSyncLabel}`,
+        icon: Clock,
+        accent: "from-amber-500/15 via-orange-500/10 to-yellow-500/10",
+        iconClass: "text-amber-600 dark:text-amber-300",
+      },
+    ];
+  }, [
+    historyFilterResult?.stats?.averageChaptersPerDay,
+    historyFilterResult?.stats?.totalChaptersRead,
+    heroMetrics.matchRate,
+    heroMetrics.matchedCount,
+    heroMetrics.pendingCount,
+    heroMetrics.totalImported,
+    lastSyncLabel,
+    syncStats?.totalSyncs,
+  ]);
 
   /**
    * Determines if there is any data available to display in the current filtered scope.
@@ -546,13 +639,25 @@ export function StatisticsPage() {
     [],
   );
 
+  const overviewSkeletonKeys = useMemo(
+    () => ["imported", "match", "reading", "sync"],
+    [],
+  );
+
   let content: React.ReactNode;
   if (isLoading) {
     content = (
-      <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {skeletonKeys.map((key) => (
-          <SkeletonCard key={`statistics-skeleton-${key}`} />
-        ))}
+      <section className="space-y-8">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {overviewSkeletonKeys.map((key) => (
+            <SkeletonCard key={`statistics-overview-skeleton-${key}`} />
+          ))}
+        </div>
+        <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {skeletonKeys.map((key) => (
+            <SkeletonCard key={`statistics-skeleton-${key}`} />
+          ))}
+        </section>
       </section>
     );
   } else if (hasAnyData) {
@@ -561,9 +666,8 @@ export function StatisticsPage() {
         variants={containerVariants}
         initial="hidden"
         animate="show"
-        className="space-y-6"
+        className="space-y-10"
       >
-        {/* Row 0: Filter Panel */}
         <motion.div variants={itemVariants} className="w-full">
           <StatisticsFilterPanel
             filters={statisticsFilters}
@@ -578,110 +682,135 @@ export function StatisticsPage() {
           />
         </motion.div>
 
-        {/* Row 1: Status and Format Distribution */}
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <motion.div variants={itemVariants} className="w-full">
-            <StatusDistributionChart
-              data={importStats?.statusCounts ?? null}
-              onDrillDown={handleDrillDown}
+        <motion.section variants={itemVariants} className="space-y-4">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-xl font-semibold tracking-tight">
+              Performance Snapshot
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              Monitor match coverage and sync reliability at a glance.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <div className="w-full">
+              <StatusDistributionChart
+                data={importStats?.statusCounts ?? null}
+                onDrillDown={handleDrillDown}
+                matchResults={filteredData.matchResults}
+              />
+            </div>
+            <div className="w-full">
+              <FormatDistributionChart
+                matchResults={filteredData.matchResults}
+                onDrillDown={handleDrillDown}
+                filteredMatchResults={filteredData.matchResults}
+                readingHistory={filteredData.readingHistory}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="w-full">
+              <MatchProgressChart matchResults={matchResults} />
+            </div>
+            <div className="w-full">
+              <SyncMetricsChart syncStats={syncStats} />
+            </div>
+          </div>
+        </motion.section>
+
+        <motion.section variants={itemVariants} className="space-y-4">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-xl font-semibold tracking-tight">
+              Reading Engagement
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              Understand momentum and habits across your selected time range.
+            </p>
+          </div>
+          <div className="space-y-6">
+            <ReadingTrendsChart
+              history={filteredData.readingHistory}
+              timeRange={selectedTimeRange}
+              enableZoom={true}
               matchResults={filteredData.matchResults}
+              onDrillDown={
+                comparisonMode.metric === "chapters"
+                  ? handleDrillDown
+                  : undefined
+              }
+              comparisonData={
+                comparisonMode.enabled && comparisonMode.metric === "chapters"
+                  ? comparisonDatasets?.secondary.trends
+                  : undefined
+              }
+              comparisonLabel={
+                comparisonMode.enabled && comparisonMode.metric === "chapters"
+                  ? comparisonDatasets?.secondaryLabel
+                  : undefined
+              }
             />
-          </motion.div>
-          <motion.div variants={itemVariants} className="w-full">
-            <FormatDistributionChart
-              matchResults={filteredData.matchResults}
-              onDrillDown={handleDrillDown}
-              filteredMatchResults={filteredData.matchResults}
-              readingHistory={filteredData.readingHistory}
-            />
-          </motion.div>
-        </div>
+          </div>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="w-full">
+              <ReadingVelocityChart
+                history={filteredData.readingHistory}
+                timeRange={selectedTimeRange}
+                comparisonData={
+                  comparisonMode.enabled && comparisonMode.metric === "velocity"
+                    ? comparisonDatasets?.secondary.velocity
+                    : undefined
+                }
+                comparisonLabel={
+                  comparisonMode.enabled && comparisonMode.metric === "velocity"
+                    ? comparisonDatasets?.secondaryLabel
+                    : undefined
+                }
+              />
+            </div>
+            <div className="w-full">
+              <ReadingHabitsChart
+                history={filteredData.readingHistory}
+                timeRange={selectedTimeRange}
+                comparisonData={
+                  comparisonMode.enabled && comparisonMode.metric === "habits"
+                    ? comparisonDatasets?.secondary.habits
+                    : undefined
+                }
+                comparisonLabel={
+                  comparisonMode.enabled && comparisonMode.metric === "habits"
+                    ? comparisonDatasets?.secondaryLabel
+                    : undefined
+                }
+              />
+            </div>
+          </div>
+        </motion.section>
 
-        {/* Row 2: Chapters Read Distribution (Horizontal) */}
-        <motion.div variants={itemVariants} className="w-full">
-          <ChaptersReadDistributionChart
-            matchResults={filteredData.matchResults}
-          />
-        </motion.div>
-
-        {/* Row 3: Top Genres */}
-        <motion.div variants={itemVariants} className="w-full">
-          <TopGenresChart
-            matchResults={filteredData.matchResults}
-            onDrillDown={handleDrillDown}
-            filteredMatchResults={filteredData.matchResults}
-            readingHistory={filteredData.readingHistory}
-          />
-        </motion.div>
-
-        {/* Row 4: Match Progress */}
-        <motion.div variants={itemVariants} className="w-full">
-          <MatchProgressChart matchResults={matchResults} />
-        </motion.div>
-
-        {/* Row 5: Sync Metrics (Horizontal) */}
-        <motion.div variants={itemVariants} className="w-full">
-          <SyncMetricsChart syncStats={syncStats} />
-        </motion.div>
-
-        {/* Row 6: Reading Trends */}
-        <motion.div variants={itemVariants} className="w-full">
-          <ReadingTrendsChart
-            history={filteredData.readingHistory}
-            timeRange={selectedTimeRange}
-            enableZoom={true}
-            matchResults={filteredData.matchResults}
-            onDrillDown={
-              comparisonMode.metric === "chapters" ? handleDrillDown : undefined
-            }
-            comparisonData={
-              comparisonMode.enabled && comparisonMode.metric === "chapters"
-                ? comparisonDatasets?.secondary.trends
-                : undefined
-            }
-            comparisonLabel={
-              comparisonMode.enabled && comparisonMode.metric === "chapters"
-                ? comparisonDatasets?.secondaryLabel
-                : undefined
-            }
-          />
-        </motion.div>
-
-        {/* Row 7: Reading Velocity */}
-        <motion.div variants={itemVariants} className="w-full">
-          <ReadingVelocityChart
-            history={filteredData.readingHistory}
-            timeRange={selectedTimeRange}
-            comparisonData={
-              comparisonMode.enabled && comparisonMode.metric === "velocity"
-                ? comparisonDatasets?.secondary.velocity
-                : undefined
-            }
-            comparisonLabel={
-              comparisonMode.enabled && comparisonMode.metric === "velocity"
-                ? comparisonDatasets?.secondaryLabel
-                : undefined
-            }
-          />
-        </motion.div>
-
-        {/* Row 8: Reading Habits */}
-        <motion.div variants={itemVariants} className="w-full">
-          <ReadingHabitsChart
-            history={filteredData.readingHistory}
-            timeRange={selectedTimeRange}
-            comparisonData={
-              comparisonMode.enabled && comparisonMode.metric === "habits"
-                ? comparisonDatasets?.secondary.habits
-                : undefined
-            }
-            comparisonLabel={
-              comparisonMode.enabled && comparisonMode.metric === "habits"
-                ? comparisonDatasets?.secondaryLabel
-                : undefined
-            }
-          />
-        </motion.div>
+        <motion.section variants={itemVariants} className="space-y-4">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-xl font-semibold tracking-tight">
+              Library Discovery
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              Explore the genres and titles powering your collection.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="w-full">
+              <TopGenresChart
+                matchResults={filteredData.matchResults}
+                onDrillDown={handleDrillDown}
+                filteredMatchResults={filteredData.matchResults}
+                readingHistory={filteredData.readingHistory}
+              />
+            </div>
+            <div className="w-full">
+              <ChaptersReadDistributionChart
+                matchResults={filteredData.matchResults}
+              />
+            </div>
+          </div>
+        </motion.section>
       </motion.section>
     );
   } else {
@@ -719,49 +848,24 @@ export function StatisticsPage() {
         >
           <motion.div
             variants={itemVariants}
-            className="flex flex-col gap-6 rounded-3xl border border-slate-200 bg-white/90 p-8 shadow-lg backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80"
+            className="space-y-6 rounded-3xl border border-slate-200 bg-white/90 p-8 shadow-lg backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80"
           >
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <div className="mb-3 flex items-center gap-3">
-                  <span className="bg-linear-to-r inline-flex h-12 w-12 items-center justify-center rounded-2xl from-blue-500/20 via-purple-500/20 to-fuchsia-500/20 text-blue-500 dark:text-blue-300">
-                    <BarChart3 className="h-6 w-6" aria-hidden="true" />
-                  </span>
-                  <div>
-                    <h1 className="text-3xl font-semibold tracking-tight">
-                      Library Statistics
-                    </h1>
-                    <p className="text-muted-foreground mt-1 text-sm">
-                      Comprehensive insights into your Kenmei to AniList
-                      migration.
-                    </p>
-                  </div>
-                </div>
-                <div className="text-muted-foreground flex flex-wrap gap-2 text-sm">
-                  <Badge
-                    variant="secondary"
-                    className="bg-blue-500/15 text-blue-600 dark:text-blue-300"
-                  >
-                    Total imported: {heroMetrics.totalImported.toLocaleString()}
-                  </Badge>
-                  <Badge
-                    variant="secondary"
-                    className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-300"
-                  >
-                    Matched: {heroMetrics.matchedCount.toLocaleString()}
-                  </Badge>
-                  <Badge
-                    variant="secondary"
-                    className="bg-amber-500/15 text-amber-600 dark:text-amber-300"
-                  >
-                    Pending: {heroMetrics.pendingCount.toLocaleString()}
-                  </Badge>
-                  <Badge
-                    variant="secondary"
-                    className="bg-purple-500/15 text-purple-600 dark:text-purple-300"
-                  >
-                    Last updated: {lastUpdatedLabel}
-                  </Badge>
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-4">
+                <span className="bg-linear-to-br inline-flex h-12 w-12 items-center justify-center rounded-2xl from-blue-500/20 via-purple-500/20 to-fuchsia-500/20 text-blue-500 dark:text-blue-300">
+                  <BarChart3 className="h-6 w-6" aria-hidden="true" />
+                </span>
+                <div className="space-y-1">
+                  <h1 className="text-3xl font-semibold tracking-tight">
+                    Library Statistics
+                  </h1>
+                  <p className="text-muted-foreground text-sm">
+                    Comprehensive insights into your Kenmei to AniList
+                    migration.
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    Last refreshed: {lastUpdatedLabel}
+                  </p>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-3">
@@ -793,7 +897,7 @@ export function StatisticsPage() {
                     DEFAULT_STATISTICS_FILTERS,
                   )}
                 />
-                {hasAnyData && (
+                {hasAnyData && !isLoading ? (
                   <>
                     <TimeRangeSelector
                       value={selectedTimeRange}
@@ -805,9 +909,54 @@ export function StatisticsPage() {
                       disabled={!hasAnyData}
                     />
                   </>
-                )}
+                ) : null}
               </div>
             </div>
+
+            {isLoading ? (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {overviewSkeletonKeys.map((key) => (
+                  <SkeletonCard key={`statistics-header-skeleton-${key}`} />
+                ))}
+              </div>
+            ) : hasAnyData ? (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {overviewCards.map((card) => {
+                  const Icon = card.icon;
+                  return (
+                    <div
+                      key={`statistics-overview-${card.key}`}
+                      className="group relative overflow-hidden rounded-2xl border border-slate-200/60 bg-white/90 shadow-md backdrop-blur-sm transition-shadow hover:shadow-lg dark:border-slate-800/60 dark:bg-slate-950/70"
+                    >
+                      <div
+                        className={`absolute inset-0 bg-gradient-to-br ${card.accent}`}
+                        aria-hidden="true"
+                      />
+                      <div className="relative flex h-full flex-col justify-between gap-3 rounded-2xl border border-white/40 bg-white/80 p-5 dark:border-slate-900/60 dark:bg-slate-950/80">
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground text-sm font-medium">
+                            {card.label}
+                          </span>
+                          <span
+                            className={`rounded-xl bg-white/80 p-2 shadow-sm dark:bg-slate-900/70 ${card.iconClass}`}
+                          >
+                            <Icon className="h-4 w-4" aria-hidden="true" />
+                          </span>
+                        </div>
+                        <span className="text-2xl font-semibold tracking-tight">
+                          {card.value}
+                        </span>
+                        {card.helper ? (
+                          <span className="text-muted-foreground text-xs">
+                            {card.helper}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
           </motion.div>
         </motion.section>
 

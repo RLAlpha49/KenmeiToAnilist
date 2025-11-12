@@ -81,7 +81,7 @@ export function ImportSuccessContent({
           </CardDescription>
         </CardHeader>
         <CardContent className="w-full space-y-3 px-6 pb-6">
-          <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+          <div className="text-muted-foreground flex items-center justify-between text-xs font-medium">
             <span>Background tasks</span>
             <span>{progress}%</span>
           </div>
@@ -123,7 +123,7 @@ export function FileUploadContent({
       <Card className="shadow-lg">
         <CardHeader className="flex flex-col gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <div className="bg-primary/10 text-primary flex h-11 w-11 items-center justify-center rounded-full">
               <Upload className="h-5 w-5" />
             </div>
             <div>
@@ -131,8 +131,8 @@ export function FileUploadContent({
                 Upload your Kenmei export
               </CardTitle>
               <CardDescription>
-                Drop your CSV to kick off the import. Validation and parsing
-                run automatically.
+                Drop your CSV to kick off the import. Validation and parsing run
+                automatically.
               </CardDescription>
             </div>
           </div>
@@ -140,17 +140,17 @@ export function FileUploadContent({
 
         <CardContent className="space-y-6">
           <Tabs defaultValue="upload" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 gap-2 rounded-lg bg-muted/40 p-1 h-[50px]">
-                <TabsTrigger
-                  value="upload"
-                  className="flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:border hover:border-slate-200 dark:hover:border-white/20"
-                >
-                  <Upload className="h-4 w-4" />
-                  Upload
-                </TabsTrigger>
+            <TabsList className="bg-muted/40 grid h-[50px] w-full grid-cols-2 gap-2 rounded-lg p-1">
+              <TabsTrigger
+                value="upload"
+                className="data-[state=active]:bg-background data-[state=active]:text-foreground flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition hover:border hover:border-slate-200 data-[state=active]:shadow-sm dark:hover:border-white/20"
+              >
+                <Upload className="h-4 w-4" />
+                Upload
+              </TabsTrigger>
               <TabsTrigger
                 value="help"
-                className="flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:border hover:border-slate-200 dark:hover:border-white/20"
+                className="data-[state=active]:bg-background data-[state=active]:text-foreground flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition hover:border hover:border-slate-200 data-[state=active]:shadow-sm dark:hover:border-white/20"
               >
                 <Info className="h-4 w-4" />
                 How to export
@@ -158,8 +158,8 @@ export function FileUploadContent({
             </TabsList>
 
             <TabsContent value="upload" className="space-y-4 pt-6">
-              <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 p-6">
-                <p className="text-sm text-muted-foreground">
+              <div className="border-border/60 bg-muted/20 rounded-lg border border-dashed p-6">
+                <p className="text-muted-foreground text-sm">
                   Drag and drop your Kenmei export here or click to browse.
                   <Badge variant="outline" className="ml-2 font-mono">
                     .csv
@@ -170,14 +170,14 @@ export function FileUploadContent({
                   <FileDropZone onFileLoaded={onFileLoaded} onError={onError} />
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 We’ll keep your Kenmei metadata intact and flag any validation
                 issues immediately.
               </p>
             </TabsContent>
 
             <TabsContent value="help" className="space-y-4 pt-6">
-              <div className="rounded-lg border border-border/60 bg-muted/10 p-6 text-sm leading-relaxed text-muted-foreground">
+              <div className="border-border/60 bg-muted/10 text-muted-foreground rounded-lg border p-6 text-sm leading-relaxed">
                 <h3 className="text-foreground mb-3 text-base font-semibold">
                   How to export from Kenmei
                 </h3>
@@ -240,8 +240,8 @@ export function FileReadyContent({
         <Card className="shadow-lg">
           <CardHeader className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <span className="h-6 w-6 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+              <div className="bg-primary/10 text-primary flex h-11 w-11 items-center justify-center rounded-full">
+                <span className="border-primary/30 border-t-primary h-6 w-6 animate-spin rounded-full border-2" />
               </div>
               <div>
                 <CardTitle className="text-2xl font-semibold">
@@ -258,13 +258,13 @@ export function FileReadyContent({
               {Array.from({ length: 4 }).map(() => (
                 <div
                   key={crypto.randomUUID()}
-                  className="h-20 rounded-lg border border-dashed border-border/50 bg-muted/30"
+                  className="border-border/50 bg-muted/30 h-20 rounded-lg border border-dashed"
                 />
               ))}
             </div>
             <div className="space-y-2">
               <Progress className="h-2 animate-pulse" />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Combining your library with previously matched entries...
               </p>
             </div>
@@ -274,7 +274,9 @@ export function FileReadyContent({
     );
   }
 
-  const statusEntries = Object.entries(statusCounts).sort(([, a], [, b]) => b - a);
+  const statusEntries = Object.entries(statusCounts).sort(
+    ([, a], [, b]) => b - a,
+  );
   const uniqueStatuses = statusEntries.length;
 
   return (
@@ -286,7 +288,7 @@ export function FileReadyContent({
       <Card className="shadow-lg">
         <CardHeader className="flex flex-col gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <div className="bg-primary/10 text-primary flex h-11 w-11 items-center justify-center rounded-full">
               <ListChecks className="h-5 w-5" />
             </div>
             <div>
@@ -302,41 +304,41 @@ export function FileReadyContent({
 
         <CardContent className="space-y-6">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3 shadow-sm">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <div className="border-border/60 bg-muted/10 flex items-center gap-3 rounded-lg border px-4 py-3 shadow-sm">
+              <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-full">
                 <BookOpen className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                <p className="text-muted-foreground text-xs uppercase tracking-wide">
                   Total entries
                 </p>
-                <p className="text-lg font-semibold text-foreground">
+                <p className="text-foreground text-lg font-semibold">
                   {importData.manga.length.toLocaleString()}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3 shadow-sm">
+            <div className="border-border/60 bg-muted/10 flex items-center gap-3 rounded-lg border px-4 py-3 shadow-sm">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                 <History className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                <p className="text-muted-foreground text-xs uppercase tracking-wide">
                   Previously matched
                 </p>
-                <p className="text-lg font-semibold text-foreground">
+                <p className="text-foreground text-lg font-semibold">
                   {previousMatchCount.toLocaleString()}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3 shadow-sm">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <div className="border-border/60 bg-muted/10 flex items-center gap-3 rounded-lg border px-4 py-3 shadow-sm">
+              <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-full">
                 <ListChecks className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                <p className="text-muted-foreground text-xs uppercase tracking-wide">
                   Unique statuses
                 </p>
-                <p className="text-lg font-semibold text-foreground">
+                <p className="text-foreground text-lg font-semibold">
                   {uniqueStatuses.toLocaleString()}
                 </p>
               </div>
@@ -345,22 +347,22 @@ export function FileReadyContent({
 
           {statusEntries.length > 0 && (
             <div className="space-y-3">
-              <p className="text-sm font-medium text-foreground">
+              <p className="text-foreground text-sm font-medium">
                 Status overview
               </p>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {statusEntries.map(([status, count]) => (
                   <div
                     key={status}
-                    className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-card px-3 py-3 shadow-sm"
+                    className="border-border/60 bg-card flex items-center justify-between gap-3 rounded-md border px-3 py-3 shadow-sm"
                   >
                     <div className="flex items-center gap-3">
                       {getStatusIcon(status)}
-                      <span className="text-sm font-medium text-foreground">
+                      <span className="text-foreground text-sm font-medium">
                         {formatStatusLabel(status)}
                       </span>
                     </div>
-                    <span className="text-lg font-semibold text-foreground">
+                    <span className="text-foreground text-lg font-semibold">
                       {count.toLocaleString()}
                     </span>
                   </div>
@@ -369,7 +371,7 @@ export function FileReadyContent({
             </div>
           )}
 
-          <div className="rounded-lg border border-border/60">
+          <div className="border-border/60 rounded-lg border">
             <DataTable
               data={importData.manga}
               itemsPerPage={50}
@@ -378,7 +380,7 @@ export function FileReadyContent({
           </div>
         </CardContent>
 
-        <CardFooter className="flex-col items-stretch gap-4 border-t border-border/60 bg-muted/10 py-6">
+        <CardFooter className="border-border/60 bg-muted/10 flex-col items-stretch gap-4 border-t py-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
             <Button
               onClick={onImport}
@@ -411,12 +413,12 @@ export function FileReadyContent({
             </Button>
           </div>
 
-          <div className="space-y-3 text-xs text-muted-foreground">
+          <div className="text-muted-foreground space-y-3 text-xs">
             <p>We’ll reapply existing match decisions before sync begins.</p>
             {previousMatchCount > 0 && (
-              <Alert className="border border-primary/30 bg-primary/5">
+              <Alert className="border-primary/30 bg-primary/5 border">
                 <Info className="h-4 w-4" />
-                <AlertDescription className="text-sm text-foreground">
+                <AlertDescription className="text-foreground text-sm">
                   {previousMatchCount.toLocaleString()} previously reviewed
                   matches carry over automatically.
                 </AlertDescription>
