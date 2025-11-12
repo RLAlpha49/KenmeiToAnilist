@@ -129,6 +129,13 @@ export function handleDuplicateDetection(
       console.warn(
         `[Worker] ⚠️ Duplicate detection task ${taskId} was cancelled after ${comparisonCount} comparisons`,
       );
+      globalThis.postMessage({
+        type: "DUP_DETECTION_CANCELLED",
+        payload: {
+          taskId,
+          comparisonsCompleted: comparisonCount,
+        },
+      });
       return;
     }
 
@@ -149,6 +156,13 @@ export function handleDuplicateDetection(
       console.warn(
         `[Worker] ⚠️ Duplicate detection task ${taskId} was cancelled before completion`,
       );
+      globalThis.postMessage({
+        type: "DUP_DETECTION_CANCELLED",
+        payload: {
+          taskId,
+          stage: "completion",
+        },
+      });
       return;
     }
 

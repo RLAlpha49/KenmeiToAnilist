@@ -12,16 +12,13 @@ let workerPoolInstance: MatchingWorkerPool | null = null;
 
 /**
  * Get the singleton worker pool instance.
- * Creates and initializes the pool on first access.
+ * Initialization is handled explicitly via initializeWorkerPoolsAsync() in the renderer.
+ * Accessing this without prior initialization will return an uninitialized pool instance.
  *
  * @returns The worker pool instance
  */
 export function getWorkerPool(): MatchingWorkerPool {
-  if (!workerPoolInstance) {
-    workerPoolInstance = new MatchingWorkerPool();
-    // Initialize lazily on first use (fire and forget)
-    workerPoolInstance.initialize().catch(console.error);
-  }
+  workerPoolInstance ??= new MatchingWorkerPool();
   return workerPoolInstance;
 }
 

@@ -389,10 +389,16 @@ export class DataTableWorkerPool {
 
     const formattingTimeMs = performance.now() - formattingStartTime;
 
-    // Compute metadata
+    // Compute cumulative row heights for virtualization (this is the actual metadata work)
     const metadataStartTime = performance.now();
 
-    // Metadata computation complete
+    const cumulativeHeights: number[] = [];
+    let cumulativeHeight = 0;
+    for (const row of preparedData) {
+      cumulativeHeight += row.rowHeight;
+      cumulativeHeights.push(cumulativeHeight);
+    }
+
     const metadataComputationTimeMs = performance.now() - metadataStartTime;
     const totalTimeMs = performance.now() - startTime;
 

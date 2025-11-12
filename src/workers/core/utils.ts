@@ -149,38 +149,15 @@ export async function executeMatchingOnMainThread(
 }
 
 /**
- * Returns the minimum available worker count across all pools.
- * Note: reflects current state; prefer executeMatchingWithWorkers for typical use.
- * @returns Minimum number of available workers (0 if unavailable).
+ * Returns the available worker count from the matching pool.
+ * For pool-specific availability checks, call getAvailableWorkerCount() directly on the pool instance.
+ * This function is primarily used for UI indicators of worker readiness.
+ * @returns Number of available workers in the matching pool (0 if unavailable).
  * @source
  */
-export async function areWorkersAvailable(): Promise<number> {
+export function areWorkersAvailable(): number {
   const matchingPool = getWorkerPool();
-  const { getCSVWorkerPool } = await import(
-    "../data-processing/csv-worker-pool"
-  );
-  const { getFilterWorkerPool } = await import(
-    "../data-processing/filter-worker-pool"
-  );
-
-  const { getTitleNormalizationPool } = await import(
-    "../statistics/title-normalization-worker-pool"
-  );
-  const { getStatisticsWorkerPool } = await import(
-    "../statistics/statistics-worker-pool"
-  );
-
-  // Get available worker counts from each pool
-  const counts = [
-    matchingPool.getAvailableWorkerCount?.() ?? 0,
-    getCSVWorkerPool?.()?.getAvailableWorkerCount?.() ?? 0,
-    getFilterWorkerPool?.()?.getAvailableWorkerCount?.() ?? 0,
-    getTitleNormalizationPool?.()?.getAvailableWorkerCount?.() ?? 0,
-    getStatisticsWorkerPool?.()?.getAvailableWorkerCount?.() ?? 0,
-  ];
-
-  // Return the minimum available count (bottleneck is the most constrained pool)
-  return Math.min(...counts);
+  return matchingPool.getAvailableWorkerCount?.() ?? 0;
 }
 
 /**

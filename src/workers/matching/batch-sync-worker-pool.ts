@@ -80,6 +80,7 @@ export class BatchSyncWorkerPool {
 
   /**
    * Executes batch sync pre-processing using a worker or the main thread.
+   * Uses the standard pool task registration and message dispatch flow.
    * @param entries - Entries to prepare for synchronization.
    * @param onProgress - Optional callback for progress updates.
    * @param taskId - Optional external task identifier.
@@ -126,36 +127,50 @@ export class BatchSyncWorkerPool {
         return;
       }
 
-      // Set up message handler for this specific task
-      const messageHandler = (event: MessageEvent) => {
-        const message = event.data;
-
-        if (
-          message.type === "BATCH_SYNC_RESULT" &&
-          message.payload.taskId === mainTaskId
-        ) {
-          worker.removeEventListener("message", messageHandler);
-          resolve(message.payload.operations || []);
-        } else if (
-          message.type === "BATCH_SYNC_PROGRESS" &&
-          message.payload.taskId === mainTaskId
-        ) {
-          if (onProgress && message.payload) {
-            const { phase, processed, total, currentMediaId } = message.payload;
-            onProgress(phase, processed, total, currentMediaId);
+      // Register task with pool using standard flow
+      const task = {
+        taskId: mainTaskId,
+        resolve: (result: unknown) => {
+          // Adapt raw payload to expected shape: extract operations array
+          const adaptedResult =
+            (result as { operations?: PreparedSyncOperation[] }).operations ||
+            (result as PreparedSyncOperation[]);
+          resolve(adaptedResult);
+        },
+        reject,
+        cancelled: false,
+        onProgress: (message: unknown) => {
+          // Adapt generic message to typed callback
+          const msgWithType = message as {
+            type?: string;
+            payload?: {
+              phase?: string;
+              processed?: number;
+              total?: number;
+              currentMediaId?: number;
+            };
+          };
+          if (
+            msgWithType.type === "BATCH_SYNC_PROGRESS" &&
+            onProgress &&
+            msgWithType.payload &&
+            typeof msgWithType.payload.processed === "number" &&
+            typeof msgWithType.payload.total === "number"
+          ) {
+            const { phase, processed, total, currentMediaId } =
+              msgWithType.payload;
+            onProgress(
+              phase as "organizing" | "building" | "ready",
+              processed,
+              total,
+              currentMediaId,
+            );
           }
-        } else if (
-          message.type === "ERROR" &&
-          message.payload.taskId === mainTaskId
-        ) {
-          worker.removeEventListener("message", messageHandler);
-          reject(
-            new Error(message.payload.error?.message || "Batch sync error"),
-          );
-        }
+        },
+        workerIndex,
       };
 
-      worker.addEventListener("message", messageHandler);
+      pool.registerTask(mainTaskId, task);
 
       // Send message to worker
       const batchSyncMessage: BatchSyncMessage = {

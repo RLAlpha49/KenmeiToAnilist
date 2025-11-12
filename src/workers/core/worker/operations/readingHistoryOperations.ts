@@ -162,6 +162,13 @@ export function handleReadingHistoryFilter(
       console.warn(
         `[Worker] ⚠️ Reading history filter task ${taskId} was cancelled before completion`,
       );
+      globalThis.postMessage({
+        type: "READ_HIST_CANCELLED",
+        payload: {
+          taskId,
+          stage: "completion",
+        },
+      });
       return;
     }
 

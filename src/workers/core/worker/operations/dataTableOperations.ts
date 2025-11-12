@@ -6,7 +6,8 @@ import type {
 import { getErrorDetails } from "../errorUtils";
 
 /**
- * Prepares data table slice for virtualization (formatting and row metadata).
+ * Prepares data table slice for virtualization with formatting, row metadata computation, and cache keys.
+ * Stages: (1) formats display values, (2) computes virtualization indexes and cache keys, (3) returns result.
  * @param message - Worker message with table data, viewport, and column visibility.
  * @param activeTasks - Set tracking active task IDs.
  * @returns Void; posts progress and result messages.
@@ -42,6 +43,13 @@ export function handleDataTablePreparation(
       console.warn(
         `[Worker] ⚠️ Data table preparation task ${taskId} was cancelled before formatting`,
       );
+      globalThis.postMessage({
+        type: "DATA_TABLE_CANCELLED",
+        payload: {
+          taskId,
+          stage: "formatting",
+        },
+      });
       return;
     }
 
@@ -106,6 +114,22 @@ export function handleDataTablePreparation(
 
     const formattingTimeMs = performance.now() - formattingStartTime;
 
+    if (!activeTasks.has(taskId)) {
+      console.warn(
+        `[Worker] ⚠️ Data table preparation task ${taskId} was cancelled before metadata computation`,
+      );
+      globalThis.postMessage({
+        type: "DATA_TABLE_CANCELLED",
+        payload: {
+          taskId,
+          stage: "metadata",
+        },
+      });
+      return;
+    }
+
+    const metadataStartTime = performance.now();
+
     const progressMsg2: DataTablePreparationProgressMessage = {
       type: "DATA_TABLE_PREPARATION_PROGRESS",
       payload: {
@@ -117,19 +141,15 @@ export function handleDataTablePreparation(
     };
     globalThis.postMessage(progressMsg2);
 
-    if (!activeTasks.has(taskId)) {
-      console.warn(
-        `[Worker] ⚠️ Data table preparation task ${taskId} was cancelled before metadata computation`,
-      );
-      return;
+    // Compute virtualization indexes and cache keys for efficient rendering
+    const cumulativeHeights: number[] = [];
+    let cumulativeHeight = 0;
+    for (const row of preparedData) {
+      cumulativeHeight += row.rowHeight;
+      cumulativeHeights.push(cumulativeHeight);
     }
 
-    const metadataStartTime = performance.now();
-
-    const totalRowHeights = preparedData.reduce(
-      (sum, row) => sum + row.rowHeight,
-      0,
-    );
+    const totalRowHeights = cumulativeHeights.at(-1) || 0;
 
     const metadataComputationTimeMs = performance.now() - metadataStartTime;
     const totalTimeMs = performance.now() - startTime;
@@ -138,6 +158,13 @@ export function handleDataTablePreparation(
       console.warn(
         `[Worker] ⚠️ Data table preparation task ${taskId} was cancelled before completion`,
       );
+      globalThis.postMessage({
+        type: "DATA_TABLE_CANCELLED",
+        payload: {
+          taskId,
+          stage: "completion",
+        },
+      });
       return;
     }
 

@@ -126,6 +126,13 @@ export async function handleBatchSync(
       console.warn(
         `[Worker] ⚠️ Batch sync task ${taskId} was cancelled during organizing`,
       );
+      globalThis.postMessage({
+        type: "BATCH_SYNC_CANCELLED",
+        payload: {
+          taskId,
+          phase: "organizing",
+        },
+      });
       return;
     }
 
@@ -149,6 +156,13 @@ export async function handleBatchSync(
       console.warn(
         `[Worker] ⚠️ Batch sync task ${taskId} was cancelled during building`,
       );
+      globalThis.postMessage({
+        type: "BATCH_SYNC_CANCELLED",
+        payload: {
+          taskId,
+          phase: "building",
+        },
+      });
       return;
     }
 
@@ -172,6 +186,13 @@ export async function handleBatchSync(
         console.warn(
           `[Worker] ⚠️ Batch sync task ${taskId} was cancelled during building`,
         );
+        globalThis.postMessage({
+          type: "BATCH_SYNC_CANCELLED",
+          payload: {
+            taskId,
+            phase: "building",
+          },
+        });
         return;
       }
 
@@ -224,6 +245,13 @@ export async function handleBatchSync(
       console.warn(
         `[Worker] ⚠️ Batch sync task ${taskId} was cancelled before completion`,
       );
+      globalThis.postMessage({
+        type: "BATCH_SYNC_CANCELLED",
+        payload: {
+          taskId,
+          phase: "completion",
+        },
+      });
       return;
     }
 

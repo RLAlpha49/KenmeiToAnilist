@@ -94,6 +94,13 @@ export function handleTitleNormalization(
         console.warn(
           `[Worker] ⚠️ Title normalization task ${taskId} was cancelled`,
         );
+        globalThis.postMessage({
+          type: "TITLE_NORM_CANCELLED",
+          payload: {
+            taskId,
+            algorithm,
+          },
+        });
         return;
       }
 
@@ -110,6 +117,13 @@ export function handleTitleNormalization(
       console.warn(
         `[Worker] ⚠️ Title normalization task ${taskId} was cancelled before completion`,
       );
+      globalThis.postMessage({
+        type: "TITLE_NORM_CANCELLED",
+        payload: {
+          taskId,
+          stage: "completion",
+        },
+      });
       return;
     }
 

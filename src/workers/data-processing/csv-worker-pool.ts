@@ -218,6 +218,9 @@ export class CSVWorkerPool {
       return;
     }
 
+    // Accumulate rows from batches during streaming
+    const accumulatedRows: KenmeiManga[] = [];
+
     // Wrap resolve to adapt raw payload to expected CSV result shape
     const wrappedResolve = (result: {
       taskId: string;
@@ -229,12 +232,12 @@ export class CSVWorkerPool {
       };
     }) => {
       // CSV_COMPLETE and CSV_CANCELLED return raw payload
-      // For CSV_COMPLETE: { taskId, manga, stats }
+      // For CSV_COMPLETE: { taskId, manga: [], stats } (rows sent via CSV_ROWS batches)
       // For CSV_CANCELLED: { taskId }
-      if (result.manga && result.stats) {
-        // CSV_COMPLETE case
+      if (result.manga !== undefined && result.stats) {
+        // CSV_COMPLETE case - use accumulated rows and stats
         resolve({
-          manga: result.manga,
+          manga: accumulatedRows,
           stats: result.stats,
         });
       } else {
@@ -257,9 +260,18 @@ export class CSVWorkerPool {
       resolve: wrappedResolve as (result: Record<string, unknown>) => void,
       reject,
       cancelled: false,
-      onProgress: onProgress as
-        | ((message: import("../core/types").WorkerMessage) => void)
-        | undefined,
+      onProgress: ((message: import("../core/types").WorkerMessage) => {
+        // Handle CSV_ROWS batches
+        if (message.type === "CSV_ROWS") {
+          const csvRowsMsg = message;
+          accumulatedRows.push(...csvRowsMsg.payload.rows);
+        }
+
+        // Forward PROGRESS messages if callback provided
+        if (onProgress && message.type === "PROGRESS") {
+          onProgress(message);
+        }
+      }) as (message: import("../core/types").WorkerMessage) => void,
       workerIndex,
     };
 

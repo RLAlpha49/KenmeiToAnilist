@@ -43,6 +43,13 @@ export async function handleStatisticsAggregation(
       console.warn(
         `[Worker] ⚠️ Statistics aggregation task ${taskId} was cancelled before filtering`,
       );
+      globalThis.postMessage({
+        type: "STATS_CANCELLED",
+        payload: {
+          taskId,
+          stage: "filtering",
+        },
+      });
       return;
     }
 
@@ -60,6 +67,13 @@ export async function handleStatisticsAggregation(
       console.warn(
         `[Worker] ⚠️ Statistics aggregation task ${taskId} was cancelled after filtering`,
       );
+      globalThis.postMessage({
+        type: "STATS_CANCELLED",
+        payload: {
+          taskId,
+          stage: "aggregation",
+        },
+      });
       return;
     }
 
@@ -99,6 +113,13 @@ export async function handleStatisticsAggregation(
       console.warn(
         `[Worker] ⚠️ Statistics aggregation task ${taskId} was cancelled before completion`,
       );
+      globalThis.postMessage({
+        type: "STATS_CANCELLED",
+        payload: {
+          taskId,
+          stage: "completion",
+        },
+      });
       return;
     }
 

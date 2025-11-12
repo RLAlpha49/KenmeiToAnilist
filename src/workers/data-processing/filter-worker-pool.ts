@@ -8,6 +8,14 @@ import type { AdvancedFilterMessage } from "../core/types";
 import type { MangaMatchResult } from "@/api/anilist/types";
 import type { AdvancedMatchFilters } from "@/types/matchingFilters";
 import { filterByAdvancedCriteria } from "@/components/sync/filtering";
+import {
+  failsConfidenceFilter,
+  failsFormatFilter,
+  failsGenreFilter,
+  failsStatusFilter,
+  failsYearFilter,
+  failsTagFilter,
+} from "../shared/filters";
 
 /**
  * Result of applying advanced filters to match results.
@@ -54,123 +62,6 @@ export interface FilterOperationResult {
  */
 function generateTaskId(): string {
   return `filter_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-}
-
-/**
- * Returns true when a match falls outside the configured confidence range.
- * @source
- */
-function failsConfidenceFilter(
-  match: MangaMatchResult,
-  filters: AdvancedMatchFilters,
-): boolean {
-  let confidence = 0;
-
-  if (match.selectedMatch && match.anilistMatches) {
-    const selectedEntry = match.anilistMatches.find(
-      (m) => m.manga?.id === match.selectedMatch?.id,
-    );
-    confidence = selectedEntry?.confidence ?? 0;
-  } else if (match.anilistMatches?.length) {
-    confidence = match.anilistMatches[0].confidence ?? 0;
-  }
-
-  return (
-    confidence < filters.confidence.min || confidence > filters.confidence.max
-  );
-}
-
-/**
- * Returns true when a match does not satisfy allowed formats.
- * @source
- */
-function failsFormatFilter(
-  match: MangaMatchResult,
-  filters: AdvancedMatchFilters,
-): boolean {
-  if (filters.formats.length === 0) {
-    return false;
-  }
-  const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
-  return !matchData?.format || !filters.formats.includes(matchData.format);
-}
-
-/**
- * Returns true when a match is missing any required genres.
- * @source
- */
-function failsGenreFilter(
-  match: MangaMatchResult,
-  filters: AdvancedMatchFilters,
-): boolean {
-  if (filters.genres.length === 0) {
-    return false;
-  }
-  const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
-  const genres = matchData?.genres || [];
-  const genresLower = new Set(genres.map((g) => g.toLowerCase()));
-  return !filters.genres.some((fg) => genresLower.has(fg.toLowerCase()));
-}
-
-/**
- * Returns true when a match does not match required publication statuses.
- * @source
- */
-function failsStatusFilter(
-  match: MangaMatchResult,
-  filters: AdvancedMatchFilters,
-): boolean {
-  if (filters.publicationStatuses.length === 0) {
-    return false;
-  }
-  const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
-  return (
-    !matchData?.status ||
-    !filters.publicationStatuses.includes(matchData.status)
-  );
-}
-
-/**
- * Returns true when a match falls outside the configured year range.
- * @source
- */
-function failsYearFilter(
-  match: MangaMatchResult,
-  filters: AdvancedMatchFilters,
-): boolean {
-  if (!filters.yearRange) {
-    return false;
-  }
-  if (filters.yearRange.min === null && filters.yearRange.max === null) {
-    return false;
-  }
-  const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
-  const year = matchData?.startDate?.year;
-
-  if (year === undefined) {
-    return true;
-  }
-  if (filters.yearRange.min !== null && year < filters.yearRange.min) {
-    return true;
-  }
-  return filters.yearRange.max !== null && year > filters.yearRange.max;
-}
-
-/**
- * Returns true when a match does not include required tags.
- * @source
- */
-function failsTagFilter(
-  match: MangaMatchResult,
-  filters: AdvancedMatchFilters,
-): boolean {
-  if (!filters.tags || filters.tags.length === 0) {
-    return false;
-  }
-  const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
-  const tags = matchData?.tags || [];
-  const tagNames = new Set(tags.map((t) => t.name.toLowerCase()));
-  return !filters.tags.some((ft) => tagNames.has(ft.toLowerCase()));
 }
 
 /**

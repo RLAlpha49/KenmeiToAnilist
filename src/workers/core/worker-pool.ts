@@ -3,47 +3,8 @@
  * @source
  */
 
-import type { WorkerMessage } from "./types";
+import type { WorkerMessage, WorkerPoolConfig, WorkerTask } from "./types";
 import Worker from "./worker?worker";
-
-/**
- * Configuration for the worker pool behavior and limits.
- * @source
- */
-export interface WorkerPoolConfig {
-  /**
-   * Number of workers to create
-   * Default: Math.min(navigator.hardwareConcurrency || 2, 4)
-   */
-  maxWorkers: number;
-
-  /**
-   * Enable workers or use main thread fallback
-   * Default: true
-   */
-  enableWorkers: boolean;
-
-  /**
-   * Fall back to main thread if workers fail
-   * Default: true
-   */
-  fallbackToMainThread: boolean;
-}
-
-/**
- * Internal tracking metadata for a single worker task.
- * @source
- */
-interface WorkerTask {
-  taskId: string;
-  type: "matching" | "csv" | "normalization";
-  resolve: (result: Record<string, unknown>) => void;
-  reject: (error: Error) => void;
-  cancelled: boolean;
-  workerIndex?: number;
-  onProgress?: (message: WorkerMessage) => void;
-  cancelTimeoutHandle?: NodeJS.Timeout;
-}
 
 /**
  * Coordinates worker lifecycle, task routing, cancellation, and fallbacks.
@@ -232,6 +193,12 @@ export class WorkerPool {
     switch (message.type) {
       case "PROGRESS":
       case "TITLE_NORMALIZATION_PROGRESS":
+      case "BATCH_SYNC_PROGRESS":
+      case "DATA_TABLE_PREPARATION_PROGRESS":
+      case "DUPLICATE_DETECTION_PROGRESS":
+      case "READING_HISTORY_FILTER_PROGRESS":
+      case "STATISTICS_AGGREGATION_PROGRESS":
+      case "CSV_ROWS":
         if (task.onProgress) {
           task.onProgress(message);
         }
@@ -244,7 +211,11 @@ export class WorkerPool {
       case "TITLE_NORMALIZATION_RESULT":
       case "STATISTICS_AGGREGATION_RESULT":
       case "JSON_SERIALIZE_RESULT":
-      case "JSON_DESERIALIZE_RESULT": {
+      case "JSON_DESERIALIZE_RESULT":
+      case "BATCH_SYNC_RESULT":
+      case "DATA_TABLE_PREPARATION_RESULT":
+      case "DUPLICATE_DETECTION_RESULT":
+      case "READING_HISTORY_FILTER_RESULT": {
         const result = this.extractMessageResult(message);
         task.resolve(result);
         this.completeTask(taskId);
@@ -266,10 +237,18 @@ export class WorkerPool {
         if (errorDetails.stack) {
           error.stack = errorDetails.stack as string;
         }
+        // Guard Error.cause with feature detection; attach to meta if not supported
         if (errorDetails.causeMessage) {
-          (error as Error & { cause: Error }).cause = new Error(
-            errorDetails.causeMessage as string,
-          );
+          try {
+            // Try to set native cause if supported (Node 16.9+, modern browsers)
+            (error as Error & { cause?: Error }).cause = new Error(
+              errorDetails.causeMessage as string,
+            );
+          } catch {
+            // Fallback: attach cause message to error object for logging
+            (error as Error & { causeMessage?: string }).causeMessage =
+              errorDetails.causeMessage as string;
+          }
         }
         task.reject(error);
         this.completeTask(taskId);
@@ -305,6 +284,17 @@ export class WorkerPool {
       message.type === "STATISTICS_AGGREGATION_RESULT" ||
       message.type === "JSON_SERIALIZE_RESULT" ||
       message.type === "JSON_DESERIALIZE_RESULT" ||
+      message.type === "BATCH_SYNC_RESULT" ||
+      message.type === "DATA_TABLE_PREPARATION_RESULT" ||
+      message.type === "DUPLICATE_DETECTION_RESULT" ||
+      message.type === "READING_HISTORY_FILTER_RESULT" ||
+      message.type === "MATCH_CANCELLED" ||
+      message.type === "STATS_CANCELLED" ||
+      message.type === "TITLE_NORM_CANCELLED" ||
+      message.type === "BATCH_SYNC_CANCELLED" ||
+      message.type === "DUP_DETECTION_CANCELLED" ||
+      message.type === "DATA_TABLE_CANCELLED" ||
+      message.type === "READ_HIST_CANCELLED" ||
       message.type === "ERROR";
 
     if (!isTerminalMessage) {

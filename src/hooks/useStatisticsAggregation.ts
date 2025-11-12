@@ -44,17 +44,22 @@ export function useStatisticsAggregation(
 
   // Initialize worker pool once
   useEffect(() => {
+    let isMounted = true;
+
     const initPool = async () => {
-      if (!poolRef.current) {
+      if (!poolRef.current && isMounted) {
         const pool = getStatisticsWorkerPool();
         await pool.initialize();
-        poolRef.current = pool;
+        if (isMounted) {
+          poolRef.current = pool;
+        }
       }
     };
 
     void initPool();
 
     return () => {
+      isMounted = false;
       // Cleanup: terminate pool when component unmounts
       if (poolRef.current) {
         poolRef.current.terminate();
@@ -108,8 +113,22 @@ export function useStatisticsAggregation(
       setError(null);
 
       try {
+        // Wait for pool initialization with timeout
+        let attempts = 0;
+        const maxAttempts = 100; // ~5 seconds with 50ms intervals
+        while (!poolRef.current && attempts < maxAttempts && !signal.aborted) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          attempts++;
+        }
+
+        if (signal.aborted) {
+          return;
+        }
+
         if (!poolRef.current) {
-          throw new Error("Worker pool not initialized");
+          throw new Error(
+            "Worker pool initialization timeout - unable to initialize worker pool",
+          );
         }
 
         const result = await poolRef.current.aggregateStatistics(

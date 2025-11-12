@@ -52,6 +52,8 @@ export interface ProgressMessage {
     // For CSV worker (byte-based)
     processedBytes?: number;
     totalBytes?: number;
+    // For CSV worker (row count progress)
+    parsedRowsCount?: number;
   };
 }
 
@@ -138,6 +140,14 @@ export interface CSVCancelledMessage {
   type: "CSV_CANCELLED";
   payload: {
     taskId: string;
+  };
+}
+
+export interface CSVRowsMessage {
+  type: "CSV_ROWS";
+  payload: {
+    taskId: string;
+    rows: KenmeiManga[];
   };
 }
 
@@ -507,6 +517,85 @@ export interface BatchSyncResultMessage {
 }
 
 /**
+ * Outbound terminal cancellation message for match batch operations.
+ * @source
+ */
+export interface MatchCancelledMessage {
+  type: "MATCH_CANCELLED";
+  payload: {
+    taskId: string;
+    itemsProcessed: number;
+    totalItems: number;
+  };
+}
+
+/**
+ * Outbound terminal cancellation message for statistics operations.
+ * @source
+ */
+export interface StatsCancelledMessage {
+  type: "STATS_CANCELLED";
+  payload: {
+    taskId: string;
+  };
+}
+
+/**
+ * Outbound terminal cancellation message for title normalization operations.
+ * @source
+ */
+export interface TitleNormCancelledMessage {
+  type: "TITLE_NORM_CANCELLED";
+  payload: {
+    taskId: string;
+  };
+}
+
+/**
+ * Outbound terminal cancellation message for batch sync operations.
+ * @source
+ */
+export interface BatchSyncCancelledMessage {
+  type: "BATCH_SYNC_CANCELLED";
+  payload: {
+    taskId: string;
+  };
+}
+
+/**
+ * Outbound terminal cancellation message for duplicate detection operations.
+ * @source
+ */
+export interface DupDetectionCancelledMessage {
+  type: "DUP_DETECTION_CANCELLED";
+  payload: {
+    taskId: string;
+  };
+}
+
+/**
+ * Outbound terminal cancellation message for data table preparation operations.
+ * @source
+ */
+export interface DataTableCancelledMessage {
+  type: "DATA_TABLE_CANCELLED";
+  payload: {
+    taskId: string;
+  };
+}
+
+/**
+ * Outbound terminal cancellation message for reading history filter operations.
+ * @source
+ */
+export interface ReadHistCancelledMessage {
+  type: "READ_HIST_CANCELLED";
+  payload: {
+    taskId: string;
+  };
+}
+
+/**
  * Discriminated union of all supported worker message variants.
  * @source
  */
@@ -519,6 +608,7 @@ export type WorkerMessage =
   | CSVStartMessage
   | CSVChunkMessage
   | CSVCompleteMessage
+  | CSVRowsMessage
   | CSVCancelledMessage
   | AdvancedFilterMessage
   | AdvancedFilterResultMessage
@@ -535,7 +625,14 @@ export type WorkerMessage =
   | DataTablePreparationProgressMessage
   | DataTablePreparationResultMessage
   | BatchSyncProgressMessage
-  | BatchSyncResultMessage;
+  | BatchSyncResultMessage
+  | MatchCancelledMessage
+  | StatsCancelledMessage
+  | TitleNormCancelledMessage
+  | BatchSyncCancelledMessage
+  | DupDetectionCancelledMessage
+  | DataTableCancelledMessage
+  | ReadHistCancelledMessage;
 
 /**
  * Inbound request to filter and aggregate reading history.
@@ -955,30 +1052,8 @@ export type WorkerInboundMessage =
   | BatchSyncMessage;
 
 /**
- * Internal task tracking structure used by the matching worker pool.
- * @source
- */
-export interface WorkerTask {
-  taskId: string;
-  kenmeiManga: KenmeiManga[];
-  anilistCandidates: Map<string, AniListManga[]>;
-  config: Partial<MatchEngineConfig>;
-  resolve: (results: MangaMatchResult[]) => void;
-  reject: (error: Error) => void;
-  cancelled: boolean;
-  progressCallback?: (
-    current: number,
-    total: number,
-    currentTitle?: string,
-  ) => void;
-  workerIndex?: number;
-  totalItems?: number;
-  processedItems?: number;
-  chunkProgress?: Map<number, { current: number; total: number }>;
-}
-
-/**
  * Configuration options controlling worker pool capacity and fallbacks.
+ * Unified definition used by all worker pool implementations.
  * @source
  */
 export interface WorkerPoolConfig {
@@ -989,7 +1064,7 @@ export interface WorkerPoolConfig {
   maxWorkers: number;
 
   /**
-   * Whether to enable worker-based matching.
+   * Whether to enable worker-based execution.
    * If false, all operations fall back to main thread.
    * Default: true
    */
@@ -1000,6 +1075,40 @@ export interface WorkerPoolConfig {
    * Default: true
    */
   fallbackToMainThread: boolean;
+}
+
+/**
+ * Unified internal task tracking structure for all worker pool operations.
+ * Supports multiple task types (matching, csv, statistics, etc.) with optional
+ * fields for task-specific metadata and progress handling.
+ * @source
+ */
+export interface WorkerTask {
+  // Core task identification and control
+  taskId: string;
+  resolve: (result: Record<string, unknown>) => void;
+  reject: (error: Error) => void;
+  cancelled: boolean;
+
+  // Worker assignment
+  workerIndex?: number;
+
+  // Progress and cancellation handling
+  onProgress?: (message: WorkerMessage) => void;
+  cancelTimeoutHandle?: NodeJS.Timeout;
+
+  // Matching-specific fields (optional for other pools)
+  kenmeiManga?: KenmeiManga[];
+  anilistCandidates?: Array<[string, AniListManga[]]>;
+  config?: Partial<MatchEngineConfig>;
+  progressCallback?: (
+    current: number,
+    total: number,
+    currentTitle?: string,
+  ) => void;
+  totalItems?: number;
+  processedItems?: number;
+  chunkProgress?: Map<number, { current: number; total: number }>;
 }
 
 /**

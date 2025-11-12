@@ -334,9 +334,10 @@ export function StatisticsPage() {
   );
 
   /**
-   * Helper function to convert TimeRange to date range for reading history filtering
+   * Memoized date range computed from selected time range.
+   * Prevents unnecessary re-runs of useReadingHistoryFilter hook.
    */
-  const getDateRangeFromTimeRange = useCallback((range: TimeRange) => {
+  const dateRangeForFilter = useMemo(() => {
     const now = Date.now();
     const ranges = {
       "7d": 7 * 24 * 60 * 60 * 1000,
@@ -344,10 +345,11 @@ export function StatisticsPage() {
       "90d": 90 * 24 * 60 * 60 * 1000,
     };
 
-    const msBack = range === "all" ? Infinity : ranges[range];
+    const msBack =
+      selectedTimeRange === "all" ? Infinity : ranges[selectedTimeRange];
     const start = msBack === Infinity ? 0 : now - msBack;
     return { start, end: now };
-  }, []);
+  }, [selectedTimeRange]);
 
   /**
    * Filters reading history for the current time range using worker pool
@@ -355,7 +357,7 @@ export function StatisticsPage() {
    */
   const { filterResult: historyFilterResult } = useReadingHistoryFilter(
     readingHistory,
-    getDateRangeFromTimeRange(selectedTimeRange),
+    dateRangeForFilter,
     "daily", // Use daily aggregation for charts
   );
 
@@ -562,7 +564,7 @@ export function StatisticsPage() {
         className="space-y-6"
       >
         {/* Row 0: Filter Panel */}
-        <motion.div variants={itemVariants}>
+        <motion.div variants={itemVariants} className="w-full">
           <StatisticsFilterPanel
             filters={statisticsFilters}
             onFiltersChange={handleFiltersChange}
@@ -578,14 +580,14 @@ export function StatisticsPage() {
 
         {/* Row 1: Status and Format Distribution */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <motion.div variants={itemVariants}>
+          <motion.div variants={itemVariants} className="w-full">
             <StatusDistributionChart
               data={importStats?.statusCounts ?? null}
               onDrillDown={handleDrillDown}
               matchResults={filteredData.matchResults}
             />
           </motion.div>
-          <motion.div variants={itemVariants}>
+          <motion.div variants={itemVariants} className="w-full">
             <FormatDistributionChart
               matchResults={filteredData.matchResults}
               onDrillDown={handleDrillDown}
@@ -596,14 +598,14 @@ export function StatisticsPage() {
         </div>
 
         {/* Row 2: Chapters Read Distribution (Horizontal) */}
-        <motion.div variants={itemVariants}>
+        <motion.div variants={itemVariants} className="w-full">
           <ChaptersReadDistributionChart
             matchResults={filteredData.matchResults}
           />
         </motion.div>
 
         {/* Row 3: Top Genres */}
-        <motion.div variants={itemVariants}>
+        <motion.div variants={itemVariants} className="w-full">
           <TopGenresChart
             matchResults={filteredData.matchResults}
             onDrillDown={handleDrillDown}
@@ -613,17 +615,17 @@ export function StatisticsPage() {
         </motion.div>
 
         {/* Row 4: Match Progress */}
-        <motion.div variants={itemVariants}>
+        <motion.div variants={itemVariants} className="w-full">
           <MatchProgressChart matchResults={matchResults} />
         </motion.div>
 
         {/* Row 5: Sync Metrics (Horizontal) */}
-        <motion.div variants={itemVariants}>
+        <motion.div variants={itemVariants} className="w-full">
           <SyncMetricsChart syncStats={syncStats} />
         </motion.div>
 
         {/* Row 6: Reading Trends */}
-        <motion.div variants={itemVariants}>
+        <motion.div variants={itemVariants} className="w-full">
           <ReadingTrendsChart
             history={filteredData.readingHistory}
             timeRange={selectedTimeRange}
@@ -646,7 +648,7 @@ export function StatisticsPage() {
         </motion.div>
 
         {/* Row 7: Reading Velocity */}
-        <motion.div variants={itemVariants}>
+        <motion.div variants={itemVariants} className="w-full">
           <ReadingVelocityChart
             history={filteredData.readingHistory}
             timeRange={selectedTimeRange}
@@ -664,7 +666,7 @@ export function StatisticsPage() {
         </motion.div>
 
         {/* Row 8: Reading Habits */}
-        <motion.div variants={itemVariants}>
+        <motion.div variants={itemVariants} className="w-full">
           <ReadingHabitsChart
             history={filteredData.readingHistory}
             timeRange={selectedTimeRange}

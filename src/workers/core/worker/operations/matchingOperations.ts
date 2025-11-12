@@ -35,6 +35,15 @@ export async function handleMatchBatch(
         console.warn(
           `[Worker] ⚠️ Task ${taskId} was cancelled after ${i}/${total} items`,
         );
+        // Post terminal cancellation message
+        globalThis.postMessage({
+          type: "MATCH_CANCELLED",
+          payload: {
+            taskId,
+            itemsProcessed: i,
+            totalItems: total,
+          },
+        });
         return;
       }
 

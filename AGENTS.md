@@ -11,7 +11,7 @@
 5. Use `think_about_task_adherence` before committing changes
 6. Use `think_about_whether_you_are_done` to verify completion
 
-**KEY**: Use Serena tools for discovery, not reading files unless necessary. Memories are for context only—NOT documentation summaries.
+**KEY**: Use Serena tools for discovery, not reading files unless necessary. Always read any relevant memories for context if needed. Memories are for context only, NOT documentation summaries. Never summarize changes or create summary documents unless explicitly asked to, this applies to things outside of memories as well.
 
 ## 📚 Context7 Integration
 
