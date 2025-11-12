@@ -18,7 +18,6 @@ export function SonnerProvider() {
     <Toaster
       richColors
       position="top-right"
-      closeButton
       theme="system"
       className="toaster-container"
     />
