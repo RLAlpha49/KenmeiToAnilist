@@ -12,52 +12,30 @@ import { FileDropZone } from "./FileDropZone";
 import { DataTable } from "./DataTable";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
-import { Separator } from "../ui/separator";
 import { Progress } from "../ui/progress";
 import { Alert, AlertDescription } from "../ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import {
-  FileCheck,
-  BarChart,
-  FilesIcon,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "../ui/card";
+import {
   CheckCircle2,
   Upload,
   Info,
-  Clock,
+  ListChecks,
+  BookOpen,
+  History,
 } from "lucide-react";
 import {
-  getStatusColor,
   getStatusIcon,
   formatStatusLabel,
   type StatusCounts,
 } from "../../utils/manga-status-utils";
-import { SkeletonCard } from "../ui/skeleton";
-
-/** Animation variants for container entrance with staggered children effects. @source */
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.1,
-    },
-  },
-};
-
-/** Animation variants for individual items with spring physics. @source */
-const itemVariants = {
-  hidden: { y: 20, opacity: 0 },
-  show: {
-    y: 0,
-    opacity: 1,
-    transition: {
-      type: "spring" as const,
-      stiffness: 300,
-      damping: 24,
-    },
-  },
-};
 
 /**
  * Props for the ImportSuccessContent component.
@@ -81,66 +59,36 @@ export function ImportSuccessContent({
   importData,
   progress,
 }: Readonly<ImportSuccessProps>) {
+  const importedCount = importData?.manga?.length ?? 0;
+
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
+    <motion.section
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="relative overflow-hidden rounded-3xl border border-white/30 bg-white/80 p-8 shadow-2xl backdrop-blur-lg dark:border-white/10 dark:bg-slate-950/70">
-        <div className="bg-linear-to-br pointer-events-none absolute right-[-60px] top-[-60px] h-48 w-48 rounded-full from-emerald-500/25 via-green-500/20 to-transparent blur-3xl" />
-        <div className="bg-linear-to-br pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full from-blue-400/20 via-indigo-400/15 to-transparent blur-3xl" />
-
-        <div className="z-1 relative mx-auto max-w-md space-y-6 text-center">
-          <motion.div
-            className="bg-linear-to-br mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-full from-emerald-500 to-green-500 text-white shadow-2xl"
-            initial={{ scale: 0, rotate: -180 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ type: "spring", stiffness: 200, damping: 15 }}
-          >
-            <CheckCircle2 className="h-12 w-12" />
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
-          >
-            <h2 className="text-foreground mb-4 text-3xl font-bold">
-              Import Successful!
-            </h2>
-            <p className="text-muted-foreground mb-8 text-lg">
-              Your {importData?.manga?.length || 0} manga entries have been
-              successfully imported.
-            </p>
-          </motion.div>
-
-          <motion.div
-            className="mb-6 space-y-3"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5, duration: 0.5 }}
-          >
-            <div className="flex items-center justify-between text-sm font-medium text-emerald-600 dark:text-emerald-300">
-              <span>Processing complete</span>
-              <span>{progress}%</span>
-            </div>
-            <Progress value={progress} className="h-2 bg-emerald-500/20" />
-          </motion.div>
-
-          <motion.div
-            className="rounded-2xl border border-white/20 bg-white/60 px-4 py-3 backdrop-blur-sm dark:border-white/10 dark:bg-white/5"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7, duration: 0.4 }}
-          >
-            <p className="text-muted-foreground text-sm">
-              Redirecting to review page...
-            </p>
-          </motion.div>
-        </div>
-      </div>
-    </motion.div>
+      <Card className="items-center text-center shadow-lg">
+        <CardHeader className="flex flex-col items-center gap-4 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <CheckCircle2 className="h-8 w-8" />
+          </div>
+          <CardTitle className="text-3xl font-semibold">
+            Import ready for review
+          </CardTitle>
+          <CardDescription className="text-base">
+            {importedCount.toLocaleString()} entries are staged. We’ll take you
+            to match review automatically.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="w-full space-y-3 px-6 pb-6">
+          <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+            <span>Background tasks</span>
+            <span>{progress}%</span>
+          </div>
+          <Progress value={progress} className="h-2" />
+        </CardContent>
+      </Card>
+    </motion.section>
   );
 }
 
@@ -167,97 +115,84 @@ export function FileUploadContent({
   onError,
 }: Readonly<FileUploadProps>) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
+    <motion.section
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.2 }}
+      transition={{ duration: 0.3 }}
     >
-      <div className="relative overflow-hidden rounded-3xl border border-white/30 bg-white/80 p-6 shadow-2xl backdrop-blur-lg dark:border-white/10 dark:bg-slate-950/70">
-        <div className="bg-linear-to-br pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full from-blue-500/25 via-indigo-500/20 to-transparent blur-3xl" />
-        <div className="bg-linear-to-br pointer-events-none absolute bottom-[-60px] left-[-60px] h-48 w-48 rounded-full from-emerald-400/20 via-teal-400/15 to-transparent blur-3xl" />
-
-        <div className="z-1 relative space-y-6">
-          <div className="flex items-center gap-4">
-            <motion.div
-              className="bg-linear-to-r flex h-12 w-12 items-center justify-center rounded-2xl from-blue-500 to-indigo-500 text-white shadow-lg"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Upload className="h-6 w-6" />
-            </motion.div>
+      <Card className="shadow-lg">
+        <CardHeader className="flex flex-col gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Upload className="h-5 w-5" />
+            </div>
             <div>
-              <h2 className="text-foreground text-2xl font-semibold">
-                Import From Kenmei
-              </h2>
-              <p className="text-muted-foreground">
-                Upload your Kenmei export file to begin the import process
-              </p>
+              <CardTitle className="text-2xl font-semibold">
+                Upload your Kenmei export
+              </CardTitle>
+              <CardDescription>
+                Drop your CSV to kick off the import. Validation and parsing
+                run automatically.
+              </CardDescription>
             </div>
           </div>
+        </CardHeader>
 
+        <CardContent className="space-y-6">
           <Tabs defaultValue="upload" className="w-full">
-            <TabsList className="flex w-full flex-col gap-2 rounded-2xl border border-white/20 bg-white/80 p-5 text-sm text-slate-600 backdrop-blur md:flex-row md:items-center md:justify-start md:gap-3 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-              <TabsTrigger
-                value="upload"
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent px-5 py-3.5 font-medium text-slate-600 transition hover:border-white/20 hover:text-slate-900 data-[state=active]:border-white/20 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg dark:hover:border-white/20 dark:hover:text-white dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-white/20 dark:data-[state=active]:text-white"
-              >
-                <FilesIcon className="h-4 w-4" />
-                Upload File
-              </TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 gap-2 rounded-lg bg-muted/40 p-1 h-[50px]">
+                <TabsTrigger
+                  value="upload"
+                  className="flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:border hover:border-slate-200 dark:hover:border-white/20"
+                >
+                  <Upload className="h-4 w-4" />
+                  Upload
+                </TabsTrigger>
               <TabsTrigger
                 value="help"
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent px-5 py-3.5 font-medium text-slate-600 transition hover:border-white/20 hover:text-slate-900 data-[state=active]:border-white/20 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg dark:hover:border-white/20 dark:hover:text-white dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-white/20 dark:data-[state=active]:text-white"
+                className="flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:border hover:border-slate-200 dark:hover:border-white/20"
               >
                 <Info className="h-4 w-4" />
-                How To Export
+                How to export
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="upload" className="space-y-6 pt-6">
-              <div className="rounded-2xl border border-white/20 bg-white/60 p-6 backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
-                <p className="text-muted-foreground mb-6 text-sm">
-                  Drag and drop your Kenmei export file here, or click to select
-                  a file.{" "}
-                  <Badge variant="outline" className="ml-1 font-mono">
+            <TabsContent value="upload" className="space-y-4 pt-6">
+              <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 p-6">
+                <p className="text-sm text-muted-foreground">
+                  Drag and drop your Kenmei export here or click to browse.
+                  <Badge variant="outline" className="ml-2 font-mono">
                     .csv
                   </Badge>{" "}
-                  files exported from Kenmei are supported.
+                  files are supported.
                 </p>
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.4, duration: 0.5 }}
-                >
+                <div className="mt-4">
                   <FileDropZone onFileLoaded={onFileLoaded} onError={onError} />
-                </motion.div>
+                </div>
               </div>
+              <p className="text-xs text-muted-foreground">
+                We’ll keep your Kenmei metadata intact and flag any validation
+                issues immediately.
+              </p>
             </TabsContent>
 
-            <TabsContent value="help" className="space-y-6 pt-6">
-              <motion.div
-                className="bg-linear-to-br rounded-2xl border border-white/20 from-blue-500/10 via-indigo-500/5 to-transparent p-6 backdrop-blur-sm dark:border-white/10 dark:from-blue-500/20 dark:via-indigo-500/10"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3, duration: 0.5 }}
-              >
-                <h3 className="text-foreground mb-4 text-lg font-semibold">
+            <TabsContent value="help" className="space-y-4 pt-6">
+              <div className="rounded-lg border border-border/60 bg-muted/10 p-6 text-sm leading-relaxed text-muted-foreground">
+                <h3 className="text-foreground mb-3 text-base font-semibold">
                   How to export from Kenmei
                 </h3>
-                <ol className="text-muted-foreground ml-5 list-decimal space-y-3 text-sm">
-                  <li>Log into your Kenmei account</li>
-                  <li>Go to Settings &gt; Dashboard</li>
-                  <li>Select CSV format</li>
-                  <li>Click &quot;Export&quot;</li>
-                  <li>Click &quot;Download&quot;</li>
-                  <li>Save the file to your computer</li>
-                  <li>Upload the saved file here</li>
+                <ol className="ml-4 list-decimal space-y-2">
+                  <li>Log into Kenmei and open your dashboard settings.</li>
+                  <li>Select the CSV export option.</li>
+                  <li>Generate the export and download the file.</li>
+                  <li>Return here and upload the downloaded CSV.</li>
                 </ol>
-              </motion.div>
+              </div>
             </TabsContent>
           </Tabs>
-        </div>
-      </div>
-    </motion.div>
+        </CardContent>
+      </Card>
+    </motion.section>
   );
 }
 
@@ -295,227 +230,174 @@ export function FileReadyContent({
   onImport,
   onReset,
 }: Readonly<FileReadyProps>) {
-  // Show processing state during import
   if (isLoading) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
+      <motion.section
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
+        transition={{ duration: 0.3 }}
       >
-        <div className="relative overflow-hidden rounded-3xl border border-white/30 bg-white/80 p-6 shadow-2xl backdrop-blur-lg dark:border-white/10 dark:bg-slate-950/70">
-          <div className="bg-linear-to-br pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full from-blue-500/25 via-indigo-500/20 to-transparent blur-3xl" />
-          <div className="bg-linear-to-br pointer-events-none absolute bottom-[-60px] left-[-60px] h-48 w-48 rounded-full from-emerald-400/20 via-teal-400/15 to-transparent blur-3xl" />
-
-          <div className="z-1 relative space-y-6">
-            <div className="flex items-center gap-4">
-              <motion.div
-                className="bg-linear-to-r flex h-12 w-12 items-center justify-center rounded-2xl from-blue-500 to-indigo-500 text-white shadow-lg"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-              >
-                <div className="h-6 w-6 rounded-full border-2 border-white/30 border-t-white" />
-              </motion.div>
+        <Card className="shadow-lg">
+          <CardHeader className="flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <span className="h-6 w-6 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+              </div>
               <div>
-                <h2 className="text-foreground text-2xl font-semibold">
-                  Processing Your Library
-                </h2>
-                <p className="text-muted-foreground">
-                  Merging entries and preparing for review...
-                </p>
+                <CardTitle className="text-2xl font-semibold">
+                  Processing your library
+                </CardTitle>
+                <CardDescription>
+                  Merging entries and reapplying previous matches...
+                </CardDescription>
               </div>
             </div>
-
-            <motion.div
-              className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
-              variants={containerVariants}
-              initial="hidden"
-              animate="show"
-            >
-              {Array.from({ length: 3 }).map((_, index) => (
-                <motion.div
-                  key={`processing-skeleton-${index + 1}`}
-                  variants={itemVariants}
-                >
-                  <SkeletonCard />
-                </motion.div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {Array.from({ length: 4 }).map(() => (
+                <div
+                  key={crypto.randomUUID()}
+                  className="h-20 rounded-lg border border-dashed border-border/50 bg-muted/30"
+                />
               ))}
-            </motion.div>
-
-            <motion.div
-              className="space-y-3"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5, duration: 0.5 }}
-            >
-              <div className="flex items-center justify-between text-sm font-medium text-blue-600 dark:text-blue-300">
-                <span>Processing entries</span>
-              </div>
-              <Progress value={0} className="h-2 animate-pulse" />
-              <p className="text-muted-foreground text-xs">
+            </div>
+            <div className="space-y-2">
+              <Progress className="h-2 animate-pulse" />
+              <p className="text-xs text-muted-foreground">
                 Combining your library with previously matched entries...
               </p>
-            </motion.div>
-          </div>
-        </div>
-      </motion.div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.section>
     );
   }
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.2 }}
-    >
-      <div className="relative overflow-hidden rounded-3xl border border-white/30 bg-white/80 p-6 shadow-2xl backdrop-blur-lg dark:border-white/10 dark:bg-slate-950/70">
-        <div className="bg-linear-to-br pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full from-emerald-500/25 via-green-500/20 to-transparent blur-3xl" />
-        <div className="bg-linear-to-br pointer-events-none absolute bottom-[-60px] left-[-60px] h-48 w-48 rounded-full from-blue-400/20 via-indigo-400/15 to-transparent blur-3xl" />
+  const statusEntries = Object.entries(statusCounts).sort(([, a], [, b]) => b - a);
+  const uniqueStatuses = statusEntries.length;
 
-        <div className="z-1 relative space-y-6">
-          <div className="flex items-center gap-4">
-            <motion.div
-              className="bg-linear-to-r flex h-12 w-12 items-center justify-center rounded-2xl from-emerald-500 to-green-500 text-white shadow-lg"
-              whileHover={{ scale: 1.05 }}
-            >
-              <FileCheck className="h-6 w-6" />
-            </motion.div>
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <Card className="shadow-lg">
+        <CardHeader className="flex flex-col gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <ListChecks className="h-5 w-5" />
+            </div>
             <div>
-              <h2 className="text-foreground text-2xl font-semibold">
-                File Ready for Import
-              </h2>
-              <p className="text-muted-foreground">
-                Review your data before proceeding to the matching step
-              </p>
+              <CardTitle className="text-2xl font-semibold">
+                Review your Kenmei entries
+              </CardTitle>
+              <CardDescription>
+                Confirm totals before heading to match review.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-6">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3 shadow-sm">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <BookOpen className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Total entries
+                </p>
+                <p className="text-lg font-semibold text-foreground">
+                  {importData.manga.length.toLocaleString()}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3 shadow-sm">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <History className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Previously matched
+                </p>
+                <p className="text-lg font-semibold text-foreground">
+                  {previousMatchCount.toLocaleString()}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/10 px-4 py-3 shadow-sm">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <ListChecks className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Unique statuses
+                </p>
+                <p className="text-lg font-semibold text-foreground">
+                  {uniqueStatuses.toLocaleString()}
+                </p>
+              </div>
             </div>
           </div>
 
-          <motion.div
-            className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
-            variants={containerVariants}
-            initial="hidden"
-            animate="show"
-          >
-            <motion.div variants={itemVariants}>
-              <div className="bg-linear-to-br relative overflow-hidden rounded-2xl border border-blue-500/20 from-blue-500/15 via-indigo-500/10 to-blue-500/5 p-4 shadow-xl backdrop-blur-sm dark:border-blue-500/20 dark:from-blue-500/20 dark:via-indigo-500/20 dark:to-blue-500/10">
-                <div className="absolute -right-5 -top-5 h-20 w-20 rounded-full bg-blue-500/20 blur-2xl" />
-                <div className="z-1 relative flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-blue-600 shadow-sm dark:bg-slate-900/60">
-                    <BarChart className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-blue-600 dark:text-blue-400">
-                      Total Entries
-                    </p>
-                    <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-                      {importData.manga.length}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Show previously matched count if available */}
-            {previousMatchCount > 0 && (
-              <motion.div variants={itemVariants}>
-                <div className="bg-linear-to-br relative overflow-hidden rounded-2xl border border-emerald-500/30 from-emerald-500/15 via-green-500/10 to-emerald-500/5 p-4 shadow-xl backdrop-blur-sm dark:border-emerald-500/25 dark:from-emerald-500/20 dark:via-green-500/15 dark:to-emerald-500/10">
-                  <div className="absolute -right-5 -top-5 h-20 w-20 rounded-full bg-emerald-500/20 blur-2xl" />
-                  <div className="z-1 relative flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-emerald-600 shadow-sm dark:bg-slate-900/60">
-                      <Clock className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                        Previously Matched
-                      </p>
-                      <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">
-                        {previousMatchCount}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Render status count cards dynamically */}
-            {Object.entries(statusCounts).map(([status, count], index) => (
-              <motion.div key={status} variants={itemVariants} custom={index}>
-                <div
-                  className={`relative overflow-hidden rounded-2xl border p-4 shadow-xl backdrop-blur-sm ${getStatusColor(status)}`}
-                >
-                  <div className="from-current/20 bg-linear-to-br absolute -right-5 -top-5 h-20 w-20 rounded-full to-transparent blur-2xl" />
-                  <div className="z-1 relative flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 shadow-sm dark:bg-slate-900/60">
+          {statusEntries.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-foreground">
+                Status overview
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {statusEntries.map(([status, count]) => (
+                  <div
+                    key={status}
+                    className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-card px-3 py-3 shadow-sm"
+                  >
+                    <div className="flex items-center gap-3">
                       {getStatusIcon(status)}
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium">
+                      <span className="text-sm font-medium text-foreground">
                         {formatStatusLabel(status)}
-                      </p>
-                      <p className="text-2xl font-bold">{count}</p>
+                      </span>
                     </div>
+                    <span className="text-lg font-semibold text-foreground">
+                      {count.toLocaleString()}
+                    </span>
                   </div>
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
 
-          <Separator className="border-white/20" />
-
-          <motion.div
-            className="rounded-2xl border border-white/20 bg-white/60 p-6 backdrop-blur-sm dark:border-white/10 dark:bg-white/5"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5, duration: 0.5 }}
-          >
-            <h3 className="text-foreground mb-4 text-lg font-semibold">
-              Manga Entries
-            </h3>
+          <div className="rounded-lg border border-border/60">
             <DataTable
               data={importData.manga}
               itemsPerPage={50}
               isLoading={isLoading}
             />
-          </motion.div>
+          </div>
+        </CardContent>
 
-          <motion.div
-            className="flex flex-col gap-4 sm:flex-row"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.4 }}
-          >
+        <CardFooter className="flex-col items-stretch gap-4 border-t border-border/60 bg-muted/10 py-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
             <Button
               onClick={onImport}
               disabled={isLoading}
               size="lg"
-              className="bg-linear-to-r group h-auto rounded-full from-blue-600 via-indigo-600 to-purple-600 px-6 py-3 text-base font-semibold text-white shadow-lg transition hover:shadow-xl focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950"
+              className="gap-2"
             >
               {isLoading ? (
-                <div className="flex items-center gap-2">
-                  <svg
-                    className="h-4 w-4 animate-spin"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  Processing...
-                </div>
+                <>
+                  <span className="flex h-4 w-4 items-center justify-center">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  </span>{" "}
+                  Processing…
+                </>
               ) : (
-                "Launch match review"
+                <>
+                  <ListChecks className="h-4 w-4" />
+                  Begin match review
+                </>
               )}
             </Button>
             <Button
@@ -523,32 +405,26 @@ export function FileReadyContent({
               disabled={isLoading}
               variant="outline"
               size="lg"
-              className="h-auto rounded-full border-white/60 bg-white/75 px-6 py-3 text-base font-semibold shadow-sm transition focus-visible:ring-2 focus-visible:ring-offset-2 dark:border-white/20 dark:bg-slate-950/60 dark:focus-visible:ring-offset-slate-950"
+              className="gap-2"
             >
               Reset import
             </Button>
-          </motion.div>
+          </div>
 
-          {previousMatchCount > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.7, duration: 0.4 }}
-            >
-              <Alert className="rounded-2xl border border-blue-400/40 bg-blue-500/10 px-4 py-3 text-sm text-blue-100 backdrop-blur-lg">
-                <Info className="h-4 w-4 text-blue-400" />
-                <AlertDescription className="text-blue-200">
-                  {/* Notify user of preserved match progress */}
-                  <span className="font-medium">Note:</span> You have{" "}
-                  {previousMatchCount} previously matched manga entries. Your
-                  matching progress will be preserved when proceeding to the
-                  next step.
+          <div className="space-y-3 text-xs text-muted-foreground">
+            <p>We’ll reapply existing match decisions before sync begins.</p>
+            {previousMatchCount > 0 && (
+              <Alert className="border border-primary/30 bg-primary/5">
+                <Info className="h-4 w-4" />
+                <AlertDescription className="text-sm text-foreground">
+                  {previousMatchCount.toLocaleString()} previously reviewed
+                  matches carry over automatically.
                 </AlertDescription>
               </Alert>
-            </motion.div>
-          )}
-        </div>
-      </div>
-    </motion.div>
+            )}
+          </div>
+        </CardFooter>
+      </Card>
+    </motion.section>
   );
 }
