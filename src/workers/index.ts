@@ -57,6 +57,13 @@ export {
   getDataTableWorkerPool,
 } from "./ui/data-table-worker-pool";
 
+// Search
+export {
+  FuzzySearchWorkerPool,
+  getFuzzySearchWorkerPool,
+} from "./search/fuzzy-search-worker-pool";
+export type { FuzzySearchResult } from "./search/fuzzy-search-worker-pool";
+
 // Type exports
 export type {
   WorkerMessage,
@@ -85,6 +92,8 @@ export type {
   BatchSyncProgressMessage,
   BatchSyncResultMessage,
   PreparedSyncOperation,
+  FuzzySearchMessage,
+  FuzzySearchResultMessage,
 } from "./core/types";
 
 export type { StatisticsAggregationResult } from "./statistics/statistics-worker-pool";

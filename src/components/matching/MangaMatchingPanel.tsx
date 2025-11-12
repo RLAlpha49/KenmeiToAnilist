@@ -29,6 +29,9 @@ import { cn } from "@/utils/tailwind";
 // Import the advanced filter hook for worker-based filtering
 import { useAdvancedFilter } from "@/hooks/useAdvancedFilter";
 
+// Import the fuzzy search hook for worker-based search
+import { useFuzzySearchResults } from "@/hooks/useFuzzySearch";
+
 // Import storage utilities
 import {
   getMatchConfig,
@@ -56,11 +59,7 @@ import {
 } from "../../types/matchingFilters";
 
 // Import fuzzy search utilities
-import {
-  fuzzySearchManga,
-  parseQuerySyntax,
-  applyQueryToFilters,
-} from "../../utils/fuzzySearch";
+import { parseQuerySyntax, applyQueryToFilters } from "../../utils/fuzzySearch";
 
 // Import shadcn UI components
 import {
@@ -636,66 +635,71 @@ export function MangaMatchingPanel({
     300, // 300ms debounce
   );
 
-  // Apply filters in order: status ✓ → advanced ✓ → search
-  const filteredMatches = useMemo(() => {
-    let filtered = advancedFilteredMatches;
+  // Prepare search query for fuzzy search (extract text tokens only)
+  const fuzzySearchQuery = useMemo(() => {
+    if (!searchTerm || !useFuzzySearch) {
+      return "";
+    }
 
-    // Finally apply search term
-    if (searchTerm) {
-      // Check if search contains query syntax
+    // Check if search contains query syntax
+    const tokens = parseQuerySyntax(searchTerm);
+    const hasFieldTokens = tokens.some((t) => t.type === "field");
+    const textTokens = tokens.filter((t) => t.type === "text");
+
+    if (hasFieldTokens && textTokens.length > 0) {
+      // If there are both field and text tokens, use only text tokens for fuzzy search
+      return textTokens.map((t) => t.value).join(" ");
+    } else if (!hasFieldTokens) {
+      // No field tokens, use the entire search term
+      return searchTerm;
+    }
+
+    // Only field tokens, no fuzzy search
+    return "";
+  }, [searchTerm, useFuzzySearch]);
+
+  // Use the async fuzzy search hook for large datasets
+  const { results: fuzzySearchedMatches } = useFuzzySearchResults(
+    fuzzySearchQuery,
+    advancedFilteredMatches,
+    {
+      debounceMs: 150,
+      enabled: useFuzzySearch && fuzzySearchQuery.length > 0,
+    },
+  );
+
+  // Apply filters in order: status ✓ → advanced ✓ → search (with field tokens)
+  const filteredMatches = useMemo(() => {
+    let filtered = fuzzySearchedMatches;
+
+    // Apply field-based filters from query syntax if present
+    if (searchTerm && useFuzzySearch) {
       const tokens = parseQuerySyntax(searchTerm);
       const hasFieldTokens = tokens.some((t) => t.type === "field");
-      const textTokens = tokens.filter((t) => t.type === "text");
 
       if (hasFieldTokens) {
         // Apply query syntax to filters (temporarily)
         const queryFilters = applyQueryToFilters(tokens, advancedFilters);
         filtered = filterByAdvancedCriteria(filtered, queryFilters);
-
-        // Apply text token matching if present
-        if (textTokens.length > 0) {
-          const textQuery = textTokens.map((t) => t.value).join(" ");
-          if (useFuzzySearch) {
-            // Use fuzzy search for text tokens
-            filtered = fuzzySearchManga(textQuery, filtered);
-          } else {
-            // Fallback to substring search for text tokens (case-insensitive)
-            filtered = filtered.filter(
-              (match) =>
-                match.kenmeiManga.title
-                  .toLowerCase()
-                  .includes(textQuery.toLowerCase()) ||
-                match.selectedMatch?.title?.english
-                  ?.toLowerCase()
-                  .includes(textQuery.toLowerCase()) ||
-                match.selectedMatch?.title?.romaji
-                  ?.toLowerCase()
-                  .includes(textQuery.toLowerCase()),
-            );
-          }
-        }
-      } else if (useFuzzySearch) {
-        // Use fuzzy search for plain text
-        filtered = fuzzySearchManga(searchTerm, filtered);
-      } else {
-        // Fallback to simple substring search
-        filtered = filtered.filter(
-          (match) =>
-            match.kenmeiManga.title
-              .toLowerCase()
-              .includes(searchTerm.toLowerCase()) ||
-            match.selectedMatch?.title?.english
-              ?.toLowerCase()
-              .includes(searchTerm.toLowerCase()) ||
-            match.selectedMatch?.title?.romaji
-              ?.toLowerCase()
-              .includes(searchTerm.toLowerCase()),
-        );
       }
+    } else if (searchTerm && !useFuzzySearch) {
+      // Fallback to substring search when fuzzy search is disabled
+      filtered = filtered.filter(
+        (match) =>
+          match.kenmeiManga.title
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          match.selectedMatch?.title?.english
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          match.selectedMatch?.title?.romaji
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()),
+      );
     }
 
     return filtered;
-  }, [advancedFilteredMatches, searchTerm, advancedFilters, useFuzzySearch]);
+  }, [fuzzySearchedMatches, searchTerm, advancedFilters, useFuzzySearch]);
 
   // Sort the filtered matches
   const sortedMatches = [...filteredMatches].sort((a, b) => {

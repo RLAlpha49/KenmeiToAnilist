@@ -11,6 +11,7 @@ import type {
 } from "@/api/anilist/types";
 import type { MatchEngineConfig } from "@/api/matching/match-engine";
 import type { AdvancedMatchFilters } from "@/types/matchingFilters";
+import type { IFuseOptions } from "fuse.js";
 
 /**
  * Inbound request to start a batch matching operation in the worker.
@@ -596,6 +597,39 @@ export interface ReadHistCancelledMessage {
 }
 
 /**
+ * Inbound request to perform fuzzy search on manga matches.
+ * @source
+ */
+export interface FuzzySearchMessage {
+  type: "FUZZY_SEARCH";
+  payload: {
+    taskId: string;
+    matches: MangaMatchResult[];
+    query: string;
+    keys: (string | { name: string; weight?: number })[];
+    options?: Partial<IFuseOptions<MangaMatchResult>>;
+    maxResults?: number;
+  };
+}
+
+/**
+ * Outbound result for fuzzy search operation with timing metrics.
+ * @source
+ */
+export interface FuzzySearchResultMessage {
+  type: "FUZZY_SEARCH_RESULT";
+  payload: {
+    taskId: string;
+    results: MangaMatchResult[];
+    timing: {
+      indexingTimeMs: number;
+      searchTimeMs: number;
+      totalTimeMs: number;
+    };
+  };
+}
+
+/**
  * Discriminated union of all supported worker message variants.
  * @source
  */
@@ -626,6 +660,8 @@ export type WorkerMessage =
   | DataTablePreparationResultMessage
   | BatchSyncProgressMessage
   | BatchSyncResultMessage
+  | FuzzySearchMessage
+  | FuzzySearchResultMessage
   | MatchCancelledMessage
   | StatsCancelledMessage
   | TitleNormCancelledMessage
@@ -1049,7 +1085,8 @@ export type WorkerInboundMessage =
   | JSONDeserializeMessage
   | DuplicateDetectionMessage
   | DataTablePreparationMessage
-  | BatchSyncMessage;
+  | BatchSyncMessage
+  | FuzzySearchMessage;
 
 /**
  * Configuration options controlling worker pool capacity and fallbacks.

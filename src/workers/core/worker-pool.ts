@@ -215,7 +215,8 @@ export class WorkerPool {
       case "BATCH_SYNC_RESULT":
       case "DATA_TABLE_PREPARATION_RESULT":
       case "DUPLICATE_DETECTION_RESULT":
-      case "READING_HISTORY_FILTER_RESULT": {
+      case "READING_HISTORY_FILTER_RESULT":
+      case "FUZZY_SEARCH_RESULT": {
         const result = this.extractMessageResult(message);
         task.resolve(result);
         this.completeTask(taskId);

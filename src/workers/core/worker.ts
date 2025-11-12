@@ -11,6 +11,7 @@ import type {
   JSONDeserializeMessage,
   DuplicateDetectionMessage,
   DataTablePreparationMessage,
+  FuzzySearchMessage,
 } from "./types";
 import { getErrorDetails } from "./worker/errorUtils";
 import {
@@ -30,6 +31,7 @@ import {
 import { handleDuplicateDetection } from "./worker/operations/duplicateDetectionOperations";
 import { handleDataTablePreparation } from "./worker/operations/dataTableOperations";
 import { handleBatchSync } from "./worker/operations/batchSyncOperations";
+import { handleFuzzySearch } from "./worker/operations/fuzzySearchOperations";
 
 const activeTasks = new Set<string>();
 
@@ -106,6 +108,10 @@ globalThis.onmessage = async (event: MessageEvent<WorkerInboundMessage>) => {
           message as unknown as DataTablePreparationMessage,
           activeTasks,
         );
+        break;
+
+      case "FUZZY_SEARCH":
+        await handleFuzzySearch(message as unknown as FuzzySearchMessage);
         break;
 
       case "CANCEL":

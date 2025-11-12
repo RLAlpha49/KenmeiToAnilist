@@ -12,6 +12,7 @@ import type {
   AdvancedMatchFilters,
 } from "@/types/matchingFilters";
 import { DEFAULT_ADVANCED_FILTERS } from "@/types/matchingFilters";
+import { getFuzzySearchWorkerPool } from "@/workers/search/fuzzy-search-worker-pool";
 
 /**
  * Default Fuse.js options for consistent fuzzy search behavior across components.
@@ -217,16 +218,18 @@ export function applyQueryToFilters(
  * Performs fuzzy search on manga matches.
  *
  * Returns top 100 results ordered by relevance score.
+ * Uses worker pool for large datasets (100+ items) to prevent UI blocking.
+ * Falls back to main thread for small datasets.
  *
  * @param query - Search query string.
  * @param matches - Array of manga match results.
  * @returns Array of matched results with scores.
  * @source
  */
-export function fuzzySearchManga(
+export async function fuzzySearchManga(
   query: string,
   matches: MangaMatchResult[],
-): MangaMatchResult[] {
+): Promise<MangaMatchResult[]> {
   if (!query.trim()) {
     return matches;
   }
@@ -243,6 +246,37 @@ export function fuzzySearchManga(
   // Combine text tokens for search
   const searchQuery = textTokens.map((t) => t.value).join(" ");
 
+  // Use worker pool for large datasets (100+ items) to prevent UI blocking
+  // Small datasets use main thread for faster execution (less overhead)
+  if (matches.length >= 100) {
+    try {
+      const pool = getFuzzySearchWorkerPool();
+      await pool.initialize();
+
+      const result = await pool.search(
+        matches,
+        searchQuery,
+        [
+          { name: "kenmeiManga.title", weight: 0.5 },
+          { name: "selectedMatch.title.romaji", weight: 0.3 },
+          { name: "selectedMatch.title.english", weight: 0.3 },
+          { name: "selectedMatch.synonyms", weight: 0.1 },
+        ],
+        { useExtendedSearch: true },
+        100,
+      );
+
+      return result.results;
+    } catch (error) {
+      console.warn(
+        "[fuzzySearchManga] Worker pool search failed, falling back to main thread:",
+        error,
+      );
+      // Fall through to main thread implementation below
+    }
+  }
+
+  // Main thread implementation for small datasets
   const fuse = createMangaFuseInstance(matches);
   const results = fuse.search(searchQuery);
 
