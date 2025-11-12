@@ -48,16 +48,16 @@ CSV File
 
 **Exported by Kenmei as CSV**:
 
-| Field | Type | Example | Required |
-|-------|------|---------|----------|
-| `title` | string | "Attack on Titan" | ✅ Yes |
-| `author` | string | "Hajime Isayama" | ❌ Optional |
-| `chapters` | number | "42" | ❌ Optional |
-| `volumes` | number | "12" | ❌ Optional |
-| `status` | string | "Reading" / "Completed" / "Dropped" | ❌ Optional |
-| `rating` | number | "9" | ❌ Optional |
-| `notes` | string | "Great series" | ❌ Optional |
-| `source` | string | "Kenmei" | ℹ️ Info only |
+| Field      | Type   | Example                             | Required     |
+| ---------- | ------ | ----------------------------------- | ------------ |
+| `title`    | string | "Attack on Titan"                   | ✅ Yes       |
+| `author`   | string | "Hajime Isayama"                    | ❌ Optional  |
+| `chapters` | number | "42"                                | ❌ Optional  |
+| `volumes`  | number | "12"                                | ❌ Optional  |
+| `status`   | string | "Reading" / "Completed" / "Dropped" | ❌ Optional  |
+| `rating`   | number | "9"                                 | ❌ Optional  |
+| `notes`    | string | "Great series"                      | ❌ Optional  |
+| `source`   | string | "Kenmei"                            | ℹ️ Info only |
 
 ### Character Encoding
 
@@ -102,7 +102,7 @@ interface KenmeiManga {
 **1. Validate CSV Structure**
 
 ```typescript
-validateCsvStructure(csvContent)
+validateCsvStructure(csvContent);
 ```
 
 - Check header row exists
@@ -113,7 +113,7 @@ validateCsvStructure(csvContent)
 **2. Parse CSV Rows**
 
 ```typescript
-parseCSVRows(csvContent, delimiter)
+parseCSVRows(csvContent, delimiter);
 ```
 
 - Handle quoted fields
@@ -124,7 +124,7 @@ parseCSVRows(csvContent, delimiter)
 **3. Extract Field Values**
 
 ```typescript
-extractFieldValues(row, headerMap)
+extractFieldValues(row, headerMap);
 ```
 
 - Map columns to fields
@@ -135,7 +135,7 @@ extractFieldValues(row, headerMap)
 **4. Normalize Values**
 
 ```typescript
-normalizeKenmeiManga(rawManga)
+normalizeKenmeiManga(rawManga);
 ```
 
 - Trim whitespace
@@ -190,27 +190,17 @@ Extracted metadata:
 **Kenmei Status → AniList MediaListStatus**:
 
 ```typescript
-type KenmeiStatus = 
-  | "Reading"
-  | "Completed"
-  | "Dropped"
-  | "Plan to Read"
-  | "On Hold";
+type KenmeiStatus = "Reading" | "Completed" | "Dropped" | "Plan to Read" | "On Hold";
 
-type AniListStatus = 
-  | "CURRENT"
-  | "COMPLETED"
-  | "DROPPED"
-  | "PLANNING"
-  | "PAUSED";
+type AniListStatus = "CURRENT" | "COMPLETED" | "DROPPED" | "PLANNING" | "PAUSED";
 
 // Mapping
 const STATUS_MAP = {
-  "Reading": "CURRENT",
-  "Completed": "COMPLETED",
-  "Dropped": "DROPPED",
+  Reading: "CURRENT",
+  Completed: "COMPLETED",
+  Dropped: "DROPPED",
   "Plan to Read": "PLANNING",
-  "On Hold": "PAUSED"
+  "On Hold": "PAUSED",
 };
 ```
 
@@ -230,7 +220,7 @@ interface ProcessOptions {
 
 const options: ProcessOptions = {
   batchSize: 100,
-  onProgress: (p) => updateProgressBar(p)
+  onProgress: (p) => updateProgressBar(p),
 };
 
 const result = await processKenmeiMangaBatches(manga, options);
@@ -248,10 +238,13 @@ const result = await processKenmeiMangaBatches(manga, options);
 ```typescript
 // In UI
 const csvPool = getCsvWorkerPool();
-const { manga, stats } = await csvPool.execute({
-  filePath: selectedFile.path,
-  options: { batchSize: 100 }
-}, cancellationToken);
+const { manga, stats } = await csvPool.execute(
+  {
+    filePath: selectedFile.path,
+    options: { batchSize: 100 },
+  },
+  cancellationToken,
+);
 ```
 
 ## Integration with Matching
@@ -284,7 +277,7 @@ storage.setItem(STORAGE_KEYS.PENDING_MANGA, JSON.stringify(pending));
 // Before sending to matching
 const prepared = prepareEntryForSync(kenmeiManga, {
   includeAuthor: true,
-  includeFormat: false
+  includeFormat: false,
 });
 
 // Now ready for search queries
@@ -503,7 +496,7 @@ const DEFAULT_PROCESS_OPTIONS = {
   batchSize: 50,
   skipValidation: false,
   onProgress: undefined,
-  cancellationToken: undefined
+  cancellationToken: undefined,
 };
 ```
 

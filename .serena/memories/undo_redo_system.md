@@ -30,12 +30,12 @@ abstract class BaseCommand implements Command {
 
 ```typescript
 enum CommandType {
-  ACCEPT_MATCH = "accept_match",           // User approves a match
-  REJECT_MATCH = "reject_match",           // User rejects a match
+  ACCEPT_MATCH = "accept_match", // User approves a match
+  REJECT_MATCH = "reject_match", // User rejects a match
   SELECT_ALTERNATIVE = "select_alternative", // User picks different candidate
   SELECT_SEARCH_MATCH = "select_search_match", // User manually searches & selects
-  RESET_TO_PENDING = "reset_to_pending",   // Revert to unmatched state
-  BULK_UPDATE = "bulk_update"               // Batch operation
+  RESET_TO_PENDING = "reset_to_pending", // Revert to unmatched state
+  BULK_UPDATE = "bulk_update", // Batch operation
 }
 ```
 
@@ -232,7 +232,7 @@ class UndoRedoManager {
   private undoStack: Command[] = [];
   private redoStack: Command[] = [];
   private isExecuting = false;
-  
+
   execute(command: Command): Promise<void>;
   undo(): Promise<void>;
   redo(): Promise<void>;
@@ -353,11 +353,8 @@ interface CommandMetadata {
 ```typescript
 // In MatchingPage.tsx
 const handleAcceptMatch = async (match: MangaMatch) => {
-  const command = new AcceptMatchCommand(
-    match.kenmeiManga.id,
-    match.selectedMatch
-  );
-  
+  const command = new AcceptMatchCommand(match.kenmeiManga.id, match.selectedMatch);
+
   await undoRedoManager.execute(command);
   // UI automatically updates via state management
 };
@@ -378,15 +375,10 @@ const handleRejectMatch = async (mangaId: number) => {
 
 ```typescript
 const handleBatchAccept = async (selectedIds: number[]) => {
-  const commands = selectedIds.map(id => 
-    new AcceptMatchCommand(id, matchMap.get(id))
-  );
-  
-  const batchCmd = new BatchCommand(
-    commands,
-    `Accepted ${selectedIds.length} matches`
-  );
-  
+  const commands = selectedIds.map((id) => new AcceptMatchCommand(id, matchMap.get(id)));
+
+  const batchCmd = new BatchCommand(commands, `Accepted ${selectedIds.length} matches`);
+
   await undoRedoManager.execute(batchCmd);
 };
 ```
@@ -514,9 +506,9 @@ manager.groupCommandsBy("time", 5000); // 5 second windows
 In debug context, undo/redo operations are logged:
 
 ```typescript
-logDebug(MODULE_TAGS.MATCHING, "Undo: Accepted match", { 
+logDebug(MODULE_TAGS.MATCHING, "Undo: Accepted match", {
   commandType,
-  affectedId
+  affectedId,
 });
 ```
 
@@ -527,10 +519,10 @@ describe("UndoRedoManager", () => {
   it("should execute and undo commands", async () => {
     const manager = new UndoRedoManager();
     const cmd = new AcceptMatchCommand(1, manga);
-    
+
     await manager.execute(cmd);
     expect(manager.canUndo()).toBe(true);
-    
+
     await manager.undo();
     // Verify state is reverted
   });

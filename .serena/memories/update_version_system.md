@@ -113,10 +113,10 @@ https://api.github.com/repos/RLAlpha49/KenmeiToAnilist/releases/latest
 
 ```typescript
 enum VersionStatus {
-  UNKNOWN = "unknown",           // Can't determine
-  UP_TO_DATE = "up_to_date",     // Latest version
+  UNKNOWN = "unknown", // Can't determine
+  UP_TO_DATE = "up_to_date", // Latest version
   UPDATE_AVAILABLE = "update_available", // Newer version exists
-  DEVELOPMENT = "development"    // Dev build (no releases)
+  DEVELOPMENT = "development", // Dev build (no releases)
 }
 
 const status = getAppVersionStatus();
@@ -208,22 +208,22 @@ const status = getAppVersionStatus();
 **Configured in `src/main.ts`**:
 
 ```typescript
-const autoUpdater = require('electron-updater').autoUpdater;
+const autoUpdater = require("electron-updater").autoUpdater;
 
-autoUpdater.on('checking-for-update', () => {
-  console.log('Checking for update...');
+autoUpdater.on("checking-for-update", () => {
+  console.log("Checking for update...");
 });
 
-autoUpdater.on('update-available', (info) => {
+autoUpdater.on("update-available", (info) => {
   console.log(`Update available: ${info.version}`);
 });
 
-autoUpdater.on('update-not-available', () => {
-  console.log('No update available');
+autoUpdater.on("update-not-available", () => {
+  console.log("No update available");
 });
 
-autoUpdater.on('error', (err) => {
-  console.error('Auto updater error:', err);
+autoUpdater.on("error", (err) => {
+  console.error("Auto updater error:", err);
 });
 ```
 
@@ -244,7 +244,7 @@ autoUpdater.on('error', (err) => {
 const appVersion = app.getVersion();
 
 // Release channel
-const releaseChannel = isDevelopment ? 'development' : 'stable';
+const releaseChannel = isDevelopment ? "development" : "stable";
 
 // Build info for Sentry
 Sentry.init({
@@ -313,14 +313,14 @@ Sentry.init({
 
 ```typescript
 interface GitHubRelease {
-  tag_name: string;        // "v1.6.0"
-  name: string;            // "1.6.0"
-  body: string;            // Markdown release notes
-  draft: boolean;          // Is draft?
-  prerelease: boolean;     // Is pre-release?
-  created_at: string;      // ISO timestamp
-  published_at: string;    // ISO timestamp
-  html_url: string;        // GitHub page URL
+  tag_name: string; // "v1.6.0"
+  name: string; // "1.6.0"
+  body: string; // Markdown release notes
+  draft: boolean; // Is draft?
+  prerelease: boolean; // Is pre-release?
+  created_at: string; // ISO timestamp
+  published_at: string; // ISO timestamp
+  html_url: string; // GitHub page URL
 }
 ```
 
@@ -370,13 +370,7 @@ interface GitHubRelease {
 ```typescript
 // Check if safe to update
 const canShowUpdateNotification = () => {
-  return (
-    !isImporting &&
-    !isMatching &&
-    !isSyncing &&
-    !isInSettings &&
-    !hasOpenDialog
-  );
+  return !isImporting && !isMatching && !isSyncing && !isInSettings && !hasOpenDialog;
 };
 
 if (canShowUpdateNotification()) {
@@ -416,7 +410,7 @@ if (canShowUpdateNotification()) {
   <button onClick={checkForUpdates}>
     Check for Updates
   </button>
-  
+
   {hasUpdate && (
     <>
       <Alert>New version {latestVersion} available</Alert>
@@ -425,11 +419,11 @@ if (canShowUpdateNotification()) {
       </button>
     </>
   )}
-  
+
   <Checkbox>
     Automatically check for updates
   </Checkbox>
-  
+
   <Select>
     <option>Stable releases only</option>
     <option>Include pre-releases</option>

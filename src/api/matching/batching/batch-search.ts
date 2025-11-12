@@ -17,10 +17,7 @@ import { batchSearchManga } from "@/api/anilist/client";
 import { withGroupAsync } from "@/utils/logging";
 import { CancelledError } from "@/utils/errorHandling";
 import { ANILIST_RATE_LIMIT_PER_MINUTE } from "@/config/anilist";
-import {
-  executeComickFallback,
-  executeMangaDexFallback,
-} from "../sources";
+import { executeComickFallback, executeMangaDexFallback } from "../sources";
 
 /**
  * Batch size for parallel manga searches (10 = AniList 60 req/min limit).
@@ -167,86 +164,6 @@ function storeAniListResults(
 }
 
 /**
- * Extract Comick and MangaDex source mappings from search matches.
- * @param matches - Array of manga matches.
- * @returns Object with Comick and MangaDex source maps by manga ID.
- * @source
- */
-function collectAlternativeSources(matches: MangaMatch[]): {
-  comick: Map<
-    number,
-    {
-      title: string;
-      slug: string;
-      comickId: string;
-      foundViaComick: boolean;
-    }
-  >;
-  mangaDex: Map<
-    number,
-    {
-      title: string;
-      slug: string;
-      mangaDexId: string;
-      foundViaMangaDex: boolean;
-    }
-  >;
-} {
-  const comick = new Map<
-    number,
-    {
-      title: string;
-      slug: string;
-      comickId: string;
-      foundViaComick: boolean;
-    }
-  >();
-
-  const mangaDex = new Map<
-    number,
-    {
-      title: string;
-      slug: string;
-      mangaDexId: string;
-      foundViaMangaDex: boolean;
-    }
-  >();
-
-  for (const match of matches) {
-    if (match.comickSource) {
-      comick.set(match.manga.id, match.comickSource);
-    }
-
-    if (match.mangaDexSource) {
-      mangaDex.set(match.manga.id, match.mangaDexSource);
-    }
-
-    if (!comick.has(match.manga.id) && match.sourceInfo?.source === "comick") {
-      comick.set(match.manga.id, {
-        title: match.sourceInfo.title,
-        slug: match.sourceInfo.slug,
-        comickId: match.sourceInfo.sourceId,
-        foundViaComick: match.sourceInfo.foundViaAlternativeSearch,
-      });
-    }
-
-    if (
-      !mangaDex.has(match.manga.id) &&
-      match.sourceInfo?.source === "mangadex"
-    ) {
-      mangaDex.set(match.manga.id, {
-        title: match.sourceInfo.title,
-        slug: match.sourceInfo.slug,
-        mangaDexId: match.sourceInfo.sourceId,
-        foundViaMangaDex: match.sourceInfo.foundViaAlternativeSearch,
-      });
-    }
-  }
-
-  return { comick, mangaDex };
-}
-
-/**
  * Execute fallback searches on alternative sources (Comick/MangaDex) for items not found.
  * @param items - Batch items requiring fallback searches.
  * @param options - Configuration, control, callbacks, and storage.
@@ -312,8 +229,10 @@ async function performFallbackSearches(
 
               // Store combined results from alternative sources
               storage.cachedResults[index] = finalResults;
-              storage.cachedComickSources[index] = comickFallback.comickSourceMap;
-              storage.cachedMangaDexSources[index] = mangaDexFallback.mangaDexSourceMap;
+              storage.cachedComickSources[index] =
+                comickFallback.comickSourceMap;
+              storage.cachedMangaDexSources[index] =
+                mangaDexFallback.mangaDexSourceMap;
 
               console.debug(
                 `[MangaSearchService] 🔁 Alternative sources found ${finalResults.length} matches for "${manga.title}" (Comick: ${comickFallback.comickSourceMap.size}, MangaDex: ${mangaDexFallback.mangaDexSourceMap.size})`,

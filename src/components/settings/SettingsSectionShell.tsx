@@ -1,6 +1,5 @@
 import React from "react";
 import type { LucideIcon } from "lucide-react";
-import { ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
 import {
   Card,
@@ -14,6 +13,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "../ui/collapsible";
+import { CollapsibleChevron } from "../ui/collapsible-chevron";
 import { cn } from "../../utils/tailwind";
 
 /**
@@ -115,13 +115,9 @@ export function SettingsSectionShell({
                   </div>
                   <div className="relative flex items-center gap-3">
                     {badge && <div>{badge}</div>}
-                    <ChevronDown
-                      className="h-5 w-5 text-slate-600 transition-transform duration-300 dark:text-slate-400"
-                      style={{
-                        transform: isCollapsed
-                          ? "rotate(0deg)"
-                          : "rotate(180deg)",
-                      }}
+                    <CollapsibleChevron
+                      isExpanded={!isCollapsed}
+                      className="text-slate-600 dark:text-slate-400"
                     />
                   </div>
                 </div>

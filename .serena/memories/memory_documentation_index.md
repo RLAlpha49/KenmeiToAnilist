@@ -90,90 +90,90 @@ This memory serves as a comprehensive index of all Serena memories available for
    - Covers: Complete matching pipeline with algorithms
 
 2. **manga_sources_and_fallback_system** ✅
-    - MangaSourceRegistry for multi-source searches
-    - ComicK and MangaDex as fallbacks
-    - Result merging and deduplication
-    - Source-specific conversion to AniList format
-    - Per-source caching and rate limiting
-    - Covers: Multi-source manga search architecture
+   - MangaSourceRegistry for multi-source searches
+   - ComicK and MangaDex as fallbacks
+   - Result merging and deduplication
+   - Source-specific conversion to AniList format
+   - Per-source caching and rate limiting
+   - Covers: Multi-source manga search architecture
 
 ### Synchronization & Updates (2 memories)
 
 1. **sync_service_and_incremental_updates** ✅
-    - Batch processing with rate limit (60 req/min)
-    - Three-step incremental updates (progress → status → notes)
-    - EntryProcessingContext for tracking
-    - Failed operation queue with retry logic
-    - Progress tracking and sync reports
-    - Resume capability after interruption
-    - Covers: Robust sync to AniList with recovery
+   - Batch processing with rate limit (60 req/min)
+   - Three-step incremental updates (progress → status → notes)
+   - EntryProcessingContext for tracking
+   - Failed operation queue with retry logic
+   - Progress tracking and sync reports
+   - Resume capability after interruption
+   - Covers: Robust sync to AniList with recovery
 
 2. **update_version_system** ✅
-    - Version management from package.json
-    - Update checking via GitHub releases
-    - Update notification with dismissal tracking
-    - Manual installation process
-    - Version comparison and release notes
-    - Pre-release and beta handling
-    - Covers: Application versioning and updates
+   - Version management from package.json
+   - Update checking via GitHub releases
+   - Update notification with dismissal tracking
+   - Manual installation process
+   - Version comparison and release notes
+   - Pre-release and beta handling
+   - Covers: Application versioning and updates
 
 ### User Interaction & Automation (4 memories)
 
 1. **keyboard_shortcuts_system** ✅
-    - Shortcut categories (General, Nav, Matching, Sync, Debug)
-    - Context-aware scope matching
-    - Platform-specific key formatting (Ctrl vs Cmd)
-    - Global keyboard listener pattern
-    - Special handling for form inputs
-    - Help panel and tooltip integration
-    - Covers: Complete keyboard shortcut system
+   - Shortcut categories (General, Nav, Matching, Sync, Debug)
+   - Context-aware scope matching
+   - Platform-specific key formatting (Ctrl vs Cmd)
+   - Global keyboard listener pattern
+   - Special handling for form inputs
+   - Help panel and tooltip integration
+   - Covers: Complete keyboard shortcut system
 
 2. **undo_redo_system** ✅
-    - Command pattern with 7 command types
-    - UndoRedoManager with stacks
-    - Command metadata for history tracking
-    - Batch operations with rollback
-    - Integration with matching system
-    - Stack limits and atomicity
-    - Covers: Full undo/redo infrastructure
+   - Command pattern with 7 command types
+   - UndoRedoManager with stacks
+   - Command metadata for history tracking
+   - Batch operations with rollback
+   - Integration with matching system
+   - Stack limits and atomicity
+   - Covers: Full undo/redo infrastructure
 
 3. **statistics_analytics_system** ✅
-    - Metrics: Match progress, reading stats, trends
-    - 10+ chart types for visualization
-    - Time range and multi-filter support
-    - Worker-based calculation for performance
-    - Data export (CSV/JSON)
-    - Drill-down modal for details
-    - Covers: Comprehensive analytics and reporting
+   - Metrics: Match progress, reading stats, trends
+   - 10+ chart types for visualization
+   - Time range and multi-filter support
+   - Worker-based calculation for performance
+   - Data export (CSV/JSON)
+   - Drill-down modal for details
+   - Covers: Comprehensive analytics and reporting
 
 ### Supporting Systems (3 memories)
 
 1. **react_hooks_and_patterns** ✅
-    - Custom hooks (useAuth, useSynchronization, useTimeEstimate, etc.)
-    - Batch selection pattern with Set
-    - Dependency array rules (React Compiler)
-    - Cleanup in useEffect
-    - useCallback for props
-    - useState with objects
-    - Covers: React-specific patterns and hooks
+   - Custom hooks (useAuth, useSynchronization, useTimeEstimate, etc.)
+   - Batch selection pattern with Set
+   - Dependency array rules (React Compiler)
+   - Cleanup in useEffect
+   - useCallback for props
+   - useState with objects
+   - Covers: React-specific patterns and hooks
 
 2. **sonarqube_complexity_patterns** ✅
-    - Cognitive complexity refactoring
-    - Nested loops → extract inner function
-    - Conditionals → extract validators
-    - Complex regex → multi-step validation
-    - Testing and SonarQube compliance
-    - Covers: Code quality and complexity management
+   - Cognitive complexity refactoring
+   - Nested loops → extract inner function
+   - Conditionals → extract validators
+   - Complex regex → multi-step validation
+   - Testing and SonarQube compliance
+   - Covers: Code quality and complexity management
 
 3. **common_gotchas_and_solutions** ✅
-    - IPC and communication issues
-    - React Compiler and hooks issues
-    - Cache and storage issues
-    - Performance issues
-    - API and authentication issues
-    - Type safety issues
-    - Debug mode issues
-    - Covers: Common problems and solutions
+   - IPC and communication issues
+   - React Compiler and hooks issues
+   - Cache and storage issues
+   - Performance issues
+   - API and authentication issues
+   - Type safety issues
+   - Debug mode issues
+   - Covers: Common problems and solutions
 
 ## How to Use This Index
 
@@ -249,18 +249,18 @@ Each memory should contain:
 
 ## Quick Reference: When to Use Each Memory
 
-| Task | Memory | Why |
-|------|--------|-----|
-| Adding new feature | critical_patterns | Know the rules |
-| Debugging sync | sync_service_and_incremental_updates | Understand flow |
-| Improving matching | matching_and_scoring_system | Know algorithms |
-| Fixing UI issue | react_hooks_and_patterns | Understand React |
-| Adding logging | logging_and_debugging_architecture | Know patterns |
-| Handling errors | error_handling_guide | Proper error handling |
-| IPC problem | ipc_and_context_bridge_patterns | Understand communication |
-| Storage issue | architecture_and_decisions | Know three-layer system |
-| Performance | web_workers_system | Offload computation |
-| Stuck/confused | common_gotchas_and_solutions | Find solution |
+| Task               | Memory                               | Why                      |
+| ------------------ | ------------------------------------ | ------------------------ |
+| Adding new feature | critical_patterns                    | Know the rules           |
+| Debugging sync     | sync_service_and_incremental_updates | Understand flow          |
+| Improving matching | matching_and_scoring_system          | Know algorithms          |
+| Fixing UI issue    | react_hooks_and_patterns             | Understand React         |
+| Adding logging     | logging_and_debugging_architecture   | Know patterns            |
+| Handling errors    | error_handling_guide                 | Proper error handling    |
+| IPC problem        | ipc_and_context_bridge_patterns      | Understand communication |
+| Storage issue      | architecture_and_decisions           | Know three-layer system  |
+| Performance        | web_workers_system                   | Offload computation      |
+| Stuck/confused     | common_gotchas_and_solutions         | Find solution            |
 
 ## Contact & Questions
 

@@ -6,11 +6,11 @@ import {
   AlertCircle,
   Book,
   TrendingUp,
-  ChevronRight,
   Star,
   Trash2,
   Save,
 } from "lucide-react";
+import { CollapsibleChevron } from "@/components/ui/collapsible-chevron";
 import {
   Card,
   CardHeader,
@@ -372,9 +372,7 @@ export function AdvancedFilterPanel({
               {/* Collapse toggle */}
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <ChevronRight
-                    className={`h-4 w-4 transform transition-transform ${isOpen ? "rotate-90" : ""}`}
-                  />
+                  <CollapsibleChevron isExpanded={isOpen} />
                   <span className="sr-only">Toggle advanced filters</span>
                 </Button>
               </CollapsibleTrigger>

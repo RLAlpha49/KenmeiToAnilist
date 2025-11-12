@@ -7,7 +7,7 @@
  * and security considerations including ReDoS vulnerabilities.
  */
 
-import React, { memo } from "react";
+import React, { memo, useState } from "react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -26,12 +26,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   BookOpen,
-  ChevronDown,
   ShieldAlert,
   ExternalLink,
   CheckCircle2,
   XCircle,
 } from "lucide-react";
+import { CollapsibleChevron } from "@/components/ui/collapsible-chevron";
 
 /**
  * Regex documentation component with comprehensive guides and examples.
@@ -39,6 +39,22 @@ import {
  * @source
  */
 function RegexDocumentationComponent() {
+  const [expandedSections, setExpandedSections] = useState<
+    Record<string, boolean>
+  >({
+    basicSyntax: true,
+    quantifiers: false,
+    characterClasses: false,
+    grouping: false,
+  });
+
+  const toggleSection = (section: string) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  };
+
   return (
     <div className="space-y-4">
       {/* Security Warning - Always Visible */}
@@ -205,7 +221,10 @@ function RegexDocumentationComponent() {
       </div>
 
       {/* Basic Syntax - Collapsible */}
-      <Collapsible defaultOpen={true}>
+      <Collapsible
+        open={expandedSections.basicSyntax}
+        onOpenChange={() => toggleSection("basicSyntax")}
+      >
         <CollapsibleTrigger asChild>
           <Button
             variant="outline"
@@ -216,7 +235,7 @@ function RegexDocumentationComponent() {
               <BookOpen className="h-4 w-4" />
               Basic Syntax
             </span>
-            <ChevronDown className="h-4 w-4" />
+            <CollapsibleChevron isExpanded={expandedSections.basicSyntax} />
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent className="mt-2">
@@ -274,7 +293,10 @@ function RegexDocumentationComponent() {
       </Collapsible>
 
       {/* Quantifiers - Collapsible */}
-      <Collapsible>
+      <Collapsible
+        open={expandedSections.quantifiers}
+        onOpenChange={() => toggleSection("quantifiers")}
+      >
         <CollapsibleTrigger asChild>
           <Button
             variant="outline"
@@ -285,7 +307,7 @@ function RegexDocumentationComponent() {
               <BookOpen className="h-4 w-4" />
               Quantifiers (Repetition)
             </span>
-            <ChevronDown className="h-4 w-4" />
+            <CollapsibleChevron isExpanded={expandedSections.quantifiers} />
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent className="mt-2">
@@ -333,7 +355,10 @@ function RegexDocumentationComponent() {
       </Collapsible>
 
       {/* Character Classes - Collapsible */}
-      <Collapsible>
+      <Collapsible
+        open={expandedSections.characterClasses}
+        onOpenChange={() => toggleSection("characterClasses")}
+      >
         <CollapsibleTrigger asChild>
           <Button
             variant="outline"
@@ -344,7 +369,9 @@ function RegexDocumentationComponent() {
               <BookOpen className="h-4 w-4" />
               Character Classes
             </span>
-            <ChevronDown className="h-4 w-4" />
+            <CollapsibleChevron
+              isExpanded={expandedSections.characterClasses}
+            />
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent className="mt-2">
@@ -386,7 +413,10 @@ function RegexDocumentationComponent() {
       </Collapsible>
 
       {/* Grouping and Alternation - Collapsible */}
-      <Collapsible>
+      <Collapsible
+        open={expandedSections.grouping}
+        onOpenChange={() => toggleSection("grouping")}
+      >
         <CollapsibleTrigger asChild>
           <Button
             variant="outline"
@@ -397,7 +427,7 @@ function RegexDocumentationComponent() {
               <BookOpen className="h-4 w-4" />
               Grouping and Alternation
             </span>
-            <ChevronDown className="h-4 w-4" />
+            <CollapsibleChevron isExpanded={expandedSections.grouping} />
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent className="mt-2">

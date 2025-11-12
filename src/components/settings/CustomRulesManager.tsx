@@ -15,7 +15,6 @@ import {
   AlertTriangle,
   Info,
   ShieldAlert,
-  ChevronDown,
   ExternalLink,
   BookOpen,
 } from "lucide-react";
@@ -47,6 +46,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { CollapsibleChevron } from "@/components/ui/collapsible-chevron";
 import {
   Dialog,
   DialogContent,
@@ -156,6 +156,8 @@ function CustomRulesManagerComponent(): React.JSX.Element {
     matches: boolean;
     reason?: string;
   } | null>(null);
+  const [isRulesCollapsibleOpen, setIsRulesCollapsibleOpen] = useState(false);
+  const [isRegexGuideOpen, setIsRegexGuideOpen] = useState(false);
 
   // Keep a ref to the cleanup function for debounced validation
   const debouncedValidateRef = React.useRef<
@@ -692,7 +694,11 @@ function CustomRulesManagerComponent(): React.JSX.Element {
   );
 
   return (
-    <Collapsible defaultOpen={false} className="space-y-4">
+    <Collapsible
+      open={isRulesCollapsibleOpen}
+      onOpenChange={setIsRulesCollapsibleOpen}
+      className="space-y-4"
+    >
       <CollapsibleTrigger asChild>
         <Button
           variant="outline"
@@ -707,7 +713,7 @@ function CustomRulesManagerComponent(): React.JSX.Element {
               For Advanced Users
             </Badge>
           </span>
-          <ChevronDown className="h-4 w-4" />
+          <CollapsibleChevron isExpanded={isRulesCollapsibleOpen} />
         </Button>
       </CollapsibleTrigger>
 
@@ -862,7 +868,10 @@ function CustomRulesManagerComponent(): React.JSX.Element {
             </div>
 
             {/* Regex Documentation */}
-            <Collapsible>
+            <Collapsible
+              open={isRegexGuideOpen}
+              onOpenChange={setIsRegexGuideOpen}
+            >
               <CollapsibleTrigger asChild>
                 <Button
                   variant="outline"
@@ -873,7 +882,7 @@ function CustomRulesManagerComponent(): React.JSX.Element {
                     <BookOpen className="h-4 w-4" />
                     Regex Pattern Guide
                   </span>
-                  <ChevronDown className="h-4 w-4" />
+                  <CollapsibleChevron isExpanded={isRegexGuideOpen} />
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-2">

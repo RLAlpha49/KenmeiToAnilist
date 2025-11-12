@@ -121,7 +121,7 @@ export function SyncConfigurationPanel({
           </span>
           <div className="flex items-center gap-2 text-xs text-slate-500 transition group-data-[state=open]:text-blue-500 dark:text-slate-400 dark:group-data-[state=open]:text-blue-300">
             <span>Adjust your rules</span>
-            <ChevronDown className="h-4 w-4 transition-transform duration-300 group-data-[state=open]:rotate-180" />
+            <ChevronDown className="h-4 w-4 transition-transform duration-300 group-data-[state=open]:-rotate-90" />
           </div>
         </Button>
       </CollapsibleTrigger>

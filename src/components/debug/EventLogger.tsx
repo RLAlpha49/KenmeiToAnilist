@@ -6,8 +6,8 @@
 
 import React, { useId, useMemo, useState, useEffect } from "react";
 import { toast } from "sonner";
+import { CollapsibleChevron } from "../ui/collapsible-chevron";
 import {
-  ChevronDown,
   Copy,
   Download,
   Filter,
@@ -887,12 +887,7 @@ function EventMetadata({
           className="text-left text-xs font-medium uppercase tracking-wide"
         >
           <span className="flex items-center gap-2">
-            <ChevronDown
-              className={cn(
-                "h-4 w-4 transition-transform",
-                expanded ? "rotate-360" : "rotate-270",
-              )}
-            />
+            <CollapsibleChevron isExpanded={expanded} />
             Metadata
           </span>
         </button>

@@ -74,7 +74,7 @@ Specialized pools:
 const pool = getCsvWorkerPool();
 const result = await pool.execute(
   { filePath, options },
-  cancellationToken // Optional
+  cancellationToken, // Optional
 );
 ```
 
@@ -196,8 +196,8 @@ try {
 ```typescript
 const csvWorkerPool = getCsvWorkerPool();
 const { manga, stats } = await csvWorkerPool.execute({
-  filePath: '/path/to/export.csv',
-  options: { skipValidation: false }
+  filePath: "/path/to/export.csv",
+  options: { skipValidation: false },
 });
 ```
 
@@ -236,7 +236,7 @@ const results = await matchingPool.execute({
 const statsPool = getStatisticsWorkerPool();
 const stats = await statsPool.execute({
   manga: allManga,
-  options: { timeRange: 'last-90-days' }
+  options: { timeRange: "last-90-days" },
 });
 ```
 
@@ -311,7 +311,7 @@ const result = await pool.execute(data, null, {
   onProgress: (progress: ProgressUpdate) => {
     console.log(`${progress.current}/${progress.total} items processed`);
     updateProgressBar(progress.percentage);
-  }
+  },
 });
 ```
 
@@ -374,12 +374,16 @@ Task 3 → Worker 1 (executing)
 ```typescript
 // In ImportPage.tsx
 const csvPool = getCsvWorkerPool();
-const { manga, stats } = await csvPool.execute({
-  filePath: selectedFile.path,
-  options: { skipValidation: false }
-}, cancellationToken, {
-  onProgress: (p) => setProgress(p)
-});
+const { manga, stats } = await csvPool.execute(
+  {
+    filePath: selectedFile.path,
+    options: { skipValidation: false },
+  },
+  cancellationToken,
+  {
+    onProgress: (p) => setProgress(p),
+  },
+);
 ```
 
 **Example: Statistics Page**
@@ -389,7 +393,7 @@ const { manga, stats } = await csvPool.execute({
 const statsPool = getStatisticsWorkerPool();
 const chartData = await statsPool.execute({
   manga: matchResults,
-  options: { aggregateBy: 'genre' }
+  options: { aggregateBy: "genre" },
 });
 ```
 
@@ -400,7 +404,7 @@ const chartData = await statsPool.execute({
 const matchPool = getMatchingWorkerPool();
 const scores = await matchPool.execute({
   searchTitle: kenmeiManga.title,
-  candidates: anilistResults
+  candidates: anilistResults,
 });
 ```
 
@@ -411,7 +415,7 @@ const scores = await matchPool.execute({
 ```typescript
 // In test file
 const pool = getCsvWorkerPool();
-const largeData = { filePath: '/huge-export.csv' };
+const largeData = { filePath: "/huge-export.csv" };
 const start = performance.now();
 const result = await pool.execute(largeData);
 const duration = performance.now() - start;
@@ -430,6 +434,6 @@ setTimeout(() => token.cancel(), 500);
 try {
   await resultPromise;
 } catch (error) {
-  expect(error.message).toContain('cancelled');
+  expect(error.message).toContain("cancelled");
 }
 ```

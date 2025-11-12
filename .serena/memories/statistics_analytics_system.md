@@ -257,18 +257,11 @@ Trend:    Increasing ↗ (+20.5 chapters/day)
 **Implementation**:
 
 ```typescript
-type TimeRange = 
-  | "week"
-  | "month"
-  | "quarter"
-  | "year"
-  | "all"
-  | { start: Date; end: Date };
+type TimeRange = "week" | "month" | "quarter" | "year" | "all" | { start: Date; end: Date };
 
 // Filter data
-const filtered = data.filter(item => 
-  item.timestamp >= getStartDate(range) &&
-  item.timestamp <= getEndDate(range)
+const filtered = data.filter(
+  (item) => item.timestamp >= getStartDate(range) && item.timestamp <= getEndDate(range),
 );
 ```
 
@@ -327,13 +320,17 @@ Long-running calculations offloaded to workers:
 
 ```typescript
 const statsPool = getStatisticsWorkerPool();
-const stats = await statsPool.execute({
-  manga: allManga,
-  filters: { statusFilter: ["CURRENT"], timeRange: "month" },
-  options: { aggregateBy: "genre" }
-}, null, {
-  onProgress: (p) => updateProgress(p)
-});
+const stats = await statsPool.execute(
+  {
+    manga: allManga,
+    filters: { statusFilter: ["CURRENT"], timeRange: "month" },
+    options: { aggregateBy: "genre" },
+  },
+  null,
+  {
+    onProgress: (p) => updateProgress(p),
+  },
+);
 ```
 
 ### Operation Types

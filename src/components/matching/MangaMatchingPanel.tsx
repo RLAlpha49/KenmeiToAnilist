@@ -12,9 +12,10 @@ import React, {
 } from "react";
 import { KenmeiManga } from "../../api/kenmei/types";
 import { MangaMatchResult, AniListManga } from "../../api/anilist/types";
+import { CollapsibleChevron } from "../ui/collapsible-chevron";
 import {
-  ChevronRight,
   ChevronLeft,
+  ChevronRight,
   AlertTriangle,
   Type,
   ListFilter,
@@ -1162,12 +1163,7 @@ export function MangaMatchingPanel({
               </div>
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <ChevronRight
-                    className={cn(
-                      "h-4 w-4 transform transition-transform",
-                      isAdvancedFiltersOpen && "rotate-90",
-                    )}
-                  />
+                  <CollapsibleChevron isExpanded={isAdvancedFiltersOpen} />
                 </Button>
               </CollapsibleTrigger>
             </div>
@@ -1277,12 +1273,7 @@ export function MangaMatchingPanel({
                   )}
                   <CollapsibleTrigger asChild>
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <ChevronRight
-                        className={cn(
-                          "h-4 w-4 transform transition-transform",
-                          isBulkActionsOpen && "rotate-90",
-                        )}
-                      />
+                      <CollapsibleChevron isExpanded={isBulkActionsOpen} />
                     </Button>
                   </CollapsibleTrigger>
                 </div>

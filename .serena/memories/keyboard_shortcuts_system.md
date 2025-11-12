@@ -23,10 +23,10 @@ interface Shortcut {
 }
 
 type ShortcutKey = {
-  ctrl?: boolean;  // Ctrl/Cmd
+  ctrl?: boolean; // Ctrl/Cmd
   shift?: boolean; // Shift
-  alt?: boolean;   // Alt
-  key: string;     // "z", "Enter", "Escape"
+  alt?: boolean; // Alt
+  key: string; // "z", "Enter", "Escape"
 };
 
 enum ShortcutCategory {
@@ -34,7 +34,7 @@ enum ShortcutCategory {
   NAVIGATION = "navigation",
   MATCHING = "matching",
   SYNC = "sync",
-  DEBUG = "debug"
+  DEBUG = "debug",
 }
 ```
 
@@ -44,15 +44,15 @@ enum ShortcutCategory {
 
 **ID**: `general:*`
 
-| Shortcut | Keys | Action |
-|----------|------|--------|
-| `general:undo` | `Ctrl+Z` / `Cmd+Z` | Undo last action |
-| `general:redo` | `Ctrl+Y` / `Cmd+Shift+Z` | Redo action |
-| `general:search` | `Ctrl+F` / `Cmd+F` | Open search (context-aware) |
-| `general:settings` | `Ctrl+,` / `Cmd+,` | Open settings |
-| `general:help` | `F1` | Open help/documentation |
-| `general:export` | `Ctrl+E` / `Cmd+E` | Export data |
-| `general:import` | `Ctrl+I` / `Cmd+I` | Import data |
+| Shortcut           | Keys                     | Action                      |
+| ------------------ | ------------------------ | --------------------------- |
+| `general:undo`     | `Ctrl+Z` / `Cmd+Z`       | Undo last action            |
+| `general:redo`     | `Ctrl+Y` / `Cmd+Shift+Z` | Redo action                 |
+| `general:search`   | `Ctrl+F` / `Cmd+F`       | Open search (context-aware) |
+| `general:settings` | `Ctrl+,` / `Cmd+,`       | Open settings               |
+| `general:help`     | `F1`                     | Open help/documentation     |
+| `general:export`   | `Ctrl+E` / `Cmd+E`       | Export data                 |
+| `general:import`   | `Ctrl+I` / `Cmd+I`       | Import data                 |
 
 **Scope**: All pages
 
@@ -60,14 +60,14 @@ enum ShortcutCategory {
 
 **ID**: `nav:*`
 
-| Shortcut | Keys | Action |
-|----------|------|--------|
-| `nav:home` | `Ctrl+Home` / `Cmd+Home` | Go to home |
-| `nav:import` | `Alt+1` | Go to import page |
-| `nav:matching` | `Alt+2` | Go to matching page |
-| `nav:sync` | `Alt+3` | Go to sync page |
-| `nav:statistics` | `Alt+4` | Go to statistics page |
-| `nav:settings` | `Alt+5` | Go to settings page |
+| Shortcut         | Keys                     | Action                |
+| ---------------- | ------------------------ | --------------------- |
+| `nav:home`       | `Ctrl+Home` / `Cmd+Home` | Go to home            |
+| `nav:import`     | `Alt+1`                  | Go to import page     |
+| `nav:matching`   | `Alt+2`                  | Go to matching page   |
+| `nav:sync`       | `Alt+3`                  | Go to sync page       |
+| `nav:statistics` | `Alt+4`                  | Go to statistics page |
+| `nav:settings`   | `Alt+5`                  | Go to settings page   |
 
 **Scope**: All pages
 
@@ -75,18 +75,18 @@ enum ShortcutCategory {
 
 **ID**: `matching:*`
 
-| Shortcut | Keys | Action |
-|----------|------|--------|
-| `matching:accept` | `Enter` / `Space` | Accept current match |
-| `matching:reject` | `Delete` / `Backspace` | Reject current match |
-| `matching:next` | `Down` / `Right` | Next manga |
-| `matching:previous` | `Up` / `Left` | Previous manga |
-| `matching:search` | `Ctrl+F` / `Cmd+F` | Manual search |
-| `matching:reset` | `Ctrl+R` / `Cmd+R` | Reset to pending |
-| `matching:select-alt` | `Tab` / `Shift+Tab` | Cycle alternatives |
-| `matching:batch-select` | `Ctrl+Click` / `Cmd+Click` | Add to batch |
-| `matching:select-all` | `Ctrl+A` / `Cmd+A` | Select all displayed |
-| `matching:clear-selection` | `Escape` | Clear batch selection |
+| Shortcut                   | Keys                       | Action                |
+| -------------------------- | -------------------------- | --------------------- |
+| `matching:accept`          | `Enter` / `Space`          | Accept current match  |
+| `matching:reject`          | `Delete` / `Backspace`     | Reject current match  |
+| `matching:next`            | `Down` / `Right`           | Next manga            |
+| `matching:previous`        | `Up` / `Left`              | Previous manga        |
+| `matching:search`          | `Ctrl+F` / `Cmd+F`         | Manual search         |
+| `matching:reset`           | `Ctrl+R` / `Cmd+R`         | Reset to pending      |
+| `matching:select-alt`      | `Tab` / `Shift+Tab`        | Cycle alternatives    |
+| `matching:batch-select`    | `Ctrl+Click` / `Cmd+Click` | Add to batch          |
+| `matching:select-all`      | `Ctrl+A` / `Cmd+A`         | Select all displayed  |
+| `matching:clear-selection` | `Escape`                   | Clear batch selection |
 
 **Scope**: Matching page only
 
@@ -94,13 +94,13 @@ enum ShortcutCategory {
 
 **ID**: `sync:*`
 
-| Shortcut | Keys | Action |
-|----------|------|--------|
-| `sync:start` | `Ctrl+S` / `Cmd+S` | Start sync |
-| `sync:pause` | `Space` | Pause/resume sync |
-| `sync:cancel` | `Escape` | Cancel sync |
-| `sync:retry` | `Ctrl+Shift+R` | Retry failed entries |
-| `sync:export-results` | `Ctrl+E` / `Cmd+E` | Export sync report |
+| Shortcut              | Keys               | Action               |
+| --------------------- | ------------------ | -------------------- |
+| `sync:start`          | `Ctrl+S` / `Cmd+S` | Start sync           |
+| `sync:pause`          | `Space`            | Pause/resume sync    |
+| `sync:cancel`         | `Escape`           | Cancel sync          |
+| `sync:retry`          | `Ctrl+Shift+R`     | Retry failed entries |
+| `sync:export-results` | `Ctrl+E` / `Cmd+E` | Export sync report   |
 
 **Scope**: Sync page only
 
@@ -108,13 +108,13 @@ enum ShortcutCategory {
 
 **ID**: `debug:*`
 
-| Shortcut | Keys | Action |
-|----------|------|--------|
-| `debug:toggle` | `F12` / `Cmd+Opt+I` | Toggle debug panel |
-| `debug:logs` | `Ctrl+Shift+J` | Show console logs |
-| `debug:ipc` | `Ctrl+Shift+K` | Show IPC monitor |
-| `debug:state` | `Ctrl+Shift+L` | Show state inspector |
-| `debug:performance` | `Ctrl+Shift+P` | Show performance |
+| Shortcut            | Keys                | Action               |
+| ------------------- | ------------------- | -------------------- |
+| `debug:toggle`      | `F12` / `Cmd+Opt+I` | Toggle debug panel   |
+| `debug:logs`        | `Ctrl+Shift+J`      | Show console logs    |
+| `debug:ipc`         | `Ctrl+Shift+K`      | Show IPC monitor     |
+| `debug:state`       | `Ctrl+Shift+L`      | Show state inspector |
+| `debug:performance` | `Ctrl+Shift+P`      | Show performance     |
 
 **Scope**: All pages (when debug enabled)
 
@@ -131,7 +131,7 @@ const shortcut = makeShortcut({
   key: { key: "Enter" },
   category: ShortcutCategory.MATCHING,
   scope: ["matching"],
-  action: () => handleAccept()
+  action: () => handleAccept(),
 });
 ```
 
@@ -184,7 +184,7 @@ export const SHORTCUTS = [
 ```typescript
 const PLATFORM = {
   ctrl: isMac ? "Cmd" : "Ctrl",
-  alt: isMac ? "Opt" : "Alt"
+  alt: isMac ? "Opt" : "Alt",
 };
 
 // Result: "Cmd+Z" on Mac, "Ctrl+Z" on Windows
@@ -359,7 +359,7 @@ const ShortcutsPanel = () => {
 ```typescript
 const AcceptButton = () => {
   const shortcut = getShortcutById("matching:accept");
-  
+
   return (
     <button
       onClick={() => shortcut.action()}
@@ -376,11 +376,11 @@ const AcceptButton = () => {
 
 ```typescript
 // In router
-NAVIGATION_ITEMS.map(item => ({
+NAVIGATION_ITEMS.map((item) => ({
   ...item,
   shortcut: getShortcutById(`nav:${item.id}`),
   // Display shortcut in menu
-}))
+}));
 ```
 
 ## Performance
@@ -390,9 +390,7 @@ NAVIGATION_ITEMS.map(item => ({
 **Index by ID**:
 
 ```typescript
-const shortcutMap = new Map(
-  SHORTCUTS.map(s => [s.id, s])
-);
+const shortcutMap = new Map(SHORTCUTS.map((s) => [s.id, s]));
 
 // O(1) lookup instead of O(n)
 const shortcut = shortcutMap.get("matching:accept");
@@ -402,9 +400,7 @@ const shortcut = shortcutMap.get("matching:accept");
 
 ```typescript
 const getApplicableShortcuts = useMemo(() => {
-  return SHORTCUTS.filter(s => 
-    s.scope.includes(currentPage)
-  );
+  return SHORTCUTS.filter((s) => s.scope.includes(currentPage));
 }, [currentPage]);
 ```
 
@@ -433,7 +429,7 @@ describe("Shortcuts", () => {
   it("should trigger accept action on Enter", () => {
     const action = vi.fn();
     const shortcut = { key: { key: "Enter" }, action };
-    
+
     const event = new KeyboardEvent("keydown", { key: "Enter" });
     expect(matchesShortcut(event, shortcut.id)).toBe(true);
   });
@@ -443,9 +439,9 @@ describe("Shortcuts", () => {
     const event = new KeyboardEvent("keydown", {
       key: "Enter",
       bubbles: true,
-      target: input
+      target: input,
     });
-    
+
     // Handle appropriately
   });
 });
