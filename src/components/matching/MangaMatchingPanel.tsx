@@ -194,6 +194,113 @@ export function MangaMatchingPanel({
     useState(false);
   const [isResettingMatchedToPending] = useState(false);
 
+  // Track which match IDs are currently being updated for visual feedback
+  const [updatingMatchIds, setUpdatingMatchIds] = useState<Set<number>>(
+    new Set(),
+  );
+
+  // Helper to check if a specific match is updating
+  const isMatchUpdating = useCallback(
+    (matchId: number): boolean => {
+      return updatingMatchIds.has(matchId);
+    },
+    [updatingMatchIds],
+  );
+
+  /**
+   * Wraps a handler callback to show/hide loading state for a specific match.
+   * Provides visual feedback during optimistic updates and background persistence.
+   *
+   * @param handler - Original callback handler
+   * @param getMatchId - Function to extract match ID from the parameter
+   * @returns Wrapped handler that tracks updating state
+   * @internal
+   */
+  const wrapHandlerWithLoadingState = useCallback(
+    <T,>(
+      handler: ((arg: T) => void | Promise<void>) | undefined,
+      getMatchId: (arg: T) => number | number[],
+    ): ((arg: T) => void | Promise<void>) | undefined => {
+      if (!handler) return undefined;
+
+      return (arg: T) => {
+        const matchIds = getMatchId(arg);
+        const ids = Array.isArray(matchIds) ? matchIds : [matchIds];
+
+        // Add to updating set
+        setUpdatingMatchIds((prev) => {
+          const newSet = new Set(prev);
+          for (const id of ids) {
+            newSet.add(id);
+          }
+          return newSet;
+        });
+
+        // Call the original handler
+        const result = handler(arg);
+
+        // If it's a promise, wait for it; otherwise, clear loading state after a brief delay
+        if (result instanceof Promise) {
+          result.finally(() => {
+            // Clear after brief delay for visual feedback
+            setTimeout(() => {
+              setUpdatingMatchIds((prev) => {
+                const newSet = new Set(prev);
+                for (const id of ids) {
+                  newSet.delete(id);
+                }
+                return newSet;
+              });
+            }, 500);
+          });
+        } else {
+          // Clear loading state after a brief delay for visual feedback
+          setTimeout(() => {
+            setUpdatingMatchIds((prev) => {
+              const newSet = new Set(prev);
+              for (const id of ids) {
+                newSet.delete(id);
+              }
+              return newSet;
+            });
+          }, 500);
+        }
+      };
+    },
+    [],
+  );
+
+  // Wrapped handlers that provide loading state feedback
+  const wrappedOnAcceptMatch = wrapHandlerWithLoadingState(
+    onAcceptMatch,
+    (match) => {
+      if ("isBatchOperation" in match && match.isBatchOperation) {
+        return match.matches.map((m) => m.kenmeiManga.id);
+      }
+      return (match as any).kenmeiManga.id;
+    },
+  );
+
+  const wrappedOnRejectMatch = wrapHandlerWithLoadingState(
+    onRejectMatch,
+    (match) => {
+      if ("isBatchOperation" in match && match.isBatchOperation) {
+        return match.matches.map((m) => m.kenmeiManga.id);
+      }
+      return (match as any).kenmeiManga.id;
+    },
+  );
+
+  const wrappedOnResetToPending = wrapHandlerWithLoadingState(
+    onResetToPending,
+    (match) => {
+      if ("isBatchOperation" in match && match.isBatchOperation) {
+        return match.matches.map((m) => m.kenmeiManga.id);
+      }
+      return (match as any).kenmeiManga.id;
+    },
+  );
+
   // State for collapsible sections
   const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
   const [isBulkActionsOpen, setIsBulkActionsOpen] = useState(false);
@@ -1488,16 +1595,17 @@ export function MangaMatchingPanel({
                       shouldBlurImage={shouldBlurImage}
                       toggleImageBlur={toggleImageBlur}
                       onManualSearch={onManualSearch}
-                      onAcceptMatch={onAcceptMatch}
-                      onRejectMatch={onRejectMatch}
+                      onAcceptMatch={wrappedOnAcceptMatch}
+                      onRejectMatch={wrappedOnRejectMatch}
                       onSelectAlternative={onSelectAlternative}
-                      onResetToPending={onResetToPending}
+                      onResetToPending={wrappedOnResetToPending}
                       isSelected={isMatchSelected(match.kenmeiManga.id)}
                       onToggleSelection={
                         onToggleSelection
                           ? () => onToggleSelection(match.kenmeiManga.id)
                           : undefined
                       }
+                      isUpdating={isMatchUpdating(match.kenmeiManga.id)}
                     />
                   );
                 })}

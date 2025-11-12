@@ -205,33 +205,53 @@ export const useMatchHandlers = (
   );
 
   /**
-   * Updates match results state and persists them to storage.
+   * Updates match results state and persists them to storage asynchronously.
+   * Uses optimistic UI updates: state is updated immediately while storage persistence
+   * happens in the background to prevent UI blocking.
    *
    * @param updatedResults - The updated array of manga match results.
    * @source
    */
   const updateMatchResults = useCallback(
     (updatedResults: MangaMatchResult[]) => {
-      // Set the state with the new array
+      // Update state immediately (optimistic UI update)
       setMatchResults(updatedResults);
 
-      // Save to storage to ensure it's consistent
-      try {
-        storage.setItem(
-          STORAGE_KEYS.MATCH_RESULTS,
-          JSON.stringify(updatedResults),
-        );
-        console.debug(
-          "[MatchHandlers] Successfully saved updated match results to storage",
-        );
-      } catch (storageError) {
-        console.error(
-          "[MatchHandlers] Failed to save match results to storage:",
-          storageError,
-        );
-      }
+      // Defer storage persistence to avoid blocking UI
+      // Schedule as a low-priority task after rendering
+      queueMicrotask(() => {
+        try {
+          const jsonString = JSON.stringify(updatedResults);
+          console.debug(
+            `[MatchHandlers] 💾 Persisting ${updatedResults.length} match results (${jsonString.length} bytes) to storage in background`,
+          );
+
+          // Try async storage first (electron-store)
+          if (storage.setItemAsync) {
+            storage
+              .setItemAsync(STORAGE_KEYS.MATCH_RESULTS, jsonString)
+              .catch((storageError) => {
+                console.error(
+                  "[MatchHandlers] Failed to persist match results to async storage:",
+                  storageError,
+                );
+              });
+          } else {
+            // Fallback to sync storage (localStorage)
+            storage.setItem(STORAGE_KEYS.MATCH_RESULTS, jsonString);
+            console.debug(
+              `[MatchHandlers] ✅ Match results persisted to localStorage`,
+            );
+          }
+        } catch (storageError) {
+          console.error(
+            "[MatchHandlers] Failed to persist match results to storage:",
+            storageError,
+          );
+        }
+      });
     },
-    [setMatchResults],
+    [],
   );
 
   /**

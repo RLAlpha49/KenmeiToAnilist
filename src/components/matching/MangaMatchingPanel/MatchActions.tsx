@@ -14,6 +14,7 @@ import { Button } from "../../ui/button";
  * @property onResetToPending - Callback to reset match to pending status.
  * @property onSelectAlternative - Callback to select an alternative match.
  * @property handleKeyDown - Handler for keyboard shortcuts on action buttons.
+ * @property isLoading - Optional flag to disable buttons while operation is in progress.
  * @source
  */
 export interface MatchActionsProps {
@@ -29,6 +30,7 @@ export interface MatchActionsProps {
     directAccept?: boolean,
   ) => void;
   handleKeyDown: (e: React.KeyboardEvent, cb: () => void) => void;
+  isLoading?: boolean;
 }
 
 /**
@@ -49,6 +51,7 @@ function MatchActionsComponent({
   onResetToPending,
   onSelectAlternative,
   handleKeyDown,
+  isLoading = false,
 }: Readonly<MatchActionsProps>) {
   // Keep onSelectAlternative referenced to preserve API and avoid unused prop warnings
   if (onSelectAlternative) {
@@ -61,7 +64,7 @@ function MatchActionsComponent({
   /** Common search button component used across different match statuses. */
   const commonSearchButton = (text: string, ariaLabel: string) => (
     <Button
-      className={`${buttonBaseClass} bg-linear-to-r from-indigo-500 via-indigo-400 to-sky-400 text-white shadow-[0_10px_30px_-12px_rgba(79,70,229,0.65)] hover:shadow-[0_18px_40px_-15px_rgba(14,165,233,0.55)] focus-visible:ring-indigo-400/70 dark:from-indigo-500 dark:via-indigo-400 dark:to-sky-500`}
+      className={`${buttonBaseClass} bg-linear-to-r from-indigo-500 via-indigo-400 to-sky-400 text-white shadow-[0_10px_30px_-12px_rgba(79,70,229,0.65)] hover:shadow-[0_18px_40px_-15px_rgba(14,165,233,0.55)] focus-visible:ring-indigo-400/70 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none dark:from-indigo-500 dark:via-indigo-400 dark:to-sky-500`}
       onClick={() => {
         if (match.status === "pending") {
           console.debug(
@@ -74,25 +77,10 @@ function MatchActionsComponent({
         handleKeyDown(e, () => onManualSearch?.(match.kenmeiManga))
       }
       aria-label={ariaLabel}
+      disabled={isLoading}
     >
       <Search className="mr-2 h-4 w-4" aria-hidden="true" />
       {text}
-    </Button>
-  );
-
-  /** Reset button for returning match to pending status. */
-  const resetButton = (
-    <Button
-      variant="secondary"
-      className={`${buttonBaseClass} bg-slate-200/80 text-slate-800 shadow-[0_8px_28px_-15px_rgba(15,23,42,0.45)] hover:bg-slate-200 focus-visible:ring-slate-400 dark:bg-slate-800/70 dark:text-slate-200 dark:hover:bg-slate-800`}
-      onClick={() => {
-        if (onResetToPending) onResetToPending(match);
-      }}
-      onKeyDown={(e) => handleKeyDown(e, () => onResetToPending?.(match))}
-      aria-label={`Reset ${match.kenmeiManga.title} to pending status`}
-    >
-      <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
-      Reset to Pending
     </Button>
   );
 
@@ -102,7 +90,7 @@ function MatchActionsComponent({
         <>
           {match.anilistMatches && match.anilistMatches.length > 0 && (
             <Button
-              className={`${buttonBaseClass} bg-linear-to-r from-emerald-500 via-emerald-400 to-lime-400 text-white shadow-[0_12px_32px_-15px_rgba(16,185,129,0.6)] hover:shadow-[0_20px_45px_-18px_rgba(101,163,13,0.55)] focus-visible:ring-emerald-400/80 dark:from-emerald-500 dark:via-emerald-400 dark:to-lime-500`}
+              className={`${buttonBaseClass} bg-linear-to-r from-emerald-500 via-emerald-400 to-lime-400 text-white shadow-[0_12px_32px_-15px_rgba(16,185,129,0.6)] hover:shadow-[0_20px_45px_-18px_rgba(101,163,13,0.55)] focus-visible:ring-emerald-400/80 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none dark:from-emerald-500 dark:via-emerald-400 dark:to-lime-500`}
               onClick={() => {
                 console.debug(
                   `[MatchActions] Clicked Accept Match for manga ID: ${match.kenmeiManga.id}, title: ${match.kenmeiManga.title}`,
@@ -111,9 +99,10 @@ function MatchActionsComponent({
               }}
               onKeyDown={(e) => handleKeyDown(e, () => onAcceptMatch?.(match))}
               aria-label={`Accept match for ${match.kenmeiManga.title}`}
+              disabled={isLoading}
             >
               <Check className="mr-2 h-4 w-4" aria-hidden="true" />
-              Accept Match
+              {isLoading ? "Accepting..." : "Accept Match"}
             </Button>
           )}
 
@@ -123,15 +112,16 @@ function MatchActionsComponent({
           )}
 
           <Button
-            className={`${buttonBaseClass} bg-slate-100/80 text-slate-700 shadow-[0_8px_28px_-15px_rgba(30,41,59,0.45)] hover:bg-slate-100 focus-visible:ring-slate-300 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800`}
+            className={`${buttonBaseClass} bg-slate-100/80 text-slate-700 shadow-[0_8px_28px_-15px_rgba(30,41,59,0.45)] hover:bg-slate-100 focus-visible:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800`}
             onClick={() => {
               if (onRejectMatch) onRejectMatch(match);
             }}
             onKeyDown={(e) => handleKeyDown(e, () => onRejectMatch?.(match))}
             aria-label={`Skip matching for ${match.kenmeiManga.title}`}
+            disabled={isLoading}
           >
             <X className="mr-2 h-4 w-4" aria-hidden="true" />
-            Skip
+            {isLoading ? "Skipping..." : "Skip"}
           </Button>
         </>
       );
@@ -144,7 +134,19 @@ function MatchActionsComponent({
             "Change Match",
             `Change match for ${match.kenmeiManga.title}`,
           )}
-          {resetButton}
+          <Button
+            variant="secondary"
+            className={`${buttonBaseClass} bg-slate-200/80 text-slate-800 shadow-[0_8px_28px_-15px_rgba(15,23,42,0.45)] hover:bg-slate-200 focus-visible:ring-slate-400 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none dark:bg-slate-800/70 dark:text-slate-200 dark:hover:bg-slate-800`}
+            onClick={() => {
+              if (onResetToPending) onResetToPending(match);
+            }}
+            onKeyDown={(e) => handleKeyDown(e, () => onResetToPending?.(match))}
+            aria-label={`Reset ${match.kenmeiManga.title} to pending status`}
+            disabled={isLoading}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
+            {isLoading ? "Resetting..." : "Reset to Pending"}
+          </Button>
         </>
       );
 
@@ -155,7 +157,19 @@ function MatchActionsComponent({
             "Search Manually",
             `Find match for ${match.kenmeiManga.title}`,
           )}
-          {resetButton}
+          <Button
+            variant="secondary"
+            className={`${buttonBaseClass} bg-slate-200/80 text-slate-800 shadow-[0_8px_28px_-15px_rgba(15,23,42,0.45)] hover:bg-slate-200 focus-visible:ring-slate-400 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none dark:bg-slate-800/70 dark:text-slate-200 dark:hover:bg-slate-800`}
+            onClick={() => {
+              if (onResetToPending) onResetToPending(match);
+            }}
+            onKeyDown={(e) => handleKeyDown(e, () => onResetToPending?.(match))}
+            aria-label={`Reset ${match.kenmeiManga.title} to pending status`}
+            disabled={isLoading}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
+            {isLoading ? "Resetting..." : "Reset to Pending"}
+          </Button>
         </>
       );
 

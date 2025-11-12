@@ -71,6 +71,7 @@ export interface MatchCardProps {
   onResetToPending?: (match: MangaMatchResult) => void;
   isSelected?: boolean;
   onToggleSelection?: () => void;
+  isUpdating?: boolean;
 }
 
 /**
@@ -1170,6 +1171,7 @@ function MatchCard({
   onResetToPending,
   isSelected = false,
   onToggleSelection,
+  isUpdating = false,
 }: Readonly<MatchCardProps>) {
   const { confidenceTestExporterEnabled } = useDebug();
 
@@ -1448,6 +1450,7 @@ function MatchCard({
                   onResetToPending={onResetToPending}
                   onSelectAlternative={onSelectAlternative}
                   handleKeyDown={handleKeyDown}
+                  isLoading={isUpdating}
                 />
               </div>
             </div>
