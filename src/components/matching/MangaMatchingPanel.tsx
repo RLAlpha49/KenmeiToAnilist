@@ -438,50 +438,52 @@ export function MangaMatchingPanel({
   }, []);
 
   // Process matches to filter out Light Novels from alternatives
-  const processedMatches = matches.map((match) => {
-    // Ensure manga has an ID - if missing, generate one based on title
-    if (match.kenmeiManga.id === undefined) {
-      // Create a simple hash from the title
-      const generatedId = match.kenmeiManga.title
-        .split("")
-        .reduce(
-          (hash, char) => (hash << 5) - hash + (char.codePointAt(0) ?? 0),
-          0,
-        );
-      match = {
+  const processedMatches = useMemo(() => {
+    return matches.map((match) => {
+      // Ensure manga has an ID - if missing, generate one based on title
+      if (match.kenmeiManga.id === undefined) {
+        // Create a simple hash from the title
+        const generatedId = match.kenmeiManga.title
+          .split("")
+          .reduce(
+            (hash, char) => (hash << 5) - hash + (char.codePointAt(0) ?? 0),
+            0,
+          );
+        match = {
+          ...match,
+          kenmeiManga: {
+            ...match.kenmeiManga,
+            id: Math.abs(generatedId),
+          },
+        };
+      }
+
+      // Filter out Light Novels from anilistMatches
+      const filteredAltMatches = match.anilistMatches
+        ? match.anilistMatches.filter(
+            (m) =>
+              m.manga &&
+              m.manga.format !== "NOVEL" &&
+              m.manga.format !== "LIGHT_NOVEL",
+          )
+        : [];
+
+      // If the selected match is a Light Novel, clear it
+      const newSelectedMatch =
+        match.selectedMatch &&
+        (match.selectedMatch.format === "NOVEL" ||
+          match.selectedMatch.format === "LIGHT_NOVEL")
+          ? undefined
+          : match.selectedMatch;
+
+      // Return a new object with filtered matches
+      return {
         ...match,
-        kenmeiManga: {
-          ...match.kenmeiManga,
-          id: Math.abs(generatedId),
-        },
+        anilistMatches: filteredAltMatches,
+        selectedMatch: newSelectedMatch,
       };
-    }
-
-    // Filter out Light Novels from anilistMatches
-    const filteredAltMatches = match.anilistMatches
-      ? match.anilistMatches.filter(
-          (m) =>
-            m.manga &&
-            m.manga.format !== "NOVEL" &&
-            m.manga.format !== "LIGHT_NOVEL",
-        )
-      : [];
-
-    // If the selected match is a Light Novel, clear it
-    const newSelectedMatch =
-      match.selectedMatch &&
-      (match.selectedMatch.format === "NOVEL" ||
-        match.selectedMatch.format === "LIGHT_NOVEL")
-        ? undefined
-        : match.selectedMatch;
-
-    // Return a new object with filtered matches
-    return {
-      ...match,
-      anilistMatches: filteredAltMatches,
-      selectedMatch: newSelectedMatch,
-    };
-  });
+    });
+  }, [matches]);
 
   // Extract unique values for filter options
   const availableGenres = useMemo(

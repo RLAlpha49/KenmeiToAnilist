@@ -98,9 +98,10 @@ export function useAdvancedFilter(
   const [error, setError] = useState<Error | null>(null);
   const [debug, setDebug] = useState<UseAdvancedFilterResult["debug"]>();
 
-  // Track the last applied filters to detect changes
+  // Track the last applied filters and matches to detect changes
   const lastFiltersRef = useRef<AdvancedMatchFilters | null>(null);
   const lastMatchesLengthRef = useRef<number>(0);
+  const lastMatchesRefRef = useRef<MangaMatchResult[] | null>(null);
 
   // Debounce timeout ID
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -122,20 +123,20 @@ export function useAdvancedFilter(
   }, []);
 
   /**
-   * Check if filters have meaningfully changed
+   * Check if filters or matches have meaningfully changed
    */
   const haveFiltersChanged = useCallback(() => {
     // If no previous filters, treat as changed
     if (!lastFiltersRef.current) return true;
 
-    // If match count changed significantly, filters may need updating
-    if (lastMatchesLengthRef.current !== matches.length) {
+    // Check if matches array reference changed (new array created)
+    if (lastMatchesRefRef.current !== matches) {
       return true;
     }
 
     // Deep comparison of filter objects
     return JSON.stringify(lastFiltersRef.current) !== JSON.stringify(filters);
-  }, [matches.length, filters]);
+  }, [matches, filters]);
 
   /**
    * Apply filters with debouncing
@@ -165,9 +166,10 @@ export function useAdvancedFilter(
         setDebug(result.debug);
       }
 
-      // Record that we've applied these filters
+      // Record that we've applied these filters and matches
       lastFiltersRef.current = structuredClone(filters);
       lastMatchesLengthRef.current = matches.length;
+      lastMatchesRefRef.current = matches;
 
       // Log performance metrics in development
       if (process.env.NODE_ENV === "development") {
