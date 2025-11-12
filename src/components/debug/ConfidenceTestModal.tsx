@@ -1,5 +1,4 @@
-import type React from "react";
-import { useState } from "react";
+import React, { useState } from "react";
 import { Check, Copy, AlertCircle } from "lucide-react";
 import {
   Dialog,
@@ -21,6 +20,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ConfidenceTestResults } from "./ConfidenceTestResults";
 import { generateConfidenceTestCommand } from "@/utils/generateConfidenceTestCommand";
 import type { MangaMatchResult } from "@/api/anilist/types";
+
+// Declare ElectronClipboard interface for type checking
+interface ElectronClipboard {
+  writeText: (text: string) => Promise<void>;
+}
 
 interface ConfidenceTestModalProps {
   readonly match: MangaMatchResult;
@@ -47,13 +51,14 @@ export function ConfidenceTestModal({
 
       // Use Electron's clipboard API via IPC bridge
       if (
-        typeof window !== "undefined" &&
-        "electronClipboard" in window &&
-        typeof (window as unknown as Record<string, unknown>)
+        globalThis.window !== undefined &&
+        "electronClipboard" in globalThis &&
+        typeof (globalThis as unknown as Record<string, unknown>)
           .electronClipboard === "object"
       ) {
-        const clipboard = (window as unknown as Record<string, unknown>)
-          .electronClipboard as ElectronClipboard;
+        const clipboard = (
+          globalThis as unknown as Record<string, ElectronClipboard>
+        ).electronClipboard;
         await clipboard.writeText(text);
       } else if (
         navigator.clipboard &&
@@ -80,7 +85,7 @@ export function ConfidenceTestModal({
             throw new Error("execCommand failed");
           }
         } finally {
-          document.body.removeChild(textArea);
+          textArea.remove();
         }
       }
 

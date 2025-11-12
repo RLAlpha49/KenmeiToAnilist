@@ -4,7 +4,7 @@
  * @description IPC listeners for clipboard operations in the Electron main process.
  */
 
-import { clipboard, BrowserWindow } from "electron";
+import { clipboard, BrowserWindow, IpcMainInvokeEvent } from "electron";
 import { secureHandle } from "../listeners-register";
 import { CLIPBOARD_WRITE_CHANNEL } from "./clipboard-channels";
 

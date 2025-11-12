@@ -1,4 +1,4 @@
-import type React from "react";
+import React from "react";
 import { AlertTriangle, Check, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -208,9 +208,9 @@ export function ConfidenceTestResults({
                 </div>
                 <span className="flex-1 text-slate-700 dark:text-slate-300">
                   {bracket.minConfidence}
-                  {bracket.minConfidence !== bracket.maxConfidence
-                    ? `–${bracket.maxConfidence}`
-                    : ""}
+                  {bracket.minConfidence === bracket.maxConfidence
+                    ? ""
+                    : `–${bracket.maxConfidence}`}
                   %: {bracket.label}
                 </span>
               </div>
@@ -221,7 +221,7 @@ export function ConfidenceTestResults({
 
       {/* Info Alert */}
       <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
-        <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+        <AlertTriangle className="h-4 w-4 shrink-0" />
         <p>
           This is a test calculation. Run the actual CLI command to see detailed
           scoring breakdown.

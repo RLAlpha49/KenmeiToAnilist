@@ -1,5 +1,4 @@
-import type React from "react";
-import { lazy } from "react";
+import React, { lazy } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const LazyConfidenceTestModal = lazy(() =>

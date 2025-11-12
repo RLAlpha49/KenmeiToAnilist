@@ -277,7 +277,7 @@ export function MangaMatchingPanel({
       if ("isBatchOperation" in match && match.isBatchOperation) {
         return match.matches.map((m) => m.kenmeiManga.id);
       }
-      return (match as any).kenmeiManga.id;
+      return (match as MangaMatchResult).kenmeiManga.id;
     },
   );
 
@@ -287,7 +287,7 @@ export function MangaMatchingPanel({
       if ("isBatchOperation" in match && match.isBatchOperation) {
         return match.matches.map((m) => m.kenmeiManga.id);
       }
-      return (match as any).kenmeiManga.id;
+      return (match as MangaMatchResult).kenmeiManga.id;
     },
   );
 
@@ -297,7 +297,7 @@ export function MangaMatchingPanel({
       if ("isBatchOperation" in match && match.isBatchOperation) {
         return match.matches.map((m) => m.kenmeiManga.id);
       }
-      return (match as any).kenmeiManga.id;
+      return (match as MangaMatchResult).kenmeiManga.id;
     },
   );
 

@@ -17,6 +17,7 @@ import { withGroupAsync } from "@/utils/logging";
 import { CancelledError } from "@/utils/errorHandling";
 import { ANILIST_RATE_LIMIT_PER_MINUTE } from "@/config/anilist";
 import { executeComickFallback, executeMangaDexFallback } from "../sources";
+import type { SearchServiceConfig as OrchestratorSearchServiceConfig } from "../orchestration/types";
 
 /**
  * Batch size for parallel manga searches (10 = AniList 60 req/min limit).
@@ -208,18 +209,32 @@ async function performFallbackSearches(
               // Skip AniList individual search since we already did batch search
               let finalResults: AniListManga[] = [];
 
+              // Create compatible config for fallback functions
+              const fallbackConfig: OrchestratorSearchServiceConfig = {
+                matchConfig: {},
+                batchSize: 10,
+                searchPerPage: 10,
+                maxSearchResults: 50,
+                useAdvancedSearch: false,
+                enablePreSearch: false,
+                exactMatchingOnly: false,
+                bypassCache: searchConfig.bypassCache,
+                enableComickSearch: searchConfig.enableComickSearch,
+                enableMangaDexSearch: searchConfig.enableMangaDexSearch,
+              };
+
               const comickFallback = await executeComickFallback(
                 manga.title,
                 token,
                 [],
-                searchConfig,
+                fallbackConfig,
               );
 
               const mangaDexFallback = await executeMangaDexFallback(
                 manga.title,
                 token,
                 comickFallback.results,
-                searchConfig,
+                fallbackConfig,
               );
 
               ensureNotCancelled(abortSignal, checkCancellation);
