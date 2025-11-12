@@ -257,7 +257,10 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64 max-h-[50vh] overflow-y-auto">
+      <DropdownMenuContent
+        align="end"
+        className="max-h-[50vh] w-64 overflow-y-auto"
+      >
         {/* Status Filters Help Text */}
         {statusFilters.size === 0 && (
           <>

@@ -11,6 +11,7 @@ import { exposeStoreContext } from "./store/store-context";
 import { exposeApiContext } from "./api/api-context";
 import { exposeUpdateContext } from "./update/update-context";
 import { exposeBackupContext } from "./backup/backup-context";
+import { exposeClipboardContext } from "./clipboard/clipboard-context";
 
 /**
  * Exposes all IPC context bridges for the renderer process.
@@ -65,5 +66,12 @@ export default function exposeContexts() {
     console.log("[Context] ✅ Backup context exposed");
   } catch (error) {
     console.error("[Context] ❌ Failed to expose backup context:", error);
+  }
+
+  try {
+    exposeClipboardContext();
+    console.log("[Context] ✅ Clipboard context exposed");
+  } catch (error) {
+    console.error("[Context] ❌ Failed to expose clipboard context:", error);
   }
 }

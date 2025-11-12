@@ -13,6 +13,7 @@ import { setupAniListAPI } from "./api/api-listeners";
 import { addUpdateEventListeners } from "./update/update-listeners";
 import { setupBackupIPC } from "./backup/backup-listeners";
 import { setupDebugIPC } from "./debug/debug-listeners";
+import { setupClipboardIPC } from "./clipboard/clipboard-listeners";
 
 /**
  * Validates that an IPC event originates from the main application window.
@@ -86,6 +87,7 @@ export default function registerListeners(mainWindow: BrowserWindow) {
   setupStoreIPC(mainWindow);
   setupBackupIPC(mainWindow);
   setupDebugIPC(mainWindow);
+  setupClipboardIPC(mainWindow);
   setupAniListAPI(mainWindow);
   addUpdateEventListeners(mainWindow);
 

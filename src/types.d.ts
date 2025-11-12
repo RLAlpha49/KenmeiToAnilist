@@ -98,6 +98,21 @@ interface ElectronWindow {
 }
 
 /**
+ * Clipboard operations interface exposed to the renderer process.
+ * Provides methods to write text to the system clipboard.
+ * @source
+ */
+interface ElectronClipboard {
+  /**
+   * Writes text to the system clipboard.
+   * @param text - Text content to write to clipboard.
+   * @returns Promise that resolves when text is written.
+   * @source
+   */
+  writeText: (text: string) => Promise<void>;
+}
+
+/**
  * Backup schedule management interface for the renderer process.
  * Type-safe reference to electronBackup context exposed by preload script.
  * @see backup-context.ts for implementation
@@ -282,6 +297,9 @@ declare global {
 
     /** Window control API. @source */
     electronWindow: ElectronWindow;
+
+    /** Clipboard API. @source */
+    electronClipboard: ElectronClipboard;
 
     /**
      * Main Electron API container for various IPC operations.
@@ -591,6 +609,10 @@ declare global {
     /** Window control API (global access). @source */
     // eslint-disable-next-line no-var
     var electronWindow: Window["electronWindow"];
+
+    /** Clipboard API (global access). @source */
+    // eslint-disable-next-line no-var
+    var electronClipboard: Window["electronClipboard"];
 
     /** Main Electron API container (global access). @source */
     // eslint-disable-next-line no-var
