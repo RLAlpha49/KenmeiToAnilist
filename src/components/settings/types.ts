@@ -54,14 +54,6 @@ export interface DataManagementProps {
   /** Whether a backup restore operation is in progress. */
   isRestoringBackup: boolean;
 
-  // Match import/export state
-  /** Currently selected match import file. */
-  matchImportFile: File | null;
-  /** Error message if match import file validation fails. */
-  matchImportError: string | null;
-  /** Whether match import is currently in progress. */
-  isImportingMatches: boolean;
-
   // Debug tools state
   /** Whether the debug menu is enabled. */
   isDebugEnabled: boolean;
@@ -105,15 +97,6 @@ export interface DataManagementProps {
   onScheduleConfigChange: (config: BackupScheduleConfig) => void;
   /** Callback to trigger manual backup creation. */
   onTriggerBackup: () => void;
-
-  // Match import/export handlers
-  /** Callback when user selects a match import file. */
-  onMatchImportFileSelect: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  /** Callback to trigger match import. */
-  onImportMatches: (
-    file: File,
-    strategy: "replace" | "merge" | "skip-duplicates",
-  ) => void;
 
   // Debug tools handlers
   /** Callback to toggle debug menu on/off. */

@@ -11,7 +11,6 @@ import type {
   UpdateProgressCallbacks,
   CachedResultsStorage,
 } from "./types";
-import type { MangaMatch } from "../orchestration/types";
 import { generateCacheKey, isCacheValid, mangaCache } from "../cache";
 import { batchSearchManga } from "@/api/anilist/client";
 import { withGroupAsync } from "@/utils/logging";

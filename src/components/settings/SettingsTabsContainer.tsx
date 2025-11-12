@@ -98,9 +98,6 @@ export function SettingsTabsContainer({
   cacheCleared,
   selectedBackupFile,
   backupValidationError,
-  matchImportFile,
-  matchImportError,
-  isImportingMatches,
   isRestoringBackup,
   isDebugEnabled,
   storageDebuggerEnabled,
@@ -120,8 +117,6 @@ export function SettingsTabsContainer({
   onRestoreBackup,
   onRestoreBackupFile,
   onFileSelect,
-  onMatchImportFileSelect,
-  onImportMatches,
   scheduleConfig,
   nextScheduledBackup,
   lastScheduledBackup,
@@ -345,9 +340,6 @@ export function SettingsTabsContainer({
           cacheCleared={cacheCleared}
           selectedBackupFile={selectedBackupFile}
           backupValidationError={backupValidationError}
-          matchImportFile={matchImportFile}
-          matchImportError={matchImportError}
-          isImportingMatches={isImportingMatches}
           isRestoringBackup={isRestoringBackup}
           isDebugEnabled={isDebugEnabled}
           storageDebuggerEnabled={storageDebuggerEnabled}
@@ -369,8 +361,6 @@ export function SettingsTabsContainer({
           onRestoreBackup={onRestoreBackup}
           onRestoreBackupFile={onRestoreBackupFile}
           onFileSelect={onFileSelect}
-          onMatchImportFileSelect={onMatchImportFileSelect}
-          onImportMatches={onImportMatches}
           onScheduleConfigChange={onScheduleConfigChange}
           onTriggerBackup={onTriggerBackup}
           onToggleDebug={onToggleDebug}
