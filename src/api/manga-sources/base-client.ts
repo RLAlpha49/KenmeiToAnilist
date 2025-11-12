@@ -29,6 +29,8 @@ export abstract class BaseMangaSourceClient<
   protected config: MangaSourceConfig;
   protected cache: MangaSourceCache = {};
   protected cacheExpiry: number;
+  /** Track last request time for rate limiting */
+  private lastRequestTime: number = 0;
 
   constructor(config: MangaSourceConfig) {
     this.config = config;
@@ -145,6 +147,9 @@ export abstract class BaseMangaSourceClient<
    */
   // eslint-disable-next-line
   protected async makeRequest(url: string): Promise<any> {
+    // Enforce rate limiting before making the request
+    await this.enforceRateLimit();
+
     // Prefer User-Agent from config; fall back to app version
     const defaultUserAgent = `KenmeiToAniList/${getAppVersion()}`;
     const userAgent = this.config.headers?.["User-Agent"] ?? defaultUserAgent;
@@ -219,6 +224,33 @@ export abstract class BaseMangaSourceClient<
         );
       }
     }
+  }
+
+  /**
+   * Enforce rate limiting based on configured requests per second.
+   * Calculates required delay to maintain compliance with the rate limit.
+   * @private
+   * @returns Promise that resolves when it's safe to make a request.
+   * @source
+   */
+  private async enforceRateLimit(): Promise<void> {
+    if (!this.config.rateLimit?.requestsPerSecond) {
+      return; // No rate limit configured
+    }
+
+    const now = Date.now();
+    const minIntervalMs = 1000 / this.config.rateLimit.requestsPerSecond;
+    const timeSinceLastRequest = now - this.lastRequestTime;
+
+    if (timeSinceLastRequest < minIntervalMs) {
+      const delayMs = minIntervalMs - timeSinceLastRequest;
+      console.debug(
+        `[MangaSourceBase] 🕐 ${this.config.name}: Waiting ${Math.round(delayMs)}ms to respect rate limit (${this.config.rateLimit.requestsPerSecond} req/s)`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+
+    this.lastRequestTime = Date.now();
   }
 
   /**
