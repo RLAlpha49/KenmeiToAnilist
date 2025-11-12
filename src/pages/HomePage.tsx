@@ -16,9 +16,7 @@ import {
   Sparkles,
   UserCheck,
   ClipboardCheck,
-  ExternalLink,
   ChevronRight,
-  PanelLeftOpen,
   Settings,
   CheckCheck,
   ArrowUpRight,
@@ -42,19 +40,6 @@ import {
 } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "../components/ui/carousel";
-import {
-  getAppVersion,
-  getAppVersionStatus,
-  AppVersionStatus,
-} from "../utils/app-version";
-import Autoplay from "embla-carousel-autoplay";
 
 interface StatsState {
   total: number;
@@ -256,56 +241,6 @@ const getReviewAction = (
 };
 
 /**
- * Renders a badge indicating the application version status (stable, beta, or development).
- * @param versionStatus - The version status object, or null if checking.
- * @returns A JSX Badge component reflecting the current version status.
- * @source
- */
-const renderVersionBadge = (versionStatus: AppVersionStatus | null) => {
-  if (versionStatus === null) {
-    return (
-      <Badge
-        variant="outline"
-        className="text-muted-foreground rounded-full border-transparent bg-white/60 px-3 py-1 text-xs font-normal dark:bg-white/10"
-      >
-        Checking...
-      </Badge>
-    );
-  }
-
-  if (versionStatus.status === "stable") {
-    return (
-      <Badge
-        variant="outline"
-        className="rounded-full border-transparent bg-emerald-500/20 px-3 py-1 text-xs font-normal text-emerald-800 dark:text-emerald-200"
-      >
-        Stable release
-      </Badge>
-    );
-  }
-
-  if (versionStatus.status === "beta") {
-    return (
-      <Badge
-        variant="outline"
-        className="rounded-full border-transparent bg-amber-400/20 px-3 py-1 text-xs font-normal text-amber-900 dark:text-amber-200"
-      >
-        Beta build
-      </Badge>
-    );
-  }
-
-  return (
-    <Badge
-      variant="outline"
-      className="rounded-full border-transparent bg-blue-500/20 px-3 py-1 text-xs font-normal text-blue-800 dark:text-blue-200"
-    >
-      Development build
-    </Badge>
-  );
-};
-
-/**
  * Renders a badge displaying the manga match review status and pending count.
  * @param matchStatus - An object containing the review status and pending match count.
  * @returns A JSX Badge component reflecting the current match status.
@@ -342,21 +277,6 @@ const renderMatchStatusBadge = (matchStatus: {
 };
 
 /**
- * Framer Motion animation configuration for parent container with staggered child animations.
- * @source
- */
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.1,
-    },
-  },
-};
-
-/**
  * Framer Motion animation configuration for child elements with spring physics.
  * @source
  */
@@ -372,56 +292,6 @@ const itemVariants = {
     },
   },
 };
-
-/**
- * Feature cards displayed in the homepage carousel with descriptions of key application features.
- * Each card includes a title, description, icon, and gradient color scheme.
- * @source
- */
-const featureCards = [
-  {
-    title: "Import From Kenmei",
-    description:
-      "Easily import your entire manga collection from Kenmei CSV export.",
-    icon: <PanelLeftOpen className="h-6 w-6" />,
-    color: "from-blue-500 to-indigo-600",
-  },
-  {
-    title: "Smart Matching",
-    description:
-      "Intelligent algorithm matches your manga to AniList entries with high accuracy.",
-    icon: <Settings className="h-6 w-6" />,
-    color: "from-purple-500 to-fuchsia-600",
-  },
-  {
-    title: "One-Click Sync",
-    description:
-      "Synchronize your entire collection to AniList with a single click after reviewing.",
-    icon: <CheckCheck className="h-6 w-6" />,
-    color: "from-green-500 to-emerald-600",
-  },
-  {
-    title: "Auto-Pause Manga",
-    description:
-      "Automatically pause manga that haven't been updated within a customizable time period.",
-    icon: <Clock className="h-6 w-6" />,
-    color: "from-amber-500 to-orange-600",
-  },
-  {
-    title: "Flexible Configuration",
-    description:
-      "Customize how synchronization works with priority settings for status, progress, and scores.",
-    icon: <Settings className="h-6 w-6" />,
-    color: "from-teal-500 to-emerald-600",
-  },
-  {
-    title: "Privacy Control",
-    description:
-      "Control which entries are private on AniList while maintaining your reading history.",
-    icon: <UserCheck className="h-6 w-6" />,
-    color: "from-red-500 to-pink-600",
-  },
-];
 
 /**
  * Home page component for the Kenmei to AniList sync tool.
@@ -460,9 +330,6 @@ export function HomePage() {
   });
 
   // Version status state
-  const [versionStatus, setVersionStatus] = useState<AppVersionStatus | null>(
-    null,
-  );
   const [syncStats, setSyncStats] = useState<SyncStats>({
     lastSyncTime: null,
     entriesSynced: 0,
@@ -470,33 +337,31 @@ export function HomePage() {
     totalSyncs: 0,
   });
 
-  useEffect(() => {
-    let mounted = true;
-    getAppVersionStatus().then((status) => {
-      if (mounted) setVersionStatus(status);
-    });
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  // Loading and error state
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Load import stats & related data on mount
   useEffect(() => {
     const loadImportStats = () => {
-      const importStats = getImportStats();
-      if (!importStats) return;
+      try {
+        const importStats = getImportStats();
+        if (!importStats) return;
 
-      const statusCounts = importStats.statusCounts || {};
-      setStats((prev) => ({
-        ...prev,
-        total: importStats.total || 0,
-        reading: statusCounts.reading || 0,
-        completed: statusCounts.completed || 0,
-        dropped: statusCounts.dropped || 0,
-        onHold: statusCounts.on_hold || 0,
-        planToRead: statusCounts.plan_to_read || 0,
-        lastSync: importStats.timestamp || null,
-      }));
+        const statusCounts = importStats.statusCounts || {};
+        setStats((prev) => ({
+          ...prev,
+          total: importStats.total || 0,
+          reading: statusCounts.reading || 0,
+          completed: statusCounts.completed || 0,
+          dropped: statusCounts.dropped || 0,
+          onHold: statusCounts.on_hold || 0,
+          planToRead: statusCounts.plan_to_read || 0,
+          lastSync: importStats.timestamp || null,
+        }));
+      } catch (error) {
+        console.error("[HomePage] ❌ Error loading import stats:", error);
+        setLoadError("Failed to load import statistics");
+      }
     };
 
     const parseMatchResults = () => {
@@ -557,10 +422,12 @@ export function HomePage() {
           failedSyncs: 0,
           totalSyncs: 0,
         });
+        setLoadError("Failed to load sync statistics");
       }
     };
 
     console.debug("[HomePage] 🔍 Initializing HomePage data...");
+    setLoadError(null);
     loadImportStats();
     parseMatchResults();
     loadSyncStats();
@@ -754,14 +621,34 @@ export function HomePage() {
     <>
       <AnimatePresence mode="wait"></AnimatePresence>
       <div className="relative min-h-screen overflow-hidden">
+        {/* Error notification banner */}
+        {loadError && (
+          <div className="fixed left-0 right-0 top-0 z-50 border-b border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950/50">
+            <div className="container mx-auto flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                <span className="text-sm font-medium text-red-800 dark:text-red-300">
+                  {loadError}
+                </span>
+              </div>
+              <button
+                onClick={() => setLoadError(null)}
+                className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                aria-label="Dismiss error"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
         <div className="pointer-events-none absolute inset-0">
-          <div className="bg-linear-to-br absolute -left-1/3 top-[8%] h-[420px] w-[420px] rounded-full from-blue-500/25 via-purple-500/20 to-transparent blur-3xl" />
-          <div className="bg-linear-to-br absolute right-[-10%] top-[35%] h-80 w-[320px] rounded-full from-emerald-400/20 via-teal-400/20 to-transparent blur-[140px]" />
-          <div className="bg-linear-to-br absolute bottom-[-20%] left-1/2 h-[280px] w-[480px] -translate-x-1/2 rounded-full from-amber-300/20 via-pink-300/20 to-transparent blur-[200px]" />
+          <div className="bg-linear-to-br absolute -left-1/4 top-[-10%] h-[460px] w-[460px] rounded-full from-sky-400/25 via-blue-500/15 to-transparent blur-[180px]" />
+          <div className="bg-linear-to-br absolute right-[-15%] top-[35%] h-[380px] w-[380px] rounded-full from-emerald-400/20 via-teal-400/15 to-transparent blur-[160px]" />
+          <div className="bg-linear-to-br absolute bottom-[-25%] left-1/2 h-[360px] w-[520px] -translate-x-1/2 rounded-full from-rose-400/20 via-orange-300/15 to-transparent blur-[200px]" />
         </div>
 
-        <motion.div
-          className="z-1 container relative mx-auto px-4 py-10 md:px-6"
+        <motion.main
+          className="container relative mx-auto px-4 py-12 md:px-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
@@ -772,26 +659,28 @@ export function HomePage() {
             initial="hidden"
             animate="show"
           >
-            <div className="bg-linear-to-br relative overflow-hidden rounded-3xl border border-white/30 from-white/85 via-white/60 to-white/30 p-8 shadow-2xl backdrop-blur-lg dark:border-white/10 dark:from-slate-950/70 dark:via-slate-950/60 dark:to-slate-950/40">
-              <div className="bg-linear-to-br pointer-events-none absolute -left-32 top-[-140px] h-64 w-64 rounded-full from-blue-500/25 via-purple-500/20 to-transparent blur-3xl" />
-              <div className="bg-linear-to-br pointer-events-none absolute -right-10 bottom-[-140px] h-64 w-64 rounded-full from-fuchsia-500/25 via-purple-500/15 to-transparent blur-3xl" />
-              <div className="z-1 relative flex flex-col gap-10 lg:flex-row lg:items-center">
-                <div className="space-y-6 lg:flex-1">
-                  <Badge
-                    variant="outline"
-                    className="text-foreground/70 w-fit rounded-full border-white/40 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/10"
-                  >
-                    Kenmei ✦ AniList
-                  </Badge>
+            <div>
+              <div className="bg-linear-to-br relative overflow-hidden rounded-3xl border border-white/30 from-white/80 via-white/60 to-white/30 p-8 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:from-slate-950/70 dark:via-slate-950/60 dark:to-slate-950/40">
+                <div className="pointer-events-none absolute -left-28 -top-40 h-72 w-72 rounded-full bg-blue-500/20 blur-3xl" />
+                <div className="pointer-events-none absolute bottom-[-140px] right-[-60px] h-64 w-64 rounded-full bg-purple-500/25 blur-3xl" />
+                <div className="relative z-10 flex flex-col gap-8">
                   <div className="space-y-4">
-                    <h1 className="text-foreground text-4xl font-semibold tracking-tight md:text-5xl lg:text-6xl">
-                      Move your Kenmei library to AniList with confidence
-                    </h1>
-                    <p className="text-muted-foreground text-lg md:max-w-2xl">
-                      A simple, safe tool to import, match, and synchronize your
-                      manga collection from Kenmei to AniList — with smart
-                      matching and flexible sync options.
-                    </p>
+                    <Badge
+                      variant="outline"
+                      className="text-foreground/70 w-fit rounded-full border-white/50 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-white/10"
+                    >
+                      Kenmei ✦ AniList
+                    </Badge>
+                    <div className="space-y-4">
+                      <h1 className="text-foreground text-4xl font-semibold tracking-tight md:text-5xl lg:text-6xl">
+                        Orchestrate your Kenmei ➝ AniList migration with clarity
+                      </h1>
+                      <p className="text-muted-foreground text-lg md:max-w-2xl">
+                        Follow a guided journey to import, review, and sync your
+                        manga collection. Every step surfaces the context you
+                        need to move forward confidently.
+                      </p>
+                    </div>
                   </div>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                     <Button
@@ -807,22 +696,6 @@ export function HomePage() {
                         <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                       </Link>
                     </Button>
-                    <Button
-                      asChild
-                      variant="outline"
-                      size="lg"
-                      className="text-foreground hover:border-primary/50 hover:text-primary focus-visible:ring-primary/30 dark:hover:border-primary/50 dark:hover:text-primary h-auto rounded-full border-white/60 bg-white/75 px-6 py-3 text-base font-semibold shadow-sm transition focus-visible:ring-2 focus-visible:ring-offset-2 dark:border-white/20 dark:bg-slate-950/60 dark:focus-visible:ring-offset-slate-950"
-                    >
-                      <a
-                        href="https://github.com/RLAlpha49/KenmeiToAnilist/blob/master/docs/guides/USER_GUIDE.md"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-2"
-                      >
-                        Quickstart guide
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    </Button>
                     {!isOnboardingActive && (
                       <Button
                         onClick={handleRestartOnboarding}
@@ -835,115 +708,136 @@ export function HomePage() {
                       </Button>
                     )}
                   </div>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-3 lg:w-80 lg:grid-cols-1">
-                  {heroHighlights.map((metric) => {
-                    const Icon = metric.icon;
-                    return (
-                      <div
-                        key={metric.label}
-                        className="group rounded-2xl border border-white/40 bg-white/80 p-4 shadow-sm backdrop-blur-sm transition hover:-translate-y-1 hover:shadow-xl dark:border-white/10 dark:bg-slate-950/70"
-                      >
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/70 shadow-sm dark:bg-slate-900/80">
-                          <Icon className={`h-5 w-5 ${metric.accent}`} />
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    {heroHighlights.map((metric) => {
+                      const Icon = metric.icon;
+                      return (
+                        <div
+                          key={metric.label}
+                          className="group rounded-2xl border border-white/40 bg-white/75 p-4 shadow-sm backdrop-blur-sm transition hover:-translate-y-1 hover:shadow-xl dark:border-white/10 dark:bg-slate-950/70"
+                          role="region"
+                          aria-label={`${metric.label}: ${formatNumber(metric.value)}`}
+                        >
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/70 shadow-sm dark:bg-slate-900/75">
+                            <Icon
+                              className={`h-5 w-5 ${metric.accent}`}
+                              aria-hidden="true"
+                            />
+                          </div>
+                          <p className="mt-3 text-2xl font-semibold">
+                            {formatNumber(metric.value)}
+                          </p>
+                          <p className="text-muted-foreground text-sm">
+                            {metric.label}
+                          </p>
                         </div>
-                        <p className="mt-3 text-2xl font-semibold">
-                          {formatNumber(metric.value)}
-                        </p>
-                        <p className="text-muted-foreground text-sm">
-                          {metric.label}
-                        </p>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
           </motion.section>
 
           <motion.section
-            className="mb-12 space-y-6"
+            className="mb-12 space-y-4"
             variants={itemVariants}
             initial="hidden"
             animate="show"
           >
-            <Carousel
-              opts={{
-                align: "start",
-                loop: true,
-              }}
-              plugins={[
-                Autoplay({
-                  delay: 4000,
-                  stopOnInteraction: false,
-                  stopOnMouseEnter: true,
-                }),
-              ]}
-              className="w-full"
-            >
-              <CarouselContent className="-ml-4">
-                {featureCards.map((feature) => (
-                  <CarouselItem
-                    key={feature.title}
-                    className="pl-4 md:basis-1/2 lg:basis-1/3"
-                  >
-                    <div className="p-1">
-                      <Card className="relative h-full overflow-hidden border border-white/20 bg-white/70 shadow-lg backdrop-blur dark:border-white/10 dark:bg-slate-950/70">
-                        <div
-                          className={`bg-linear-to-r absolute inset-x-0 top-0 h-1.5 ${feature.color}`}
-                        />
-                        <CardContent className="flex h-full flex-col justify-between p-6">
-                          <div>
-                            <div className="bg-linear-to-br mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full from-blue-100 to-indigo-100 text-blue-700 shadow-sm dark:from-blue-900/20 dark:to-indigo-900/20 dark:text-blue-300">
-                              {feature.icon}
-                            </div>
-                            <h3 className="text-foreground mb-2 text-xl font-semibold">
-                              {feature.title}
-                            </h3>
-                            <p className="text-muted-foreground text-sm">
-                              {feature.description}
-                            </p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <div className="mt-4 flex justify-end gap-2">
-                <CarouselPrevious className="static translate-y-0" />
-                <CarouselNext className="static translate-y-0" />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 className="text-2xl font-semibold">Action board</h2>
+                <p className="text-muted-foreground text-sm">
+                  Quick commands to move your migration forward.
+                </p>
               </div>
-            </Carousel>
+              <Badge
+                variant="outline"
+                className="text-foreground/70 w-fit rounded-full border-white/30 bg-white/60 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.2em] dark:border-white/10 dark:bg-slate-950/60"
+              >
+                Guided flow
+              </Badge>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {quickActionConfigs.map((action) => {
+                const ActionIcon = action.icon;
+                return (
+                  <Link
+                    key={action.key}
+                    to={action.to}
+                    className={`bg-linear-to-br group flex h-full flex-col justify-between rounded-2xl border border-white/25 p-5 shadow-lg backdrop-blur transition hover:-translate-y-1 hover:border-white/40 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:border-white/10 dark:focus-visible:ring-offset-slate-950 ${action.tone}`}
+                    title={`${action.label}: ${action.description}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/75 shadow-sm dark:bg-slate-900/70">
+                          <ActionIcon
+                            className={`h-5 w-5 ${action.iconClass}`}
+                            aria-hidden="true"
+                          />
+                        </div>
+                        <div>
+                          <p className="text-foreground text-sm font-semibold">
+                            {action.label}
+                          </p>
+                          <p className="text-muted-foreground text-xs">
+                            {action.description}
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronRight
+                        className="text-muted-foreground h-4 w-4 transition group-hover:translate-x-1"
+                        aria-hidden="true"
+                      />
+                    </div>
+                    {action.footnote && (
+                      <Badge
+                        variant="outline"
+                        className={`mt-6 w-fit rounded-full border-transparent px-2.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.2em] ${action.badgeClass}`}
+                      >
+                        {action.footnote}
+                      </Badge>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
           </motion.section>
 
           <motion.section
-            className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3"
-            variants={containerVariants}
+            className="mb-12 space-y-4"
+            variants={itemVariants}
             initial="hidden"
             animate="show"
           >
-            <motion.div variants={itemVariants}>
-              <Card className="bg-linear-to-br relative overflow-hidden border border-blue-500/20 from-blue-500/15 via-indigo-500/10 to-blue-500/5 p-6 shadow-xl backdrop-blur-sm dark:border-blue-500/20 dark:from-blue-500/20 dark:via-indigo-500/20 dark:to-blue-500/10">
-                <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-blue-500/20 blur-3xl" />
-                <CardHeader className="flex flex-col gap-2 p-0 pb-4">
-                  <CardTitle className="flex items-center gap-2 text-lg font-semibold text-blue-700 dark:text-blue-200">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-blue-600 shadow-sm dark:bg-slate-900/60">
+            <div className="space-y-1">
+              <h2 className="text-2xl font-semibold">Migration insights</h2>
+              <p className="text-muted-foreground text-sm">
+                Live metrics help you validate progress and spot blockers.
+              </p>
+            </div>
+            <div className="grid gap-6 lg:grid-cols-3">
+              <Card className="relative overflow-hidden border border-white/30 bg-white/80 p-6 shadow-xl backdrop-blur dark:border-white/10 dark:bg-slate-950/70">
+                <div className="pointer-events-none absolute -right-16 -top-10 h-40 w-40 rounded-full bg-blue-500/20 blur-3xl" />
+                <CardHeader className="space-y-2 p-0 pb-4">
+                  <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/60 text-blue-600 shadow-sm dark:bg-slate-900/60">
                       <Library className="h-5 w-5" />
                     </div>
-                    Imported Library
+                    Library snapshot
                   </CardTitle>
-                  <CardDescription className="text-sm text-blue-900/70 dark:text-blue-100/70">
+                  <CardDescription>
                     {stats.total > 0
-                      ? "Current snapshot from your Kenmei export."
-                      : "Import your Kenmei CSV to populate the dashboard."}
+                      ? "Your Kenmei export is ready to sync."
+                      : "Import to unlock personalized recommendations."}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 p-0">
-                  <p className="text-4xl font-bold text-blue-700 dark:text-blue-200">
+                  <p className="text-4xl font-semibold">
                     {formatNumber(stats.total)}
                   </p>
-                  <div className="flex items-center gap-2 text-sm text-blue-900/70 dark:text-blue-100/70">
+                  <div className="text-muted-foreground flex items-center gap-2 text-sm">
                     <Clock className="h-4 w-4 text-blue-500" />
                     <span>
                       {stats.total > 0
@@ -953,38 +847,34 @@ export function HomePage() {
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
 
-            <motion.div variants={itemVariants}>
-              <Card className="bg-linear-to-br relative overflow-hidden border border-emerald-500/20 from-emerald-500/15 via-green-500/10 to-emerald-500/5 p-6 shadow-xl backdrop-blur-sm dark:border-emerald-500/20 dark:from-emerald-500/20 dark:via-green-500/20 dark:to-emerald-500/10">
-                <div className="absolute left-[-60px] top-[60px] h-40 w-40 rounded-full bg-emerald-500/20 blur-3xl" />
-                <CardHeader className="flex flex-col gap-2 p-0 pb-4">
-                  <CardTitle className="flex items-center gap-2 text-lg font-semibold text-emerald-700 dark:text-emerald-200">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-emerald-600 shadow-sm dark:bg-slate-900/60">
+              <Card className="relative overflow-hidden border border-white/30 bg-white/80 p-6 shadow-xl backdrop-blur dark:border-white/10 dark:bg-slate-950/70">
+                <div className="pointer-events-none absolute left-[-30px] top-10 h-36 w-36 rounded-full bg-emerald-400/20 blur-3xl" />
+                <CardHeader className="space-y-2 p-0 pb-4">
+                  <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/60 text-emerald-600 shadow-sm dark:bg-slate-900/60">
                       <ClipboardCheck className="h-5 w-5" />
                     </div>
-                    Match Review
+                    Review status
                   </CardTitle>
-                  <CardDescription className="text-sm text-emerald-900/70 dark:text-emerald-100/70">
-                    Resolve matches before syncing to ensure accuracy.
+                  <CardDescription>
+                    Resolve matches to unlock a confident sync.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 p-0">
                   <div className="flex items-center gap-3">
-                    <p className="text-4xl font-bold text-emerald-700 dark:text-emerald-200">
-                      {matchStatusText}
-                    </p>
+                    <p className="text-3xl font-semibold">{matchStatusText}</p>
                     {renderMatchStatusBadge(matchStatus)}
                   </div>
-                  <div className="flex flex-wrap gap-2 text-xs text-emerald-900/70 dark:text-emerald-100/70">
+                  <div className="text-muted-foreground flex flex-wrap gap-2 text-xs">
                     {matchStatus.totalMatches > 0 && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-1 shadow-sm dark:bg-slate-900/70">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-3 py-1 shadow-sm dark:bg-slate-900/70">
                         <BarChart2 className="h-3.5 w-3.5 text-emerald-500" />
-                        {formatNumber(matchStatus.totalMatches)} total matches
+                        {formatNumber(matchStatus.totalMatches)} total
                       </span>
                     )}
                     {matchStatus.skippedMatches > 0 && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-1 shadow-sm dark:bg-slate-900/70">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-3 py-1 shadow-sm dark:bg-slate-900/70">
                         <AlertCircle className="h-3.5 w-3.5 text-blue-500" />
                         {formatNumber(matchStatus.skippedMatches)} skipped
                       </span>
@@ -992,23 +882,21 @@ export function HomePage() {
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
 
-            <motion.div variants={itemVariants}>
-              <Card className="bg-linear-to-br relative overflow-hidden border border-purple-500/20 from-purple-500/15 via-fuchsia-500/10 to-purple-500/5 p-6 shadow-xl backdrop-blur-sm dark:border-purple-500/20 dark:from-purple-500/20 dark:via-fuchsia-500/20 dark:to-purple-500/10">
-                <div className="absolute right-[-70px] top-10 h-48 w-48 rounded-full bg-purple-500/25 blur-3xl" />
-                <CardHeader className="flex flex-col gap-2 p-0 pb-4">
-                  <CardTitle className="flex items-center gap-2 text-lg font-semibold text-purple-700 dark:text-purple-200">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-purple-600 shadow-sm dark:bg-slate-900/60">
+              <Card className="relative overflow-hidden border border-white/30 bg-white/80 p-6 shadow-xl backdrop-blur dark:border-white/10 dark:bg-slate-950/70">
+                <div className="pointer-events-none absolute bottom-[-60px] right-[-50px] h-40 w-40 rounded-full bg-purple-500/25 blur-3xl" />
+                <CardHeader className="space-y-2 p-0 pb-4">
+                  <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/60 text-purple-600 shadow-sm dark:bg-slate-900/60">
                       <Sparkles className="h-5 w-5" />
                     </div>
-                    Sync Pulse
+                    Sync health
                   </CardTitle>
-                  <CardDescription className="text-sm text-purple-900/70 dark:text-purple-100/70">
-                    Track how your latest syncs are performing.
+                  <CardDescription>
+                    Validate reliability before running your next sync.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3 p-0 text-sm text-purple-900/80 dark:text-purple-100/80">
+                <CardContent className="text-muted-foreground space-y-3 p-0 text-sm">
                   <div className="flex items-center justify-between">
                     <span className="text-foreground font-medium">
                       Last sync
@@ -1023,13 +911,30 @@ export function HomePage() {
                     <span className="text-foreground font-medium">
                       Entries synced
                     </span>
-                    <span>{formatNumber(syncStats.entriesSynced)}</span>
+                    <span className="flex items-center gap-2">
+                      {formatNumber(syncStats.entriesSynced)}
+                      {syncStats.entriesSynced >= 100 && (
+                        <span className="text-sm" title="Milestone unlocked">
+                          🎉
+                        </span>
+                      )}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-foreground font-medium">
                       Failed syncs
                     </span>
-                    <span>{formatNumber(syncStats.failedSyncs)}</span>
+                    <span className="flex items-center gap-2">
+                      {formatNumber(syncStats.failedSyncs)}
+                      {syncStats.failedSyncs > 0 && (
+                        <span
+                          className="text-xs font-semibold text-amber-600 dark:text-amber-400"
+                          title="Review sync logs to investigate failures"
+                        >
+                          ⚠️
+                        </span>
+                      )}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-foreground font-medium">
@@ -1038,160 +943,69 @@ export function HomePage() {
                     <span>{formatNumber(syncStats.totalSyncs)}</span>
                   </div>
                   {syncSuccessRate !== null && (
-                    <div className="flex items-center justify-between rounded-xl bg-white/60 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-purple-700 shadow-sm dark:bg-slate-900/60 dark:text-purple-200">
+                    <div
+                      className={`flex items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-wide shadow-sm ${
+                        syncSuccessRate >= 95
+                          ? "bg-emerald-500/25 text-emerald-900 dark:text-emerald-100"
+                          : "bg-white/60 text-purple-700 dark:bg-slate-900/60 dark:text-purple-200"
+                      }`}
+                    >
                       <span>Reliability</span>
-                      <span>{syncSuccessRate}% success</span>
+                      <span className="flex items-center gap-1">
+                        {syncSuccessRate}% success
+                        {syncSuccessRate >= 95 && <span>⭐</span>}
+                      </span>
                     </div>
                   )}
                 </CardContent>
               </Card>
-            </motion.div>
-          </motion.section>
 
-          <motion.section
-            className="mb-12"
-            variants={itemVariants}
-            initial="hidden"
-            animate="show"
-          >
-            <Card className="relative overflow-hidden border border-white/30 bg-white/80 p-6 shadow-xl backdrop-blur dark:border-white/10 dark:bg-slate-950/70">
-              <CardHeader className="space-y-2 p-0 pb-4">
-                <CardTitle className="text-xl font-semibold">
-                  Status distribution
-                </CardTitle>
-                <CardDescription>
-                  See how your library breaks down by reading state.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4 p-0">
-                {statusBreakdown.map((status) => {
-                  const percent =
-                    stats.total > 0
-                      ? Math.round((status.value / stats.total) * 100)
-                      : 0;
-                  return (
-                    <div key={status.label} className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-foreground font-medium">
-                          {status.label}
-                        </span>
-                        <span className="text-muted-foreground">
-                          {formatNumber(status.value)}{" "}
-                          {status.value === 1 ? "entry" : "entries"} • {percent}
-                          %
-                        </span>
-                      </div>
-                      <div className="bg-muted relative h-2.5 overflow-hidden rounded-full">
-                        <div
-                          className={`bg-linear-to-r absolute inset-y-0 left-0 rounded-full ${status.gradient}`}
-                          style={{ width: `${percent}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-                {stats.total === 0 && (
-                  <p className="text-muted-foreground text-sm">
-                    Import your Kenmei CSV to unlock detailed visualizations.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </motion.section>
-
-          <motion.section
-            className="mb-12"
-            variants={itemVariants}
-            initial="hidden"
-            animate="show"
-          >
-            <Card className="border border-white/30 bg-white/80 shadow-xl backdrop-blur dark:border-white/10 dark:bg-slate-950/70">
-              <CardHeader className="space-y-2">
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  <Sparkles className="h-5 w-5 text-blue-500" />
-                  Quick actions
-                </CardTitle>
-                <CardDescription>
-                  Jump straight into the next best move for your migration.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  {quickActionConfigs.map((action) => {
-                    const ActionIcon = action.icon;
+              <Card className="border border-white/30 bg-white/80 p-6 shadow-xl backdrop-blur lg:col-span-3 dark:border-white/10 dark:bg-slate-950/70">
+                <CardHeader className="space-y-2 p-0 pb-4">
+                  <CardTitle className="text-lg font-semibold">
+                    Status distribution
+                  </CardTitle>
+                  <CardDescription>
+                    Understand how your library breaks down by reading state.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 p-0">
+                  {statusBreakdown.map((status) => {
+                    const percent =
+                      stats.total > 0
+                        ? Math.round((status.value / stats.total) * 100)
+                        : 0;
                     return (
-                      <Button
-                        key={action.key}
-                        asChild
-                        variant="outline"
-                        className={`bg-linear-to-br group h-full w-full justify-start gap-4 rounded-2xl border border-transparent ${action.tone} dark:hover:border-primary/40 p-4 text-left transition hover:-translate-y-1 hover:border-white/40 hover:shadow-xl`}
-                      >
-                        <Link
-                          to={action.to}
-                          className="flex w-full items-center gap-4"
-                        >
-                          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/70 shadow-sm dark:bg-slate-900/70">
-                            <ActionIcon
-                              className={`h-5 w-5 ${action.iconClass}`}
-                            />
-                          </div>
-                          <div className="flex-1 space-y-1">
-                            <p className="text-foreground text-sm font-semibold">
-                              {action.label}
-                            </p>
-                            <p className="text-muted-foreground text-xs">
-                              {action.description}
-                            </p>
-                          </div>
-                          <div className="flex flex-col items-end gap-2">
-                            {action.footnote && (
-                              <Badge
-                                variant="outline"
-                                className={`rounded-full border-transparent px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide ${action.badgeClass}`}
-                              >
-                                {action.footnote}
-                              </Badge>
-                            )}
-                            <ChevronRight className="text-muted-foreground h-4 w-4 transition group-hover:translate-x-1" />
-                          </div>
-                        </Link>
-                      </Button>
+                      <div key={status.label} className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-foreground font-medium">
+                            {status.label}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {formatNumber(status.value)}{" "}
+                            {status.value === 1 ? "entry" : "entries"} •{" "}
+                            {percent}%
+                          </span>
+                        </div>
+                        <div className="bg-muted relative h-2.5 overflow-hidden rounded-full">
+                          <div
+                            className={`bg-linear-to-r absolute inset-y-0 left-0 rounded-full ${status.gradient}`}
+                            style={{ width: `${percent}%` }}
+                          />
+                        </div>
+                      </div>
                     );
                   })}
-                </div>
-              </CardContent>
-            </Card>
+                  {stats.total === 0 && (
+                    <p className="text-muted-foreground text-sm">
+                      Import your Kenmei CSV to unlock detailed visualizations.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </motion.section>
-
-          <motion.section
-            variants={itemVariants}
-            initial="hidden"
-            animate="show"
-          >
-            <Card className="bg-linear-to-r border border-white/30 from-white/70 via-white/50 to-white/30 text-center shadow-lg backdrop-blur dark:border-white/10 dark:from-slate-950/70 dark:via-slate-950/60 dark:to-slate-950/40">
-              <CardContent className="flex flex-col items-center gap-2 py-6">
-                <p className="text-muted-foreground text-sm">
-                  Kenmei to AniList Sync Tool • Version {getAppVersion()}
-                </p>
-                <div className="flex items-center gap-3">
-                  {renderVersionBadge(versionStatus)}
-                  <a
-                    href="https://github.com/RLAlpha49/KenmeiToAnilist"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs font-medium transition-colors"
-                  >
-                    <ExternalLink className="h-3 w-3" />
-                    GitHub
-                  </a>
-                </div>
-                <p className="text-muted-foreground/70 text-xs">
-                  Made with ❤️ for manga readers
-                </p>
-              </CardContent>
-            </Card>
-          </motion.section>
-        </motion.div>
+        </motion.main>
       </div>
     </>
   );
