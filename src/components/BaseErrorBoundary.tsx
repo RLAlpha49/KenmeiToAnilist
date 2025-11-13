@@ -78,7 +78,7 @@ export class BaseErrorBoundary extends Component<
    * @source
    */
   static getDerivedStateFromError(
-    error: Error
+    error: Error,
   ): Partial<BaseErrorBoundaryState> {
     return {
       hasError: true,

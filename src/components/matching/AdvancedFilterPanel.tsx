@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from "react";
-import { buildFuse } from "@/utils/fuzzySearch";
 import {
   SlidersHorizontal,
   Target,
@@ -42,6 +41,7 @@ import type {
   FilterPreset,
 } from "@/types/matchingFilters";
 import { formatLabel, statusLabel } from "./labels";
+import { SearchableFilterList } from "./SearchableFilterList";
 
 /**
  * Props for the AdvancedFilterPanel component.
@@ -177,41 +177,9 @@ export function AdvancedFilterPanel({
   onDeletePreset,
 }: Readonly<AdvancedFilterPanelProps>) {
   const [isOpen, setIsOpen] = useState(false);
-  const [genreSearch, setGenreSearch] = useState("");
-  const [tagSearch, setTagSearch] = useState("");
   const [showPresetDialog, setShowPresetDialog] = useState(false);
   const [presetName, setPresetName] = useState("");
   const [presetDescription, setPresetDescription] = useState("");
-
-  // Memoize filtered genres to avoid recomputation on every render
-  const filteredGenres = useMemo(() => {
-    if (!genreSearch.trim()) return availableGenres;
-
-    const fuse = buildFuse(
-      availableGenres.map((genre) => ({ name: genre })),
-      ["name"],
-    );
-
-    const results = fuse.search(genreSearch);
-    return results.map(
-      (result: { item: { name: string } }) => result.item.name,
-    );
-  }, [availableGenres, genreSearch]);
-
-  // Memoize filtered tags to avoid recomputation on every render
-  const filteredTags = useMemo(() => {
-    if (!tagSearch.trim()) return availableTags;
-
-    const fuse = buildFuse(
-      availableTags.map((tag) => ({ name: tag })),
-      ["name"],
-    );
-
-    const results = fuse.search(tagSearch);
-    return results.map(
-      (result: { item: { name: string } }) => result.item.name,
-    );
-  }, [availableTags, tagSearch]);
 
   // Memoize active filter count for badge display
   const activeFilterCount = useMemo(() => {
@@ -578,143 +546,30 @@ export function AdvancedFilterPanel({
 
             {/* Genre Filter */}
             {availableGenres.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                      Genres
-                    </div>
-                    {filters.genres.length > 0 && (
-                      <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">
-                        ({filters.genres.length} selected)
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleSelectAllGenres}
-                      className="h-6 text-xs"
-                    >
-                      Select All
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleClearAllGenres}
-                      className="h-6 text-xs"
-                    >
-                      Clear
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Genre search */}
-                <Input
-                  type="text"
-                  placeholder="Search genres..."
-                  value={genreSearch}
-                  onChange={(e) => setGenreSearch(e.target.value)}
-                  aria-label="Search genres"
-                />
-
-                {/* Genre list */}
-                <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
-                  {filteredGenres.length > 0 ? (
-                    filteredGenres.map((genre) => (
-                      <div key={genre} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`genre-${genre}`}
-                          checked={filters.genres.includes(genre)}
-                          onCheckedChange={() => handleGenreToggle(genre)}
-                        />
-                        <label
-                          htmlFor={`genre-${genre}`}
-                          className="cursor-pointer text-sm text-slate-700 dark:text-slate-300"
-                        >
-                          {genre}
-                        </label>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-center text-xs text-slate-500 dark:text-slate-400">
-                      No genres found
-                    </p>
-                  )}
-                </div>
-              </div>
+              <SearchableFilterList
+                items={availableGenres}
+                selectedItems={filters.genres}
+                onToggle={handleGenreToggle}
+                label={(genre) => genre}
+                showSelectClear
+                onSelectAll={handleSelectAllGenres}
+                onClearAll={handleClearAllGenres}
+                searchPlaceholder="Search genres..."
+              />
             )}
 
             {/* Tags Filter */}
             {availableTags.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                      Tags
-                    </div>
-                    {(filters.tags?.length || 0) > 0 && (
-                      <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">
-                        ({filters.tags?.length || 0} selected)
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleSelectAllTags}
-                      className="h-6 text-xs"
-                    >
-                      Select All
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleClearAllTags}
-                      className="h-6 text-xs"
-                    >
-                      Clear
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Tag search */}
-                <Input
-                  type="text"
-                  placeholder="Search tags..."
-                  value={tagSearch}
-                  onChange={(e) => setTagSearch(e.target.value)}
-                  className="h-8 text-sm"
-                  aria-label="Search tags"
-                />
-
-                {/* Tag list */}
-                <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
-                  {filteredTags.length > 0 ? (
-                    filteredTags.map((tag) => (
-                      <div key={tag} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`tag-${tag}`}
-                          checked={filters.tags?.includes(tag) || false}
-                          onCheckedChange={() => handleTagToggle(tag)}
-                        />
-                        <label
-                          htmlFor={`tag-${tag}`}
-                          className="cursor-pointer text-sm text-slate-700 dark:text-slate-300"
-                        >
-                          {tag}
-                        </label>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-center text-xs text-slate-500 dark:text-slate-400">
-                      No tags found
-                    </p>
-                  )}
-                </div>
-              </div>
+              <SearchableFilterList
+                items={availableTags}
+                selectedItems={filters.tags || []}
+                onToggle={handleTagToggle}
+                label={(tag) => tag}
+                showSelectClear
+                onSelectAll={handleSelectAllTags}
+                onClearAll={handleClearAllTags}
+                searchPlaceholder="Search tags..."
+              />
             )}
 
             {/* Publication Status Filter */}

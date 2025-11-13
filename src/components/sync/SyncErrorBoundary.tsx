@@ -4,7 +4,10 @@
  * @description Specialized error boundary for the sync section with recovery actions
  */
 import React, { ReactNode } from "react";
-import { BaseErrorBoundary, RecoveryAction } from "@/components/BaseErrorBoundary";
+import {
+  BaseErrorBoundary,
+  RecoveryAction,
+} from "@/components/BaseErrorBoundary";
 import { RefreshCw, AlertTriangle, XCircle } from "lucide-react";
 
 interface Props {

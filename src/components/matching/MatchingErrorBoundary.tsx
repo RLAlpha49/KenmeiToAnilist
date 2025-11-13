@@ -4,7 +4,10 @@
  * @description Specialized error boundary for the matching section with recovery actions
  */
 import React, { ReactNode } from "react";
-import { BaseErrorBoundary, RecoveryAction } from "@/components/BaseErrorBoundary";
+import {
+  BaseErrorBoundary,
+  RecoveryAction,
+} from "@/components/BaseErrorBoundary";
 import { RefreshCw, Trash2 } from "lucide-react";
 
 interface Props {

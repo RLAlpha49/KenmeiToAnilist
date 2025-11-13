@@ -218,6 +218,48 @@ export interface NormalizedTitleCache {
 }
 
 /**
+ * Shared manga match result structure for statistics operations.
+ * @source
+ */
+export interface StatisticsMatchResult {
+  readonly kenmeiManga: {
+    id: string | number;
+    title: string;
+    status: string;
+    score: number;
+    chapters_read: number;
+    volumes_read: number;
+    notes: string;
+    created_at: string;
+    updated_at: string;
+    last_read_at?: string;
+  };
+  readonly anilistMatches?: Array<{ confidence?: number }>;
+  readonly selectedMatch?: {
+    readonly format?: string;
+    readonly genres: string[];
+    readonly tags: string[];
+    readonly confidence?: number;
+  };
+  readonly status: string;
+  readonly matchDate?: string | number | Date;
+}
+
+/**
+ * Shared reading history structure for statistics operations.
+ * @source
+ */
+export interface ReadingHistoryData {
+  entries: Array<{
+    mangaId: string | number;
+    chaptersRead: number;
+    timestamp: number;
+  }>;
+  lastUpdated: number;
+  version: number;
+}
+
+/**
  * Inbound request to normalize titles with one or more algorithms.
  * @source
  */
@@ -285,38 +327,8 @@ export interface StatisticsAggregationMessage {
   type: "STATISTICS_AGGREGATION";
   payload: {
     taskId: string;
-    matchResults: Array<{
-      readonly kenmeiManga: {
-        id: string | number;
-        title: string;
-        status: string;
-        score: number;
-        chapters_read: number;
-        volumes_read: number;
-        notes: string;
-        created_at: string;
-        updated_at: string;
-        last_read_at?: string;
-      };
-      readonly anilistMatches?: Array<{ confidence?: number }>;
-      readonly selectedMatch?: {
-        readonly format?: string;
-        readonly genres: string[];
-        readonly tags: string[];
-        readonly confidence?: number;
-      };
-      readonly status: string;
-      readonly matchDate?: string | number | Date;
-    }>;
-    readingHistory: {
-      entries: Array<{
-        mangaId: string | number;
-        chaptersRead: number;
-        timestamp: number;
-      }>;
-      lastUpdated: number;
-      version: number;
-    };
+    matchResults: StatisticsMatchResult[];
+    readingHistory: ReadingHistoryData;
     filters: {
       genres: string[];
       formats: string[];
@@ -361,38 +373,8 @@ export interface StatisticsAggregationResultMessage {
      * Filtered match results and history
      */
     filteredData: {
-      matchResults: Array<{
-        readonly kenmeiManga: {
-          id: string | number;
-          title: string;
-          status: string;
-          score: number;
-          chapters_read: number;
-          volumes_read: number;
-          notes: string;
-          created_at: string;
-          updated_at: string;
-          last_read_at?: string;
-        };
-        readonly anilistMatches?: Array<{ confidence?: number }>;
-        readonly selectedMatch?: {
-          readonly format?: string;
-          readonly genres: string[];
-          readonly tags: string[];
-          readonly confidence?: number;
-        };
-        readonly status: string;
-        readonly matchDate?: string | number | Date;
-      }>;
-      readingHistory: {
-        entries: Array<{
-          mangaId: string | number;
-          chaptersRead: number;
-          timestamp: number;
-        }>;
-        lastUpdated: number;
-        version: number;
-      };
+      matchResults: StatisticsMatchResult[];
+      readingHistory: ReadingHistoryData;
     };
     /**
      * Available filter options extracted from data

@@ -5,21 +5,13 @@
 
 import { BaseWorkerPool } from "../core/base-worker-pool";
 import { generateTaskId } from "../core/pool-utils";
-import type { DuplicateDetectionMessage } from "../core/types";
+import type {
+  DuplicateDetectionMessage,
+  DuplicateDetectionEntry,
+} from "../core/types";
 import type { MangaMatchResult } from "@/api/anilist/types";
 import { detectDuplicateAniListIds } from "@/components/matching/detectDuplicateAniListIds";
 import { getIgnoredDuplicates } from "@/utils/storage";
-
-/**
- * Represents a detected duplicate AniList entry across Kenmei titles.
- * @source
- */
-export interface DuplicateDetectionEntry {
-  anilistId: number;
-  anilistTitle: string;
-  matchIndices: number[];
-  kenmeiTitles: string[];
-}
 
 /**
  * Result of a duplicate detection operation including timing and execution context.

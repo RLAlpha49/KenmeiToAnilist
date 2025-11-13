@@ -1,40 +1,6 @@
 import Fuse from "fuse.js";
-import type { IFuseOptions } from "fuse.js";
-import type { MangaMatchResult } from "@/api/anilist/types";
+import type { FuzzySearchMessage } from "../../types";
 import { getErrorDetails } from "../errorUtils";
-
-/**
- * Inbound message for fuzzy search operations.
- * @source
- */
-export interface FuzzySearchMessage {
-  type: "FUZZY_SEARCH";
-  payload: {
-    taskId: string;
-    matches: MangaMatchResult[];
-    query: string;
-    keys: (string | { name: string; weight?: number })[];
-    options?: Partial<IFuseOptions<MangaMatchResult>>;
-    maxResults?: number;
-  };
-}
-
-/**
- * Outbound result message for fuzzy search.
- * @source
- */
-export interface FuzzySearchResultMessage {
-  type: "FUZZY_SEARCH_RESULT";
-  payload: {
-    taskId: string;
-    results: MangaMatchResult[];
-    timing: {
-      indexingTimeMs: number;
-      searchTimeMs: number;
-      totalTimeMs: number;
-    };
-  };
-}
 
 /**
  * Performs fuzzy search on manga matches using Fuse.js in a worker thread.

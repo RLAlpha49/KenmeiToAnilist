@@ -95,6 +95,69 @@ interface ValidationResult {
 }
 
 /**
+ * Creates backup metadata for a backup operation.
+ * @param appVersion - Optional app version override (uses current version if not provided).
+ * @returns Backup metadata object.
+ * @internal
+ * @source
+ */
+function createBackupMetadata(appVersion?: string): BackupMetadata {
+  return {
+    timestamp: new Date().toISOString(),
+    appVersion: appVersion || getAppVersion(),
+    cacheVersion: CURRENT_CACHE_VERSION,
+    backupVersion: BACKUP_VERSION,
+    dataKeys: [...BACKUPABLE_KEYS],
+  };
+}
+
+/**
+ * Collects all backupable data from storage into a BackupData structure.
+ * Uses async getter when available (prefers electron-store) and falls back to sync getter.
+ * @returns Backup data object with metadata and collected storage values.
+ * @internal
+ * @source
+ */
+async function collectBackupData(
+  appVersion?: string,
+): Promise<{ data: BackupData; size: number }> {
+  // Collect all backupable data
+  const backupData: BackupData = {
+    metadata: createBackupMetadata(appVersion),
+    data: {},
+  };
+
+  // Gather data for each backupable key
+  // Use the async getter which prefers electron-store when available and keeps localStorage synchronized.
+  for (const key of BACKUPABLE_KEYS) {
+    try {
+      // Prefer authoritative electron-store when present
+      // getItemAsync will fall back to localStorage if electron-store is not available
+      // and will keep localStorage in sync when electron-store is used.
+      const value = await storage.getItemAsync(key);
+      if (value !== null) {
+        backupData.data[key] = value;
+      }
+    } catch (e) {
+      console.warn(
+        `[Backup] Failed to read key ${key} from storage async getter:`,
+        e,
+      );
+      // Fallback to synchronous getter
+      const fallback = storage.getItem(key);
+      if (fallback !== null) {
+        backupData.data[key] = fallback;
+      }
+    }
+  }
+
+  // Calculate backup size
+  const backupSize = JSON.stringify(backupData).length;
+
+  return { data: backupData, size: backupSize };
+}
+
+/**
  * Creates a complete backup of application data and triggers file download.
  * Automatically adds entry to backup history and manages history limit.
  * Large backups are exported asynchronously to avoid blocking the UI.
@@ -112,49 +175,13 @@ export async function createBackup(): Promise<string> {
     console.log("[Backup] Creating backup...");
 
     // Collect all backupable data
-    const backupData: BackupData = {
-      metadata: {
-        timestamp: new Date().toISOString(),
-        appVersion: getAppVersion(),
-        cacheVersion: CURRENT_CACHE_VERSION,
-        backupVersion: BACKUP_VERSION,
-        dataKeys: [...BACKUPABLE_KEYS],
-      },
-      data: {},
-    };
-
-    // Gather data for each backupable key
-    // Use the async getter which prefers electron-store when available and keeps localStorage synchronized.
-    for (const key of BACKUPABLE_KEYS) {
-      try {
-        // Prefer authoritative electron-store when present
-        // getItemAsync will fall back to localStorage if electron-store is not available
-        // and will keep localStorage in sync when electron-store is used.
-        const value = await storage.getItemAsync(key);
-        if (value !== null) {
-          backupData.data[key] = value;
-        }
-      } catch (e) {
-        console.warn(
-          `[Backup] Failed to read key ${key} from storage async getter:`,
-          e,
-        );
-        // Fallback to synchronous getter
-        const fallback = storage.getItem(key);
-        if (fallback !== null) {
-          backupData.data[key] = fallback;
-        }
-      }
-    }
-
-    // Generate backup ID
-    const backupId = `backup_${Date.now()}`;
-
-    // Calculate backup size
-    const backupSize = JSON.stringify(backupData).length;
+    const { data: backupData, size: backupSize } = await collectBackupData();
     console.log(
       `[Backup] Backup size: ${(backupSize / 1024 / 1024).toFixed(2)} MB`,
     );
+
+    // Generate backup ID
+    const backupId = `backup_${Date.now()}`;
 
     // Export to JSON file asynchronously to avoid blocking UI for large payloads
     // Yield to the event loop before starting export
@@ -675,47 +702,15 @@ export async function createBackupSilent(): Promise<{
   try {
     console.log("[Backup] Creating silent backup data...");
 
-    // Collect all backupable data (same as createBackup)
-    const backupData: BackupData = {
-      metadata: {
-        timestamp: new Date().toISOString(),
-        appVersion: getAppVersion(),
-        cacheVersion: CURRENT_CACHE_VERSION,
-        backupVersion: BACKUP_VERSION,
-        dataKeys: [...BACKUPABLE_KEYS],
-      },
-      data: {},
-    };
-
-    // Gather data for each backupable key
-    for (const key of BACKUPABLE_KEYS) {
-      try {
-        const value = await storage.getItemAsync(key);
-        if (value !== null) {
-          backupData.data[key] = value;
-        }
-      } catch (e) {
-        console.warn(
-          `[Backup] Failed to read key ${key} from storage async getter:`,
-          e,
-        );
-        // Fallback to synchronous getter
-        const fallback = storage.getItem(key);
-        if (fallback !== null) {
-          backupData.data[key] = fallback;
-        }
-      }
-    }
+    // Collect all backupable data
+    const { data: backupData, size: backupSize } = await collectBackupData();
 
     // Generate backup ID
     const backupId = `backup_${Date.now()}`;
 
-    // Calculate backup size
-    const backupSize = JSON.stringify(backupData).length;
     console.log(
       `[Backup] Silent backup size: ${(backupSize / 1024 / 1024).toFixed(2)} MB`,
     );
-
     console.log("[Backup] Silent backup data created successfully:", backupId);
     return { data: backupData, backupId, size: backupSize };
   } catch (error) {
@@ -747,13 +742,7 @@ export function createBackupFromData(
     console.log("[Backup] Creating backup from raw data...");
 
     const backupData: BackupData = {
-      metadata: {
-        timestamp: new Date().toISOString(),
-        appVersion: appVersion || getAppVersion(),
-        cacheVersion: CURRENT_CACHE_VERSION,
-        backupVersion: BACKUP_VERSION,
-        dataKeys: [...BACKUPABLE_KEYS],
-      },
+      metadata: createBackupMetadata(appVersion),
       data: {},
     };
 

@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from "react";
-import { buildFuse } from "@/utils/fuzzySearch";
 import { formatLabel, statusLabel } from "@/components/matching/labels";
 import {
   SlidersHorizontal,
@@ -18,7 +17,6 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -30,19 +28,11 @@ import { RangeSlider } from "@/components/ui/slider";
 import type { StatisticsFilters } from "@/types/statistics";
 import type { MatchStatus } from "@/api/anilist/types";
 import { DEFAULT_STATISTICS_FILTERS } from "@/types/statistics";
-
-/**
- * Converts a Date to YYYY-MM-DD format using local date components.
- * Avoids toISOString() which can display the wrong calendar date in some time zones.
- * @param date - The date to format.
- * @returns Date string in YYYY-MM-DD format for use in date input value.
- */
-const toDateInputValue = (date: Date): string => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
+import { SearchableFilterList } from "@/components/matching/SearchableFilterList";
+import {
+  toDateInputValue,
+  parseDateInputValue,
+} from "@/components/matching/filterUtils";
 
 /**
  * Props for the StatisticsFilterPanel component.
@@ -145,9 +135,6 @@ export function StatisticsFilterPanel({
   matchCount,
 }: Readonly<StatisticsFilterPanelProps>): React.ReactElement {
   const [isOpen, setIsOpen] = useState(false);
-  const [genreSearch, setGenreSearch] = useState("");
-  const [formatSearch, setFormatSearch] = useState("");
-  const [tagSearch, setTagSearch] = useState("");
 
   // Calculate active filter count
   const activeFilterCount = useMemo(() => {
@@ -162,61 +149,8 @@ export function StatisticsFilterPanel({
     return count;
   }, [filters]);
 
-  // Filter genres by search
-  const filteredGenres = useMemo(() => {
-    if (!genreSearch.trim()) return availableGenres;
-
-    const fuse = buildFuse(
-      availableGenres.map((genre) => ({ name: genre })),
-      ["name"],
-    );
-
-    const results = fuse.search(genreSearch);
-    return results.map(
-      (result: { item: { name: string } }) => result.item.name,
-    );
-  }, [availableGenres, genreSearch]);
-
-  // Filter formats by search
-  const filteredFormats = useMemo(() => {
-    if (!formatSearch.trim()) return availableFormats;
-
-    const fuse = buildFuse(
-      availableFormats.map((format) => ({ name: format })),
-      ["name"],
-    );
-
-    const results = fuse.search(formatSearch);
-    return results.map(
-      (result: { item: { name: string } }) => result.item.name,
-    );
-  }, [availableFormats, formatSearch]);
-
-  // Filter tags by search
-  const filteredTags = useMemo(() => {
-    if (!tagSearch.trim()) return availableTags;
-
-    const fuse = buildFuse(
-      availableTags.map((tag) => ({ name: tag })),
-      ["name"],
-    );
-
-    const results = fuse.search(tagSearch);
-    return results.map(
-      (result: { item: { name: string } }) => result.item.name,
-    );
-  }, [availableTags, tagSearch]);
-
-  // Handle filter changes
   const handleConfidenceChange = (value: { min: number; max: number }) => {
     onFiltersChange({ ...filters, confidenceRange: value });
-  };
-
-  const handleGenreToggle = (genre: string) => {
-    const newGenres = filters.genres.includes(genre)
-      ? filters.genres.filter((g) => g !== genre)
-      : [...filters.genres, genre];
-    onFiltersChange({ ...filters, genres: newGenres });
   };
 
   const handleFormatToggle = (format: string) => {
@@ -233,52 +167,21 @@ export function StatisticsFilterPanel({
     onFiltersChange({ ...filters, statuses: newStatuses });
   };
 
-  const handleTagToggle = (tag: string) => {
-    const newTags = filters.tags.includes(tag)
-      ? filters.tags.filter((t) => t !== tag)
-      : [...filters.tags, tag];
-    onFiltersChange({ ...filters, tags: newTags });
-  };
-
   const handleDateRangeChange = (
     type: "start" | "end",
     value: string | null,
   ) => {
     const newDateRange = { ...filters.dateRange };
     if (value) {
-      // Parse date string (format: "YYYY-MM-DD") using local components to avoid timezone shifts
-      const [yearStr, monthStr, dayStr] = value.split("-");
-      const year = Number.parseInt(yearStr, 10);
-      const month = Number.parseInt(monthStr, 10) - 1; // Month is 0-indexed
-      const day = Number.parseInt(dayStr, 10);
-      newDateRange[type] = new Date(year, month, day);
+      newDateRange[type] = parseDateInputValue(value);
     } else {
       newDateRange[type] = null;
     }
     onFiltersChange({ ...filters, dateRange: newDateRange });
   };
 
-  const handleSelectAllGenres = () => {
-    onFiltersChange({ ...filters, genres: [...availableGenres] });
-  };
-
-  const handleClearAllGenres = () => {
-    onFiltersChange({ ...filters, genres: [] });
-  };
-
-  const handleSelectAllTags = () => {
-    onFiltersChange({ ...filters, tags: [...availableTags] });
-  };
-
-  const handleClearAllTags = () => {
-    onFiltersChange({ ...filters, tags: [] });
-  };
-
   const handleClearAllFilters = () => {
     onFiltersChange(DEFAULT_STATISTICS_FILTERS);
-    setGenreSearch("");
-    setFormatSearch("");
-    setTagSearch("");
   };
 
   const handlePresetClick = (preset: FilterPreset) => {
@@ -443,174 +346,72 @@ export function StatisticsFilterPanel({
                 <Input
                   type="text"
                   placeholder="Search formats..."
-                  value={formatSearch}
-                  onChange={(e) => setFormatSearch(e.target.value)}
+                  value=""
+                  onChange={() => {}}
                   aria-label="Search formats"
                 />
                 <div className="space-y-2">
-                  {filteredFormats.length > 0 ? (
-                    filteredFormats.map((format) => (
-                      <div key={format} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`format-${format}`}
-                          checked={filters.formats.includes(format)}
-                          onCheckedChange={() => handleFormatToggle(format)}
-                        />
-                        <label
-                          htmlFor={`format-${format}`}
-                          className="cursor-pointer text-sm text-slate-700 dark:text-slate-300"
-                        >
-                          {formatLabel(format)}
-                        </label>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-center text-xs text-slate-500 dark:text-slate-400">
-                      No formats found
-                    </p>
-                  )}
+                  {availableFormats.map((format) => (
+                    <div key={format} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id={`format-${format}`}
+                        checked={filters.formats.includes(format)}
+                        onChange={() => handleFormatToggle(format)}
+                        className="h-4 w-4 rounded border-slate-300 text-blue-600"
+                      />
+                      <label
+                        htmlFor={`format-${format}`}
+                        className="cursor-pointer text-sm text-slate-700 dark:text-slate-300"
+                      >
+                        {formatLabel(format)}
+                      </label>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
 
             {/* Genre Filter */}
             {availableGenres.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                      Genres
-                    </div>
-                    {filters.genres.length > 0 && (
-                      <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">
-                        ({filters.genres.length} selected)
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleSelectAllGenres}
-                      className="h-6 text-xs"
-                    >
-                      Select All
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleClearAllGenres}
-                      className="h-6 text-xs"
-                    >
-                      Clear
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Genre search */}
-                <Input
-                  type="text"
-                  placeholder="Search genres..."
-                  value={genreSearch}
-                  onChange={(e) => setGenreSearch(e.target.value)}
-                  aria-label="Search genres"
-                />
-
-                {/* Genre list */}
-                <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
-                  {filteredGenres.length > 0 ? (
-                    filteredGenres.map((genre) => (
-                      <div key={genre} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`genre-${genre}`}
-                          checked={filters.genres.includes(genre)}
-                          onCheckedChange={() => handleGenreToggle(genre)}
-                        />
-                        <label
-                          htmlFor={`genre-${genre}`}
-                          className="cursor-pointer text-sm text-slate-700 dark:text-slate-300"
-                        >
-                          {genre}
-                        </label>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-center text-xs text-slate-500 dark:text-slate-400">
-                      No genres found
-                    </p>
-                  )}
-                </div>
-              </div>
+              <SearchableFilterList
+                items={availableGenres}
+                selectedItems={filters.genres}
+                onToggle={(genre) => {
+                  const newGenres = filters.genres.includes(genre)
+                    ? filters.genres.filter((g) => g !== genre)
+                    : [...filters.genres, genre];
+                  onFiltersChange({ ...filters, genres: newGenres });
+                }}
+                label={(genre) => genre}
+                showSelectClear
+                onSelectAll={() =>
+                  onFiltersChange({ ...filters, genres: [...availableGenres] })
+                }
+                onClearAll={() => onFiltersChange({ ...filters, genres: [] })}
+                searchPlaceholder="Search genres..."
+              />
             )}
 
             {/* Tags Filter */}
             {availableTags.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                      Tags
-                    </div>
-                    {filters.tags.length > 0 && (
-                      <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">
-                        ({filters.tags.length} selected)
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleSelectAllTags}
-                      className="h-6 text-xs"
-                    >
-                      Select All
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleClearAllTags}
-                      className="h-6 text-xs"
-                    >
-                      Clear
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Tag search */}
-                <Input
-                  type="text"
-                  placeholder="Search tags..."
-                  value={tagSearch}
-                  onChange={(e) => setTagSearch(e.target.value)}
-                  aria-label="Search tags"
-                />
-
-                {/* Tag list */}
-                <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
-                  {filteredTags.length > 0 ? (
-                    filteredTags.map((tag) => (
-                      <div key={tag} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`tag-${tag}`}
-                          checked={filters.tags.includes(tag)}
-                          onCheckedChange={() => handleTagToggle(tag)}
-                        />
-                        <label
-                          htmlFor={`tag-${tag}`}
-                          className="cursor-pointer text-sm text-slate-700 dark:text-slate-300"
-                        >
-                          {tag}
-                        </label>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-center text-xs text-slate-500 dark:text-slate-400">
-                      No tags found
-                    </p>
-                  )}
-                </div>
-              </div>
+              <SearchableFilterList
+                items={availableTags}
+                selectedItems={filters.tags}
+                onToggle={(tag) => {
+                  const newTags = filters.tags.includes(tag)
+                    ? filters.tags.filter((t) => t !== tag)
+                    : [...filters.tags, tag];
+                  onFiltersChange({ ...filters, tags: newTags });
+                }}
+                label={(tag) => tag}
+                showSelectClear
+                onSelectAll={() =>
+                  onFiltersChange({ ...filters, tags: [...availableTags] })
+                }
+                onClearAll={() => onFiltersChange({ ...filters, tags: [] })}
+                searchPlaceholder="Search tags..."
+              />
             )}
 
             {/* Status Filter */}
@@ -622,10 +423,12 @@ export function StatisticsFilterPanel({
                 <div className="space-y-2">
                   {availableStatuses.map((status) => (
                     <div key={status} className="flex items-center gap-2">
-                      <Checkbox
+                      <input
+                        type="checkbox"
                         id={`status-${status}`}
                         checked={filters.statuses.includes(status)}
-                        onCheckedChange={() => handleStatusToggle(status)}
+                        onChange={() => handleStatusToggle(status)}
+                        className="h-4 w-4 rounded border-slate-300 text-blue-600"
                       />
                       <label
                         htmlFor={`status-${status}`}
