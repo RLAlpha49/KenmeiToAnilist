@@ -3,19 +3,12 @@
  * @source
  */
 
-import { getGenericWorkerPool } from "../core/worker-pool";
+import { BaseWorkerPool } from "../core/base-worker-pool";
+import { generateTaskId, computeFilterStats } from "../core/pool-utils";
 import type { AdvancedFilterMessage } from "../core/types";
 import type { MangaMatchResult } from "@/api/anilist/types";
 import type { AdvancedMatchFilters } from "@/types/matchingFilters";
 import { filterByAdvancedCriteria } from "@/components/sync/filtering";
-import {
-  failsConfidenceFilter,
-  failsFormatFilter,
-  failsGenreFilter,
-  failsStatusFilter,
-  failsYearFilter,
-  failsTagFilter,
-} from "../shared/filters";
 
 /**
  * Result of applying advanced filters to match results.
@@ -56,104 +49,16 @@ export interface FilterOperationResult {
 }
 
 /**
- * Generates a unique task id for filter operations.
- * @returns A unique task id string.
- * @source
- */
-function generateTaskId(): string {
-  return `filter_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-}
-
-/**
- * Computes aggregated statistics explaining how filters affected the result set.
- * @source
- */
-function computeFilterStats(
-  matches: MangaMatchResult[],
-  filteredMatches: MangaMatchResult[],
-  filters: AdvancedMatchFilters,
-): Record<string, number> {
-  const filteredMatchIds = new Set(
-    filteredMatches.map((m) => m.kenmeiManga.id),
-  );
-  const excludedMatches = matches.filter(
-    (m) => !filteredMatchIds.has(m.kenmeiManga.id),
-  );
-
-  let confidenceFiltered = 0;
-  let formatFiltered = 0;
-  let genreFiltered = 0;
-  let statusFiltered = 0;
-  let yearFiltered = 0;
-  let tagFiltered = 0;
-
-  for (const match of excludedMatches) {
-    if (failsConfidenceFilter(match, filters)) {
-      confidenceFiltered++;
-    }
-    if (failsFormatFilter(match, filters)) {
-      formatFiltered++;
-    }
-    if (failsGenreFilter(match, filters)) {
-      genreFiltered++;
-    }
-    if (failsStatusFilter(match, filters)) {
-      statusFiltered++;
-    }
-    if (failsYearFilter(match, filters)) {
-      yearFiltered++;
-    }
-    if (failsTagFilter(match, filters)) {
-      tagFiltered++;
-    }
-  }
-
-  return {
-    totalMatches: matches.length,
-    filteredCount: filteredMatches.length,
-    confidenceFiltered,
-    formatFiltered,
-    genreFiltered,
-    statusFiltered,
-    yearFiltered,
-    tagFiltered,
-  };
-}
-
-/**
  * Manages advanced filter tasks using the shared worker pool with robust fallbacks.
  * @source
  */
-export class AdvancedFilterWorkerPool {
-  private initialized = false;
-  private readonly maxWorkers: number;
-
+export class AdvancedFilterWorkerPool extends BaseWorkerPool {
   constructor(maxWorkers?: number) {
-    this.maxWorkers = maxWorkers ?? 2;
+    super({ maxWorkers });
   }
 
-  /**
-   * Initializes the worker-backed filtering environment once.
-   * @source
-   */
-  async initialize(): Promise<void> {
-    if (this.initialized) {
-      return;
-    }
-
-    try {
-      const pool = getGenericWorkerPool();
-      await pool.initialize();
-      this.initialized = true;
-      console.info("[AdvancedFilterWorkerPool] Pool initialized");
-    } catch (error) {
-      console.warn(
-        "[AdvancedFilterWorkerPool] Failed to initialize pool:",
-        error,
-      );
-      // Still mark as initialized to use main thread fallback
-      this.initialized = true;
-    }
+  protected getPoolName(): string {
+    return "AdvancedFilterWorkerPool";
   }
 
   /**
@@ -167,38 +72,18 @@ export class AdvancedFilterWorkerPool {
     matches: MangaMatchResult[],
     filters: AdvancedMatchFilters,
   ): Promise<FilterOperationResult> {
-    const taskId = generateTaskId();
+    const taskId = generateTaskId("filter");
+    await this.ensureInitialized();
 
-    // Ensure pool is initialized
-    if (!this.initialized) {
-      await this.initialize();
-    }
-
-    try {
-      const pool = getGenericWorkerPool();
-
-      // Check if workers are available
-      if (!pool.isAvailable()) {
-        console.debug(
-          "[AdvancedFilterWorkerPool] No workers available, using main thread",
-        );
-        return this.executeOnMainThread(matches, filters);
-      }
-
-      // Try to use worker
-      return await this.executeOnWorker(pool, taskId, matches, filters);
-    } catch (error) {
-      console.warn(
-        "[AdvancedFilterWorkerPool] Worker execution failed, falling back to main thread:",
-        error,
-      );
-      return this.executeOnMainThread(matches, filters);
-    }
+    return this.executeWithFallback(
+      () => this.executeOnWorker(taskId, matches, filters),
+      () => this.executeOnMainThread(matches, filters),
+      taskId,
+    );
   }
 
   /**
    * Executes filtering on a worker via the generic worker pool API.
-   * @param pool - Shared worker pool instance.
    * @param taskId - Unique task id.
    * @param matches - Matches to filter.
    * @param filters - Filters to apply.
@@ -206,25 +91,21 @@ export class AdvancedFilterWorkerPool {
    * @source
    */
   private async executeOnWorker(
-    pool: ReturnType<typeof getGenericWorkerPool>,
     taskId: string,
     matches: MangaMatchResult[],
     filters: AdvancedMatchFilters,
   ): Promise<FilterOperationResult> {
     try {
-      // Get a worker from the pool using selectWorker API
-      const workerIndex = pool.selectWorker();
+      const workerIndex = this.selectWorker();
       if (workerIndex === -1) {
         throw new Error("No workers available from pool");
       }
 
-      const worker = pool.getWorker(workerIndex);
+      const worker = this.getWorker(workerIndex);
       if (!worker) {
         throw new Error("Failed to get worker from pool");
       }
 
-      // Register task with the pool so it handles message dispatching
-      // and marks the worker as busy/available
       const task = {
         taskId,
         type: "advanced_filter" as const,
@@ -252,10 +133,8 @@ export class AdvancedFilterWorkerPool {
         },
       );
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      pool.registerTask(taskId, task as unknown as any);
+      this.registerTask(taskId, task);
 
-      // Send message to the worker
       const message: AdvancedFilterMessage = {
         type: "ADVANCED_FILTER",
         payload: {
@@ -271,29 +150,7 @@ export class AdvancedFilterWorkerPool {
         `[AdvancedFilterWorkerPool] Dispatched filter task ${taskId}: ${matches.length} matches`,
       );
 
-      // Set timeout for task completion (30 seconds)
-      const timeout = setTimeout(() => {
-        pool.cancelTask(taskId);
-        // Reject the promise with a TimeoutError to notify caller
-        task.reject(
-          new Error(
-            `[AdvancedFilterWorkerPool] Filter task ${taskId} timed out after 30s`,
-          ),
-        );
-        console.warn(
-          `[AdvancedFilterWorkerPool] Filter task ${taskId} timed out after 30s`,
-        );
-      }, 30000);
-
-      // Wait for result and clear timeout
-      try {
-        const result = await taskPromise;
-        clearTimeout(timeout);
-        return result;
-      } catch (error) {
-        clearTimeout(timeout);
-        throw error;
-      }
+      return taskPromise;
     } catch (error) {
       console.error(
         "[AdvancedFilterWorkerPool] Error executing filter on worker:",
@@ -346,48 +203,6 @@ export class AdvancedFilterWorkerPool {
       },
       executedOnWorker: false,
     };
-  }
-
-  /**
-   * Returns basic initialization state for the filter worker pool.
-   * @returns Object indicating whether the pool is initialized.
-   * @source
-   */
-  getStats(): {
-    initialized: boolean;
-  } {
-    return {
-      initialized: this.initialized,
-    };
-  }
-
-  /**
-   * Returns the number of available workers for filter tasks.
-   * @returns Count of idle workers.
-   * @source
-   */
-  getAvailableWorkerCount(): number {
-    const pool = getGenericWorkerPool();
-    return this.initialized ? pool.getAvailableWorkerCount() : 0;
-  }
-
-  /**
-   * Terminates the underlying shared worker pool used for filtering.
-   * @source
-   */
-  terminate(): void {
-    if (this.initialized) {
-      try {
-        const pool = getGenericWorkerPool();
-        pool.terminate();
-        this.initialized = false;
-      } catch (error) {
-        console.warn(
-          "[AdvancedFilterWorkerPool] Error terminating pool:",
-          error,
-        );
-      }
-    }
   }
 }
 

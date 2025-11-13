@@ -3,7 +3,8 @@
  * @source
  */
 
-import { getGenericWorkerPool } from "../core/worker-pool";
+import { BaseWorkerPool } from "../core/base-worker-pool";
+import { generateTaskId } from "../core/pool-utils";
 import type { DuplicateDetectionMessage } from "../core/types";
 import type { MangaMatchResult } from "@/api/anilist/types";
 import { detectDuplicateAniListIds } from "@/components/matching/detectDuplicateAniListIds";
@@ -49,44 +50,21 @@ export interface DuplicateDetectionResult {
  * @returns A unique task ID string.
  * @source
  */
-function generateTaskId(): string {
-  return `dup_detection_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+function generateUniqueTaskId(): string {
+  return generateTaskId("dup_detection");
 }
 
 /**
  * Coordinates duplicate detection tasks across workers with main-thread fallback.
  * @source
  */
-export class DuplicateDetectionWorkerPool {
-  private initialized = false;
-  private readonly maxWorkers: number;
-
+export class DuplicateDetectionWorkerPool extends BaseWorkerPool {
   constructor(maxWorkers?: number) {
-    this.maxWorkers = maxWorkers ?? 2;
+    super({ maxWorkers });
   }
 
-  /**
-   * Initializes the worker pool or prepares main-thread fallback.
-   * @source
-   */
-  async initialize(): Promise<void> {
-    if (this.initialized) {
-      return;
-    }
-
-    try {
-      const pool = getGenericWorkerPool();
-      await pool.initialize();
-      this.initialized = true;
-      console.info("[DuplicateDetectionWorkerPool] Pool initialized");
-    } catch (error) {
-      console.warn(
-        "[DuplicateDetectionWorkerPool] Failed to initialize pool:",
-        error,
-      );
-      // Still mark as initialized to use main thread fallback
-      this.initialized = true;
-    }
+  protected getPoolName(): string {
+    return "DuplicateDetectionWorkerPool";
   }
 
   /**
@@ -99,56 +77,34 @@ export class DuplicateDetectionWorkerPool {
   async detectDuplicates(
     matches: MangaMatchResult[],
   ): Promise<DuplicateDetectionResult> {
-    const taskId = generateTaskId();
+    const taskId = generateUniqueTaskId();
+    await this.ensureInitialized();
 
-    // Ensure pool is initialized
-    if (!this.initialized) {
-      await this.initialize();
-    }
-
-    try {
-      const pool = getGenericWorkerPool();
-
-      // Check if workers are available
-      if (!pool.isAvailable()) {
-        console.debug(
-          "[DuplicateDetectionWorkerPool] No workers available, using main thread",
-        );
-        return this.executeOnMainThread(matches);
-      }
-
-      // Try to use worker
-      return await this.executeOnWorker(pool, taskId, matches);
-    } catch (error) {
-      console.warn(
-        "[DuplicateDetectionWorkerPool] Worker execution failed, falling back to main thread:",
-        error,
-      );
-      return this.executeOnMainThread(matches);
-    }
+    return this.executeWithFallback(
+      () => this.executeOnWorker(taskId, matches),
+      () => this.executeOnMainThread(matches),
+      taskId,
+    );
   }
 
   /**
    * Executes duplicate detection on a worker thread via the generic pool.
-   * @param pool - The shared worker pool instance.
    * @param taskId - Unique identifier for the dispatched task.
    * @param matches - Candidate matches to process.
    * @returns Duplicate detection result when the worker completes.
    * @source
    */
   private async executeOnWorker(
-    pool: ReturnType<typeof getGenericWorkerPool>,
     taskId: string,
     matches: MangaMatchResult[],
   ): Promise<DuplicateDetectionResult> {
     try {
-      // Get a worker from the pool
-      const workerIndex = pool.selectWorker();
+      const workerIndex = this.selectWorker();
       if (workerIndex === -1) {
         throw new Error("No workers available from pool");
       }
 
-      const worker = pool.getWorker(workerIndex);
+      const worker = this.getWorker(workerIndex);
       if (!worker) {
         throw new Error("Failed to get worker from pool");
       }
@@ -183,8 +139,7 @@ export class DuplicateDetectionWorkerPool {
         },
       );
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      pool.registerTask(taskId, task as unknown as any);
+      this.registerTask(taskId, task);
 
       // Send message to the worker
       const message: DuplicateDetectionMessage = {
@@ -202,28 +157,7 @@ export class DuplicateDetectionWorkerPool {
         `[DuplicateDetectionWorkerPool] Dispatched duplicate detection task ${taskId}: ${matches.length} matches`,
       );
 
-      // Set timeout for task completion (30 seconds)
-      const timeout = setTimeout(() => {
-        pool.cancelTask(taskId);
-        task.reject(
-          new Error(
-            `[DuplicateDetectionWorkerPool] Duplicate detection task ${taskId} timed out after 30s`,
-          ),
-        );
-        console.warn(
-          `[DuplicateDetectionWorkerPool] Duplicate detection task ${taskId} timed out after 30s`,
-        );
-      }, 30000);
-
-      // Wait for result and clear timeout
-      try {
-        const result = await taskPromise;
-        clearTimeout(timeout);
-        return result;
-      } catch (error) {
-        clearTimeout(timeout);
-        throw error;
-      }
+      return taskPromise;
     } catch (error) {
       console.error(
         "[DuplicateDetectionWorkerPool] Error executing on worker:",
@@ -268,48 +202,6 @@ export class DuplicateDetectionWorkerPool {
       },
       executedOnWorker: false,
     };
-  }
-
-  /**
-   * Returns basic initialization status for the worker pool.
-   * @returns Initialization state snapshot.
-   * @source
-   */
-  getStats(): {
-    initialized: boolean;
-  } {
-    return {
-      initialized: this.initialized,
-    };
-  }
-
-  /**
-   * Returns the number of currently available workers in the pool.
-   * @returns Count of available workers.
-   * @source
-   */
-  getAvailableWorkerCount(): number {
-    const pool = getGenericWorkerPool();
-    return this.initialized ? pool.getAvailableWorkerCount() : 0;
-  }
-
-  /**
-   * Terminates all workers in the pool and resets initialization state.
-   * @source
-   */
-  terminate(): void {
-    if (this.initialized) {
-      try {
-        const pool = getGenericWorkerPool();
-        pool.terminate();
-        this.initialized = false;
-      } catch (error) {
-        console.warn(
-          "[DuplicateDetectionWorkerPool] Error terminating pool:",
-          error,
-        );
-      }
-    }
   }
 }
 

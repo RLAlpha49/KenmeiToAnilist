@@ -4,7 +4,8 @@
  * @source
  */
 
-import { getGenericWorkerPool } from "../core/worker-pool";
+import { BaseWorkerPool } from "../core/base-worker-pool";
+import { generateTaskId } from "../core/pool-utils";
 import type {
   FuzzySearchMessage,
   FuzzySearchResultMessage,
@@ -42,8 +43,8 @@ export interface FuzzySearchResult {
  * @returns A unique task ID string.
  * @source
  */
-function generateTaskId(): string {
-  return `fuzzy_search_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+function generateUniqueFuzzySearchTaskId(): string {
+  return generateTaskId("fuzzy_search");
 }
 
 /**
@@ -51,33 +52,13 @@ function generateTaskId(): string {
  * Optimized for large dataset searches (100+ items) where Fuse.js would block the UI.
  * @source
  */
-export class FuzzySearchWorkerPool {
-  private initialized = false;
-  private readonly maxWorkers: number;
-
+export class FuzzySearchWorkerPool extends BaseWorkerPool {
   constructor(maxWorkers?: number) {
-    this.maxWorkers = maxWorkers ?? 2;
+    super({ maxWorkers });
   }
 
-  /**
-   * Initializes the worker pool or prepares main-thread fallback.
-   * @source
-   */
-  async initialize(): Promise<void> {
-    if (this.initialized) {
-      return;
-    }
-
-    try {
-      const pool = getGenericWorkerPool();
-      await pool.initialize();
-      this.initialized = true;
-      console.info("[FuzzySearchWorkerPool] Pool initialized");
-    } catch (error) {
-      console.warn("[FuzzySearchWorkerPool] Failed to initialize pool:", error);
-      // Still mark as initialized to use main thread fallback
-      this.initialized = true;
-    }
+  protected getPoolName(): string {
+    return "FuzzySearchWorkerPool";
   }
 
   /**
@@ -99,58 +80,19 @@ export class FuzzySearchWorkerPool {
     options?: Partial<IFuseOptions<MangaMatchResult>>,
     maxResults: number = 100,
   ): Promise<FuzzySearchResult> {
-    const taskId = generateTaskId();
+    const taskId = generateUniqueFuzzySearchTaskId();
+    await this.ensureInitialized();
 
-    // Ensure pool is initialized
-    if (!this.initialized) {
-      await this.initialize();
-    }
-
-    try {
-      const pool = getGenericWorkerPool();
-
-      // Check if workers are available
-      if (!pool.isAvailable()) {
-        console.debug(
-          "[FuzzySearchWorkerPool] No workers available, using main thread",
-        );
-        return this.executeOnMainThread(
-          matches,
-          query,
-          keys,
-          options,
-          maxResults,
-        );
-      }
-
-      // Try to use worker
-      return await this.executeOnWorker(
-        pool,
-        taskId,
-        matches,
-        query,
-        keys,
-        options,
-        maxResults,
-      );
-    } catch (error) {
-      console.warn(
-        "[FuzzySearchWorkerPool] Worker execution failed, falling back to main thread:",
-        error,
-      );
-      return this.executeOnMainThread(
-        matches,
-        query,
-        keys,
-        options,
-        maxResults,
-      );
-    }
+    return this.executeWithFallback(
+      () =>
+        this.executeOnWorker(taskId, matches, query, keys, options, maxResults),
+      () => this.executeOnMainThread(matches, query, keys, options, maxResults),
+      taskId,
+    );
   }
 
   /**
    * Executes fuzzy search on a worker thread via the generic pool.
-   * @param pool - The shared worker pool instance.
    * @param taskId - Unique identifier for the dispatched task.
    * @param matches - Candidate matches to search.
    * @param query - Search query string.
@@ -161,7 +103,6 @@ export class FuzzySearchWorkerPool {
    * @source
    */
   private async executeOnWorker(
-    pool: ReturnType<typeof getGenericWorkerPool>,
     taskId: string,
     matches: MangaMatchResult[],
     query: string,
@@ -170,13 +111,12 @@ export class FuzzySearchWorkerPool {
     maxResults: number,
   ): Promise<FuzzySearchResult> {
     try {
-      // Get a worker from the pool
-      const workerIndex = pool.selectWorker();
+      const workerIndex = this.selectWorker();
       if (workerIndex === -1) {
         throw new Error("No workers available from pool");
       }
 
-      const worker = pool.getWorker(workerIndex);
+      const worker = this.getWorker(workerIndex);
       if (!worker) {
         throw new Error("Failed to get worker from pool");
       }
@@ -203,8 +143,7 @@ export class FuzzySearchWorkerPool {
         task.reject = reject;
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      pool.registerTask(taskId, task as unknown as any);
+      this.registerTask(taskId, task);
 
       // Send message to the worker
       const message: FuzzySearchMessage = {
@@ -227,7 +166,7 @@ export class FuzzySearchWorkerPool {
 
       // Set timeout for task completion (10 seconds for search operations)
       const timeout = setTimeout(() => {
-        pool.cancelTask(taskId);
+        this.cancelTask(taskId);
         task.reject(
           new Error(
             `[FuzzySearchWorkerPool] Fuzzy search task ${taskId} timed out after 10s`,
@@ -332,45 +271,6 @@ export class FuzzySearchWorkerPool {
       },
       executedOnWorker: false,
     };
-  }
-
-  /**
-   * Returns basic initialization status for the worker pool.
-   * @returns Initialization state snapshot.
-   * @source
-   */
-  getStats(): {
-    initialized: boolean;
-  } {
-    return {
-      initialized: this.initialized,
-    };
-  }
-
-  /**
-   * Returns the number of currently available workers in the pool.
-   * @returns Count of available workers.
-   * @source
-   */
-  getAvailableWorkerCount(): number {
-    const pool = getGenericWorkerPool();
-    return this.initialized ? pool.getAvailableWorkerCount() : 0;
-  }
-
-  /**
-   * Terminates all workers in the pool and resets initialization state.
-   * @source
-   */
-  terminate(): void {
-    if (this.initialized) {
-      try {
-        const pool = getGenericWorkerPool();
-        pool.terminate();
-        this.initialized = false;
-      } catch (error) {
-        console.warn("[FuzzySearchWorkerPool] Error terminating pool:", error);
-      }
-    }
   }
 }
 
