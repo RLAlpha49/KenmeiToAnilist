@@ -562,6 +562,106 @@ function handleFailureResponse(
   throw error;
 }
 
+/**
+ * Processes an HTTP response from the fetch request.
+ * Handles transient errors with retry logic and rate limit coordination.
+ * @param requestId - Unique identifier for tracking.
+ * @param response - The HTTP response to process.
+ * @param attempt - Current attempt number.
+ * @param MAX_RETRIES - Maximum retry attempts.
+ * @returns Object containing whether to retry and delay if needed, or error if unrecoverable.
+ * @source
+ */
+function processHttpResponse(
+  requestId: string,
+  response: Response,
+  attempt: number,
+  MAX_RETRIES: number,
+):
+  | {
+      shouldRetry: boolean;
+      delayMs?: number;
+      error?: never;
+    }
+  | {
+      shouldRetry: false;
+      delayMs?: never;
+      error: Error;
+    } {
+  // Handle transient errors with retry
+  if (
+    !response.ok &&
+    checkIsTransientError(response) &&
+    attempt < MAX_RETRIES
+  ) {
+    const retryAfterDelay = getRetryAfterDelay(response);
+    const delayMs = retryAfterDelay ?? calculateBackoff(attempt);
+
+    // Emit event for rate-limit coordination if 429
+    if (
+      response.status === 429 &&
+      typeof globalThis.dispatchEvent === "function"
+    ) {
+      globalThis.dispatchEvent(
+        new CustomEvent("ratelimit:retry-after", {
+          detail: {
+            retryAfterMs: delayMs,
+            retryAfterSeconds: Math.ceil(delayMs / 1000),
+          },
+        }),
+      );
+    }
+
+    console.warn(
+      `[AniListClient] ⚠️ [${requestId}] Transient error (HTTP ${response.status}), retrying in ${delayMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})`,
+    );
+
+    return { shouldRetry: true, delayMs };
+  }
+
+  // Unrecoverable HTTP error
+  if (!response.ok) {
+    return { shouldRetry: false, error: new Error("HTTP Error") };
+  }
+
+  return { shouldRetry: false };
+}
+
+/**
+ * Processes a fetch error, determining if it's transient and retryable.
+ * @param requestId - Unique identifier for tracking.
+ * @param error - The error that occurred.
+ * @param attempt - Current attempt number.
+ * @param MAX_RETRIES - Maximum retry attempts.
+ * @returns Object containing whether to retry, delay if needed, and the error.
+ * @source
+ */
+function processFetchError(
+  requestId: string,
+  error: unknown,
+  attempt: number,
+  MAX_RETRIES: number,
+): {
+  shouldRetry: boolean;
+  delayMs?: number;
+  lastError: Error;
+} {
+  const lastError = error instanceof Error ? error : new Error(String(error));
+
+  // Retry transient errors unless last attempt
+  if (checkIsTransientError(error) && attempt < MAX_RETRIES) {
+    const delayMs = calculateBackoff(attempt);
+    console.warn(
+      `[AniListClient] ⚠️ [${requestId}] Network error, retrying in ${delayMs}ms (attempt ${attempt + 1}/${MAX_RETRIES}):`,
+      lastError.message,
+    );
+
+    return { shouldRetry: true, delayMs, lastError };
+  }
+
+  return { shouldRetry: false, lastError };
+}
+
 async function handleBrowserRequest<T>(
   requestId: string,
   options: RequestInit,
@@ -579,40 +679,20 @@ async function handleBrowserRequest<T>(
     try {
       const response = await fetch("https://graphql.anilist.co", options);
 
-      // Handle transient errors with retry
-      if (
-        !response.ok &&
-        checkIsTransientError(response) &&
-        attempt < MAX_RETRIES
-      ) {
-        const retryAfterDelay = getRetryAfterDelay(response);
-        const delayMs = retryAfterDelay ?? calculateBackoff(attempt);
+      const httpResult = processHttpResponse(
+        requestId,
+        response,
+        attempt,
+        MAX_RETRIES,
+      );
 
-        // Emit event for rate-limit coordination if 429
-        if (
-          response.status === 429 &&
-          typeof globalThis.dispatchEvent === "function"
-        ) {
-          globalThis.dispatchEvent(
-            new CustomEvent("ratelimit:retry-after", {
-              detail: {
-                retryAfterMs: delayMs,
-                retryAfterSeconds: Math.ceil(delayMs / 1000),
-              },
-            }),
-          );
-        }
-
-        console.warn(
-          `[AniListClient] ⚠️ [${requestId}] Transient error (HTTP ${response.status}), retrying in ${delayMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})`,
-        );
-
+      if (httpResult.shouldRetry) {
+        const delayMs = httpResult.delayMs ?? 0;
         await new Promise((resolve) => setTimeout(resolve, delayMs));
         continue;
       }
 
-      // Unrecoverable HTTP error
-      if (!response.ok) {
+      if (httpResult.error) {
         await processHttpError(requestId, response);
       }
 
@@ -620,17 +700,18 @@ async function handleBrowserRequest<T>(
       const duration = performance.now() - startTime;
       return handleSuccessResponse(requestId, jsonResponse, options, duration);
     } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
       const duration = performance.now() - startTime;
 
-      // Retry transient errors unless last attempt
-      if (checkIsTransientError(error) && attempt < MAX_RETRIES) {
-        const delayMs = calculateBackoff(attempt);
-        console.warn(
-          `[AniListClient] ⚠️ [${requestId}] Network error, retrying in ${delayMs}ms (attempt ${attempt + 1}/${MAX_RETRIES}):`,
-          lastError.message,
-        );
+      const fetchResult = processFetchError(
+        requestId,
+        error,
+        attempt,
+        MAX_RETRIES,
+      );
+      lastError = fetchResult.lastError;
 
+      if (fetchResult.shouldRetry) {
+        const delayMs = fetchResult.delayMs ?? 0;
         await new Promise((resolve) => setTimeout(resolve, delayMs));
         continue;
       }

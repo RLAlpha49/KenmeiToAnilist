@@ -83,57 +83,55 @@ function BackupList({
 }: Readonly<BackupListProps>) {
   return (
     <div className="space-y-2">
-      {backups
-        .slice(0, showAll ? undefined : 2)
-        .map((backup) => (
-          <div
-            key={backup.name}
-            className="hover:bg-muted/60 flex items-center justify-between rounded-md p-3 transition-colors"
-          >
-            <div className="min-w-0 flex-1 space-y-1">
-              <p className="truncate text-sm font-medium">
-                {new Date(backup.timestamp).toLocaleString()}
-              </p>
-              <div className="flex gap-2">
-                <Badge variant="outline" className="text-xs">
-                  {(backup.size / 1024 / 1024).toFixed(2)} MB
-                </Badge>
-                <span className="text-muted-foreground text-xs">
-                  {backup.name}
-                </span>
-              </div>
-            </div>
-            <div className="ml-2 flex gap-2">
-              <Button
-                onClick={() => onRestore(backup)}
-                disabled={isRestoringFromList === backup.name}
-                variant="outline"
-                size="sm"
-                title="Restore from this backup"
-              >
-                {isRestoringFromList === backup.name ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Upload className="h-4 w-4" />
-                )}
-              </Button>
-              <Button
-                onClick={() => onDelete(backup.name)}
-                disabled={isDeletingBackup === backup.name}
-                variant="ghost"
-                size="sm"
-                className="ml-2"
-                title="Delete this backup"
-              >
-                {isDeletingBackup === backup.name ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Trash2 className="h-4 w-4" />
-                )}
-              </Button>
+      {backups.slice(0, showAll ? undefined : 2).map((backup) => (
+        <div
+          key={backup.name}
+          className="hover:bg-muted/60 flex items-center justify-between rounded-md p-3 transition-colors"
+        >
+          <div className="min-w-0 flex-1 space-y-1">
+            <p className="truncate text-sm font-medium">
+              {new Date(backup.timestamp).toLocaleString()}
+            </p>
+            <div className="flex gap-2">
+              <Badge variant="outline" className="text-xs">
+                {(backup.size / 1024 / 1024).toFixed(2)} MB
+              </Badge>
+              <span className="text-muted-foreground text-xs">
+                {backup.name}
+              </span>
             </div>
           </div>
-        ))}
+          <div className="ml-2 flex gap-2">
+            <Button
+              onClick={() => onRestore(backup)}
+              disabled={isRestoringFromList === backup.name}
+              variant="outline"
+              size="sm"
+              title="Restore from this backup"
+            >
+              {isRestoringFromList === backup.name ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+            </Button>
+            <Button
+              onClick={() => onDelete(backup.name)}
+              disabled={isDeletingBackup === backup.name}
+              variant="ghost"
+              size="sm"
+              className="ml-2"
+              title="Delete this backup"
+            >
+              {isDeletingBackup === backup.name ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </div>
+      ))}
 
       {backups.length > 2 && (
         <Button

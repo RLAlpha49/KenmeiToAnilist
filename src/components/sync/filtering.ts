@@ -4,7 +4,11 @@
  * @description Filtering and sorting logic for manga matches
  */
 
-import { MangaMatchResult, UserMediaList } from "../../api/anilist/types";
+import {
+  MangaMatchResult,
+  UserMediaList,
+  AniListManga,
+} from "../../api/anilist/types";
 import { SyncConfig } from "../../utils/storage";
 import { getEffectiveStatus } from "./sync-utils";
 import { FilterOptions, SortOption } from "./types";
@@ -181,6 +185,123 @@ export function sortMangaMatches(
 }
 
 /**
+ * Computes the confidence score for a manga match.
+ * @param match - The manga match result
+ * @returns The confidence score (0 if not found)
+ */
+function computeMatchConfidence(match: MangaMatchResult): number {
+  if (match.selectedMatch && match.anilistMatches) {
+    const selectedEntry = match.anilistMatches.find(
+      (m) => m.manga?.id === match.selectedMatch?.id,
+    );
+    return selectedEntry?.confidence ?? 0;
+  }
+  return match.anilistMatches?.length
+    ? (match.anilistMatches[0].confidence ?? 0)
+    : 0;
+}
+
+/**
+ * Checks if a manga match passes the confidence filter.
+ * @param confidence - The match confidence score
+ * @param confidenceRange - The acceptable confidence range
+ * @returns True if match passes the filter
+ */
+function passesConfidenceFilter(
+  confidence: number,
+  confidenceRange: { min: number; max: number },
+): boolean {
+  return confidence >= confidenceRange.min && confidence <= confidenceRange.max;
+}
+
+/**
+ * Checks if a manga match passes the format filter.
+ * @param matchData - The manga data to check
+ * @param formats - Array of acceptable formats
+ * @returns True if match passes the filter
+ */
+function passesFormatFilter(
+  matchData: AniListManga | undefined,
+  formats: string[],
+): boolean {
+  if (formats.length === 0) return true;
+  return !!(matchData?.format && formats.includes(matchData.format));
+}
+
+/**
+ * Checks if a manga match passes the genre filter.
+ * @param matchData - The manga data to check
+ * @param genres - Array of acceptable genres
+ * @returns True if match passes the filter
+ */
+function passesGenreFilter(
+  matchData: AniListManga | undefined,
+  genres: string[],
+): boolean {
+  if (genres.length === 0) return true;
+  const matchGenres = matchData?.genres || [];
+  const genresLower = new Set(matchGenres.map((g: string) => g.toLowerCase()));
+  return genres.some((filterGenre) =>
+    genresLower.has(filterGenre.toLowerCase()),
+  );
+}
+
+/**
+ * Checks if a manga match passes the publication status filter.
+ * @param matchData - The manga data to check
+ * @param statuses - Array of acceptable statuses
+ * @returns True if match passes the filter
+ */
+function passesStatusFilter(
+  matchData: AniListManga | undefined,
+  statuses: string[],
+): boolean {
+  if (statuses.length === 0) return true;
+  return !!(matchData?.status && statuses.includes(matchData.status));
+}
+
+/**
+ * Checks if a manga match passes the year range filter.
+ * @param matchData - The manga data to check
+ * @param yearRange - The acceptable year range
+ * @returns True if match passes the filter
+ */
+function passesYearFilter(
+  matchData: AniListManga | undefined,
+  yearRange: { min: number | null; max: number | null } | undefined,
+): boolean {
+  if (!yearRange || (yearRange.min === null && yearRange.max === null)) {
+    return true;
+  }
+
+  const year = matchData?.startDate?.year;
+  if (!year) return false;
+
+  if (yearRange.min !== null && year < yearRange.min) return false;
+  if (yearRange.max !== null && year > yearRange.max) return false;
+
+  return true;
+}
+
+/**
+ * Checks if a manga match passes the tags filter.
+ * @param matchData - The manga data to check
+ * @param tags - Array of acceptable tags
+ * @returns True if match passes the filter
+ */
+function passesTagFilter(
+  matchData: AniListManga | undefined,
+  tags: string[] | undefined,
+): boolean {
+  if (!tags || tags.length === 0) return true;
+  const matchTags = matchData?.tags || [];
+  const tagNamesLower = new Set(
+    matchTags.map((t: { name: string }) => t.name.toLowerCase()),
+  );
+  return tags.some((filterTag) => tagNamesLower.has(filterTag.toLowerCase()));
+}
+
+/**
  * Filter manga matches by advanced criteria (confidence, format, genres, publication status).
  * @param matches - Array of manga match results to filter.
  * @param filters - Advanced filter options to apply.
@@ -194,92 +315,20 @@ export function filterByAdvancedCriteria(
     // Get the match data (prefer selectedMatch, fallback to first anilistMatch)
     const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
 
-    // Compute confidence: use selectedMatch if available, else highest from alternatives, else 0
-    let confidence = 0;
-    if (match.selectedMatch && match.anilistMatches) {
-      const selectedEntry = match.anilistMatches.find(
-        (m) => m.manga?.id === match.selectedMatch?.id,
-      );
-      confidence = selectedEntry?.confidence ?? 0;
-    } else if (match.anilistMatches?.length) {
-      confidence = match.anilistMatches[0].confidence ?? 0;
-    }
-
-    // Filter by confidence
-    if (
-      confidence < filters.confidence.min ||
-      confidence > filters.confidence.max
-    ) {
+    // Compute and check confidence
+    const confidence = computeMatchConfidence(match);
+    if (!passesConfidenceFilter(confidence, filters.confidence)) {
       return false;
     }
 
-    // Filter by format: if no matchData and filters require formats, reject
-    if (filters.formats.length > 0) {
-      if (!matchData?.format || !filters.formats.includes(matchData.format)) {
-        return false;
-      }
-    }
-
-    // Filter by genres (match if ANY selected genre is present): if no data and filters require genres, reject
-    if (filters.genres.length > 0) {
-      const genres = matchData?.genres || [];
-      const genresLower = new Set(genres.map((g) => g.toLowerCase()));
-      const hasMatchingGenre = filters.genres.some((filterGenre) =>
-        genresLower.has(filterGenre.toLowerCase()),
-      );
-      if (!hasMatchingGenre) {
-        return false;
-      }
-    }
-
-    // Filter by publication status: if no data and filters require status, reject
-    if (filters.publicationStatuses.length > 0) {
-      if (
-        !matchData?.status ||
-        !filters.publicationStatuses.includes(matchData.status)
-      ) {
-        return false;
-      }
-    }
-
-    // Filter by year range
-    if (
-      filters.yearRange &&
-      (filters.yearRange.min !== null || filters.yearRange.max !== null)
-    ) {
-      const year = matchData?.startDate?.year;
-
-      // If year filter is active but no year data, exclude
-      if (!year) {
-        return false;
-      }
-
-      // Check min year
-      if (filters.yearRange.min !== null && year < filters.yearRange.min) {
-        return false;
-      }
-
-      // Check max year
-      if (filters.yearRange.max !== null && year > filters.yearRange.max) {
-        return false;
-      }
-    }
-
-    // Filter by tags (match if ANY selected tag is present)
-    if (filters.tags && filters.tags.length > 0) {
-      const tags = matchData?.tags || [];
-      const tagNamesLower = new Set(tags.map((t) => t.name.toLowerCase()));
-      const hasMatchingTag = filters.tags.some((filterTag) =>
-        tagNamesLower.has(filterTag.toLowerCase()),
-      );
-
-      // If tag filter is active but no matching tags, exclude
-      if (!hasMatchingTag) {
-        return false;
-      }
-    }
-
-    return true;
+    // Check all filters
+    return (
+      passesFormatFilter(matchData, filters.formats) &&
+      passesGenreFilter(matchData, filters.genres) &&
+      passesStatusFilter(matchData, filters.publicationStatuses) &&
+      passesYearFilter(matchData, filters.yearRange) &&
+      passesTagFilter(matchData, filters.tags)
+    );
   });
 }
 

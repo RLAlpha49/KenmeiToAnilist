@@ -72,15 +72,13 @@ export function MatchingSettingsSection({
       icon: ShieldBan,
       iconWrapperClass:
         "bg-rose-500/15 text-rose-600 shadow-inner shadow-rose-500/20 dark:bg-rose-500/15 dark:text-rose-200",
-      accentBarClass:
-        "from-rose-400/80 via-rose-500/70 to-rose-400/80",
+      accentBarClass: "from-rose-400/80 via-rose-500/70 to-rose-400/80",
     },
     "matching-blur-adult": {
       icon: EyeOff,
       iconWrapperClass:
         "bg-purple-500/15 text-purple-600 shadow-inner shadow-purple-500/20 dark:bg-purple-500/15 dark:text-purple-200",
-      accentBarClass:
-        "from-purple-400/80 via-purple-500/70 to-purple-400/80",
+      accentBarClass: "from-purple-400/80 via-purple-500/70 to-purple-400/80",
     },
     "matching-mangadex": {
       icon: Compass,
@@ -92,15 +90,13 @@ export function MatchingSettingsSection({
       icon: Globe2,
       iconWrapperClass:
         "bg-amber-500/15 text-amber-600 shadow-inner shadow-amber-500/20 dark:bg-amber-500/15 dark:text-amber-200",
-      accentBarClass:
-        "from-amber-400/80 via-amber-500/70 to-amber-400/80",
+      accentBarClass: "from-amber-400/80 via-amber-500/70 to-amber-400/80",
     },
     "matching-custom-rules": {
       icon: Wand2,
       iconWrapperClass:
         "bg-indigo-500/15 text-indigo-600 shadow-inner shadow-indigo-500/20 dark:bg-indigo-500/15 dark:text-indigo-200",
-      accentBarClass:
-        "from-indigo-400/80 via-blue-500/70 to-sky-400/80",
+      accentBarClass: "from-indigo-400/80 via-blue-500/70 to-sky-400/80",
     },
   };
 
@@ -131,7 +127,7 @@ export function MatchingSettingsSection({
         <span
           aria-hidden="true"
           className={cn(
-            "pointer-events-none absolute inset-x-0 top-0 h-1 bg-linear-to-r opacity-80",
+            "bg-linear-to-r pointer-events-none absolute inset-x-0 top-0 h-1 opacity-80",
             opts.accentBarClass,
           )}
         />

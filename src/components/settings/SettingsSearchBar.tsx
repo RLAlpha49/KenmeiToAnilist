@@ -44,6 +44,15 @@ interface SettingsSearchBarProps {
  * @returns The rendered search bar.
  * @source
  */
+/**
+ * Formats the search results count display text based on the count.
+ * @param count - Number of results found
+ * @returns Formatted string for display
+ */
+function formatResultsCountText(count: number): string {
+  return `${count} ${count === 1 ? "match" : "matches"}`;
+}
+
 export function SettingsSearchBar({
   searchQuery,
   searchResults,
@@ -105,15 +114,24 @@ export function SettingsSearchBar({
               )}
             >
               {resultsCount > 0
-                ? `${resultsCount} ${resultsCount === 1 ? "match" : "matches"}`
+                ? formatResultsCountText(resultsCount)
                 : "No results"}
             </span>
           ) : (
             <div className="flex flex-wrap items-center gap-2">
               {[
-                ["Matching", "bg-purple-100 text-purple-700 dark:bg-purple-400/20 dark:text-purple-200"],
-                ["Sync", "bg-blue-100 text-blue-700 dark:bg-blue-400/20 dark:text-blue-200"],
-                ["Data", "bg-slate-200 text-slate-700 dark:bg-slate-700/40 dark:text-slate-200"],
+                [
+                  "Matching",
+                  "bg-purple-100 text-purple-700 dark:bg-purple-400/20 dark:text-purple-200",
+                ],
+                [
+                  "Sync",
+                  "bg-blue-100 text-blue-700 dark:bg-blue-400/20 dark:text-blue-200",
+                ],
+                [
+                  "Data",
+                  "bg-slate-200 text-slate-700 dark:bg-slate-700/40 dark:text-slate-200",
+                ],
               ].map(([label, tone]) => (
                 <Badge
                   key={label}
@@ -132,7 +150,8 @@ export function SettingsSearchBar({
 
         {hasQuery && resultsCount === 0 && (
           <p className="rounded-2xl border border-rose-200/40 bg-rose-100/40 px-3 py-2 text-xs text-rose-700 dark:border-rose-300/30 dark:bg-rose-400/10 dark:text-rose-200">
-            No settings match that search. Try a different phrase or browse the sections below.
+            No settings match that search. Try a different phrase or browse the
+            sections below.
           </p>
         )}
       </div>

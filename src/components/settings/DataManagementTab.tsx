@@ -290,7 +290,8 @@ export function DataManagementTab({
     });
   };
 
-  const selectedCacheCount = Object.values(cachesToClear).filter(Boolean).length;
+  const selectedCacheCount =
+    Object.values(cachesToClear).filter(Boolean).length;
 
   const cacheStatusLabel = getCacheStatusLabel(
     isClearing,
@@ -399,7 +400,7 @@ export function DataManagementTab({
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, delay: 0.1 }}
-        className="relative overflow-hidden rounded-3xl border border-cyan-500/20 bg-linear-to-br from-cyan-500/12 via-cyan-500/5 to-transparent p-6 shadow-[0_35px_110px_-70px_rgba(10,54,79,0.45)] dark:border-cyan-500/25 dark:from-cyan-500/20 dark:via-slate-950/70 dark:to-slate-950/40"
+        className="bg-linear-to-br from-cyan-500/12 relative overflow-hidden rounded-3xl border border-cyan-500/20 via-cyan-500/5 to-transparent p-6 shadow-[0_35px_110px_-70px_rgba(10,54,79,0.45)] dark:border-cyan-500/25 dark:from-cyan-500/20 dark:via-slate-950/70 dark:to-slate-950/40"
       >
         <div className="absolute -left-24 -top-24 h-48 w-48 rounded-full bg-cyan-500/10 blur-3xl" />
         <div className="relative flex items-start gap-4">
@@ -432,7 +433,7 @@ export function DataManagementTab({
             <span
               aria-hidden="true"
               className={cn(
-                "pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-linear-to-r opacity-90",
+                "bg-linear-to-r pointer-events-none absolute inset-x-0 top-0 h-0.5 opacity-90",
                 stat.accentClass,
               )}
             />
@@ -450,7 +451,9 @@ export function DataManagementTab({
                   {stat.title}
                 </p>
                 {stat.badge ? (
-                  <span className={stat.badge.className}>{stat.badge.label}</span>
+                  <span className={stat.badge.className}>
+                    {stat.badge.label}
+                  </span>
                 ) : null}
               </div>
               <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">

@@ -5,10 +5,7 @@
 
 import type { MangaSearchResponse, SearchServiceConfig } from "./types";
 import type { KenmeiManga } from "@/api/kenmei/types";
-import type {
-  ComickSourceMap,
-  MangaDexSourceMap,
-} from "../sources/types";
+import type { ComickSourceMap, MangaDexSourceMap } from "../sources/types";
 import type { AniListManga } from "@/api/anilist/types";
 import { DEFAULT_SEARCH_CONFIG } from "./types";
 import { handleCacheBypass, processCachedResults } from "./cache-handlers";
@@ -126,7 +123,11 @@ async function handleFallbackSources(
     console.debug(
       `[MangaSearchService] ✅ Found ${filteredResults.length} AniList results for "${title}", skipping fallback sources`,
     );
-    return { finalResults: filteredResults, comickSourceMap, mangaDexSourceMap };
+    return {
+      finalResults: filteredResults,
+      comickSourceMap,
+      mangaDexSourceMap,
+    };
   }
 
   console.info(
@@ -260,12 +261,7 @@ export async function searchMangaByTitle(
 
   // Handle fallback sources
   const { finalResults, comickSourceMap, mangaDexSourceMap } =
-    await handleFallbackSources(
-      filteredResults,
-      title,
-      token,
-      searchConfig,
-    );
+    await handleFallbackSources(filteredResults, title, token, searchConfig);
 
   // Build and return final response
   return buildFinalResponse(

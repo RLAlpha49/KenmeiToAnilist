@@ -81,7 +81,7 @@ export function SyncSettingsTab({
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, delay: 0.08 }}
-        className="relative overflow-hidden rounded-3xl border border-sky-500/20 bg-linear-to-br from-sky-500/12 via-sky-500/5 to-transparent p-6 shadow-[0_35px_110px_-70px_rgba(12,48,94,0.45)] dark:border-sky-500/25 dark:from-sky-500/20 dark:via-slate-950/70 dark:to-slate-950/40"
+        className="bg-linear-to-br from-sky-500/12 relative overflow-hidden rounded-3xl border border-sky-500/20 via-sky-500/5 to-transparent p-6 shadow-[0_35px_110px_-70px_rgba(12,48,94,0.45)] dark:border-sky-500/25 dark:from-sky-500/20 dark:via-slate-950/70 dark:to-slate-950/40"
       >
         <div className="absolute -right-24 -top-24 h-48 w-48 rounded-full bg-sky-500/10 blur-3xl" />
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -120,8 +120,8 @@ export function SyncSettingsTab({
                 Rate limiting & pauses
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Configure auto-pause behaviour to respect AniList limits and your
-                comfort thresholds.
+                Configure auto-pause behaviour to respect AniList limits and
+                your comfort thresholds.
               </p>
             </div>
             <SyncAutoPauseSection

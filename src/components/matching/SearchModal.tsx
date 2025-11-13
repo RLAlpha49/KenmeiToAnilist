@@ -3,7 +3,7 @@
  * @module SearchModal
  * @description React component for displaying a modal to search and select AniList manga matches for a given Kenmei manga.
  */
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { KenmeiManga } from "../../api/kenmei/types";
 import { AniListManga } from "../../api/anilist/types";
 import { MangaSearchPanel } from "./MangaSearchPanel";
@@ -44,6 +44,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   onClose,
   onSelectMatch,
 }) => {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
   useEffect(() => {
     if (!isOpen) {
       return;
@@ -97,9 +99,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Tab") {
         // Get modal container and find focusable elements within it
-        const modalContainer = document.querySelector(
-          '[role="dialog"][aria-modal="true"]',
-        ) as HTMLElement;
+        const modalContainer = dialogRef.current;
         if (!modalContainer) return;
 
         // Only handle Tab if active element is within this modal
@@ -152,9 +152,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({
             transition={{ duration: 0.2 }}
           ></motion.div>
 
-          <motion.div
-            role="dialog"
-            aria-modal="true"
+          <motion.dialog
+            ref={dialogRef}
             aria-labelledby="search-modal-title"
             aria-describedby="search-description"
             className="rounded-4xl bg-linear-to-br relative z-50 m-4 max-h-[85vh] w-full max-w-6xl overflow-visible border border-white/15 from-blue-400/25 via-white/15 to-purple-500/20 p-[1.5px] shadow-[0_40px_160px_-60px_rgba(30,64,175,0.7)] backdrop-blur-2xl dark:border-slate-700/40"
@@ -182,7 +181,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                 bypassCache={bypassCache}
               />
             </div>
-          </motion.div>
+          </motion.dialog>
         </div>
       )}
     </AnimatePresence>,

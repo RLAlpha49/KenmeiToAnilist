@@ -1,5 +1,5 @@
 ---
-mode: agent
+agent: agent
 description: Refactor a component into separate, single-responsibility files while maintaining all functionality and its public API.
 ---
 

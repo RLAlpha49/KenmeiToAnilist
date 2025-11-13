@@ -93,7 +93,7 @@ export function SettingsSectionShell({
             >
               <CardHeader
                 className={cn(
-                  "relative overflow-hidden border-b border-white/40 px-6 py-6 dark:border-white/10 sm:px-8",
+                  "relative overflow-hidden border-b border-white/40 px-6 py-6 sm:px-8 dark:border-white/10",
                   "bg-linear-to-r",
                   accent,
                 )}
@@ -127,7 +127,7 @@ export function SettingsSectionShell({
           <CollapsibleContent id={id ? `content-${id}` : undefined}>
             <CardContent
               className={cn(
-                "px-6 py-6 text-slate-700 dark:text-slate-200 sm:px-8",
+                "px-6 py-6 text-slate-700 sm:px-8 dark:text-slate-200",
                 contentClassName,
               )}
             >
@@ -139,7 +139,7 @@ export function SettingsSectionShell({
         <>
           <CardHeader
             className={cn(
-              "relative overflow-hidden border-b border-white/40 px-6 py-6 dark:border-white/10 sm:px-8",
+              "relative overflow-hidden border-b border-white/40 px-6 py-6 sm:px-8 dark:border-white/10",
               "bg-linear-to-r",
               accent,
             )}
@@ -164,7 +164,7 @@ export function SettingsSectionShell({
           </CardHeader>
           <CardContent
             className={cn(
-              "px-6 py-6 text-slate-700 dark:text-slate-200 sm:px-8",
+              "px-6 py-6 text-slate-700 sm:px-8 dark:text-slate-200",
               contentClassName,
             )}
           >

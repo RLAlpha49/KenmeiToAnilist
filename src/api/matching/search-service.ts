@@ -50,7 +50,8 @@ function isRateLimitError(
 
   const errorObj = error as Record<string, unknown>;
 
-  const hasRateLimitFlag = "isRateLimited" in errorObj && errorObj.isRateLimited === true;
+  const hasRateLimitFlag =
+    "isRateLimited" in errorObj && errorObj.isRateLimited === true;
   const hasStatus429 = "status" in errorObj && errorObj.status === 429;
 
   return hasRateLimitFlag || hasStatus429;
@@ -98,9 +99,7 @@ async function waitForRateLimitClear(
       throw new CancelledError("Operation aborted during rate limit wait");
     }
     // Check if rate limit has been cleared via global state
-    if (
-      globalThis.matchingProcessState?.wasRateLimitPaused === false
-    ) {
+    if (globalThis.matchingProcessState?.wasRateLimitPaused === false) {
       console.info(
         "[MangaSearchService] 🟢 Rate limit cleared, retrying batch processing",
       );

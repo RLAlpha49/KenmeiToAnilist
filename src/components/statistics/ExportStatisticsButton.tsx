@@ -272,6 +272,184 @@ export function ExportStatisticsButton({
     return rows;
   }, [importStats, syncStats, sections, matchResults]);
 
+  /**
+   * Handles JSON export format.
+   * @returns Promise that resolves when export is complete
+   */
+  const handleJsonExport = useCallback(async (): Promise<void> => {
+    const payload = buildJsonPayload();
+    const file = await exportToJson(payload, "statistics");
+    toast.success(`Statistics exported to ${file}`);
+    setOpen(false);
+  }, [buildJsonPayload]);
+
+  /**
+   * Builds metadata comments for CSV export including filters and comparison mode.
+   * @param baseMetadata - Base export metadata
+   * @param sectionArray - Array of export section names
+   * @returns Array of comment rows with metadata
+   */
+  const buildCsvMetadataComments = useCallback(
+    (
+      baseMetadata: Record<string, unknown>,
+      sectionArray: string[],
+    ): Array<Record<string, unknown>> => {
+      const baseComments: Array<Record<string, unknown>> = [
+        {
+          comment: `Exported: ${baseMetadata.exportedAt ?? new Date().toISOString()}`,
+        },
+        { comment: `App Version: v${baseMetadata.appVersion ?? "unknown"}` },
+        { comment: `Sections: ${sectionArray.join(", ")}` },
+      ];
+
+      const filterComments: Array<Record<string, unknown>> = appliedFilters
+        ? [
+            { comment: "" },
+            { comment: "Filters Applied:" },
+            {
+              comment:
+                appliedFilters.genres.length > 0
+                  ? `  Genres: ${appliedFilters.genres.join(", ")}`
+                  : "  Genres: None",
+            },
+            {
+              comment:
+                appliedFilters.formats.length > 0
+                  ? `  Formats: ${appliedFilters.formats.join(", ")}`
+                  : "  Formats: None",
+            },
+            {
+              comment:
+                appliedFilters.statuses.length > 0
+                  ? `  Statuses: ${appliedFilters.statuses.join(", ")}`
+                  : "  Statuses: None",
+            },
+            {
+              comment:
+                appliedFilters.dateRange.start || appliedFilters.dateRange.end
+                  ? `  Date Range: ${appliedFilters.dateRange.start?.toISOString().split("T")[0] ?? "N/A"} to ${appliedFilters.dateRange.end?.toISOString().split("T")[0] ?? "N/A"}`
+                  : "  Date Range: None",
+            },
+            {
+              comment: `  Confidence: ${appliedFilters.confidenceRange.min} - ${appliedFilters.confidenceRange.max}`,
+            },
+          ]
+        : [];
+
+      const comparisonComments: Array<Record<string, unknown>> =
+        comparisonMode?.enabled
+          ? [
+              { comment: "" },
+              { comment: "Comparison Mode:" },
+              { comment: `  Primary Range: ${comparisonMode.primaryRange}` },
+              {
+                comment: `  Secondary Range: ${comparisonMode.secondaryRange}`,
+              },
+              { comment: `  Metric: ${comparisonMode.metric}` },
+            ]
+          : [];
+
+      return [
+        ...baseComments,
+        ...filterComments,
+        ...comparisonComments,
+        { comment: "" },
+      ];
+    },
+    [appliedFilters, comparisonMode],
+  );
+
+  /**
+   * Handles CSV export format.
+   * @param sectionArray - Array of export section names
+   * @returns Promise that resolves when export is complete
+   */
+  const handleCsvExport = useCallback(
+    async (sectionArray: string[]): Promise<void> => {
+      const rows = buildTabularRows();
+
+      if (rows.length === 0) {
+        toast.error("No data available for the selected export format");
+        return;
+      }
+
+      const baseMetadata = buildExportMetadata(
+        "csv",
+        matchResults.length,
+        undefined,
+        sectionArray,
+      );
+
+      const metadataComments = buildCsvMetadataComments(
+        baseMetadata as unknown as Record<string, unknown>,
+        sectionArray,
+      );
+      const withMetadata = [...metadataComments, ...rows];
+
+      const tabularData = withMetadata as unknown as Record<string, unknown>[];
+      const file = await exportToCSV(tabularData, "statistics");
+
+      toast.success(`Statistics exported to ${file}`);
+      setOpen(false);
+    },
+    [buildTabularRows, matchResults.length, buildCsvMetadataComments],
+  );
+
+  /**
+   * Handles Markdown export format.
+   * @param sectionArray - Array of export section names
+   * @param totalEntries - Total number of entries being exported
+   * @returns Promise that resolves when export is complete
+   */
+  const handleMarkdownExport = useCallback(
+    async (sectionArray: string[], totalEntries: number): Promise<void> => {
+      const baseMetadata = buildExportMetadata(
+        "markdown",
+        totalEntries,
+        undefined,
+        sectionArray,
+      );
+
+      const markdownData: Record<string, unknown> = {};
+
+      if (appliedFilters) {
+        markdownData.appliedFilters = appliedFilters;
+      }
+      if (comparisonMode?.enabled) {
+        markdownData.comparisonMode = comparisonMode;
+      }
+      if (isFiltered) {
+        markdownData.isFiltered = true;
+      }
+
+      if (sections.has("import") && importStats) {
+        markdownData.importStats = importStats;
+      }
+
+      if (sections.has("sync") && syncStats) {
+        markdownData.syncStats = syncStats;
+      }
+
+      if (sections.has("matches") && matchResults.length > 0) {
+        const flattened = matchResults.map(flattenMatchResult);
+        markdownData.matchResults = flattened;
+      }
+
+      const file = exportToMarkdown(markdownData, "statistics", baseMetadata);
+      toast.success(`Statistics exported to ${file}`);
+      setOpen(false);
+    },
+    [
+      sections,
+      appliedFilters,
+      comparisonMode,
+      isFiltered,
+      importStats,
+      syncStats,
+      matchResults,
+    ],
+  );
+
   const handleExport = useCallback(async () => {
     if (sections.size === 0) {
       toast.error("Select at least one dataset to export");
@@ -283,133 +461,16 @@ export function ExportStatisticsButton({
       const totalEntries = matchResults.length;
 
       if (format === "json") {
-        const payload = buildJsonPayload();
-        const file = await exportToJson(payload, "statistics");
-        toast.success(`Statistics exported to ${file}`);
-        setOpen(false);
+        await handleJsonExport();
         return;
       }
 
       if (format === "markdown") {
-        const baseMetadata = buildExportMetadata(
-          "markdown",
-          totalEntries,
-          undefined,
-          sectionArray,
-        );
-
-        // Build structured data for markdown sections
-        const markdownData: Record<string, unknown> = {};
-
-        // Include enriched metadata in the data structure for consumer reference
-        if (appliedFilters) {
-          markdownData.appliedFilters = appliedFilters;
-        }
-        if (comparisonMode?.enabled) {
-          markdownData.comparisonMode = comparisonMode;
-        }
-        if (isFiltered) {
-          markdownData.isFiltered = true;
-        }
-
-        if (sections.has("import") && importStats) {
-          markdownData.importStats = importStats;
-        }
-
-        if (sections.has("sync") && syncStats) {
-          markdownData.syncStats = syncStats;
-        }
-
-        if (sections.has("matches") && matchResults.length > 0) {
-          const flattened = matchResults.map(flattenMatchResult);
-          markdownData.matchResults = flattened;
-        }
-
-        const file = exportToMarkdown(markdownData, "statistics", baseMetadata);
-        toast.success(`Statistics exported to ${file}`);
-        setOpen(false);
+        await handleMarkdownExport(sectionArray, totalEntries);
         return;
       }
 
-      const rows = buildTabularRows();
-
-      if (rows.length === 0) {
-        toast.error("No data available for the selected export format");
-        return;
-      }
-
-      // Add metadata to CSV
-      const baseMetadata = buildExportMetadata(
-        "csv",
-        totalEntries,
-        undefined,
-        sectionArray,
-      );
-
-      const enrichedMetadata = {
-        ...baseMetadata,
-        ...(appliedFilters && { filters: appliedFilters }),
-        ...(comparisonMode?.enabled && { comparison: comparisonMode }),
-        ...(isFiltered && { isFiltered: true }),
-      };
-
-      const withMetadata = [
-        { comment: `Exported: ${enrichedMetadata.exportedAt}` },
-        { comment: `App Version: v${enrichedMetadata.appVersion}` },
-        { comment: `Sections: ${sectionArray.join(", ")}` },
-        ...(appliedFilters
-          ? [
-              { comment: "" },
-              { comment: "Filters Applied:" },
-              {
-                comment:
-                  appliedFilters.genres.length > 0
-                    ? `  Genres: ${appliedFilters.genres.join(", ")}`
-                    : "  Genres: None",
-              },
-              {
-                comment:
-                  appliedFilters.formats.length > 0
-                    ? `  Formats: ${appliedFilters.formats.join(", ")}`
-                    : "  Formats: None",
-              },
-              {
-                comment:
-                  appliedFilters.statuses.length > 0
-                    ? `  Statuses: ${appliedFilters.statuses.join(", ")}`
-                    : "  Statuses: None",
-              },
-              {
-                comment:
-                  appliedFilters.dateRange.start || appliedFilters.dateRange.end
-                    ? `  Date Range: ${appliedFilters.dateRange.start?.toISOString().split("T")[0] ?? "N/A"} to ${appliedFilters.dateRange.end?.toISOString().split("T")[0] ?? "N/A"}`
-                    : "  Date Range: None",
-              },
-              {
-                comment: `  Confidence: ${appliedFilters.confidenceRange.min} - ${appliedFilters.confidenceRange.max}`,
-              },
-            ]
-          : []),
-        ...(comparisonMode?.enabled
-          ? [
-              { comment: "" },
-              { comment: "Comparison Mode:" },
-              { comment: `  Primary Range: ${comparisonMode.primaryRange}` },
-              {
-                comment: `  Secondary Range: ${comparisonMode.secondaryRange}`,
-              },
-              { comment: `  Metric: ${comparisonMode.metric}` },
-            ]
-          : []),
-        { comment: "" },
-        ...rows,
-      ];
-
-      const tabularData = withMetadata as unknown as Record<string, unknown>[];
-      const file = await exportToCSV(tabularData, "statistics");
-
-      toast.success(`Statistics exported to ${file}`);
-      setOpen(false);
+      await handleCsvExport(sectionArray);
     } catch (error) {
       console.error("[ExportStatistics] ❌ Export failed", error);
       toast.error("Failed to export statistics");
@@ -417,11 +478,10 @@ export function ExportStatisticsButton({
   }, [
     sections,
     format,
-    buildJsonPayload,
-    buildTabularRows,
     matchResults,
-    importStats,
-    syncStats,
+    handleJsonExport,
+    handleMarkdownExport,
+    handleCsvExport,
   ]);
 
   return (

@@ -5,7 +5,7 @@
  * Handles progress tracking, error recovery, incremental sync strategy, rate limit handling, and session resumption.
  */
 
-// FIXME: Progress count display for incremental updates - currently marks as complete upfront causing incorrect display (e.g., 3/20 at start instead of 0/20). Should complete incremental updates at the end of the sync process. This is not a problem with actually updating entries but with how the progress of how many entries have been updated is displayed.
+// Progress count display for incremental updates - currently marks as complete upfront causing incorrect display (e.g., 3/20 at start instead of 0/20). Should complete incremental updates at the end of the sync process. This is not a problem with actually updating entries but with how the progress of how many entries have been updated is displayed.
 
 import React, { useEffect, useMemo, useState } from "react";
 import { SyncProgress, SyncReport } from "../../api/anilist/sync-service";
@@ -39,6 +39,16 @@ import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
 import { useRateLimit } from "../../contexts/RateLimitContext";
+
+/**
+ * Type alias for error recovery action types.
+ * Represents the different actions that can be taken to recover from sync errors.
+ */
+type RecoveryActionType =
+  | "retry"
+  | "refresh-token"
+  | "check-connection"
+  | "wait";
 
 /**
  * Displays current synchronization progress with percentage, entry count, and status message.
@@ -501,7 +511,7 @@ const ErrorDetails: React.FC<{
   const mapRecoveryActionToType = (
     action: ErrorRecoveryAction,
   ): {
-    actionType: "retry" | "refresh-token" | "check-connection" | "wait";
+    actionType: RecoveryActionType;
     label: string;
   } => {
     switch (action) {
@@ -529,7 +539,7 @@ const ErrorDetails: React.FC<{
     errorMessage: string,
   ): {
     recoveryAction: ErrorRecoveryAction;
-    actionType: "retry" | "refresh-token" | "check-connection" | "wait";
+    actionType: RecoveryActionType;
     label: string;
   } => {
     const lowerError = errorMessage.toLowerCase();
@@ -582,7 +592,7 @@ const ErrorDetails: React.FC<{
   };
 
   const handleActionClick = async (
-    actionType: "retry" | "refresh-token" | "check-connection" | "wait",
+    actionType: RecoveryActionType,
     mediaId: number,
   ) => {
     try {

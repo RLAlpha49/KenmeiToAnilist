@@ -207,6 +207,36 @@ export function MangaMatchingPanel({
   );
 
   /**
+   * Clears the loading state for specified match IDs after a visual delay.
+   * @param ids - Array of match IDs to clear from updating state
+   */
+  const clearLoadingStateAfterDelay = (ids: number[]): void => {
+    setTimeout(() => {
+      setUpdatingMatchIds((prev) => {
+        const newSet = new Set(prev);
+        for (const id of ids) {
+          newSet.delete(id);
+        }
+        return newSet;
+      });
+    }, 500);
+  };
+
+  /**
+   * Adds match IDs to the updating state set.
+   * @param ids - Array of match IDs to mark as updating
+   */
+  const addToUpdatingSet = (ids: number[]): void => {
+    setUpdatingMatchIds((prev) => {
+      const newSet = new Set(prev);
+      for (const id of ids) {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  /**
    * Wraps a handler callback to show/hide loading state for a specific match.
    * Provides visual feedback during optimistic updates and background persistence.
    *
@@ -227,13 +257,7 @@ export function MangaMatchingPanel({
         const ids = Array.isArray(matchIds) ? matchIds : [matchIds];
 
         // Add to updating set
-        setUpdatingMatchIds((prev) => {
-          const newSet = new Set(prev);
-          for (const id of ids) {
-            newSet.add(id);
-          }
-          return newSet;
-        });
+        addToUpdatingSet(ids);
 
         // Call the original handler
         const result = handler(arg);
@@ -241,28 +265,10 @@ export function MangaMatchingPanel({
         // If it's a promise, wait for it; otherwise, clear loading state after a brief delay
         if (result instanceof Promise) {
           result.finally(() => {
-            // Clear after brief delay for visual feedback
-            setTimeout(() => {
-              setUpdatingMatchIds((prev) => {
-                const newSet = new Set(prev);
-                for (const id of ids) {
-                  newSet.delete(id);
-                }
-                return newSet;
-              });
-            }, 500);
+            clearLoadingStateAfterDelay(ids);
           });
         } else {
-          // Clear loading state after a brief delay for visual feedback
-          setTimeout(() => {
-            setUpdatingMatchIds((prev) => {
-              const newSet = new Set(prev);
-              for (const id of ids) {
-                newSet.delete(id);
-              }
-              return newSet;
-            });
-          }, 500);
+          clearLoadingStateAfterDelay(ids);
         }
       };
     },

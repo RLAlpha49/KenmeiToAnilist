@@ -80,7 +80,9 @@ export function ConfidenceTestModal({
         try {
           textArea.focus();
           textArea.select();
-          const successful = document.execCommand("copy");
+          const successful = (
+            document as { execCommand(command: string): boolean }
+          ).execCommand("copy");
           if (!successful) {
             throw new Error("execCommand failed");
           }

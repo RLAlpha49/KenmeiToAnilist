@@ -313,7 +313,9 @@ export function IpcViewer(): React.ReactElement {
         textarea.style.opacity = "0";
         document.body.appendChild(textarea);
         textarea.select();
-        const success = document.execCommand("copy");
+        const success = (
+          document as { execCommand(command: string): boolean }
+        ).execCommand("copy");
         textarea.remove();
 
         if (success) {
