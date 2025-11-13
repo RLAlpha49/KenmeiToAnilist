@@ -673,12 +673,11 @@ export function HomePage() {
                     </Badge>
                     <div className="space-y-4">
                       <h1 className="text-foreground text-4xl font-semibold tracking-tight md:text-5xl lg:text-6xl">
-                        Orchestrate your Kenmei ➝ AniList migration with clarity
+                        Move your library from Kenmei ➝ AniList with ease
                       </h1>
                       <p className="text-muted-foreground text-lg md:max-w-2xl">
                         Follow a guided journey to import, review, and sync your
-                        manga collection. Every step surfaces the context you
-                        need to move forward confidently.
+                        manga collection.
                       </p>
                     </div>
                   </div>
@@ -715,21 +714,23 @@ export function HomePage() {
                         <div
                           key={metric.label}
                           className="group rounded-2xl border border-white/40 bg-white/75 p-4 shadow-sm backdrop-blur-sm transition hover:-translate-y-1 hover:shadow-xl dark:border-white/10 dark:bg-slate-950/70"
-                          role="region"
-                          aria-label={`${metric.label}: ${formatNumber(metric.value)}`}
                         >
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/70 shadow-sm dark:bg-slate-900/75">
-                            <Icon
-                              className={`h-5 w-5 ${metric.accent}`}
-                              aria-hidden="true"
-                            />
-                          </div>
-                          <p className="mt-3 text-2xl font-semibold">
-                            {formatNumber(metric.value)}
-                          </p>
-                          <p className="text-muted-foreground text-sm">
-                            {metric.label}
-                          </p>
+                          <section
+                            aria-label={`${metric.label}: ${formatNumber(metric.value)}`}
+                          >
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/70 shadow-sm dark:bg-slate-900/75">
+                              <Icon
+                                className={`h-5 w-5 ${metric.accent}`}
+                                aria-hidden="true"
+                              />
+                            </div>
+                            <p className="mt-3 text-2xl font-semibold">
+                              {formatNumber(metric.value)}
+                            </p>
+                            <p className="text-muted-foreground text-sm">
+                              {metric.label}
+                            </p>
+                          </section>
                         </div>
                       );
                     })}

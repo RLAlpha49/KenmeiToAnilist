@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const prettierIgnorePath = path.resolve(__dirname, "../.prettierignore");
+const prettierIgnorePath = path.resolve(__dirname, ".prettierignore");
 
 /** @type {import('eslint').Linter.Config[]} */
 export default [

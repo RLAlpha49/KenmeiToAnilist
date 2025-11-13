@@ -6,6 +6,15 @@
 
 import React from "react";
 import { motion } from "framer-motion";
+import type { LucideIcon } from "lucide-react";
+import {
+  Compass,
+  EyeOff,
+  Globe2,
+  ShieldBan,
+  Sparkles,
+  Wand2,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { CustomRulesManager } from "./CustomRulesManager";
@@ -44,6 +53,57 @@ export function MatchingSettingsSection({
   highlightedSectionId,
   onMatchConfigChange,
 }: Readonly<MatchingSettingsSectionProps>) {
+  const sectionVisuals: Record<
+    string,
+    {
+      icon: LucideIcon;
+      iconWrapperClass: string;
+      accentBarClass: string;
+    }
+  > = {
+    "matching-one-shots": {
+      icon: Sparkles,
+      iconWrapperClass:
+        "bg-emerald-500/15 text-emerald-600 shadow-inner shadow-emerald-500/20 dark:bg-emerald-500/15 dark:text-emerald-200",
+      accentBarClass:
+        "from-emerald-400/80 via-emerald-500/70 to-emerald-400/80",
+    },
+    "matching-adult-content": {
+      icon: ShieldBan,
+      iconWrapperClass:
+        "bg-rose-500/15 text-rose-600 shadow-inner shadow-rose-500/20 dark:bg-rose-500/15 dark:text-rose-200",
+      accentBarClass:
+        "from-rose-400/80 via-rose-500/70 to-rose-400/80",
+    },
+    "matching-blur-adult": {
+      icon: EyeOff,
+      iconWrapperClass:
+        "bg-purple-500/15 text-purple-600 shadow-inner shadow-purple-500/20 dark:bg-purple-500/15 dark:text-purple-200",
+      accentBarClass:
+        "from-purple-400/80 via-purple-500/70 to-purple-400/80",
+    },
+    "matching-mangadex": {
+      icon: Compass,
+      iconWrapperClass:
+        "bg-sky-500/15 text-sky-600 shadow-inner shadow-sky-500/20 dark:bg-sky-500/15 dark:text-sky-200",
+      accentBarClass: "from-sky-400/80 via-sky-500/70 to-sky-400/80",
+    },
+    "matching-comick": {
+      icon: Globe2,
+      iconWrapperClass:
+        "bg-amber-500/15 text-amber-600 shadow-inner shadow-amber-500/20 dark:bg-amber-500/15 dark:text-amber-200",
+      accentBarClass:
+        "from-amber-400/80 via-amber-500/70 to-amber-400/80",
+    },
+    "matching-custom-rules": {
+      icon: Wand2,
+      iconWrapperClass:
+        "bg-indigo-500/15 text-indigo-600 shadow-inner shadow-indigo-500/20 dark:bg-indigo-500/15 dark:text-indigo-200",
+      accentBarClass:
+        "from-indigo-400/80 via-blue-500/70 to-sky-400/80",
+    },
+  };
+
   const renderToggleSection = (opts: {
     id: string;
     title: string;
@@ -52,11 +112,14 @@ export function MatchingSettingsSection({
     field?: string;
     disabled?: boolean;
     badge?: string;
+    icon?: LucideIcon;
+    iconWrapperClass?: string;
+    accentBarClass?: string;
   }) => (
     <motion.div
       id={opts.id}
       className={cn(
-        "bg-muted/40 rounded-xl border p-4",
+        "group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-[0_24px_70px_-55px_rgba(15,23,42,0.4)] transition-colors duration-200 hover:border-slate-200 hover:shadow-[0_28px_90px_-60px_rgba(15,23,42,0.45)] dark:border-white/10 dark:bg-slate-950/45 dark:hover:border-white/15",
         highlightedSectionId === opts.id &&
           "ring-2 ring-blue-500 ring-offset-2 ring-offset-white dark:ring-blue-400 dark:ring-offset-slate-950",
       )}
@@ -64,28 +127,51 @@ export function MatchingSettingsSection({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex-1 space-y-1">
-          <div className="flex items-center gap-2">
+      {opts.accentBarClass ? (
+        <span
+          aria-hidden="true"
+          className={cn(
+            "pointer-events-none absolute inset-x-0 top-0 h-1 bg-linear-to-r opacity-80",
+            opts.accentBarClass,
+          )}
+        />
+      ) : null}
+      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-1 items-start gap-4">
+          {opts.icon ? (
+            <div
+              className={cn(
+                "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl",
+                "shadow-inner shadow-black/5 dark:shadow-black/40",
+                opts.iconWrapperClass,
+              )}
+            >
+              <opts.icon className="h-5 w-5" />
+            </div>
+          ) : null}
+          <div className="space-y-1">
             <label
               htmlFor={opts.id}
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              className="text-sm font-semibold leading-tight text-slate-900 dark:text-white"
             >
               {searchQuery
                 ? highlightText(opts.title, searchQuery)
                 : opts.title}
             </label>
-            {opts.badge && (
-              <Badge variant="secondary" className="text-xs">
+            <p className="text-xs text-slate-600 dark:text-slate-300">
+              {searchQuery
+                ? highlightText(opts.description, searchQuery)
+                : opts.description}
+            </p>
+            {opts.badge ? (
+              <Badge
+                variant="secondary"
+                className="mt-1 inline-flex items-center gap-1 rounded-full bg-slate-900/5 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:bg-white/10 dark:text-slate-200"
+              >
                 {opts.badge}
               </Badge>
-            )}
+            ) : null}
           </div>
-          <p className="text-muted-foreground text-xs">
-            {searchQuery
-              ? highlightText(opts.description, searchQuery)
-              : opts.description}
-          </p>
         </div>
         <Switch
           id={opts.id}
@@ -115,6 +201,9 @@ export function MatchingSettingsSection({
       disabled?: boolean;
       badge?: string;
       checked?: boolean;
+      icon?: LucideIcon;
+      iconWrapperClass?: string;
+      accentBarClass?: string;
     }
   > = {
     "matching-one-shots": {
@@ -165,8 +254,9 @@ export function MatchingSettingsSection({
       <motion.div
         id="matching-custom-rules"
         className={cn(
+          "group relative overflow-hidden rounded-lg border border-slate-200/70 bg-white/95 p-0 shadow-[0_28px_90px_-60px_rgba(15,23,42,0.45)] dark:border-white/10 dark:bg-slate-950/45 dark:shadow-[0_40px_110px_-65px_rgba(15,23,42,0.85)]",
           highlightedSectionId === "matching-custom-rules" &&
-            "rounded-xl ring-2 ring-blue-500 ring-offset-2 ring-offset-white dark:ring-blue-400 dark:ring-offset-slate-950",
+            "ring-2 ring-blue-500 ring-offset-2 ring-offset-white dark:ring-blue-400 dark:ring-offset-slate-950",
         )}
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -179,8 +269,8 @@ export function MatchingSettingsSection({
 
   const descriptor = sectionMap[sectionId];
   if (descriptor) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return renderToggleSection(descriptor as any);
+    const visual = sectionVisuals[sectionId];
+    return renderToggleSection({ ...descriptor, ...visual });
   }
 
   return null;

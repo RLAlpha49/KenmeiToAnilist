@@ -13,7 +13,7 @@
     "commitlint": "commitlint --edit",
     "docs": "typedoc --options config/typedoc.json",
     "format:write": "prettier --write .",
-    "lint": "eslint -c config/eslint.config.mjs .",
+    "lint": "eslint -c eslint.config.mjs .",
     "make": "node build.js",
     "typecheck": "tsc --noEmit",
     "make:dev": "cross-env NODE_ENV=development electron-forge make",

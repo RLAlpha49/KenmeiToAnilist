@@ -75,7 +75,33 @@ export function SyncSettingsTab({
       initial="hidden"
       animate="show"
       data-onboarding="sync-settings"
+      className="space-y-8"
     >
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, delay: 0.08 }}
+        className="relative overflow-hidden rounded-3xl border border-sky-500/20 bg-gradient-to-br from-sky-500/12 via-sky-500/5 to-transparent p-6 shadow-[0_35px_110px_-70px_rgba(12,48,94,0.45)] dark:border-sky-500/25 dark:from-sky-500/20 dark:via-slate-950/70 dark:to-slate-950/40"
+      >
+        <div className="absolute -right-24 -top-24 h-48 w-48 rounded-full bg-sky-500/10 blur-3xl" />
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/85 text-sky-600 shadow-md backdrop-blur dark:bg-white/10 dark:text-sky-200">
+              <RefreshCw className="h-5 w-5" />
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+                Sync automation
+              </h2>
+              <p className="max-w-xl text-sm text-slate-600 dark:text-slate-300">
+                Decide how aggressively Kenmei updates your AniList library and
+                what safeguards are enforced during background sync runs.
+              </p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
       <SettingsSectionShell
         id="sync-preferences"
         isCollapsible={true}
@@ -84,34 +110,58 @@ export function SyncSettingsTab({
         icon={RefreshCw}
         title="Sync preferences"
         description="Control how Kenmei data is synchronized to your AniList library."
-        accent="from-purple-500/15 via-blue-500/10 to-transparent"
-        contentClassName="space-y-5"
+        accent="from-sky-500/20 via-blue-500/15 to-transparent"
+        contentClassName="space-y-8"
       >
-        <SyncAutoPauseSection
-          syncConfig={syncConfig}
-          useCustomThreshold={useCustomThreshold}
-          searchQuery={searchQuery}
-          highlightedSectionId={highlightedSectionId}
-          onSyncConfigChange={onSyncConfigChange}
-          onCustomThresholdToggle={onCustomThresholdToggle}
-          setSyncConfig={setSyncConfig}
-        />
+        <div className="space-y-6">
+          <div className="space-y-6">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-sky-600 dark:text-sky-300">
+                Rate limiting & pauses
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Configure auto-pause behaviour to respect AniList limits and your
+                comfort thresholds.
+              </p>
+            </div>
+            <SyncAutoPauseSection
+              syncConfig={syncConfig}
+              useCustomThreshold={useCustomThreshold}
+              searchQuery={searchQuery}
+              highlightedSectionId={highlightedSectionId}
+              onSyncConfigChange={onSyncConfigChange}
+              onCustomThresholdToggle={onCustomThresholdToggle}
+              setSyncConfig={setSyncConfig}
+            />
 
-        <SyncStatusPrioritySection
-          syncConfig={syncConfig}
-          searchQuery={searchQuery}
-          highlightedSectionId={highlightedSectionId}
-          onSyncConfigChange={onSyncConfigChange}
-          setSyncConfig={setSyncConfig}
-        />
+            <SyncStatusPrioritySection
+              syncConfig={syncConfig}
+              searchQuery={searchQuery}
+              highlightedSectionId={highlightedSectionId}
+              onSyncConfigChange={onSyncConfigChange}
+              setSyncConfig={setSyncConfig}
+            />
+          </div>
 
-        <SyncPrivacySection
-          syncConfig={syncConfig}
-          searchQuery={searchQuery}
-          highlightedSectionId={highlightedSectionId}
-          onSyncConfigChange={onSyncConfigChange}
-          setSyncConfig={setSyncConfig}
-        />
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+                Privacy & safeguards
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Guard sensitive information while syncing and choose how
+                visibility is preserved across automated updates.
+              </p>
+            </div>
+            <SyncPrivacySection
+              syncConfig={syncConfig}
+              searchQuery={searchQuery}
+              highlightedSectionId={highlightedSectionId}
+              onSyncConfigChange={onSyncConfigChange}
+              setSyncConfig={setSyncConfig}
+            />
+          </div>
+        </div>
       </SettingsSectionShell>
     </motion.div>
   );

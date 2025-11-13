@@ -702,7 +702,7 @@ function CustomRulesManagerComponent(): React.JSX.Element {
       <CollapsibleTrigger asChild>
         <Button
           variant="outline"
-          className="bg-muted/40 hover:bg-muted/60 w-full justify-between border-2"
+          className="bg-muted/40 hover:bg-muted/60 w-full justify-between border-2 mb-0!"
         >
           <span className="flex items-center gap-2">
             <ShieldAlert className="h-5 w-5 text-amber-500" />
@@ -717,7 +717,7 @@ function CustomRulesManagerComponent(): React.JSX.Element {
         </Button>
       </CollapsibleTrigger>
 
-      <CollapsibleContent className="space-y-4">
+      <CollapsibleContent className="space-y-4 m-6">
         {/* Advanced User Warning */}
         <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950">
           <ShieldAlert className="h-4 w-4 text-amber-600" />

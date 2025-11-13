@@ -101,6 +101,7 @@ export function BackupRestoreSection({
   const [resolvedDefaultBackupLocation, setResolvedDefaultBackupLocation] =
     useState<string>("");
   const [isContextMissing, setIsContextMissing] = useState(false);
+  const [showAllBackups, setShowAllBackups] = useState(false);
   const refreshCooldownRef = useRef<NodeJS.Timeout | null>(null);
 
   // Detect if electronBackup context is missing on mount
@@ -733,55 +734,70 @@ export function BackupRestoreSection({
           </div>
         ) : localBackups.length > 0 ? (
           <div className="space-y-2">
-            {localBackups.map((backup) => (
-              <div
-                key={backup.name}
-                className="hover:bg-muted/60 flex items-center justify-between rounded-md p-3 transition-colors"
-              >
-                <div className="min-w-0 flex-1 space-y-1">
-                  <p className="truncate text-sm font-medium">
-                    {new Date(backup.timestamp).toLocaleString()}
-                  </p>
-                  <div className="flex gap-2">
-                    <Badge variant="outline" className="text-xs">
-                      {(backup.size / 1024 / 1024).toFixed(2)} MB
-                    </Badge>
-                    <span className="text-muted-foreground text-xs">
-                      {backup.name}
-                    </span>
+            {localBackups
+              .slice(0, showAllBackups ? undefined : 2)
+              .map((backup) => (
+                <div
+                  key={backup.name}
+                  className="hover:bg-muted/60 flex items-center justify-between rounded-md p-3 transition-colors"
+                >
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <p className="truncate text-sm font-medium">
+                      {new Date(backup.timestamp).toLocaleString()}
+                    </p>
+                    <div className="flex gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        {(backup.size / 1024 / 1024).toFixed(2)} MB
+                      </Badge>
+                      <span className="text-muted-foreground text-xs">
+                        {backup.name}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="ml-2 flex gap-2">
+                    <Button
+                      onClick={() => handleRestoreFromList(backup)}
+                      disabled={isRestoringFromList === backup.name}
+                      variant="outline"
+                      size="sm"
+                      title="Restore from this backup"
+                    >
+                      {isRestoringFromList === backup.name ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Upload className="h-4 w-4" />
+                      )}
+                    </Button>
+                    <Button
+                      onClick={() => handleDeleteBackup(backup.name)}
+                      disabled={isDeletingBackup === backup.name}
+                      variant="ghost"
+                      size="sm"
+                      className="ml-2"
+                      title="Delete this backup"
+                    >
+                      {isDeletingBackup === backup.name ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </Button>
                   </div>
                 </div>
-                <div className="ml-2 flex gap-2">
-                  <Button
-                    onClick={() => handleRestoreFromList(backup)}
-                    disabled={isRestoringFromList === backup.name}
-                    variant="outline"
-                    size="sm"
-                    title="Restore from this backup"
-                  >
-                    {isRestoringFromList === backup.name ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Upload className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <Button
-                    onClick={() => handleDeleteBackup(backup.name)}
-                    disabled={isDeletingBackup === backup.name}
-                    variant="ghost"
-                    size="sm"
-                    className="ml-2"
-                    title="Delete this backup"
-                  >
-                    {isDeletingBackup === backup.name ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-            ))}
+              ))}
+
+            {localBackups.length > 2 && (
+              <Button
+                onClick={() => setShowAllBackups(!showAllBackups)}
+                variant="ghost"
+                className="w-full"
+                size="sm"
+              >
+                {showAllBackups
+                  ? "Show Less"
+                  : `Show ${localBackups.length - 2} More Backup${localBackups.length - 2 === 1 ? "" : "s"}`}
+              </Button>
+            )}
           </div>
         ) : (
           <p className="text-muted-foreground text-sm">
