@@ -206,6 +206,48 @@ type OverviewCard = {
 };
 
 /**
+ * Renders a single overview card with icon, metrics, and helper text.
+ * @param card - The card configuration
+ * @returns Rendered card component
+ */
+function OverviewCardComponent({
+  card,
+}: {
+  readonly card: OverviewCard;
+}): React.ReactNode {
+  const Icon = card.icon;
+  return (
+    <div
+      key={`statistics-overview-${card.key}`}
+      className="group relative overflow-hidden rounded-2xl border border-slate-200/60 bg-white/90 shadow-md backdrop-blur-sm transition-shadow hover:shadow-lg dark:border-slate-800/60 dark:bg-slate-950/70"
+    >
+      <div
+        className={`bg-linear-to-br absolute inset-0 ${card.accent}`}
+        aria-hidden="true"
+      />
+      <div className="relative flex h-full flex-col justify-between gap-3 rounded-2xl border border-white/40 bg-white/80 p-5 dark:border-slate-900/60 dark:bg-slate-950/80">
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground text-sm font-medium">
+            {card.label}
+          </span>
+          <span
+            className={`rounded-xl bg-white/80 p-2 shadow-sm dark:bg-slate-900/70 ${card.iconClass}`}
+          >
+            <Icon className="h-4 w-4" aria-hidden="true" />
+          </span>
+        </div>
+        <span className="text-2xl font-semibold tracking-tight">
+          {card.value}
+        </span>
+        {card.helper ? (
+          <span className="text-muted-foreground text-xs">{card.helper}</span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/**
  * StatisticsPage component – visual analytics for import, match, and sync data.
  * Displays comprehensive statistics with charts, filters, and data export capabilities.
  * @returns Rendered statistics dashboard.
@@ -644,24 +686,60 @@ export function StatisticsPage() {
     [],
   );
 
-  let content: React.ReactNode;
-  if (isLoading) {
-    content = (
-      <section className="space-y-8">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {overviewSkeletonKeys.map((key) => (
-            <SkeletonCard key={`statistics-overview-skeleton-${key}`} />
-          ))}
-        </div>
-        <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {skeletonKeys.map((key) => (
-            <SkeletonCard key={`statistics-skeleton-${key}`} />
-          ))}
-        </section>
+  /**
+   * Renders the loading state with skeleton cards.
+   */
+  const renderLoadingState = (): React.ReactNode => (
+    <section className="space-y-8">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {overviewSkeletonKeys.map((key) => (
+          <SkeletonCard key={`statistics-overview-skeleton-${key}`} />
+        ))}
+      </div>
+      <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {skeletonKeys.map((key) => (
+          <SkeletonCard key={`statistics-skeleton-${key}`} />
+        ))}
       </section>
-    );
-  } else if (hasAnyData) {
-    content = (
+    </section>
+  );
+
+  /**
+   * Renders the empty state when no statistics are available.
+   */
+  const renderEmptyState = (): React.ReactNode => (
+    <section className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-dashed border-slate-200 bg-white/80 p-12 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950/70">
+      <AlertCircle className="h-10 w-10 text-amber-500" aria-hidden="true" />
+      <div className="space-y-2">
+        <h2 className="text-xl font-semibold">No statistics available yet</h2>
+        <p className="text-muted-foreground">
+          Import your Kenmei library and review matches to unlock detailed
+          analytics.
+        </p>
+      </div>
+      <Button asChild size="lg" className="gap-2">
+        <Link to="/import">
+          Start Import
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </Link>
+      </Button>
+    </section>
+  );
+
+  /**
+   * Determines the main content to render based on loading and data availability states.
+   * Extracts conditional logic to reduce cognitive complexity.
+   */
+  const getMainContent = (): React.ReactNode => {
+    if (isLoading) {
+      return renderLoadingState();
+    }
+
+    if (!hasAnyData) {
+      return renderEmptyState();
+    }
+
+    return (
       <motion.section
         variants={containerVariants}
         initial="hidden"
@@ -813,27 +891,44 @@ export function StatisticsPage() {
         </motion.section>
       </motion.section>
     );
-  } else {
-    content = (
-      <section className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-dashed border-slate-200 bg-white/80 p-12 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950/70">
-        <AlertCircle className="h-10 w-10 text-amber-500" aria-hidden="true" />
-        <div className="space-y-2">
-          <h2 className="text-xl font-semibold">No statistics available yet</h2>
-          <p className="text-muted-foreground">
-            Import your Kenmei library and review matches to unlock detailed
-            analytics.
-          </p>
-        </div>
-        <Button asChild size="lg" className="gap-2">
-          <Link to="/import">
-            Start Import
-            <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
-        </Button>
-      </section>
-    );
-  }
+  };
 
+  /**
+   * Determines whether to show the header controls (time range and comparison toggle).
+   */
+  const shouldShowHeaderControls = hasAnyData && !isLoading;
+
+  /**
+   * Renders the header overview cards conditionally based on loading and data state.
+   */
+  const getHeaderOverviewCards = (): React.ReactNode => {
+    if (isLoading) {
+      return (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {overviewSkeletonKeys.map((key) => (
+            <SkeletonCard key={`statistics-header-skeleton-${key}`} />
+          ))}
+        </div>
+      );
+    }
+
+    if (hasAnyData) {
+      return (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {overviewCards.map((card) => (
+            <OverviewCardComponent
+              key={`statistics-overview-${card.key}`}
+              card={card}
+            />
+          ))}
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  const content = getMainContent();
   return (
     <main className="container mx-auto px-4 py-10">
       <StatisticsErrorBoundary
@@ -897,7 +992,7 @@ export function StatisticsPage() {
                     DEFAULT_STATISTICS_FILTERS,
                   )}
                 />
-                {hasAnyData && !isLoading ? (
+                {shouldShowHeaderControls ? (
                   <>
                     <TimeRangeSelector
                       value={selectedTimeRange}
@@ -913,50 +1008,7 @@ export function StatisticsPage() {
               </div>
             </div>
 
-            {isLoading ? (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {overviewSkeletonKeys.map((key) => (
-                  <SkeletonCard key={`statistics-header-skeleton-${key}`} />
-                ))}
-              </div>
-            ) : hasAnyData ? (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {overviewCards.map((card) => {
-                  const Icon = card.icon;
-                  return (
-                    <div
-                      key={`statistics-overview-${card.key}`}
-                      className="group relative overflow-hidden rounded-2xl border border-slate-200/60 bg-white/90 shadow-md backdrop-blur-sm transition-shadow hover:shadow-lg dark:border-slate-800/60 dark:bg-slate-950/70"
-                    >
-                      <div
-                        className={`absolute inset-0 bg-gradient-to-br ${card.accent}`}
-                        aria-hidden="true"
-                      />
-                      <div className="relative flex h-full flex-col justify-between gap-3 rounded-2xl border border-white/40 bg-white/80 p-5 dark:border-slate-900/60 dark:bg-slate-950/80">
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground text-sm font-medium">
-                            {card.label}
-                          </span>
-                          <span
-                            className={`rounded-xl bg-white/80 p-2 shadow-sm dark:bg-slate-900/70 ${card.iconClass}`}
-                          >
-                            <Icon className="h-4 w-4" aria-hidden="true" />
-                          </span>
-                        </div>
-                        <span className="text-2xl font-semibold tracking-tight">
-                          {card.value}
-                        </span>
-                        {card.helper ? (
-                          <span className="text-muted-foreground text-xs">
-                            {card.helper}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : null}
+            {getHeaderOverviewCards()}
           </motion.div>
         </motion.section>
 

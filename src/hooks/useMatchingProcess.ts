@@ -147,6 +147,85 @@ export const useMatchingProcess = ({
   );
 
   /**
+   * Handles manual pause state updates during progress tracking.
+   * @source
+   */
+  const handleManualPauseState = useCallback((): boolean => {
+    const manualPauseActive = isManualMatchingPaused();
+
+    if (manualPauseActive) {
+      pauseTimeTracking();
+    } else {
+      resumeTimeTracking();
+    }
+
+    return manualPauseActive;
+  }, [pauseTimeTracking, resumeTimeTracking]);
+
+  /**
+   * Updates pause transition state if needed during progress tracking.
+   * @source
+   */
+  const updatePauseTransition = useCallback(() => {
+    if (isManuallyPaused) {
+      setIsManuallyPaused(false);
+    }
+
+    if (!isPauseTransitioning) {
+      setIsPauseTransitioning(true);
+      setStatusMessage("Pausing matching...");
+      setDetailMessage("Finishing the current manga before pausing.");
+      updateGlobalState({
+        isManuallyPaused: false,
+        isPauseTransitioning: true,
+        statusMessage: "Pausing matching...",
+        detailMessage: "Finishing the current manga before pausing.",
+      });
+
+      if (schedulePauseFinalizationRef.current) {
+        schedulePauseFinalizationRef.current();
+      }
+    }
+  }, [isManuallyPaused, isPauseTransitioning]);
+
+  /**
+   * Updates status messages for batch fetch phase.
+   * @source
+   */
+  const updateBatchFetchStatus = useCallback(
+    (current: number, withKnownIdsCount: number) => {
+      const statusMsg = "Batch fetching manga with known IDs";
+      setStatusMessage(statusMsg);
+      setDetailMessage(`${current} of ${withKnownIdsCount}`);
+      updateGlobalState({
+        statusMessage: statusMsg,
+        detailMessage: `${current} of ${withKnownIdsCount}`,
+      });
+    },
+    [],
+  );
+
+  /**
+   * Updates status messages for matching phase.
+   * @source
+   */
+  const updateMatchingStatus = useCallback((current: number, total: number) => {
+    const completionPercent = Math.min(
+      100,
+      Math.round((current / total) * 100),
+    );
+    const baseDetail = `Processing: ${Math.min(current, total)} of ${total}`;
+    const statusMsg = `Matching manga (${completionPercent}% complete)`;
+
+    setStatusMessage(statusMsg);
+    setDetailMessage(baseDetail);
+    updateGlobalState({
+      statusMessage: statusMsg,
+      detailMessage: `${baseDetail} (${Math.max(0, total - current)} remaining)`,
+    });
+  }, []);
+
+  /**
    * Creates a progress callback handler for tracking batch matching progress.
    * Updates status messages, time estimates, and global state during matching operations.
    * @param withKnownIdsCount - Number of manga with pre-existing AniList IDs for batch fetching.
@@ -156,14 +235,7 @@ export const useMatchingProcess = ({
   const createProgressHandler = useCallback(
     (withKnownIdsCount: number) => {
       return (current: number, total: number, currentTitle?: string) => {
-        const manualPauseActive = isManualMatchingPaused();
-
-        // Pause/resume time tracking depending on manual pause flag
-        if (manualPauseActive) {
-          pauseTimeTracking();
-        } else {
-          resumeTimeTracking();
-        }
+        const manualPauseActive = handleManualPauseState();
 
         setProgressSafely(() => ({
           current,
@@ -189,76 +261,27 @@ export const useMatchingProcess = ({
         }
 
         if (manualPauseActive) {
-          let shouldUpdateStatus = false;
-
-          if (isManuallyPaused) {
-            setIsManuallyPaused(false);
-            shouldUpdateStatus = true;
-          }
-
-          if (!isPauseTransitioning) {
-            setIsPauseTransitioning(true);
-            shouldUpdateStatus = true;
-          }
-
-          if (shouldUpdateStatus) {
-            setStatusMessage("Pausing matching...");
-            setDetailMessage("Finishing the current manga before pausing.");
-          }
-
-          if (shouldUpdateStatus) {
-            updateGlobalState({
-              isManuallyPaused: false,
-              isPauseTransitioning: true,
-              statusMessage: "Pausing matching...",
-              detailMessage: "Finishing the current manga before pausing.",
-            });
-          }
-
-          if (schedulePauseFinalizationRef.current) {
-            schedulePauseFinalizationRef.current();
-          }
+          updatePauseTransition();
         }
 
-        const completionPercent = Math.min(
-          100,
-          Math.round((current / total) * 100),
-        );
-        const baseDetail = `Processing: ${Math.min(current, total)} of ${total}`;
         calculateTimeEstimate(current, total);
 
+        // Update appropriate status messages based on phase
         if (withKnownIdsCount > 0 && current <= withKnownIdsCount) {
-          const statusMsg = "Batch fetching manga with known IDs";
-          setStatusMessage(statusMsg);
-          setDetailMessage(`${current} of ${withKnownIdsCount}`);
-          updateGlobalState({
-            statusMessage: statusMsg,
-            detailMessage: `${current} of ${withKnownIdsCount}`,
-          });
-          return;
+          updateBatchFetchStatus(current, withKnownIdsCount);
+        } else {
+          updateMatchingStatus(current, total);
         }
-
-        const statusMsg = `Matching manga (${completionPercent}% complete)`;
-        setStatusMessage(statusMsg);
-        setDetailMessage(baseDetail);
-        updateGlobalState({
-          statusMessage: statusMsg,
-          detailMessage: `${baseDetail} (${Math.max(0, total - current)} remaining)`,
-        });
       };
     },
     [
-      isManuallyPaused,
-      isPauseTransitioning,
-      pauseTimeTracking,
-      resumeTimeTracking,
-      calculateTimeEstimate,
+      handleManualPauseState,
       setProgressSafely,
-      setIsManuallyPaused,
-      setIsPauseTransitioning,
-      setStatusMessage,
-      setDetailMessage,
       updateGlobalState,
+      updatePauseTransition,
+      calculateTimeEstimate,
+      updateBatchFetchStatus,
+      updateMatchingStatus,
     ],
   );
 

@@ -374,6 +374,54 @@ async function ensureOnboardingKeysInitialized(): Promise<void> {
  * Syncs electron-store to localStorage on app startup.
  * @source
  */
+/**
+ * Syncs a single storage key from electron-store to localStorage.
+ * @param key - The storage key to sync
+ * @returns 1 if synced successfully, 0 otherwise
+ */
+async function syncStorageKey(key: string): Promise<number> {
+  try {
+    const electronValue = await globalThis.electronStore?.getItem(key);
+    if (electronValue !== null) {
+      localStorage.setItem(key, electronValue);
+      storageCache[key] = electronValue;
+      return 1;
+    }
+  } catch (error) {
+    console.error(`[Storage] ⚠️ Failed to sync key ${key}:`, error);
+    captureError(
+      ErrorType.STORAGE,
+      `Error syncing storage key from electron-store: ${key}`,
+      error instanceof Error ? error : new Error(String(error)),
+      { key, operation: "sync" },
+    );
+  }
+  return 0;
+}
+
+/**
+ * Syncs the auth state from electron-store to localStorage.
+ * @returns 1 if synced successfully, 0 otherwise
+ */
+async function syncAuthState(): Promise<number> {
+  try {
+    const authState = await globalThis.electronStore?.getItem("authState");
+    if (authState !== null) {
+      localStorage.setItem("authState", authState);
+      storageCache["authState"] = authState;
+      return 1;
+    }
+  } catch (error) {
+    captureError(
+      ErrorType.STORAGE,
+      "Error syncing authState from electron-store",
+      error instanceof Error ? error : new Error(String(error)),
+      { key: "authState", operation: "sync" },
+    );
+  }
+  return 0;
+}
+
 export async function initializeStorage(): Promise<void> {
   if (!globalThis.electronStore) {
     console.debug("[Storage] 🔧 Electron store not available, skipping sync");
@@ -386,42 +434,12 @@ export async function initializeStorage(): Promise<void> {
 
     // Sync all known storage keys
     const keys = Object.values(STORAGE_KEYS);
-
     for (const key of keys) {
-      try {
-        const electronValue = await globalThis.electronStore.getItem(key);
-        if (electronValue !== null) {
-          localStorage.setItem(key, electronValue);
-          storageCache[key] = electronValue;
-          syncCount++;
-        }
-      } catch (error) {
-        console.error(`[Storage] ⚠️ Failed to sync key ${key}:`, error);
-        captureError(
-          ErrorType.STORAGE,
-          `Error syncing storage key from electron-store: ${key}`,
-          error instanceof Error ? error : new Error(String(error)),
-          { key, operation: "sync" },
-        );
-      }
+      syncCount += await syncStorageKey(key);
     }
 
     // Also sync auth state
-    try {
-      const authState = await globalThis.electronStore.getItem("authState");
-      if (authState !== null) {
-        localStorage.setItem("authState", authState);
-        storageCache["authState"] = authState;
-        syncCount++;
-      }
-    } catch (error) {
-      captureError(
-        ErrorType.STORAGE,
-        "Error syncing authState from electron-store",
-        error instanceof Error ? error : new Error(String(error)),
-        { key: "authState", operation: "sync" },
-      );
-    }
+    syncCount += await syncAuthState();
 
     console.info(
       `[Storage] ✅ Synced ${syncCount} keys from electron-store to localStorage`,
@@ -1131,6 +1149,82 @@ export function getMatchConfig(): MatchConfig {
  * @returns The advanced match filters.
  * @source
  */
+/**
+ * Sanitizes and validates confidence range values (0-100).
+ * Ensures min <= max by swapping if needed.
+ */
+function sanitizeConfidenceRange(parsed: Record<string, unknown>): {
+  min: number;
+  max: number;
+} {
+  let minConfidence = 0;
+  let maxConfidence = 100;
+
+  const confidence = parsed.confidence as Record<string, unknown> | undefined;
+  if (typeof confidence?.min === "number") {
+    minConfidence = Math.max(0, Math.min(100, confidence.min));
+  }
+  if (typeof confidence?.max === "number") {
+    maxConfidence = Math.max(0, Math.min(100, confidence.max));
+  }
+
+  // Ensure min <= max
+  if (minConfidence > maxConfidence) {
+    [minConfidence, maxConfidence] = [maxConfidence, minConfidence];
+  }
+
+  return { min: minConfidence, max: maxConfidence };
+}
+
+/**
+ * Validates and extracts string array from parsed data.
+ */
+function validateStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string");
+}
+
+/**
+ * Sanitizes and validates year range (1900-2100).
+ * Ensures min <= max by swapping if needed.
+ */
+function sanitizeYearRange(parsed: Record<string, unknown>): {
+  min: number | null;
+  max: number | null;
+} {
+  const yearRange: { min: number | null; max: number | null } = {
+    min: null,
+    max: null,
+  };
+
+  const yr = parsed.yearRange as Record<string, unknown> | undefined;
+  if (!yr) {
+    return yearRange;
+  }
+
+  const minYear = typeof yr.min === "number" ? yr.min : null;
+  const maxYear = typeof yr.max === "number" ? yr.max : null;
+
+  // Clamp to reasonable range
+  if (minYear !== null) {
+    yearRange.min = Math.max(1900, Math.min(2100, minYear));
+  }
+  if (maxYear !== null) {
+    yearRange.max = Math.max(1900, Math.min(2100, maxYear));
+  }
+
+  // Ensure min <= max if both are set
+  if (
+    yearRange.min !== null &&
+    yearRange.max !== null &&
+    yearRange.min > yearRange.max
+  ) {
+    [yearRange.min, yearRange.max] = [yearRange.max, yearRange.min];
+  }
+
+  return yearRange;
+}
+
 export function getMatchFilters(): AdvancedMatchFilters {
   try {
     const saved = storage.getItem(STORAGE_KEYS.MATCH_FILTERS);
@@ -1140,64 +1234,16 @@ export function getMatchFilters(): AdvancedMatchFilters {
 
     const parsed = JSON.parse(saved);
 
-    // Validate and sanitize confidence values
-    let minConfidence = 0;
-    let maxConfidence = 100;
-
-    if (typeof parsed.confidence?.min === "number") {
-      minConfidence = Math.max(0, Math.min(100, parsed.confidence.min));
-    }
-    if (typeof parsed.confidence?.max === "number") {
-      maxConfidence = Math.max(0, Math.min(100, parsed.confidence.max));
-    }
-
-    // Ensure min <= max
-    if (minConfidence > maxConfidence) {
-      [minConfidence, maxConfidence] = [maxConfidence, minConfidence];
-    }
-
-    // Validate and sanitize array fields
-    const validateStringArray = (value: unknown): string[] => {
-      if (!Array.isArray(value)) return [];
-      return value.filter((item): item is string => typeof item === "string");
-    };
-
+    // Validate and sanitize all fields
+    const confidence = sanitizeConfidenceRange(parsed);
     const formats = validateStringArray(parsed.formats);
     const genres = validateStringArray(parsed.genres);
     const publicationStatuses = validateStringArray(parsed.publicationStatuses);
     const tags = validateStringArray(parsed.tags);
-
-    // Validate and sanitize yearRange
-    const yearRange: { min: number | null; max: number | null } = {
-      min: null,
-      max: null,
-    };
-    if (parsed.yearRange) {
-      const minYear =
-        typeof parsed.yearRange.min === "number" ? parsed.yearRange.min : null;
-      const maxYear =
-        typeof parsed.yearRange.max === "number" ? parsed.yearRange.max : null;
-
-      // Clamp to reasonable range
-      if (minYear !== null) {
-        yearRange.min = Math.max(1900, Math.min(2100, minYear));
-      }
-      if (maxYear !== null) {
-        yearRange.max = Math.max(1900, Math.min(2100, maxYear));
-      }
-
-      // Ensure min <= max if both are set
-      if (
-        yearRange.min !== null &&
-        yearRange.max !== null &&
-        yearRange.min > yearRange.max
-      ) {
-        [yearRange.min, yearRange.max] = [yearRange.max, yearRange.min];
-      }
-    }
+    const yearRange = sanitizeYearRange(parsed);
 
     return {
-      confidence: { min: minConfidence, max: maxConfidence },
+      confidence,
       formats,
       genres,
       publicationStatuses,

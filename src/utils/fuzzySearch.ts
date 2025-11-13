@@ -164,49 +164,91 @@ export function parseQuerySyntax(query: string): QuerySyntaxToken[] {
  * @returns Updated filter object.
  * @source
  */
+/**
+ * Applies a genre filter token to the filters object.
+ */
+function applyGenreFilter(
+  filters: AdvancedMatchFilters,
+  value: string,
+): AdvancedMatchFilters {
+  if (!filters.genres.includes(value)) {
+    return { ...filters, genres: [...filters.genres, value] };
+  }
+  return filters;
+}
+
+/**
+ * Applies a format filter token to the filters object.
+ */
+function applyFormatFilter(
+  filters: AdvancedMatchFilters,
+  value: string,
+): AdvancedMatchFilters {
+  const upperValue = value.toUpperCase();
+  if (!filters.formats.includes(upperValue)) {
+    return { ...filters, formats: [...filters.formats, upperValue] };
+  }
+  return filters;
+}
+
+/**
+ * Applies a year filter token to the filters object.
+ * Handles both year ranges (e.g., "2020-2023") and single years.
+ */
+function applyYearFilter(
+  filters: AdvancedMatchFilters,
+  value: string,
+): AdvancedMatchFilters {
+  const rangeParts = value.split("-");
+  if (rangeParts.length === 2) {
+    const min = Number.parseInt(rangeParts[0], 10);
+    const max = Number.parseInt(rangeParts[1], 10);
+    if (!Number.isNaN(min) && !Number.isNaN(max)) {
+      return { ...filters, yearRange: { min, max } };
+    }
+  } else {
+    const year = Number.parseInt(value, 10);
+    if (!Number.isNaN(year)) {
+      return { ...filters, yearRange: { min: year, max: year } };
+    }
+  }
+  return filters;
+}
+
+/**
+ * Applies a tag filter token to the filters object.
+ */
+function applyTagFilter(
+  filters: AdvancedMatchFilters,
+  value: string,
+): AdvancedMatchFilters {
+  if (!filters.tags?.includes(value)) {
+    return { ...filters, tags: [...(filters.tags || []), value] };
+  }
+  return filters;
+}
+
 export function applyQueryToFilters(
   tokens: QuerySyntaxToken[],
   existingFilters: AdvancedMatchFilters = DEFAULT_ADVANCED_FILTERS,
 ): AdvancedMatchFilters {
-  const filters = { ...existingFilters };
+  let filters = { ...existingFilters };
 
   for (const token of tokens) {
     if (token.type !== "field" || !token.field) continue;
 
     switch (token.field) {
       case "genre":
-        if (!filters.genres.includes(token.value)) {
-          filters.genres = [...filters.genres, token.value];
-        }
+        filters = applyGenreFilter(filters, token.value);
         break;
-
       case "format":
-        if (!filters.formats.includes(token.value.toUpperCase())) {
-          filters.formats = [...filters.formats, token.value.toUpperCase()];
-        }
+        filters = applyFormatFilter(filters, token.value);
         break;
-
-      case "year": {
-        const rangeParts = token.value.split("-");
-        if (rangeParts.length === 2) {
-          const min = Number.parseInt(rangeParts[0], 10);
-          const max = Number.parseInt(rangeParts[1], 10);
-          if (!Number.isNaN(min) && !Number.isNaN(max)) {
-            filters.yearRange = { min, max };
-          }
-        } else {
-          const year = Number.parseInt(token.value, 10);
-          if (!Number.isNaN(year)) {
-            filters.yearRange = { min: year, max: year };
-          }
-        }
+      case "year":
+        filters = applyYearFilter(filters, token.value);
         break;
-      }
-
       case "tag":
-        if (!filters.tags?.includes(token.value)) {
-          filters.tags = [...(filters.tags || []), token.value];
-        }
+        filters = applyTagFilter(filters, token.value);
         break;
     }
   }

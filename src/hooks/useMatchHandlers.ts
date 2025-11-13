@@ -255,6 +255,178 @@ export const useMatchHandlers = (
   );
 
   /**
+   * Validates batch operation has matches.
+   * @source
+   */
+  const validateBatchOperation = useCallback(
+    (
+      match:
+        | MangaMatchResult
+        | { isBatchOperation: boolean; matches: MangaMatchResult[] },
+      actionName: string,
+    ): boolean => {
+      if (!("isBatchOperation" in match) || !match.isBatchOperation) {
+        return false;
+      }
+
+      if (!match.matches || match.matches.length === 0) {
+        console.warn(
+          `[MatchHandlers] Batch ${actionName} operation called with empty matches array`,
+        );
+        return false;
+      }
+
+      return true;
+    },
+    [],
+  );
+
+  /**
+   * Processes a batch operation with undo/redo support.
+   * @source
+   */
+  const processBatchWithUndoRedo = useCallback(
+    async (
+      batchMatches: MangaMatchResult[],
+      newStatus: "matched" | "skipped",
+      actionName: string,
+      getSelectedMatch: (match: MangaMatchResult) => AniListManga | undefined,
+      onProgress?: (current: number, total: number) => void,
+      abortSignal?: AbortSignal,
+    ) => {
+      // Yield to UI while processing chunks
+      await processInChunks(batchMatches, async () => [], {
+        chunkSize: 20,
+        delayBetweenChunks: 8,
+        onProgress,
+        signal: abortSignal,
+      });
+
+      // Build updated results
+      const beforeState = structuredClone(matchResults);
+      const updatedResults = matchResults.map((m) => {
+        const isInBatch = batchMatches.some(
+          (bm) => bm.kenmeiManga.id === m.kenmeiManga.id,
+        );
+        if (isInBatch) {
+          return {
+            ...m,
+            status: newStatus,
+            selectedMatch: getSelectedMatch(m),
+            matchDate: new Date().toISOString(),
+          };
+        }
+        return m;
+      });
+
+      // Create bulk command
+      const bulkCommand = new BulkUpdateCommand(
+        beforeState,
+        updatedResults,
+        updateMatchResults,
+        `Batch ${actionName.toLowerCase()}`,
+      );
+
+      undoRedoManager!.executeCommand(bulkCommand);
+    },
+    [matchResults, updateMatchResults, undoRedoManager],
+  );
+
+  /**
+   * Processes a batch operation without undo/redo support.
+   * @source
+   */
+  const processBatchWithoutUndoRedo = useCallback(
+    async (
+      batchMatches: MangaMatchResult[],
+      newStatus: "matched" | "skipped",
+      getSelectedMatch: (match: MangaMatchResult) => AniListManga | undefined,
+      onProgress?: (current: number, total: number) => void,
+      abortSignal?: AbortSignal,
+    ) => {
+      // Yield to UI while processing chunks
+      await processInChunks(batchMatches, async () => [], {
+        chunkSize: 20,
+        delayBetweenChunks: 8,
+        onProgress,
+        signal: abortSignal,
+      });
+
+      // Build and update results
+      const updatedResults = matchResults.map((m) => {
+        const isInBatch = batchMatches.some(
+          (bm) => bm.kenmeiManga.id === m.kenmeiManga.id,
+        );
+        if (isInBatch) {
+          return {
+            ...m,
+            status: newStatus,
+            selectedMatch: getSelectedMatch(m),
+            matchDate: new Date().toISOString(),
+          };
+        }
+        return m;
+      });
+      updateMatchResults(updatedResults);
+    },
+    [matchResults, updateMatchResults],
+  );
+
+  /**
+   * Processes a single match update with undo/redo support.
+   * @source
+   */
+  const processSingleMatchWithUndoRedo = useCallback(
+    (
+      singleMatch: MangaMatchResult,
+      index: number,
+      newStatus: "matched" | "skipped",
+      getSelectedMatch: (match: MangaMatchResult) => AniListManga | undefined,
+      commandType: typeof AcceptMatchCommand | typeof RejectMatchCommand,
+    ) => {
+      const updatedMatch = {
+        ...singleMatch,
+        status: newStatus,
+        selectedMatch: getSelectedMatch(singleMatch),
+        matchDate: new Date().toISOString(),
+      };
+
+      const command = new commandType(
+        index,
+        structuredClone(singleMatch),
+        updatedMatch,
+        applyCommandPatch,
+      );
+      undoRedoManager!.executeCommand(command);
+    },
+    [undoRedoManager, applyCommandPatch],
+  );
+
+  /**
+   * Processes a single match update without undo/redo support.
+   * @source
+   */
+  const processSingleMatchWithoutUndoRedo = useCallback(
+    (
+      singleMatch: MangaMatchResult,
+      index: number,
+      newStatus: "matched" | "skipped",
+      getSelectedMatch: (match: MangaMatchResult) => AniListManga | undefined,
+    ) => {
+      const updatedResults = [...matchResults];
+      const updatedMatch = {
+        ...singleMatch,
+        status: newStatus,
+        selectedMatch: getSelectedMatch(singleMatch),
+        matchDate: new Date().toISOString(),
+      };
+      updatedResults[index] = updatedMatch;
+      updateMatchResults(updatedResults);
+    },
+    [matchResults, updateMatchResults],
+  );
+
+  /**
    * Handles updating a match or batch of matches with a new status.
    * Integrates with undo/redo manager if provided.
    *
@@ -265,6 +437,59 @@ export const useMatchHandlers = (
    * @param commandType - The type of command for undo/redo tracking.
    * @source
    */
+
+  /**
+   * Logs batch operation details for debugging and event tracking.
+   * @source
+   */
+  const logBatchOperation = useCallback(
+    (matchCount: number, actionName: string): void => {
+      console.debug(
+        `[MatchHandlers] Processing batch ${actionName} operation for ${matchCount} matches`,
+      );
+
+      recordEvent({
+        type: `match.batch-${actionName.toLowerCase()}`,
+        message: `Batch ${actionName.toLowerCase()}: ${matchCount} matches`,
+        level: "info",
+        metadata: {
+          matchCount,
+          action: actionName.toLowerCase(),
+        },
+      });
+    },
+    [recordEvent],
+  );
+
+  /**
+   * Logs single match operation details for debugging and event tracking.
+   * @source
+   */
+  const logSingleMatchOperation = useCallback(
+    (
+      match: MangaMatchResult,
+      actionName: string,
+      newStatus: "matched" | "skipped",
+    ): void => {
+      console.debug(
+        `[MatchHandlers] ${actionName === "Accept" ? "Accepting" : "Skipping"} match for ${match.kenmeiManga.title}, current status: ${match.status}`,
+      );
+
+      recordEvent({
+        type: `match.${newStatus === "matched" ? "accept" : "skip"}`,
+        message: `${actionName} match: ${match.kenmeiManga.title}`,
+        level: "info",
+        metadata: {
+          kenmeiTitle: match.kenmeiManga.title,
+          anilistId: match.selectedMatch?.id,
+          anilistTitle: match.selectedMatch?.title?.romaji,
+          status: newStatus,
+        },
+      });
+    },
+    [recordEvent],
+  );
+
   const handleMatchStatusUpdate = useCallback(
     async (
       match:
@@ -278,92 +503,34 @@ export const useMatchHandlers = (
       abortSignal?: AbortSignal,
     ) => {
       // Check if this is a batch operation
-      if ("isBatchOperation" in match && match.isBatchOperation) {
-        // Validate batch operation has matches
-        if (!match.matches || match.matches.length === 0) {
-          console.warn(
-            `[MatchHandlers] Batch ${actionName} operation called with empty matches array`,
-          );
-          return;
-        }
-
+      if (validateBatchOperation(match, actionName)) {
+        const batchMatch = match as {
+          isBatchOperation: boolean;
+          matches: MangaMatchResult[];
+        };
         const startTime = performance.now();
-        console.debug(
-          `[MatchHandlers] Processing batch ${actionName} operation for ${match.matches.length} matches`,
-        );
-
-        recordEvent({
-          type: `match.batch-${actionName.toLowerCase()}`,
-          message: `Batch ${actionName.toLowerCase()}: ${match.matches.length} matches`,
-          level: "info",
-          metadata: {
-            matchCount: match.matches.length,
-            action: actionName.toLowerCase(),
-          },
-        });
+        logBatchOperation(batchMatch.matches.length, actionName);
 
         try {
           // For batch operations with undo/redo
           if (undoRedoManager && commandType) {
-            // First, yield to allow UI updates while we process chunks
-            await processInChunks(match.matches, async () => [], {
-              chunkSize: 20,
-              delayBetweenChunks: 8,
+            await processBatchWithUndoRedo(
+              batchMatch.matches,
+              newStatus,
+              actionName,
+              getSelectedMatch,
               onProgress,
-              signal: abortSignal,
-            });
-
-            // Build the final updated results array (single pass)
-            const beforeState = structuredClone(matchResults);
-            const updatedResults = matchResults.map((m) => {
-              const isInBatch = match.matches.some(
-                (bm) => bm.kenmeiManga.id === m.kenmeiManga.id,
-              );
-              if (isInBatch) {
-                return {
-                  ...m,
-                  status: newStatus,
-                  selectedMatch: getSelectedMatch(m),
-                  matchDate: new Date().toISOString(),
-                };
-              }
-              return m;
-            });
-
-            // Create a bulk command that applies the entire state at once
-            const bulkCommand = new BulkUpdateCommand(
-              beforeState,
-              updatedResults,
-              updateMatchResults,
-              `Batch ${actionName.toLowerCase()}`,
+              abortSignal,
             );
-
-            // Execute the command (which will call updateMatchResults once)
-            undoRedoManager.executeCommand(bulkCommand);
           } else {
             // Fallback: update results directly without undo/redo
-            await processInChunks(match.matches, async () => [], {
-              chunkSize: 20,
-              delayBetweenChunks: 8,
+            await processBatchWithoutUndoRedo(
+              batchMatch.matches,
+              newStatus,
+              getSelectedMatch,
               onProgress,
-              signal: abortSignal,
-            });
-
-            const updatedResults = matchResults.map((m) => {
-              const isInBatch = match.matches.some(
-                (bm) => bm.kenmeiManga.id === m.kenmeiManga.id,
-              );
-              if (isInBatch) {
-                return {
-                  ...m,
-                  status: newStatus,
-                  selectedMatch: getSelectedMatch(m),
-                  matchDate: new Date().toISOString(),
-                };
-              }
-              return m;
-            });
-            updateMatchResults(updatedResults);
+              abortSignal,
+            );
           }
 
           const endTime = performance.now();
@@ -378,73 +545,46 @@ export const useMatchHandlers = (
           console.error(`[MatchHandlers] Batch ${actionName} error:`, error);
           throw error;
         }
+        return;
       }
 
       // Regular single match processing
-      console.debug(
-        `[MatchHandlers] handle${actionName} called with match:`,
-        match,
-      );
-
       // Find the match
       const index = findMatchIndex(match as MangaMatchResult);
       if (index === -1) return;
 
       const singleMatch = match as MangaMatchResult;
-      console.debug(
-        `[MatchHandlers] ${actionName === "Accept" ? "Accepting" : "Skipping"} match for ${singleMatch.kenmeiManga.title}, current status: ${singleMatch.status}`,
-      );
-
-      // Create a copy of the results and update the status
-      const updatedResults = [...matchResults];
-
-      // Create a new object reference to ensure React detects the change
-      const updatedMatch = {
-        ...singleMatch,
-        status: newStatus,
-        selectedMatch: getSelectedMatch(singleMatch),
-        matchDate: new Date().toISOString(),
-      };
-
-      // Update the array with the new object
-      updatedResults[index] = updatedMatch;
-
-      console.debug(
-        `[MatchHandlers] Updated match status to: ${updatedMatch.status}, title: ${updatedMatch.kenmeiManga.title}`,
-      );
-
-      recordEvent({
-        type: `match.${newStatus === "matched" ? "accept" : "skip"}`,
-        message: `${actionName} match: ${singleMatch.kenmeiManga.title}`,
-        level: "info",
-        metadata: {
-          kenmeiTitle: singleMatch.kenmeiManga.title,
-          anilistId: updatedMatch.selectedMatch?.id,
-          anilistTitle: updatedMatch.selectedMatch?.title?.romaji,
-          status: newStatus,
-        },
-      });
+      logSingleMatchOperation(singleMatch, actionName, newStatus);
 
       // Handle undo/redo if manager is available
       if (undoRedoManager && commandType) {
-        const command = new commandType(
+        processSingleMatchWithUndoRedo(
+          singleMatch,
           index,
-          structuredClone(singleMatch),
-          updatedMatch,
-          applyCommandPatch,
+          newStatus,
+          getSelectedMatch,
+          commandType,
         );
-        undoRedoManager.executeCommand(command);
       } else {
-        updateMatchResults(updatedResults);
+        processSingleMatchWithoutUndoRedo(
+          singleMatch,
+          index,
+          newStatus,
+          getSelectedMatch,
+        );
       }
     },
     [
       findMatchIndex,
-      matchResults,
       recordEvent,
-      updateMatchResults,
       undoRedoManager,
-      applyCommandPatch,
+      validateBatchOperation,
+      processBatchWithUndoRedo,
+      processBatchWithoutUndoRedo,
+      processSingleMatchWithUndoRedo,
+      processSingleMatchWithoutUndoRedo,
+      logBatchOperation,
+      logSingleMatchOperation,
     ],
   );
 
@@ -661,6 +801,136 @@ export const useMatchHandlers = (
   );
 
   /**
+   * Processes a batch reset operation with undo/redo support.
+   * @source
+   */
+  const processBatchResetWithUndoRedo = useCallback(
+    async (
+      batchMatches: MangaMatchResult[],
+      onProgress?: (current: number, total: number) => void,
+      abortSignal?: AbortSignal,
+    ) => {
+      // Yield to UI while processing chunks
+      await processInChunks(batchMatches, async () => [], {
+        chunkSize: 20,
+        delayBetweenChunks: 8,
+        onProgress,
+        signal: abortSignal,
+      });
+
+      // Build updated results with original main match restored
+      const beforeState = structuredClone(matchResults);
+      const updatedResults = matchResults.map((m) => {
+        const isInBatch = batchMatches.some(
+          (bm) => bm.kenmeiManga.id === m.kenmeiManga.id,
+        );
+        if (isInBatch) {
+          const originalMainMatch = m.anilistMatches?.length
+            ? m.anilistMatches[0].manga
+            : undefined;
+          return {
+            ...m,
+            status: "pending" as const,
+            selectedMatch: originalMainMatch,
+            matchDate: new Date().toISOString(),
+          };
+        }
+        return m;
+      });
+
+      // Create and execute bulk command
+      const bulkCommand = new BulkUpdateCommand(
+        beforeState,
+        updatedResults,
+        updateMatchResults,
+        "Batch reset",
+      );
+
+      undoRedoManager!.executeCommand(bulkCommand);
+    },
+    [matchResults, updateMatchResults, undoRedoManager],
+  );
+
+  /**
+   * Processes a batch reset operation without undo/redo support.
+   * @source
+   */
+  const processBatchResetWithoutUndoRedo = useCallback(
+    async (
+      batchMatches: MangaMatchResult[],
+      onProgress?: (current: number, total: number) => void,
+      abortSignal?: AbortSignal,
+    ) => {
+      // Yield to UI while processing chunks
+      await processInChunks(batchMatches, async () => [], {
+        chunkSize: 20,
+        delayBetweenChunks: 8,
+        onProgress,
+        signal: abortSignal,
+      });
+
+      // Build and update results with original main match restored
+      const updatedResults = matchResults.map((m) => {
+        const isInBatch = batchMatches.some(
+          (bm) => bm.kenmeiManga.id === m.kenmeiManga.id,
+        );
+        if (isInBatch) {
+          const originalMainMatch = m.anilistMatches?.length
+            ? m.anilistMatches[0].manga
+            : undefined;
+          return {
+            ...m,
+            status: "pending" as const,
+            selectedMatch: originalMainMatch,
+            matchDate: new Date().toISOString(),
+          };
+        }
+        return m;
+      });
+
+      updateMatchResults(updatedResults);
+    },
+    [matchResults, updateMatchResults],
+  );
+
+  /**
+   * Processes a single match reset to pending status with undo/redo support.
+   * @source
+   */
+  const processSingleReset = useCallback(
+    (match: MangaMatchResult, index: number) => {
+      // Create updated match with original main match restored
+      const currentMatch = matchResults[index];
+      const originalMainMatch = currentMatch.anilistMatches?.length
+        ? currentMatch.anilistMatches[0].manga
+        : undefined;
+
+      const updatedMatch = {
+        ...match,
+        status: "pending" as const,
+        selectedMatch: originalMainMatch,
+        matchDate: new Date().toISOString(),
+      };
+
+      // Handle undo/redo if manager is available
+      if (undoRedoManager) {
+        const command = new ResetToPendingCommand(
+          index,
+          structuredClone(currentMatch),
+          updatedMatch,
+          applyCommandPatch,
+        );
+        undoRedoManager.executeCommand(command);
+      } else {
+        const updatedResults = [...matchResults];
+        updatedResults[index] = updatedMatch;
+        updateMatchResults(updatedResults);
+      }
+    },
+    [matchResults, updateMatchResults, undoRedoManager, applyCommandPatch],
+  );
+
+  /**
    * Handles resetting a match or batch of matches back to the "pending" status.
    * Creates a ResetToPendingCommand for undo/redo tracking if manager is available.
    *
@@ -706,49 +976,20 @@ export const useMatchHandlers = (
         });
 
         try {
-          // Yield to allow UI updates while we process chunks
-          await processInChunks(match.matches, async () => [], {
-            chunkSize: 20,
-            delayBetweenChunks: 8,
-            onProgress,
-            signal: abortSignal,
-          });
-
-          // Build the unified updated results once AFTER chunking against fresh matchResults
-          const beforeState = structuredClone(matchResults);
-          const updatedResults = matchResults.map((m) => {
-            const isInBatch = match.matches.some(
-              (bm) => bm.kenmeiManga.id === m.kenmeiManga.id,
-            );
-            if (isInBatch) {
-              const originalMainMatch = m.anilistMatches?.length
-                ? m.anilistMatches[0].manga
-                : undefined;
-              return {
-                ...m,
-                status: "pending" as const,
-                selectedMatch: originalMainMatch,
-                matchDate: new Date().toISOString(),
-              };
-            }
-            return m;
-          });
-
           // For batch operations with undo/redo
           if (undoRedoManager) {
-            // Create a bulk command that applies the entire state at once
-            const bulkCommand = new BulkUpdateCommand(
-              beforeState,
-              updatedResults,
-              updateMatchResults,
-              "Batch reset",
+            await processBatchResetWithUndoRedo(
+              match.matches,
+              onProgress,
+              abortSignal,
             );
-
-            // Execute the command (which will call updateMatchResults once)
-            undoRedoManager.executeCommand(bulkCommand);
           } else {
             // Fallback: update results directly without undo/redo
-            updateMatchResults(updatedResults);
+            await processBatchResetWithoutUndoRedo(
+              match.matches,
+              onProgress,
+              abortSignal,
+            );
           }
 
           const endTime = performance.now();
@@ -765,7 +1006,7 @@ export const useMatchHandlers = (
         }
       }
 
-      // Regular single match processing (existing code)
+      // Regular single match processing
       // Find the match
       const index = findMatchIndex(match as MangaMatchResult);
       if (index === -1) return;
@@ -774,57 +1015,15 @@ export const useMatchHandlers = (
         `[MatchHandlers] Resetting match for ${(match as MangaMatchResult).kenmeiManga.title} from ${(match as MangaMatchResult).status} to pending`,
       );
 
-      // Create a copy of the results and update the status
-      const updatedResults = [...matchResults];
-
-      // Get the current match from the latest state
-      const currentMatch = matchResults[index];
-
-      // When resetting to pending, we should restore the original main match
-      // The original main match is typically the first item in the anilistMatches array
-      const originalMainMatch = currentMatch.anilistMatches?.length
-        ? currentMatch.anilistMatches[0].manga
-        : undefined;
-
-      console.debug(
-        `[MatchHandlers] Restoring original main match: ${originalMainMatch?.title?.english || originalMainMatch?.title?.romaji || "None"}`,
-      );
-
-      // Create a new object reference to ensure React detects the change
-      const updatedMatch = {
-        ...(match as MangaMatchResult),
-        status: "pending" as const,
-        // Restore the original main match as the selectedMatch
-        selectedMatch: originalMainMatch,
-        matchDate: new Date().toISOString(),
-      };
-
-      // Update the array with the new object
-      updatedResults[index] = updatedMatch;
-
-      console.debug(
-        `[MatchHandlers] Updated match status from ${(match as MangaMatchResult).status} to pending for: ${updatedMatch.kenmeiManga.title}`,
-      );
-
-      // Handle undo/redo if manager is available
-      if (undoRedoManager) {
-        const command = new ResetToPendingCommand(
-          index,
-          structuredClone(currentMatch),
-          updatedMatch,
-          applyCommandPatch,
-        );
-        undoRedoManager.executeCommand(command);
-      } else {
-        updateMatchResults(updatedResults);
-      }
+      processSingleReset(match as MangaMatchResult, index);
     },
     [
       findMatchIndex,
-      matchResults,
-      updateMatchResults,
+      recordEvent,
       undoRedoManager,
-      applyCommandPatch,
+      processBatchResetWithUndoRedo,
+      processBatchResetWithoutUndoRedo,
+      processSingleReset,
     ],
   );
 
