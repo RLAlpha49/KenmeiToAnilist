@@ -23,6 +23,29 @@ import { highlightText, truncateToastMessage } from "@/utils/textHighlight";
 import { cn } from "@/utils/tailwind";
 import type { BackupScheduleConfig } from "@/utils/storage";
 
+// Helper functions
+function clampValue(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value || min));
+}
+
+function parseBackupCount(input: string): number {
+  const value = input ? Number.parseInt(input, 10) : 1;
+  return clampValue(value, 1, 50);
+}
+
+function parseBackupSize(input: string): number {
+  const value = input ? Number.parseInt(input, 10) : 100;
+  return clampValue(value, 10, 1000);
+}
+
+function formatBackupCountText(count: number): string {
+  return `${count} backup file${count === 1 ? "" : "s"}`;
+}
+
+function formatMoreBackupsLabel(count: number): string {
+  return `Show ${count} More Backup${count === 1 ? "" : "s"}`;
+}
+
 /**
  * Represents a backup file with metadata.
  * @source
@@ -34,6 +57,149 @@ interface BackupFile {
   timestamp: number;
   /** Backup file size in bytes. */
   size: number;
+}
+
+/**
+ * Props for BackupList component.
+ */
+interface BackupListProps {
+  backups: BackupFile[];
+  showAll: boolean;
+  isRestoringFromList: string | null;
+  isDeletingBackup: string | null;
+  onRestore: (backup: BackupFile) => Promise<void>;
+  onDelete: (filename: string) => Promise<void>;
+  onToggleShowAll: () => void;
+}
+
+function BackupList({
+  backups,
+  showAll,
+  isRestoringFromList,
+  isDeletingBackup,
+  onRestore,
+  onDelete,
+  onToggleShowAll,
+}: Readonly<BackupListProps>) {
+  return (
+    <div className="space-y-2">
+      {backups
+        .slice(0, showAll ? undefined : 2)
+        .map((backup) => (
+          <div
+            key={backup.name}
+            className="hover:bg-muted/60 flex items-center justify-between rounded-md p-3 transition-colors"
+          >
+            <div className="min-w-0 flex-1 space-y-1">
+              <p className="truncate text-sm font-medium">
+                {new Date(backup.timestamp).toLocaleString()}
+              </p>
+              <div className="flex gap-2">
+                <Badge variant="outline" className="text-xs">
+                  {(backup.size / 1024 / 1024).toFixed(2)} MB
+                </Badge>
+                <span className="text-muted-foreground text-xs">
+                  {backup.name}
+                </span>
+              </div>
+            </div>
+            <div className="ml-2 flex gap-2">
+              <Button
+                onClick={() => onRestore(backup)}
+                disabled={isRestoringFromList === backup.name}
+                variant="outline"
+                size="sm"
+                title="Restore from this backup"
+              >
+                {isRestoringFromList === backup.name ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+              </Button>
+              <Button
+                onClick={() => onDelete(backup.name)}
+                disabled={isDeletingBackup === backup.name}
+                variant="ghost"
+                size="sm"
+                className="ml-2"
+                title="Delete this backup"
+              >
+                {isDeletingBackup === backup.name ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          </div>
+        ))}
+
+      {backups.length > 2 && (
+        <Button
+          onClick={onToggleShowAll}
+          variant="ghost"
+          className="w-full"
+          size="sm"
+        >
+          {showAll ? "Show Less" : formatMoreBackupsLabel(backups.length - 2)}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Props for BackupListContent component.
+ */
+interface BackupListContentProps {
+  readonly isLoading: boolean;
+  readonly backups: BackupFile[];
+  readonly showAll: boolean;
+  readonly isRestoringFromList: string | null;
+  readonly isDeletingBackup: string | null;
+  readonly onRestore: (backup: BackupFile) => Promise<void>;
+  readonly onDelete: (filename: string) => Promise<void>;
+  readonly onToggleShowAll: () => void;
+}
+
+function BackupListContent({
+  isLoading,
+  backups,
+  showAll,
+  isRestoringFromList,
+  isDeletingBackup,
+  onRestore,
+  onDelete,
+  onToggleShowAll,
+}: Readonly<BackupListContentProps>) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
+      </div>
+    );
+  }
+
+  if (backups.length === 0) {
+    return (
+      <p className="text-muted-foreground text-sm">
+        No backups available yet. Create one to get started.
+      </p>
+    );
+  }
+
+  return (
+    <BackupList
+      backups={backups}
+      showAll={showAll}
+      isRestoringFromList={isRestoringFromList}
+      isDeletingBackup={isDeletingBackup}
+      onRestore={onRestore}
+      onDelete={onDelete}
+      onToggleShowAll={onToggleShowAll}
+    />
+  );
 }
 
 /**
@@ -518,10 +684,7 @@ export function BackupRestoreSection({
                   max="50"
                   value={scheduleConfig.maxBackupCount}
                   onChange={(e) => {
-                    const value = e.target.value
-                      ? Number.parseInt(e.target.value, 10)
-                      : 1;
-                    const clamped = Math.min(50, Math.max(1, value || 1));
+                    const clamped = parseBackupCount(e.target.value);
                     onScheduleConfigChange({
                       ...scheduleConfig,
                       maxBackupCount: clamped,
@@ -556,10 +719,7 @@ export function BackupRestoreSection({
                   max="1000"
                   value={scheduleConfig.maxBackupSizeMB}
                   onChange={(e) => {
-                    const value = e.target.value
-                      ? Number.parseInt(e.target.value, 10)
-                      : 100;
-                    const clamped = Math.min(1000, Math.max(10, value || 100));
+                    const clamped = parseBackupSize(e.target.value);
                     onScheduleConfigChange({
                       ...scheduleConfig,
                       maxBackupSizeMB: clamped,
@@ -699,10 +859,10 @@ export function BackupRestoreSection({
             <p className="text-muted-foreground text-xs">
               {searchQuery
                 ? highlightText(
-                    `${localBackups.length} backup file${localBackups.length === 1 ? "" : "s"} available`,
+                    `${formatBackupCountText(localBackups.length)} available`,
                     searchQuery,
                   )
-                : `${localBackups.length} backup file${localBackups.length === 1 ? "" : "s"} available`}
+                : `${formatBackupCountText(localBackups.length)} available`}
             </p>
           </div>
           <Button
@@ -728,82 +888,16 @@ export function BackupRestoreSection({
 
         <Separator />
 
-        {isLoadingBackups ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
-          </div>
-        ) : localBackups.length > 0 ? (
-          <div className="space-y-2">
-            {localBackups
-              .slice(0, showAllBackups ? undefined : 2)
-              .map((backup) => (
-                <div
-                  key={backup.name}
-                  className="hover:bg-muted/60 flex items-center justify-between rounded-md p-3 transition-colors"
-                >
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <p className="truncate text-sm font-medium">
-                      {new Date(backup.timestamp).toLocaleString()}
-                    </p>
-                    <div className="flex gap-2">
-                      <Badge variant="outline" className="text-xs">
-                        {(backup.size / 1024 / 1024).toFixed(2)} MB
-                      </Badge>
-                      <span className="text-muted-foreground text-xs">
-                        {backup.name}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="ml-2 flex gap-2">
-                    <Button
-                      onClick={() => handleRestoreFromList(backup)}
-                      disabled={isRestoringFromList === backup.name}
-                      variant="outline"
-                      size="sm"
-                      title="Restore from this backup"
-                    >
-                      {isRestoringFromList === backup.name ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Upload className="h-4 w-4" />
-                      )}
-                    </Button>
-                    <Button
-                      onClick={() => handleDeleteBackup(backup.name)}
-                      disabled={isDeletingBackup === backup.name}
-                      variant="ghost"
-                      size="sm"
-                      className="ml-2"
-                      title="Delete this backup"
-                    >
-                      {isDeletingBackup === backup.name ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              ))}
-
-            {localBackups.length > 2 && (
-              <Button
-                onClick={() => setShowAllBackups(!showAllBackups)}
-                variant="ghost"
-                className="w-full"
-                size="sm"
-              >
-                {showAllBackups
-                  ? "Show Less"
-                  : `Show ${localBackups.length - 2} More Backup${localBackups.length - 2 === 1 ? "" : "s"}`}
-              </Button>
-            )}
-          </div>
-        ) : (
-          <p className="text-muted-foreground text-sm">
-            No backups available yet. Create one to get started.
-          </p>
-        )}
+        <BackupListContent
+          isLoading={isLoadingBackups}
+          backups={localBackups}
+          showAll={showAllBackups}
+          isRestoringFromList={isRestoringFromList}
+          isDeletingBackup={isDeletingBackup}
+          onRestore={handleRestoreFromList}
+          onDelete={handleDeleteBackup}
+          onToggleShowAll={() => setShowAllBackups(!showAllBackups)}
+        />
       </motion.div>
 
       {/* Restore from Backup Section */}

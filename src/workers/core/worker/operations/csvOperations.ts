@@ -25,8 +25,9 @@ function splitCSVLines(csv: string): { lines: string[]; remainder: string } {
   let remainder = "";
   let inQuotes = false;
   let currentLine = "";
+  let i = 0;
 
-  for (let i = 0; i < csv.length; i++) {
+  while (i < csv.length) {
     const char = csv[i];
 
     // Handle quote toggling: only toggle on a quote not part of a doubled-quote escape (CSV uses "")
@@ -54,6 +55,8 @@ function splitCSVLines(csv: string): { lines: string[]; remainder: string } {
       // Regular character (including quotes inside double-quotes)
       currentLine += char;
     }
+
+    i++;
   }
 
   remainder = currentLine;

@@ -24,6 +24,178 @@ import { BackupRestoreSection } from "./BackupRestoreSection";
 import { DebugToolsSection } from "./DebugToolsSection";
 import type { DataManagementProps } from "./types";
 
+/**
+ * Get the cache status label based on current state.
+ * @param isClearing - Whether caches are currently being cleared.
+ * @param cacheCleared - Whether caches have been cleared.
+ * @param selectedCacheCount - Number of selected caches.
+ * @returns The status label string.
+ */
+function getCacheStatusLabel(
+  isClearing: boolean,
+  cacheCleared: boolean,
+  selectedCacheCount: number,
+): string {
+  if (isClearing) return "Clearing";
+  if (cacheCleared) return "Cleared";
+  if (selectedCacheCount > 0) return "Ready";
+  return "Idle";
+}
+
+/**
+ * Get the cache badge CSS class based on current state.
+ * @param pillBaseClass - Base pill styling class.
+ * @param isClearing - Whether caches are currently being cleared.
+ * @param cacheCleared - Whether caches have been cleared.
+ * @param selectedCacheCount - Number of selected caches.
+ * @returns The badge CSS class string.
+ */
+function getCacheBadgeClass(
+  pillBaseClass: string,
+  isClearing: boolean,
+  cacheCleared: boolean,
+  selectedCacheCount: number,
+): string {
+  if (isClearing)
+    return cn(
+      pillBaseClass,
+      "bg-cyan-500/15 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-100",
+    );
+  if (cacheCleared)
+    return cn(
+      pillBaseClass,
+      "bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
+    );
+  if (selectedCacheCount > 0)
+    return cn(
+      pillBaseClass,
+      "bg-slate-900/10 text-slate-700 dark:bg-white/10 dark:text-white",
+    );
+  return cn(
+    pillBaseClass,
+    "bg-slate-300/20 text-slate-600 dark:bg-white/5 dark:text-slate-300",
+  );
+}
+
+/**
+ * Get the cache description based on selected cache count.
+ * @param selectedCacheCount - Number of selected caches.
+ * @returns The description string.
+ */
+function getCacheDescription(selectedCacheCount: number): string {
+  if (selectedCacheCount > 0) {
+    const plural = selectedCacheCount === 1 ? "" : "s";
+    return `${selectedCacheCount} cache${plural} selected for clearing.`;
+  }
+  return "Select the caches you want to refresh before running a clear.";
+}
+
+/**
+ * Get the cache caption based on current state.
+ * @param isClearing - Whether caches are currently being cleared.
+ * @param cacheCleared - Whether caches have been cleared.
+ * @returns The caption string.
+ */
+function getCacheCaption(isClearing: boolean, cacheCleared: boolean): string {
+  if (isClearing) return "Currently clearing caches…";
+  if (cacheCleared) return "Last action: caches cleared successfully.";
+  return "No recent cache clear.";
+}
+
+/**
+ * Get the backup badge label based on current state.
+ * @param backupValidationError - Backup validation error if any.
+ * @param scheduleConfigEnabled - Whether backup scheduling is enabled.
+ * @returns The badge label string.
+ */
+function getBackupBadgeLabel(
+  backupValidationError: string | null,
+  scheduleConfigEnabled: boolean,
+): string {
+  if (backupValidationError) return "Needs attention";
+  if (scheduleConfigEnabled) return "Scheduled";
+  return "Manual";
+}
+
+/**
+ * Get the backup badge CSS class based on current state.
+ * @param pillBaseClass - Base pill styling class.
+ * @param backupValidationError - Backup validation error if any.
+ * @param scheduleConfigEnabled - Whether backup scheduling is enabled.
+ * @returns The badge CSS class string.
+ */
+function getBackupBadgeClass(
+  pillBaseClass: string,
+  backupValidationError: string | null,
+  scheduleConfigEnabled: boolean,
+): string {
+  if (backupValidationError)
+    return cn(
+      pillBaseClass,
+      "bg-rose-500/20 text-rose-700 dark:bg-rose-500/25 dark:text-rose-100",
+    );
+  if (scheduleConfigEnabled)
+    return cn(
+      pillBaseClass,
+      "bg-purple-500/15 text-purple-700 dark:bg-purple-500/25 dark:text-purple-100",
+    );
+  return cn(
+    pillBaseClass,
+    "bg-slate-300/20 text-slate-600 dark:bg-white/5 dark:text-slate-300",
+  );
+}
+
+/**
+ * Get the backup description based on current state.
+ * @param backupValidationError - Backup validation error if any.
+ * @param scheduleConfigEnabled - Whether backup scheduling is enabled.
+ * @param nextBackupDisplay - Formatted next backup time string.
+ * @returns The description string.
+ */
+function getBackupDescription(
+  backupValidationError: string | null,
+  scheduleConfigEnabled: boolean,
+  nextBackupDisplay: string,
+): string {
+  if (backupValidationError) return backupValidationError;
+  if (scheduleConfigEnabled) return `Next backup ${nextBackupDisplay}.`;
+  return "Automatic backups are disabled.";
+}
+
+/**
+ * Get the debug tools count description.
+ * @param activeDebugTools - Number of active debug tools.
+ * @returns The description string.
+ */
+function getDebugToolsDescription(activeDebugTools: number): string {
+  if (activeDebugTools > 0) {
+    const plural = activeDebugTools === 1 ? "" : "s";
+    return `${activeDebugTools} tool${plural} enabled.`;
+  }
+  return "All tools disabled.";
+}
+
+/**
+ * Get the debug badge CSS class based on current state.
+ * @param pillBaseClass - Base pill styling class.
+ * @param isDebugEnabled - Whether debug mode is enabled.
+ * @returns The badge CSS class string.
+ */
+function getDebugBadgeClass(
+  pillBaseClass: string,
+  isDebugEnabled: boolean,
+): string {
+  if (isDebugEnabled)
+    return cn(
+      pillBaseClass,
+      "bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
+    );
+  return cn(
+    pillBaseClass,
+    "bg-slate-300/20 text-slate-500 dark:bg-white/5 dark:text-slate-200",
+  );
+}
+
 const itemVariants = {
   hidden: { y: 20, opacity: 0 },
   show: {
@@ -120,34 +292,21 @@ export function DataManagementTab({
 
   const selectedCacheCount = Object.values(cachesToClear).filter(Boolean).length;
 
-  const cacheStatusLabel = isClearing
-    ? "Clearing"
-    : cacheCleared
-      ? "Cleared"
-      : selectedCacheCount > 0
-        ? "Ready"
-        : "Idle";
-
-  const cacheBadgeClass = cn(
-    pillBaseClass,
-    isClearing
-      ? "bg-cyan-500/15 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-100"
-      : cacheCleared
-        ? "bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100"
-        : selectedCacheCount > 0
-          ? "bg-slate-900/10 text-slate-700 dark:bg-white/10 dark:text-white"
-          : "bg-slate-300/20 text-slate-600 dark:bg-white/5 dark:text-slate-300",
+  const cacheStatusLabel = getCacheStatusLabel(
+    isClearing,
+    cacheCleared,
+    selectedCacheCount,
   );
 
-  const cacheDescription =
-    selectedCacheCount > 0
-      ? `${selectedCacheCount} cache${selectedCacheCount === 1 ? "" : "s"} selected for clearing.`
-      : "Select the caches you want to refresh before running a clear.";
-  const cacheCaption = isClearing
-    ? "Currently clearing caches…"
-    : cacheCleared
-      ? "Last action: caches cleared successfully."
-      : "No recent cache clear.";
+  const cacheBadgeClass = getCacheBadgeClass(
+    pillBaseClass,
+    isClearing,
+    cacheCleared,
+    selectedCacheCount,
+  );
+
+  const cacheDescription = getCacheDescription(selectedCacheCount);
+  const cacheCaption = getCacheCaption(isClearing, cacheCleared);
 
   const nextBackupDisplay = formatTimestamp(
     nextScheduledBackup ?? scheduleConfig.nextBackupTimestamp ?? null,
@@ -156,35 +315,26 @@ export function DataManagementTab({
     lastScheduledBackup ?? scheduleConfig.lastBackupTimestamp ?? null,
   );
 
-  const backupBadgeLabel = backupValidationError
-    ? "Needs attention"
-    : scheduleConfig.enabled
-      ? "Scheduled"
-      : "Manual";
-
-  const backupBadgeClass = cn(
-    pillBaseClass,
-    backupValidationError
-      ? "bg-rose-500/20 text-rose-700 dark:bg-rose-500/25 dark:text-rose-100"
-      : scheduleConfig.enabled
-        ? "bg-purple-500/15 text-purple-700 dark:bg-purple-500/25 dark:text-purple-100"
-        : "bg-slate-300/20 text-slate-600 dark:bg-white/5 dark:text-slate-300",
+  const backupBadgeLabel = getBackupBadgeLabel(
+    backupValidationError,
+    scheduleConfig.enabled,
   );
 
-  const backupDescription = backupValidationError
-    ? backupValidationError
-    : scheduleConfig.enabled
-      ? `Next backup ${nextBackupDisplay}.`
-      : "Automatic backups are disabled.";
+  const backupBadgeClass = getBackupBadgeClass(
+    pillBaseClass,
+    backupValidationError,
+    scheduleConfig.enabled,
+  );
+
+  const backupDescription = getBackupDescription(
+    backupValidationError,
+    scheduleConfig.enabled,
+    nextBackupDisplay,
+  );
   const backupCaption = `Last backup ${lastBackupDisplay}.`;
 
   const debugBadgeLabel = isDebugEnabled ? "Enabled" : "Disabled";
-  const debugBadgeClass = cn(
-    pillBaseClass,
-    isDebugEnabled
-      ? "bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100"
-      : "bg-slate-300/20 text-slate-500 dark:bg-white/5 dark:text-slate-200",
-  );
+  const debugBadgeClass = getDebugBadgeClass(pillBaseClass, isDebugEnabled);
 
   const activeDebugTools = [
     storageDebuggerEnabled,
@@ -200,10 +350,7 @@ export function DataManagementTab({
   const debugDescription = isDebugEnabled
     ? "Developer instrumentation is visible this session."
     : "Developer instrumentation is hidden until enabled.";
-  const debugCaption =
-    activeDebugTools > 0
-      ? `${activeDebugTools} tool${activeDebugTools === 1 ? "" : "s"} enabled.`
-      : "All tools disabled.";
+  const debugCaption = getDebugToolsDescription(activeDebugTools);
 
   const quickStats: QuickStat[] = [
     {

@@ -54,10 +54,10 @@ export function MatchingSettingsTab({
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, delay: 0.06 }}
-        className="relative overflow-hidden rounded-3xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/12 via-emerald-500/5 to-transparent p-6 shadow-[0_35px_110px_-70px_rgba(16,38,61,0.45)] dark:border-emerald-500/25 dark:from-emerald-500/20 dark:via-slate-950/70 dark:to-slate-950/40"
+        className="relative overflow-hidden rounded-3xl border border-emerald-500/20 bg-linear-to-br from-emerald-500/12 via-emerald-500/5 to-transparent p-6 shadow-[0_35px_110px_-70px_rgba(16,38,61,0.45)] dark:border-emerald-500/25 dark:from-emerald-500/20 dark:via-slate-950/70 dark:to-slate-950/40"
       >
         <div className="absolute -right-24 -top-24 h-48 w-48 rounded-full bg-emerald-500/10 blur-3xl" />
-        <div className="absolute inset-y-0 left-0 w-px bg-gradient-to-b from-transparent via-emerald-500/30 to-transparent" />
+        <div className="absolute inset-y-0 left-0 w-px bg-linear-to-b from-transparent via-emerald-500/30 to-transparent" />
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/85 text-emerald-600 shadow-md backdrop-blur dark:bg-white/10 dark:text-emerald-200">

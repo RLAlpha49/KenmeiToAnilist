@@ -16,6 +16,8 @@ import type {
 import type {
   ComickSourceStorage,
   MangaDexSourceStorage,
+  UncachedMangaConfig,
+  UncachedMangaControl,
 } from "./batching/types";
 import { DEFAULT_SEARCH_CONFIG } from "./orchestration/types";
 import { searchMangaByTitle as orchestratedSearch } from "./orchestration";
@@ -32,6 +34,166 @@ import { findBestMatches } from "./match-engine";
 import { getMangaByIds } from "@/api/anilist/client";
 import { withGroupAsync } from "@/utils/logging";
 import { CancelledError, captureError, ErrorType } from "@/utils/errorHandling";
+
+/**
+ * Checks if an error is a rate limit error (429).
+ *
+ * @param error - Error to check
+ * @returns True if error is a rate limit error
+ */
+function isRateLimitError(
+  error: unknown,
+): error is { status?: number; isRateLimited?: boolean; retryAfter?: number } {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const errorObj = error as Record<string, unknown>;
+
+  const hasRateLimitFlag = "isRateLimited" in errorObj && errorObj.isRateLimited === true;
+  const hasStatus429 = "status" in errorObj && errorObj.status === 429;
+
+  return hasRateLimitFlag || hasStatus429;
+}
+
+/**
+ * Checks if operation should be cancelled due to abort signal or cancellation request.
+ * Throws CancelledError if cancellation is detected.
+ *
+ * @param abortSignal - Optional abort signal
+ * @param shouldCancel - Optional cancellation function
+ * @param context - Context message for error logging
+ */
+function checkCancellationState(
+  abortSignal: AbortSignal | undefined,
+  shouldCancel: (() => boolean) | undefined,
+  context: string,
+): void {
+  if (abortSignal?.aborted) {
+    console.info(`[MangaSearchService] ${context}: Aborted by signal`);
+    throw new CancelledError("Operation aborted by abort signal");
+  }
+
+  if (shouldCancel?.()) {
+    console.info(`[MangaSearchService] ${context}: Cancelled by user`);
+    throw new CancelledError("Operation cancelled by user");
+  }
+}
+
+/**
+ * Waits for rate limit to clear with cancellation support.
+ *
+ * @param retryAfterSeconds - Seconds to wait
+ * @param abortSignal - Optional abort signal
+ */
+async function waitForRateLimitClear(
+  retryAfterSeconds: number,
+  abortSignal: AbortSignal | undefined,
+): Promise<void> {
+  const waitUntil = Date.now() + retryAfterSeconds * 1000;
+
+  while (Date.now() < waitUntil) {
+    // Check if we should cancel
+    if (abortSignal?.aborted) {
+      throw new CancelledError("Operation aborted during rate limit wait");
+    }
+    // Check if rate limit has been cleared via global state
+    if (
+      globalThis.matchingProcessState?.wasRateLimitPaused === false
+    ) {
+      console.info(
+        "[MangaSearchService] 🟢 Rate limit cleared, retrying batch processing",
+      );
+      break;
+    }
+    // Wait a short interval before checking again
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+}
+
+/**
+ * Processes uncached manga with automatic rate limit retry and exponential backoff.
+ *
+ * @param params - Processing parameters
+ * @param config - Search and token configuration
+ * @param cancellation - Abort signal and cancellation function
+ * @param progress - Progress callback
+ * @param cache - Cached results storage
+ */
+async function processMangaWithRateLimit(
+  params: {
+    uncachedManga: { index: number; manga: KenmeiManga }[];
+    mangaList: KenmeiManga[];
+    reportedIndices: Set<number>;
+  },
+  config: UncachedMangaConfig,
+  cancellation: UncachedMangaControl,
+  progress: {
+    updateProgress: (index: number, title?: string) => void;
+  },
+  cache: {
+    cachedResults: Record<number, AniListManga[]>;
+    cachedComickSources: ComickSourceStorage;
+    cachedMangaDexSources: MangaDexSourceStorage;
+  },
+): Promise<void> {
+  const MAX_RATE_LIMIT_RETRIES = 3;
+  let rateLimitRetryCount = 0;
+
+  while (true) {
+    try {
+      await processBatchedUncachedManga(
+        {
+          uncachedManga: params.uncachedManga,
+          mangaList: params.mangaList,
+          reportedIndices: params.reportedIndices,
+        },
+        config,
+        cancellation,
+        progress,
+        cache,
+      );
+      break; // Success, exit retry loop
+    } catch (error) {
+      const isRateLimit = isRateLimitError(error);
+
+      if (isRateLimit && rateLimitRetryCount < MAX_RATE_LIMIT_RETRIES) {
+        rateLimitRetryCount++;
+        const retryAfterSeconds =
+          (error as { retryAfter?: number }).retryAfter || 60;
+
+        console.warn(
+          `[MangaSearchService] ⏸️ Rate limited (429). Retry ${rateLimitRetryCount}/${MAX_RATE_LIMIT_RETRIES} after ${retryAfterSeconds}s`,
+        );
+
+        // Respect abort signal and shouldCancel before waiting
+        cancellation.checkCancellation();
+
+        // Wait for the rate limit to clear
+        await waitForRateLimitClear(
+          retryAfterSeconds,
+          cancellation.abortSignal,
+        );
+
+        // Retry the operation
+        continue;
+      }
+
+      console.warn("[MangaSearchService] Processing failed:", error);
+
+      // If we got here due to cancellation, return partial results
+      if (error instanceof CancelledError) {
+        console.info(
+          "[MangaSearchService] Cancellation detected, returning partial results",
+        );
+        throw error;
+      }
+
+      // If it's a different kind of error or max retries exceeded, rethrow it
+      throw error;
+    }
+  }
+}
 
 /**
  * Attempt to execute matching using workers with automatic fallback.
@@ -231,33 +393,17 @@ export async function batchMatchManga(
       let cachedComickSources: ComickSourceStorage = {};
       let cachedMangaDexSources: MangaDexSourceStorage = {};
 
-      // Function to check if the operation should be cancelled
-      const checkCancellation = () => {
-        // Check the abort signal first
-        if (abortSignal?.aborted) {
-          console.info(
-            "[MangaSearchService] Batch matching process aborted by abort signal",
-          );
-          throw new CancelledError("Operation aborted by abort signal");
-        }
-
-        // Then check the cancellation function
-        if (shouldCancel?.()) {
-          console.info(
-            "[MangaSearchService] Batch matching process cancelled by user",
-          );
-          throw new CancelledError("Operation cancelled by user");
-        }
-
-        return false;
-      };
-
       // Update progress with deduplication
       const updateProgress = (index: number, title?: string) => {
         if (progressCallback && !reportedIndices.has(index)) {
           reportedIndices.add(index);
           progressCallback(reportedIndices.size, mangaList.length, title);
         }
+      };
+
+      // Simplified cancellation check
+      const checkCancellation = () => {
+        checkCancellationState(abortSignal, shouldCancel, "Batch matching");
       };
 
       try {
@@ -295,90 +441,14 @@ export async function batchMatchManga(
         // Check for cancellation
         checkCancellation();
 
-        // Process uncached manga using batched GraphQL queries
-        // This significantly reduces API calls by grouping multiple searches
-        let rateLimitRetryCount = 0;
-        const MAX_RATE_LIMIT_RETRIES = 3;
-
-        while (true) {
-          try {
-            await processBatchedUncachedManga(
-              { uncachedManga, mangaList, reportedIndices },
-              { token, searchConfig },
-              { abortSignal, checkCancellation },
-              { updateProgress },
-              { cachedResults, cachedComickSources, cachedMangaDexSources },
-            );
-            break; // Success, exit retry loop
-          } catch (error) {
-            // Check if this is a rate limit error (429)
-            const isRateLimitError =
-              error &&
-              typeof error === "object" &&
-              ("isRateLimited" in error || "status" in error) &&
-              ((error as { isRateLimited?: boolean }).isRateLimited === true ||
-                (error as { status?: number }).status === 429);
-
-            if (
-              isRateLimitError &&
-              rateLimitRetryCount < MAX_RATE_LIMIT_RETRIES
-            ) {
-              rateLimitRetryCount++;
-              const retryAfterSeconds =
-                (error as { retryAfter?: number }).retryAfter || 60;
-              console.warn(
-                `[MangaSearchService] ⏸️ Rate limited (429). Retry ${rateLimitRetryCount}/${MAX_RATE_LIMIT_RETRIES} after ${retryAfterSeconds}s`,
-              );
-
-              // Respect abort signal and shouldCancel before waiting
-              checkCancellation();
-
-              // Wait for the rate limit to clear or until wasRateLimitPaused flag is cleared
-              const waitUntil = Date.now() + retryAfterSeconds * 1000;
-              while (Date.now() < waitUntil) {
-                // Check if we should cancel
-                if (shouldCancel?.()) {
-                  throw new CancelledError(
-                    "Operation cancelled by user during rate limit wait",
-                  );
-                }
-                if (abortSignal?.aborted) {
-                  throw new CancelledError(
-                    "Operation aborted during rate limit wait",
-                  );
-                }
-                // Check if rate limit has been cleared via global state
-                if (
-                  globalThis.matchingProcessState?.wasRateLimitPaused === false
-                ) {
-                  console.info(
-                    "[MangaSearchService] 🟢 Rate limit cleared, retrying batch processing",
-                  );
-                  break;
-                }
-                // Wait a short interval before checking again
-                await new Promise((resolve) => setTimeout(resolve, 1000));
-              }
-
-              // Retry the operation
-              continue;
-            }
-
-            console.warn("[MangaSearchService] Processing cancelled:", error);
-
-            // If we got here due to cancellation, return the partial results we've managed to gather
-            if (error instanceof CancelledError) {
-              console.info(
-                `[MangaSearchService] Cancellation completed, returning partial results`,
-              );
-
-              return handleCancellationResults(mangaList, cachedResults);
-            }
-
-            // If it's a different kind of error or max retries exceeded, rethrow it
-            throw error;
-          }
-        }
+        // Process uncached manga using batched GraphQL queries with automatic rate limit handling
+        await processMangaWithRateLimit(
+          { uncachedManga, mangaList, reportedIndices },
+          { token, searchConfig },
+          { abortSignal, checkCancellation },
+          { updateProgress },
+          { cachedResults, cachedComickSources, cachedMangaDexSources },
+        );
 
         // Check for cancellation after the batch completes
         checkCancellation();

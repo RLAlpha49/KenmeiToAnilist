@@ -5,6 +5,11 @@
 
 import type { MangaSearchResponse, SearchServiceConfig } from "./types";
 import type { KenmeiManga } from "@/api/kenmei/types";
+import type {
+  ComickSourceMap,
+  MangaDexSourceMap,
+} from "../sources/types";
+import type { AniListManga } from "@/api/anilist/types";
 import { DEFAULT_SEARCH_CONFIG } from "./types";
 import { handleCacheBypass, processCachedResults } from "./cache-handlers";
 import { executeSearchLoop } from "./search-execution";
@@ -22,6 +27,139 @@ import {
   mergeSourceResults,
 } from "../sources";
 import { executeMatchingWithWorkers } from "@/workers";
+
+/**
+ * Handle cache checking and return cached result if available.
+ * @param title - Manga title to search for
+ * @param cacheKey - Cache key for the search
+ * @param kenmeiManga - Optional Kenmei manga context for custom rule evaluation
+ * @param bypassCache - Whether to bypass cache
+ * @returns Cached result if available and not bypassed, otherwise null
+ */
+function handleCacheCheck(
+  title: string,
+  cacheKey: string,
+  kenmeiManga: KenmeiManga | undefined,
+  bypassCache: boolean,
+): MangaSearchResponse | null {
+  if (bypassCache && cacheKey) {
+    handleCacheBypass(title, cacheKey);
+    return null;
+  }
+
+  const cachedResult = processCachedResults(title, cacheKey, kenmeiManga);
+  if (cachedResult) {
+    if (typeof globalThis.dispatchEvent === "function") {
+      globalThis.dispatchEvent(
+        new CustomEvent("matching:cache-hit", {
+          detail: { title, cacheKey },
+        }),
+      );
+    }
+    return cachedResult;
+  }
+
+  return null;
+}
+
+/**
+ * Apply worker-based scoring to search results.
+ * @param rankedResults - Initial ranked results from search
+ * @param kenmeiManga - Kenmei manga context for scoring
+ * @param searchConfig - Search service configuration
+ * @returns Scored results or original results if worker execution fails
+ */
+async function applyWorkerScoring(
+  rankedResults: AniListManga[],
+  kenmeiManga: KenmeiManga | undefined,
+  searchConfig: SearchServiceConfig,
+): Promise<AniListManga[]> {
+  if (!searchConfig.useWorkers || rankedResults.length === 0 || !kenmeiManga) {
+    return rankedResults;
+  }
+
+  try {
+    const candidatesMap = new Map<string, AniListManga[]>();
+    candidatesMap.set("0", rankedResults);
+    const execution = executeMatchingWithWorkers(
+      [kenmeiManga],
+      candidatesMap,
+      searchConfig.matchConfig,
+    );
+    const workerResults = await execution.promise;
+    if (
+      workerResults &&
+      workerResults.length > 0 &&
+      workerResults[0]?.anilistMatches
+    ) {
+      return workerResults[0].anilistMatches.map((match) => match.manga);
+    }
+  } catch {
+    // Fallback to sync results if worker execution fails
+  }
+
+  return rankedResults;
+}
+
+/**
+ * Handle fallback sources when no AniList results are found.
+ * @param filteredResults - Filtered results from AniList
+ * @param title - Manga title being searched
+ * @param token - Authentication token
+ * @param searchConfig - Search service configuration
+ * @returns Object with final results and source maps
+ */
+async function handleFallbackSources(
+  filteredResults: AniListManga[],
+  title: string,
+  token: string | undefined,
+  searchConfig: SearchServiceConfig,
+): Promise<{
+  finalResults: AniListManga[];
+  comickSourceMap: ComickSourceMap;
+  mangaDexSourceMap: MangaDexSourceMap;
+}> {
+  const comickSourceMap: ComickSourceMap = new Map();
+  const mangaDexSourceMap: MangaDexSourceMap = new Map();
+
+  if (filteredResults.length > 0) {
+    console.debug(
+      `[MangaSearchService] ✅ Found ${filteredResults.length} AniList results for "${title}", skipping fallback sources`,
+    );
+    return { finalResults: filteredResults, comickSourceMap, mangaDexSourceMap };
+  }
+
+  console.info(
+    `[MangaSearchService] 🎯 No AniList results found for "${title}", trying fallback sources...`,
+  );
+
+  const comickFallback = await executeComickFallback(
+    title,
+    token,
+    filteredResults,
+    searchConfig,
+  );
+  const mangaDexFallback = await executeMangaDexFallback(
+    title,
+    token,
+    filteredResults,
+    searchConfig,
+  );
+
+  const mergedResults = mergeSourceResults(
+    filteredResults,
+    comickFallback.results,
+    mangaDexFallback.results,
+    comickFallback.comickSourceMap,
+    mangaDexFallback.mangaDexSourceMap,
+  );
+
+  return {
+    finalResults: mergedResults.mergedResults,
+    comickSourceMap: mergedResults.comickSourceMap,
+    mangaDexSourceMap: mergedResults.mangaDexSourceMap,
+  };
+}
 
 /**
  * Search for manga by title with rate limiting and caching.
@@ -55,23 +193,15 @@ export async function searchMangaByTitle(
   const searchConfig = { ...DEFAULT_SEARCH_CONFIG, ...config };
   const cacheKey = generateCacheKey(title);
 
-  // Handle cache operations
-  if (searchConfig.bypassCache && cacheKey) {
-    handleCacheBypass(title, cacheKey);
-  } else if (!searchConfig.bypassCache) {
-    // Pass kenmeiManga to ensure cached results respect custom rules when context exists
-    const cachedResult = processCachedResults(title, cacheKey, kenmeiManga);
-    if (cachedResult) {
-      // Dispatch cache hit event for performance tracking
-      if (typeof globalThis.dispatchEvent === "function") {
-        globalThis.dispatchEvent(
-          new CustomEvent("matching:cache-hit", {
-            detail: { title, cacheKey },
-          }),
-        );
-      }
-      return cachedResult;
-    }
+  // Check cache first
+  const cachedResult = handleCacheCheck(
+    title,
+    cacheKey,
+    kenmeiManga,
+    searchConfig.bypassCache ?? false,
+  );
+  if (cachedResult) {
+    return cachedResult;
   }
 
   if (searchConfig.exactMatchingOnly) {
@@ -110,34 +240,12 @@ export async function searchMangaByTitle(
     kenmeiManga,
   );
 
-  // Apply worker-based scoring if enabled and we have results to score
-  let scoredResults = rankedResults;
-  if (searchConfig.useWorkers && rankedResults.length > 0 && kenmeiManga) {
-    try {
-      const candidatesMap = new Map<string, typeof rankedResults>();
-      // Use index-based key to avoid collision with undefined manga.id
-      candidatesMap.set("0", rankedResults);
-      const execution = executeMatchingWithWorkers(
-        [kenmeiManga],
-        candidatesMap,
-        searchConfig.matchConfig,
-      );
-      const workerResults = await execution.promise;
-      if (
-        workerResults &&
-        workerResults.length > 0 &&
-        workerResults[0]?.anilistMatches
-      ) {
-        // Extract the AniListManga objects from the scored matches
-        scoredResults = workerResults[0].anilistMatches.map(
-          (match) => match.manga,
-        );
-      }
-    } catch {
-      // Fallback to sync results if worker execution fails
-      scoredResults = rankedResults;
-    }
-  }
+  // Apply worker-based scoring if enabled
+  const scoredResults = await applyWorkerScoring(
+    rankedResults,
+    kenmeiManga,
+    searchConfig,
+  );
 
   let filteredResults = applyContentFiltering(
     scoredResults,
@@ -150,59 +258,14 @@ export async function searchMangaByTitle(
     searchConfig,
   );
 
-  // Handle fallback sources only if no original AniList results were found
-  let finalResults = filteredResults;
-  let comickSourceMap = new Map<
-    number,
-    { title: string; slug: string; comickId: string; foundViaComick: boolean }
-  >();
-  let mangaDexSourceMap = new Map<
-    number,
-    {
-      title: string;
-      slug: string;
-      mangaDexId: string;
-      foundViaMangaDex: boolean;
-    }
-  >();
-
-  // Only use fallback sources if no AniList results were found
-  if (filteredResults.length === 0) {
-    console.info(
-      `[MangaSearchService] 🎯 No AniList results found for "${title}", trying fallback sources...`,
-    );
-
-    // Try both fallback sources when enabled
-    const comickFallback = await executeComickFallback(
+  // Handle fallback sources
+  const { finalResults, comickSourceMap, mangaDexSourceMap } =
+    await handleFallbackSources(
+      filteredResults,
       title,
       token,
-      finalResults,
       searchConfig,
     );
-    const mangaDexFallback = await executeMangaDexFallback(
-      title,
-      token,
-      finalResults,
-      searchConfig,
-    );
-
-    // Merge results and handle duplicates
-    const mergedResults = mergeSourceResults(
-      finalResults,
-      comickFallback.results,
-      mangaDexFallback.results,
-      comickFallback.comickSourceMap,
-      mangaDexFallback.mangaDexSourceMap,
-    );
-
-    finalResults = mergedResults.mergedResults;
-    comickSourceMap = mergedResults.comickSourceMap;
-    mangaDexSourceMap = mergedResults.mangaDexSourceMap;
-  } else {
-    console.debug(
-      `[MangaSearchService] ✅ Found ${filteredResults.length} AniList results for "${title}", skipping fallback sources`,
-    );
-  }
 
   // Build and return final response
   return buildFinalResponse(
