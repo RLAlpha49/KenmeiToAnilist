@@ -443,6 +443,17 @@ Before syncing, configure which fields to synchronize:
 
 **Important**: Always review the preview before syncing to ensure accuracy. Changes to AniList cannot be easily undone.
 
+## 🔔 Updates
+
+The app includes a built-in updater. When a new version is available, you'll see an in-app prompt:
+
+- Click "Download" to fetch the update and monitor progress
+- Click "Install and Restart" after download completes
+- You can dismiss a specific version; the prompt won't appear again for that version
+- Optional: enable pre-release updates in Settings to receive beta versions
+
+The app also performs periodic background checks and may notify you shortly after startup.
+
 ## 💾 Backup & Restore
 
 ### Creating Backups
@@ -462,18 +473,20 @@ Backups preserve your complete application data in a single file, allowing you t
 **Manual Backup Creation:**
 
 1. Navigate to **Settings → Data Management**
-2. Click **"Create Backup Now"** button
-3. A backup file (`backup-TIMESTAMP.json`) will download to your Downloads folder
-4. Store the file in a safe location
+2. Set a backup location (folder) if not already configured
+3. Click **"Create Backup Now"**
+4. The backup file (e.g. `backup-YYYYMMDD-HHMMSS.json`) is saved in the configured backup location
+5. Use **"Open Backup Location"** to open the folder in your file manager
 
 **Automatic Backups:**
 
-Enable automatic backups to create backup files before each sync or matching operation:
+Use the scheduler to keep backups current without manual steps:
 
 1. Navigate to **Settings → Data Management**
-2. Enable the **"Enable automatic backups before sync/matching operations"** checkbox
-3. Backups will now be created automatically before major operations
-4. Automatic backup files are saved alongside manual backups in your Downloads folder
+2. Configure the schedule (Daily, Weekly, Monthly) and limits (max files/size)
+3. Choose a backup location (you can open it anytime from the UI)
+4. Optional: enable automatic backup before Matching and/or Sync operations
+5. Backups will be created automatically per your schedule and retained based on rotation settings
 
 ### Restoring Backups
 
@@ -489,14 +502,13 @@ Restore a backup to return your application data to a previous state.
 **To Restore a Backup:**
 
 1. Navigate to **Settings → Data Management**
-2. Click the file upload area under "Restore from Backup"
-3. Select a previously saved backup file (`.json`)
-4. A confirmation dialog will display:
-   - Backup timestamp
-   - Application version when backup was created
-   - List of data that will be restored
-5. Click **"Restore Backup"** to confirm
-6. Application will automatically reload with restored data
+2. Use one of the following options:
+
+- Select a backup from the "Recent Backups" list and click Restore
+- Or choose a file via "Restore from File" to pick a `.json` backup
+
+3. Review the confirmation details (timestamp, app version, included data)
+4. Click **"Restore"** to proceed; the app will reload after restoration
 
 ### Backup History
 
@@ -509,7 +521,9 @@ Recently created backups are tracked in backup history:
    - Application version at backup time
    - Backup file size
 4. Click **"Restore"** next to any backup to restore from history
-   - *Note: This requires the original backup file; history shows metadata only*
+
+- Restores from the configured backup location; use "Open Backup Location" if you need to manage files
+
 5. Click **"Clear History"** to remove all history entries
 
 ## ❓ Frequently Asked Questions

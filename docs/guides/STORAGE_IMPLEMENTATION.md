@@ -66,6 +66,10 @@ export const STORAGE_KEYS = {
   SYNC_CONFIG: "sync_config",           // Synchronization configuration settings
   SYNC_STATS: "sync_stats",            // Synchronization statistics and history
   MATCH_CONFIG: "match_config",         // Matching algorithm configuration
+  UPDATE_DISMISSED_VERSIONS: "update_dismissed_versions", // Updater: versions the user dismissed
+  UPDATE_CHANNEL: "update_channel",     // Updater: channel preference (stable/beta)
+  BACKUP_HISTORY: "backup_history",     // Backup: recent backups metadata
+  BACKUP_SCHEDULE_CONFIG: "backup_schedule_config", // Backup: scheduler configuration
 };
 
 // Current cache version for compatibility

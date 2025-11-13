@@ -38,25 +38,22 @@
 
 ### IPC Communication Architecture
 
-**Pattern**: Context bridge via `src/helpers/ipc/context-exposer.ts`
+Pattern: Context bridge via `src/helpers/ipc/context-exposer.ts`, with sender validation in `src/helpers/ipc/listeners-register.ts`.
 
-Exposes 5 domain contexts:
+Exposed contexts (8):
 
-- `globalThis.electronWindow` - Window management
-- `globalThis.electronTheme` - Theme persistence
-- `globalThis.electronAuth` - OAuth flows & credentials
-- `globalThis.electronStore` - Electron-store file access
-- `globalThis.electronApi` - AniList API calls
+- electronWindow — Window controls
+- electronTheme — Theme persistence
+- electronAuth — OAuth flows & credentials
+- electronStore — Electron-store access
+- electronApi — AniList API and sync calls
+- electronUpdater — Auto-updater control and events
+- electronBackup — Backup scheduler, file ops, and history
+- electronClipboard — Clipboard utilities
 
-**Handler organization**: `src/helpers/ipc/{domain}/`
+Handlers are organized per domain under `src/helpers/ipc/*` with channel constants and listener wiring. All `ipcMain.handle` registrations use `secureHandle()` which rejects calls from unknown senders via `isValidSender()`.
 
-- `api/` - AniList API, sync service
-- `auth/` - OAuth, token management
-- `store/` - electron-store access
-- `theme/` - Theme persistence
-- `window/` - Window management
-
-**Registration**: `src/helpers/ipc/listeners-register.ts` - All handlers registered once at app startup
+Registration: `src/helpers/ipc/listeners-register.ts` registers window, theme, auth, store, backup, clipboard, api, and update listeners once at startup.
 
 ## React Context Architecture
 

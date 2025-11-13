@@ -35,11 +35,7 @@ export interface SearchServiceConfig {
   enableComickSearch?: boolean;
   /** Enable searching via MangaDex source */
   enableMangaDexSearch?: boolean;
-  /**
-   * Enable Web Worker-based matching for improved performance on large batches.
-   * Workers execute CPU-intensive similarity calculations in parallel threads.
-   * @default true
-   */
+  /** Enable Web Worker-based matching for improved performance on large batches. */
   useWorkers?: boolean;
 }
 

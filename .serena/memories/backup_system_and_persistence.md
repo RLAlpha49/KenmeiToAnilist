@@ -257,32 +257,51 @@ interface BackupHistory {
 
 ## IPC Integration
 
-### Backup Channels
+Location: `src/helpers/ipc/backup/*`
 
-**Constants** (`src/helpers/ipc/backup/backup-channels.ts`):
+### Channels (BACKUP_CHANNELS)
 
-- `backup:status-changed` - Emit when backup status changes
-- `backup:backup-now` - Handle immediate backup request
-- `backup:get-status` - Get current backup status
-- `backup:get-history` - Get backup history
-- `backup:restore` - Restore from backup file
-- `backup:update-schedule` - Update schedule config
-- `backup:get-schedule` - Get current schedule
+- backup:get-schedule-config — GET_SCHEDULE_CONFIG
+- backup:set-schedule-config — SET_SCHEDULE_CONFIG
+- backup:get-backup-location — GET_BACKUP_LOCATION
+- backup:set-backup-location — SET_BACKUP_LOCATION
+- backup:open-backup-location — OPEN_BACKUP_LOCATION
+- backup:list-local-backups — LIST_LOCAL_BACKUPS
+- backup:read-local-backup — READ_LOCAL_BACKUP
+- backup:restore-local-backup — RESTORE_LOCAL_BACKUP
+- backup:delete-backup — DELETE_BACKUP
+- backup:trigger-backup — TRIGGER_BACKUP
+- backup:create-now — CREATE_NOW
+- backup:get-backup-status — GET_BACKUP_STATUS
+- backup:get-backup-history — GET_BACKUP_HISTORY
+- backup:clear-history — CLEAR_HISTORY
+- backup:on-backup-complete — ON_BACKUP_COMPLETE (event)
+- backup:on-backup-error — ON_BACKUP_ERROR (event)
+- backup:on-history-updated — ON_HISTORY_UPDATED (event)
+- backup:on-status-changed — ON_STATUS_CHANGED (event)
 
-### Context Bridge
+### Context Bridge API (globalThis.electronBackup)
 
-**Exposed via** `globalThis.electronBackup`:
+- getScheduleConfig(): Promise<BackupScheduleConfig>
+- setScheduleConfig(config): Promise<{ success: boolean; error?: string }>
+- getBackupLocation(): Promise<{ success: boolean; data?: string; error?: string }>
+- setBackupLocation(path): Promise<{ success: boolean; error?: string; code?: string }>
+- openBackupLocation(): Promise<{ success: boolean; error?: string }>
+- listLocalBackups(): Promise<{ success: boolean; data?: Array<{ name: string; timestamp: number; size: number }>; error?: string }>
+- readLocalBackupFile(filename): Promise<{ success: boolean; data?: string; error?: string }>
+- deleteBackup(filename): Promise<{ success: boolean; error?: string }>
+- triggerBackup(): Promise<{ success: boolean; backupId?: string; error?: string }>
+- createNow(): Promise<{ success: boolean; backupId?: string; error?: string }>
+- getBackupStatus(): Promise<{ isRunning: boolean; lastBackup: number | null; nextBackup: number | null }>
+- getBackupHistory(): Promise<BackupHistoryEntry[]>
+- clearHistory(): Promise<{ success: boolean; error?: string }>
+- restoreFromLocal(filename, options?: { merge?: boolean }): Promise<{ success: boolean; errors?: string[] }>
+- onBackupComplete(cb): () => void
+- onBackupError(cb): () => void
+- onHistoryUpdated(cb): () => void
+- onStatusChanged(cb): () => void
 
-```typescript
-{
-  backupNow(): Promise<{ success: boolean; message: string }>;
-  getStatus(): Promise<SchedulerState>;
-  getHistory(): Promise<BackupHistory>;
-  restore(filename: string): Promise<{ success: boolean; message: string }>;
-  updateSchedule(config: BackupScheduleConfig): Promise<void>;
-  getSchedule(): Promise<BackupScheduleConfig>;
-}
-```
+Usage: Subscribe to events for live UI updates (status, completion, errors) and call trigger/createNow for manual backups; use list/read/delete for file management and restoreFromLocal for recovery.
 
 ## Storage Integration
 

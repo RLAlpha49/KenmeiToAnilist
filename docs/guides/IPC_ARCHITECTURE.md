@@ -19,15 +19,18 @@ The **context bridge pattern** solves this by:
 
 This architecture ensures that the renderer can only perform operations that were explicitly approved by the developer.
 
-### Five Exposed Contexts
+### Eight Exposed Contexts
 
-This application exposes five distinct contexts to the renderer, each serving a specific purpose:
+This application exposes eight distinct contexts to the renderer, each serving a specific purpose:
 
 1. **electronWindow** - Window management (minimize, maximize, close)
 2. **electronTheme** - Theme persistence and system-wide theme changes
 3. **electronAuth** - OAuth authentication with browser interaction
 4. **electronStore** - Persistent file-based storage via electron-store
-5. **electronAPI** - AniList API requests, caching, rate limiting, and shell operations
+5. **electronAPI** - AniList API requests, caching, rate limiting, external sources, and shell operations
+6. **electronUpdater** - Auto-update checks, downloads, installation, and progress events
+7. **electronBackup** - Backup scheduler/config, manual backup/restore, history, and location management
+8. **electronClipboard** - Clipboard helper utilities (writeText)
 
 ## Context Bridge Pattern
 
@@ -45,6 +48,9 @@ The context bridge architecture consists of three layers:
 │  - globalThis.electronAuth                                  │
 │  - globalThis.electronStore                                 │
 │  - globalThis.electronAPI                                   │
+│  - globalThis.electronUpdater                               │
+│  - globalThis.electronBackup                                │
+│  - globalThis.electronClipboard                             │
 └─────────────────┬───────────────────────────────────────────┘
                   │ (Context Bridge)
 ┌─────────────────▼───────────────────────────────────────────┐
@@ -87,12 +93,22 @@ The central registration point that imports and combines all context definitions
 // context-exposer.ts handles the registration logic
 import { exposeWindowContext } from './window/window-context';
 import { exposeThemeContext } from './theme/theme-context';
-// ... import other contexts
+import { exposeAuthContext } from './auth/auth-context';
+import { exposeStoreContext } from './store/store-context';
+import { exposeApiContext } from './api/api-context';
+import { exposeUpdateContext } from './update/update-context';
+import { exposeBackupContext } from './backup/backup-context';
+import { exposeClipboardContext } from './clipboard/clipboard-context';
 
-export function exposeAllContexts() {
+export default function exposeContexts() {
   exposeWindowContext();
   exposeThemeContext();
-  // ... expose other contexts
+  exposeAuthContext();
+  exposeStoreContext();
+  exposeApiContext();
+  exposeUpdateContext();
+  exposeBackupContext();
+  exposeClipboardContext();
 }
 ```
 
@@ -104,7 +120,11 @@ IPC handlers are organized by domain:
 - `src/helpers/ipc/theme/theme-listeners.ts` - Theme operations
 - `src/helpers/ipc/auth/auth-listeners.ts` - Authentication
 - `src/helpers/ipc/store/store-setup.ts` - Storage
-- `src/helpers/ipc/api/api-listeners.ts` - API operations
+- `src/helpers/ipc/api/api-listeners.ts` - AniList/search/shell operations
+- `src/helpers/ipc/update/update-listeners.ts` - Auto-updater events and commands
+- `src/helpers/ipc/backup/backup-listeners.ts` - Backup scheduler and file operations
+- `src/helpers/ipc/clipboard/clipboard-listeners.ts` - Clipboard helpers
+- `src/helpers/ipc/debug/debug-listeners.ts` - Debug utilities
 
 ## Exposed Contexts Reference
 
@@ -634,22 +654,30 @@ All IPC handlers are registered in `src/helpers/ipc/listeners-register.ts`:
 import { addWindowEventListeners } from './window/window-listeners';
 import { addThemeEventListeners } from './theme/theme-listeners';
 import { addAuthEventListeners } from './auth/auth-listeners';
-import { setupElectronStore } from './store/store-setup';
+import { setupStoreIPC } from './store/store-setup';
 import { setupAniListAPI } from './api/api-listeners';
+import { addUpdateEventListeners } from './update/update-listeners';
+import { setupBackupIPC } from './backup/backup-listeners';
+import { setupDebugIPC } from './debug/debug-listeners';
+import { setupClipboardIPC } from './clipboard/clipboard-listeners';
 
-export function registerListeners(mainWindow: BrowserWindow) {
+export default function registerListeners(mainWindow: BrowserWindow) {
   addWindowEventListeners(mainWindow);
   addThemeEventListeners(mainWindow);
   addAuthEventListeners(mainWindow);
-  setupElectronStore(mainWindow);
+  setupStoreIPC(mainWindow);
+  setupBackupIPC(mainWindow);
+  setupDebugIPC(mainWindow);
+  setupClipboardIPC(mainWindow);
   setupAniListAPI(mainWindow);
+  addUpdateEventListeners(mainWindow);
 }
 ```
 
 This function is called from `src/main.ts` during application startup:
 
 ```typescript
-import { registerListeners } from '@/helpers/ipc/listeners-register';
+import registerListeners from '@/helpers/ipc/listeners-register';
 
 app.on('ready', () => {
   const mainWindow = createWindow();
@@ -659,28 +687,30 @@ app.on('ready', () => {
 
 ### Secure Handler Pattern
 
-All IPC handlers use a secure wrapper that validates the sender:
+All IPC handlers are registered through a helper that validates the sender against the main window's `webContents.id`:
 
 ```typescript
-function secureHandle<T>(
-  event: IpcMainInvokeEvent,
-  handler: () => T | Promise<T>
-): T | Promise<T> {
-  // Verify the request comes from the main window
-  if (event.senderFrame.parent) {
-    throw new Error('IPC must come from main frame');
-  }
+import { BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron';
 
-  // Execute the handler
-  return handler();
+function isValidSender(event: IpcMainInvokeEvent, mainWindow: BrowserWindow): boolean {
+  return event.sender.id === mainWindow.webContents.id;
 }
 
-// Usage in listener
-ipcMain.handle('window:minimize', async (event) => {
-  return secureHandle(event, () => {
-    mainWindow.minimize();
+function secureHandle<T extends unknown[]>(
+  channel: string,
+  handler: (event: IpcMainInvokeEvent, ...args: T) => unknown,
+  mainWindow: BrowserWindow,
+): void {
+  ipcMain.handle(channel, async (event: IpcMainInvokeEvent, ...args: T) => {
+    if (!isValidSender(event, mainWindow)) {
+      throw new Error(`Unauthorized IPC call to channel: ${channel}`);
+    }
+    return handler(event, ...args);
   });
-});
+}
+
+// Usage in a domain listener
+secureHandle('window:minimize', (_event) => mainWindow.minimize(), mainWindow);
 ```
 
 ### Adding a New IPC Operation
@@ -1277,6 +1307,25 @@ const result = await globalThis.electronAPI.request(query);
 **Solution:** Implement timeout wrapper.
 
 ---
+
+## Additional Contexts
+
+### 6. electronUpdater — Auto-Update
+
+- Methods: `checkForUpdates({ allowPrerelease? })`, `downloadUpdate()`, `installUpdate()`
+- Events: `update:available`, `update:download-progress`, `update:downloaded`, `update:error`
+- Files: `src/helpers/ipc/update/update-context.ts`, `src/helpers/ipc/update/update-listeners.ts`, `src/helpers/ipc/update/update-channels.ts`
+
+### 7. electronBackup — Backups
+
+- Methods: `getScheduleConfig`, `setScheduleConfig`, `getBackupLocation`, `setBackupLocation`, `openBackupLocation`, `listLocalBackups`, `readLocalBackupFile`, `deleteBackup`, `triggerBackup`, `createNow`, `getBackupStatus`, `getBackupHistory`, `clearHistory`, `restoreFromLocal`
+- Events: `backup:on-backup-complete`, `backup:on-backup-error`, `backup:on-history-updated`, `backup:on-status-changed`
+- Files: `src/helpers/ipc/backup/backup-context.ts`, `src/helpers/ipc/backup/backup-listeners.ts`, `src/helpers/ipc/backup/backup-channels.ts`
+
+### 8. electronClipboard — Clipboard Helpers
+
+- Methods: `writeText(text: string)`
+- Files: `src/helpers/ipc/clipboard/clipboard-context.ts`, `src/helpers/ipc/clipboard/clipboard-listeners.ts`
 
 ## References
 

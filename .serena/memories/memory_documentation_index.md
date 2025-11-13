@@ -18,7 +18,7 @@ This memory serves as a comprehensive index of all Serena memories available for
    - Covers: Core decisions that define app structure
 
 2. **ipc_and_context_bridge_patterns** ✅
-   - Five exposed contexts: Window, Theme, Auth, Store, API
+   - Eight exposed contexts: Window, Theme, Auth, Store, API, Update, Backup, Clipboard
    - Context bridge security model
    - Handler registration and organization
    - OAuth flow with HTTP server pattern
@@ -109,13 +109,12 @@ This memory serves as a comprehensive index of all Serena memories available for
    - Covers: Robust sync to AniList with recovery
 
 2. **update_version_system** ✅
-   - Version management from package.json
-   - Update checking via GitHub releases
-   - Update notification with dismissal tracking
-   - Manual installation process
-   - Version comparison and release notes
-   - Pre-release and beta handling
-   - Covers: Application versioning and updates
+   - Electron auto-updater via IPC (electronUpdater)
+   - Update events: available, progress, downloaded, error
+   - UI hook: useAutoUpdater, persistent dismissals
+   - Pre-release opt-in (allowPrerelease)
+   - Install in-app via installUpdate()
+   - Version reporting via app.getVersion()
 
 ### User Interaction & Automation (4 memories)
 

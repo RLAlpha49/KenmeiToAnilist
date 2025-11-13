@@ -30,7 +30,8 @@
 - **One-Click Sync**: Synchronize your collection to AniList with a single click after reviewing matches.
 - **Auto-Pause Manga**: Automatically pause manga that haven't been updated within a customizable time period.
 - **Flexible Configuration**: Customize how synchronization works with priority settings for status, progress, and scores.
-- **Automatic Updates**: Stay up-to-date with automatic update checking and seamless installation via GitHub releases.
+- **Automatic Updates**: Built-in Electron auto-updater with in‑app download and install. Optional pre‑release channel support.
+- **Automatic Backups**: Configurable scheduled backups (hourly/daily/weekly) with rotation and restore from Settings.
 
 ---
 

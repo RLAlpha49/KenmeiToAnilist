@@ -1,527 +1,92 @@
-# Application Update & Version Management System
+# Auto-Update & Version System (Electron)
 
 ## Overview
 
-The application implements an automatic update system with version checking, GitHub release detection, and user-controlled update installation. The system prevents updates during critical operations and provides clear user feedback.
+The app uses Electron's auto-updater with a secure IPC bridge to check for, download, and install updates. The renderer never calls autoUpdater directly; it interacts via `globalThis.electronUpdater` exposed in the preload script.
 
 ## Architecture
 
-**Location**: `src/utils/app-version.ts` and `src/main.ts`
+- Context: `src/helpers/ipc/update/update-context.ts` (exposes electronUpdater)
+- Channels: `src/helpers/ipc/update/update-channels.ts` (constants)
+- Listeners: `src/helpers/ipc/update/update-listeners.ts` (wires electron-updater events to IPC)
+- Hook: `src/hooks/useAutoUpdater.ts` (UI state and control)
+- Registration: `src/helpers/ipc/listeners-register.ts` → `addUpdateEventListeners()`
 
-### Version Information
+## Context Bridge API (globalThis.electronUpdater)
 
-**`getAppVersion()`**:
+Methods:
 
-```typescript
-// Returns app version from package.json
-// Format: "1.2.3"
+- checkForUpdates(options?: { allowPrerelease?: boolean }): Promise<{ updateAvailable: boolean; version?: string; releaseNotes?: string; releaseDate?: string }>
+- downloadUpdate(): Promise<void>
+- installUpdate(): Promise<void>
 
-const version = getAppVersion();
-// "1.5.0"
-```
+Events (unsubscribe by calling returned function):
 
-**`getAppVersionElectron()`**:
+- onUpdateAvailable(cb: (info: { version: string; releaseNotes: string; releaseDate: string }) => void): () => void
+- onDownloadProgress(cb: (p: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => void): () => void
+- onUpdateDownloaded(cb: (info: { version: string }) => void): () => void
+- onUpdateError(cb: (err: { message: string; stack?: string; name?: string }) => void): () => void
 
-```typescript
-// Returns Electron-managed version
-// More reliable than package.json
+## IPC Channels
 
-const version = getAppVersionElectron();
-// "1.5.0"
-```
+- update:check — UPDATE_CHECK_CHANNEL
+- update:download — UPDATE_DOWNLOAD_CHANNEL
+- update:install — UPDATE_INSTALL_CHANNEL
+- update:available — UPDATE_AVAILABLE_EVENT (event)
+- update:download-progress — UPDATE_DOWNLOAD_PROGRESS_EVENT (event)
+- update:downloaded — UPDATE_DOWNLOADED_EVENT (event)
+- update:error — UPDATE_ERROR_EVENT (event)
 
-**`getFormattedAppVersion()`**:
+## Renderer Integration: useAutoUpdater()
 
-```typescript
-// Returns display-friendly version string
-// Format: "v1.5.0" or "v1.5.0-alpha"
+Location: `src/hooks/useAutoUpdater.ts`
 
-const formatted = getFormattedAppVersion();
-// "v1.5.0"
-```
+State exposed:
 
-## Version Comparison
+- updateAvailable, updateInfo (version, notes, date)
+- downloadProgress, isDownloading, isDownloaded
+- error (string | null)
 
-**`compareVersions(v1, v2)`**:
+Actions:
 
-```typescript
-compareVersions("1.5.0", "1.4.9"); // 1 (v1 > v2)
-compareVersions("1.5.0", "1.5.0"); // 0 (v1 = v2)
-compareVersions("1.5.0", "1.5.1"); // -1 (v1 < v2)
-```
+- checkForUpdates(allowPrerelease?: boolean)
+- downloadUpdate()
+- installUpdate()
+- dismissUpdate()
 
-**Algorithm**:
+Behavior:
 
-- Compare major.minor.patch segments
-- Handle prerelease versions (alpha, beta)
-- Return -1, 0, or 1 for sorting
+- Subscribes to all update events; updates state and shows toasts on changes
+- Dismisses versions persistently via storage key `STORAGE_KEYS.UPDATE_DISMISSED_VERSIONS` (value: "update_dismissed_versions")
+- Gracefully handles environments without auto-updater (e.g., dev) by showing user-friendly toasts and warnings
 
-## Update Checking
+## Settings & UI
 
-### GitHub Release Detection
+- Settings page can call checkForUpdates and show status
+- When an update is available and not dismissed, a toast/notification is shown with version and "Download" action
+- After download completes, a toast offers "Install Now" action which calls installUpdate()
 
-**`checkForUpdates()`**:
+## Version Reporting
 
-```typescript
-interface UpdateInfo {
-  hasUpdate: boolean;
-  latestVersion: string;
-  currentVersion: string;
-  releaseUrl: string;
-  downloadUrl: string;
-  releaseNotes: string;
-}
+- Version strings come from Electron (app.getVersion())
+- Sentry uses `release: kenmeitoanilist@<version>` for correlation
 
-const updateInfo = await checkForUpdates();
-// {
-//   hasUpdate: true,
-//   latestVersion: "1.6.0",
-//   currentVersion: "1.5.0",
-//   releaseUrl: "https://github.com/RLAlpha49/KenmeiToAnilist/releases/tag/v1.6.0",
-//   downloadUrl: "https://github.com/.../KenmeiToAnilist-1.6.0.exe",
-//   releaseNotes: "## 1.6.0\n- New features...\n- Bug fixes..."
-// }
-```
+## Error Handling & Telemetry
 
-**Source**: GitHub API for releases
+- All update errors are surfaced via onUpdateError and bubbled into the hook (toast + state)
+- Non-fatal failures (e.g., check failing offline) are handled gracefully and do not block the app
 
-```typescript
-// API call to
-https://api.github.com/repos/RLAlpha49/KenmeiToAnilist/releases/latest
-```
+## Pre-releases
 
-### Check Frequency
+- checkForUpdates accepts `allowPrerelease` to include beta/rc builds when desired
+- Preference may be stored under `STORAGE_KEYS.UPDATE_CHANNEL` if needed (stable/beta)
 
-**Automatic checks**:
+## Security
 
-- On app startup
-- Every 24 hours (background)
-- When user opens Settings → Updates
+- Renderer interacts only through context bridge
+- All handlers registered via `secureHandle()` (sender validation) in `listeners-register.ts`
 
-**Manual check**:
+## Notes
 
-```typescript
-// In settings page
-<button onClick={() => checkForUpdates()}>
-  Check for Updates
-</button>
-```
-
-### Version Status
-
-**`getAppVersionStatus()`**:
-
-```typescript
-enum VersionStatus {
-  UNKNOWN = "unknown", // Can't determine
-  UP_TO_DATE = "up_to_date", // Latest version
-  UPDATE_AVAILABLE = "update_available", // Newer version exists
-  DEVELOPMENT = "development", // Dev build (no releases)
-}
-
-const status = getAppVersionStatus();
-// "update_available"
-```
-
-## Update Notification System
-
-### Update Notification Component
-
-**Location**: `src/components/UpdateNotification.tsx`
-
-**Display triggers**:
-
-1. Update available
-2. Delayed 3 seconds (let app stabilize)
-3. Not during sync/matching
-4. Not during critical operations
-
-**Notification content**:
-
-```text
-┌─────────────────────────────────────┐
-│ ℹ️ Update Available                 │
-│ Version 1.6.0 is now available     │
-│                                     │
-│ [Download Update] [Remind Later]   │
-│ [Read Release Notes]               │
-└─────────────────────────────────────┘
-```
-
-### User Actions
-
-**[Download Update]**:
-
-- Open GitHub release page
-- User manually downloads installer
-- User installs at their convenience
-- App notified of completion
-
-**[Remind Later]**:
-
-- Dismiss notification
-- Check again next session
-- Stored in storage: `UPDATE_DISMISSED_VERSIONS`
-
-**[Read Release Notes]**:
-
-- Open GitHub release page in browser
-- Show changelog
-- User can review before deciding
-
-### Dismissal Logic
-
-**`UPDATE_DISMISSED_VERSIONS` storage key**:
-
-```typescript
-// Stored versions that user dismissed
-["1.5.5", "1.6.0-beta"];
-
-// If new 1.6.0 released after dismissing 1.6.0-beta
-// → Show notification again (different version)
-
-// If same version pushed again
-// → Don't show notification again (dismissed by user)
-```
-
-## Update Installation
-
-### Manual Installation Process
-
-**Currently**: Manual download and installation
-
-```text
-1. User clicks "Download Update"
-2. Browser opens GitHub release
-3. User downloads .exe (Windows) / .dmg (macOS) / .deb (Linux)
-4. User runs installer
-5. Installer handles:
-   - Backup old version (Windows)
-   - Install new version
-   - Preserve user data
-   - Clean up old files
-6. App auto-restarts with new version
-```
-
-### Auto-Update (Electron Auto Updater)
-
-**Configured in `src/main.ts`**:
-
-```typescript
-const autoUpdater = require("electron-updater").autoUpdater;
-
-autoUpdater.on("checking-for-update", () => {
-  console.log("Checking for update...");
-});
-
-autoUpdater.on("update-available", (info) => {
-  console.log(`Update available: ${info.version}`);
-});
-
-autoUpdater.on("update-not-available", () => {
-  console.log("No update available");
-});
-
-autoUpdater.on("error", (err) => {
-  console.error("Auto updater error:", err);
-});
-```
-
-**Timing**:
-
-- Check on startup
-- Check every 24 hours
-- User can manually trigger
-
-## Build Configuration
-
-### Build Metadata
-
-**`src/main.ts` setup**:
-
-```typescript
-// App version from package.json
-const appVersion = app.getVersion();
-
-// Release channel
-const releaseChannel = isDevelopment ? "development" : "stable";
-
-// Build info for Sentry
-Sentry.init({
-  release: `kenmeitoanilist@${appVersion}`,
-  tracesSampleRate: 0.1,
-  // ...
-});
-```
-
-### Versioning Strategy
-
-**Semantic Versioning**: `MAJOR.MINOR.PATCH`
-
-- **MAJOR**: Breaking changes (1.x → 2.x)
-- **MINOR**: Features/enhancements (1.4 → 1.5)
-- **PATCH**: Bug fixes (1.5.0 → 1.5.1)
-
-**Pre-releases**: `1.6.0-beta.1`, `1.6.0-rc.1`
-
-**Development builds**: Use higher version with -dev suffix
-
-## Update Types
-
-### Feature Updates
-
-**MINOR version bump**:
-
-- New features added
-- Backward compatible
-- Automatic check recommended
-- Release notes highlight features
-
-### Bug Fix Updates
-
-**PATCH version bump**:
-
-- Fixes critical bugs
-- Backward compatible
-- Automatic installation safe
-- Release notes list fixes
-
-### Security Updates
-
-**PATCH or MINOR**:
-
-- Security vulnerability fixed
-- URGENT - recommend immediate update
-- Release notes explain vulnerability
-- Special notification styling
-
-### Breaking Changes
-
-**MAJOR version bump**:
-
-- API changes
-- Data format changes
-- Incompatibilities
-- Migration guide in release notes
-- Strongly recommend update
-
-## Release Notes
-
-### Release Information
-
-**From GitHub**:
-
-```typescript
-interface GitHubRelease {
-  tag_name: string; // "v1.6.0"
-  name: string; // "1.6.0"
-  body: string; // Markdown release notes
-  draft: boolean; // Is draft?
-  prerelease: boolean; // Is pre-release?
-  created_at: string; // ISO timestamp
-  published_at: string; // ISO timestamp
-  html_url: string; // GitHub page URL
-}
-```
-
-**Release notes parsing**:
-
-```typescript
-// Release body (Markdown)
-## Features
-- New matching algorithm
-- Dark mode support
-
-## Bug Fixes
-- Fixed sync crashes
-- Fixed import encoding
-
-## Performance
-- 30% faster startup
-- Reduced memory usage
-```
-
-### Display in UI
-
-```typescript
-<Dialog open={showReleaseNotes}>
-  <h2>Release Notes - v{version}</h2>
-  <div className="markdown">
-    {parseMarkdown(releaseBody)}
-  </div>
-  <a href={url}>View on GitHub</a>
-</Dialog>
-```
-
-## Update Prevention
-
-### Critical Operations
-
-**Don't show update during**:
-
-- CSV import in progress
-- Manga matching active
-- AniList sync running
-- Settings being modified
-- Modal dialogs open
-
-**Implementation**:
-
-```typescript
-// Check if safe to update
-const canShowUpdateNotification = () => {
-  return !isImporting && !isMatching && !isSyncing && !isInSettings && !hasOpenDialog;
-};
-
-if (canShowUpdateNotification()) {
-  showUpdateNotification();
-}
-```
-
-## Update History
-
-### Tracking Updates
-
-**Not currently tracked**, but could include:
-
-- Current version
-- Previous version
-- Update timestamp
-- Update method (auto/manual)
-- Installation success/failure
-
-**Would be useful for**:
-
-- User support (troubleshooting)
-- Analytics (adoption metrics)
-- Rollback if needed
-
-## Settings Integration
-
-### Update Preferences
-
-**Settings → About → Updates**:
-
-```typescript
-<SettingsSection title="Updates">
-  <div>
-    Current Version: {currentVersion}
-  </div>
-  <button onClick={checkForUpdates}>
-    Check for Updates
-  </button>
-
-  {hasUpdate && (
-    <>
-      <Alert>New version {latestVersion} available</Alert>
-      <button onClick={downloadUpdate}>
-        Download Now
-      </button>
-    </>
-  )}
-
-  <Checkbox>
-    Automatically check for updates
-  </Checkbox>
-
-  <Select>
-    <option>Stable releases only</option>
-    <option>Include pre-releases</option>
-  </Select>
-</SettingsSection>
-```
-
-## Error Handling
-
-### Update Check Failures
-
-**Network error**:
-
-```typescript
-try {
-  const update = await checkForUpdates();
-} catch (error) {
-  if (isNetworkError(error)) {
-    console.warn("Can't check updates - offline");
-    // Silently continue, try again later
-  } else {
-    logError("Update check failed", error);
-  }
-}
-```
-
-**GitHub API issues**:
-
-- Rate limit hit (60 requests/hour unauthenticated)
-- Service unavailable
-- Timeout (5 second default)
-
-**Solution**: Retry with exponential backoff
-
-### Notification Failures
-
-**If notification can't display**:
-
-- Log error silently
-- Try again on next cycle
-- Don't block app startup
-
-## Testing
-
-### Simulating Updates
-
-**Dev mode**:
-
-```typescript
-// Override version for testing
-if (isDevelopment) {
-  mockAppVersion("1.0.0");
-  mockLatestVersion("2.0.0");
-  showUpdateNotification();
-}
-```
-
-### Checking Current Version
-
-```bash
-# CLI
-electron . --version
-
-# In DevTools console
-require('electron').app.getVersion()
-```
-
-## Performance Characteristics
-
-### Update Check
-
-**HTTP request to GitHub API**:
-
-- Timeout: 5 seconds
-- Response size: ~5KB
-- Frequency: Once per 24 hours (automatic)
-- Network impact: Negligible
-
-### Memory Impact
-
-- Update info stored in memory: ~10KB
-- Release notes cached: ~50KB
-- No persistent disk impact
-
-## Best Practices
-
-✅ **DO**:
-
-- Check for updates regularly
-- Display clear notifications
-- Show release notes
-- Prevent updates during operations
-- Handle network failures gracefully
-
-❌ **DON'T**:
-
-- Force updates without user consent
-- Update during critical operations
-- Hide update availability
-- Annoy users with notifications
-- Break backward compatibility without reason
+- The previous GitHub-release-only flow has been superseded by the auto-updater
+- Manual install remains possible but is not the primary path in current code

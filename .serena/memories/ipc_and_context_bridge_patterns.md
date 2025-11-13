@@ -6,43 +6,44 @@
 
 All IPC communication uses context bridge pattern for security. The renderer process does NOT access IPC directly.
 
-### Five Exposed Contexts
+### Exposed Contexts (8)
 
-1. **electronWindow** - Window management
-   - `minimize()` - Minimize window
-   - `maximize()` - Toggle maximize
-   - `close()` - Close window
+1. electronWindow — Window management
+   - minimize(), maximize(), close()
 
-2. **electronTheme** - Theme persistence
-   - `getCurrentMode()` - Get current theme
-   - `toggleTheme()` - Cycle through themes
-   - `setDarkMode()` - Force dark theme
-   - `setLightMode()` - Force light theme
-   - `setSystemMode()` - Use system theme
-   - `onThemeChange(callback)` - Listen for theme changes
+2. electronTheme — Theme persistence
+   - getCurrentMode(), toggleTheme(), setDarkMode(), setLightMode(), setSystemMode(), onThemeChange(cb)
 
-3. **electronAuth** - OAuth & credentials
-   - `openOAuthWindow(url, redirectUri)` - Start OAuth flow
-   - `storeCredentials(credentials)` - Save OAuth credentials
-   - `getCredentials(source)` - Get stored credentials
-   - `exchangeToken(params)` - Exchange auth code for token
-   - `onCodeReceived(callback)` - Listen for auth code
-   - `onCancelled(callback)` - Listen for cancellation
-   - `onStatus(callback)` - Listen for status updates
+3. electronAuth — OAuth & credentials
+   - openOAuthWindow(url, redirectUri)
+   - storeCredentials(credentials), getCredentials(source)
+   - exchangeToken(params)
+   - onCodeReceived(cb), onCancelled(cb), onStatus(cb)
 
-4. **electronStore** - Electron-store file access
-   - `setItem(key, value)` - Save to store
-   - `getItem(key)` - Get from store
-   - `removeItem(key)` - Delete from store
-   - `clear()` - Clear all store data
+4. electronStore — Electron-store access
+   - setItem(key, value), getItem(key), removeItem(key), clear()
 
-5. **electronApi** - AniList API calls
-   - `searchManga(query, config)` - Search for manga
-   - `advancedSearchManga(options)` - Advanced search
-   - `getMangaByIds(ids)` - Fetch by IDs
-   - `getUserMangaList(userId, options)` - Get user's list
-   - `syncMangaBatch(entries)` - Batch update user list
-   - `updateMangaEntry(id, data)` - Update single entry
+5. electronApi — AniList API calls
+   - searchManga(query, config), advancedSearchManga(options)
+   - getMangaByIds(ids), getUserMangaList(userId, options)
+   - syncMangaBatch(entries), updateMangaEntry(id, data)
+
+6. electronUpdater — Auto-update control
+   - checkForUpdates(options?: { allowPrerelease?: boolean })
+   - downloadUpdate(), installUpdate()
+   - onUpdateAvailable(cb), onDownloadProgress(cb), onUpdateDownloaded(cb), onUpdateError(cb)
+
+7. electronBackup — Backup scheduler and file ops
+   - getScheduleConfig(), setScheduleConfig(config)
+   - getBackupLocation(), setBackupLocation(path), openBackupLocation()
+   - listLocalBackups(), readLocalBackupFile(filename), deleteBackup(filename)
+   - triggerBackup(), createNow()
+   - getBackupStatus(), getBackupHistory(), clearHistory()
+   - restoreFromLocal(filename, options?)
+   - onBackupComplete(cb), onBackupError(cb), onHistoryUpdated(cb), onStatusChanged(cb)
+
+8. electronClipboard — Clipboard helpers
+   - writeText(text)
 
 ### Usage Pattern
 
@@ -58,33 +59,42 @@ ipcRenderer.send("store:set");
 
 ## IPC Channel Organization
 
-**Location**: `src/helpers/ipc/`
+Location: `src/helpers/ipc/`
 
 All IPC handlers organized by domain in separate files:
 
-```text
+```
 helpers/ipc/
-├── context-exposer.ts (exposes 5 contexts)
-├── listeners-register.ts (registers all handlers)
+├── context-exposer.ts        # Exposes 8 contexts (window, theme, auth, store, api, update, backup, clipboard)
+├── listeners-register.ts     # Registers all handlers with sender validation
 ├── api/
-│   ├── api-context.ts (expose electronApi)
-│   └── api-listeners.ts (handle API calls)
+│   ├── api-context.ts        # expose electronApi
+│   └── api-listeners.ts      # AniList/search/sync handlers
 ├── auth/
-│   ├── auth-context.ts (expose electronAuth)
-│   └── auth-listeners.ts (handle OAuth)
+│   ├── auth-context.ts       # expose electronAuth
+│   └── auth-listeners.ts     # OAuth flows, token exchange
 ├── store/
-│   ├── store-context.ts (expose electronStore)
-│   └── store-setup.ts (handle store operations)
+│   ├── store-context.ts      # expose electronStore
+│   └── store-setup.ts        # electron-store operations
 ├── theme/
-│   ├── theme-channels.ts (channel constants)
-│   ├── theme-context.ts (expose electronTheme)
-│   └── theme-listeners.ts (handle theme changes)
+│   ├── theme-channels.ts
+│   ├── theme-context.ts      # expose electronTheme
+│   └── theme-listeners.ts
 ├── window/
-│   ├── window-channels.ts (channel constants)
-│   ├── window-context.ts (expose electronWindow)
-│   └── window-listeners.ts (handle window operations)
-└── debug/
-    └── ipc-debugger.ts (IPC logging)
+│   ├── window-channels.ts
+│   ├── window-context.ts     # expose electronWindow
+│   └── window-listeners.ts
+├── update/
+│   ├── update-channels.ts    # channel/event constants
+│   ├── update-context.ts     # expose electronUpdater
+│   └── update-listeners.ts   # autoUpdater wiring
+├── backup/
+│   ├── backup-channels.ts    # channel/event constants
+│   ├── backup-context.ts     # expose electronBackup
+│   └── backup-listeners.ts   # scheduler, file ops, history
+└── clipboard/
+    ├── clipboard-channels.ts
+    └── clipboard-context.ts  # expose electronClipboard
 ```
 
 ## Handler Registration Pattern
@@ -203,15 +213,15 @@ setIpcDebuggingEnabled(value); // Toggle logging
 
 ## Security Model
 
-**Three security layers**:
+Three layers of protection:
 
-1. **Context Bridge** - Only whitelisted methods exposed
-2. **IPC Handler Validation** - Input validation on all handlers
-3. **Preload Script** - Runs in secure context, bridges gap
+1. Context Bridge — Only whitelisted, strongly-typed methods are exposed to `window`.
+2. Sender Validation — All `ipcMain.handle` registrations go through `secureHandle()` in `listeners-register.ts`, which validates the `webContents.id` of the sender against the main window via `isValidSender()`. Unauthorized calls are rejected and logged.
+3. Input Validation — Handler-level validation of payloads (e.g., file paths, schedule config) occurs before accessing Node APIs.
 
-**Never expose**:
+Never expose:
 
-- File system operations (except electron-store)
-- Child process spawn
-- Native modules
-- Unvalidated user input to Node.js APIs
+- Arbitrary filesystem access (backup uses validated, sandboxed directories)
+- Child process spawning
+- Native modules to renderer
+- Unvalidated input to privileged APIs

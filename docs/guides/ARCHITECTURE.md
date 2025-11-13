@@ -64,7 +64,7 @@ Kenmei to AniList is a cross-platform desktop application built with Electron th
 
 ### Storage & Data
 
-- **electron-store** - Encrypted, persistent file-based storage for sensitive data
+- **electron-store** - Persistent file-based storage for preferences and app data
 - **localStorage** - Browser-based storage for fast access and compatibility
 - **In-memory cache** - Runtime performance optimization with automatic invalidation
 - **Automatic Synchronization** - Seamless data consistency across all storage layers
@@ -188,7 +188,7 @@ function createWindow() {
   const mainWindow = new BrowserWindow({
     webPreferences: {
       contextIsolation: true, // Security isolation
-      nodeIntegration: true, // Node.js access in main
+      nodeIntegration: false, // No Node.js in renderer
       nodeIntegrationInSubFrames: false,
       preload: preload, // Preload script path
     },
@@ -243,6 +243,11 @@ export default function App() {
     </ThemeProvider>
   );
 }
+
+// Logging and lifecycle notes (src/renderer.ts):
+// - Console interception is gated by env:
+//   - Enabled in production or when VITE_CAPTURE_CONSOLE=1
+// - An unload listener cleans up the interceptor to prevent leaks
 ```
 
 ## 🧩 Component Architecture
@@ -870,7 +875,7 @@ npm run make
 - **Windows**: Squirrel installer (.exe)
 - **macOS**: DMG installer with code signing
 - **Linux**: DEB and AppImage packages
-- **Auto-updater**: Built-in update mechanism (planned)
+- **Auto-updater**: Built-in Electron auto-updater
 - **Intelligent invalidation**: Manual clearing with title-specific targeting
 
 ## 🔒 Security Considerations
@@ -882,7 +887,7 @@ npm run make
 new BrowserWindow({
   webPreferences: {
     contextIsolation: true, // Isolate renderer context
-    nodeIntegration: true, // Node.js in main only
+    nodeIntegration: false, // No Node.js in renderer
     nodeIntegrationInSubFrames: false, // No Node.js in subframes
     preload: preload, // Controlled API exposure
   },

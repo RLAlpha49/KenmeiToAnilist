@@ -775,10 +775,6 @@ export function computeDrillDownData(
  * @param value - Specific value to drill down into.
  * @param readingHistory - Reading history for chapter counts.
  * @returns Drill-down data with detailed breakdown.
- *
- * @note The 'status' drill-down type filters by match status (the result of the matching process),
- *       not by reading status (kenmeiManga.status like "reading", "completed", etc).
- *       For reading status drill-downs, StatusDistributionChart currently handles this separately.
  * @source
  */
 export function computeDrillDownData(

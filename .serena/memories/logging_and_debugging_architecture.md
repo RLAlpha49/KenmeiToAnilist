@@ -426,6 +426,15 @@ if (shouldCancel()) {
 }
 ```
 
+## Renderer Interception Gating & Cleanup
+
+- Interceptor install is gated by:
+  - Production mode OR `import.meta.env.VITE_CAPTURE_CONSOLE === "1"`
+- Cleanup on window unload:
+  - In `src/renderer.ts`, a `window.addEventListener("unload")` calls the cleanup function returned by `installConsoleInterceptor()` to restore original console methods.
+
+This avoids noisy logs during local development unless explicitly enabled, and prevents leaking wrapped console methods across reloads.
+
 ## Limitations
 
 - Logs stored in memory only (lost on restart)
