@@ -5,38 +5,19 @@
  */
 
 import { getGenericWorkerPool } from "../core/worker-pool";
-import type { DataTablePreparationMessage } from "../core/types";
+import type {
+  DataTablePreparationMessage,
+  PreparedTableRow,
+} from "../core/types";
 import type { KenmeiMangaItem } from "@/types/kenmei";
+import { prepareTableSlice } from "../shared/dataTableFormatter";
 
 /**
  * Precomputed values and metadata for a single table row prepared for display.
  * @source
  */
-export interface PreparedTableRow {
-  /**
-   * Original manga item backing this row.
-   * @source
-   */
-  original: KenmeiMangaItem;
-
-  /**
-   * Precomputed formatted values used for visible columns.
-   * @source
-   */
-  formattedValues: {
-    status: string;
-    score: string;
-    chapters: string;
-    volumes: string;
-    lastRead: string;
-  };
-
-  /**
-   * Computed row height used by the virtualized table.
-   * @source
-   */
-  rowHeight: number;
-}
+// PreparedTableRow is now sourced from the core worker types and imported above so
+// both worker and main thread share the same shape.
 
 /**
  * Result of preparing a data table slice, including metadata and timing.
@@ -47,7 +28,7 @@ export interface DataTablePreparationResult {
    * The prepared row slice with precomputed display values.
    * @source
    */
-  preparedData: PreparedTableRow[];
+  preparedData: PreparedTableRow<KenmeiMangaItem>[];
 
   /**
    * Index range and total count for the prepared slice.
@@ -237,7 +218,8 @@ export class DataTableWorkerPool {
           task.resolve = (result: unknown) => {
             const typedResult = result as Record<string, unknown>;
             resolve({
-              preparedData: typedResult.preparedData as PreparedTableRow[],
+              preparedData:
+                typedResult.preparedData as PreparedTableRow<KenmeiMangaItem>[],
               indexInfo:
                 typedResult.indexInfo as DataTablePreparationResult["indexInfo"],
               timing:
@@ -325,67 +307,13 @@ export class DataTableWorkerPool {
     // Extract and format the viewport slice
     const slice = data.slice(startIndex, endIndex);
 
-    // Precompute formatted values for all visible rows
-    const preparedData = slice.map((item) => {
-      // Format status
-      const statusDisplayValue = item.status
-        .split("_")
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(" ");
-
-      // Format score (only if visible and present)
-      let scoreDisplayValue = "-";
-      if (columnVisibility.score && item.score !== undefined) {
-        scoreDisplayValue = item.score > 0 ? item.score.toString() : "-";
-      }
-
-      // Format chapters (only if visible and present)
-      let chaptersDisplayValue = "-";
-      if (columnVisibility.chapters && item.chapters_read !== undefined) {
-        chaptersDisplayValue =
-          item.chapters_read > 0 ? item.chapters_read.toString() : "0";
-      }
-
-      // Format volumes (only if visible and present)
-      let volumesDisplayValue = "-";
-      if (columnVisibility.volumes && item.volumes_read !== undefined) {
-        volumesDisplayValue =
-          item.volumes_read > 0 ? item.volumes_read.toString() : "0";
-      }
-
-      // Format last read date (only if visible)
-      const lastReadDate = item.last_read_at || item.updated_at;
-      const lastReadDisplayValue =
-        columnVisibility.lastRead && lastReadDate
-          ? (() => {
-              try {
-                const date = new Date(lastReadDate);
-                return date.toLocaleDateString();
-              } catch {
-                return "-";
-              }
-            })()
-          : "-";
-
-      // Calculate approximate row height based on content
-      const titleLength = item.title.length;
-      const titleLines = Math.max(1, Math.ceil(titleLength / 40)); // ~40 chars per line
-      const baseRowHeight = 40;
-      const additionalHeight = (titleLines - 1) * 20;
-      const rowHeight = baseRowHeight + additionalHeight;
-
-      return {
-        original: item,
-        formattedValues: {
-          status: statusDisplayValue,
-          score: scoreDisplayValue,
-          chapters: chaptersDisplayValue,
-          volumes: volumesDisplayValue,
-          lastRead: lastReadDisplayValue,
-        },
-        rowHeight,
-      };
-    });
+    // Precompute formatted values for all visible rows using shared formatter
+    const preparedData = prepareTableSlice(
+      slice,
+      0,
+      slice.length,
+      columnVisibility,
+    );
 
     const formattingTimeMs = performance.now() - formattingStartTime;
 

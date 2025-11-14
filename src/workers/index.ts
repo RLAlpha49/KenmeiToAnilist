@@ -106,8 +106,6 @@ export type {
 } from "./statistics/title-normalization-worker-pool";
 export type { JSONSerializationWorkerPoolConfig } from "./data-processing/json-serialization-worker-pool";
 export type { DuplicateDetectionResult } from "./statistics/duplicate-worker-pool";
-export type {
-  DataTablePreparationResult,
-  PreparedTableRow,
-} from "./ui/data-table-worker-pool";
+export type { DataTablePreparationResult } from "./ui/data-table-worker-pool";
+export type { PreparedTableRow } from "./core/types";
 export type { BatchSyncExecution } from "./matching/batch-sync-worker-pool";

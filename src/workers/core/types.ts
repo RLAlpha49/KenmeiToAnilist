@@ -918,6 +918,23 @@ export interface DataTableCellData {
 }
 
 /**
+ * Prepared table row with precomputed display values for UI virtualization.
+ * This interface is shared between the worker and main thread so both can agree on
+ * the shape of rows produced by the data table preparation operation.
+ */
+export interface PreparedTableRow<TOriginal = unknown> {
+  original: TOriginal;
+  formattedValues: {
+    status: string;
+    score: string;
+    chapters: string;
+    volumes: string;
+    lastRead: string;
+  };
+  rowHeight: number;
+}
+
+/**
  * Inbound request to prepare paged/virtualized table data.
  * @source
  */
@@ -1004,40 +1021,9 @@ export interface DataTablePreparationResultMessage {
     /**
      * Virtualized data slice with precomputed values
      */
-    preparedData: Array<{
-      /**
-       * Original manga data
-       */
-      original: {
-        title: string;
-        status: string;
-        score?: number;
-        chapters_read?: number;
-        volumes_read?: number;
-        url?: string;
-        source?: string;
-        notes?: string;
-        last_read_at?: string;
-        created_at?: string;
-        updated_at?: string;
-      };
-
-      /**
-       * Precomputed formatted values for display
-       */
-      formattedValues: {
-        status: string;
-        score: string;
-        chapters: string;
-        volumes: string;
-        lastRead: string;
-      };
-
-      /**
-       * Computed row height for virtualization
-       */
-      rowHeight: number;
-    }>;
+    preparedData: PreparedTableRow<
+      DataTablePreparationMessage["payload"]["data"][number]
+    >[];
     /**
      * Index information
      */
