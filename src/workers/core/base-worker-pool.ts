@@ -8,16 +8,12 @@
 import { getGenericWorkerPool } from "./worker-pool";
 
 /**
- * Configuration for task execution timeouts and retry behavior.
+ * Configuration for task execution timeouts.
  * @source
  */
 export interface BaseWorkerPoolConfig {
-  /** Maximum number of workers to use (default: 2) */
-  maxWorkers?: number;
   /** Task timeout in milliseconds (default: 30000) */
   taskTimeoutMs?: number;
-  /** Whether to enable retry on timeout (default: false) */
-  enableRetry?: boolean;
 }
 
 /**
@@ -28,14 +24,10 @@ export interface BaseWorkerPoolConfig {
  */
 export abstract class BaseWorkerPool {
   protected initialized = false;
-  protected readonly maxWorkers: number;
   protected readonly taskTimeoutMs: number;
-  protected readonly enableRetry: boolean;
 
   constructor(config?: BaseWorkerPoolConfig) {
-    this.maxWorkers = config?.maxWorkers ?? 2;
     this.taskTimeoutMs = config?.taskTimeoutMs ?? 30000;
-    this.enableRetry = config?.enableRetry ?? false;
   }
 
   /**
@@ -166,8 +158,9 @@ export abstract class BaseWorkerPool {
 
     try {
       // Set timeout for worker execution
+      let timeoutHandle: NodeJS.Timeout | undefined;
       const timeoutPromise = new Promise<T>((_, reject) => {
-        setTimeout(() => {
+        timeoutHandle = setTimeout(() => {
           this.cancelTask(taskId);
           reject(
             new Error(
@@ -177,8 +170,15 @@ export abstract class BaseWorkerPool {
         }, this.taskTimeoutMs);
       });
 
-      // Race between worker execution and timeout
-      return await Promise.race([workerExecution(), timeoutPromise]);
+      try {
+        // Race between worker execution and timeout
+        return await Promise.race([workerExecution(), timeoutPromise]);
+      } finally {
+        // Ensure timeout is always cleared, whether worker succeeds or rejects
+        if (timeoutHandle) {
+          clearTimeout(timeoutHandle);
+        }
+      }
     } catch (error) {
       console.warn(
         `[${this.getPoolName()}] Worker execution failed for ${taskId}, falling back to main thread:`,

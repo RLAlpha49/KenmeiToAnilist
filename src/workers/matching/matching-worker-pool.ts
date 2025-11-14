@@ -13,22 +13,7 @@ import type { AniListManga, MangaMatchResult } from "@/api/anilist/types";
 import type { MatchEngineConfig } from "@/api/matching/match-engine";
 import { findBestMatches } from "@/api/matching/match-engine";
 import { getGenericWorkerPool } from "../core/worker-pool";
-
-/**
- * Generates a RFC4122-like UUID for matching tasks.
- * @returns A unique task identifier.
- * @source
- */
-function generateUUID(): string {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replaceAll(
-    /[xy]/g,
-    function (c) {
-      const r = Math.trunc(Math.random() * 16);
-      const v = c === "x" ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    },
-  );
-}
+import { generateUUID } from "../core/pool-utils";
 
 /**
  * Manages manga matching operations using the shared worker pool.

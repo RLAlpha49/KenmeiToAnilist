@@ -53,8 +53,8 @@ export interface FilterOperationResult {
  * @source
  */
 export class AdvancedFilterWorkerPool extends BaseWorkerPool {
-  constructor(maxWorkers?: number) {
-    super({ maxWorkers });
+  constructor() {
+    super();
   }
 
   protected getPoolName(): string {
@@ -214,13 +214,10 @@ let filterPoolInstance: AdvancedFilterWorkerPool | null = null;
 
 /**
  * Returns the shared advanced filter worker pool instance, lazily creating it.
- * @param maxWorkers - Optional maximum workers used on first creation.
  * @returns Advanced filter worker pool singleton.
  * @source
  */
-export function getFilterWorkerPool(
-  maxWorkers?: number,
-): AdvancedFilterWorkerPool {
-  filterPoolInstance ??= new AdvancedFilterWorkerPool(maxWorkers);
+export function getFilterWorkerPool(): AdvancedFilterWorkerPool {
+  filterPoolInstance ??= new AdvancedFilterWorkerPool();
   return filterPoolInstance;
 }

@@ -514,23 +514,28 @@ export interface MatchCancelledMessage {
 
 /**
  * Outbound terminal cancellation message for statistics operations.
+ * Includes stage information indicating at which processing stage cancellation occurred.
  * @source
  */
 export interface StatsCancelledMessage {
   type: "STATS_CANCELLED";
   payload: {
     taskId: string;
+    stage: "filtering" | "aggregation" | "completion";
   };
 }
 
 /**
  * Outbound terminal cancellation message for title normalization operations.
+ * Includes algorithm and stage information indicating when cancellation occurred.
  * @source
  */
 export interface TitleNormCancelledMessage {
   type: "TITLE_NORM_CANCELLED";
   payload: {
     taskId: string;
+    algorithm?: string;
+    stage?: "completion";
   };
 }
 
@@ -569,12 +574,14 @@ export interface DataTableCancelledMessage {
 
 /**
  * Outbound terminal cancellation message for reading history filter operations.
+ * Includes stage information indicating at which processing stage cancellation occurred.
  * @source
  */
 export interface ReadHistCancelledMessage {
   type: "READ_HIST_CANCELLED";
   payload: {
     taskId: string;
+    stage: "completion";
   };
 }
 

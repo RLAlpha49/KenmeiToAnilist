@@ -152,6 +152,10 @@ export class WorkerPool {
     if (task?.workerIndex !== undefined) {
       this.workerBusy[task.workerIndex] = false;
     }
+    // Clear any pending cancel timeout to prevent it from firing after task completion
+    if (task?.cancelTimeoutHandle) {
+      clearTimeout(task.cancelTimeoutHandle);
+    }
     this.tasks.delete(taskId);
     return task;
   }

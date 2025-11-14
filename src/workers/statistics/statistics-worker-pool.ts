@@ -9,23 +9,12 @@ import type {
 } from "@/utils/statisticsAdapter";
 import type { ReadingHistory } from "@/utils/storage";
 import type { StatisticsFilters, ComparisonMode } from "@/types/statistics";
+import {
+  BaseWorkerPool,
+  type BaseWorkerPoolConfig,
+} from "../core/base-worker-pool";
 import { getGenericWorkerPool } from "../core/worker-pool";
-
-/**
- * Generates a UUID v4-style identifier for aggregation tasks.
- * @returns Generated UUID string.
- * @source
- */
-function generateUUID(): string {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replaceAll(
-    /[xy]/g,
-    function (c) {
-      const r = Math.trunc(Math.random() * 16);
-      const v = c === "x" ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    },
-  );
-}
+import { generateUUID } from "../core/pool-utils";
 
 /**
  * Result of a statistics aggregation operation including data, options, and timing.
@@ -90,57 +79,13 @@ export interface StatisticsAggregationResult {
  * Singleton-backed worker pool for statistics aggregation with main-thread fallback.
  * @source
  */
-export class StatisticsAggregationWorkerPool {
-  private static instance: StatisticsAggregationWorkerPool | null = null;
-  private initialized = false;
-  private readonly config: {
-    maxWorkers: number;
-    enableWorkers: boolean;
-    fallbackToMainThread: boolean;
-  };
-
-  private constructor(config?: {
-    maxWorkers?: number;
-    enableWorkers?: boolean;
-    fallbackToMainThread?: boolean;
-  }) {
-    this.config = {
-      maxWorkers: config?.maxWorkers ?? 4,
-      enableWorkers: config?.enableWorkers ?? true,
-      fallbackToMainThread: config?.fallbackToMainThread ?? true,
-    };
+export class StatisticsAggregationWorkerPool extends BaseWorkerPool {
+  constructor(config?: Partial<BaseWorkerPoolConfig>) {
+    super(config);
   }
 
-  /**
-   * Returns the singleton instance, creating it on first use.
-   * @param config - Optional worker pool configuration.
-   * @returns Shared statistics aggregation worker pool.
-   * @source
-   */
-  static getInstance(config?: {
-    maxWorkers?: number;
-    enableWorkers?: boolean;
-    fallbackToMainThread?: boolean;
-  }): StatisticsAggregationWorkerPool {
-    this.instance ??= new StatisticsAggregationWorkerPool(config);
-    return this.instance;
-  }
-
-  /**
-   * Initializes the underlying generic worker pool.
-   * @source
-   */
-  async initialize(): Promise<void> {
-    if (this.initialized) {
-      return;
-    }
-    const pool = getGenericWorkerPool({
-      maxWorkers: this.config.maxWorkers,
-      enableWorkers: this.config.enableWorkers,
-      fallbackToMainThread: this.config.fallbackToMainThread,
-    });
-    await pool.initialize();
-    this.initialized = true;
+  protected getPoolName(): string {
+    return "StatisticsAggregationWorkerPool";
   }
 
   /**
@@ -168,97 +113,74 @@ export class StatisticsAggregationWorkerPool {
     ) => void,
     taskId?: string,
   ): Promise<StatisticsAggregationResult> {
-    // Initialize pool if not already done
-    if (!this.initialized) {
-      await this.initialize();
-    }
-
     const mainTaskId = taskId || generateUUID();
-    const pool = getGenericWorkerPool({
-      maxWorkers: this.config.maxWorkers,
-      enableWorkers: this.config.enableWorkers,
-      fallbackToMainThread: this.config.fallbackToMainThread,
-    });
+    await this.ensureInitialized();
 
-    // Ensure pool is initialized
-    if (!pool.isAvailable()) {
-      await pool.initialize();
-    }
-
-    return new Promise<StatisticsAggregationResult>((resolve, reject) => {
-      // If pool is not available or workers are disabled, use main thread
-      if (!pool.isAvailable() || !this.config.enableWorkers) {
+    return this.executeWithFallback(
+      () =>
+        this.executeOnWorker(
+          mainTaskId,
+          matchResults,
+          readingHistory,
+          filters,
+          comparisonMode,
+          selectedTimeRange,
+          progressCallback,
+        ),
+      () =>
         this.aggregateStatisticsMainThread(
           matchResults,
           readingHistory,
           filters,
           comparisonMode,
           selectedTimeRange,
-        )
-          .then(resolve)
-          .catch(reject);
-        return;
-      }
+        ),
+      mainTaskId,
+    );
+  }
 
-      // Try to get a worker
-      const workerIndex = pool.selectWorker();
+  /**
+   * Executes statistics aggregation on a worker thread.
+   * @param taskId - Unique task identifier.
+   * @param matchResults - Normalized match results.
+   * @param readingHistory - Reading history dataset.
+   * @param filters - Filters to apply.
+   * @param comparisonMode - Comparison mode configuration.
+   * @param selectedTimeRange - Selected time range.
+   * @param progressCallback - Optional progress callback.
+   * @returns Aggregation result from worker.
+   * @source
+   */
+  private async executeOnWorker(
+    taskId: string,
+    matchResults: NormalizedMatchForStats[],
+    readingHistory: ReadingHistory,
+    filters: StatisticsFilters,
+    comparisonMode: ComparisonMode,
+    selectedTimeRange: TimeRange,
+    progressCallback?: (
+      stage: string,
+      progress: number,
+      message: string,
+    ) => void,
+  ): Promise<StatisticsAggregationResult> {
+    try {
+      const workerIndex = this.selectWorker();
       if (workerIndex === -1) {
-        // No workers available, fall back to main thread
-        this.aggregateStatisticsMainThread(
-          matchResults,
-          readingHistory,
-          filters,
-          comparisonMode,
-          selectedTimeRange,
-        )
-          .then(resolve)
-          .catch(reject);
-        return;
+        throw new Error("No workers available from pool");
       }
 
-      const worker = pool.getWorker(workerIndex);
+      const worker = this.getWorker(workerIndex);
       if (!worker) {
-        // Worker retrieval failed, fall back to main thread
-        this.aggregateStatisticsMainThread(
-          matchResults,
-          readingHistory,
-          filters,
-          comparisonMode,
-          selectedTimeRange,
-        )
-          .then(resolve)
-          .catch(reject);
-        return;
+        throw new Error("Failed to get worker from pool");
       }
 
-      // Register task with pool
       const task = {
-        taskId: mainTaskId,
+        taskId,
         type: "statistics" as const,
-        resolve: (result: unknown) => {
-          const typedResult = result as StatisticsAggregationResult & {
-            comparisonDatasets?: unknown;
-            timing?: {
-              filteringTimeMs: number;
-              aggregationTimeMs: number;
-              totalTimeMs: number;
-            };
-          };
-          resolve({
-            filteredData: typedResult.filteredData,
-            filterOptions: typedResult.filterOptions,
-            comparisonDatasets: typedResult.comparisonDatasets || null,
-            cacheKey: typedResult.cacheKey,
-            timing: typedResult.timing || {
-              filteringTimeMs: 0,
-              aggregationTimeMs: 0,
-              totalTimeMs: 0,
-            },
-          });
-        },
-        reject,
+        resolve: null as unknown as (result: unknown) => void,
+        reject: null as unknown as (error: Error) => void,
         cancelled: false,
-        progressCallback,
         onProgress: (message: unknown) => {
           // Adapt STATISTICS_AGGREGATION_PROGRESS message to typed callback
           const msgWithType = message as { type?: string; payload?: unknown };
@@ -288,14 +210,40 @@ export class StatisticsAggregationWorkerPool {
         workerIndex,
       };
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (pool as any).registerTask?.(mainTaskId, task);
+      const taskPromise = new Promise<StatisticsAggregationResult>(
+        (resolve, reject) => {
+          task.resolve = (result: unknown) => {
+            const typedResult = result as StatisticsAggregationResult & {
+              comparisonDatasets?: unknown;
+              timing?: {
+                filteringTimeMs: number;
+                aggregationTimeMs: number;
+                totalTimeMs: number;
+              };
+            };
+            resolve({
+              filteredData: typedResult.filteredData,
+              filterOptions: typedResult.filterOptions,
+              comparisonDatasets: typedResult.comparisonDatasets || null,
+              cacheKey: typedResult.cacheKey,
+              timing: typedResult.timing || {
+                filteringTimeMs: 0,
+                aggregationTimeMs: 0,
+                totalTimeMs: 0,
+              },
+            });
+          };
+          task.reject = reject;
+        },
+      );
+
+      this.registerTask(taskId, task);
 
       // Dispatch task to worker
       worker.postMessage({
         type: "STATISTICS_AGGREGATION",
         payload: {
-          taskId: mainTaskId,
+          taskId,
           matchResults,
           readingHistory,
           filters,
@@ -307,7 +255,15 @@ export class StatisticsAggregationWorkerPool {
       console.info(
         `[StatisticsWorkerPool] Dispatched statistics aggregation to worker ${workerIndex}`,
       );
-    });
+
+      return await taskPromise;
+    } catch (error) {
+      console.error(
+        "[StatisticsAggregationWorkerPool] Error executing on worker:",
+        error,
+      );
+      throw error;
+    }
   }
 
   /**
@@ -422,11 +378,12 @@ export class StatisticsAggregationWorkerPool {
   }
 
   /**
-   * Returns statistics for the underlying generic worker pool.
-   * @returns Pool statistics including workers and tasks.
+   * Returns pool statistics for the underlying generic worker pool.
+   * Provides detailed metrics about active workers and tasks.
+   * @returns Pool statistics including total workers, active workers, and active tasks.
    * @source
    */
-  getStats(): {
+  getPoolStats(): {
     totalWorkers: number;
     activeWorkers: number;
     activeTasks: number;
@@ -455,10 +412,19 @@ export class StatisticsAggregationWorkerPool {
 }
 
 /**
+ * Module-level singleton instance of the statistics aggregation worker pool.
+ */
+let statisticsWorkerPoolInstance: StatisticsAggregationWorkerPool | null = null;
+
+/**
  * Returns the singleton statistics aggregation worker pool instance.
+ * @param config - Optional configuration for the pool.
  * @returns Shared statistics aggregation worker pool.
  * @source
  */
-export function getStatisticsWorkerPool(): StatisticsAggregationWorkerPool {
-  return StatisticsAggregationWorkerPool.getInstance();
+export function getStatisticsWorkerPool(
+  config?: Partial<BaseWorkerPoolConfig>,
+): StatisticsAggregationWorkerPool {
+  statisticsWorkerPoolInstance ??= new StatisticsAggregationWorkerPool(config);
+  return statisticsWorkerPoolInstance;
 }

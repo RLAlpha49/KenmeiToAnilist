@@ -51,8 +51,8 @@ function generateUniqueTaskId(): string {
  * @source
  */
 export class DuplicateDetectionWorkerPool extends BaseWorkerPool {
-  constructor(maxWorkers?: number) {
-    super({ maxWorkers });
+  constructor() {
+    super();
   }
 
   protected getPoolName(): string {
@@ -209,11 +209,7 @@ let duplicateDetectionPoolInstance: DuplicateDetectionWorkerPool | null = null;
  * @returns Shared duplicate detection worker pool instance.
  * @source
  */
-export function getDuplicateDetectionWorkerPool(
-  maxWorkers?: number,
-): DuplicateDetectionWorkerPool {
-  duplicateDetectionPoolInstance ??= new DuplicateDetectionWorkerPool(
-    maxWorkers,
-  );
+export function getDuplicateDetectionWorkerPool(): DuplicateDetectionWorkerPool {
+  duplicateDetectionPoolInstance ??= new DuplicateDetectionWorkerPool();
   return duplicateDetectionPoolInstance;
 }

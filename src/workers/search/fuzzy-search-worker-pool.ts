@@ -53,8 +53,8 @@ function generateUniqueFuzzySearchTaskId(): string {
  * @source
  */
 export class FuzzySearchWorkerPool extends BaseWorkerPool {
-  constructor(maxWorkers?: number) {
-    super({ maxWorkers });
+  constructor() {
+    super();
   }
 
   protected getPoolName(): string {
@@ -164,28 +164,9 @@ export class FuzzySearchWorkerPool extends BaseWorkerPool {
         `[FuzzySearchWorkerPool] Dispatched fuzzy search task ${taskId}: query="${query}", ${matches.length} items`,
       );
 
-      // Set timeout for task completion (10 seconds for search operations)
-      const timeout = setTimeout(() => {
-        this.cancelTask(taskId);
-        task.reject(
-          new Error(
-            `[FuzzySearchWorkerPool] Fuzzy search task ${taskId} timed out after 10s`,
-          ),
-        );
-        console.warn(
-          `[FuzzySearchWorkerPool] Fuzzy search task ${taskId} timed out after 10s`,
-        );
-      }, 10000);
-
-      // Wait for result and clear timeout
-      try {
-        const result = await taskPromise;
-        clearTimeout(timeout);
-        return result;
-      } catch (error) {
-        clearTimeout(timeout);
-        throw error;
-      }
+      // Rely on executeWithFallback in BaseWorkerPool to enforce timeouts using taskTimeoutMs
+      // This ensures consistent timeout behavior with other worker pools
+      return await taskPromise;
     } catch (error) {
       console.error(
         "[FuzzySearchWorkerPool] Error executing on worker:",
@@ -282,13 +263,10 @@ let fuzzySearchPoolInstance: FuzzySearchWorkerPool | null = null;
 
 /**
  * Returns the singleton fuzzy search worker pool, creating it if needed.
- * @param maxWorkers - Optional max worker count for initial creation.
  * @returns Shared fuzzy search worker pool instance.
  * @source
  */
-export function getFuzzySearchWorkerPool(
-  maxWorkers?: number,
-): FuzzySearchWorkerPool {
-  fuzzySearchPoolInstance ??= new FuzzySearchWorkerPool(maxWorkers);
+export function getFuzzySearchWorkerPool(): FuzzySearchWorkerPool {
+  fuzzySearchPoolInstance ??= new FuzzySearchWorkerPool();
   return fuzzySearchPoolInstance;
 }

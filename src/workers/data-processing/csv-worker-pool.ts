@@ -10,22 +10,7 @@ import type {
 } from "../core/types";
 import type { KenmeiManga, KenmeiStatus } from "@/api/kenmei/types";
 import { getGenericWorkerPool } from "../core/worker-pool";
-
-/**
- * Generates a random UUID for worker tasks.
- * @returns A UUID string.
- * @source
- */
-function generateUUID(): string {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replaceAll(
-    /[xy]/g,
-    function (c) {
-      const r = Math.trunc(Math.random() * 16);
-      const v = c === "x" ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    },
-  );
-}
+import { generateUUID } from "../core/pool-utils";
 
 /**
  * Configuration for CSV worker pool behavior.
@@ -57,10 +42,16 @@ interface CSVResult {
  */
 export class CSVWorkerPool {
   private readonly chunkSize: number;
+  private readonly maxWorkers: number;
+  private readonly enableWorkers: boolean;
+  private readonly fallbackToMainThread: boolean;
   private initialized = false;
 
   constructor(config?: CSVWorkerPoolConfig) {
     this.chunkSize = config?.chunkSize ?? 65536;
+    this.maxWorkers = config?.maxWorkers ?? 4;
+    this.enableWorkers = config?.enableWorkers ?? true;
+    this.fallbackToMainThread = config?.fallbackToMainThread ?? true;
   }
 
   /**
@@ -71,7 +62,11 @@ export class CSVWorkerPool {
     if (this.initialized) {
       return;
     }
-    const pool = getGenericWorkerPool();
+    const pool = getGenericWorkerPool({
+      maxWorkers: this.maxWorkers,
+      enableWorkers: this.enableWorkers,
+      fallbackToMainThread: this.fallbackToMainThread,
+    });
     await pool.initialize();
     this.initialized = true;
   }
@@ -82,7 +77,11 @@ export class CSVWorkerPool {
    * @source
    */
   isAvailable(): boolean {
-    const pool = getGenericWorkerPool();
+    const pool = getGenericWorkerPool({
+      maxWorkers: this.maxWorkers,
+      enableWorkers: this.enableWorkers,
+      fallbackToMainThread: this.fallbackToMainThread,
+    });
     return this.initialized && pool.isAvailable();
   }
 
@@ -92,7 +91,11 @@ export class CSVWorkerPool {
    * @source
    */
   getAvailableWorkerCount(): number {
-    const pool = getGenericWorkerPool();
+    const pool = getGenericWorkerPool({
+      maxWorkers: this.maxWorkers,
+      enableWorkers: this.enableWorkers,
+      fallbackToMainThread: this.fallbackToMainThread,
+    });
     return this.initialized ? pool.getAvailableWorkerCount() : 0;
   }
 
@@ -152,7 +155,11 @@ export class CSVWorkerPool {
     options: { defaultStatus?: KenmeiStatus } = {},
   ): Promise<CSVResult> {
     return new Promise<CSVResult>((resolve, reject) => {
-      const pool = getGenericWorkerPool();
+      const pool = getGenericWorkerPool({
+        maxWorkers: this.maxWorkers,
+        enableWorkers: this.enableWorkers,
+        fallbackToMainThread: this.fallbackToMainThread,
+      });
 
       // Ensure pool is initialized before checking availability
       if (!pool.isAvailable()) {
@@ -359,7 +366,11 @@ export class CSVWorkerPool {
    * @source
    */
   cancelTask(taskId: string): void {
-    const pool = getGenericWorkerPool();
+    const pool = getGenericWorkerPool({
+      maxWorkers: this.maxWorkers,
+      enableWorkers: this.enableWorkers,
+      fallbackToMainThread: this.fallbackToMainThread,
+    });
     pool.cancelTask(taskId);
   }
 
@@ -373,7 +384,11 @@ export class CSVWorkerPool {
     activeWorkers: number;
     activeTasks: number;
   } {
-    const pool = getGenericWorkerPool();
+    const pool = getGenericWorkerPool({
+      maxWorkers: this.maxWorkers,
+      enableWorkers: this.enableWorkers,
+      fallbackToMainThread: this.fallbackToMainThread,
+    });
     return pool.getStats();
   }
 
@@ -382,7 +397,11 @@ export class CSVWorkerPool {
    * @source
    */
   terminate(): void {
-    const pool = getGenericWorkerPool();
+    const pool = getGenericWorkerPool({
+      maxWorkers: this.maxWorkers,
+      enableWorkers: this.enableWorkers,
+      fallbackToMainThread: this.fallbackToMainThread,
+    });
     pool.terminate();
   }
 }

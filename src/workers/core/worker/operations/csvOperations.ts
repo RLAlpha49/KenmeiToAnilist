@@ -66,27 +66,23 @@ function splitCSVLines(csv: string): { lines: string[]; remainder: string } {
 /**
  * Parses accumulated CSV text and returns parsed manga entries.
  * Uses the public parseKenmeiCsvExport API for incremental segment parsing.
+ * Throws raw errors to be handled by the outermost handler.
  * @source
  */
 async function parseCSVBufferSegment(
   csvText: string,
   defaultStatus: string,
 ): Promise<KenmeiManga[]> {
-  try {
-    const { parseKenmeiCsvExport } = await import("@/api/kenmei/parser");
+  const { parseKenmeiCsvExport } = await import("@/api/kenmei/parser");
 
-    // Parse the CSV segment with the public API
-    const exportData = parseKenmeiCsvExport(csvText, {
-      defaultStatus: defaultStatus as import("@/api/kenmei/types").KenmeiStatus,
-      validateStructure: true,
-      allowPartialData: true, // Allow partial data since we're streaming
-    });
+  // Parse the CSV segment with the public API
+  const exportData = parseKenmeiCsvExport(csvText, {
+    defaultStatus: defaultStatus as import("@/api/kenmei/types").KenmeiStatus,
+    validateStructure: true,
+    allowPartialData: true, // Allow partial data since we're streaming
+  });
 
-    return exportData.manga;
-  } catch (error) {
-    console.error("[Worker] Error parsing CSV buffer segment:", error);
-    throw error;
-  }
+  return exportData.manga;
 }
 
 /**
@@ -225,6 +221,7 @@ async function processCSVChunkIncremental(
 /**
  * Flushes the buffer by parsing CSV segment and accumulating results.
  * Preserves incomplete trailing lines in the buffer for the next chunk.
+ * Throws raw errors to be handled by the outermost handler.
  * @param state - Parser state with accumulated CSV buffer.
  * @returns Promise that resolves after parsing and clearing the flushed portion.
  * @source
@@ -234,54 +231,47 @@ async function flushBufferAndParseRows(
 ): Promise<KenmeiManga[]> {
   if (!state?.csvBuffer) return [];
 
-  try {
-    // Split buffer by lines, preserving incomplete trailing line
-    const { lines, remainder } = splitCSVLines(state.csvBuffer);
+  // Split buffer by lines, preserving incomplete trailing line
+  const { lines, remainder } = splitCSVLines(state.csvBuffer);
 
-    let newlyParsedRows: KenmeiManga[] = [];
+  let newlyParsedRows: KenmeiManga[] = [];
 
-    if (lines.length > 0) {
-      // On first flush, capture the header line
-      if (!state.header && lines.length > 0) {
-        state.header = lines[0];
-        // Remove header from lines so we only parse data rows
-        lines.shift();
-      }
-
-      // For subsequent flushes, prepend the header to ensure parseKenmeiCsvExport has it
-      const csvWithHeader = state.header
-        ? `${state.header}\n${lines.join("\n")}`
-        : lines.join("\n");
-
-      if (lines.length > 0) {
-        // Parse the CSV segment
-        const manga = await parseCSVBufferSegment(
-          csvWithHeader,
-          state.defaultStatus,
-        );
-
-        newlyParsedRows = manga;
-
-        console.debug(
-          `[Worker] 🔄 Flushed ${lines.length} lines, parsed ${manga.length} rows`,
-        );
-      }
+  if (lines.length > 0) {
+    // On first flush, capture the header line
+    if (!state.header && lines.length > 0) {
+      state.header = lines[0];
+      // Remove header from lines so we only parse data rows
+      lines.shift();
     }
 
-    // Keep incomplete trailing line in buffer for next chunk
-    state.csvBuffer = remainder;
-    return newlyParsedRows;
-  } catch (error) {
-    console.error(
-      `[Worker] Error flushing and parsing CSV buffer for task ${state.taskId}:`,
-      error,
-    );
-    throw error;
+    // For subsequent flushes, prepend the header to ensure parseKenmeiCsvExport has it
+    const csvWithHeader = state.header
+      ? `${state.header}\n${lines.join("\n")}`
+      : lines.join("\n");
+
+    if (lines.length > 0) {
+      // Parse the CSV segment
+      const manga = await parseCSVBufferSegment(
+        csvWithHeader,
+        state.defaultStatus,
+      );
+
+      newlyParsedRows = manga;
+
+      console.debug(
+        `[Worker] 🔄 Flushed ${lines.length} lines, parsed ${manga.length} rows`,
+      );
+    }
   }
+
+  // Keep incomplete trailing line in buffer for next chunk
+  state.csvBuffer = remainder;
+  return newlyParsedRows;
 }
 
 /**
  * Finalizes CSV parsing by processing any remaining buffered data and combining all parsed results.
+ * Throws raw errors to be handled by the outermost handler.
  * @param state - Parser state containing accumulated CSV buffer and parsed rows.
  * @returns Promise that posts CSV_COMPLETE or throws on parse error.
  * @source
@@ -291,77 +281,69 @@ async function finalizeCSVParsing(
 ): Promise<void> {
   if (!state) return;
 
-  try {
-    // Flush any remaining buffer content
-    if (state.csvBuffer.trim()) {
-      const newlyParsedRows = await flushBufferAndParseRows(state);
+  // Flush any remaining buffer content
+  if (state.csvBuffer.trim()) {
+    const newlyParsedRows = await flushBufferAndParseRows(state);
 
-      // Initialize pending batch if needed
-      state.pendingBatch ??= [];
+    // Initialize pending batch if needed
+    state.pendingBatch ??= [];
 
-      // Track total parsed rows
-      state.totalParsedRows =
-        (state.totalParsedRows ?? 0) + newlyParsedRows.length;
+    // Track total parsed rows
+    state.totalParsedRows =
+      (state.totalParsedRows ?? 0) + newlyParsedRows.length;
 
-      // Add newly parsed rows to pending batch
-      state.pendingBatch.push(...newlyParsedRows);
-    }
-
-    // Emit any remaining pending batch
-    if (state.pendingBatch && state.pendingBatch.length > 0) {
-      globalThis.postMessage({
-        type: "CSV_ROWS",
-        payload: {
-          taskId: state.taskId,
-          rows: state.pendingBatch,
-        },
-      });
-
-      console.debug(
-        `[Worker] 📤 Emitted final CSV_ROWS batch of ${state.pendingBatch.length} rows for task ${state.taskId}`,
-      );
-    }
-
-    const totalParsedRowsCount = state.totalParsedRows ?? 0;
-    const duration = performance.now() - state.startTime;
-
-    console.info(
-      `[Worker] ✅ CSV task ${state.taskId}: Parsed ${totalParsedRowsCount} rows with incremental streaming in ${duration.toFixed(2)}ms`,
-    );
-
-    // Emit final PROGRESS at 100% to smooth UI progress bars
-    globalThis.postMessage({
-      type: "PROGRESS",
-      payload: {
-        taskId: state.taskId,
-        processedBytes: state.totalSize,
-        totalBytes: state.totalSize,
-        parsedRowsCount: state.totalParsedRows ?? 0,
-      },
-    });
-
-    // Send CSV_COMPLETE with stats only (rows are sent via CSV_ROWS batches)
-    globalThis.postMessage({
-      type: "CSV_COMPLETE",
-      payload: {
-        taskId: state.taskId,
-        manga: [], // Empty array - rows sent via CSV_ROWS batches
-        stats: {
-          totalParsed: totalParsedRowsCount,
-          processingTimeMs: duration,
-          bytesProcessed: state.processedBytes,
-        },
-      },
-    });
-
-    state.isComplete = true;
-  } catch (error) {
-    console.error(
-      `[Worker] Failed to finalize CSV parsing for task ${state.taskId}:`,
-      error,
-    );
-    throw error;
+    // Add newly parsed rows to pending batch
+    state.pendingBatch.push(...newlyParsedRows);
   }
+
+  // Emit any remaining pending batch
+  if (state.pendingBatch && state.pendingBatch.length > 0) {
+    globalThis.postMessage({
+      type: "CSV_ROWS",
+      payload: {
+        taskId: state.taskId,
+        rows: state.pendingBatch,
+      },
+    });
+
+    console.debug(
+      `[Worker] 📤 Emitted final CSV_ROWS batch of ${state.pendingBatch.length} rows for task ${state.taskId}`,
+    );
+  }
+
+  const totalParsedRowsCount = state.totalParsedRows ?? 0;
+  const duration = performance.now() - state.startTime;
+
+  console.info(
+    `[Worker] ✅ CSV task ${state.taskId}: Parsed ${totalParsedRowsCount} rows with incremental streaming in ${duration.toFixed(2)}ms`,
+  );
+
+  // Emit final PROGRESS at 100% to smooth UI progress bars
+  globalThis.postMessage({
+    type: "PROGRESS",
+    payload: {
+      taskId: state.taskId,
+      processedBytes: state.totalSize,
+      totalBytes: state.totalSize,
+      parsedRowsCount: state.totalParsedRows ?? 0,
+    },
+  });
+
+  // Send CSV_COMPLETE with stats only (rows are sent via CSV_ROWS batches)
+  globalThis.postMessage({
+    type: "CSV_COMPLETE",
+    payload: {
+      taskId: state.taskId,
+      manga: [], // Empty array - rows sent via CSV_ROWS batches
+      stats: {
+        totalParsed: totalParsedRowsCount,
+        processingTimeMs: duration,
+        bytesProcessed: state.processedBytes,
+      },
+    },
+  });
+
+  state.isComplete = true;
 }
 
 /**
