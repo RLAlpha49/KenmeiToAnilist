@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module window_channels
+ * @module window-channels
  * @description IPC channels for window control operations (minimize, maximize, close) in Electron.
  */
 

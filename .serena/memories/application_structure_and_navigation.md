@@ -53,8 +53,8 @@ Context Bridge (Secure IPC)
 
 - **Framework**: TanStack Router with memory history (no URLs for Electron)
 - **Root Route**: `src/routes/__root.tsx` - Base layout with providers
-- **Route Definitions**: `src/routes/routes.tsx` - All page routes
-- **Router Instance**: `src/routes/router.tsx` - Router initialization
+- **Route Definitions**: `src/routes/routes.ts` - All page routes
+- **Router Instance**: `src/routes/router.ts` - Router initialization
 
 ### Page Structure
 

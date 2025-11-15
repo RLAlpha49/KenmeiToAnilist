@@ -1574,15 +1574,15 @@ function countConflicts(
   existingMatches: MatchResult[],
 ): number {
   let conflicts = 0;
-  for (const imported_match of importedMatches) {
+  for (const importedMatch of importedMatches) {
     const existing = existingMatches.find(
       (m) =>
-        m.kenmeiManga.id === imported_match.kenmeiManga.id ||
+        m.kenmeiManga.id === importedMatch.kenmeiManga.id ||
         m.kenmeiManga.title.toLowerCase() ===
-          imported_match.kenmeiManga.title.toLowerCase(),
+          importedMatch.kenmeiManga.title.toLowerCase(),
     );
 
-    if (existing && existing.status !== "pending") {
+      if (existing && existing.status !== "pending") {
       conflicts++;
     }
   }

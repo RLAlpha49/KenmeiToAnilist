@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module window_listeners
+ * @module window-listeners
  * @description Registers IPC event listeners for window actions (minimize, maximize, close) in the Electron main process.
  */
 

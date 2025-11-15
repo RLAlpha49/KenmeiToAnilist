@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module clipboard_listeners
+ * @module clipboard-listeners
  * @description IPC listeners for clipboard operations in the Electron main process.
  */
 

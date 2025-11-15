@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module ipc_debugger
+ * @module ipc-debugger
  * @description Instrumentation utilities for capturing IPC activity between the renderer and main processes.
  */
 

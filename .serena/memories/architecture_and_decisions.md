@@ -112,8 +112,8 @@ Registration: `src/helpers/ipc/listeners-register.ts` registers window, theme, a
 **Setup**:
 
 - `src/routes/__root.tsx` - Root layout wrapping all routes with `BaseLayout`
-- `src/routes/routes.tsx` - Route definitions (HomePage, MatchingPage, etc.)
-- `src/routes/router.tsx` - Router instance with memory history
+- `src/routes/routes.ts` - Route definitions (HomePage, MatchingPage, etc.)
+- `src/routes/router.ts` - Router instance with memory history
 - Module augmentation for type-safe router
 
 **Navigation**: Use `useRouter()` hook from TanStack Router

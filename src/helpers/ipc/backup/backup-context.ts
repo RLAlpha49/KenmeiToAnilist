@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module backup_context
+ * @module backup-context
  * @description Exposes the Electron backup context bridge to the renderer process.
  */
 

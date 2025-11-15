@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module auth_listeners
+ * @module auth-listeners
  * @description Registers IPC event listeners for authentication-related actions (OAuth, credentials, token exchange) in the Electron main process.
  */
 

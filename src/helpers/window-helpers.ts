@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module window_helpers
+ * @module window-helpers
  * @description Helper functions for controlling the Electron window (minimize, maximize, close).
  */
 

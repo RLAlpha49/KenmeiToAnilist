@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module backup_listeners
+ * @module backup-listeners
  * @description Registers IPC event listeners for backup-related actions in the Electron main process.
  */
 

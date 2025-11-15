@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module anilist_config
+ * @module anilist-config
  * @description Default configuration and constants for the AniList API, including credentials, endpoints, and rate limiting.
  */
 

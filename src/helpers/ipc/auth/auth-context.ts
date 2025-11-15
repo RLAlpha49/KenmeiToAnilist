@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module auth_context
+ * @module auth-context
  * @description Exposes the Electron authentication context bridge (OAuth, credentials, token exchange, event listeners) to the renderer process.
  */
 

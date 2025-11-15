@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module store_context
+ * @module store-context
  * @description Exposes the Electron store context bridge (getItem, setItem, removeItem, clear) to the renderer process.
  */
 

@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module context_exposer
+ * @module context-exposer
  * @description Exposes all IPC context bridges for the Electron renderer process, including window, theme, auth, store, and API contexts.
  */
 

@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module window_context
+ * @module window-context
  * @description Exposes the Electron window control context bridge (minimize, maximize, close) to the renderer process.
  */
 

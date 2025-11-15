@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module debug_context
+ * @module debug-context
  * @description Exports type definitions for debug context (memory stats and IPC debugging). The actual exposure is handled by ipc-debugger.ts which includes both IPC debugging and memory stats under the unified `electronDebug` object.
  */
 

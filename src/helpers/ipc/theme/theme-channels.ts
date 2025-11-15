@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module theme_channels
+ * @module theme-channels
  * @description IPC channel names for theme mode actions (current, toggle, dark, light, system) in the Electron app.
  */
 

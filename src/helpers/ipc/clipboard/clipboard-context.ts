@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module clipboard_context
+ * @module clipboard-context
  * @description Exposes the Electron clipboard context bridge to the renderer process for secure clipboard operations.
  */
 

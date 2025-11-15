@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module debug_types
+ * @module debug-types
  * @description Shared debug-related type definitions.
  */
 

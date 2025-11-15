@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module listeners_register
+ * @module listeners-register
  * @description Registers all IPC event listeners for the Electron main process, including window, theme, auth, store, and AniList API listeners.
  */
 

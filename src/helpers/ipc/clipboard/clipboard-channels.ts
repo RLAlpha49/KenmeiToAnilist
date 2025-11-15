@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module clipboard_channels
+ * @module clipboard-channels
  * @description IPC channel names for clipboard operations between main and renderer processes.
  */
 

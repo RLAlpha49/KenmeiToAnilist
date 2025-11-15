@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module ipc_types
+ * @module ipc-types
  * @description Shared TypeScript types for IPC communication between main and renderer processes.
  */
 

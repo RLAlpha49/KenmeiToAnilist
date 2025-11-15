@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module theme_context
+ * @module theme-context
  * @description Exposes the Electron theme mode context bridge (current, toggle, dark, light, system) to the renderer process.
  */
 

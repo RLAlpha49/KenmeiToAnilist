@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module theme_helpers
+ * @module theme-helpers
  * @description Helper functions and types for managing application theme (dark, light, system) and syncing with local storage and the DOM.
  */
 

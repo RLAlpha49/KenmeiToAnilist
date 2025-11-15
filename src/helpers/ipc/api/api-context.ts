@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module api_context
+ * @module api-context
  * @description Exposes the Electron API context bridge (AniList API, shell actions) to the renderer process.
  */
 

@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module api_listeners
+ * @module api-listeners
  * @description Registers IPC event listeners for AniList API requests, token exchange, cache, and shell actions in the Electron main process.
  */
 

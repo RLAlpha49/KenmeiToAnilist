@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module theme_listeners
+ * @module theme-listeners
  * @description Registers IPC event listeners for theme mode actions (current, toggle, dark, light, system) in the Electron main process.
  */
 

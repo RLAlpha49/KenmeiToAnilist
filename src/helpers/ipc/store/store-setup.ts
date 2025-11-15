@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module store_setup
+ * @module store-setup
  * @description Registers IPC event listeners for interacting with the Electron store (get, set, remove, clear) in the main process.
  */
 

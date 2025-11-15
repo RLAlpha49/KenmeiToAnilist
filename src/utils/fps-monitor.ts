@@ -72,10 +72,10 @@ export class FPSMonitor {
 
         // Notify if FPS is low (throttle notifications to once per second)
         if (this.options.onLowFPS && this.averageFPS < this.options.threshold) {
-          const now_ms = Date.now();
-          if (now_ms - this.lastLowFPSNotification > 1000) {
+          const nowMs = Date.now();
+          if (nowMs - this.lastLowFPSNotification > 1000) {
             this.options.onLowFPS(this.averageFPS);
-            this.lastLowFPSNotification = now_ms;
+            this.lastLowFPSNotification = nowMs;
           }
         }
       }

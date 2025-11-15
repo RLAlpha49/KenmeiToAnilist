@@ -878,15 +878,15 @@ export function normalizeKenmeiManga(
     entry.status && isValidStatus(entry.status) ? entry.status : defaultStatus;
 
   // Normalize numeric fields with defaults
-  const chapters_read =
+  const chaptersRead =
     typeof entry.chapters_read === "number" ? entry.chapters_read : 0;
-  const volumes_read =
+  const volumesRead =
     typeof entry.volumes_read === "number" ? entry.volumes_read : undefined;
   const score = typeof entry.score === "number" ? entry.score : 0;
 
   // Normalize timestamp fields
-  const created_at = entry.created_at ?? now;
-  const updated_at = entry.updated_at ?? now;
+  const createdAt = entry.created_at ?? now;
+  const updatedAt = entry.updated_at ?? now;
 
   return {
     id: entry.id ?? 0,
@@ -895,14 +895,14 @@ export function normalizeKenmeiManga(
     score,
     url: entry.url ?? "",
     cover_url: entry.cover_url,
-    chapters_read,
+    chapters_read: chaptersRead,
     total_chapters: entry.total_chapters,
-    volumes_read,
+    volumes_read: volumesRead,
     total_volumes: entry.total_volumes,
     notes: entry.notes,
     last_read_at: entry.last_read_at,
-    created_at,
-    updated_at,
+    created_at: createdAt,
+    updated_at: updatedAt,
     author: entry.author,
     alternative_titles: entry.alternative_titles,
     anilistId: entry.anilistId,

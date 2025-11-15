@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module debug_listeners
+ * @module debug-listeners
  * @description Registers IPC event listeners for debug-related actions (memory stats, performance monitoring) in the Electron main process.
  */
 
