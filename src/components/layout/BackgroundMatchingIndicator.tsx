@@ -6,12 +6,12 @@
 
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
-import { getPathname } from "@/utils/getPathname";
+import { getPathname } from "@/utils/get-pathname";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, ChevronDown, ChevronUp, Search } from "lucide-react";
-import { Button } from "../ui/button";
-import { Card } from "../ui/card";
-import { Progress } from "../ui/progress";
+import { Button } from "../ui/Button";
+import { Card } from "../ui/Card";
+import { Progress } from "../ui/Progress";
 
 /**
  * A floating indicator displaying background manga matching progress when user is not on the matching page.

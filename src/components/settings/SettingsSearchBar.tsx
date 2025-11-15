@@ -7,8 +7,8 @@
 import React from "react";
 import { Search, Sparkles, X } from "lucide-react";
 import { motion } from "framer-motion";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/Input";
+import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/utils/tailwind";
 
 /**

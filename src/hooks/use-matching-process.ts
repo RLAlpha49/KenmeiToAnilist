@@ -21,9 +21,9 @@ import {
   MatchResult,
 } from "../utils/storage";
 import { ApiError, MatchingProgress } from "../types/matching";
-import { captureError, ErrorType } from "../utils/errorHandling";
-import { useTimeEstimate } from "./useTimeEstimate";
-import { usePendingManga } from "./usePendingManga";
+import { captureError, ErrorType } from "../utils/error-handling";
+import { useTimeEstimate } from "./use-time-estimate";
+import { usePendingManga } from "./use-pending-manga";
 
 /**
  * Manages the manga matching process with batch operations, progress tracking, and pause/resume support.

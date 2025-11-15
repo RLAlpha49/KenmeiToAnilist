@@ -7,8 +7,8 @@
 import React from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { Card, CardContent } from "../ui/card";
-import { Button } from "../ui/button";
+import { Card, CardContent } from "../ui/Card";
+import { Button } from "../ui/Button";
 import { AlertCircle } from "lucide-react";
 
 /**

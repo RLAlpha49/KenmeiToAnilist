@@ -10,7 +10,7 @@ import type {
   PreparedTableRow,
 } from "../core/types";
 import type { KenmeiMangaItem } from "@/types/kenmei";
-import { prepareTableSlice } from "../shared/dataTableFormatter";
+import { prepareTableSlice } from "../shared/data-table-formatter";
 
 /**
  * Precomputed values and metadata for a single table row prepared for display.

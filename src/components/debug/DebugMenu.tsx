@@ -11,7 +11,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "../ui/dialog";
+} from "../ui/Dialog";
 import {
   Braces,
   Bug,
@@ -26,12 +26,12 @@ import { StateInspector } from "./StateInspector";
 import { IpcViewer } from "./IpcViewer";
 import { EventLogger } from "./EventLogger";
 import { PerformanceMonitor } from "./PerformanceMonitor";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { Badge } from "../ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/Tabs";
+import { Badge } from "../ui/Badge";
 import { useDebugState } from "../../contexts/DebugContext";
 import { cn } from "@/utils/tailwind";
-import { Button } from "../ui/button";
-import { ScrollArea } from "../ui/scroll-area";
+import { Button } from "../ui/Button";
+import { ScrollArea } from "../ui/ScrollArea";
 
 /**
  * Defines a debug panel configuration with metadata and content.

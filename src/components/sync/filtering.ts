@@ -12,7 +12,7 @@ import {
 import { SyncConfig } from "../../utils/storage";
 import { getEffectiveStatus } from "./sync-utils";
 import { FilterOptions, SortOption } from "./types";
-import { AdvancedMatchFilters } from "../../types/matchingFilters";
+import { AdvancedMatchFilters } from "../../types/matching-filters";
 
 /**
  * Apply filters to manga matches based on status, changes, and library membership.

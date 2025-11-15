@@ -2,7 +2,7 @@ import { findBestMatches } from "@/api/matching/match-engine";
 import type { AniListManga } from "@/api/anilist/types";
 import type { MatchBatchMessage } from "../../types";
 import type { MatchEngineConfig } from "@/api/matching/match-engine";
-import { getErrorDetails } from "../errorUtils";
+import { getErrorDetails } from "../error-utils";
 
 /**
  * Performs batch matching of Kenmei manga against AniList candidates.

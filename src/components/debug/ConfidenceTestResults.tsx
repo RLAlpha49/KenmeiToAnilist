@@ -1,8 +1,8 @@
 import React from "react";
 import { AlertTriangle, Check, X } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Separator } from "@/components/ui/Separator";
 import type { MangaMatch } from "@/api/anilist/types";
 
 interface ConfidenceBracket {

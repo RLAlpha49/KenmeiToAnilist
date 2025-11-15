@@ -13,25 +13,25 @@ import type {
   DataTablePreparationMessage,
   FuzzySearchMessage,
 } from "./types";
-import { getErrorDetails } from "./worker/errorUtils";
+import { getErrorDetails } from "./worker/error-utils";
 import {
   handleCSVStart,
   handleCSVChunk,
-} from "./worker/operations/csvOperations";
-import { handleMatchBatch } from "./worker/operations/matchingOperations";
-import { handleAdvancedFilter } from "./worker/operations/advancedFilterOperations";
-import { handleTitleNormalization } from "./worker/operations/titleNormalizationOperations";
-import { handleCancel } from "./worker/cancellationHandler";
-import { handleReadingHistoryFilter } from "./worker/operations/readingHistoryOperations";
-import { handleStatisticsAggregation } from "./worker/operations/statisticsOperations";
+} from "./worker/operations/csv-operations";
+import { handleMatchBatch } from "./worker/operations/matching-operations";
+import { handleAdvancedFilter } from "./worker/operations/advanced-filter-operations";
+import { handleTitleNormalization } from "./worker/operations/title-normalization-operations";
+import { handleCancel } from "./worker/cancellation-handler";
+import { handleReadingHistoryFilter } from "./worker/operations/reading-history-operations";
+import { handleStatisticsAggregation } from "./worker/operations/statistics-operations";
 import {
   handleJsonSerialize,
   handleJsonDeserialize,
-} from "./worker/operations/jsonOperations";
-import { handleDuplicateDetection } from "./worker/operations/duplicateDetectionOperations";
-import { handleDataTablePreparation } from "./worker/operations/dataTableOperations";
-import { handleBatchSync } from "./worker/operations/batchSyncOperations";
-import { handleFuzzySearch } from "./worker/operations/fuzzySearchOperations";
+} from "./worker/operations/json-operations";
+import { handleDuplicateDetection } from "./worker/operations/duplicate-detection-operations";
+import { handleDataTablePreparation } from "./worker/operations/data-table-operations";
+import { handleBatchSync } from "./worker/operations/batch-sync-operations";
+import { handleFuzzySearch } from "./worker/operations/fuzzy-search-operations";
 
 const activeTasks = new Set<string>();
 

@@ -25,8 +25,8 @@ import {
   exportToCSV,
   exportToMarkdown,
   buildExportMetadata,
-} from "@/utils/exportUtils";
-import { Button } from "@/components/ui/button";
+} from "@/utils/export-utils";
+import { Button } from "@/components/ui/Button";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -37,7 +37,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuCheckboxItem,
   DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/ui/DropdownMenu";
 
 export type StatisticsExportFormat = "json" | "csv" | "markdown";
 

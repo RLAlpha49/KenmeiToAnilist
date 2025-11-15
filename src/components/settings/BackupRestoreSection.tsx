@@ -16,10 +16,10 @@ import {
   FolderOpen,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import { highlightText, truncateToastMessage } from "@/utils/textHighlight";
+import { Button } from "@/components/ui/Button";
+import { Separator } from "@/components/ui/Separator";
+import { Badge } from "@/components/ui/Badge";
+import { highlightText, truncateToastMessage } from "@/utils/text-highlight";
 import { cn } from "@/utils/tailwind";
 import type { BackupScheduleConfig } from "@/utils/storage";
 

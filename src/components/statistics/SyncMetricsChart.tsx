@@ -25,9 +25,9 @@ import {
   AlertCircle,
 } from "lucide-react";
 import type { SyncStats } from "@/types/sync";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/utils/tailwind";
-import { formatRelativeTime } from "@/utils/timeUtils";
+import { formatRelativeTime } from "@/utils/time-utils";
 
 interface SyncMetricsChartProps {
   /** Sync statistics object representing aggregate results. */

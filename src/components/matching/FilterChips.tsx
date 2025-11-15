@@ -1,8 +1,8 @@
 import React from "react";
 import { X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import type { AdvancedMatchFilters } from "@/types/matchingFilters";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import type { AdvancedMatchFilters } from "@/types/matching-filters";
 import { formatLabel, statusLabel, yearRangeLabel } from "./labels";
 
 /**

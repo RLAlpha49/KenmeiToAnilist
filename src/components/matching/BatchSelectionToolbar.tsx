@@ -4,14 +4,14 @@
  * @description Floating toolbar component for batch selection operations
  */
 import React from "react";
-import { Card } from "../ui/card";
-import { Button } from "../ui/button";
+import { Card } from "../ui/Card";
+import { Button } from "../ui/Button";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "../ui/tooltip";
+} from "../ui/Tooltip";
 import {
   CheckSquare,
   Check,
@@ -21,7 +21,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { Progress } from "../ui/progress";
+import { Progress } from "../ui/Progress";
 
 /**
  * Props for the BatchSelectionToolbar component.

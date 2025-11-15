@@ -2,7 +2,7 @@ import type {
   StatisticsAggregationMessage,
   StatisticsAggregationResultMessage,
 } from "../../types";
-import { getErrorDetails } from "../errorUtils";
+import { getErrorDetails } from "../error-utils";
 
 /**
  * Aggregates statistics for matches and reading history in a worker.
@@ -37,7 +37,7 @@ export async function handleStatisticsAggregation(
       applyStatisticsFilters,
       buildComparisonDatasets,
       extractAvailableFilterOptions,
-    } = await import("@/utils/statisticsAdapter");
+    } = await import("@/utils/statistics-adapter");
 
     if (!activeTasks.has(taskId)) {
       console.warn(
@@ -56,7 +56,7 @@ export async function handleStatisticsAggregation(
     const filterStartTime = performance.now();
 
     const filteredData = applyStatisticsFilters(
-      matchResults as unknown as import("@/utils/statisticsAdapter").NormalizedMatchForStats[],
+      matchResults as unknown as import("@/utils/statistics-adapter").NormalizedMatchForStats[],
       readingHistory as unknown as import("@/utils/storage").ReadingHistory,
       filters as unknown as import("@/types/statistics").StatisticsFilters,
     );
@@ -88,8 +88,8 @@ export async function handleStatisticsAggregation(
       comparisonMode.primaryRange !== comparisonMode.secondaryRange
         ? buildComparisonDatasets(
             filteredData.readingHistory,
-            comparisonMode.primaryRange as import("@/utils/statisticsAdapter").TimeRange,
-            comparisonMode.secondaryRange as import("@/utils/statisticsAdapter").TimeRange,
+            comparisonMode.primaryRange as import("@/utils/statistics-adapter").TimeRange,
+            comparisonMode.secondaryRange as import("@/utils/statistics-adapter").TimeRange,
           )
         : null;
 

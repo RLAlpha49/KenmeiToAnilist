@@ -1,6 +1,6 @@
 import React from "react";
 import { motion, type Variants } from "framer-motion";
-import { Button } from "../ui/button";
+import { Button } from "../ui/Button";
 import {
   CheckCircle2,
   Clock3,
@@ -12,13 +12,13 @@ import {
   Redo2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { Badge } from "../ui/badge";
+import { Badge } from "../ui/Badge";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "../ui/tooltip";
+} from "../ui/Tooltip";
 import { ExportMatchesButton } from "./ExportMatchesButton";
 import ImportMatchesButton from "./ImportMatchesButton";
 import { MangaMatchResult } from "../../api/anilist/types";

@@ -10,7 +10,7 @@ import {
   RefreshCw,
   UserCircle,
 } from "lucide-react";
-import { Button } from "../ui/button";
+import { Button } from "../ui/Button";
 import { cn } from "../../utils/tailwind";
 
 /**

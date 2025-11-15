@@ -1,8 +1,8 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { AlertCircle, Search, X } from "lucide-react";
-import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
+import { Button } from "../ui/Button";
+import { Badge } from "../ui/Badge";
 
 /**
  * Represents a duplicate entry with one AniList manga mapped to multiple Kenmei titles.

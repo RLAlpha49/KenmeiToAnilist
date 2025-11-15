@@ -6,15 +6,15 @@
 
 import React, { useRef, useState, useEffect } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
-import { getPathname } from "@/utils/getPathname";
+import { getPathname } from "@/utils/get-pathname";
 import ToggleTheme from "../ToggleTheme";
-import { Button } from "../ui/button";
+import { Button } from "../ui/Button";
 import {
   NavigationMenu,
   NavigationMenuList,
   NavigationMenuItem,
   NavigationMenuLink,
-} from "../ui/navigation-menu";
+} from "../ui/NavigationMenu";
 import {
   Minimize2,
   Maximize2,
@@ -32,13 +32,13 @@ import {
   minimizeWindow,
   maximizeWindow,
   closeWindow,
-} from "../../helpers/window_helpers";
+} from "../../helpers/window-helpers";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "../ui/tooltip";
+} from "../ui/Tooltip";
 import { motion } from "framer-motion";
 import appIcon from "../../assets/k2a-icon-512x512.png";
 import { useDebugState, useDebugActions } from "../../contexts/DebugContext";

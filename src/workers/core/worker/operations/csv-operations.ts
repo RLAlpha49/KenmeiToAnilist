@@ -1,7 +1,7 @@
 import type { KenmeiManga } from "@/api/kenmei/types";
 import type { CSVParserState } from "../types";
 import type { CSVStartMessage, CSVChunkMessage } from "../../types";
-import { getErrorDetails } from "../errorUtils";
+import { getErrorDetails } from "../error-utils";
 
 /** Maximum buffer size before flushing rows (500KB) @source */
 const MAX_BUFFER_SIZE = 500 * 1024;

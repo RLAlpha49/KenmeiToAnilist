@@ -9,7 +9,7 @@ import { MangaMatchResult, AniListManga } from "../api/anilist/types";
 import { storage, STORAGE_KEYS, type MatchResult } from "./storage";
 import type { MatchForExport } from "../types/matching";
 import { getAppVersion } from "./app-version";
-import { createError, ErrorType } from "./errorHandling";
+import { createError, ErrorType } from "./error-handling";
 import { getJSONSerializationWorkerPool } from "../workers";
 
 /**

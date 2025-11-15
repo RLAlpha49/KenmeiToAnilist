@@ -2,7 +2,7 @@ import React from "react";
 import { Search, Check, X, ArrowLeft } from "lucide-react";
 import { MangaMatchResult } from "../../../api/anilist/types";
 import { KenmeiManga } from "../../../api/kenmei/types";
-import { Button } from "../../ui/button";
+import { Button } from "../../ui/Button";
 
 /**
  * Props for the MatchActions component.

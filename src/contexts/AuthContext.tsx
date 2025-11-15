@@ -20,8 +20,8 @@ import {
   createError,
   showErrorNotification,
   ErrorRecoveryAction,
-} from "../utils/errorHandling";
-import { truncateToastMessage } from "../utils/textHighlight";
+} from "../utils/error-handling";
+import { truncateToastMessage } from "../utils/text-highlight";
 import {
   AuthState,
   APICredentials,
@@ -30,7 +30,10 @@ import {
   AuthActionsContextValue,
   OfflineQueueTask,
 } from "../types/auth";
-import { AuthActionsContext, AuthStateContext } from "./AuthContextDefinition";
+import {
+  AuthActionsContext,
+  AuthStateContext,
+} from "./auth-context-definition";
 import { DEFAULT_ANILIST_CONFIG } from "../config/anilist";
 import { useDebugActions, StateInspectorHandle } from "./DebugContext";
 import { request } from "../api/anilist/client";

@@ -17,7 +17,7 @@ import {
   exportSyncErrorLog,
   exportSyncReport,
   saveSyncReportToHistory,
-} from "../utils/exportUtils";
+} from "../utils/export-utils";
 import {
   storage,
   STORAGE_KEYS,
@@ -33,12 +33,12 @@ import {
   FailedOperation,
   type ReadingHistoryEntry,
 } from "../utils/storage";
-import { captureError, ErrorType } from "../utils/errorHandling";
+import { captureError, ErrorType } from "../utils/error-handling";
 import {
   useDebugActions,
   StateInspectorHandle,
 } from "../contexts/DebugContext";
-import { useAuthState } from "./useAuth";
+import { useAuthState } from "./use-auth";
 
 /**
  * Snapshot of an in-progress synchronization session for pause/resume recovery.

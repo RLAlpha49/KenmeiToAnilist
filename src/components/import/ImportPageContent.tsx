@@ -7,14 +7,14 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { KenmeiData } from "../../types/kenmei";
-import { AppError } from "../../utils/errorHandling";
+import { AppError } from "../../utils/error-handling";
 import { FileDropZone } from "./FileDropZone";
 import { DataTable } from "./DataTable";
-import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
-import { Progress } from "../ui/progress";
-import { Alert, AlertDescription } from "../ui/alert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { Button } from "../ui/Button";
+import { Badge } from "../ui/Badge";
+import { Progress } from "../ui/Progress";
+import { Alert, AlertDescription } from "../ui/Alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/Tabs";
 import {
   Card,
   CardHeader,
@@ -22,7 +22,7 @@ import {
   CardDescription,
   CardContent,
   CardFooter,
-} from "../ui/card";
+} from "../ui/Card";
 import {
   CheckCircle2,
   Upload,

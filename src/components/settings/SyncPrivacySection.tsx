@@ -6,8 +6,8 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Switch } from "@/components/ui/switch";
-import { highlightText } from "@/utils/textHighlight";
+import { Switch } from "@/components/ui/Switch";
+import { highlightText } from "@/utils/text-highlight";
 import { cn } from "@/utils/tailwind";
 import type { SyncConfig } from "@/utils/storage";
 

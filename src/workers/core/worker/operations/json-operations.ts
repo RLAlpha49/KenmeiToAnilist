@@ -1,5 +1,5 @@
 import type { JSONSerializeMessage, JSONDeserializeMessage } from "../../types";
-import { getErrorDetails } from "../errorUtils";
+import { getErrorDetails } from "../error-utils";
 
 /**
  * Serializes data to JSON in a worker for heavy payloads.

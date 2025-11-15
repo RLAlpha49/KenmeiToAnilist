@@ -5,7 +5,7 @@
  */
 
 import type { MangaMatchResult } from "@/api/anilist/types";
-import type { AdvancedMatchFilters } from "@/types/matchingFilters";
+import type { AdvancedMatchFilters } from "@/types/matching-filters";
 import {
   failsConfidenceFilter,
   failsFormatFilter,

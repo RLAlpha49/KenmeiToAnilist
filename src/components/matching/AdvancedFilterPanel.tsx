@@ -9,14 +9,14 @@ import {
   Trash2,
   Save,
 } from "lucide-react";
-import { CollapsibleChevron } from "@/components/ui/collapsible-chevron";
+import { CollapsibleChevron } from "@/components/ui/CollapsibleChevron";
 import {
   Card,
   CardHeader,
   CardTitle,
   CardDescription,
   CardContent,
-} from "@/components/ui/card";
+} from "@/components/ui/Card";
 import {
   Dialog,
   DialogContent,
@@ -24,22 +24,22 @@ import {
   DialogTitle,
   DialogFooter,
   DialogDescription,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+} from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/Button";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { Badge } from "@/components/ui/Badge";
+import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
 import {
   Collapsible,
   CollapsibleTrigger,
   CollapsibleContent,
-} from "@/components/ui/collapsible";
-import { RangeSlider } from "@/components/ui/slider";
+} from "@/components/ui/Collapsible";
+import { RangeSlider } from "@/components/ui/Slider";
 import type {
   AdvancedMatchFilters,
   FilterPreset,
-} from "@/types/matchingFilters";
+} from "@/types/matching-filters";
 import { formatLabel, statusLabel } from "./labels";
 import { SearchableFilterList } from "./SearchableFilterList";
 

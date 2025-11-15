@@ -6,7 +6,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { MangaMatchResult } from "@/api/anilist/types";
-import { fuzzySearchManga } from "@/utils/fuzzySearch";
+import { fuzzySearchManga } from "@/utils/fuzzy-search";
 
 /**
  * Options for configuring the fuzzy search hook.

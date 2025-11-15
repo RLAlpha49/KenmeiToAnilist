@@ -2,7 +2,7 @@ import { useOnboarding } from "@/contexts/OnboardingContext";
 import { getRouteForStep } from "@/config/onboarding-routes";
 import { useEffect, useRef } from "react";
 import { router, history } from "@/routes/router";
-import { getPathname } from "@/utils/getPathname";
+import { getPathname } from "@/utils/get-pathname";
 
 /**
  * Automatically navigates to the correct onboarding page for the current step.

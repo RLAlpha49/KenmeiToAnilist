@@ -6,11 +6,11 @@
 
 import React, { type FC } from "react";
 import { GitCompare, AlertCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { cn } from "@/utils/tailwind";
 import type { ComparisonMode } from "@/types/statistics";
-import type { TimeRange } from "@/utils/statisticsAdapter";
+import type { TimeRange } from "@/utils/statistics-adapter";
 import { TimeRangeSelector } from "@/components/statistics/TimeRangeSelector";
 
 /**

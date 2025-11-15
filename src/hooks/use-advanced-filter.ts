@@ -13,7 +13,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { getFilterWorkerPool } from "@/workers";
 import type { FilterOperationResult } from "@/workers";
 import type { MangaMatchResult } from "@/api/anilist/types";
-import type { AdvancedMatchFilters } from "@/types/matchingFilters";
+import type { AdvancedMatchFilters } from "@/types/matching-filters";
 
 interface UseAdvancedFilterResult {
   /**

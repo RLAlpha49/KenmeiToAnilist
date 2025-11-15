@@ -5,7 +5,7 @@
  */
 import React, { useState, useRef } from "react";
 import { UploadCloud, File, FileText } from "lucide-react";
-import { Button } from "../ui/button";
+import { Button } from "../ui/Button";
 import { KenmeiData } from "../../types/kenmei";
 import {
   createError,
@@ -13,9 +13,9 @@ import {
   ErrorRecoveryAction,
   AppError,
   CancelledError,
-} from "../../utils/errorHandling";
+} from "../../utils/error-handling";
 import { getCSVWorkerPool } from "@/workers";
-import { Progress } from "../ui/progress";
+import { Progress } from "../ui/Progress";
 
 /**
  * Props for the FileDropZone component.

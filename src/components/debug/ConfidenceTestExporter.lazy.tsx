@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, Component, ErrorInfo, ReactNode } from "react";
-import { DebugLoadingFallback } from "../ui/loading-fallback";
+import { DebugLoadingFallback } from "../ui/LoadingFallback";
 
 // Lazy-load the actual component to reduce initial bundle size
 const ConfidenceTestExporterComponent = lazy(() =>

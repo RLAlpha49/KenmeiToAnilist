@@ -7,8 +7,8 @@ import {
   Layers,
   AlertTriangle,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "../../ui/card";
-import { Input } from "../../ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "../../ui/Card";
+import { Input } from "../../ui/Input";
 import { cn } from "../../../utils/tailwind";
 
 /**

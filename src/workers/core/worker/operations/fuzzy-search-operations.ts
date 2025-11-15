@@ -1,6 +1,6 @@
 import Fuse from "fuse.js";
 import type { FuzzySearchMessage } from "../../types";
-import { getErrorDetails } from "../errorUtils";
+import { getErrorDetails } from "../error-utils";
 
 /**
  * Performs fuzzy search on manga matches using Fuse.js in a worker thread.

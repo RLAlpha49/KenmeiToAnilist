@@ -12,7 +12,7 @@ import React, {
 } from "react";
 import { KenmeiManga } from "../../api/kenmei/types";
 import { MangaMatchResult, AniListManga } from "../../api/anilist/types";
-import { CollapsibleChevron } from "../ui/collapsible-chevron";
+import { CollapsibleChevron } from "../ui/CollapsibleChevron";
 import {
   ChevronLeft,
   ChevronRight,
@@ -27,10 +27,10 @@ import {
 import { cn } from "@/utils/tailwind";
 
 // Import the advanced filter hook for worker-based filtering
-import { useAdvancedFilter } from "@/hooks/useAdvancedFilter";
+import { useAdvancedFilter } from "@/hooks/use-advanced-filter";
 
 // Import the fuzzy search hook for worker-based search
-import { useFuzzySearchResults } from "@/hooks/useFuzzySearch";
+import { useFuzzySearchResults } from "@/hooks/use-fuzzy-search";
 
 // Import storage utilities
 import {
@@ -56,10 +56,13 @@ import {
   DEFAULT_ADVANCED_FILTERS,
   type AdvancedMatchFilters,
   type FilterPreset,
-} from "../../types/matchingFilters";
+} from "../../types/matching-filters";
 
 // Import fuzzy search utilities
-import { parseQuerySyntax, applyQueryToFilters } from "../../utils/fuzzySearch";
+import {
+  parseQuerySyntax,
+  applyQueryToFilters,
+} from "../../utils/fuzzy-search";
 
 // Import shadcn UI components
 import {
@@ -67,9 +70,9 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-} from "../../components/ui/card";
-import { Badge } from "../../components/ui/badge";
-import { SkeletonCard } from "../../components/ui/skeleton";
+} from "../../components/ui/Card";
+import { Badge } from "../../components/ui/Badge";
+import { SkeletonCard } from "../../components/ui/Skeleton";
 import { AnimatePresence, motion } from "framer-motion";
 import MatchCard from "./MangaMatchingPanel/MatchCard";
 import { MatchStatisticsCard } from "./MangaMatchingPanel/MatchStatisticsCard";
@@ -85,8 +88,8 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { Button } from "../ui/button";
+} from "@/components/ui/Collapsible";
+import { Button } from "../ui/Button";
 
 /**
  * Props for the MangaMatchingPanel component.

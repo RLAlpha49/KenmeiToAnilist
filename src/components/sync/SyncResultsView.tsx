@@ -21,8 +21,8 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "../ui/card";
-import { Button } from "../ui/button";
+} from "../ui/Card";
+import { Button } from "../ui/Button";
 
 /**
  * Props for the SyncResultsView component.

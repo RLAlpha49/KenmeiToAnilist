@@ -6,7 +6,7 @@
 
 import React, { useState, useCallback } from "react";
 import { Upload } from "lucide-react";
-import { Button } from "../ui/button";
+import { Button } from "../ui/Button";
 import ImportMatchesDialog from "./ImportMatchesDialog";
 
 /**

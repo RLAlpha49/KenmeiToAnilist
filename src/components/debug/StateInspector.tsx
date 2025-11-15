@@ -7,11 +7,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useDebugActions, useDebugState } from "../../contexts/DebugContext";
-import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
-import { Textarea } from "../ui/textarea";
-import { ScrollArea } from "../ui/scroll-area";
-import { Separator } from "../ui/separator";
+import { Badge } from "../ui/Badge";
+import { Button } from "../ui/Button";
+import { Textarea } from "../ui/Textarea";
+import { ScrollArea } from "../ui/ScrollArea";
+import { Separator } from "../ui/Separator";
 import { cn } from "@/utils/tailwind";
 import {
   AlertCircle,

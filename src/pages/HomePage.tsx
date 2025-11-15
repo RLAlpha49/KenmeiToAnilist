@@ -22,7 +22,7 @@ import {
   ArrowUpRight,
   HelpCircle,
 } from "lucide-react";
-import { useAuthState } from "../hooks/useAuth";
+import { useAuthState } from "../hooks/use-auth";
 import {
   getImportStats,
   storage,
@@ -37,9 +37,9 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Badge } from "../components/ui/badge";
+} from "../components/ui/Card";
+import { Button } from "../components/ui/Button";
+import { Badge } from "../components/ui/Badge";
 
 interface StatsState {
   total: number;

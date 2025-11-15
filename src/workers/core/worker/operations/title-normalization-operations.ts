@@ -4,7 +4,7 @@ import type {
   TitleNormalizationProgressMessage,
   TitleNormalizationResultMessage,
 } from "../../types";
-import { getErrorDetails } from "../errorUtils";
+import { getErrorDetails } from "../error-utils";
 
 /**
  * Normalizes titles using a specific algorithm.

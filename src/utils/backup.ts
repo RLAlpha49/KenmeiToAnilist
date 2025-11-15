@@ -11,7 +11,7 @@ import {
   mergeMatchResults,
 } from "@/utils/storage";
 import { getAppVersion } from "@/utils/app-version";
-import { exportToJson } from "@/utils/exportUtils";
+import { exportToJson } from "@/utils/export-utils";
 
 /**
  * Backup metadata with version information and data structure details.

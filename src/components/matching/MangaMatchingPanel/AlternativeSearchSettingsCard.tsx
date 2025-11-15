@@ -6,10 +6,10 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-} from "../../ui/card";
-import { Switch } from "../../ui/switch";
-import { Label } from "../../ui/label";
-import { Badge } from "../../ui/badge";
+} from "../../ui/Card";
+import { Switch } from "../../ui/Switch";
+import { Label } from "../../ui/Label";
+import { Badge } from "../../ui/Badge";
 
 /**
  * Props for the AlternativeSearchSettingsCard component.

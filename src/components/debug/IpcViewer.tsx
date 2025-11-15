@@ -7,11 +7,11 @@
 import React, { useMemo, useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import { useDebugActions, useDebugState } from "../../contexts/DebugContext";
-import { ScrollArea } from "../ui/scroll-area";
-import { Input } from "../ui/input";
-import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
-import { Separator } from "../ui/separator";
+import { ScrollArea } from "../ui/ScrollArea";
+import { Input } from "../ui/Input";
+import { Button } from "../ui/Button";
+import { Badge } from "../ui/Badge";
+import { Separator } from "../ui/Separator";
 import {
   Dialog,
   DialogContent,
@@ -19,13 +19,13 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "../ui/dialog";
-import { Textarea } from "../ui/textarea";
+} from "../ui/Dialog";
+import { Textarea } from "../ui/Textarea";
 import { cn } from "@/utils/tailwind";
 import { Copy, Search, Trash2, Filter, Check } from "lucide-react";
-import { sanitizeForDebug } from "@/utils/debugSanitizer";
-import { highlightText } from "@/utils/textHighlight";
-import { buildFuse, FUSE_PRESET_LOOSE } from "@/utils/fuzzySearch";
+import { sanitizeForDebug } from "@/utils/debug-sanitizer";
+import { highlightText } from "@/utils/text-highlight";
+import { buildFuse, FUSE_PRESET_LOOSE } from "@/utils/fuzzy-search";
 import type { IpcLogEntry } from "@/types/debug";
 
 /** Direction options for IPC message filtering. @source */

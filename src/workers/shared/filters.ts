@@ -5,7 +5,7 @@
  */
 
 import type { MangaMatchResult } from "@/api/anilist/types";
-import type { AdvancedMatchFilters } from "@/types/matchingFilters";
+import type { AdvancedMatchFilters } from "@/types/matching-filters";
 
 /**
  * Returns whether a match violates the configured confidence range.

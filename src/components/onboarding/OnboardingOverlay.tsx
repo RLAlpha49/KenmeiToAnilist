@@ -11,7 +11,7 @@ import {
   Settings,
   Sparkles,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,9 +19,9 @@ import {
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from "@/components/ui/AlertDialog";
 import { useOnboarding, STEP_CONFIGS } from "@/contexts/OnboardingContext";
-import { useOnboardingNavigation } from "@/hooks/useOnboardingNavigation";
+import { useOnboardingNavigation } from "@/hooks/use-onboarding-navigation";
 import { OnboardingHighlight } from "@/components/onboarding/OnboardingHighlight";
 import { getSpotlightForStep } from "@/config/onboarding-routes";
 import type { OnboardingStep } from "@/contexts/OnboardingContext";

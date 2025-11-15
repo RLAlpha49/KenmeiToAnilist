@@ -3,10 +3,10 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "../ui/collapsible";
-import { Button } from "../ui/button";
-import { Switch } from "../ui/switch";
-import { Label } from "../ui/label";
+} from "../ui/Collapsible";
+import { Button } from "../ui/Button";
+import { Switch } from "../ui/Switch";
+import { Label } from "../ui/Label";
 import type { LucideIcon } from "lucide-react";
 import {
   Settings,

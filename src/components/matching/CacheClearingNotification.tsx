@@ -12,8 +12,8 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-} from "../../components/ui/card";
-import { Badge } from "../ui/badge";
+} from "../../components/ui/Card";
+import { Badge } from "../ui/Badge";
 
 /**
  * Props for the CacheClearingNotification component.

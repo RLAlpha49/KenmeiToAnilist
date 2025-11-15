@@ -22,7 +22,7 @@ import {
   getMatchConfig,
 } from "../utils/storage";
 import { toast } from "sonner";
-import { PageLoadingFallback } from "../components/ui/loading-fallback";
+import { PageLoadingFallback } from "../components/ui/LoadingFallback";
 
 /**
  * Root route providing base layout and outlet for all child routes.

@@ -7,7 +7,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Search, RefreshCw, Database } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/Tabs";
 import { MatchingSettingsTab } from "./MatchingSettingsTab";
 import { SyncSettingsTab } from "./SyncSettingsTab";
 import { DataManagementTab } from "./DataManagementTab";

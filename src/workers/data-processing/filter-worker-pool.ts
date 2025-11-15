@@ -7,7 +7,7 @@ import { BaseWorkerPool } from "../core/base-worker-pool";
 import { generateTaskId, computeFilterStats } from "../core/pool-utils";
 import type { AdvancedFilterMessage } from "../core/types";
 import type { MangaMatchResult } from "@/api/anilist/types";
-import type { AdvancedMatchFilters } from "@/types/matchingFilters";
+import type { AdvancedMatchFilters } from "@/types/matching-filters";
 import { filterByAdvancedCriteria } from "@/components/sync/filtering";
 
 /**

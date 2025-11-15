@@ -12,19 +12,19 @@ import React, {
   useCallback,
 } from "react";
 import Fuse, { type FuseResult } from "fuse.js";
-import { ErrorMessage } from "../components/ui/error-message";
-import { ErrorType, createError, AppError } from "../utils/errorHandling";
+import { ErrorMessage } from "../components/ui/ErrorMessage";
+import { ErrorType, createError, AppError } from "../utils/error-handling";
 import { CheckCircle, ChevronsDown, ChevronsUp } from "lucide-react";
-import { Button } from "../components/ui/button";
+import { Button } from "../components/ui/Button";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "../components/ui/tooltip";
+} from "../components/ui/Tooltip";
 import { SettingsSection, SettingsSearchResult } from "../types/settings";
-import { useAuthActions, useAuthState } from "../hooks/useAuth";
-import { useAutoUpdater } from "../hooks/useAutoUpdater";
+import { useAuthActions, useAuthState } from "../hooks/use-auth";
+import { useAutoUpdater } from "../hooks/use-auto-updater";
 import { useDebugActions, useDebugState } from "../contexts/DebugContext";
 import { useOnboarding } from "../contexts/OnboardingContext";
 import { APICredentials } from "../types/auth";
@@ -43,7 +43,7 @@ import {
 } from "../utils/storage";
 import { restoreBackup, importBackupFromFile } from "../utils/backup";
 import { motion } from "framer-motion";
-import { truncateToastMessage } from "../utils/textHighlight";
+import { truncateToastMessage } from "../utils/text-highlight";
 import { toast } from "sonner";
 import { SettingsHero } from "../components/settings/SettingsHero";
 import { SettingsSearchBar } from "../components/settings/SettingsSearchBar";

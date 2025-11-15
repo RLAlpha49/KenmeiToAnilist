@@ -6,7 +6,7 @@
 import type {
   NormalizedMatchForStats,
   TimeRange,
-} from "@/utils/statisticsAdapter";
+} from "@/utils/statistics-adapter";
 import type { ReadingHistory } from "@/utils/storage";
 import type { StatisticsFilters, ComparisonMode } from "@/types/statistics";
 import {
@@ -290,7 +290,7 @@ export class StatisticsAggregationWorkerPool extends BaseWorkerPool {
       applyStatisticsFilters: applyFilters,
       buildComparisonDatasets: buildComparison,
       extractAvailableFilterOptions: extractOptions,
-    } = await import("@/utils/statisticsAdapter");
+    } = await import("@/utils/statistics-adapter");
 
     const filterStartTime = performance.now();
 

@@ -7,22 +7,22 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { storageCache } from "../../utils/storage";
-import { Button } from "../ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { Textarea } from "../ui/textarea";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { Badge } from "../ui/badge";
-import { ScrollArea } from "../ui/scroll-area";
-import { Switch } from "../ui/switch";
+import { Button } from "../ui/Button";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
+import { Textarea } from "../ui/Textarea";
+import { Input } from "../ui/Input";
+import { Label } from "../ui/Label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/Tabs";
+import { Badge } from "../ui/Badge";
+import { ScrollArea } from "../ui/ScrollArea";
+import { Switch } from "../ui/Switch";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "../ui/dialog";
+} from "../ui/Dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,7 +33,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "../ui/alert-dialog";
+} from "../ui/AlertDialog";
 import {
   Trash2,
   RefreshCw,

@@ -16,13 +16,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "../ui/alert-dialog";
-import { Alert, AlertDescription } from "../ui/alert";
+} from "../ui/AlertDialog";
+import { Alert, AlertDescription } from "../ui/Alert";
 import {
   getImportPreview,
   importMatchResults,
   ImportMergeStrategy,
-} from "../../utils/exportUtils";
+} from "../../utils/export-utils";
 
 /**
  * Props for ImportMatchesDialog component.

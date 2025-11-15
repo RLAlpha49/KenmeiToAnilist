@@ -16,7 +16,7 @@ import {
 } from "recharts";
 import { BookOpen, AlertCircle } from "lucide-react";
 import { cn } from "@/utils/tailwind";
-import { computeDrillDownData } from "@/utils/statisticsAdapter";
+import { computeDrillDownData } from "@/utils/statistics-adapter";
 
 /**
  * Minimal match result shape containing only selectedMatch for format extraction.
@@ -39,7 +39,7 @@ interface FormatDistributionChartProps {
     data: import("@/types/statistics").DrillDownData,
   ) => void;
   /** Full match results for drill-down data building. */
-  readonly filteredMatchResults?: import("@/utils/statisticsAdapter").NormalizedMatchForStats[];
+  readonly filteredMatchResults?: import("@/utils/statistics-adapter").NormalizedMatchForStats[];
   /** Reading history for drill-down data computation. */
   readonly readingHistory?: import("@/utils/storage").ReadingHistory;
 }

@@ -21,9 +21,9 @@ import {
   MAX_LOG_ENTRIES,
   setLogRedactionEnabled as setCollectorLogRedactionEnabled,
 } from "../utils/logging";
-import { exportToJson } from "../utils/exportUtils";
+import { exportToJson } from "../utils/export-utils";
 import { throttle } from "@/utils/debounce";
-import { FPSMonitor } from "@/utils/fpsMonitor";
+import { FPSMonitor } from "@/utils/fps-monitor";
 import {
   getSyncConfig,
   saveSyncConfig,

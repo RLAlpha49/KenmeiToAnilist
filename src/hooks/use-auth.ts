@@ -8,7 +8,7 @@ import { useContext, useMemo } from "react";
 import {
   AuthActionsContext,
   AuthStateContext,
-} from "../contexts/AuthContextDefinition";
+} from "../contexts/auth-context-definition";
 import {
   AuthActionsContextValue,
   AuthContextType,

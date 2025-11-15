@@ -1,5 +1,5 @@
 import type { CancelMessage } from "../types";
-import { csvParserStates } from "./operations/csvOperations";
+import { csvParserStates } from "./operations/csv-operations";
 
 /**
  * Handles cancellation of worker tasks and notifies CSV parsing when applicable.

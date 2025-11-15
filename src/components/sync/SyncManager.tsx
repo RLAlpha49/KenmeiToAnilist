@@ -13,7 +13,7 @@ import { AniListMediaEntry } from "../../api/anilist/types";
 import {
   ErrorRecoveryAction,
   getRecoveryActionMessage,
-} from "../../utils/errorHandling";
+} from "../../utils/error-handling";
 import {
   CheckCircle,
   XCircle,
@@ -33,11 +33,11 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "../ui/card";
-import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
-import { Button } from "../ui/button";
-import { Switch } from "../ui/switch";
-import { Label } from "../ui/label";
+} from "../ui/Card";
+import { Alert, AlertDescription, AlertTitle } from "../ui/Alert";
+import { Button } from "../ui/Button";
+import { Switch } from "../ui/Switch";
+import { Label } from "../ui/Label";
 import { useRateLimit } from "../../contexts/RateLimitContext";
 
 /**

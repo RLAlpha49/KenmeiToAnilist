@@ -10,8 +10,8 @@ import type { MangaMatchResult } from "@/api/anilist/types";
 import type {
   QuerySyntaxToken,
   AdvancedMatchFilters,
-} from "@/types/matchingFilters";
-import { DEFAULT_ADVANCED_FILTERS } from "@/types/matchingFilters";
+} from "@/types/matching-filters";
+import { DEFAULT_ADVANCED_FILTERS } from "@/types/matching-filters";
 import { getFuzzySearchWorkerPool } from "@/workers/search/fuzzy-search-worker-pool";
 
 /**

@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Card, CardContent } from "../ui/card";
+import { Card, CardContent } from "../ui/Card";
 import { Loader2 } from "lucide-react";
 
 /**

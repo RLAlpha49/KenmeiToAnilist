@@ -11,7 +11,7 @@ import { router } from "./routes/router";
 import { RouterProvider } from "@tanstack/react-router";
 import { AuthProvider } from "./contexts/AuthContext";
 import { OnboardingProvider } from "./contexts/OnboardingContext";
-import { SonnerProvider } from "./components/ui/sonner-provider";
+import { SonnerProvider } from "./components/ui/SonnerProvider";
 import { RateLimitProvider } from "./contexts/RateLimitContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { DebugProvider } from "./contexts/DebugContext";
@@ -19,7 +19,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AnimatePresence } from "framer-motion";
 import { UpdateNotification } from "./components/UpdateNotification";
 import { OnboardingOverlay } from "./components/onboarding/OnboardingOverlay";
-import { useAutoUpdater } from "./hooks/useAutoUpdater";
+import { useAutoUpdater } from "./hooks/use-auto-updater";
 
 /**
  * Main application content with all providers and UI layers.

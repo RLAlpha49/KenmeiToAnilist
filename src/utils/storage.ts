@@ -6,9 +6,9 @@
 import type {
   AdvancedMatchFilters,
   FilterPreset,
-} from "../types/matchingFilters";
-import { DEFAULT_ADVANCED_FILTERS } from "../types/matchingFilters";
-import { captureError, ErrorType } from "./errorHandling";
+} from "../types/matching-filters";
+import { DEFAULT_ADVANCED_FILTERS } from "../types/matching-filters";
+import { captureError, ErrorType } from "./error-handling";
 
 declare global {
   interface Window {

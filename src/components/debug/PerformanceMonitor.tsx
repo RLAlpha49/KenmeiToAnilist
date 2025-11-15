@@ -24,7 +24,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "../ui/card";
+} from "../ui/Card";
 import { Zap, Cpu } from "lucide-react";
 import { cn } from "@/utils/tailwind";
 import type { MemoryMetrics } from "@/types/debug";

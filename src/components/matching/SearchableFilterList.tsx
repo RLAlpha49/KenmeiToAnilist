@@ -1,8 +1,8 @@
 import React, { useMemo } from "react";
-import { buildFuse } from "@/utils/fuzzySearch";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
+import { buildFuse } from "@/utils/fuzzy-search";
+import { Button } from "@/components/ui/Button";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { Input } from "@/components/ui/Input";
 
 /**
  * Props for the SearchableFilterList component.

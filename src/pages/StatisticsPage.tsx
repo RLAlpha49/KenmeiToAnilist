@@ -47,20 +47,20 @@ import {
   getReadingHistory,
   type ReadingHistory,
 } from "@/utils/storage";
-import { formatRelativeTime } from "@/utils/timeUtils";
+import { formatRelativeTime } from "@/utils/time-utils";
 import {
   normalizeMatchResults,
   parseSyncStats,
   type NormalizedMatchForStats,
   type TimeRange,
-} from "@/utils/statisticsAdapter";
+} from "@/utils/statistics-adapter";
 import {
   exportToJson,
   exportToCSV,
   exportToMarkdown,
   buildExportMetadata,
   type ExportFormat,
-} from "@/utils/exportUtils";
+} from "@/utils/export-utils";
 import type { MatchForExport } from "@/types/matching";
 import type {
   StatisticsFilters,
@@ -68,12 +68,12 @@ import type {
   DrillDownData,
 } from "@/types/statistics";
 import { DEFAULT_STATISTICS_FILTERS } from "@/types/statistics";
-import { SkeletonCard } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
+import { SkeletonCard } from "@/components/ui/Skeleton";
+import { Button } from "@/components/ui/Button";
 import { StatisticsErrorBoundary } from "@/components/statistics/StatisticsErrorBoundary";
-import { captureError, ErrorType } from "@/utils/errorHandling";
-import { useStatisticsAggregation } from "@/hooks/useStatisticsAggregation";
-import { useReadingHistoryFilter } from "@/hooks/useReadingHistoryFilter";
+import { captureError, ErrorType } from "@/utils/error-handling";
+import { useStatisticsAggregation } from "@/hooks/use-statistics-aggregation";
+import { useReadingHistoryFilter } from "@/hooks/use-reading-history-filter";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0, y: 16 },

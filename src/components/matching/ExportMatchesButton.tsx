@@ -25,8 +25,8 @@ import {
   EXPORT_TEMPLATES,
   EXPORTABLE_FIELDS,
   type ExportableFieldId,
-} from "../../utils/exportUtils";
-import { Button } from "../ui/button";
+} from "../../utils/export-utils";
+import { Button } from "../ui/Button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,7 +37,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuCheckboxItem,
   DropdownMenuItem,
-} from "../ui/dropdown-menu";
+} from "../ui/DropdownMenu";
 
 /**
  * Props for ExportMatchesButton component.

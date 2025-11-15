@@ -33,20 +33,20 @@ import {
 import { clearRegexCache } from "@/api/matching/filtering";
 import { debounce } from "@/utils/debounce";
 import { useDebugActions } from "@/contexts/DebugContext";
-import { truncateToastMessage } from "@/utils/textHighlight";
+import { truncateToastMessage } from "@/utils/text-highlight";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
+import { Switch } from "@/components/ui/Switch";
+import { Badge } from "@/components/ui/Badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/Alert";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { CollapsibleChevron } from "@/components/ui/collapsible-chevron";
+} from "@/components/ui/Tooltip";
+import { CollapsibleChevron } from "@/components/ui/CollapsibleChevron";
 import {
   Dialog,
   DialogContent,
@@ -54,7 +54,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/components/ui/Dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,7 +64,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from "@/components/ui/AlertDialog";
 import {
   Table,
   TableBody,
@@ -72,12 +72,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@/components/ui/Table";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+} from "@/components/ui/Collapsible";
 import { MetadataFieldSelector } from "./MetadataFieldSelector";
 import { RegexDocumentation } from "./RegexDocumentation";
 

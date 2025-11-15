@@ -15,10 +15,10 @@ import {
   Sparkles,
   Wand2,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/Badge";
+import { Switch } from "@/components/ui/Switch";
 import { CustomRulesManager } from "./CustomRulesManager";
-import { highlightText } from "@/utils/textHighlight";
+import { highlightText } from "@/utils/text-highlight";
 import { cn } from "@/utils/tailwind";
 import type { MatchConfig } from "@/utils/storage";
 

@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/utils/tailwind";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/Alert";
 import { SettingsSectionShell } from "./SettingsSectionShell";
 import { CacheManagementSection } from "./CacheManagementSection";
 import { BackupRestoreSection } from "./BackupRestoreSection";

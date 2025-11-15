@@ -13,7 +13,7 @@ import React, {
 } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { KenmeiManga } from "../api/kenmei/types";
-import { useAuthState } from "../hooks/useAuth";
+import { useAuthState } from "../hooks/use-auth";
 import {
   getKenmeiData,
   addIgnoredDuplicate,
@@ -23,19 +23,19 @@ import {
 } from "../utils/storage";
 import { StatusFilterOptions } from "../types/matching";
 import { MangaMatchResult } from "../api/anilist/types";
-import { useMatchingProcess } from "../hooks/useMatchingProcess";
-import { usePendingManga } from "../hooks/usePendingManga";
-import { useMatchHandlers } from "../hooks/useMatchHandlers";
+import { useMatchingProcess } from "../hooks/use-matching-process";
+import { usePendingManga } from "../hooks/use-pending-manga";
+import { useMatchHandlers } from "../hooks/use-match-handlers";
 import { useOnboarding } from "../contexts/OnboardingContext";
 import { clearCacheForTitles } from "../api/matching/search-service";
 import { useRateLimit } from "../contexts/RateLimitContext";
-import { UndoRedoManager } from "../utils/undoRedo";
+import { UndoRedoManager } from "../utils/undo-redo";
 import { useDebugActions } from "../contexts/DebugContext";
 import { debounce } from "../utils/debounce";
-import { AbortError } from "../utils/chunkedProcessing";
-import { truncateToastMessage } from "../utils/textHighlight";
+import { AbortError } from "../utils/chunked-processing";
+import { truncateToastMessage } from "../utils/text-highlight";
 import { toast } from "sonner";
-import { captureError, ErrorType } from "../utils/errorHandling";
+import { captureError, ErrorType } from "../utils/error-handling";
 import { getCacheWarmer } from "../api/matching/normalization";
 
 // Components
@@ -53,7 +53,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "../components/ui/alert-dialog";
+} from "../components/ui/AlertDialog";
 import InitializationCard from "../components/matching/InitializationCard";
 import AuthRequiredCard from "../components/matching/AuthRequiredCard";
 import { AnimatePresence, motion } from "framer-motion";
@@ -65,11 +65,11 @@ import {
   DuplicateWarning,
   DuplicateEntry,
 } from "../components/matching/DuplicateWarning";
-import { detectDuplicateAniListIds } from "../components/matching/detectDuplicateAniListIds";
+import { detectDuplicateAniListIds } from "../components/matching/detect-duplicate-anilist-ids";
 import { getDuplicateDetectionWorkerPool } from "../workers";
 import { LoadingView } from "../components/matching/LoadingView";
-import { SkeletonCard } from "../components/ui/skeleton";
-import EmptyState from "../components/ui/empty-state";
+import { SkeletonCard } from "../components/ui/Skeleton";
+import EmptyState from "../components/ui/EmptyState";
 import { FileSearch } from "lucide-react";
 
 // Animation variants

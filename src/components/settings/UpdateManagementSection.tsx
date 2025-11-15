@@ -6,9 +6,9 @@
 
 import React from "react";
 import { RefreshCw, Loader2, Download, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/RadioGroup";
 import { SettingsSectionShell } from "./SettingsSectionShell";
 import { getAppVersion, compareVersions } from "@/utils/app-version";
 import { cn } from "@/utils/tailwind";

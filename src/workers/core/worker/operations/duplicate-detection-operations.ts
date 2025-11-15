@@ -4,7 +4,7 @@ import type {
   DuplicateDetectionProgressMessage,
   DuplicateDetectionResultMessage,
 } from "../../types";
-import { getErrorDetails } from "../errorUtils";
+import { getErrorDetails } from "../error-utils";
 
 /**
  * Builds a map of AniList IDs to associated match indices and titles.

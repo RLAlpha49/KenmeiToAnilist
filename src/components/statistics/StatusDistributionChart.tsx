@@ -15,7 +15,7 @@ import {
   Tooltip,
 } from "recharts";
 import { PieChart as PieChartIcon, AlertCircle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/utils/tailwind";
 
 /**
@@ -62,7 +62,7 @@ export interface StatusDistributionChartProps {
     data: import("@/types/statistics").DrillDownData,
   ) => void;
   /** Full match results for drill-down data building. */
-  readonly matchResults?: import("@/utils/statisticsAdapter").NormalizedMatchForStats[];
+  readonly matchResults?: import("@/utils/statistics-adapter").NormalizedMatchForStats[];
 }
 
 /**

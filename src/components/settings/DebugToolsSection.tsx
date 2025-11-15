@@ -7,9 +7,9 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { AlertTriangle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { highlightText } from "@/utils/textHighlight";
+import { Badge } from "@/components/ui/Badge";
+import { Switch } from "@/components/ui/Switch";
+import { highlightText } from "@/utils/text-highlight";
 import { cn } from "@/utils/tailwind";
 
 /**

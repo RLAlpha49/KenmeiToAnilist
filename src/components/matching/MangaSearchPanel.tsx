@@ -4,7 +4,7 @@
  * @description React component for searching and selecting AniList manga matches for a given Kenmei manga, with manual search and result selection features.
  */
 import React, { useState, useRef, useEffect } from "react";
-import { buildFuse, FUSE_PRESET_BALANCED } from "@/utils/fuzzySearch";
+import { buildFuse, FUSE_PRESET_BALANCED } from "@/utils/fuzzy-search";
 import {
   Search,
   X,
@@ -26,7 +26,7 @@ import {
   getStatusBadgeColor,
   formatScore,
   isOnUserList,
-} from "../../utils/mediaListHelpers";
+} from "../../utils/media-list-helpers";
 
 // Import storage utilities
 import { getMatchConfig } from "../../utils/storage";

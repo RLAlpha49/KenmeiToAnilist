@@ -4,7 +4,7 @@
  * @description Reusable error boundary component with configurable recovery actions
  */
 import React, { Component, ErrorInfo, ReactNode } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import {
   Card,
   CardContent,
@@ -12,7 +12,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@/components/ui/Card";
 import { AlertTriangle, Home, LucideIcon } from "lucide-react";
 import * as Sentry from "@sentry/electron/renderer";
 

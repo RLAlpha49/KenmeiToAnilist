@@ -7,9 +7,9 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Trash2, RefreshCw, CheckCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { highlightText } from "@/utils/textHighlight";
+import { Button } from "@/components/ui/Button";
+import { Separator } from "@/components/ui/Separator";
+import { highlightText } from "@/utils/text-highlight";
 import { cn } from "@/utils/tailwind";
 
 /**

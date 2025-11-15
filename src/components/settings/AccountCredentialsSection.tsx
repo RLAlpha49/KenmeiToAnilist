@@ -7,9 +7,9 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { AlertTriangle } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/Switch";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/Alert";
+import { Badge } from "@/components/ui/Badge";
 import { DEFAULT_AUTH_PORT } from "@/config/anilist";
 import type { AuthState } from "@/types/auth";
 

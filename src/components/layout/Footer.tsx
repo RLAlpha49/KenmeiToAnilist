@@ -24,15 +24,15 @@ const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 import { motion } from "framer-motion";
-import { Separator } from "../ui/separator";
+import { Separator } from "../ui/Separator";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "../ui/tooltip";
-import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
+} from "../ui/Tooltip";
+import { Button } from "../ui/Button";
+import { Badge } from "../ui/Badge";
 import { getAppVersion } from "../../utils/app-version";
 import appIcon from "../../assets/k2a-icon-512x512.png";
 

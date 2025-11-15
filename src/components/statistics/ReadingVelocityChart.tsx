@@ -13,11 +13,11 @@ import {
   ArrowUp,
   ArrowDown,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/utils/tailwind";
 import type { ReadingHistory } from "@/utils/storage";
-import type { TimeRange } from "@/utils/statisticsAdapter";
-import { computeReadingVelocity } from "@/utils/statisticsAdapter";
+import type { TimeRange } from "@/utils/statistics-adapter";
+import { computeReadingVelocity } from "@/utils/statistics-adapter";
 
 /**
  * Props for ReadingVelocityChart component.

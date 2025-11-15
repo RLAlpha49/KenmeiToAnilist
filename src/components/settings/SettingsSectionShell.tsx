@@ -7,13 +7,13 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "../ui/card";
+} from "../ui/Card";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "../ui/collapsible";
-import { CollapsibleChevron } from "../ui/collapsible-chevron";
+} from "../ui/Collapsible";
+import { CollapsibleChevron } from "../ui/CollapsibleChevron";
 import { cn } from "../../utils/tailwind";
 
 /**

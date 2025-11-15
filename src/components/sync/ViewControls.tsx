@@ -6,7 +6,7 @@
 
 import React from "react";
 import { SortAsc, Filter, Check } from "lucide-react";
-import { Button } from "../ui/button";
+import { Button } from "../ui/Button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +14,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
+} from "../ui/DropdownMenu";
 import { DisplayMode, SortOption, FilterOptions } from "./types";
 
 /**

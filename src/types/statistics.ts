@@ -6,7 +6,7 @@ import type { MatchStatus } from "@/api/anilist/types";
 import type {
   TimeRange,
   NormalizedMatchForStats,
-} from "@/utils/statisticsAdapter";
+} from "@/utils/statistics-adapter";
 import type { ReadingHistory } from "@/utils/storage";
 
 /**

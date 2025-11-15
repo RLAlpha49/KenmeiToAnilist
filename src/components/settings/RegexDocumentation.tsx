@@ -12,8 +12,8 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+} from "@/components/ui/Collapsible";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/Alert";
 import {
   Table,
   TableBody,
@@ -21,9 +21,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+} from "@/components/ui/Table";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import {
   BookOpen,
   ShieldAlert,
@@ -31,7 +31,7 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react";
-import { CollapsibleChevron } from "@/components/ui/collapsible-chevron";
+import { CollapsibleChevron } from "@/components/ui/CollapsibleChevron";
 
 /**
  * Regex documentation component with comprehensive guides and examples.

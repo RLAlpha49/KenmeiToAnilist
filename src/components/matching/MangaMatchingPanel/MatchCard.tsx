@@ -9,11 +9,11 @@ import type {
 } from "../../../api/anilist/types";
 import type { KenmeiManga } from "../../../api/kenmei/types";
 import { Check, ExternalLink, ChevronRight, Info } from "lucide-react";
-import { Badge } from "../../ui/badge";
-import { Button } from "../../ui/button";
-import { Separator } from "../../ui/separator";
+import { Badge } from "../../ui/Badge";
+import { Button } from "../../ui/Button";
+import { Separator } from "../../ui/Separator";
 import { ConfidenceBadge } from "./ConfidenceBadge";
-import { createKenmeiUrl } from "./createKenmeiUrl";
+import { createKenmeiUrl } from "./create-kenmei-url";
 import MatchActions from "./MatchActions";
 import { useDebug } from "../../../contexts/DebugContext";
 import { ConfidenceTestExporter } from "../../debug/ConfidenceTestExporter.lazy";
@@ -22,7 +22,7 @@ import {
   getStatusBadgeColor,
   formatScore,
   isOnUserList,
-} from "../../../utils/mediaListHelpers";
+} from "../../../utils/media-list-helpers";
 
 /**
  * Props for the MatchCard component.

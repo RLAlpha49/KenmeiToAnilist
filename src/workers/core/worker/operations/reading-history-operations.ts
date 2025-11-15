@@ -3,7 +3,7 @@ import type {
   ReadingHistoryFilterProgressMessage,
   ReadingHistoryFilterResultMessage,
 } from "../../types";
-import { getErrorDetails } from "../errorUtils";
+import { getErrorDetails } from "../error-utils";
 
 /**
  * Normalizes a timestamp to a YYYY-MM-DD UTC date string.

@@ -9,7 +9,7 @@ import { KenmeiManga } from "../api/kenmei/types";
 import { AniListManga, MangaMatchResult } from "../api/anilist/types";
 import { STORAGE_KEYS, storage } from "../utils/storage";
 import { useDebugActions } from "../contexts/DebugContext";
-import type { UndoRedoManager } from "../utils/undoRedo";
+import type { UndoRedoManager } from "../utils/undo-redo";
 import {
   AcceptMatchCommand,
   RejectMatchCommand,
@@ -17,8 +17,8 @@ import {
   ResetToPendingCommand,
   SelectSearchMatchCommand,
   BulkUpdateCommand,
-} from "../utils/undoRedo";
-import { processInChunks, AbortError } from "../utils/chunkedProcessing";
+} from "../utils/undo-redo";
+import { processInChunks, AbortError } from "../utils/chunked-processing";
 
 /**
  * Provides handler functions for managing manga match results and user interactions during the matching workflow.

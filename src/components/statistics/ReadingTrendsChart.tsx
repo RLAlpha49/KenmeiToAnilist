@@ -18,14 +18,14 @@ import {
   Brush,
 } from "recharts";
 import { TrendingUp, AlertCircle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/utils/tailwind";
 import type { ReadingHistory } from "@/utils/storage";
-import type { TimeRange } from "@/utils/statisticsAdapter";
+import type { TimeRange } from "@/utils/statistics-adapter";
 import {
   computeReadingTrends,
   computeDailyDeltasByManga,
-} from "@/utils/statisticsAdapter";
+} from "@/utils/statistics-adapter";
 
 /**
  * Props for ReadingTrendsChart component.
@@ -38,7 +38,7 @@ interface ReadingTrendsChartProps {
   readonly onDrillDown?: (
     data: import("@/types/statistics").DrillDownData,
   ) => void;
-  readonly matchResults?: import("@/utils/statisticsAdapter").NormalizedMatchForStats[];
+  readonly matchResults?: import("@/utils/statistics-adapter").NormalizedMatchForStats[];
   readonly comparisonData?: Array<{
     date: string;
     chapters: number;

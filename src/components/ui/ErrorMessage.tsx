@@ -15,7 +15,7 @@ import {
   HardDrive,
   Cpu,
 } from "lucide-react";
-import { ErrorType } from "../../utils/errorHandling";
+import { ErrorType } from "../../utils/error-handling";
 
 /**
  * Props for the ErrorMessage component.

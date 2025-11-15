@@ -6,14 +6,14 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { ErrorMessage } from "../components/ui/error-message";
+import { ErrorMessage } from "../components/ui/ErrorMessage";
 import {
   ErrorType,
   AppError,
   createError,
   showErrorNotification,
   ErrorRecoveryAction,
-} from "../utils/errorHandling";
+} from "../utils/error-handling";
 import { KenmeiData } from "../types/kenmei";
 import { saveKenmeiData, getSavedMatchResults } from "../utils/storage";
 import { useOnboarding } from "../contexts/OnboardingContext";
@@ -31,7 +31,7 @@ import {
   clearPendingMangaStorage,
 } from "../utils/manga-import-utils";
 import { getStatusCounts } from "../utils/manga-status-utils";
-import { truncateToastMessage } from "../utils/textHighlight";
+import { truncateToastMessage } from "../utils/text-highlight";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { useDebugActions } from "../contexts/DebugContext";

@@ -6,8 +6,8 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { AlertTriangle, Play, XCircle } from "lucide-react";
-import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
+import { Button } from "../ui/Button";
+import { Badge } from "../ui/Badge";
 
 /**
  * Props for the SyncResumeNotification component.

@@ -6,7 +6,7 @@
  */
 import { cn } from "@/utils/tailwind";
 import React from "react";
-import { Card, CardContent, CardHeader } from "./card";
+import { Card, CardContent, CardHeader } from "./Card";
 import {
   Table,
   TableBody,
@@ -14,7 +14,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "./table";
+} from "./Table";
 
 /**
  * Renders an animated pulsing placeholder element for loading states.

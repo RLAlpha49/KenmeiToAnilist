@@ -6,14 +6,14 @@
 
 import { Moon, Sun } from "lucide-react";
 import React from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@/components/ui/Tooltip";
 
 /**
  * Button for toggling between light and dark themes.

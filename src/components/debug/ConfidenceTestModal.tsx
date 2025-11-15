@@ -8,17 +8,17 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+} from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/Button";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+} from "@/components/ui/Tooltip";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import { ConfidenceTestResults } from "./ConfidenceTestResults";
-import { generateConfidenceTestCommand } from "@/utils/generateConfidenceTestCommand";
+import { generateConfidenceTestCommand } from "@/utils/generate-confidence-test-command";
 import type { MangaMatchResult } from "@/api/anilist/types";
 
 // Declare ElectronClipboard interface for type checking

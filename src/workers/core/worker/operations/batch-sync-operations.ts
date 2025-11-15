@@ -5,7 +5,7 @@ import type {
   BatchSyncResultMessage,
   PreparedSyncOperation,
 } from "../../types";
-import { getErrorDetails } from "../errorUtils";
+import { getErrorDetails } from "../error-utils";
 
 /**
  * Determines which incremental sync steps are required for an entry.

@@ -6,7 +6,7 @@
 
 import React, { useId, useMemo, useState, useEffect } from "react";
 import { toast } from "sonner";
-import { CollapsibleChevron } from "../ui/collapsible-chevron";
+import { CollapsibleChevron } from "../ui/CollapsibleChevron";
 import {
   Copy,
   Download,
@@ -16,14 +16,14 @@ import {
   Tags,
   Trash2,
 } from "lucide-react";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Badge } from "../ui/badge";
-import { ScrollArea } from "../ui/scroll-area";
-import { Separator } from "../ui/separator";
+import { Button } from "../ui/Button";
+import { Input } from "../ui/Input";
+import { Badge } from "../ui/Badge";
+import { ScrollArea } from "../ui/ScrollArea";
+import { Separator } from "../ui/Separator";
 import { useDebugActions, useDebugState } from "../../contexts/DebugContext";
 import { cn } from "@/utils/tailwind";
-import { exportToJson } from "@/utils/exportUtils";
+import { exportToJson } from "@/utils/export-utils";
 import type { DebugEventEntry, DebugEventLevel } from "@/types/debug";
 import {
   DropdownMenu,
@@ -32,7 +32,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
+} from "../ui/DropdownMenu";
 
 /**
  * Mapping of event severity levels to display metadata (label and tone).

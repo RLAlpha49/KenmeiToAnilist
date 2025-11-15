@@ -15,16 +15,16 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+} from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { Input } from "@/components/ui/Input";
 import {
   Collapsible,
   CollapsibleTrigger,
   CollapsibleContent,
-} from "@/components/ui/collapsible";
-import { RangeSlider } from "@/components/ui/slider";
+} from "@/components/ui/Collapsible";
+import { RangeSlider } from "@/components/ui/Slider";
 import type { StatisticsFilters } from "@/types/statistics";
 import type { MatchStatus } from "@/api/anilist/types";
 import { DEFAULT_STATISTICS_FILTERS } from "@/types/statistics";
@@ -32,7 +32,7 @@ import { SearchableFilterList } from "@/components/matching/SearchableFilterList
 import {
   toDateInputValue,
   parseDateInputValue,
-} from "@/components/matching/filterUtils";
+} from "@/components/matching/filter-utils";
 
 /**
  * Props for the StatisticsFilterPanel component.

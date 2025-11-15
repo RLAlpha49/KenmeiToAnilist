@@ -15,11 +15,11 @@ import {
   Tooltip,
 } from "recharts";
 import { Clock, AlertCircle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/utils/tailwind";
 import type { ReadingHistory } from "@/utils/storage";
-import type { TimeRange } from "@/utils/statisticsAdapter";
-import { computeReadingHabits } from "@/utils/statisticsAdapter";
+import type { TimeRange } from "@/utils/statistics-adapter";
+import { computeReadingHabits } from "@/utils/statistics-adapter";
 
 /**
  * Props for ReadingHabitsChart component.

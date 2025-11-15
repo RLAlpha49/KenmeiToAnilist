@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Button } from "../ui/button";
+import { Button } from "../ui/Button";
 import { MangaMatchingPanel } from "./MangaMatchingPanel";
 import type { MangaMatchResult } from "../../api/anilist/types";
 import type { KenmeiManga } from "../../api/kenmei/types";

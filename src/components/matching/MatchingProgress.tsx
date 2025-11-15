@@ -6,17 +6,17 @@
 
 import React, { ReactNode, useMemo, useState, useEffect, useRef } from "react";
 import { MatchingProgress, TimeEstimate } from "../../types/matching";
-import { formatTimeRemaining } from "../../utils/timeUtils";
+import { formatTimeRemaining } from "../../utils/time-utils";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   CardFooter,
-} from "../../components/ui/card";
-import { Progress } from "../../components/ui/progress";
-import { Button } from "../../components/ui/button";
-import { Badge } from "../../components/ui/badge";
+} from "../../components/ui/Card";
+import { Progress } from "../../components/ui/Progress";
+import { Button } from "../../components/ui/Button";
+import { Badge } from "../../components/ui/Badge";
 import {
   Loader2,
   RotateCcw,

@@ -3,8 +3,8 @@ import type {
   DataTablePreparationProgressMessage,
   DataTablePreparationResultMessage,
 } from "../../types";
-import { prepareTableSlice } from "../../../shared/dataTableFormatter";
-import { getErrorDetails } from "../errorUtils";
+import { prepareTableSlice } from "../../../shared/data-table-formatter";
+import { getErrorDetails } from "../error-utils";
 
 /**
  * Prepares data table slice for virtualization with formatting, row metadata computation, and cache keys.

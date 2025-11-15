@@ -1,11 +1,11 @@
 import React, { useMemo } from "react";
 import { motion } from "framer-motion";
-import { Card, CardContent } from "../ui/card";
-import { Button } from "../ui/button";
+import { Card, CardContent } from "../ui/Card";
+import { Button } from "../ui/Button";
 import { AlertCircle } from "lucide-react";
 import { MatchingProgressPanel } from "./MatchingProgress";
 import type { Variants } from "framer-motion";
-import { useMatchingProcess } from "../../hooks/useMatchingProcess";
+import { useMatchingProcess } from "../../hooks/use-matching-process";
 import { useRateLimit } from "../../contexts/RateLimitContext";
 
 type MatchingProcessType = ReturnType<typeof useMatchingProcess>;

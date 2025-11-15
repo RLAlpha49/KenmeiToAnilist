@@ -1,7 +1,7 @@
 import React, { Dispatch, SetStateAction } from "react";
 import { Filter, CheckCircle2, Clock3, Wand2, XOctagon } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "../../ui/card";
-import { Badge } from "../../ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "../../ui/Card";
+import { Badge } from "../../ui/Badge";
 import { cn } from "../../../utils/tailwind";
 
 /**

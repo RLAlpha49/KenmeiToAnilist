@@ -6,9 +6,9 @@
 
 import React, { type FC } from "react";
 import { Calendar } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { cn } from "@/utils/tailwind";
-import type { TimeRange } from "@/utils/statisticsAdapter";
+import type { TimeRange } from "@/utils/statistics-adapter";
 
 /**
  * Props for TimeRangeSelector component.

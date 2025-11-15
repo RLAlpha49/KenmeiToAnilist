@@ -9,7 +9,7 @@ import { motion } from "framer-motion";
 import { Filter, Info } from "lucide-react";
 import { SettingsSectionShell } from "./SettingsSectionShell";
 import { MatchingSettingsSection } from "./MatchingSettingsSection";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/Alert";
 import type { MatchConfig } from "@/utils/storage";
 
 const itemVariants = {

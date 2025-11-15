@@ -11,7 +11,7 @@ import {
 import type {
   NormalizedMatchForStats,
   TimeRange,
-} from "@/utils/statisticsAdapter";
+} from "@/utils/statistics-adapter";
 import type { ReadingHistory } from "@/utils/storage";
 import type { StatisticsFilters, ComparisonMode } from "@/types/statistics";
 

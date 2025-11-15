@@ -12,11 +12,11 @@ import {
   CardHeader,
   CardTitle,
   CardFooter,
-} from "../../components/ui/card";
-import { Badge } from "../../components/ui/badge";
-import { Button } from "../../components/ui/button";
-import { Checkbox } from "../../components/ui/checkbox";
-import { Alert, AlertTitle, AlertDescription } from "../../components/ui/alert";
+} from "../../components/ui/Card";
+import { Badge } from "../../components/ui/Badge";
+import { Button } from "../../components/ui/Button";
+import { Checkbox } from "../../components/ui/Checkbox";
+import { Alert, AlertTitle, AlertDescription } from "../../components/ui/Alert";
 import {
   RefreshCw,
   AlertTriangle,

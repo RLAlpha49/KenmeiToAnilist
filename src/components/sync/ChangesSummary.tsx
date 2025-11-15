@@ -15,7 +15,7 @@ import {
   Sparkles,
   CheckCircle2,
 } from "lucide-react";
-import { Button } from "../ui/button";
+import { Button } from "../ui/Button";
 import { UserMediaList, MangaMatchResult } from "../../api/anilist/types";
 import { SyncConfig } from "../../utils/storage";
 import { getEffectiveStatus } from "./sync-utils";

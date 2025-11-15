@@ -14,11 +14,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../ui/table";
-import { ScrollArea } from "../ui/scroll-area";
-import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
-import { Skeleton } from "../ui/skeleton";
+} from "../ui/Table";
+import { ScrollArea } from "../ui/ScrollArea";
+import { Badge } from "../ui/Badge";
+import { Button } from "../ui/Button";
+import { Skeleton } from "../ui/Skeleton";
 import { Loader2, ChevronDown } from "lucide-react";
 
 /**

@@ -33,7 +33,11 @@ import { calculateMatchScore } from "./scoring";
 import { findBestMatches } from "./match-engine";
 import { getMangaByIds } from "@/api/anilist/client";
 import { withGroupAsync } from "@/utils/logging";
-import { CancelledError, captureError, ErrorType } from "@/utils/errorHandling";
+import {
+  CancelledError,
+  captureError,
+  ErrorType,
+} from "@/utils/error-handling";
 
 /**
  * Checks if an error is a rate limit error (429).

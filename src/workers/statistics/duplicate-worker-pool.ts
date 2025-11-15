@@ -10,7 +10,7 @@ import type {
   DuplicateDetectionEntry,
 } from "../core/types";
 import type { MangaMatchResult } from "@/api/anilist/types";
-import { detectDuplicateAniListIds } from "@/components/matching/detectDuplicateAniListIds";
+import { detectDuplicateAniListIds } from "@/components/matching/detect-duplicate-anilist-ids";
 import { getIgnoredDuplicates } from "@/utils/storage";
 
 /**

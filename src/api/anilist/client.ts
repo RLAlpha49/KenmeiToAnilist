@@ -28,7 +28,7 @@ import {
   captureError,
   ErrorType,
   ErrorRecoveryAction,
-} from "@/utils/errorHandling";
+} from "@/utils/error-handling";
 
 /**
  * Rate limit error indicating request quota exceeded.

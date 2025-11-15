@@ -10,7 +10,7 @@ import type {
   AniListMediaEntry,
 } from "@/api/anilist/types";
 import type { MatchEngineConfig } from "@/api/matching/match-engine";
-import type { AdvancedMatchFilters } from "@/types/matchingFilters";
+import type { AdvancedMatchFilters } from "@/types/matching-filters";
 import type { IFuseOptions } from "fuse.js";
 
 /**

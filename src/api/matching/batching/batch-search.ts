@@ -14,7 +14,7 @@ import type {
 import { generateCacheKey, isCacheValid, mangaCache } from "../cache";
 import { batchSearchManga } from "@/api/anilist/client";
 import { withGroupAsync } from "@/utils/logging";
-import { CancelledError } from "@/utils/errorHandling";
+import { CancelledError } from "@/utils/error-handling";
 import { ANILIST_RATE_LIMIT_PER_MINUTE } from "@/config/anilist";
 import { executeComickFallback, executeMangaDexFallback } from "../sources";
 import type { SearchServiceConfig as OrchestratorSearchServiceConfig } from "../orchestration/types";

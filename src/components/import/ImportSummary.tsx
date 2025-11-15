@@ -15,7 +15,7 @@ import {
   ArrowRight,
   FilePlus,
 } from "lucide-react";
-import { Button } from "../ui/button";
+import { Button } from "../ui/Button";
 import {
   Card,
   CardContent,
@@ -23,9 +23,9 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "../ui/card";
-import { Badge } from "../ui/badge";
-import { Separator } from "../ui/separator";
+} from "../ui/Card";
+import { Badge } from "../ui/Badge";
+import { Separator } from "../ui/Separator";
 
 /**
  * Props for the ImportSummary component.

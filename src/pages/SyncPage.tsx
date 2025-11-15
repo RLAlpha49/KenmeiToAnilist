@@ -6,8 +6,8 @@
 
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useAuthState } from "../hooks/useAuth";
-import { useSynchronization } from "../hooks/useSynchronization";
+import { useAuthState } from "../hooks/use-auth";
+import { useSynchronization } from "../hooks/use-synchronization";
 import { useRateLimit } from "../contexts/RateLimitContext";
 import { useOnboarding } from "../contexts/OnboardingContext";
 import {
@@ -27,7 +27,7 @@ import {
 import { getUserMangaList } from "../api/anilist/client";
 import SyncManager from "../components/sync/SyncManager";
 import SyncResultsView from "../components/sync/SyncResultsView";
-import { Button } from "../components/ui/button";
+import { Button } from "../components/ui/Button";
 import {
   Card,
   CardContent,
@@ -35,8 +35,8 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "../components/ui/card";
-import { Badge } from "../components/ui/badge";
+} from "../components/ui/Card";
+import { Badge } from "../components/ui/Badge";
 import {
   AlertCircle,
   Loader2,
@@ -48,7 +48,7 @@ import {
   RefreshCw,
   Trash2,
 } from "lucide-react";
-import { exportSyncErrorLog } from "../utils/exportUtils";
+import { exportSyncErrorLog } from "../utils/export-utils";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   pageVariants,
@@ -84,8 +84,8 @@ import { LoadingStateDisplay } from "../components/sync/LoadingStateDisplay";
 import { SyncConfigurationPanel } from "../components/sync/SyncConfigurationPanel";
 import { ChangesSummary } from "../components/sync/ChangesSummary";
 import { ViewControls } from "../components/sync/ViewControls";
-import { SkeletonCard, SkeletonList } from "../components/ui/skeleton";
-import EmptyState from "../components/ui/empty-state";
+import { SkeletonCard, SkeletonList } from "../components/ui/Skeleton";
+import EmptyState from "../components/ui/EmptyState";
 import { SyncResumeNotification } from "../components/sync/SyncResumeNotification";
 import { SyncErrorBoundary } from "../components/sync/SyncErrorBoundary";
 import {
@@ -94,7 +94,7 @@ import {
   createError,
   showErrorNotification,
   ErrorRecoveryAction,
-} from "../utils/errorHandling";
+} from "../utils/error-handling";
 
 /**
  * Sync page component for the Kenmei to AniList sync tool.

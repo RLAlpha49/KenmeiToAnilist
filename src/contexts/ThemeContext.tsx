@@ -20,7 +20,7 @@ import {
   enableDarkMode,
   enableLightMode,
   applySystemTheme,
-} from "@/helpers/theme_helpers";
+} from "@/helpers/theme-helpers";
 import { useDebugActions, StateInspectorHandle } from "./DebugContext";
 
 /**

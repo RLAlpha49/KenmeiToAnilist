@@ -13,12 +13,12 @@ import {
   serialiseLogEntries,
 } from "../../utils/logging";
 import { cn } from "@/utils/tailwind";
-import { ScrollArea } from "../ui/scroll-area";
-import { Input } from "../ui/input";
-import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
-import { Switch } from "../ui/switch";
-import { Separator } from "../ui/separator";
+import { ScrollArea } from "../ui/ScrollArea";
+import { Input } from "../ui/Input";
+import { Button } from "../ui/Button";
+import { Badge } from "../ui/Badge";
+import { Switch } from "../ui/Switch";
+import { Separator } from "../ui/Separator";
 import {
   AlertCircle,
   AlertTriangle,
