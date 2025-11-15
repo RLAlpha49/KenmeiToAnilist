@@ -50,6 +50,7 @@ import { SettingsSearchBar } from "../components/settings/SettingsSearchBar";
 import { AccountCredentialsSection } from "../components/settings/AccountCredentialsSection";
 import { SettingsTabsContainer } from "../components/settings/SettingsTabsContainer";
 import { UpdateManagementSection } from "@/components/settings/UpdateManagementSection";
+import { openExternalSafe } from "@/helpers/external/open-external";
 
 /**
  * Settings page component for the Kenmei to AniList sync tool.
@@ -244,15 +245,14 @@ export function SettingsPage() {
    * @returns A React event handler function.
    * @source
    */
-  const handleOpenExternal = (url: string) => (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (globalThis.electronAPI?.shell?.openExternal) {
-      globalThis.electronAPI.shell.openExternal(url);
-    } else {
-      // Fallback to regular link behavior if not in Electron
-      globalThis.open(url, "_blank", "noopener,noreferrer");
-    }
-  };
+  const handleOpenExternal =
+    (url: string) => async (e: React.SyntheticEvent) => {
+      e.preventDefault();
+      const res = await openExternalSafe(url);
+      if (!res.success) {
+        console.error("[Settings] Failed to open external URL:", res.error);
+      }
+    };
 
   // Create searchable settings sections index
   const settingsSections = useMemo<SettingsSection[]>(() => {

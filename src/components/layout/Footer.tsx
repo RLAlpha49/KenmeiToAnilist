@@ -34,6 +34,7 @@ import {
 import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
 import { getAppVersion } from "../../utils/app-version";
+import { openExternalSafe } from "../../helpers/external/open-external";
 import appIcon from "../../assets/k2a-icon-512x512.png";
 
 /**
@@ -49,14 +50,11 @@ export function Footer() {
    * @returns A React click event handler function.
    * @source
    */
-  const handleOpenExternal = (url: string) => (e: React.MouseEvent) => {
+  const handleOpenExternal = (url: string) => async (e: React.MouseEvent) => {
     e.preventDefault();
-    // Use Electron shell API for external links, fallback to browser for web
-    if (globalThis.electronAPI?.shell?.openExternal) {
-      globalThis.electronAPI.shell.openExternal(url);
-    } else {
-      // Fallback to regular link behavior if not in Electron
-      globalThis.open(url, "_blank", "noopener,noreferrer");
+    const result = await openExternalSafe(url);
+    if (!result.success) {
+      console.error("[Footer] Failed to open external URL:", result.error);
     }
   };
 

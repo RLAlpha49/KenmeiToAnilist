@@ -250,9 +250,9 @@ const renderUserListStatus = (
         On Your AniList
       </span>
       <Badge
-        className={`${listStatusBadgeBaseClasses} ${getStatusBadgeColor(altMediaListEntry.status as MediaListStatus)}`}
+        className={`${listStatusBadgeBaseClasses} ${getStatusBadgeColor(altMediaListEntry.status)}`}
       >
-        {formatMediaListStatus(altMediaListEntry.status as MediaListStatus)}
+        {formatMediaListStatus(altMediaListEntry.status)}
       </Badge>
       <span>
         Progress: {altMediaListEntry.progress || 0}

@@ -20,82 +20,50 @@ import { executeComickFallback, executeMangaDexFallback } from "../sources";
 import type { SearchServiceConfig as OrchestratorSearchServiceConfig } from "../orchestration/types";
 
 /**
- * Batch size for parallel manga searches (10 = AniList 60 req/min limit).
+ * Batch size for parallel manga searches (10 = AniList 30 req/min official limit; tuned to safe parallelism)
  * @source
  */
 const BATCH_SIZE = 10;
 
 /**
- * AniList API rate limit: 60 requests per minute (from centralized config).
- * Used to calculate adaptive inter-batch delays.
+ * Time window for rate limit budget (ms in one minute).
  * @source
  */
-const API_RATE_LIMIT = ANILIST_RATE_LIMIT_PER_MINUTE;
-
-/**
- * Time window for rate limit budget (milliseconds in one minute).
- * @source
- */
-const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const RATE_LIMIT_WINDOW_MS = 60_000;
 
 /**
  * Minimum delay between batches (milliseconds) to ensure responsiveness.
  * @source
  */
-const MIN_BATCH_DELAY_MS = 500;
+const MIN_BATCH_DELAY_MS = 250;
 
 /**
  * Maximum delay between batches (milliseconds) to prevent excessive waiting.
  * @source
  */
-const MAX_BATCH_DELAY_MS = 2000;
+const MAX_BATCH_DELAY_MS = 1500;
 
 /**
- * Calculate adaptive inter-batch delay based on request count and rate limit budget.
+ * Calculate adaptive inter-batch delay based on request count.
  *
- * Determines optimal delay between batches to respect API rate limits while
- * maximizing throughput. Formula: delay = (requests × 60000) / API_RATE_LIMIT
- *
- * When `budgetRemaining` feedback is available from getRateLimitStatus:
- * - High budget (>30 requests): Use calculated delay (fast batching)
- * - Medium budget (10-30 requests): Apply moderate throttling
- * - Low budget (<10 requests): Increase delay significantly to allow rate limit window to reset
+ * Determines an initial delay between batches to respect API rate limits while
+ * maximizing throughput. Formula: delay = (requests × 60000) / ANILIST_RATE_LIMIT_PER_MINUTE
+ * This uses a literal 60000ms per minute to clearly express the intent.
  *
  * @param requestCount - Number of API requests in this batch (1 for main query + fallback count).
- * @param budgetRemaining - Optional remaining API requests available in current minute window from getRateLimitStatus.
  * @returns Delay in milliseconds, clamped between MIN_BATCH_DELAY_MS and MAX_BATCH_DELAY_MS.
  * @source
  */
-function calculateAdaptiveBatchDelay(
-  requestCount: number,
-  budgetRemaining?: number,
-): number {
+function calculateAdaptiveBatchDelay(requestCount: number): number {
   // Start with base calculated delay
-  let delayMs = (requestCount * RATE_LIMIT_WINDOW_MS) / API_RATE_LIMIT;
-
-  // If we have rate limit budget feedback, adjust delay based on current budget
-  if (budgetRemaining !== undefined) {
-    if (budgetRemaining < 10) {
-      // Running very low on budget - significantly increase delay to wait for reset
-      delayMs *= 3;
-      console.warn(
-        `[MangaSearchService] ⚠️ Rate limit budget critically low (${budgetRemaining} requests remaining), increasing delay to ${Math.round(delayMs)}ms to allow reset`,
-      );
-    } else if (budgetRemaining < 20) {
-      // Moderate budget - apply moderate increase
-      delayMs *= 1.5;
-      console.debug(
-        `[MangaSearchService] ⚠️ Rate limit budget moderate (${budgetRemaining} requests), increasing delay to ${Math.round(delayMs)}ms`,
-      );
-    }
-    // If budgetRemaining >= 20, use calculated delay as-is (high budget available)
-  }
+  let delayMs =
+    (requestCount * RATE_LIMIT_WINDOW_MS) / ANILIST_RATE_LIMIT_PER_MINUTE;
 
   // Clamp to reasonable bounds to avoid excessive delays or premature throttling
   delayMs = Math.max(MIN_BATCH_DELAY_MS, Math.min(delayMs, MAX_BATCH_DELAY_MS));
 
   console.debug(
-    `[MangaSearchService] ⏱️ Adaptive batch delay: ${Math.round(delayMs)}ms (requests: ${requestCount}, budget: ${budgetRemaining ?? "unknown"})`,
+    `[MangaSearchService] ⏱️ Adaptive batch delay: ${Math.round(delayMs)}ms (requests: ${requestCount})`,
   );
 
   return delayMs;
@@ -215,7 +183,6 @@ async function performFallbackSearches(
                 batchSize: 10,
                 searchPerPage: 10,
                 maxSearchResults: 50,
-                useAdvancedSearch: false,
                 enablePreSearch: false,
                 exactMatchingOnly: false,
                 bypassCache: searchConfig.bypassCache,
@@ -285,7 +252,6 @@ type BatchProcessingContext = {
   batchNumber: number;
   totalBatches: number;
   hasMoreBatches: boolean;
-  rateLimitBudget?: number;
 };
 
 /**
@@ -313,7 +279,6 @@ async function processBatch(
         batchNumber,
         totalBatches,
         hasMoreBatches,
-        rateLimitBudget,
       } = context;
 
       console.debug(
@@ -375,10 +340,7 @@ async function processBatch(
           const requestsInBatch = 1 + fallbackCandidates.length;
 
           // Calculate adaptive delay based on request count and rate limit budget
-          const delayMs = calculateAdaptiveBatchDelay(
-            requestsInBatch,
-            rateLimitBudget,
-          );
+          const delayMs = calculateAdaptiveBatchDelay(requestsInBatch);
 
           console.debug(
             `[MangaSearchService] Waiting ${Math.round(delayMs)}ms before next batch...`,
@@ -414,7 +376,7 @@ async function processBatch(
 /**
  * Process uncached manga using batched GraphQL queries with fallback searches.
  *
- * Divides uncached manga into batches (15 per batch) respecting AniList's 60 req/min limit.
+ * Divides uncached manga into batches (15 per batch) respecting AniList's 30 req/min official limit.
  * Performs batched GraphQL queries and fallback searches on Comick/MangaDex for misses.
  * Supports early termination, abort signals, and cancellation checks.
  *

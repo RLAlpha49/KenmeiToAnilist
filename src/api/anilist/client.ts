@@ -1,7 +1,7 @@
 /**
  * @packageDocumentation
  * @module anilist-client
- * @description AniList API client for making GraphQL requests, including search, advanced search, user manga list, and cache utilities.
+ * @description AniList API client for making GraphQL requests, including search, user manga list, and cache utilities.
  */
 
 import {
@@ -10,10 +10,10 @@ import {
   SearchResult,
   UserMediaList,
   ApiProvider,
+  MediaListStatus,
 } from "./types";
 import {
   SEARCH_MANGA,
-  ADVANCED_SEARCH_MANGA,
   GET_MANGA_BY_IDS,
   GET_USER_MANGA_LIST,
   GET_VIEWER,
@@ -29,6 +29,7 @@ import {
   ErrorType,
   ErrorRecoveryAction,
 } from "@/utils/error-handling";
+import { RATE_LIMIT_CONFIG } from "@/config/anilist";
 
 /**
  * Rate limit error indicating request quota exceeded.
@@ -61,13 +62,14 @@ const CACHE_EXPIRATION = 30 * 60 * 1000;
  * Local search result cache for the renderer process to minimize IPC calls.
  * @source
  */
+
 const searchCache: Cache<SearchResult<AniListManga>> = {};
 
 /**
  * Flag indicating whether the search cache has been initialized from storage.
  * @source
  */
-let searchCacheInitialized = false;
+let isSearchCacheInitialized = false;
 
 /**
  * Loads the search cache from storage if available and not yet initialized.
@@ -76,7 +78,7 @@ let searchCacheInitialized = false;
  */
 function initializeSearchCache(): void {
   // Skip if already initialized
-  if (searchCacheInitialized) {
+  if (isSearchCacheInitialized) {
     console.debug(
       "[AniListClient] 💾 Search cache already initialized, skipping duplicate initialization",
     );
@@ -84,7 +86,7 @@ function initializeSearchCache(): void {
   }
 
   console.debug("[AniListClient] 💾 Initializing AniList search cache...");
-  searchCacheInitialized = true;
+  isSearchCacheInitialized = true;
 
   try {
     const cachedData = storage.getItem(STORAGE_KEYS.ANILIST_SEARCH_CACHE);
@@ -245,7 +247,7 @@ async function handleElectronRequest<T>(
   let succeeded = false;
   try {
     // Use the correct call format for the main process with typed AniListRequest payload
-    const response = await globalThis.electronAPI.anilist.request({
+    const envelope = await globalThis.electronAPI.anilist.request({
       query,
       variables,
       token,
@@ -258,8 +260,29 @@ async function handleElectronRequest<T>(
       throw new DOMException("The operation was aborted", "AbortError");
     }
 
+    // Consistent envelope handling: main process returns { success, data?, error? }
+    if (!envelope) {
+      throw new Error("No response from main process");
+    }
+
+    if (!envelope.success) {
+      // Map error onto Error object with additional properties for handling
+      interface ElectronApiError extends Error {
+        status?: number;
+        errors?: Array<{ message: string }>;
+      }
+
+      const err = new Error(
+        envelope.error?.message || "Unknown AniList error",
+      ) as ElectronApiError;
+      err.status = envelope.error?.status;
+      err.errors = envelope.error?.errors;
+      throw err;
+    }
+
     succeeded = true;
-    return response as AniListResponse<T>;
+    // Map the inner data to AniListResponse<T> for the rest of the client code
+    return { data: envelope.data as T } as AniListResponse<T>;
   } catch (error) {
     // Extract operation name for context
     const endpoint = extractOperationEndpoint({
@@ -339,7 +362,12 @@ async function processHttpError(
   // Check for rate limiting
   if (response.status === 429) {
     const retryAfter = response.headers.get("Retry-After");
-    const retrySeconds = retryAfter ? Number.parseInt(retryAfter, 10) : 60;
+    const fallbackSeconds = Math.ceil(
+      (RATE_LIMIT_CONFIG?.retryDelay ?? 60000) / 1000,
+    );
+    const retrySeconds = retryAfter
+      ? Number.parseInt(retryAfter, 10)
+      : fallbackSeconds;
 
     // Notify the application about rate limiting through a custom event
     try {
@@ -808,18 +836,21 @@ export async function getAccessToken(
     codeLength: code.length,
   });
 
-  // Use the main process to exchange the token
-  const result = await globalThis.electronAPI.anilist.exchangeToken({
+  // Use the main process to exchange the token via the auth context
+  const result = await globalThis.electronAuth.exchangeToken({
     clientId,
     clientSecret,
     redirectUri,
     code,
   });
 
-  if (!result.success || !result.token) {
+  if (!result.success) {
     throw new Error(
       `Failed to exchange code for token: ${result.error || "Unknown error"}`,
     );
+  }
+  if (!result.token) {
+    throw new Error("Failed to exchange code for token: token not present");
   }
 
   return result.token;
@@ -877,7 +908,7 @@ interface SearchQueryOptions {
 
 /**
  * Executes a search query with caching and error handling.
- * Shared logic for both basic and advanced search operations.
+ * Shared logic for search operations.
  * @param options - Search query configuration including query, variables, and cache settings.
  * @returns Promise resolving to search results with pagination.
  * @source
@@ -1268,47 +1299,6 @@ ${queryParts.join("\n")}
 }
 
 /**
- * Advanced search for manga using the AniList dedicated search endpoint.
- * Results are cached for 30 minutes to minimize API calls.
- * @param search - Search query string.
- * @param page - Results page number (default: 1).
- * @param perPage - Results per page (default: 50).
- * @param token - Optional access token for authenticated requests.
- * @param bypassCache - Skip cache and fetch from API (default: false).
- * @param noRetry - Disable automatic retry logic (default: false).
- * @returns Promise resolving to paginated search results.
- * @source
- */
-export async function advancedSearchManga(
-  search: string,
-  page: number = 1,
-  perPage: number = 50,
-  token?: string,
-  bypassCache?: boolean,
-  noRetry?: boolean,
-): Promise<SearchResult<AniListManga>> {
-  const cacheKey = generateCacheKey(search, page, perPage);
-  const variables = {
-    search,
-    page,
-    perPage,
-  };
-
-  return executeSearchQuery({
-    query: ADVANCED_SEARCH_MANGA,
-    variables,
-    search,
-    cacheKey,
-    searchType: "Advanced search",
-    token,
-    bypassCache,
-    page,
-    perPage,
-    noRetry,
-  });
-}
-
-/**
  * Clear the search cache entirely or for specific queries.
  * Persists the cleared cache to storage and notifies main process.
  * @param searchQuery - Optional query to clear only matching entries; clears all if omitted.
@@ -1343,6 +1333,54 @@ export function clearSearchCache(searchQuery?: string): void {
         error,
       );
     });
+}
+
+/**
+ * Clear only the local renderer search cache (no IPC call to main process).
+ * Used to handle coordinated invalidation when main process triggers a cache clear.
+ */
+export function clearSearchCacheLocal(searchQuery?: string): void {
+  if (searchQuery) {
+    // Clear specific cache entries
+    for (const key of Object.keys(searchCache)) {
+      if (key.includes(searchQuery.toLowerCase())) {
+        delete searchCache[key];
+      }
+    }
+    console.info(
+      `[AniListClient] 🗑️ Cleared local search cache for: ${searchQuery}`,
+    );
+  } else {
+    // Clear all cache
+    for (const key of Object.keys(searchCache)) {
+      delete searchCache[key];
+    }
+    console.info("[AniListClient] 🗑️ Cleared all local search cache");
+  }
+
+  // Persist to storage immediately
+  persistSearchCacheImmediate();
+}
+
+// Subscribe to main process cache clear notifications so the renderer can invalidate local cache.
+try {
+  if (globalThis.electronAPI?.anilist?.onSearchCacheCleared) {
+    globalThis.electronAPI.anilist.onSearchCacheCleared((payload) => {
+      try {
+        clearSearchCacheLocal(payload?.searchQuery);
+      } catch (err) {
+        console.warn(
+          "[AniListClient] Failed to clear local cache from event:",
+          err,
+        );
+      }
+    });
+  }
+} catch (error) {
+  console.warn(
+    "[AniListClient] Unable to register search cache cleared listener:",
+    error,
+  );
 }
 
 /**
@@ -1523,7 +1561,7 @@ export async function getUserMangaList(
 
     try {
       // Get the user's ID first
-      const viewerId = await getAuthenticatedUserID(token, abortSignal);
+      const viewerId = await getAuthenticatedUserId(token, abortSignal);
       console.debug(
         "[AniListClient] ✅ Successfully retrieved user ID:",
         viewerId,
@@ -1594,7 +1632,7 @@ export async function getUserMangaList(
  * @throws {Error} On network failure or auth error.
  * @source
  */
-async function getAuthenticatedUserID(
+async function getAuthenticatedUserId(
   token: string,
   abortSignal?: AbortSignal,
 ): Promise<number | undefined> {
@@ -1678,7 +1716,7 @@ async function getAuthenticatedUserID(
 interface MediaListEntry {
   id: number;
   mediaId: number;
-  status: string;
+  status: MediaListStatus;
   progress: number;
   score: number;
   private: boolean;
@@ -2005,24 +2043,3 @@ function processMediaListCollectionChunk(
 
   return entriesProcessed;
 }
-
-/**
- * Test utilities for internal cache and fetch functions.
- * @source
- */
-export const __test__ = {
-  initializeSearchCache,
-  persistSearchCache: persistSearchCache as unknown,
-  persistSearchCacheImmediate,
-  generateCacheKey,
-  isCacheValid,
-  searchCache,
-  searchCacheInitialized: () => searchCacheInitialized,
-  setSearchCacheInitialized: (val: boolean) => {
-    searchCacheInitialized = val;
-  },
-  processMediaListCollectionChunk,
-  fetchCompleteUserMediaList,
-  getAuthenticatedUserID,
-  getUserMangaList,
-};

@@ -100,7 +100,7 @@ This memory serves as a comprehensive index of all Serena memories available for
 ### Synchronization & Updates (2 memories)
 
 1. **sync_service_and_incremental_updates** ✅
-   - Batch processing with rate limit (60 req/min)
+   - Batch processing with rate limit (AniList official 30 req/min; internal SAFE_REQUESTS_PER_MINUTE used)
    - Three-step incremental updates (progress → status → notes)
    - EntryProcessingContext for tracking
    - Failed operation queue with retry logic

@@ -21,8 +21,6 @@ export interface SearchServiceConfig {
   searchPerPage: number;
   /** Maximum number of search results to return */
   maxSearchResults: number;
-  /** Use advanced search API instead of basic search */
-  useAdvancedSearch: boolean;
   /** Enable pre-search for common titles */
   enablePreSearch: boolean;
   /** Use exact matching only (no fuzzy matching) */
@@ -107,7 +105,6 @@ export const DEFAULT_SEARCH_CONFIG: SearchServiceConfig = {
   batchSize: 10,
   searchPerPage: 50,
   maxSearchResults: 50,
-  useAdvancedSearch: false,
   enablePreSearch: true,
   exactMatchingOnly: false,
   bypassCache: false,

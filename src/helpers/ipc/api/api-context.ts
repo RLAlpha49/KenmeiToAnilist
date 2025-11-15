@@ -35,6 +35,20 @@ export interface AniListRequest {
 }
 
 /**
+ * Envelope returned by main process for AniList requests.
+ * Keeps the renderer/client API consistent and decouples GraphQL format.
+ */
+export interface AniListResponseEnvelope {
+  success: boolean;
+  data?: Record<string, unknown>;
+  error?: {
+    message: string;
+    status?: number;
+    errors?: Array<{ message: string }>;
+  };
+}
+
+/**
  * Exposes the Electron API context bridge to the renderer process.
  * Provides secure IPC interfaces for AniList GraphQL requests, manga source searches, and shell operations.
  *
@@ -51,12 +65,26 @@ export function exposeApiContext() {
 
     contextBridge.exposeInMainWorld("electronAPI", {
       anilist: {
-        request: (payload: AniListRequest) =>
+        request: (payload: AniListRequest): Promise<AniListResponseEnvelope> =>
           ipcRenderer.invoke("anilist:request", payload),
         clearCache: (searchQuery?: string) =>
           ipcRenderer.invoke("anilist:clearCache", searchQuery),
         getRateLimitStatus: () =>
           ipcRenderer.invoke("anilist:getRateLimitStatus"),
+        onSearchCacheCleared: (
+          handler: (payload: { searchQuery?: string }) => void,
+        ) => {
+          const listener = (
+            _event: Electron.IpcRendererEvent,
+            payload: { searchQuery?: string },
+          ) => handler(payload);
+          ipcRenderer.on("anilist:search-cache-cleared", listener);
+          return () =>
+            ipcRenderer.removeListener(
+              "anilist:search-cache-cleared",
+              listener,
+            );
+        },
       },
       mangaSource: {
         search: (source: MangaSource, query: string, limit?: number) =>

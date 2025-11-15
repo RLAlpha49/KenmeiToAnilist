@@ -432,10 +432,14 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
           return;
         }
 
-        if (!tokenExchangeResult.success || !tokenExchangeResult.token) {
+        if (!tokenExchangeResult.success) {
           throw new Error(
             tokenExchangeResult.error || "Failed to exchange token",
           );
+        }
+        if (!tokenExchangeResult.token) {
+          // Unexpected: success was true but token is missing
+          throw new Error("Token not present in exchange response");
         }
 
         const tokenResponse = tokenExchangeResult.token;

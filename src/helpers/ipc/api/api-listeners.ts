@@ -7,12 +7,14 @@
 import { BrowserWindow, shell } from "electron";
 import { secureHandle } from "../listeners-register";
 import fetch, { Response } from "node-fetch";
-import { createHash } from "node:crypto";
 import { getAppVersionElectron } from "../../../utils/app-version";
 import { withGroupAsync } from "../../../utils/logging";
 import { AniListRequest } from "./api-context";
 import type { ShellOperationResult } from "../types";
-import { SAFE_REQUESTS_PER_MINUTE } from "../../../config/anilist";
+import {
+  SAFE_REQUESTS_PER_MINUTE,
+  RATE_LIMIT_CONFIG,
+} from "../../../config/anilist";
 import type { MangaSource } from "../../../api/manga-sources/types";
 
 /**
@@ -35,7 +37,7 @@ const API_URL = "https://graphql.anilist.co";
 /** Cache expiration time in milliseconds (30 minutes). @source */
 const CACHE_EXPIRATION = 30 * 60 * 1000;
 
-/** Requests per minute rate limit (safe headroom below AniList's 60 req/min). @source */
+/** Requests per minute rate limit (safe headroom below AniList's 30 req/min official limit). @source */
 const API_RATE_LIMIT = SAFE_REQUESTS_PER_MINUTE;
 
 /** Milliseconds between requests for rate limiting. @source */
@@ -44,8 +46,23 @@ const REQUEST_INTERVAL = (60 * 1000) / API_RATE_LIMIT;
 /** Maximum retry attempts for rate-limited requests. @source */
 const MAX_RETRY_ATTEMPTS = 5;
 
-/** Maximum backoff time in milliseconds (60 seconds) to prevent queue starvation. @source */
-const MAX_BACKOFF_MS = 60000;
+/**
+ * Maximum backoff time in milliseconds for retrying requests.
+ * We choose a fixed upper bound instead of coupling MAX_BACKOFF_MS to the client-side
+ * RATE_LIMIT_CONFIG to avoid brittle configurations and surprising queue starvation.
+ * Using 120000ms (2 minutes) provides a conservative cap while still allowing retries
+ * to complete under temporary rate-limited or service outage scenarios.
+ * @source
+ */
+const MAX_BACKOFF_MS = 120000;
+
+/**
+ * Per-request timeout used in the main process when performing network requests.
+ * Mirrors the token exchange pattern which uses an AbortController, and ensures
+ * main-process requests cannot hang indefinitely. Derive from RATE_LIMIT_CONFIG where available.
+ */
+const MAIN_PROCESS_REQUEST_TIMEOUT_MS =
+  RATE_LIMIT_CONFIG.requestTimeout ?? 15000;
 
 /**
  * Promise-based mutex for serializing state updates.
@@ -266,11 +283,26 @@ interface Cache<T> {
 }
 
 /** Global search response cache. @source */
-const searchCache: Cache<Record<string, unknown>> = {};
+const searchCache: Cache<AniListEnvelope> = {};
+interface AniListEnvelope {
+  success: boolean;
+  data?: Record<string, unknown>;
+  error?: {
+    message: string;
+    status?: number;
+    errors?: Array<{ message: string }>;
+  };
+}
 
 /**
  * Index mapping normalized search terms to their hashed cache keys.
- * Allows precise clearing of specific search queries without substring matching.
+ *
+ * The renderer uses the same keying scheme; this map mirrors the renderer's
+ * cache keys so the main process can precisely evict entries by search term
+ * (instead of substring-based heuristics). When the main process clears cache
+ * entries by search term, the renderer is notified via `anilist:search-cache-cleared`
+ * and should also invalidate its local cache to stay consistent.
+ *
  * @internal
  * @source
  */
@@ -501,7 +533,11 @@ async function handleNetworkError(
   variables: Record<string, unknown> | undefined,
   token?: string,
 ): Promise<Record<string, unknown>> {
-  if (error.name === "FetchError" && retryCount < MAX_RETRY_ATTEMPTS) {
+  // Treat aborts and fetch errors as transient/network errors that can be retried
+  if (
+    (error.name === "FetchError" || error.name === "AbortError") &&
+    retryCount < MAX_RETRY_ATTEMPTS
+  ) {
     const waitTime = 1000 * Math.pow(2, retryCount);
     console.warn(
       `[ApiIPC] Network error, retrying in ${waitTime / 1000}s (attempt ${retryCount + 1}/${MAX_RETRY_ATTEMPTS})`,
@@ -526,6 +562,12 @@ async function handleNetworkError(
  * @returns Promise resolving to the GraphQL response data.
  * @internal
  * @source
+ *
+ * Expected timing and upper bounds:
+ * - Per-request timeout: MAIN_PROCESS_REQUEST_TIMEOUT_MS (defaults to 15000ms), after which the request will abort.
+ * - Per-attempt backoff for 429/5xx: exponential backoff with jitter capped at MAX_BACKOFF_MS (120000ms).
+ * - Overall time from enqueue to completion under sustained rate-limited conditions may be up to MAX_BACKOFF_MS multiplied by retry attempts (plus queue delays).
+ *
  */
 async function requestAniList(
   query: string,
@@ -552,14 +594,7 @@ async function requestAniList(
         }
 
         try {
-          const response = await fetch(API_URL, {
-            method: "POST",
-            headers,
-            body: JSON.stringify({
-              query,
-              variables,
-            }),
-          });
+          const response = await performAniListFetch(query, variables, headers);
 
           if (response.status === 429) {
             return handleRateLimitResponse(
@@ -614,23 +649,50 @@ async function requestAniList(
 }
 
 /**
- * Generate a stable cache key from query and variables using SHA-1 hash.
- * Uses the full query and variables to avoid collisions across different queries.
- *
- * @param query - The GraphQL query string.
- * @param variables - The query variables object.
- * @returns Cache key string (SHA-1 hex digest with 'cache_' prefix).
- * @internal
- * @source
+ * Perform fetch call for AniList with a per-request timeout.
  */
-function generateCacheKey(
+async function performAniListFetch(
   query: string,
+  variables: Record<string, unknown> | undefined,
+  headers: Record<string, string>,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    MAIN_PROCESS_REQUEST_TIMEOUT_MS,
+  );
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ query, variables }),
+      signal: controller.signal,
+    });
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
+ * Generate a stable cache key for search queries in the same format used by renderer
+ * to ensure both caches use the same keying strategy.
+ * Uses search/page/perPage and additional params.
+ * @internal
+ */
+function generateSearchCacheKey(
   variables: Record<string, unknown> = {},
 ): string {
-  // Create a stable hash of full query and variables
-  const cacheInput = JSON.stringify({ query, variables });
-  const hash = createHash("sha1").update(cacheInput).digest("hex");
-  return `cache_${hash}`;
+  const search = (variables.search as string) ?? "";
+  const page = (variables.page as number) ?? 1;
+  const perPage = (variables.perPage as number) ?? 50;
+  // Copy variables excluding search/page/perPage
+  const additionalParams: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(variables)) {
+    if (k === "search" || k === "page" || k === "perPage") continue;
+    additionalParams[k] = v;
+  }
+  return `${search.toLowerCase()}_${page}_${perPage}_${JSON.stringify(additionalParams)}`;
 }
 
 /**
@@ -648,6 +710,104 @@ function isCacheValid<T>(cache: Cache<T>, key: string): boolean {
 
   const now = Date.now();
   return now - entry.timestamp < CACHE_EXPIRATION;
+}
+
+function tryGetCachedSearchResults(
+  variables: Record<string, unknown> | undefined,
+  bypassCache = false,
+): AniListEnvelope | null {
+  if (!variables) return null;
+  const isSearchQuery = variables?.search !== undefined;
+  if (!isSearchQuery || bypassCache) return null;
+  const cacheKey = generateSearchCacheKey(variables);
+  if (isCacheValid(searchCache, cacheKey)) {
+    return searchCache[cacheKey].data;
+  }
+  return null;
+}
+
+function mapRawResponseToEnvelope(
+  rawResponse: Record<string, unknown>,
+): AniListEnvelope {
+  const envelope: AniListEnvelope = { success: false };
+  const rawErrors = rawResponse?.errors as
+    | Array<{ message?: string }>
+    | undefined;
+
+  if (rawErrors && rawErrors.length > 0) {
+    const msg = rawErrors[0]?.message || "GraphQL Error";
+    envelope.success = false;
+    envelope.error = {
+      message: msg,
+      errors: rawErrors.map((e) => ({ message: e?.message || "" })),
+    };
+  } else if (rawResponse?.data) {
+    envelope.success = true;
+    envelope.data = rawResponse.data as Record<string, unknown>;
+  } else {
+    envelope.success = true;
+    envelope.data = rawResponse;
+  }
+  return envelope;
+}
+
+function cacheSearchResult(
+  variables: Record<string, unknown> | undefined,
+  envelope: AniListEnvelope,
+): void {
+  if (!variables) return;
+  const isSearchQuery = variables?.search !== undefined;
+  if (!isSearchQuery) return;
+  const cacheKey = generateSearchCacheKey(variables);
+  searchCache[cacheKey] = { data: envelope, timestamp: Date.now() };
+  const normalizedTerm = normalizeSearchTerm(variables?.search);
+  if (normalizedTerm) {
+    if (!searchTermIndex.has(normalizedTerm)) {
+      searchTermIndex.set(normalizedTerm, new Set());
+    }
+    searchTermIndex.get(normalizedTerm)?.add(cacheKey);
+  }
+}
+
+/**
+ * Perform the logic for AniList requests including cache checks and caching results.
+ * Extracted to reduce cognitive complexity inside setupAniListAPI's handler.
+ */
+async function performAniListRequestHandler(
+  query: string,
+  variables: Record<string, unknown> | undefined,
+  token?: string,
+  bypassCache = false,
+): Promise<AniListEnvelope> {
+  try {
+    console.debug("[ApiIPC] Handling AniList API request in main process");
+    const cached = tryGetCachedSearchResults(variables, bypassCache);
+    if (cached) return cached;
+
+    if (query.includes("Page(") && variables?.search && bypassCache) {
+      console.debug(
+        `[ApiIPC] Bypassing cache for search: ${variables?.search}`,
+      );
+    }
+
+    const rawResponse = await requestAniList(query, variables, token);
+    const envelope = mapRawResponseToEnvelope(rawResponse);
+
+    if (
+      query.includes("Page(") &&
+      variables?.search &&
+      envelope.success &&
+      envelope.data &&
+      !bypassCache
+    ) {
+      cacheSearchResult(variables, envelope);
+    }
+
+    return envelope;
+  } catch (error) {
+    console.error("[ApiIPC] Error in anilist:request:", error);
+    throw error;
+  }
 }
 
 /**
@@ -673,57 +833,8 @@ export function setupAniListAPI(mainWindow: BrowserWindow) {
       const searchTerm = getSearchTermFromVariables(variables);
       return withGroupAsync(
         `[ApiIPC] AniList Request: ${searchTerm}`,
-        async () => {
-          try {
-            console.debug(
-              "[ApiIPC] Handling AniList API request in main process",
-            );
-
-            // Check if it's a search request and if we should use cache
-            const isSearchQuery = query.includes("Page(") && variables?.search;
-
-            if (isSearchQuery && !bypassCache) {
-              const cacheKey = generateCacheKey(query, variables);
-
-              if (isCacheValid(searchCache, cacheKey)) {
-                console.debug(
-                  `[ApiIPC] Using cached search results for: ${variables.search}`,
-                );
-                return searchCache[cacheKey].data;
-              }
-            }
-
-            if (isSearchQuery && bypassCache) {
-              console.debug(
-                `[ApiIPC] Bypassing cache for search: ${variables.search}`,
-              );
-            }
-
-            const response = await requestAniList(query, variables, token);
-
-            // Cache search results only if not bypassing cache
-            if (isSearchQuery && response.data && !bypassCache) {
-              const cacheKey = generateCacheKey(query, variables);
-              searchCache[cacheKey] = {
-                data: response,
-                timestamp: Date.now(),
-              };
-              // Register the cache key in the search term index for precise clearing
-              const normalizedTerm = normalizeSearchTerm(variables?.search);
-              if (normalizedTerm) {
-                if (!searchTermIndex.has(normalizedTerm)) {
-                  searchTermIndex.set(normalizedTerm, new Set());
-                }
-                searchTermIndex.get(normalizedTerm)?.add(cacheKey);
-              }
-            }
-
-            return response;
-          } catch (error) {
-            console.error("[ApiIPC] Error in anilist:request:", error);
-            throw error;
-          }
-        },
+        async () =>
+          performAniListRequestHandler(query, variables, token, bypassCache),
       );
     },
     mainWindow,
@@ -814,6 +925,27 @@ export function setupAniListAPI(mainWindow: BrowserWindow) {
         searchTermIndex.clear();
         console.debug(
           `[ApiIPC] Cleared all cache entries (${totalEntries} total)`,
+        );
+      }
+
+      // Notify renderer(s) so they can clear their local caches as well
+      try {
+        const windows = BrowserWindow.getAllWindows();
+        for (const win of windows) {
+          try {
+            win.webContents.send("anilist:search-cache-cleared", {
+              searchQuery,
+            });
+          } catch (error_) {
+            console.warn(
+              `[ApiIPC] Failed to notify renderer ${win.id} of cache clear: ${String(error_)}`,
+            );
+          }
+        }
+      } catch (err) {
+        console.warn(
+          "[ApiIPC] Failed to broadcast cache cleared event to renderers:",
+          err,
         );
       }
 

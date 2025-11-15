@@ -90,6 +90,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/Collapsible";
 import { Button } from "../ui/Button";
+import { openExternalSafe } from "@/helpers/external/open-external";
 
 /**
  * Props for the MangaMatchingPanel component.
@@ -436,34 +437,12 @@ export function MangaMatchingPanel({
   // Handler for opening external links in the default browser
   const handleOpenExternal = (url: string) => async (e: React.MouseEvent) => {
     e.preventDefault();
-    try {
-      // Defensive guard: check if electronAPI is available
-      if (!globalThis.electronAPI?.shell?.openExternal) {
-        console.warn(
-          "[MangaMatchingPanel] electronAPI.shell.openExternal not available, falling back to window.open",
-        );
-        globalThis.open?.(url, "_blank", "noopener,noreferrer");
-        return;
-      }
-
-      const result = (await globalThis.electronAPI.shell.openExternal(url)) as
-        | { success: boolean; error?: string }
-        | undefined;
-
-      if (!result?.success) {
-        // error is now guaranteed to be string (or undefined)
-        const errorMessage = result?.error || "Unknown error";
-        console.error(
-          "[MangaMatchingPanel] Failed to open external URL:",
-          errorMessage,
-        );
-        // Fallback to regular link behavior if opening failed
-        globalThis.open?.(url, "_blank", "noopener,noreferrer");
-      }
-    } catch (error) {
-      console.error("[MangaMatchingPanel] Error opening external URL:", error);
-      // Fallback to regular link behavior if not in Electron
-      globalThis.open?.(url, "_blank", "noopener,noreferrer");
+    const result = await openExternalSafe(url);
+    if (!result.success) {
+      console.error(
+        "[MangaMatchingPanel] Failed to open external URL:",
+        result.error,
+      );
     }
   };
 

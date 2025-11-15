@@ -379,7 +379,7 @@ interface SyncConfig {
 
 **Typical sync of 500 entries**:
 
-- Duration: ~8-10 minutes (respects 60 req/min limit)
+- Duration: ~8-10 minutes (respects AniList official 30 req/min limit with safe headroom)
 - API calls: ~750-1000 (1-3 per entry)
 - Memory: Minimal (streaming processing)
 - Network: Bidirectional ~2-5MB
@@ -392,7 +392,7 @@ interface SyncConfig {
 
 ## Limitations & Constraints
 
-- Must maintain 60 req/min rate limit
+- Must maintain AniList official 30 req/min rate limit (the application uses SAFE_REQUESTS_PER_MINUTE for headroom)
 - Sequential processing (not parallelized)
 - Cannot update deleted entries
 - No batch deletion support

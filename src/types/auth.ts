@@ -43,24 +43,6 @@ export interface APICredentials {
 }
 
 /**
- * Represents the response from a token exchange request.
- *
- * @property success - Whether the token exchange was successful.
- * @property token - The token object if successful.
- * @property error - The error message if unsuccessful.
- * @source
- */
-export interface TokenExchangeResponse {
-  success: boolean;
-  token?: {
-    access_token: string;
-    token_type: string;
-    expires_in: number;
-  };
-  error?: string;
-}
-
-/**
  * Represents the response from an AniList viewer query.
  *
  * @property data - The viewer data if successful.

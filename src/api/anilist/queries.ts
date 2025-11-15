@@ -1,7 +1,7 @@
 /**
  * @packageDocumentation
  * @module anilist-queries
- * @description GraphQL queries for AniList API, including user, manga, and advanced search queries.
+ * @description GraphQL queries for AniList API, including user and manga queries.
  */
 
 /**
@@ -58,69 +58,6 @@ query ($userId: Int, $chunk: Int, $perChunk: Int) {
  * @source
  */
 export const SEARCH_MANGA = `
-query ($search: String, $page: Int, $perPage: Int) {
-  Page(page: $page, perPage: $perPage) {
-    pageInfo {
-      total
-      currentPage
-      lastPage
-      hasNextPage
-      perPage
-    }
-    media(type: MANGA, search: $search, format_not_in: [NOVEL]) {
-      id
-      title {
-        romaji
-        english
-        native
-      }
-      synonyms
-      format
-      status
-      chapters
-      volumes
-      description
-      genres
-      tags {
-        id
-        name
-        category
-      }
-      countryOfOrigin
-      source
-      staff {
-        edges {
-          role
-          node {
-            name {
-              full
-            }
-          }
-        }
-      }
-      coverImage {
-        large
-        medium
-      }
-      mediaListEntry {
-        id
-        status
-        progress
-        score
-        private
-      }
-      isAdult
-    }
-  }
-}
-`;
-
-/**
- * Query to perform an advanced manga search with filtering and pagination.
- * Excludes light novels from results.
- * @source
- */
-export const ADVANCED_SEARCH_MANGA = `
 query ($search: String, $page: Int, $perPage: Int) {
   Page(page: $page, perPage: $perPage) {
     pageInfo {

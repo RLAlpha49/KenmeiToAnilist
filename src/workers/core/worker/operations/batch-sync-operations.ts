@@ -1,4 +1,8 @@
 import type { AniListMediaEntry } from "@/api/anilist/types";
+import {
+  determineIncrementalSteps,
+  buildVariablesForStep,
+} from "@/api/anilist/incremental-sync";
 import type {
   BatchSyncMessage,
   BatchSyncProgressMessage,
@@ -14,24 +18,11 @@ import { getErrorDetails } from "../error-utils";
  * @source
  */
 function getIncrementalStepsForEntry(entry: AniListMediaEntry): number[] {
-  const steps: number[] = [];
-
-  if (
-    !entry.previousValues ||
-    entry.progress !== entry.previousValues.progress
-  ) {
-    steps.push(1);
-  }
-
-  if (
-    !entry.previousValues ||
-    entry.status !== entry.previousValues.status ||
-    entry.score !== entry.previousValues.score
-  ) {
-    steps.push(2);
-  }
-
-  return steps.length > 0 ? steps : [1];
+  const steps = determineIncrementalSteps(entry);
+  const resumeFromStep = entry.syncMetadata?.resumeFromStep;
+  return resumeFromStep
+    ? steps.filter((step) => step >= resumeFromStep)
+    : steps;
 }
 
 /**
@@ -79,25 +70,7 @@ function buildGraphQLVariablesForEntry(
   entry: AniListMediaEntry,
   step: number,
 ): Record<string, unknown> {
-  const baseVariables = {
-    mediaId: entry.mediaId,
-    status: entry.status,
-  };
-
-  if (step === 1) {
-    return {
-      ...baseVariables,
-      progress: entry.progress,
-    };
-  } else if (step === 2) {
-    return {
-      ...baseVariables,
-      score: entry.score,
-      private: entry.private,
-    };
-  }
-
-  return baseVariables;
+  return buildVariablesForStep(entry, step);
 }
 
 /**

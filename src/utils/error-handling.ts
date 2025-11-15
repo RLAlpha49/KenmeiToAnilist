@@ -5,6 +5,7 @@
  */
 
 import React from "react";
+import { openExternalSafe } from "../helpers/external/open-external";
 
 /**
  * Custom error class for batch operation cancellations.
@@ -306,24 +307,15 @@ export function getRecoveryActionButton(
       return {
         label: "Check Connection",
         onClick: () => {
-          // Try to use Electron's shell.openExternal for better reliability
-          import("electron")
-            .then((electron) => {
-              // Access shell from the module
-              const shell = electron.shell;
-              if (shell && typeof shell.openExternal === "function") {
-                shell.openExternal("https://www.google.com");
-              } else if (globalThis.window?.open) {
-                // Fallback to window.open if shell is not available
-                globalThis.window.open("https://www.google.com", "_blank");
-              }
-            })
-            .catch(() => {
-              // If import fails, fall back to window.open
-              if (globalThis.window?.open) {
-                globalThis.window.open("https://www.google.com", "_blank");
-              }
-            });
+          // Use centralized helper to open external links safely
+          openExternalSafe("https://www.google.com").then((res) => {
+            if (!res.success) {
+              console.warn(
+                "[ErrorHandling] Failed to open connection check link:",
+                res.error,
+              );
+            }
+          });
         },
       };
 
@@ -348,8 +340,15 @@ export function getRecoveryActionButton(
         onClick: () => {
           try {
             const helpLink = getHelpLinkForErrorType(ErrorType.UNKNOWN);
-            if (helpLink && globalThis.window?.open) {
-              globalThis.window.open(helpLink, "_blank");
+            if (helpLink) {
+              openExternalSafe(helpLink).then((res) => {
+                if (!res.success) {
+                  console.warn(
+                    "[ErrorHandling] Failed to open help link:",
+                    res.error,
+                  );
+                }
+              });
             }
           } catch (error) {
             console.error("[ErrorHandling] Failed to open help link:", error);

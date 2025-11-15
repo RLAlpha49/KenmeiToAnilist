@@ -232,6 +232,7 @@ async function executeSyncModeImpl(
           progress: previousProgress,
           updatedStatus: entry.status !== entry.previousValues?.status,
           updatedScore: entry.score !== entry.previousValues?.score,
+          updatedPrivate: entry.private !== entry.previousValues?.private,
           step: undefined,
         },
       };

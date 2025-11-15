@@ -74,11 +74,11 @@ export const ANILIST_API_ENDPOINTS = {
 };
 
 /**
- * AniList official rate limit: 60 requests per minute.
+ * AniList official rate limit: 30 requests per minute.
  * Reference: AniList GraphQL API documentation.
  * @source
  */
-export const ANILIST_RATE_LIMIT_PER_MINUTE = 60;
+export const ANILIST_RATE_LIMIT_PER_MINUTE = 30;
 
 /**
  * Safe request rate for IPC processing (28 requests per minute).
@@ -96,7 +96,7 @@ export const SAFE_REQUESTS_PER_MINUTE = 28;
  * @source
  */
 export const RATE_LIMIT_CONFIG = {
-  maxRequestsPerMinute: 18, // Keep slightly below the actual limit
+  maxRequestsPerMinute: 25, // Keep slightly below the actual limit
   requestTimeout: 10000, // 10 seconds
-  retryDelay: 60000 / 18, // Time between requests to stay under rate limit
+  retryDelay: 60000 / 25, // Time between requests to stay under rate limit
 };

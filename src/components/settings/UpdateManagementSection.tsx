@@ -43,7 +43,7 @@ interface UpdateManagementSectionProps {
   /** Callback to install update. */
   onInstallUpdate: () => void;
   /** Callback to open external URL. */
-  onOpenExternal: (url: string) => (e: React.MouseEvent) => void;
+  onOpenExternal: (url: string) => (e: React.SyntheticEvent) => void;
   /** Map of section IDs to their collapsed states. */
   collapsedSections: Record<string, boolean>;
   /** Callback to toggle a section's collapsed state. */
@@ -161,15 +161,8 @@ export function UpdateManagementSection({
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    if (globalThis.electronAPI?.shell?.openExternal) {
-                      globalThis.electronAPI.shell.openExternal(updateInfo.url);
-                    } else {
-                      globalThis.open(
-                        updateInfo.url,
-                        "_blank",
-                        "noopener,noreferrer",
-                      );
-                    }
+                    const openHandler = onOpenExternal(updateInfo.url);
+                    openHandler(e);
                   }
                 }}
               >

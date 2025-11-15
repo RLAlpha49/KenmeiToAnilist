@@ -1167,6 +1167,11 @@ const SyncManager: React.FC<SyncManagerProps> = ({
                 useIncrementalSync: shouldUseIncremental,
                 targetProgress: entry.progress,
                 progress: shouldUseIncremental ? 1 : entry.progress, // Start from 1 for incremental
+                // For new entries, mark that metadata should be set if provided
+                updatedStatus: !!entry.status,
+                updatedScore:
+                  typeof entry.score === "number" && entry.score > 0,
+                updatedPrivate: entry.private !== undefined,
               },
             };
           }
@@ -1184,6 +1189,9 @@ const SyncManager: React.FC<SyncManagerProps> = ({
               progress: shouldUseIncremental
                 ? previousProgress + 1
                 : entry.progress,
+              updatedStatus: entry.status !== entry.previousValues?.status,
+              updatedScore: entry.score !== entry.previousValues?.score,
+              updatedPrivate: entry.private !== entry.previousValues?.private,
             },
           };
         });

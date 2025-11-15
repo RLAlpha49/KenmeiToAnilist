@@ -9,7 +9,12 @@ import {
   DELETE_MANGA_ENTRY,
   generateUpdateMangaEntryMutation,
 } from "./mutations";
+import {
+  determineIncrementalSteps,
+  buildVariablesForStep,
+} from "./incremental-sync";
 import { AniListMediaEntry } from "./types";
+import { RATE_LIMIT_CONFIG } from "../../config/anilist";
 import { storage, STORAGE_KEYS } from "../../utils/storage";
 import { withGroupAsync } from "../../utils/logging";
 import { BatchSyncWorkerPool } from "@/workers";
@@ -33,7 +38,13 @@ function buildVariablesForExistingEntry(
     mediaId: entry.mediaId,
   };
 
-  if (!entry.previousValues) return variables;
+  if (!entry.previousValues) {
+    // previousValues missing: fall back to new entry behavior
+    console.warn(
+      `[AniListSync] ⚠️ buildVariablesForExistingEntry: previousValues missing for media ${entry.mediaId}, falling back to new-entry variable build`,
+    );
+    return buildVariablesForNewEntry(entry);
+  }
 
   // Only include fields that have changed
   if (entry.status !== entry.previousValues.status)
@@ -43,10 +54,15 @@ function buildVariablesForExistingEntry(
     variables.progress = entry.progress;
 
   if (entry.score !== entry.previousValues.score)
-    variables.score = entry.score || 0;
+    variables.score = typeof entry.score === "number" ? entry.score : 0;
 
-  // Only include private flag if it's explicitly set
-  if (entry.private !== undefined) variables.private = entry.private;
+  // Only include private flag if it's explicitly set or has changed
+  if (
+    typeof entry.private === "boolean" &&
+    entry.previousValues.private !== entry.private
+  ) {
+    variables.private = entry.private;
+  }
 
   return variables;
 }
@@ -85,17 +101,13 @@ function handleIncrementalStep1(
   entry: AniListMediaEntry,
   operationId: string,
 ): GraphQLVariables {
-  const previousProgress = entry.previousValues?.progress || 0;
-  const variables = {
-    mediaId: entry.mediaId,
-    progress: previousProgress + 1,
-  };
-
+  const variables = buildVariablesForStep(entry, 1);
   console.debug(
-    `[AniListSync] 📊 [${operationId}] Incremental sync step 1: Updating progress from ${previousProgress} to ${variables.progress} (incrementing by 1)`,
+    `[AniListSync] 📊 [${operationId}] Incremental sync step 1: variables=${JSON.stringify(
+      variables,
+    )}`,
   );
-
-  return variables;
+  return variables as GraphQLVariables;
 }
 
 /**
@@ -109,72 +121,13 @@ function handleIncrementalStep2(
   entry: AniListMediaEntry,
   operationId: string,
 ): GraphQLVariables {
-  const variables = {
-    mediaId: entry.mediaId,
-    progress: entry.progress,
-  };
-
+  const variables = buildVariablesForStep(entry, 2);
   console.debug(
-    `[AniListSync] 📊 [${operationId}] Incremental sync step 2: Updating progress to final value ${entry.progress}`,
+    `[AniListSync] 📊 [${operationId}] Incremental sync step 2: variables=${JSON.stringify(
+      variables,
+    )}`,
   );
-
-  return variables;
-}
-
-/**
- * Builds GraphQL variables for incremental step 3 (new entries): sets status, score, and private flag.
- * @param entry - The new entry being synced.
- * @returns GraphQL variables for metadata update.
- * @source
- */
-function buildStep3VariablesForNewEntry(
-  entry: AniListMediaEntry,
-): GraphQLVariables {
-  const variables: GraphQLVariables = {
-    mediaId: entry.mediaId,
-  };
-
-  if (entry.status) variables.status = entry.status;
-
-  // Include score for new entries if it has a value
-  if (typeof entry.score === "number" && entry.score > 0)
-    variables.score = entry.score;
-
-  // Include private flag if set
-  if (entry.private !== undefined) variables.private = entry.private;
-
-  return variables;
-}
-
-/**
- * Builds GraphQL variables for incremental step 3 (existing entries): includes only changed metadata fields.
- * @param entry - The existing entry being synced with previousValues set.
- * @returns GraphQL variables for metadata update.
- * @source
- */
-function buildStep3VariablesForExistingEntry(
-  entry: AniListMediaEntry,
-): GraphQLVariables {
-  const variables: GraphQLVariables = {
-    mediaId: entry.mediaId,
-  };
-
-  // For existing entries, only include status if it's changed
-  if (entry.status !== entry.previousValues!.status)
-    variables.status = entry.status;
-
-  // Include score if available and changed
-  if (
-    entry.score !== entry.previousValues!.score &&
-    typeof entry.score === "number" &&
-    entry.score >= 0
-  )
-    variables.score = entry.score;
-
-  // Include private flag if set
-  if (entry.private !== undefined) variables.private = entry.private;
-
-  return variables;
+  return variables as GraphQLVariables;
 }
 
 /**
@@ -188,15 +141,11 @@ function handleIncrementalStep3(
   entry: AniListMediaEntry,
   operationId: string,
 ): GraphQLVariables {
-  // Build variables based on entry type
-  const variables = entry.previousValues
-    ? buildStep3VariablesForExistingEntry(entry)
-    : buildStep3VariablesForNewEntry(entry);
-
-  // Build info string for logging
-  const changes = [];
+  const variables = buildVariablesForStep(entry, 3);
+  const changes: string[] = [];
   if (variables.status) changes.push(`status to ${variables.status}`);
-  if (variables.score) changes.push(`score to ${variables.score}`);
+  if (variables.score !== undefined)
+    changes.push(`score to ${variables.score}`);
   if (variables.private !== undefined)
     changes.push(`private to ${variables.private}`);
 
@@ -206,7 +155,7 @@ function handleIncrementalStep3(
     `[AniListSync] 📊 [${operationId}] Incremental sync step 3: Updating ${updateInfo}`,
   );
 
-  return variables;
+  return variables as GraphQLVariables;
 }
 
 /**
@@ -247,7 +196,9 @@ function applyIncrementalSyncStep(
 function extractRetryAfterTime(
   errors: { extensions?: { retryAfter?: number }; message: string }[],
 ): number {
-  const retryAfter = 60000; // Default to 60 seconds
+  const defaultRetryAfterMs =
+    RATE_LIMIT_CONFIG?.retryDelay ??
+    Math.ceil(60000 / RATE_LIMIT_CONFIG.maxRequestsPerMinute);
 
   for (const err of errors) {
     if (err.extensions?.retryAfter)
@@ -257,7 +208,7 @@ function extractRetryAfterTime(
     if (timeMatch?.[1]) return Number(timeMatch[1]) * 1000;
   }
 
-  return retryAfter;
+  return defaultRetryAfterMs;
 }
 
 /**
@@ -554,13 +505,13 @@ function handleUpdateError(
  * Rate limiting constant: maximum requests allowed per minute (28 out of AniList's 60).
  * @source
  */
-const MAX_REQUESTS_PER_MINUTE = 28;
+const MAX_REQUESTS_PER_MINUTE = RATE_LIMIT_CONFIG.maxRequestsPerMinute;
 /**
  * Request interval in milliseconds calculated from rate limit constant.
  * Enforces minimum time between API requests.
  * @source
  */
-const REQUEST_INTERVAL = 60000 / MAX_REQUESTS_PER_MINUTE; // Time between requests
+const REQUEST_INTERVAL = Math.ceil(60000 / MAX_REQUESTS_PER_MINUTE); // Time between requests
 
 /**
  * Singleton instance of the batch sync worker pool.
@@ -853,111 +804,13 @@ export async function deleteMangaEntry(
 }
 
 /**
- * Calculates incremental sync steps for new entries without previous values.
- * @param entry - The new entry to sync.
- * @returns Array of step numbers (1, 2, and/or 3) to execute in order.
- * @source
- */
-function calculateNewEntrySteps(entry: AniListMediaEntry): number[] {
-  const steps: number[] = [];
-  const targetProgress = entry.progress;
-  const hasMetadata =
-    entry.status || entry.score || entry.private !== undefined;
-
-  // For new entries with progress > 1, use incremental steps
-  if (targetProgress > 1)
-    steps.push(1, 2); // Step 1: progress = 1, Step 2: progress = target
-  else if (targetProgress === 1) steps.push(1); // Step 1: progress = 1
-
-  // Always include step 3 for new entries to set status and other metadata
-  if (hasMetadata) steps.push(3);
-
-  // If no progress and no metadata, just add everything in one step
-  if (steps.length === 0) steps.push(1);
-
-  return steps;
-}
-
-/**
- * Calculates incremental sync steps for existing entries with previous values.
- * @param entry - The existing entry with previousValues set.
- * @returns Array of step numbers (1, 2, and/or 3) to execute in order.
- * @source
- */
-function calculateExistingEntrySteps(entry: AniListMediaEntry): number[] {
-  const steps: number[] = [];
-  const prev = entry.previousValues!;
-
-  const progressChanged = entry.progress !== prev.progress;
-  const progressDelta = entry.progress - prev.progress;
-  const metadataChanged =
-    entry.status !== prev.status ||
-    entry.score !== prev.score ||
-    entry.private !== prev.private;
-
-  // Add progress steps based on change amount
-  if (progressChanged) {
-    if (progressDelta === 1) steps.push(1);
-    else if (progressDelta > 1) steps.push(1, 2);
-  }
-
-  // Add metadata step if needed
-  if (metadataChanged) {
-    if (progressChanged) {
-      // Both progress and metadata changed
-      addMetadataStepForBothChanged(steps, progressDelta);
-    } else {
-      // Only metadata changed
-      steps.push(3);
-    }
-  }
-
-  return steps;
-}
-
-/**
- * Helper to add metadata (step 3) when both progress and metadata changed.
- * Ensures progress steps are included before metadata step.
- * @param steps - Current steps array to modify in-place.
- * @param progressDelta - Amount progress changed.
- * @source
- */
-function addMetadataStepForBothChanged(
-  steps: number[],
-  progressDelta: number,
-): void {
-  // Ensure progress steps are included
-  if (progressDelta === 1) {
-    if (!steps.includes(1)) steps.push(1);
-  } else if (progressDelta > 1) {
-    if (!steps.includes(1)) steps.push(1);
-    if (!steps.includes(2)) steps.push(2);
-  }
-
-  // Always add metadata step
-  steps.push(3);
-}
-
-/**
  * Determines the complete set of incremental steps for an entry, considering resume points.
  * @param entry - The entry with syncMetadata and optional resumeFromStep.
  * @returns Array of step numbers to execute, filtered by resumeFromStep if present.
  * @source
  */
 function getIncrementalSteps(entry: AniListMediaEntry): number[] {
-  const prev = entry.previousValues;
-
-  // For new entries (no previousValues)
-  if (!prev) {
-    const steps = calculateNewEntrySteps(entry);
-    const resumeFromStep = entry.syncMetadata?.resumeFromStep;
-    return resumeFromStep
-      ? steps.filter((step) => step >= resumeFromStep)
-      : steps;
-  }
-
-  // For existing entries (original logic)
-  const steps = calculateExistingEntrySteps(entry);
+  const steps = determineIncrementalSteps(entry);
   const resumeFromStep = entry.syncMetadata?.resumeFromStep;
   return resumeFromStep
     ? steps.filter((step) => step >= resumeFromStep)
@@ -1084,18 +937,18 @@ function determineProcessingOrder(
 /**
  * Initializes progress tracking for a specific media entry or batch.
  * Sets up currentEntry info and step tracking if incremental sync.
- * @param mediaIdNum - Current media ID being processed.
+ * @param mediaId - Current media ID being processed.
  * @param entriesForMediaId - Entries for this media ID.
  * @param progress - Sync progress object to update.
  * @returns Object indicating if incremental sync is active.
  * @source
  */
 function setupProgressForMedia(
-  mediaIdNum: number,
+  mediaId: number,
   entriesForMediaId: AniListMediaEntry[],
   progress: SyncProgress,
 ): { isIncremental: boolean } {
-  const mediaIdStr = String(mediaIdNum);
+  const mediaIdStr = String(mediaId);
   const firstEntry = entriesForMediaId[0];
   const isIncremental =
     entriesForMediaId.length > 1 && firstEntry.syncMetadata?.useIncrementalSync;
@@ -1214,7 +1067,7 @@ async function processEntryStep(
 
 /**
  * Processes all entries for a single media ID, handling incremental sync and retries.
- * @param mediaIdNum - Media ID to process.
+ * @param mediaId - Media ID to process.
  * @param entriesByMediaId - All organized entries by media ID.
  * @param token - User's access token.
  * @param apiCallsCompleted - Reference object tracking total API calls.
@@ -1225,7 +1078,7 @@ async function processEntryStep(
  * @source
  */
 async function processMediaEntries(
-  mediaIdNum: number,
+  mediaId: number,
   entriesByMediaId: Record<number, AniListMediaEntry[]>,
   token: string,
   apiCallsCompleted: { count: number },
@@ -1234,15 +1087,15 @@ async function processMediaEntries(
   abortSignal: AbortSignal | undefined,
 ): Promise<{ success: boolean; error?: string }> {
   return withGroupAsync(
-    `[AniListSync] Process Media ${mediaIdNum} (${progress.completed + 1}/${progress.total})`,
+    `[AniListSync] Process Media ${mediaId} (${progress.completed + 1}/${progress.total})`,
     async () => {
-      const entriesForMediaId = entriesByMediaId[mediaIdNum];
-      const mediaIdStr = String(mediaIdNum);
+      const entriesForMediaId = entriesByMediaId[mediaId];
+      const mediaIdStr = String(mediaId);
 
       if (!entriesForMediaId) return { success: true }; // Skip if not present
 
       console.debug(
-        `[AniListSync] 📚 Starting sync for manga ${mediaIdNum} (${progress.completed + 1}/${progress.total})`,
+        `[AniListSync] 📚 Starting sync for manga ${mediaId} (${progress.completed + 1}/${progress.total})`,
       );
 
       if (abortSignal?.aborted) {
@@ -1258,7 +1111,7 @@ async function processMediaEntries(
       });
 
       const { isIncremental } = setupProgressForMedia(
-        mediaIdNum,
+        mediaId,
         entriesForMediaId,
         progress,
       );
@@ -1362,13 +1215,13 @@ function generateSyncReport(
 /**
  * Processes a single media ID within a batch sync operation.
  * Updates progress, handles errors, and invokes batch completion callbacks.
- * @param mediaIdNum - Media ID to process from the batch.
+ * @param mediaId - Media ID to process from the batch.
  * @param context - Processing context with shared state, callbacks, and configuration.
  * @returns Promise that resolves when processing completes.
  * @source
  */
 async function processMediaIdInBatch(
-  mediaIdNum: number,
+  mediaId: number,
   context: {
     entriesByMediaId: Record<number, AniListMediaEntry[]>;
     token: string;
@@ -1383,11 +1236,11 @@ async function processMediaIdInBatch(
     errors?: { mediaId: number; error: string }[];
   },
 ): Promise<void> {
-  const mediaEntries = context.entriesByMediaId[mediaIdNum];
+  const mediaEntries = context.entriesByMediaId[mediaId];
 
   if (!mediaEntries || mediaEntries.length === 0) {
     console.debug(
-      `[AniListSync] ⏭️ Skipping media ${mediaIdNum} — no entries in current batch`,
+      `[AniListSync] ⏭️ Skipping media ${mediaId} — no entries in current batch`,
     );
     return;
   }
@@ -1398,7 +1251,7 @@ async function processMediaIdInBatch(
   }
 
   const result = await processMediaEntries(
-    mediaIdNum,
+    mediaId,
     context.entriesByMediaId,
     context.token,
     context.apiCallsCompleted,
@@ -1419,7 +1272,7 @@ async function processMediaIdInBatch(
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const errorEntry: any = {
-        mediaId: mediaIdNum,
+        mediaId: mediaId,
         error: result.error,
         recoveryAction: metadata.recoveryAction,
         recoveryMessage: metadata.recoveryMessage,
@@ -1440,7 +1293,7 @@ async function processMediaIdInBatch(
     context.onBatchComplete(
       { ...context.progress },
       {
-        mediaId: mediaIdNum,
+        mediaId: mediaId,
         success: result.success,
         error: result.error,
       },
@@ -1561,8 +1414,8 @@ export async function syncMangaBatch(
       const apiCallsCompleted = { count: 0 };
 
       // Process each media ID in order
-      for (const mediaIdNum of userOrderMediaIds) {
-        await processMediaIdInBatch(mediaIdNum, {
+      for (const mediaId of userOrderMediaIds) {
+        await processMediaIdInBatch(mediaId, {
           entriesByMediaId,
           token,
           apiCallsCompleted,

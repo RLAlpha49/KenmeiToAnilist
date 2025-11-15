@@ -28,6 +28,17 @@ export type MediaListStatus =
   | "REPEATING";
 
 /**
+ * Valid AniList media (title) status values (not to be confused with MediaListStatus which is the user's list status).
+ * See docs/guides/API_REFERENCE.md for source and explanation.
+ */
+export type MediaStatus =
+  | "FINISHED"
+  | "RELEASING"
+  | "NOT_YET_RELEASED"
+  | "CANCELLED"
+  | "HIATUS";
+
+/**
  * Complete AniList manga entry with metadata, staff, and user list information.
  * @source
  */
@@ -38,10 +49,10 @@ export interface AniListManga {
     english: string | null;
     native: string | null;
   };
-  synonyms?: string[];
-  description?: string;
+  synonyms: string[];
+  description: string | null;
   format: string;
-  status: string;
+  status: MediaStatus;
   chapters?: number;
   volumes?: number;
   countryOfOrigin?: string;
@@ -50,8 +61,8 @@ export interface AniListManga {
     large?: string;
     medium?: string;
   };
-  genres?: string[];
-  tags?: {
+  genres: string[];
+  tags: {
     id: number;
     name: string;
     category?: string;
@@ -94,7 +105,7 @@ export interface AniListMediaEntry {
   private: boolean;
   score: number;
   previousValues: {
-    status: string;
+    status: MediaListStatus;
     progress: number;
     score: number;
     private: boolean;
@@ -109,6 +120,7 @@ export interface AniListMediaEntry {
     step?: number;
     updatedStatus?: boolean;
     updatedScore?: boolean;
+    updatedPrivate?: boolean;
     isRetry?: boolean;
     retryTimestamp?: number;
     retryCount?: number;
@@ -248,7 +260,7 @@ export interface MangaMatchResult {
 export interface UserMediaEntry {
   id: number;
   mediaId: number;
-  status: string;
+  status: MediaListStatus;
   progress: number;
   score: number;
   private: boolean;

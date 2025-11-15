@@ -37,8 +37,4 @@ export { sleep } from "./utils";
 export { acquireRateLimit } from "./queue-processor";
 
 // Search wrappers
-export type { SearchRateLimitOptions } from "./search-wrappers";
-export {
-  searchWithRateLimit,
-  advancedSearchWithRateLimit,
-} from "./search-wrappers";
+export { searchWithRateLimit } from "./search-wrappers";

@@ -88,7 +88,7 @@ throw error; // raw error without context
 
 ### Performance Issues
 
-1. **Not respecting AniList rate limits** (60 req/min) - batch operations must check `RateLimitContext`
+1. **Not respecting AniList rate limits** (official: 30 req/min) - batch operations must check `RateLimitContext` and adhere to SAFE_REQUESTS_PER_MINUTE to remain under the limit
 2. **Bypassing search cache for no reason** - cache reduces API calls significantly
 3. **Redundant storage writes** - storage layer automatically skips writes if value hasn't changed via cache check
 4. **Not memoizing expensive calculations** - React Compiler auto-memoizes, but profile before manual `useMemo`

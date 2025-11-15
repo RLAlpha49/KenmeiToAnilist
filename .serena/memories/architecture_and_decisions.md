@@ -16,7 +16,7 @@
 
 ### Search Cache Architecture
 
-**Purpose**: Reduce AniList API calls (60 req/min rate limit)
+**Purpose**: Reduce AniList API calls (AniList official rate limit is 30 req/min; the application uses SAFE_REQUESTS_PER_MINUTE to stay below the limit)
 
 **Cache expiration**: 30 minutes (`CACHE_EXPIRATION = 30 * 60 * 1000`)  
 **Persistence**: localStorage via `anilist_search_cache` key  
@@ -79,7 +79,7 @@ Registration: `src/helpers/ipc/listeners-register.ts` registers window, theme, a
 
 **RateLimitContext** (`src/contexts/RateLimitContext.tsx`):
 
-- AniList rate limit tracking (60 req/min)
+- AniList rate limit tracking (official: ANILIST_RATE_LIMIT_PER_MINUTE = 30 requests/min; the application uses a conservative SAFE_REQUESTS_PER_MINUTE = 28 by default)
 - Used to batch operations and prevent rate limit hits
 
 ## API Integration Architecture

@@ -5,11 +5,7 @@
 
 import type { AniListManga, PageInfo, SearchResult } from "@/api/anilist/types";
 import type { SearchServiceConfig, SearchLoopResult } from "./types";
-import {
-  acquireRateLimit,
-  searchWithRateLimit,
-  advancedSearchWithRateLimit,
-} from "../rate-limiting";
+import { acquireRateLimit, searchWithRateLimit } from "../rate-limiting";
 
 /**
  * Execute a single search request with the appropriate method.
@@ -28,27 +24,14 @@ async function executeSingleSearch(
   searchConfig: SearchServiceConfig,
   token: string | undefined,
 ): Promise<SearchResult<AniListManga>> {
-  let searchResult: SearchResult<AniListManga>;
-
-  if (searchConfig.useAdvancedSearch) {
-    searchResult = await advancedSearchWithRateLimit(searchQuery, {
-      page: currentPage,
-      perPage: searchConfig.searchPerPage,
-      token,
-      acquireLimit: false,
-      bypassCache: searchConfig.bypassCache,
-    });
-  } else {
-    searchResult = await searchWithRateLimit(
-      searchQuery,
-      currentPage,
-      searchConfig.searchPerPage,
-      token,
-      false,
-      searchConfig.bypassCache,
-    );
-  }
-
+  const searchResult: SearchResult<AniListManga> = await searchWithRateLimit(
+    searchQuery,
+    currentPage,
+    searchConfig.searchPerPage,
+    token,
+    false,
+    searchConfig.bypassCache,
+  );
   return searchResult;
 }
 

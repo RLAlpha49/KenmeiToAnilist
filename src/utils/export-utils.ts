@@ -1582,7 +1582,7 @@ function countConflicts(
           importedMatch.kenmeiManga.title.toLowerCase(),
     );
 
-      if (existing && existing.status !== "pending") {
+    if (existing && existing.status !== "pending") {
       conflicts++;
     }
   }

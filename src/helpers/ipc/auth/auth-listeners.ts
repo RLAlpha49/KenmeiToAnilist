@@ -8,9 +8,13 @@ import { BrowserWindow, shell } from "electron";
 import { secureHandle } from "../listeners-register";
 import { URL } from "node:url";
 import * as http from "node:http";
-import fetch from "node-fetch";
 import { withGroupAsync, startGroup, endGroup } from "../../../utils/logging";
-import type { TokenExchangeResponse } from "../../../types/auth";
+import type { TokenExchangeResponse } from "../../../types/api";
+import { exchangeToken as exchangeTokenHelper } from "../../../api/anilist/auth";
+import {
+  DEFAULT_ANILIST_CONFIG,
+  DEFAULT_AUTH_PORT,
+} from "../../../config/anilist";
 
 let authCancelled = false; // Flag to track if user cancelled auth
 let loadTimeout: NodeJS.Timeout | null = null; // Timeout handle for auth process
@@ -19,7 +23,7 @@ let authResolve: ((code: string) => void) | null = null; // Promise resolver for
 let authReject: ((error: Error) => void) | null = null; // Promise rejecter for auth errors
 
 /** Port for OAuth callback server (non-privileged, no admin required). @source */
-const DEFAULT_PORT = 8765;
+const DEFAULT_PORT = DEFAULT_AUTH_PORT;
 
 /**
  * Represents authentication credentials for AniList API.
@@ -36,19 +40,23 @@ interface AuthCredentials {
   redirectUri: string;
 }
 
-/** Client ID for default AniList OAuth app. @source */
-const DEFAULT_CLIENT_ID = process.env.VITE_ANILIST_CLIENT_ID || "";
-/** Client secret for default AniList OAuth app. @source */
-const DEFAULT_CLIENT_SECRET = process.env.VITE_ANILIST_CLIENT_SECRET || "";
-
 /** In-memory store of user credentials by source. @source */
 const storedCredentials: Record<string, AuthCredentials | null> = {
-  default: {
-    source: "default",
-    clientId: DEFAULT_CLIENT_ID,
-    clientSecret: DEFAULT_CLIENT_SECRET,
-    redirectUri: `http://localhost:${DEFAULT_PORT}/callback`,
-  },
+  default: DEFAULT_ANILIST_CONFIG
+    ? {
+        source: "default",
+        clientId: DEFAULT_ANILIST_CONFIG.clientId || "",
+        clientSecret: DEFAULT_ANILIST_CONFIG.clientSecret || "",
+        redirectUri:
+          DEFAULT_ANILIST_CONFIG.redirectUri ||
+          `http://localhost:${DEFAULT_PORT}/callback`,
+      }
+    : {
+        source: "default",
+        clientId: "",
+        clientSecret: "",
+        redirectUri: `http://localhost:${DEFAULT_PORT}/callback`,
+      },
   custom: null,
 };
 
@@ -112,89 +120,6 @@ function validateTokenExchangeParams(params: {
 }
 
 /**
- * Exchanges an authorization code for an access token via AniList API.
- * @param params - Token exchange parameters (clientId, clientSecret, redirectUri, code).
- * @returns Promise with token exchange result (success or error).
- * @internal
- * @source
- */
-async function performTokenExchange(params: {
-  clientId: string;
-  clientSecret: string;
-  redirectUri: string;
-  code: string;
-}): Promise<
-  | { success: true; token: TokenExchangeResponse["token"] }
-  | { success: false; error: string }
-> {
-  return withGroupAsync(`[AuthIPC] Exchange Attempt`, async () => {
-    const { clientId, clientSecret, redirectUri, code } = params;
-
-    const response = await fetch("https://anilist.co/api/v2/oauth/token", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        grant_type: "authorization_code",
-        client_id: clientId,
-        client_secret: clientSecret,
-        redirect_uri: redirectUri,
-        code,
-      }),
-    });
-
-    console.info("[AuthIPC] Token exchange response status:", response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      // Redact sensitive credentials from error logs
-      const redactedError = errorText.replaceAll(
-        /client_secret[^&\s]*/gi,
-        "client_secret=[REDACTED]",
-      );
-      console.error(
-        "[AuthIPC] Token exchange error (redacted):",
-        redactedError,
-      );
-      if (errorText.includes("invalid_client")) {
-        console.error(
-          "[AuthIPC] Detected invalid_client from AniList. Diagnostics:",
-          {
-            clientIdLen: clientId.length,
-            clientSecretLen: clientSecret.length,
-            redirectUri,
-            codeLen: code.length,
-          },
-        );
-      }
-      return {
-        success: false,
-        error: `API error: ${response.status} ${redactedError}`,
-      };
-    }
-
-    const data = (await response.json()) as TokenExchangeResponse["token"];
-
-    if (!data?.access_token) {
-      return {
-        success: false,
-        error: "Token exchange returned invalid response structure",
-      };
-    }
-
-    console.info("[AuthIPC] Token exchange successful:", {
-      token_type: data.token_type,
-      expires_in: data.expires_in,
-      token_length: data.access_token?.length || 0,
-    });
-
-    return { success: true, token: data };
-  });
-}
-
-/**
  * Detects if an error is a network error that warrants retrying.
  * @param error - The error to check.
  * @returns True if error is network-related and retryable.
@@ -203,13 +128,32 @@ async function performTokenExchange(params: {
  */
 function isNetworkError(error: unknown): boolean {
   const errorMessage = error instanceof Error ? error.message : String(error);
-  return (
+
+  // Generic network-level errors
+  if (
     errorMessage.includes("ENOTFOUND") ||
     errorMessage.includes("ETIMEDOUT") ||
     errorMessage.includes("ECONNRESET") ||
     errorMessage.includes("socket hang up") ||
     errorMessage.includes("network error")
-  );
+  ) {
+    return true;
+  }
+
+  // Retry on server-side 5xx responses surfaced by exchangeToken or other helpers
+  if (errorMessage.includes("HTTP 5")) return true;
+
+  // Retry on aborts/timeouts (AbortController or fetch abort)
+  if (
+    errorMessage.includes("aborted") ||
+    errorMessage.includes("The operation was aborted") ||
+    errorMessage.includes("timed out") ||
+    errorMessage.includes("timeout")
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 /**
@@ -369,6 +313,117 @@ function validateRedirectUri(
       error: `Invalid redirect_uri URL: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
+}
+
+/**
+ * Resolve an implementation for fetch and AbortController in Electron main process.
+ * Falls back to node-fetch if globals are unavailable.
+ * @returns fetchImpl and AbortController implementation (may be undefined if not found)
+ */
+async function getFetchAndAbortController(): Promise<{
+  fetchImpl?: typeof globalThis.fetch;
+  AbortControllerImpl?: typeof AbortController;
+}> {
+  let fetchImpl: typeof globalThis.fetch | undefined =
+    typeof globalThis.fetch === "function" ? globalThis.fetch : undefined;
+  let AbortControllerImpl: typeof AbortController | undefined =
+    typeof globalThis.AbortController === "function"
+      ? globalThis.AbortController
+      : undefined;
+
+  if (!fetchImpl || !AbortControllerImpl) {
+    try {
+      const nodeFetchModule: unknown = await import("node-fetch");
+      const nf = nodeFetchModule as {
+        default?: typeof globalThis.fetch;
+        AbortController?: typeof AbortController;
+      };
+      fetchImpl = nf.default ?? (nf as unknown as typeof globalThis.fetch);
+      AbortControllerImpl = nf.AbortController ?? globalThis.AbortController;
+    } catch (err) {
+      console.debug(
+        "[AuthIPC] node-fetch fallback not available, relying on global fetch/AbortController",
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  }
+
+  return { fetchImpl, AbortControllerImpl };
+}
+
+/**
+ * Attempt a single token exchange using the helper with provided fetch/AbortController.
+ * Throws on non-success results to allow caller to classify retries.
+ */
+async function attemptExchangeTokenOnce(
+  params: {
+    clientId: string;
+    clientSecret: string;
+    redirectUri: string;
+    code: string;
+  },
+  fetchImpl?: typeof globalThis.fetch,
+  AbortControllerImpl?: typeof AbortController,
+): Promise<TokenExchangeResponse> {
+  const result = await exchangeTokenHelper(
+    {
+      clientId: params.clientId,
+      clientSecret: params.clientSecret,
+      redirectUri: params.redirectUri,
+      code: params.code,
+    },
+    { fetch: fetchImpl, AbortController: AbortControllerImpl },
+  );
+  if (result.success) return result;
+  throw new Error(result.error);
+}
+
+/**
+ * Performs token exchange with retries on network-level errors (including 5xx and aborts/timeouts).
+ */
+async function exchangeTokenWithRetries(
+  params: {
+    clientId: string;
+    clientSecret: string;
+    redirectUri: string;
+    code: string;
+  },
+  maxAttempts = 3,
+): Promise<TokenExchangeResponse> {
+  let lastError: unknown = null;
+  let attempts = 0;
+  const deps = await getFetchAndAbortController();
+
+  while (attempts < maxAttempts) {
+    try {
+      if (attempts > 0) {
+        const delay = Math.min(Math.pow(2, attempts) * 1000, 60000);
+        console.debug(`[AuthIPC] Waiting ${delay}ms before retry...`);
+        await new Promise((r) => setTimeout(r, delay));
+      }
+
+      const result = await attemptExchangeTokenOnce(
+        params,
+        deps.fetchImpl,
+        deps.AbortControllerImpl,
+      );
+      return result;
+    } catch (err) {
+      lastError = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(
+        `[AuthIPC] Token exchange attempt ${attempts + 1} failed: ${msg}`,
+      );
+      // Retry classification
+      if (!isNetworkError(err)) {
+        break;
+      }
+      attempts++;
+    }
+  }
+
+  // All attempts exhausted
+  return { success: false, error: formatTokenExchangeError(lastError) };
 }
 
 /**
@@ -650,60 +705,11 @@ export function addAuthEventListeners(mainWindow: BrowserWindow) {
               codeLength: code.length,
             });
 
-            // Maximum number of retry attempts
-            const MAX_RETRIES = 3;
-            let retries = 0;
-            let lastError = null;
-
-            while (retries < MAX_RETRIES) {
-              try {
-                console.debug(
-                  `[AuthIPC] Token exchange attempt ${retries + 1}/${MAX_RETRIES}`,
-                );
-
-                // Add delay between retries
-                if (retries > 0) {
-                  const delay = retries * 1000; // 1s, 2s, 3s
-                  console.debug(`[AuthIPC] Waiting ${delay}ms before retry...`);
-                  await new Promise((resolve) => setTimeout(resolve, delay));
-                }
-
-                const result = await performTokenExchange({
-                  clientId,
-                  clientSecret,
-                  redirectUri,
-                  code,
-                });
-                if (result.success) {
-                  return { success: true, token: result.token };
-                }
-
-                throw new Error(result.error);
-              } catch (error) {
-                lastError = error;
-                console.error(
-                  `[AuthIPC] Token exchange attempt ${retries + 1} failed:`,
-                  error,
-                );
-
-                if (!isNetworkError(error)) {
-                  // Don't retry for non-network errors
-                  break;
-                }
-
-                retries++;
-              }
-            }
-
-            // If we reach here, all retries failed
-            console.error(
-              "[AuthIPC] All token exchange attempts failed:",
-              lastError,
+            const result = await exchangeTokenWithRetries(
+              { clientId, clientSecret, redirectUri, code },
+              3,
             );
-            return {
-              success: false,
-              error: formatTokenExchangeError(lastError),
-            };
+            return result;
           } catch (error) {
             const errorMessage =
               error instanceof Error ? error.message : String(error);

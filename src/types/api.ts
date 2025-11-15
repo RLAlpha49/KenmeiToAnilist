@@ -19,3 +19,22 @@ export interface TokenExchangeParams {
   redirectUri: string;
   code: string;
 }
+
+/**
+ * Partial token shape returned by AniList's token endpoint.
+ * Mirrors the structure used by the exchangeToken helper.
+ */
+export interface TokenResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  refresh_token?: string;
+}
+
+/**
+ * Discriminated union for token exchange outcome.
+ * Matches the helper return shape in src/api/anilist/auth.ts.
+ */
+export type TokenExchangeResponse =
+  | { success: true; token: TokenResponse }
+  | { success: false; error: string };

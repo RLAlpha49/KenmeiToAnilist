@@ -25,9 +25,10 @@ declare module "*.ts?worker" {
   export default workerConstructor;
 }
 
-import type { APICredentials, TokenExchangeResponse } from "./types/auth";
-import type { TokenExchangeParams } from "./types/api";
+import type { APICredentials } from "./types/auth";
+import type { TokenExchangeResponse } from "./types/api";
 import type { AniListRequest } from "./helpers/ipc/api/api-context";
+import type { ShellOperationResult } from "./helpers/ipc/types";
 import type { MangaSource } from "./api/manga-sources/types";
 import type { ElectronBackupApi } from "./helpers/ipc/backup/backup-context";
 import type { ElectronIpcDebugBridge } from "./helpers/ipc/debug/debug-context";
@@ -366,15 +367,6 @@ declare global {
          * @returns Token response with access token and expiration.
          * @source
          */
-        exchangeToken: (params: TokenExchangeParams) => Promise<{
-          success: boolean;
-          token?: {
-            access_token: string;
-            token_type: string;
-            expires_in: number;
-          };
-          error?: string;
-        }>;
 
         /**
          * Clears the search result cache.
@@ -385,7 +377,10 @@ declare global {
 
         /**
          * Retrieves current API rate limit status.
-         * @returns Rate limit information and time until reset.
+         * @returns Rate limit information and time until reset. Values are in milliseconds.
+         * - `isRateLimited` true when currently rate limited.
+         * - `retryAfter` is the Unix timestamp (milliseconds) when rate limit resets, or `null` when no rate limit active.
+         * - `timeRemaining` is the number of milliseconds remaining until reset; it will be 0 when not rate limited.
          * @source
          */
         getRateLimitStatus: () => Promise<{
@@ -393,6 +388,17 @@ declare global {
           retryAfter: number | null;
           timeRemaining: number;
         }>;
+        /**
+         * Register a listener for cache clear events broadcast by the main process.
+         * Allows the renderer to respond to main process cache invalidation.
+         * The callback's `searchQuery` will be `undefined` when the entire cache is cleared and consumers should treat that as a signal to invalidate all local caches.
+         * Handlers should be idempotent because this callback may be invoked multiple times for the same query or an entire cache clear.
+         * @param callback - Callback invoked with an optional search query string; `undefined` means clear everything.
+         * @returns Unsubscribe function.
+         */
+        onSearchCacheCleared: (
+          callback: (payload: { searchQuery?: string }) => void,
+        ) => () => void;
       };
 
       /**
@@ -453,44 +459,20 @@ declare global {
          * @param url - URL to open.
          * @source
          */
-        openExternal: (url: string) => Promise<void>;
+        openExternal: (url: string) => Promise<ShellOperationResult>;
       };
+    };
 
-      /**
-       * Persistent key-value storage API.
-       * Stores configuration and data across sessions.
-       * @source
-       */
-      electronStore: {
-        /**
-         * Retrieves a value from persistent storage.
-         * @param key - Storage key.
-         * @returns Stored value as string.
-         * @source
-         */
-        getItem: (key: string) => Promise<string>;
-
-        /**
-         * Stores a value in persistent storage.
-         * @param key - Storage key.
-         * @param value - Value to store.
-         * @source
-         */
-        setItem: (key: string, value: string) => Promise<void>;
-
-        /**
-         * Removes a value from persistent storage.
-         * @param key - Storage key.
-         * @source
-         */
-        removeItem: (key: string) => Promise<void>;
-
-        /**
-         * Clears all persistent storage.
-         * @source
-         */
-        clear: () => Promise<void>;
-      };
+    /**
+     * Persistent key-value storage API exposed at top-level as `window.electronStore`.
+     * Mirrors the electron-store API used in the main process but via IPC-safe methods.
+     * @source
+     */
+    electronStore: {
+      getItem: (key: string) => Promise<string>;
+      setItem: (key: string, value: string) => Promise<void>;
+      removeItem: (key: string) => Promise<void>;
+      clear: () => Promise<void>;
     };
 
     /**
@@ -644,6 +626,6 @@ declare global {
 
     /** Persistent storage API (global access). @source */
     // eslint-disable-next-line no-var
-    var electronStore: Window["electronAPI"]["electronStore"];
+    var electronStore: Window["electronStore"];
   }
 }
