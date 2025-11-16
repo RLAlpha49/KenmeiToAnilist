@@ -32,7 +32,10 @@ function rankMangaCore(
   results: AniListManga[],
   searchTitle: string,
   isManualSearch: boolean,
-  includeMangaPredicate: (manga: AniListManga, score: number) => InclusionResult,
+  includeMangaPredicate: (
+    manga: AniListManga,
+    score: number,
+  ) => InclusionResult,
   kenmeiManga?: KenmeiManga,
 ): AniListManga[] {
   const scoredResults: Array<{ manga: AniListManga; score: number }> = [];
@@ -47,7 +50,10 @@ function rankMangaCore(
     const score = calculateMatchScore(manga, searchTitle);
 
     // Evaluate if manga should be included using the provided function
-    const { shouldInclude, adjustedScore } = includeMangaPredicate(manga, score);
+    const { shouldInclude, adjustedScore } = includeMangaPredicate(
+      manga,
+      score,
+    );
 
     if (shouldInclude) {
       scoredResults.push({ manga, score: adjustedScore });

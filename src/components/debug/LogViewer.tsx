@@ -208,7 +208,7 @@ export function LogViewer(): React.ReactElement {
   const { clearLogs, exportLogs } = useDebugActions();
   const [searchTerm, setSearchTerm] = useState("");
   const [levelFilters, setLevelFilters] = useState(DEFAULT_LEVEL_FILTER);
-  const [autoScroll, setAutoScroll] = useState(true);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const scrollRootRef = useRef<HTMLDivElement | null>(null);
 
   const filteredEntries = useMemo(() => {
@@ -219,7 +219,7 @@ export function LogViewer(): React.ReactElement {
   }, [logEntries, levelFilters, searchTerm]);
 
   useEffect(() => {
-    if (!autoScroll) return;
+    if (!shouldAutoScroll) return;
     // Scroll to the bottom of the viewport when new entries are added
     const viewport = scrollRootRef.current?.querySelector<HTMLDivElement>(
       '[data-slot="scroll-area-viewport"]',
@@ -227,7 +227,7 @@ export function LogViewer(): React.ReactElement {
     if (viewport) {
       viewport.scrollTop = viewport.scrollHeight;
     }
-  }, [filteredEntries, autoScroll]);
+  }, [filteredEntries, shouldAutoScroll]);
 
   const toggleLevel = (level: VisibleLogLevel) => {
     setLevelFilters((prev) => ({
@@ -294,8 +294,10 @@ export function LogViewer(): React.ReactElement {
             <div className="text-muted-foreground flex items-center gap-2">
               <Switch
                 id="debug-log-autoscroll"
-                checked={autoScroll}
-                onCheckedChange={(checked) => setAutoScroll(Boolean(checked))}
+                checked={shouldAutoScroll}
+                onCheckedChange={(checked) =>
+                  setShouldAutoScroll(Boolean(checked))
+                }
               />
               <label htmlFor="debug-log-autoscroll" className="cursor-pointer">
                 Auto-scroll to newest

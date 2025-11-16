@@ -187,16 +187,16 @@ export function StorageDebugger() {
   const [editingItem, setEditingItem] = useState<{
     key: string;
     value: string;
-    isElectron: boolean;
+    isElectronStore: boolean;
   } | null>(null);
   const [newItem, setNewItem] = useState<{
     key: string;
     value: string;
-    isElectron: boolean;
+    isElectronStore: boolean;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchInValues, setSearchInValues] = useState(true);
+  const [shouldSearchInValues, setShouldSearchInValues] = useState(true);
 
   // Add formatter helper
   const tryFormatJSON = (raw: string): string | null => {
@@ -316,7 +316,7 @@ export function StorageDebugger() {
     if (!editingItem) return;
 
     try {
-      if (editingItem.isElectron) {
+      if (editingItem.isElectronStore) {
         if (globalThis.electronStore) {
           await globalThis.electronStore.setItem(
             editingItem.key,
@@ -351,7 +351,7 @@ export function StorageDebugger() {
     if (!newItem?.key?.trim()) return;
 
     try {
-      if (newItem.isElectron) {
+      if (newItem.isElectronStore) {
         if (globalThis.electronStore) {
           await globalThis.electronStore.setItem(newItem.key, newItem.value);
 
@@ -378,9 +378,9 @@ export function StorageDebugger() {
     }
   };
 
-  const deleteItem = async (key: string, isElectron: boolean) => {
+  const deleteItem = async (key: string, isElectronStore: boolean) => {
     try {
-      if (isElectron) {
+      if (isElectronStore) {
         if (globalThis.electronStore) {
           await globalThis.electronStore.removeItem(key);
 
@@ -419,7 +419,7 @@ export function StorageDebugger() {
     URL.revokeObjectURL(url);
   };
 
-  const onImportJson = async (file: File, isElectron: boolean) => {
+  const onImportJson = async (file: File, isElectronStore: boolean) => {
     try {
       const text = await file.text();
       const parsed = tryParseJSON(text);
@@ -434,7 +434,7 @@ export function StorageDebugger() {
           typeof entry.value === "string"
             ? entry.value
             : JSON.stringify(entry.value);
-        if (isElectron) {
+        if (isElectronStore) {
           if (globalThis.electronStore) {
             await globalThis.electronStore.setItem(entry.key, value);
 
@@ -450,7 +450,7 @@ export function StorageDebugger() {
         }
       }
       toast.success(
-        `Imported ${applied} items${isElectron ? ". localStorage and cache automatically synced." : ""}`,
+        `Imported ${applied} items${isElectronStore ? ". localStorage and cache automatically synced." : ""}`,
       );
       await refreshData();
     } catch (e) {
@@ -474,13 +474,13 @@ export function StorageDebugger() {
     return items.filter(
       (it) =>
         it.key.toLowerCase().includes(q) ||
-        (searchInValues && it.value.toLowerCase().includes(q)),
+        (shouldSearchInValues && it.value.toLowerCase().includes(q)),
     );
   };
 
   const renderStorageTable = (
     items: StorageItem[],
-    isElectron: boolean,
+    isElectronStore: boolean,
     title: string,
     icon: React.ReactNode,
   ) => {
@@ -504,7 +504,9 @@ export function StorageDebugger() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setNewItem({ key: "", value: "", isElectron })}
+                onClick={() =>
+                  setNewItem({ key: "", value: "", isElectronStore })
+                }
               >
                 <Plus className="mr-1 h-4 w-4" /> Add
               </Button>
@@ -514,7 +516,7 @@ export function StorageDebugger() {
                 onClick={() =>
                   exportItems(
                     items,
-                    `${isElectron ? "electron" : "local"}-storage.json`,
+                    `${isElectronStore ? "electron" : "local"}-storage.json`,
                   )
                 }
               >
@@ -527,7 +529,7 @@ export function StorageDebugger() {
                   className="hidden"
                   onChange={(e) =>
                     e.target.files &&
-                    onImportJson(e.target.files[0], isElectron)
+                    onImportJson(e.target.files[0], isElectronStore)
                   }
                 />
                 <Button asChild variant="outline" size="sm">
@@ -586,7 +588,7 @@ export function StorageDebugger() {
                             setEditingItem({
                               key: item.key,
                               value: item.value,
-                              isElectron,
+                              isElectronStore,
                             })
                           }
                           aria-label="Edit item"
@@ -618,7 +620,9 @@ export function StorageDebugger() {
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <AlertDialogAction
-                                onClick={() => deleteItem(item.key, isElectron)}
+                                onClick={() =>
+                                  deleteItem(item.key, isElectronStore)
+                                }
                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                               >
                                 Delete
@@ -721,9 +725,9 @@ export function StorageDebugger() {
               <div className="text-muted-foreground flex items-center gap-2 text-xs">
                 <Switch
                   id="search-values-toggle"
-                  checked={searchInValues}
+                  checked={shouldSearchInValues}
                   onCheckedChange={(checked) =>
-                    setSearchInValues(Boolean(checked))
+                    setShouldSearchInValues(Boolean(checked))
                   }
                   aria-labelledby="search-values-label"
                 />
@@ -864,7 +868,7 @@ export function StorageDebugger() {
               <DialogDescription>
                 Modify the value for key:{" "}
                 <code className="font-mono">{editingItem.key}</code>
-                {editingItem.isElectron && (
+                {editingItem.isElectronStore && (
                   <div className="mt-2 text-sm text-blue-600 dark:text-blue-400">
                     💡 Electron store changes will automatically sync to
                     localStorage and cache
@@ -965,8 +969,8 @@ export function StorageDebugger() {
               <DialogTitle>Add New Storage Item</DialogTitle>
               <DialogDescription>
                 Add a new item to{" "}
-                {newItem.isElectron ? "Electron Store" : "localStorage"}
-                {newItem.isElectron && (
+                {newItem.isElectronStore ? "Electron Store" : "localStorage"}
+                {newItem.isElectronStore && (
                   <div className="mt-2 text-sm text-blue-600 dark:text-blue-400">
                     💡 Electron store items will automatically sync to
                     localStorage and cache

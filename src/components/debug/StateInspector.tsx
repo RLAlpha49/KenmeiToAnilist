@@ -285,10 +285,10 @@ export function StateInspector(): React.ReactElement {
                     isDirty: false,
                     error: null,
                   };
-                  const readOnly = !source.canEdit;
+                  const isReadOnly = !source.canEdit;
 
                   let statusBadge: React.ReactNode;
-                  if (readOnly) {
+                  if (isReadOnly) {
                     statusBadge = (
                       <Badge
                         variant="outline"
@@ -356,13 +356,13 @@ export function StateInspector(): React.ReactElement {
                           spellCheck={false}
                           className={cn(
                             "min-h-[220px] w-full resize-y whitespace-pre-wrap font-mono text-xs leading-relaxed",
-                            readOnly && "opacity-70",
+                            isReadOnly && "opacity-70",
                             editor.error &&
                               "border-red-400 focus-visible:ring-red-400",
                           )}
                           wrap="soft"
                           style={{ overflowWrap: "anywhere" }}
-                          readOnly={readOnly}
+                          readOnly={isReadOnly}
                         />
 
                         <div className="flex flex-wrap items-center gap-2">
@@ -392,7 +392,7 @@ export function StateInspector(): React.ReactElement {
                               onClick={() =>
                                 handleApply(source.id, source.label)
                               }
-                              disabled={readOnly || !editor.isDirty}
+                              disabled={isReadOnly || !editor.isDirty}
                             >
                               <Check className="mr-2 h-4 w-4" />
                               Apply changes
@@ -400,7 +400,7 @@ export function StateInspector(): React.ReactElement {
                           </div>
                         </div>
 
-                        {readOnly ? (
+                        {isReadOnly ? (
                           <div className="border-border/60 bg-muted/40 flex items-center gap-2 rounded-md border px-3 py-2 text-xs">
                             <ShieldAlert className="text-muted-foreground h-3.5 w-3.5" />
                             <span>

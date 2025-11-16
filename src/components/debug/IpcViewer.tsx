@@ -216,8 +216,8 @@ export function IpcViewer(): React.ReactElement {
   >(DEFAULT_DIRECTION_FILTER);
   const [clipboardFallbackOpen, setClipboardFallbackOpen] = useState(false);
   const [clipboardFallbackText, setClipboardFallbackText] = useState("");
-  const DEFAULT_WINDOW = 100;
-  const [visibleCount, setVisibleCount] = useState<number>(DEFAULT_WINDOW);
+  const DEFAULT_WINDOW_SIZE = 100;
+  const [visibleCount, setVisibleCount] = useState<number>(DEFAULT_WINDOW_SIZE);
 
   // Listen for custom events from PerformanceMonitor to set filter
   useEffect(() => {
@@ -227,7 +227,7 @@ export function IpcViewer(): React.ReactElement {
       if (detail?.channel) {
         // Set channel filter when custom event is triggered
         setChannelFilter(detail.channel);
-        setVisibleCount(DEFAULT_WINDOW);
+        setVisibleCount(DEFAULT_WINDOW_SIZE);
       }
     };
 
@@ -355,9 +355,9 @@ export function IpcViewer(): React.ReactElement {
     return reversedFiltered.slice(0, visibleCount);
   }, [reversedFiltered, visibleCount]);
 
-  const loadMore = () => setVisibleCount((v) => v + DEFAULT_WINDOW);
+  const loadMore = () => setVisibleCount((v) => v + DEFAULT_WINDOW_SIZE);
   const showAll = () => setVisibleCount(reversedFiltered.length || 0);
-  const resetWindow = () => setVisibleCount(DEFAULT_WINDOW);
+  const resetWindow = () => setVisibleCount(DEFAULT_WINDOW_SIZE);
 
   return (
     <div className="flex h-full flex-col gap-4">
@@ -472,7 +472,7 @@ export function IpcViewer(): React.ReactElement {
                       Show all
                     </Button>
                   )}
-                {visibleCount !== DEFAULT_WINDOW && (
+                {visibleCount !== DEFAULT_WINDOW_SIZE && (
                   <Button size="sm" variant="outline" onClick={resetWindow}>
                     Reset
                   </Button>

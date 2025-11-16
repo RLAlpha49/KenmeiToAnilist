@@ -31,10 +31,8 @@ export function calculateWordOrderSimilarity(
 
   // Calculate longest common subsequence (LCS) length
   // This gives us the longest sequence of words that appear in same order
-  const longestCommonSubsequenceLength = calculateLongestCommonSubsequenceLength(
-    primaryWords,
-    comparisonWords,
-  );
+  const longestCommonSubsequenceLength =
+    calculateLongestCommonSubsequenceLength(primaryWords, comparisonWords);
 
   // Calculate order preservation score
   // Higher LCS means better order preservation

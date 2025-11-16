@@ -33,7 +33,8 @@ export function processMangaDexResults(
         title: enhancedManga.sourceInfo.title,
         slug: enhancedManga.sourceInfo.slug,
         mangaDexId: enhancedManga.sourceInfo.sourceId,
-        isFoundViaMangaDex: enhancedManga.sourceInfo.isFoundViaAlternativeSearch,
+        isFoundViaMangaDex:
+          enhancedManga.sourceInfo.isFoundViaAlternativeSearch,
       });
     }
 

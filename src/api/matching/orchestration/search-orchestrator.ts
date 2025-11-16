@@ -71,7 +71,11 @@ async function applyWorkerScoring(
   kenmeiManga: KenmeiManga | undefined,
   searchConfig: SearchServiceConfig,
 ): Promise<AniListManga[]> {
-  if (!searchConfig.shouldUseWorkers || rankedResults.length === 0 || !kenmeiManga) {
+  if (
+    !searchConfig.shouldUseWorkers ||
+    rankedResults.length === 0 ||
+    !kenmeiManga
+  ) {
     return rankedResults;
   }
 
