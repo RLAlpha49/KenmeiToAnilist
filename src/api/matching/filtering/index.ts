@@ -10,7 +10,7 @@ export {
   shouldSkipManga,
 } from "./skip-rules";
 
-export { checkExactMatch } from "./exact-match-checker";
+export { isExactMatch } from "./exact-match-checker";
 
 export {
   shouldIncludeMangaExact,

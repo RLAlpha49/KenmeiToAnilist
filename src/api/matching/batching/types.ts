@@ -18,7 +18,7 @@ export type ComickSourceStorage = Record<
       title: string;
       slug: string;
       comickId: string;
-      foundViaComick: boolean;
+      isFoundViaComick: boolean;
     }
   >
 >;
@@ -35,7 +35,7 @@ export type MangaDexSourceStorage = Record<
       title: string;
       slug: string;
       mangaDexId: string;
-      foundViaMangaDex: boolean;
+      isFoundViaMangaDex: boolean;
     }
   >
 >;
@@ -83,7 +83,7 @@ export interface KnownMangaConfig {
   /** Search configuration. */
   searchConfig: SearchServiceConfig;
   /** AniList API token. */
-  token: string | undefined;
+  token?: string;
 }
 
 /**
@@ -92,9 +92,9 @@ export interface KnownMangaConfig {
  */
 export interface KnownMangaControl {
   /** Cancellation check function. */
-  shouldCancel: (() => boolean) | undefined;
+  shouldCancel?: () => boolean;
   /** Abort signal for early termination. */
-  abortSignal: AbortSignal | undefined;
+  abortSignal?: AbortSignal;
 }
 
 /**
@@ -116,7 +116,7 @@ export interface UncachedMangaData {
  */
 export interface UncachedMangaConfig {
   /** AniList API token. */
-  token: string | undefined;
+  token?: string;
   /** Search configuration. */
   searchConfig: SearchServiceConfig;
 }
@@ -127,7 +127,7 @@ export interface UncachedMangaConfig {
  */
 export interface UncachedMangaControl {
   /** Abort signal for early termination. */
-  abortSignal: AbortSignal | undefined;
+  abortSignal?: AbortSignal;
   /** Cancellation check function. */
   checkCancellation: () => void;
 }

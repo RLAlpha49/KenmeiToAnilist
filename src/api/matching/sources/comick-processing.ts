@@ -33,7 +33,7 @@ export function processComickResults(
         title: enhancedManga.sourceInfo.title,
         slug: enhancedManga.sourceInfo.slug,
         comickId: enhancedManga.sourceInfo.sourceId,
-        foundViaComick: enhancedManga.sourceInfo.foundViaAlternativeSearch,
+        isFoundViaComick: enhancedManga.sourceInfo.isFoundViaAlternativeSearch,
       });
     }
 
@@ -79,7 +79,7 @@ export function applyComickFiltering(
   const matchConfig = getMatchConfig();
   let filteredResults = comickResults;
 
-  if (matchConfig.ignoreOneShots) {
+  if (matchConfig.shouldIgnoreOneShots) {
     const beforeFilter = filteredResults.length;
     filteredResults = filteredResults.filter((manga) => !isOneShot(manga));
     const afterFilter = filteredResults.length;
@@ -91,7 +91,7 @@ export function applyComickFiltering(
     }
   }
 
-  if (matchConfig.ignoreAdultContent) {
+  if (matchConfig.shouldIgnoreAdultContent) {
     const beforeFilter = filteredResults.length;
     filteredResults = filteredResults.filter((manga) => !manga.isAdult);
     const afterFilter = filteredResults.length;

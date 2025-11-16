@@ -33,8 +33,8 @@ export interface SearchServiceConfig {
   enableComickSearch?: boolean;
   /** Enable searching via MangaDex source */
   enableMangaDexSearch?: boolean;
-  /** Enable Web Worker-based matching for improved performance on large batches. */
-  useWorkers?: boolean;
+  /** Should attempt Web Worker-based matching for large batches. */
+  shouldUseWorkers?: boolean;
 }
 
 /**
@@ -64,14 +64,14 @@ export interface MangaMatch {
     title: string;
     slug: string;
     comickId: string;
-    foundViaComick: boolean;
+    isFoundViaComick: boolean;
   };
   /** MangaDex source information if found via MangaDex */
   mangaDexSource?: {
     title: string;
     slug: string;
     mangaDexId: string;
-    foundViaMangaDex: boolean;
+    isFoundViaMangaDex: boolean;
   };
   /** Unified source information */
   sourceInfo?: {
@@ -79,7 +79,7 @@ export interface MangaMatch {
     title: string;
     slug: string;
     sourceId: string;
-    foundViaAlternativeSearch: boolean;
+    isFoundViaAlternativeSearch: boolean;
   };
 }
 
@@ -111,5 +111,5 @@ export const DEFAULT_SEARCH_CONFIG: SearchServiceConfig = {
   singlePageSearch: false,
   enableComickSearch: false,
   enableMangaDexSearch: false,
-  useWorkers: true,
+  shouldUseWorkers: true,
 };

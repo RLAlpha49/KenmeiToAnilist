@@ -446,19 +446,35 @@ export function flattenMatchResult(
     genresString = selectedMatchGenres.join("; ");
   }
 
+  const kenmeiRecord = kenmei as unknown as Record<string, unknown>;
+  const getKenmeiNumber = (camel: string, snake: string): number => {
+    const camelVal = kenmeiRecord[camel];
+    if (typeof camelVal === "number") return camelVal;
+    const snakeVal = kenmeiRecord[snake];
+    if (typeof snakeVal === "number") return snakeVal;
+    return 0;
+  };
+  const getKenmeiString = (camel: string, snake: string): string => {
+    const camelVal = kenmeiRecord[camel];
+    if (typeof camelVal === "string") return camelVal;
+    const snakeVal = kenmeiRecord[snake];
+    if (typeof snakeVal === "string") return snakeVal;
+    return "";
+  };
+
   return {
     // Kenmei data
     kenmeiId: Number(kenmei.id),
     kenmeiTitle: kenmei.title,
     kenmeiStatus: kenmei.status || "",
     kenmeiScore: kenmei.score ?? null,
-    chaptersRead: kenmei.chapters_read || 0,
-    volumesRead: kenmei.volumes_read || 0,
+    chaptersRead: getKenmeiNumber("chaptersRead", "chapters_read"),
+    volumesRead: getKenmeiNumber("volumesRead", "volumes_read"),
     author: "author" in kenmei ? (kenmei.author ?? "") : "",
     notes: kenmei.notes || "",
-    createdAt: kenmei.created_at || "",
-    updatedAt: kenmei.updated_at || "",
-    lastReadAt: kenmei.last_read_at || "",
+    createdAt: getKenmeiString("createdAt", "created_at"),
+    updatedAt: getKenmeiString("updatedAt", "updated_at"),
+    lastReadAt: getKenmeiString("lastReadAt", "last_read_at"),
 
     // Match data
     matchStatus: match.status,

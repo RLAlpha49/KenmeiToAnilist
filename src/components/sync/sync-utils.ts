@@ -11,19 +11,19 @@ import { SyncConfig } from "../../utils/storage";
 /**
  * Kenmei manga data structure for status calculation.
  * @property status - Reading status in Kenmei.
- * @property updated_at - Last update timestamp.
- * @property last_read_at - Last read timestamp (optional).
+ * @property updatedAt - Last update timestamp.
+ * @property lastReadAt - Last read timestamp (optional).
  * @property title - Manga title.
- * @property chapters_read - Number of chapters read (optional).
+ * @property chaptersRead - Number of chapters read (optional).
  * @property score - User rating (optional).
  * @source
  */
 export interface KenmeiMangaData {
   status: string;
-  updated_at: string;
-  last_read_at?: string;
+  updatedAt: string;
+  lastReadAt?: string;
   title: string;
-  chapters_read?: number;
+  chaptersRead?: number;
   score?: number;
 }
 
@@ -75,7 +75,7 @@ export function getEffectiveStatus(
   syncConfig: SyncConfig,
 ): MediaListStatus {
   // Check if manga should be auto-paused due to inactivity
-  const lastActivity = kenmei.last_read_at || kenmei.updated_at;
+  const lastActivity = kenmei.lastReadAt || kenmei.updatedAt;
   if (
     syncConfig.autoPauseInactive &&
     kenmei.status.toLowerCase() !== "completed" &&
@@ -158,7 +158,7 @@ export function calculateSyncChanges(
 
   const determineProgressWillChange = (): boolean => {
     if (!userEntry) return true;
-    const kenmeiProgress = kenmei.chapters_read || 0;
+    const kenmeiProgress = kenmei.chaptersRead || 0;
     const aniProgress = userEntry.progress || 0;
     if (syncConfig.prioritizeAniListProgress) {
       return kenmeiProgress > aniProgress; // only if Kenmei ahead

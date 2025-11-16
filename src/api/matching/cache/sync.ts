@@ -95,12 +95,12 @@ function processSearchCacheEntry(searchEntry: {
 
     // Also cache by English title if available for broader search coverage
     if (manga.title.english) {
-      const engKey = generateCacheKey(manga.title.english);
+      const englishKey = generateCacheKey(manga.title.english);
       if (
-        !mangaCache[engKey] ||
-        searchEntry.timestamp > mangaCache[engKey].timestamp
+        !mangaCache[englishKey] ||
+        searchEntry.timestamp > mangaCache[englishKey].timestamp
       ) {
-        mangaCache[engKey] = {
+        mangaCache[englishKey] = {
           manga: [manga],
           timestamp: searchEntry.timestamp,
         };

@@ -11,6 +11,33 @@ import type { SyncStats } from "@/types/sync";
 import type { ReadingHistory, ReadingHistoryEntry } from "./storage";
 import { getLocalDateString } from "./storage";
 
+// Local helpers to pick values supporting both camelCase and snake_case keys
+function pickStringFromRecord(
+  obj: Record<string, unknown>,
+  ...keys: string[]
+): string | undefined {
+  for (const key of keys) {
+    const v = obj[key];
+    if (typeof v === "string") return v;
+  }
+  return undefined;
+}
+
+function pickNumberFromRecord(
+  obj: Record<string, unknown>,
+  ...keys: string[]
+): number | undefined {
+  for (const key of keys) {
+    const v = obj[key];
+    if (typeof v === "number") return v;
+    if (typeof v === "string" && v.trim() !== "") {
+      const n = Number(v);
+      if (!Number.isNaN(n)) return n;
+    }
+  }
+  return undefined;
+}
+
 /**
  * Standardized date key format for statistics (yyyy-MM-dd).
  * All date keys in statistics use the local date string format to ensure consistency.
@@ -74,16 +101,15 @@ export function extractKenmeiManga(raw: unknown): KenmeiManga | null {
   return {
     id: obj.id,
     title: obj.title,
-    status: typeof obj.status === "string" ? obj.status : "",
-    score: typeof obj.score === "number" ? obj.score : 0,
-    chapters_read:
-      typeof obj.chapters_read === "number" ? obj.chapters_read : 0,
-    volumes_read: typeof obj.volumes_read === "number" ? obj.volumes_read : 0,
-    notes: typeof obj.notes === "string" ? obj.notes : "",
-    created_at: typeof obj.created_at === "string" ? obj.created_at : "",
-    updated_at: typeof obj.updated_at === "string" ? obj.updated_at : "",
-    last_read_at:
-      typeof obj.last_read_at === "string" ? obj.last_read_at : undefined,
+    status: pickStringFromRecord(obj, "status") ?? "",
+    score: pickNumberFromRecord(obj, "score") ?? 0,
+    chaptersRead:
+      pickNumberFromRecord(obj, "chaptersRead", "chapters_read") ?? 0,
+    volumesRead: pickNumberFromRecord(obj, "volumesRead", "volumes_read") ?? 0,
+    notes: pickStringFromRecord(obj, "notes") ?? "",
+    createdAt: pickStringFromRecord(obj, "createdAt", "created_at") ?? "",
+    updatedAt: pickStringFromRecord(obj, "updatedAt", "updated_at") ?? "",
+    lastReadAt: pickStringFromRecord(obj, "lastReadAt", "last_read_at"),
   };
 }
 

@@ -58,7 +58,7 @@ export async function executeMangaDexFallback(
     );
 
     const mangaDexResults = await mangaSourceRegistry.searchAndGetAniListManga(
-      MangaSource.MANGADEX,
+      MangaSource.MangaDex,
       title,
       token,
       mangaDexLimit,

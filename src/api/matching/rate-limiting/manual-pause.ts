@@ -12,13 +12,13 @@
  * Current manual pause state for matching requests.
  * @source
  */
-let _manualPauseActive = false;
+let manualPauseActive = false;
 
 /**
  * Queue of resolve functions waiting for pause to be lifted.
  * @source
  */
-let _pauseWaiters: Array<() => void> = [];
+let pauseWaiters: Array<() => void> = [];
 
 /**
  * Check if manual pause is currently active.
@@ -26,7 +26,7 @@ let _pauseWaiters: Array<() => void> = [];
  * @source
  */
 export function isManualPauseActive(): boolean {
-  return _manualPauseActive;
+  return manualPauseActive;
 }
 
 /**
@@ -35,8 +35,8 @@ export function isManualPauseActive(): boolean {
  */
 function resolvePauseWaiters(): void {
   // Capture current waiters before clearing to avoid issues if new waiters are added during resolution
-  const currentWaiters = _pauseWaiters;
-  _pauseWaiters = [];
+  const currentWaiters = pauseWaiters;
+  pauseWaiters = [];
   for (const resolve of currentWaiters) {
     resolve();
   }
@@ -48,8 +48,8 @@ function resolvePauseWaiters(): void {
  * @source
  */
 export async function waitWhileManuallyPaused(): Promise<void> {
-  while (_manualPauseActive) {
-    await new Promise<void>((resolve) => _pauseWaiters.push(resolve));
+  while (manualPauseActive) {
+    await new Promise<void>((resolve) => pauseWaiters.push(resolve));
   }
 }
 
@@ -61,9 +61,9 @@ export async function waitWhileManuallyPaused(): Promise<void> {
  */
 export function setManualMatchingPause(paused: boolean): void {
   if (paused) {
-    _manualPauseActive = true;
-  } else if (_manualPauseActive) {
-    _manualPauseActive = false;
+    manualPauseActive = true;
+  } else if (manualPauseActive) {
+    manualPauseActive = false;
     resolvePauseWaiters();
   }
 
@@ -87,5 +87,5 @@ export function setManualMatchingPause(paused: boolean): void {
  * @source
  */
 export function isManualMatchingPaused(): boolean {
-  return _manualPauseActive;
+  return manualPauseActive;
 }

@@ -33,28 +33,29 @@ export function formatTableRow<T extends { title: string; status: string }>(
 
   // Chapters
   let chaptersDisplayValue = "-";
-  if (
-    columnVisibility.chapters &&
-    (item as unknown as { chapters_read?: number }).chapters_read !== undefined
-  ) {
+  if (columnVisibility.chapters) {
     const c =
-      (item as unknown as { chapters_read?: number }).chapters_read ?? 0;
+      (item as unknown as { chaptersRead?: number }).chaptersRead ??
+      (item as unknown as { chapters_read?: number }).chapters_read ??
+      0;
     chaptersDisplayValue = c > 0 ? String(c) : "0";
   }
 
   // Volumes
   let volumesDisplayValue = "-";
-  if (
-    columnVisibility.volumes &&
-    (item as unknown as { volumes_read?: number }).volumes_read !== undefined
-  ) {
-    const v = (item as unknown as { volumes_read?: number }).volumes_read ?? 0;
+  if (columnVisibility.volumes) {
+    const v =
+      (item as unknown as { volumesRead?: number }).volumesRead ??
+      (item as unknown as { volumes_read?: number }).volumes_read ??
+      0;
     volumesDisplayValue = v > 0 ? String(v) : "0";
   }
 
   // Last read date
   const maybeLastRead =
-    (item as unknown as { last_read_at?: string }).last_read_at ||
+    (item as unknown as { lastReadAt?: string }).lastReadAt ??
+    (item as unknown as { last_read_at?: string }).last_read_at ??
+    (item as unknown as { updatedAt?: string }).updatedAt ??
     (item as unknown as { updated_at?: string }).updated_at;
 
   const lastReadDisplayValue =

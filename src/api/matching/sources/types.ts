@@ -10,7 +10,7 @@ export interface ComickSourceInfo {
   title: string;
   slug: string;
   comickId: string;
-  foundViaComick: boolean;
+  isFoundViaComick: boolean;
 }
 
 /** MangaDex source metadata for a manga entry. @source */
@@ -18,7 +18,7 @@ export interface MangaDexSourceInfo {
   title: string;
   slug: string;
   mangaDexId: string;
-  foundViaMangaDex: boolean;
+  isFoundViaMangaDex: boolean;
 }
 
 /** Comick source information keyed by manga ID. @source */
@@ -33,5 +33,5 @@ export interface GenericSourceInfo {
   slug: string;
   sourceId: string;
   source: "comick" | "mangadex";
-  foundViaAlternativeSearch: boolean;
+  isFoundViaAlternativeSearch: boolean;
 }

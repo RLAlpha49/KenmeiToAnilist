@@ -25,7 +25,7 @@ import { cn } from "@/utils/tailwind";
  */
 type MinimalMatchResult = {
   readonly kenmeiManga: {
-    readonly chapters_read: number;
+    readonly chaptersRead: number;
   };
 };
 
@@ -165,7 +165,7 @@ function buildHistogram(matchResults?: Array<MinimalMatchResult> | null): {
   const values: number[] = [];
 
   for (const result of matchResults) {
-    const chapters = result.kenmeiManga?.chapters_read;
+    const chapters = result.kenmeiManga?.chaptersRead;
     if (
       typeof chapters !== "number" ||
       Number.isNaN(chapters) ||

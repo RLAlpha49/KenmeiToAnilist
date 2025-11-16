@@ -58,7 +58,7 @@ export async function executeComickFallback(
     );
 
     const comickResults = await mangaSourceRegistry.searchAndGetAniListManga(
-      MangaSource.COMICK,
+      MangaSource.Comick,
       title,
       token,
       comickLimit,

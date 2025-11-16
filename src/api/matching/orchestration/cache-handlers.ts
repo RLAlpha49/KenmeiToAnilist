@@ -79,25 +79,25 @@ export function processCachedResults(
   if (!isCacheValid(cacheKey)) return null;
 
   console.debug(`[MangaSearchService] Using cache for ${title}`);
-  let filteredManga = mangaCache[cacheKey].manga.filter(
+  let filteredResults = mangaCache[cacheKey].manga.filter(
     (manga) => manga.format !== "NOVEL" && manga.format !== "LIGHT_NOVEL",
   );
 
   const matchConfig = getMatchConfig();
 
   // Apply system content filters (one-shots, adult content, custom skip rules)
-  filteredManga = applySystemContentFilters(
-    filteredManga,
+  filteredResults = applySystemContentFilters(
+    filteredResults,
     matchConfig,
     kenmeiManga,
     title,
   );
 
   console.debug(
-    `[MangaSearchService] ⚖️ Calculating fresh confidence scores for ${filteredManga.length} cached matches`,
+    `[MangaSearchService] ⚖️ Calculating fresh confidence scores for ${filteredResults.length} cached matches`,
   );
 
-  const matches = filteredManga.map((manga) => {
+  const matches = filteredResults.map((manga) => {
     let confidence = calculateConfidence(title, manga);
     const titleTypePriority = calculateTitleTypePriority(manga, title);
 

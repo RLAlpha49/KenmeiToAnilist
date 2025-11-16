@@ -1278,13 +1278,13 @@ export function useSynchronization(): [
       for (const match of matchResults) {
         // Only record for matched/manual entries with chapter progress
         if (!["matched", "manual"].includes(match.status ?? "")) continue;
-        if (!match.kenmeiManga?.chapters_read) continue;
-        if (match.kenmeiManga.chapters_read <= 0) continue;
+        if (!match.kenmeiManga?.chaptersRead) continue;
+        if (match.kenmeiManga.chaptersRead <= 0) continue;
 
         // Prefer reading time from kenmeiManga.last_read_at if available
         let timestamp = now;
-        if (match.kenmeiManga.last_read_at) {
-          const readTime = new Date(match.kenmeiManga.last_read_at).getTime();
+        if (match.kenmeiManga.lastReadAt) {
+          const readTime = new Date(match.kenmeiManga.lastReadAt).getTime();
           if (!Number.isNaN(readTime)) {
             timestamp = readTime;
           }
@@ -1294,7 +1294,7 @@ export function useSynchronization(): [
           timestamp,
           mangaId: match.kenmeiManga.id,
           title: match.kenmeiManga.title,
-          chaptersRead: match.kenmeiManga.chapters_read,
+          chaptersRead: match.kenmeiManga.chaptersRead,
           status: match.kenmeiManga.status || "unknown",
           anilistId: match.selectedMatch?.id,
         });

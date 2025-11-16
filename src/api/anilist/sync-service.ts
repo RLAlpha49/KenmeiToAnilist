@@ -27,41 +27,42 @@ type GraphQLVariables = Record<string, string | number | boolean>;
 
 /**
  * Builds GraphQL variables for updating an existing entry, including only changed fields.
- * @param entry - The entry with previousValues indicating what changed.
+ * @param mediaEntry - The entry with previousValues indicating what changed.
  * @returns GraphQL variables object with mediaId and changed fields.
  * @source
  */
 function buildVariablesForExistingEntry(
-  entry: AniListMediaEntry,
+  mediaEntry: AniListMediaEntry,
 ): GraphQLVariables {
   const variables: GraphQLVariables = {
-    mediaId: entry.mediaId,
+    mediaId: mediaEntry.mediaId,
   };
 
-  if (!entry.previousValues) {
+  if (!mediaEntry.previousValues) {
     // previousValues missing: fall back to new entry behavior
     console.warn(
-      `[AniListSync] ⚠️ buildVariablesForExistingEntry: previousValues missing for media ${entry.mediaId}, falling back to new-entry variable build`,
+      `[AniListSync] ⚠️ buildVariablesForExistingEntry: previousValues missing for media ${mediaEntry.mediaId}, falling back to new-entry variable build`,
     );
-    return buildVariablesForNewEntry(entry);
+    return buildVariablesForNewEntry(mediaEntry);
   }
 
   // Only include fields that have changed
-  if (entry.status !== entry.previousValues.status)
-    variables.status = entry.status;
+  if (mediaEntry.status !== mediaEntry.previousValues.status)
+    variables.status = mediaEntry.status;
 
-  if (entry.progress !== entry.previousValues.progress)
-    variables.progress = entry.progress;
+  if (mediaEntry.progress !== mediaEntry.previousValues.progress)
+    variables.progress = mediaEntry.progress;
 
-  if (entry.score !== entry.previousValues.score)
-    variables.score = typeof entry.score === "number" ? entry.score : 0;
+  if (mediaEntry.score !== mediaEntry.previousValues.score)
+    variables.score =
+      typeof mediaEntry.score === "number" ? mediaEntry.score : 0;
 
   // Only include private flag if it's explicitly set or has changed
   if (
-    typeof entry.private === "boolean" &&
-    entry.previousValues.private !== entry.private
+    typeof mediaEntry.private === "boolean" &&
+    mediaEntry.previousValues.private !== mediaEntry.private
   ) {
-    variables.private = entry.private;
+    variables.private = mediaEntry.private;
   }
 
   return variables;
@@ -69,39 +70,41 @@ function buildVariablesForExistingEntry(
 
 /**
  * Builds GraphQL variables for creating a new entry with all specified fields.
- * @param entry - The new entry with complete data.
+ * @param mediaEntry - The new entry with complete data.
  * @returns GraphQL variables object with mediaId, status, and optional fields.
  * @source
  */
-function buildVariablesForNewEntry(entry: AniListMediaEntry): GraphQLVariables {
+function buildVariablesForNewEntry(
+  mediaEntry: AniListMediaEntry,
+): GraphQLVariables {
   const variables: GraphQLVariables = {
-    mediaId: entry.mediaId,
-    status: entry.status,
+    mediaId: mediaEntry.mediaId,
+    status: mediaEntry.status,
   };
 
-  if (typeof entry.progress === "number" && entry.progress >= 0)
-    variables.progress = entry.progress;
+  if (typeof mediaEntry.progress === "number" && mediaEntry.progress >= 0)
+    variables.progress = mediaEntry.progress;
 
-  if (typeof entry.score === "number" && entry.score >= 0)
-    variables.score = entry.score;
+  if (typeof mediaEntry.score === "number" && mediaEntry.score >= 0)
+    variables.score = mediaEntry.score;
 
-  if (entry.private !== undefined) variables.private = entry.private;
+  if (mediaEntry.private !== undefined) variables.private = mediaEntry.private;
 
   return variables;
 }
 
 /**
  * Handles incremental sync step 1: increments progress by 1 from current value.
- * @param entry - The entry being synced.
+ * @param mediaEntry - The entry being synced.
  * @param operationId - Unique operation identifier for logging.
  * @returns GraphQL variables with incremented progress.
  * @source
  */
 function handleIncrementalStep1(
-  entry: AniListMediaEntry,
+  mediaEntry: AniListMediaEntry,
   operationId: string,
 ): GraphQLVariables {
-  const variables = buildVariablesForStep(entry, 1);
+  const variables = buildVariablesForStep(mediaEntry, 1);
   console.debug(
     `[AniListSync] 📊 [${operationId}] Incremental sync step 1: variables=${JSON.stringify(
       variables,
@@ -112,16 +115,16 @@ function handleIncrementalStep1(
 
 /**
  * Handles incremental sync step 2: sets progress to final target value.
- * @param entry - The entry being synced.
+ * @param mediaEntry - The entry being synced.
  * @param operationId - Unique operation identifier for logging.
  * @returns GraphQL variables with target progress value.
  * @source
  */
 function handleIncrementalStep2(
-  entry: AniListMediaEntry,
+  mediaEntry: AniListMediaEntry,
   operationId: string,
 ): GraphQLVariables {
-  const variables = buildVariablesForStep(entry, 2);
+  const variables = buildVariablesForStep(mediaEntry, 2);
   console.debug(
     `[AniListSync] 📊 [${operationId}] Incremental sync step 2: variables=${JSON.stringify(
       variables,
@@ -132,16 +135,16 @@ function handleIncrementalStep2(
 
 /**
  * Handles incremental sync step 3: updates status, score, and private flag.
- * @param entry - The entry being synced.
+ * @param mediaEntry - The entry being synced.
  * @param operationId - Unique operation identifier for logging.
  * @returns GraphQL variables with metadata changes.
  * @source
  */
 function handleIncrementalStep3(
-  entry: AniListMediaEntry,
+  mediaEntry: AniListMediaEntry,
   operationId: string,
 ): GraphQLVariables {
-  const variables = buildVariablesForStep(entry, 3);
+  const variables = buildVariablesForStep(mediaEntry, 3);
   const changes: string[] = [];
   if (variables.status) changes.push(`status to ${variables.status}`);
   if (variables.score !== undefined)
@@ -161,27 +164,27 @@ function handleIncrementalStep3(
 /**
  * Applies incremental sync step modifications to GraphQL variables.
  * Modifies variables based on the current step number in syncMetadata.
- * @param entry - The entry with syncMetadata.step indicating which step to apply.
+ * @param mediaEntry - The entry with syncMetadata.step indicating which step to apply.
  * @param variables - Base GraphQL variables to potentially modify.
  * @param operationId - Unique operation identifier for logging.
  * @returns Modified GraphQL variables appropriate for the current step.
  * @source
  */
 function applyIncrementalSyncStep(
-  entry: AniListMediaEntry,
+  mediaEntry: AniListMediaEntry,
   variables: GraphQLVariables,
   operationId: string,
 ): GraphQLVariables {
-  const step = entry.syncMetadata?.step;
+  const step = mediaEntry.syncMetadata?.step;
   if (!step) return variables;
 
   switch (step) {
     case 1:
-      return handleIncrementalStep1(entry, operationId);
+      return handleIncrementalStep1(mediaEntry, operationId);
     case 2:
-      return handleIncrementalStep2(entry, operationId);
+      return handleIncrementalStep2(mediaEntry, operationId);
     case 3:
-      return handleIncrementalStep3(entry, operationId);
+      return handleIncrementalStep3(mediaEntry, operationId);
     default:
       return variables;
   }
@@ -417,17 +420,17 @@ function inferRecoveryMetadata(errorMessage: string): {
  * Logs detailed error information including type, message, and stack trace.
  * Used for debugging failed update operations.
  * @param error - The error object to log.
- * @param entry - The entry that failed.
+ * @param mediaEntry - The entry that failed.
  * @param operationId - Unique operation identifier for tracking.
  * @source
  */
 function logErrorDetails(
   error: unknown,
-  entry: AniListMediaEntry,
+  mediaEntry: AniListMediaEntry,
   operationId: string,
 ): void {
   console.error(
-    `[AniListSync] ❌ [${operationId}] Error updating entry ${entry.mediaId}:`,
+    `[AniListSync] ❌ [${operationId}] Error updating entry ${mediaEntry.mediaId}:`,
     error,
   );
 
@@ -450,11 +453,11 @@ function logErrorDetails(
   }
 
   console.error(`[AniListSync]    [${operationId}] Entry details:`, {
-    mediaId: entry.mediaId,
-    title: entry.title,
-    status: entry.status,
-    progress: entry.progress,
-    score: entry.score,
+    mediaId: mediaEntry.mediaId,
+    title: mediaEntry.title,
+    status: mediaEntry.status,
+    progress: mediaEntry.progress,
+    score: mediaEntry.score,
   });
 }
 
@@ -462,20 +465,20 @@ function logErrorDetails(
  * Processes exception errors during entry update and returns appropriate SyncResult.
  * Detects 500 server errors for automatic retry handling.
  * @param error - The caught exception.
- * @param entry - The entry that failed to update.
+ * @param mediaEntry - The entry that failed to update.
  * @param operationId - Unique operation identifier for logging.
  * @returns SyncResult with error details and retry guidance.
  * @source
  */
 function handleUpdateError(
   error: unknown,
-  entry: AniListMediaEntry,
+  mediaEntry: AniListMediaEntry,
   operationId: string,
 ): SyncResult {
   const errorMessage =
     error instanceof Error ? `${error.name}: ${error.message}` : String(error);
 
-  logErrorDetails(error, entry, operationId);
+  logErrorDetails(error, mediaEntry, operationId);
 
   if (is500ServerError(error, errorMessage)) {
     console.warn(
@@ -485,7 +488,7 @@ function handleUpdateError(
     const retryDelay = 3000;
     return {
       success: false,
-      mediaId: entry.mediaId,
+      mediaId: mediaEntry.mediaId,
       error: `Server Error (500): ${errorMessage}. Automatic retry scheduled.`,
       rateLimited: true,
       retryAfter: retryDelay,
@@ -494,7 +497,7 @@ function handleUpdateError(
 
   return {
     success: false,
-    mediaId: entry.mediaId,
+    mediaId: mediaEntry.mediaId,
     error: errorMessage,
     rateLimited: false,
     retryAfter: null,
@@ -597,20 +600,20 @@ export interface SyncReport {
 /**
  * Update a single manga entry in AniList.
  *
- * @param entry - The AniList media entry to update.
+ * @param mediaEntry - The AniList media entry to update.
  * @param token - The user's authentication token.
  * @returns A promise resolving to a SyncResult object.
  * @source
  */
 export async function updateMangaEntry(
-  entry: AniListMediaEntry,
+  mediaEntry: AniListMediaEntry,
   token: string,
 ): Promise<SyncResult> {
   // Generate an operation ID for tracking in logs early
-  const operationId = `${entry.mediaId}-${Date.now().toString(36).substring(4, 10)}`;
+  const operationId = `${mediaEntry.mediaId}-${Date.now().toString(36).substring(4, 10)}`;
 
   return withGroupAsync(
-    `[AniListSync] Update Entry [${operationId}] - Media ${entry.mediaId}`,
+    `[AniListSync] Update Entry [${operationId}] - Media ${mediaEntry.mediaId}`,
     async () => {
       if (!token) {
         console.error(
@@ -618,7 +621,7 @@ export async function updateMangaEntry(
         );
         return {
           success: false,
-          mediaId: entry.mediaId,
+          mediaId: mediaEntry.mediaId,
           error: "No authentication token provided",
           rateLimited: false,
           retryAfter: null,
@@ -627,12 +630,16 @@ export async function updateMangaEntry(
 
       try {
         // Build variables based on entry type (existing vs new)
-        let variables = entry.previousValues
-          ? buildVariablesForExistingEntry(entry)
-          : buildVariablesForNewEntry(entry);
+        let variables = mediaEntry.previousValues
+          ? buildVariablesForExistingEntry(mediaEntry)
+          : buildVariablesForNewEntry(mediaEntry);
 
         // Apply incremental sync modifications if needed
-        variables = applyIncrementalSyncStep(entry, variables, operationId);
+        variables = applyIncrementalSyncStep(
+          mediaEntry,
+          variables,
+          operationId,
+        );
 
         // Generate a dynamic mutation with only the needed variables
         const mutation = generateUpdateMangaEntryMutation(variables);
@@ -668,16 +675,16 @@ export async function updateMangaEntry(
         if (response.errors && response.errors.length > 0) {
           return handleGraphQLErrors(
             response.errors,
-            entry.mediaId,
+            mediaEntry.mediaId,
             operationId,
           );
         }
 
         // Handle response data
-        return handleResponseData(response, entry.mediaId, operationId);
+        return handleResponseData(response, mediaEntry.mediaId, operationId);
       } catch (error) {
         // Handle exception errors
-        return handleUpdateError(error, entry, operationId);
+        return handleUpdateError(error, mediaEntry, operationId);
       }
     },
   );
@@ -805,13 +812,13 @@ export async function deleteMangaEntry(
 
 /**
  * Determines the complete set of incremental steps for an entry, considering resume points.
- * @param entry - The entry with syncMetadata and optional resumeFromStep.
+ * @param mediaEntry - The entry with syncMetadata and optional resumeFromStep.
  * @returns Array of step numbers to execute, filtered by resumeFromStep if present.
  * @source
  */
-function getIncrementalSteps(entry: AniListMediaEntry): number[] {
-  const steps = determineIncrementalSteps(entry);
-  const resumeFromStep = entry.syncMetadata?.resumeFromStep;
+function getIncrementalSteps(mediaEntry: AniListMediaEntry): number[] {
+  const steps = determineIncrementalSteps(mediaEntry);
+  const resumeFromStep = mediaEntry.syncMetadata?.resumeFromStep;
   return resumeFromStep
     ? steps.filter((step) => step >= resumeFromStep)
     : steps;
@@ -895,43 +902,44 @@ async function handleRateLimitRetry(
 function organizeEntriesByMediaId(
   entries: AniListMediaEntry[],
 ): Record<number, AniListMediaEntry[]> {
-  const entriesByMediaId: Record<number, AniListMediaEntry[]> = {};
+  const entriesGroupedByMediaId: Record<number, AniListMediaEntry[]> = {};
 
-  for (const entry of entries) {
-    if (!entriesByMediaId[entry.mediaId]) entriesByMediaId[entry.mediaId] = [];
+  for (const mediaEntry of entries) {
+    if (!entriesGroupedByMediaId[mediaEntry.mediaId])
+      entriesGroupedByMediaId[mediaEntry.mediaId] = [];
 
-    if (entry.syncMetadata?.useIncrementalSync) {
-      const steps = getIncrementalSteps(entry);
+    if (mediaEntry.syncMetadata?.useIncrementalSync) {
+      const steps = getIncrementalSteps(mediaEntry);
       for (const step of steps) {
-        const stepEntry = { ...entry };
+        const stepEntry = { ...mediaEntry };
         stepEntry.syncMetadata = {
-          ...entry.syncMetadata,
+          ...mediaEntry.syncMetadata,
           step: step,
         };
-        entriesByMediaId[entry.mediaId].push(stepEntry);
+        entriesGroupedByMediaId[mediaEntry.mediaId].push(stepEntry);
       }
     } else {
-      entriesByMediaId[entry.mediaId].push(entry);
+      entriesGroupedByMediaId[mediaEntry.mediaId].push(mediaEntry);
     }
   }
 
-  return entriesByMediaId;
+  return entriesGroupedByMediaId;
 }
 
 /**
  * Determines the order of media IDs to process, respecting user-specified order if provided.
  * @param displayOrderMediaIds - Optional user-specified processing order.
- * @param entriesByMediaId - Organized entries by media ID.
+ * @param entriesGroupedByMediaId - Organized entries by media ID.
  * @returns Array of media IDs in processing order.
  * @source
  */
 function determineProcessingOrder(
   displayOrderMediaIds: number[] | undefined,
-  entriesByMediaId: Record<number, AniListMediaEntry[]>,
+  entriesGroupedByMediaId: Record<number, AniListMediaEntry[]>,
 ): number[] {
   return displayOrderMediaIds && displayOrderMediaIds.length > 0
     ? displayOrderMediaIds
-    : Object.keys(entriesByMediaId).map(Number);
+    : Object.keys(entriesGroupedByMediaId).map(Number);
 }
 
 /**
@@ -986,7 +994,7 @@ interface EntryProcessingContext {
 /**
  * Processes a single entry step with rate limiting, error handling, and progress tracking.
  * Handles retries automatically if rate-limited and logs detailed errors.
- * @param entry - Current entry to process.
+ * @param mediaEntry - Current entry to process.
  * @param entryIndex - Index in the entries array.
  * @param isIncremental - Whether this is incremental sync (affects error handling).
  * @param context - Processing context with shared state and callbacks.
@@ -994,14 +1002,15 @@ interface EntryProcessingContext {
  * @source
  */
 async function processEntryStep(
-  entry: AniListMediaEntry,
+  mediaEntry: AniListMediaEntry,
   entryIndex: number,
   isIncremental: boolean,
   context: EntryProcessingContext,
 ): Promise<{ success: boolean; error?: string; shouldRetry: boolean }> {
   // Update progress step
   if (isIncremental)
-    context.progress.currentStep = entry.syncMetadata?.step || entryIndex + 1;
+    context.progress.currentStep =
+      mediaEntry.syncMetadata?.step || entryIndex + 1;
 
   if (context.onProgress) {
     console.debug(
@@ -1015,7 +1024,7 @@ async function processEntryStep(
     if (context.apiCallsCompleted.count > 0)
       await new Promise((resolve) => setTimeout(resolve, REQUEST_INTERVAL));
 
-    const result = await updateMangaEntry(entry, context.token);
+    const result = await updateMangaEntry(mediaEntry, context.token);
     context.apiCallsCompleted.count++;
 
     // Handle rate limiting
@@ -1041,20 +1050,20 @@ async function processEntryStep(
   } catch (error) {
     context.apiCallsCompleted.count++;
     const entryError = error instanceof Error ? error.message : String(error);
-    const errorOpId = `err-${context.mediaIdStr}-${entry.syncMetadata?.step || 0}-${Date.now().toString(36).substring(4, 10)}`;
+    const errorOpId = `err-${context.mediaIdStr}-${mediaEntry.syncMetadata?.step || 0}-${Date.now().toString(36).substring(4, 10)}`;
 
     console.error(
       `[AniListSync] ❌ [${errorOpId}] Error updating entry ${context.mediaIdStr}:`,
       error,
     );
     console.error(`[AniListSync]    [${errorOpId}] Entry details:`, {
-      mediaId: entry.mediaId,
-      title: entry.title,
-      status: entry.status,
-      progress: entry.progress,
-      score: entry.score,
+      mediaId: mediaEntry.mediaId,
+      title: mediaEntry.title,
+      status: mediaEntry.status,
+      progress: mediaEntry.progress,
+      score: mediaEntry.score,
       incremental: isIncremental,
-      step: entry.syncMetadata?.step || "N/A",
+      step: mediaEntry.syncMetadata?.step || "N/A",
     });
 
     return {
@@ -1068,7 +1077,7 @@ async function processEntryStep(
 /**
  * Processes all entries for a single media ID, handling incremental sync and retries.
  * @param mediaId - Media ID to process.
- * @param entriesByMediaId - All organized entries by media ID.
+ * @param entriesGroupedByMediaId - All organized entries by media ID.
  * @param token - User's access token.
  * @param apiCallsCompleted - Reference object tracking total API calls.
  * @param progress - Current sync progress to update.
@@ -1079,7 +1088,7 @@ async function processEntryStep(
  */
 async function processMediaEntries(
   mediaId: number,
-  entriesByMediaId: Record<number, AniListMediaEntry[]>,
+  entriesGroupedByMediaId: Record<number, AniListMediaEntry[]>,
   token: string,
   apiCallsCompleted: { count: number },
   progress: SyncProgress,
@@ -1089,7 +1098,7 @@ async function processMediaEntries(
   return withGroupAsync(
     `[AniListSync] Process Media ${mediaId} (${progress.completed + 1}/${progress.total})`,
     async () => {
-      const entriesForMediaId = entriesByMediaId[mediaId];
+      const entriesForMediaId = entriesGroupedByMediaId[mediaId];
       const mediaIdStr = String(mediaId);
 
       if (!entriesForMediaId) return { success: true }; // Skip if not present
@@ -1127,7 +1136,7 @@ async function processMediaEntries(
           break;
         }
 
-        const entry = entriesForMediaId[entryIndex];
+        const mediaEntry = entriesForMediaId[entryIndex];
         const context: EntryProcessingContext = {
           token,
           apiCallsCompleted,
@@ -1139,7 +1148,7 @@ async function processMediaEntries(
         };
 
         const result = await processEntryStep(
-          entry,
+          mediaEntry,
           entryIndex,
           isIncremental,
           context,
@@ -1223,7 +1232,7 @@ function generateSyncReport(
 async function processMediaIdInBatch(
   mediaId: number,
   context: {
-    entriesByMediaId: Record<number, AniListMediaEntry[]>;
+    entriesGroupedByMediaId: Record<number, AniListMediaEntry[]>;
     token: string;
     apiCallsCompleted: { count: number };
     progress: SyncProgress;
@@ -1236,7 +1245,7 @@ async function processMediaIdInBatch(
     errors?: { mediaId: number; error: string }[];
   },
 ): Promise<void> {
-  const mediaEntries = context.entriesByMediaId[mediaId];
+  const mediaEntries = context.entriesGroupedByMediaId[mediaId];
 
   if (!mediaEntries || mediaEntries.length === 0) {
     console.debug(
@@ -1252,7 +1261,7 @@ async function processMediaIdInBatch(
 
   const result = await processMediaEntries(
     mediaId,
-    context.entriesByMediaId,
+    context.entriesGroupedByMediaId,
     context.token,
     context.apiCallsCompleted,
     context.progress,
@@ -1314,7 +1323,7 @@ async function processMediaIdInBatch(
  * @source
  */
 export async function syncMangaBatch(
-  entries: AniListMediaEntry[],
+  mediaEntries: AniListMediaEntry[],
   token: string,
   onProgress?: (progress: SyncProgress) => void,
   abortSignal?: AbortSignal,
@@ -1325,13 +1334,13 @@ export async function syncMangaBatch(
   ) => void,
 ): Promise<SyncReport> {
   return withGroupAsync(
-    `[AniListSync] Batch Sync (${entries.length} entries)`,
+    `[AniListSync] Batch Sync (${mediaEntries.length} entries)`,
     async () => {
       const errors: { mediaId: number; error: string }[] = [];
 
       // Initialize progress
       const initialProgress: SyncProgress = {
-        total: entries.length,
+        total: mediaEntries.length,
         completed: 0,
         successful: 0,
         failed: 0,
@@ -1351,7 +1360,7 @@ export async function syncMangaBatch(
 
       try {
         await pool.executeBatchSyncPreprocessing(
-          entries,
+          mediaEntries,
           (
             phase: string,
             processed: number,
@@ -1365,12 +1374,14 @@ export async function syncMangaBatch(
               total: total,
             };
             if (currentMediaId) {
-              const entry = entries.find((e) => e.mediaId === currentMediaId);
-              if (entry) {
+              const mediaEntry = mediaEntries.find(
+                (e) => e.mediaId === currentMediaId,
+              );
+              if (mediaEntry) {
                 progress.currentEntry = {
                   mediaId: currentMediaId,
-                  title: entry.title || "Unknown",
-                  coverImage: entry.coverImage || "",
+                  title: mediaEntry.title || "Unknown",
+                  coverImage: mediaEntry.coverImage || "",
                 };
               }
             }
@@ -1386,12 +1397,12 @@ export async function syncMangaBatch(
       }
 
       // Organize entries by media ID for handling incremental sync properly
-      const entriesByMediaId = organizeEntriesByMediaId(entries);
+      const entriesGroupedByMediaId = organizeEntriesByMediaId(mediaEntries);
 
       // Determine processing order and unique entry count
       const userOrderMediaIds = determineProcessingOrder(
         displayOrderMediaIds,
-        entriesByMediaId,
+        entriesGroupedByMediaId,
       );
       const uniqueEntryCount = userOrderMediaIds.length;
 
@@ -1416,7 +1427,7 @@ export async function syncMangaBatch(
       // Process each media ID in order
       for (const mediaId of userOrderMediaIds) {
         await processMediaIdInBatch(mediaId, {
-          entriesByMediaId,
+          entriesGroupedByMediaId,
           token,
           apiCallsCompleted,
           progress,
@@ -1430,7 +1441,7 @@ export async function syncMangaBatch(
         if (abortSignal?.aborted) break;
       }
 
-      return generateSyncReport(entries, progress, errors);
+      return generateSyncReport(mediaEntries, progress, errors);
     },
   );
 }
@@ -1459,8 +1470,8 @@ export async function retryFailedUpdates(
   ) => void,
 ): Promise<SyncReport> {
   // Filter entries to only include previously failed ones
-  const entriesToRetry = entries.filter((entry) =>
-    failedMediaIds.includes(entry.mediaId),
+  const entriesToRetry = entries.filter((mediaEntry) =>
+    failedMediaIds.includes(mediaEntry.mediaId),
   );
 
   console.info(
@@ -1468,21 +1479,21 @@ export async function retryFailedUpdates(
   );
 
   // Add retry metadata to each entry
-  for (const entry of entriesToRetry) {
+  for (const mediaEntry of entriesToRetry) {
     // Initialize the syncMetadata if it doesn't exist
-    if (entry.syncMetadata) {
+    if (mediaEntry.syncMetadata) {
       // Update existing syncMetadata
-      entry.syncMetadata = {
-        ...entry.syncMetadata,
+      mediaEntry.syncMetadata = {
+        ...mediaEntry.syncMetadata,
         isRetry: true,
         retryTimestamp: Date.now(),
-        retryCount: (entry.syncMetadata.retryCount || 0) + 1,
+        retryCount: (mediaEntry.syncMetadata.retryCount || 0) + 1,
       };
     } else {
-      entry.syncMetadata = {
+      mediaEntry.syncMetadata = {
         useIncrementalSync: false,
-        targetProgress: entry.progress,
-        progress: entry.progress,
+        targetProgress: mediaEntry.progress,
+        progress: mediaEntry.progress,
         isRetry: true,
         retryTimestamp: Date.now(),
         retryCount: 1,

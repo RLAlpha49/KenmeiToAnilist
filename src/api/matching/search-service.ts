@@ -204,16 +204,16 @@ async function processMangaWithRateLimit(
  * @param kenmeiManga - Manga to match
  * @param potentialMatches - Array of potential AniList matches
  * @param config - Match engine configuration
- * @param useWorkers - Whether to attempt worker usage
+ * @param shouldUseWorkers - Whether we should attempt worker execution
  * @returns Promise resolving to match result, or null if workers unavailable
  */
 async function tryMatchWithWorkers(
   kenmeiManga: KenmeiManga,
   potentialMatches: MangaMatch[],
   config: Partial<SearchServiceConfig>,
-  useWorkers = true,
+  shouldUseWorkers = true,
 ): Promise<MangaMatchResult | null> {
-  if (!useWorkers) return null;
+  if (!shouldUseWorkers) return null;
 
   try {
     const { executeMatchingWithWorkers } = await import("@/workers");
@@ -337,7 +337,7 @@ export async function matchSingleManga(
     kenmeiManga,
     potentialMatches,
     searchConfig,
-    searchConfig.useWorkers,
+    searchConfig.shouldUseWorkers,
   );
 
   if (workerResult) {
@@ -468,7 +468,7 @@ export async function batchMatchManga(
           cachedMangaDexSources,
           checkCancellation,
           updateProgress,
-          searchConfig.useWorkers,
+          searchConfig.shouldUseWorkers,
         );
 
         console.info(

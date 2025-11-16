@@ -73,12 +73,15 @@ function calculateAdaptiveBatchDelay(requestCount: number): number {
 type BatchItem = UncachedMangaData["uncachedManga"][number];
 
 /**
- * Generate GraphQL alias for manga index in batch query.
+ * Generate GraphQL alias for a given manga index in a batch query.
+ * Uses explicit naming to make intent clear across the codebase.
  * @param index - Manga position in batch.
  * @returns Alias string formatted as `manga_{index}`.
  * @source
  */
-const toAlias = (index: number) => `manga_${index}`;
+function generateMangaAlias(index: number): string {
+  return `manga_${index}`;
+}
 
 /**
  * Validates operation is not aborted or cancelled, throws if it is.
@@ -288,7 +291,7 @@ async function processBatch(
       try {
         const batchResults = await batchSearchManga(
           batch.map(({ manga, index }) => ({
-            alias: toAlias(index),
+            alias: generateMangaAlias(index),
             title: manga.title,
             index,
           })),
@@ -304,7 +307,7 @@ async function processBatch(
         for (const { manga, index } of batch) {
           ensureNotCancelled(abortSignal, checkCancellation);
 
-          const alias = toAlias(index);
+          const alias = generateMangaAlias(index);
           const result = batchResults.get(alias);
 
           if (result?.media?.length) {
@@ -376,7 +379,7 @@ async function processBatch(
 /**
  * Process uncached manga using batched GraphQL queries with fallback searches.
  *
- * Divides uncached manga into batches (15 per batch) respecting AniList's 30 req/min official limit.
+ * Divides uncached manga into batches (per batch size controlled by BATCH_SIZE) respecting AniList's rate limits.
  * Performs batched GraphQL queries and fallback searches on Comick/MangaDex for misses.
  * Supports early termination, abort signals, and cancellation checks.
  *

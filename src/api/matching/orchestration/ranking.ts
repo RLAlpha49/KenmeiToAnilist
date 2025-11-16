@@ -9,6 +9,7 @@ import { calculateMatchScore } from "../scoring";
 import {
   shouldIncludeMangaExact,
   shouldIncludeMangaRegular,
+  type InclusionResult,
 } from "../filtering/inclusion-rules";
 import { shouldSkipManga as shouldSkipMangaByRules } from "../filtering/skip-rules";
 
@@ -21,7 +22,7 @@ import { shouldSkipManga as shouldSkipMangaByRules } from "../filtering/skip-rul
  * @param results - Manga results to rank
  * @param searchTitle - Original search title
  * @param isManualSearch - Whether this is a manual search operation
- * @param includeMangaFn - Predicate function determining inclusion
+ * @param includeMangaPredicate - Predicate function determining inclusion
  * @param kenmeiManga - Optional Kenmei manga for custom rule evaluation
  * @returns Ranked manga results
  *
@@ -31,10 +32,7 @@ function rankMangaCore(
   results: AniListManga[],
   searchTitle: string,
   isManualSearch: boolean,
-  includeMangaFn: (
-    manga: AniListManga,
-    score: number,
-  ) => { include: boolean; adjustedScore: number },
+  includeMangaPredicate: (manga: AniListManga, score: number) => InclusionResult,
   kenmeiManga?: KenmeiManga,
 ): AniListManga[] {
   const scoredResults: Array<{ manga: AniListManga; score: number }> = [];
@@ -49,9 +47,9 @@ function rankMangaCore(
     const score = calculateMatchScore(manga, searchTitle);
 
     // Evaluate if manga should be included using the provided function
-    const { include, adjustedScore } = includeMangaFn(manga, score);
+    const { shouldInclude, adjustedScore } = includeMangaPredicate(manga, score);
 
-    if (include) {
+    if (shouldInclude) {
       scoredResults.push({ manga, score: adjustedScore });
     }
   }
@@ -100,7 +98,7 @@ export function rankMangaResults(
   isManualSearch: boolean = false,
   kenmeiManga?: KenmeiManga,
 ): AniListManga[] {
-  const includeMangaFn = exactMatchingOnly
+  const includeMangaPredicate = exactMatchingOnly
     ? (manga: AniListManga, score: number) =>
         shouldIncludeMangaExact(manga, score, searchTitle, results, kenmeiManga)
     : (manga: AniListManga, score: number) =>
@@ -110,7 +108,7 @@ export function rankMangaResults(
     results,
     searchTitle,
     isManualSearch,
-    includeMangaFn,
+    includeMangaPredicate,
     kenmeiManga,
   );
 }

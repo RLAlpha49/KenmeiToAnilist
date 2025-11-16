@@ -10,29 +10,29 @@ import { getCacheWarmer } from "./cache-warmer";
 /**
  * Direct normalization for matching - checks cache first, then computes.
  * Converts to lowercase, removes punctuation and special characters, normalizes whitespace.
- * @param str - The title string to normalize.
+ * @param title - The title string to normalize.
  * @returns Normalized title (lowercase, no punctuation, single spaces).
  * @source
  */
-export function normalizeForMatching(str: string): string {
+export function normalizeForMatching(title: string): string {
   // Try to get from cache first
   const cacheWarmer = getCacheWarmer();
   const cached = cacheWarmer.getNormalizedTitle(
-    str,
+    title,
     "normalizeForMatching",
     normalizeForMatchingDirect,
   );
   if (cached) {
     console.debug(
-      `[TitleNormalizer] ✅ Cache HIT for normalizeForMatching: "${str}" → "${cached}"`,
+      `[TitleNormalizer] ✅ Cache HIT for normalizeForMatching: "${title}" → "${cached}"`,
     );
     return cached;
   }
 
   // Cache miss - compute directly
-  const result = normalizeForMatchingDirect(str);
+  const result = normalizeForMatchingDirect(title);
   console.debug(
-    `[TitleNormalizer] ⚠️ Cache MISS for normalizeForMatching: "${str}" → "${result}"`,
+    `[TitleNormalizer] ⚠️ Cache MISS for normalizeForMatching: "${title}" → "${result}"`,
   );
   return result;
 }
@@ -41,8 +41,8 @@ export function normalizeForMatching(str: string): string {
  * Direct implementation of normalize-for-matching (no cache).
  * @internal
  */
-function normalizeForMatchingDirect(str: string): string {
-  return str
+function normalizeForMatchingDirect(title: string): string {
+  return title
     .toLowerCase()
     .replaceAll("-", "") // Remove dashes consistently with processTitle logic
     .replaceAll(/[^\w\s]/g, "") // Remove remaining punctuation
@@ -106,34 +106,41 @@ function processTitleDirect(title: string): string {
  * @returns Array of title objects with normalized text, source label, and original form.
  * @source
  */
-export function createNormalizedTitles(
-  manga: AniListManga,
-): { text: string; source: string; original: string }[] {
-  const allTitles: { text: string; source: string; original: string }[] = [];
+export type NormalizedTitle = {
+  text: string;
+  source: string;
+  original: string;
+};
 
-  const pushTitle = (title: string | null | undefined, source: string) => {
+export function createNormalizedTitles(manga: AniListManga): NormalizedTitle[] {
+  const normalizedTitles: NormalizedTitle[] = [];
+
+  const addNormalizedTitle = (
+    title: string | null | undefined,
+    source: string,
+  ) => {
     if (!title) return;
 
     // Get from cache if available
     const processedTitle = processTitle(title); // This now uses cache
-    allTitles.push({
+    normalizedTitles.push({
       text: normalizeForMatching(processedTitle), // This now uses cache
       source,
       original: processedTitle,
     });
   };
 
-  pushTitle(manga.title.english, "english");
-  pushTitle(manga.title.romaji, "romaji");
-  pushTitle(manga.title.native, "native");
+  addNormalizedTitle(manga.title.english, "english");
+  addNormalizedTitle(manga.title.romaji, "romaji");
+  addNormalizedTitle(manga.title.native, "native");
 
   if (manga.synonyms && Array.isArray(manga.synonyms)) {
     for (const [index, synonym] of manga.synonyms.entries()) {
-      pushTitle(synonym, `synonym_${index}`);
+      addNormalizedTitle(synonym, `synonym_${index}`);
     }
   }
 
-  return allTitles;
+  return normalizedTitles;
 }
 
 /**
@@ -147,7 +154,7 @@ export function collectMangaTitles(manga: AniListManga): string[] {
   const titles: string[] = [];
   const cacheWarmer = getCacheWarmer();
 
-  const addTitle = (rawTitle: string | null | undefined) => {
+  const addRawTitle = (rawTitle: string | null | undefined) => {
     if (!rawTitle) return;
     // Cache the raw title for consistency
     cacheWarmer.getNormalizedTitle(
@@ -158,13 +165,13 @@ export function collectMangaTitles(manga: AniListManga): string[] {
     titles.push(rawTitle);
   };
 
-  addTitle(manga.title.english);
-  addTitle(manga.title.romaji);
-  addTitle(manga.title.native);
+  addRawTitle(manga.title.english);
+  addRawTitle(manga.title.romaji);
+  addRawTitle(manga.title.native);
 
   if (manga.synonyms && Array.isArray(manga.synonyms)) {
     for (const synonym of manga.synonyms) {
-      addTitle(synonym);
+      addRawTitle(synonym);
     }
   }
 
@@ -180,29 +187,31 @@ export function collectMangaTitles(manga: AniListManga): string[] {
  * @source
  */
 export function isDifferenceOnlyArticles(
-  title1: string,
-  title2: string,
+  leftTitle: string,
+  rightTitle: string,
 ): boolean {
   const articles = new Set(["a", "an", "the"]);
 
   // Normalize both titles (now uses cache)
-  const norm1 = normalizeForMatching(title1)
+  const leftWords = normalizeForMatching(leftTitle)
     .split(/\s+/)
     .filter((word) => word.length > 0);
-  const norm2 = normalizeForMatching(title2)
+  const rightWords = normalizeForMatching(rightTitle)
     .split(/\s+/)
     .filter((word) => word.length > 0);
 
   console.debug(
-    `[MangaSearchService] 🔍 Checking article difference between "${title1}" and "${title2}"`,
+    `[MangaSearchService] 🔍 Checking article difference between "${leftTitle}" and "${rightTitle}"`,
   );
   console.debug(
-    `[MangaSearchService]   Normalized: ["${norm1.join('", "')}" vs ["${norm2.join('", "')}"]`,
+    `[MangaSearchService]   Normalized: ["${leftWords.join('", "')}" vs ["${rightWords.join('", "')}"]`,
   );
 
   // Find the longer and shorter word arrays
   const [longer, shorter] =
-    norm1.length >= norm2.length ? [norm1, norm2] : [norm2, norm1];
+    leftWords.length >= rightWords.length
+      ? [leftWords, rightWords]
+      : [rightWords, leftWords];
 
   // If they have the same number of words, they're not article-different
   if (longer.length === shorter.length) {

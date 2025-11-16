@@ -49,7 +49,7 @@ export interface MatchScoreOptions {
    * Useful for regression testing and before/after comparisons.
    * @source
    */
-  disableMeaningfulOverlap?: boolean;
+  shouldDisableMeaningfulOverlap?: boolean;
 }
 
 /** Secondary/contextual words excluded from primary token matching (e.g., "season", "part", "episode"). @source */
@@ -293,7 +293,7 @@ const createTokenData = (words: string[]): TokenData => {
  * @source
  */
 const buildInitialism = (rawWords: string[]): string => {
-  const letters: string[] = [];
+  const initialChars: string[] = [];
 
   for (const rawWord of rawWords) {
     const normalized = normalizeToken(rawWord);
@@ -301,15 +301,15 @@ const buildInitialism = (rawWords: string[]): string => {
       continue;
     }
 
-    const source =
+    const initialCharSource =
       /^\d+$/.test(normalized) && /^[a-z]/i.test(rawWord)
         ? rawWord.toLowerCase()
         : normalized;
 
-    letters.push(source[0]);
+    initialChars.push(initialCharSource[0]);
   }
 
-  return letters.join("");
+  return initialChars.join("");
 };
 
 /**
@@ -321,7 +321,7 @@ const buildInitialism = (rawWords: string[]): string => {
  * @returns True if title matches search criteria with acceptable word order/proximity
  * @source
  */
-function checkTitleMatch(title: string, searchName: string): boolean {
+function isTitleMatch(title: string, searchName: string): boolean {
   // Remove punctuation from the title and the search name
   const cleanTitle = removePunctuation(title);
   const cleanSearchName = removePunctuation(searchName);
@@ -343,17 +343,17 @@ function checkTitleMatch(title: string, searchName: string): boolean {
   }
 
   // For multi-word searches, check if all words are present
-  const allWordsPresent = searchWordsArray.every((word) =>
+  const areAllWordsPresent = searchWordsArray.every((word) =>
     titleWordsArray.includes(word),
   );
-  if (!allWordsPresent) return false;
+  if (!areAllWordsPresent) return false;
 
   // If all words are present, check for order preservation and proximity
   // Find indexes of search words in the title
   const indexes = searchWordsArray.map((word) => titleWordsArray.indexOf(word));
 
   // Check if the words appear in the same order (indexes should be increasing)
-  const sameOrder = indexes.every(
+  const isSameOrder = indexes.every(
     (index, i) => i === 0 || index > indexes[i - 1],
   );
 
@@ -369,7 +369,7 @@ function checkTitleMatch(title: string, searchName: string): boolean {
   const proximityScore = adjacentCount / (searchWordsArray.length - 1);
 
   // Return true if words are in same order OR if at least 50% are adjacent
-  return sameOrder || proximityScore >= 0.5;
+  return isSameOrder || proximityScore >= 0.5;
 }
 
 /**
@@ -787,7 +787,7 @@ function checkWordMatching(
     }
   }
 
-  if (!options?.disableMeaningfulOverlap) {
+  if (!options?.shouldDisableMeaningfulOverlap) {
     const overlapScore = checkMeaningfulWordOverlap(
       normalizedTitles,
       normalizedSearchTitle,
@@ -1011,7 +1011,7 @@ function checkSubsetMatch(
   normalizedSearchTitle: string,
   importantWords: string[],
 ): number {
-  if (checkTitleMatch(processedTitle, searchTitle)) {
+  if (isTitleMatch(processedTitle, searchTitle)) {
     const lengthDiff =
       Math.abs(processedTitle.length - searchTitle.length) /
       Math.max(processedTitle.length, searchTitle.length);

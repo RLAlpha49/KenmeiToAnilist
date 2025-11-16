@@ -15,6 +15,96 @@ import {
 } from "./types";
 import { withGroup } from "../../utils/logging";
 
+// Helper: pick first string matching the keys provided (supports both camelCase and snake_case)
+function pickString(
+  obj: Record<string, unknown>,
+  ...keys: string[]
+): string | undefined {
+  for (const key of keys) {
+    const val = obj[key];
+    if (typeof val === "string" && val.trim() !== "") return val;
+  }
+  return undefined;
+}
+
+// Helper: pick first number matching the keys provided. Accepts numeric strings too.
+function pickNumber(
+  obj: Record<string, unknown>,
+  ...keys: string[]
+): number | undefined {
+  for (const key of keys) {
+    const val = obj[key];
+    if (typeof val === "number") return val;
+    if (typeof val === "string" && val.trim() !== "") {
+      const n = Number(val);
+      if (!Number.isNaN(n)) return n;
+    }
+  }
+  return undefined;
+}
+
+// Helper: pick first array of strings matching the keys provided.
+function pickStringArray(
+  obj: Record<string, unknown>,
+  ...keys: string[]
+): string[] | undefined {
+  for (const key of keys) {
+    const val = obj[key];
+    if (Array.isArray(val))
+      return (val as unknown[]).filter(
+        (x): x is string => typeof x === "string",
+      );
+  }
+  return undefined;
+}
+
+// Map a raw JSON object (camelCase or snake_case) to a Partial<KenmeiManga>
+function mapJsonToKenmeiManga(raw: unknown): Partial<KenmeiManga> {
+  const obj = (raw ?? {}) as Record<string, unknown>;
+
+  return {
+    id: pickNumber(obj, "id"),
+    title: pickString(obj, "title"),
+    status: pickString(obj, "status") as KenmeiStatus | undefined,
+    score: pickNumber(obj, "score"),
+    url: pickString(obj, "url"),
+    coverUrl: pickString(obj, "coverUrl", "cover_url"),
+    chaptersRead: pickNumber(obj, "chaptersRead", "chapters_read"),
+    totalChapters: pickNumber(obj, "totalChapters", "total_chapters"),
+    volumesRead: pickNumber(obj, "volumesRead", "volumes_read"),
+    totalVolumes: pickNumber(obj, "totalVolumes", "total_volumes"),
+    notes: pickString(obj, "notes"),
+    lastReadAt: pickString(obj, "lastReadAt", "last_read_at"),
+    createdAt: pickString(obj, "createdAt", "created_at"),
+    updatedAt: pickString(obj, "updatedAt", "updated_at"),
+    author: pickString(obj, "author"),
+    alternativeTitles: pickStringArray(
+      obj,
+      "alternativeTitles",
+      "alternative_titles",
+    ),
+    anilistId: pickNumber(obj, "anilistId", "anilist_id"),
+  };
+}
+
+// Validate and normalize partial manga objects to ensure minimal shape requirements
+function validateAndNormalizePartialMangaArray(
+  mangaArray: Partial<KenmeiManga>[],
+  parseOptions: KenmeiParseOptions,
+): void {
+  for (const [index, manga] of mangaArray.entries()) {
+    if (!manga?.title) {
+      throw new Error(`Manga at index ${index} is missing a title`);
+    }
+
+    if (!manga.status || !isValidStatus(manga.status)) {
+      manga.status = parseOptions.defaultStatus;
+    }
+
+    if (typeof manga.chaptersRead !== "number") manga.chaptersRead = 0;
+  }
+}
+
 /**
  * Parse a Kenmei export file, optionally validating structure and normalizing entries.
  * @param fileContent - Raw export file content as text.
@@ -30,7 +120,21 @@ export function parseKenmeiExport(
   return withGroup(`[KenmeiParser] Parse JSON Export`, () => {
     const parseOptions = { ...DEFAULT_PARSE_OPTIONS, ...options };
     try {
-      const data = JSON.parse(fileContent);
+      const rawData = JSON.parse(fileContent);
+
+      const rawDataObj = rawData as Record<string, unknown>;
+      const data = {
+        exportDate: pickString(rawDataObj, "export_date", "exportDate") ?? "",
+        user:
+          typeof rawDataObj.user === "object" && rawDataObj.user !== null
+            ? (rawDataObj.user as Record<string, unknown>)
+            : undefined,
+        manga: Array.isArray(rawDataObj.manga)
+          ? (rawDataObj.manga as unknown[]).map((m: unknown) =>
+              mapJsonToKenmeiManga(m),
+            )
+          : [],
+      };
 
       if (!parseOptions.validateStructure) return data as KenmeiExport;
 
@@ -41,18 +145,8 @@ export function parseKenmeiExport(
         );
       }
 
-      // Validate and normalize each manga entry
-      for (const [index, manga] of data.manga.entries()) {
-        if (!manga?.title) {
-          throw new Error(`Manga at index ${index} is missing a title`);
-        }
-
-        if (!manga.status || !isValidStatus(manga.status)) {
-          manga.status = parseOptions.defaultStatus;
-        }
-
-        if (typeof manga.chapters_read !== "number") manga.chapters_read = 0;
-      }
+      // Validate and normalize each manga entry (basic shape checks)
+      validateAndNormalizePartialMangaArray(data.manga, parseOptions);
 
       return data as KenmeiExport;
     } catch (error) {
@@ -503,21 +597,21 @@ function createMangaEntry(
     status: validateStatus(fieldValues.statusValue, defaultStatus),
     score,
     url: fieldValues.urlValue ?? "",
-    cover_url: entry.cover_url,
-    chapters_read: chaptersRead,
-    total_chapters: entry.total_chapters
+    coverUrl: entry.cover_url,
+    chaptersRead: chaptersRead,
+    totalChapters: entry.total_chapters
       ? Number.parseInt(entry.total_chapters)
       : undefined,
-    volumes_read: volumesRead,
-    total_volumes: entry.total_volumes
+    volumesRead: volumesRead,
+    totalVolumes: entry.total_volumes
       ? Number.parseInt(entry.total_volumes)
       : undefined,
     notes: fieldValues.notesValue ?? "",
-    last_read_at: fieldValues.lastReadAt,
-    created_at: entry.created_at ?? fieldValues.dateValue,
-    updated_at: entry.updated_at ?? fieldValues.dateValue,
+    lastReadAt: fieldValues.lastReadAt,
+    createdAt: entry.created_at ?? fieldValues.dateValue,
+    updatedAt: entry.updated_at ?? fieldValues.dateValue,
     author: entry.author,
-    alternative_titles: entry.alternative_titles
+    alternativeTitles: entry.alternative_titles
       ? entry.alternative_titles.split(";")
       : undefined,
   };
@@ -600,7 +694,7 @@ export const parseKenmeiCsvExport = (
 
       // Create the export object
       const kenmeiExport: KenmeiExport = {
-        export_date: new Date().toISOString(),
+        exportDate: new Date().toISOString(),
         user: {
           username: "CSV Import User",
           id: 0,
@@ -879,14 +973,14 @@ export function normalizeKenmeiManga(
 
   // Normalize numeric fields with defaults
   const chaptersRead =
-    typeof entry.chapters_read === "number" ? entry.chapters_read : 0;
+    typeof entry.chaptersRead === "number" ? entry.chaptersRead : 0;
   const volumesRead =
-    typeof entry.volumes_read === "number" ? entry.volumes_read : undefined;
+    typeof entry.volumesRead === "number" ? entry.volumesRead : undefined;
   const score = typeof entry.score === "number" ? entry.score : 0;
 
   // Normalize timestamp fields
-  const createdAt = entry.created_at ?? now;
-  const updatedAt = entry.updated_at ?? now;
+  const createdAt = entry.createdAt ?? now;
+  const updatedAt = entry.updatedAt ?? now;
 
   return {
     id: entry.id ?? 0,
@@ -894,17 +988,17 @@ export function normalizeKenmeiManga(
     status,
     score,
     url: entry.url ?? "",
-    cover_url: entry.cover_url,
-    chapters_read: chaptersRead,
-    total_chapters: entry.total_chapters,
-    volumes_read: volumesRead,
-    total_volumes: entry.total_volumes,
+    coverUrl: entry.coverUrl,
+    chaptersRead: chaptersRead,
+    totalChapters: entry.totalChapters,
+    volumesRead: volumesRead,
+    totalVolumes: entry.totalVolumes,
     notes: entry.notes,
-    last_read_at: entry.last_read_at,
-    created_at: createdAt,
-    updated_at: updatedAt,
+    lastReadAt: entry.lastReadAt,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
     author: entry.author,
-    alternative_titles: entry.alternative_titles,
+    alternativeTitles: entry.alternativeTitles,
     anilistId: entry.anilistId,
   };
 }
@@ -944,9 +1038,9 @@ export function extractMangaMetadata(manga: KenmeiManga[]): {
       scoredEntries++;
     }
 
-    totalChaptersRead += entry.chapters_read ?? 0;
+    totalChaptersRead += entry.chaptersRead ?? 0;
 
-    if (entry.volumes_read !== undefined || entry.total_volumes !== undefined)
+    if (entry.volumesRead !== undefined || entry.totalVolumes !== undefined)
       hasVolumesData = true;
   }
 

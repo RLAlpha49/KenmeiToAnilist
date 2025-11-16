@@ -108,7 +108,7 @@ export function prepareEntryForSync(
   // Determine progress (chapters vs volumes)
   // Use guard clauses and prefer explicit undefined over nullish values
   const hasVolumeData =
-    manga.volumes_read !== undefined && manga.volumes_read !== null;
+    manga.volumesRead !== undefined && manga.volumesRead !== null;
 
   // If preferVolumes and volume data exists, use volumes only; otherwise use chapters
   let progress: number;
@@ -117,11 +117,11 @@ export function prepareEntryForSync(
   if (processOptions.preferVolumes && hasVolumeData) {
     // When preferring volumes, set progress to 0 and expose only progressVolumes
     progress = 0;
-    progressVolumes = manga.volumes_read;
+    progressVolumes = manga.volumesRead;
   } else {
     // Default: use chapters for progress, optionally expose volumes
-    progress = manga.chapters_read ?? 0;
-    progressVolumes = hasVolumeData ? manga.volumes_read : undefined;
+    progress = manga.chaptersRead ?? 0;
+    progressVolumes = hasVolumeData ? manga.volumesRead : undefined;
   }
 
   // Normalize score if needed (Kenmei uses 1-10, AniList uses 1-100 or 1-10 depending on settings)
@@ -167,8 +167,8 @@ export function extractReadingStats(manga: KenmeiManga[]): {
   const statusBreakdown: Record<string, number> = {};
 
   for (const entry of manga) {
-    totalChapters += entry.chapters_read ?? 0;
-    totalVolumes += entry.volumes_read ?? 0;
+    totalChapters += entry.chaptersRead ?? 0;
+    totalVolumes += entry.volumesRead ?? 0;
 
     if (entry.status === "completed") {
       completedManga++;
@@ -243,12 +243,12 @@ export function filterMangaEntries(
     }
 
     if (criteria.minChapters !== undefined) {
-      if ((entry.chapters_read ?? 0) < criteria.minChapters) return false;
+      if ((entry.chaptersRead ?? 0) < criteria.minChapters) return false;
     }
 
     if (criteria.hasProgress) {
-      const chapters = entry.chapters_read ?? 0;
-      const volumes = entry.volumes_read ?? 0;
+      const chapters = entry.chaptersRead ?? 0;
+      const volumes = entry.volumesRead ?? 0;
       if (chapters <= 0 && volumes <= 0) return false;
     }
 

@@ -27,17 +27,17 @@ export interface KenmeiManga {
   status: KenmeiStatus;
   score: number;
   url: string;
-  cover_url?: string;
-  chapters_read: number;
-  total_chapters?: number;
-  volumes_read?: number;
-  total_volumes?: number;
+  coverUrl?: string;
+  chaptersRead: number;
+  totalChapters?: number;
+  volumesRead?: number;
+  totalVolumes?: number;
   notes?: string;
-  last_read_at?: string;
-  created_at: string;
-  updated_at: string;
+  lastReadAt?: string;
+  createdAt: string;
+  updatedAt: string;
   author?: string;
-  alternative_titles?: string[];
+  alternativeTitles?: string[];
   anilistId?: number; // Optional AniList ID for direct matching
 }
 
@@ -46,7 +46,7 @@ export interface KenmeiManga {
  * @source
  */
 export interface KenmeiExport {
-  export_date: string;
+  exportDate: string;
   user: {
     username: string;
     id: number;
@@ -95,13 +95,16 @@ export interface MangaMatch {
  * Bidirectional Kenmei-to-AniList status mapping constant.
  * @source
  */
-export const STATUS_MAPPING: Record<KenmeiStatus, MediaListStatus> = {
+export const DEFAULT_STATUS_MAPPING: Record<KenmeiStatus, MediaListStatus> = {
   reading: "CURRENT",
   completed: "COMPLETED",
   on_hold: "PAUSED",
   dropped: "DROPPED",
   plan_to_read: "PLANNING",
 };
+
+// Backwards compatibility alias for existing imports using STATUS_MAPPING
+export const STATUS_MAPPING = DEFAULT_STATUS_MAPPING;
 
 /**
  * Custom status mapping configuration for Kenmei-to-AniList conversion.

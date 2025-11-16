@@ -29,7 +29,7 @@ export interface QueueEntry {
  * Timestamp of the last API request in milliseconds.
  * @source
  */
-let _lastRequestTime = 0;
+let lastRequestTime = 0;
 
 /**
  * Get the timestamp of the last request.
@@ -37,7 +37,7 @@ let _lastRequestTime = 0;
  * @source
  */
 export function getLastRequestTime(): number {
-  return _lastRequestTime;
+  return lastRequestTime;
 }
 
 /**
@@ -46,7 +46,7 @@ export function getLastRequestTime(): number {
  * @source
  */
 export function setLastRequestTime(time: number): void {
-  _lastRequestTime = time;
+  lastRequestTime = time;
 }
 
 /**
@@ -59,7 +59,7 @@ export const requestQueue: QueueEntry[] = [];
  * Flag indicating whether the queue processor is currently running.
  * @source
  */
-let _processingQueue = false;
+let processingQueueActive = false;
 
 /**
  * Check if the queue is currently being processed.
@@ -67,7 +67,7 @@ let _processingQueue = false;
  * @source
  */
 export function isProcessingQueue(): boolean {
-  return _processingQueue;
+  return processingQueueActive;
 }
 
 /**
@@ -76,5 +76,5 @@ export function isProcessingQueue(): boolean {
  * @source
  */
 export function setProcessingQueue(value: boolean): void {
-  _processingQueue = value;
+  processingQueueActive = value;
 }

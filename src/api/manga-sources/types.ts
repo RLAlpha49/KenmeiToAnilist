@@ -11,8 +11,8 @@ import type { AniListManga } from "../anilist/types";
  * @source
  */
 export enum MangaSource {
-  COMICK = "comick",
-  MANGADEX = "mangadex",
+  Comick = "comick",
+  MangaDex = "mangadex",
 }
 
 /**
@@ -180,7 +180,7 @@ export interface EnhancedAniListManga extends AniListManga {
     /** Which source this came from */
     source: MangaSource;
     /** Whether this was found via alternative search */
-    foundViaAlternativeSearch: boolean;
+    isFoundViaAlternativeSearch: boolean;
   };
 }
 
@@ -190,8 +190,7 @@ export interface EnhancedAniListManga extends AniListManga {
  * @template T - The type of cached data.
  * @source
  */
-// eslint-disable-next-line
-export interface MangaSourceCacheEntry<T = any> {
+export interface MangaSourceCacheEntry<T = unknown> {
   /** Cached data */
   data: T;
   /** Timestamp when cached */
@@ -205,6 +204,4 @@ export interface MangaSourceCacheEntry<T = any> {
  * Maps cache keys to their entries for efficient lookup and expiration.
  * @source
  */
-export interface MangaSourceCache {
-  [key: string]: MangaSourceCacheEntry;
-}
+export type MangaSourceCache = Record<string, MangaSourceCacheEntry>;

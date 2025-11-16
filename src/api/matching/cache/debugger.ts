@@ -4,8 +4,59 @@
  */
 
 import { mangaCache } from "./storage";
+import type { MangaCache } from "./types";
 import { generateCacheKey, clearMangaCache } from "./utils";
 import { syncWithClientCache } from "./sync";
+
+/**
+ * Types for cache debugger utilities
+ */
+interface LocalStorageCacheCounts {
+  mangaCache: number;
+  searchCache: number;
+}
+
+export interface CacheStatus {
+  inMemoryCache: number;
+  localStorage: LocalStorageCacheCounts;
+}
+
+export interface CacheEntryInfo {
+  mangaCount: number;
+  timestamp: number;
+  age: string;
+}
+
+export interface CheckMangaInCacheResult {
+  isFound: boolean;
+  cacheKey: string;
+  entry?: CacheEntryInfo;
+}
+
+export interface CacheEntrySummary {
+  cacheKey: string;
+  mangaCount: number;
+  timestamp: number;
+  age: string;
+}
+
+/**
+ * Returns a human-readable age string from a timestamp.
+ */
+function formatCacheAge(timestamp: number): string {
+  const ageMs = Date.now() - timestamp;
+  const ageMinutes = Math.floor(ageMs / 60000);
+
+  if (ageMinutes < 60) {
+    return `${ageMinutes} minute(s)`;
+  }
+
+  if (ageMinutes < 1440) {
+    return `${Math.floor(ageMinutes / 60)} hour(s)`;
+  }
+
+  return `${Math.floor(ageMinutes / 1440)} day(s)`;
+}
 
 /**
  * Debugging utilities for cache inspection and management.
@@ -18,46 +69,52 @@ export const cacheDebugger = {
    * @returns Object with in-memory cache count and localStorage cache counts.
    * @source
    */
-  getCacheStatus(): {
-    inMemoryCache: number;
-    localStorage: {
-      mangaCache: number;
-      searchCache: number;
-    };
-  } {
+  getCacheStatus(): CacheStatus {
     // Check in-memory cache for entry count
-    const inMemoryCount = Object.keys(mangaCache).length;
+    const inMemoryCacheCount = Object.keys(mangaCache).length;
 
     // Check localStorage for cached manga and search data
-    let storedMangaCount = 0;
-    let storedSearchCount = 0;
+    let localStorageMangaCount = 0;
+    let localStorageSearchCount = 0;
 
     if (globalThis.window !== undefined) {
       try {
-        const mangaCacheData = localStorage.getItem("anilist_manga_cache");
-        if (mangaCacheData) {
-          const parsed = JSON.parse(mangaCacheData);
-          storedMangaCount = Object.keys(parsed).length;
+        const localStorageMangaCacheData = localStorage.getItem(
+          "anilist_manga_cache",
+        );
+        if (localStorageMangaCacheData) {
+          const parsedLocalStorageMangaCache = JSON.parse(
+            localStorageMangaCacheData,
+          );
+          localStorageMangaCount = Object.keys(
+            parsedLocalStorageMangaCache,
+          ).length;
         }
 
-        const searchCacheData = localStorage.getItem("anilist_search_cache");
-        if (searchCacheData) {
-          const parsed = JSON.parse(searchCacheData);
-          storedSearchCount = Object.keys(parsed).length;
+        const localStorageSearchCacheData = localStorage.getItem(
+          "anilist_search_cache",
+        );
+        if (localStorageSearchCacheData) {
+          const parsedLocalStorageSearchCache = JSON.parse(
+            localStorageSearchCacheData,
+          );
+          localStorageSearchCount = Object.keys(
+            parsedLocalStorageSearchCache,
+          ).length;
         }
-      } catch (e) {
+      } catch (error) {
         console.error(
           "[MangaSearchService] Error checking localStorage cache:",
-          e,
+          error,
         );
       }
     }
 
     return {
-      inMemoryCache: inMemoryCount,
+      inMemoryCache: inMemoryCacheCount,
       localStorage: {
-        mangaCache: storedMangaCount,
-        searchCache: storedSearchCount,
+        mangaCache: localStorageMangaCount,
+        searchCache: localStorageSearchCount,
       },
     };
   },
@@ -65,45 +122,27 @@ export const cacheDebugger = {
   /**
    * Checks if a manga title exists in cache and retrieves its metadata.
    * @param title - Manga title to look up.
-   * @returns Object with found flag, cache key, and entry metadata if found (count, timestamp, age).
+   * @returns Object with isFound flag, cache key, and entry metadata if found (count, timestamp, age).
    * @source
    */
-  checkMangaInCache(title: string): {
-    found: boolean;
-    cacheKey: string;
-    entry?: {
-      mangaCount: number;
-      timestamp: number;
-      age: string;
-    };
-  } {
+  checkMangaInCache(title: string): CheckMangaInCacheResult {
     const cacheKey = generateCacheKey(title);
-    const entry = mangaCache[cacheKey];
+    const cacheEntry = mangaCache[cacheKey] as MangaCache[string] | undefined;
 
-    if (!entry) {
-      return { found: false, cacheKey };
+    if (!cacheEntry) {
+      return { isFound: false, cacheKey };
     }
 
-    // Calculate cache entry age from timestamp in human-readable format
-    const ageMs = Date.now() - entry.timestamp;
-    const ageMinutes = Math.floor(ageMs / 60000);
-
-    let age: string;
-    if (ageMinutes < 60) {
-      age = `${ageMinutes} minute(s)`;
-    } else if (ageMinutes < 1440) {
-      age = `${Math.floor(ageMinutes / 60)} hour(s)`;
-    } else {
-      age = `${Math.floor(ageMinutes / 1440)} day(s)`;
-    }
+    // Format cache entry age using helper
+    const ageLabel = formatCacheAge(cacheEntry.timestamp);
 
     return {
-      found: true,
+      isFound: true,
       cacheKey,
       entry: {
-        mangaCount: entry.manga.length,
-        timestamp: entry.timestamp,
-        age,
+        mangaCount: cacheEntry.manga.length,
+        timestamp: cacheEntry.timestamp,
+        age: ageLabel,
       },
     };
   },
@@ -134,10 +173,10 @@ export const cacheDebugger = {
         console.info(
           "[MangaSearchService] All AniList caches have been cleared",
         );
-      } catch (e) {
+      } catch (error) {
         console.error(
           "[MangaSearchService] Error clearing localStorage caches:",
-          e,
+          error,
         );
       }
     }
@@ -169,36 +208,20 @@ export const cacheDebugger = {
    * @returns Array of objects with cache key, manga count, timestamp, and formatted age.
    * @source
    */
-  getAllCacheEntries(): Array<{
-    cacheKey: string;
-    mangaCount: number;
-    timestamp: number;
-    age: string;
-  }> {
-    const entries = [];
+  getAllCacheEntries(): CacheEntrySummary[] {
+    const cacheEntries: CacheEntrySummary[] = [];
 
-    for (const [cacheKey, entry] of Object.entries(mangaCache)) {
-      // Format age from milliseconds to human-readable string
-      const ageMs = Date.now() - entry.timestamp;
-      const ageMinutes = Math.floor(ageMs / 60000);
-
-      let age: string;
-      if (ageMinutes < 60) {
-        age = `${ageMinutes} minute(s)`;
-      } else if (ageMinutes < 1440) {
-        age = `${Math.floor(ageMinutes / 60)} hour(s)`;
-      } else {
-        age = `${Math.floor(ageMinutes / 1440)} day(s)`;
-      }
-
-      entries.push({
+    for (const [cacheKey, cacheEntry] of Object.entries(mangaCache)) {
+      // Format age using helper
+      const ageLabel = formatCacheAge(cacheEntry.timestamp);
+      cacheEntries.push({
         cacheKey,
-        mangaCount: entry.manga.length,
-        timestamp: entry.timestamp,
-        age,
+        mangaCount: cacheEntry.manga.length,
+        timestamp: cacheEntry.timestamp,
+        age: ageLabel,
       });
     }
 
-    return entries;
+    return cacheEntries;
   },
 };

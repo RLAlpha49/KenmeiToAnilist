@@ -4,8 +4,13 @@
  * @description Comick API response type definitions for manga search and details.
  */
 
-import type { AniListManga } from "../../anilist/types";
-import type { BaseMangaEntry, BaseMangaDetail } from "../types";
+// AniList types are not required in this file; use base EnhancedAniListManga from manga-sources/types when needed
+import type {
+  BaseMangaEntry,
+  BaseMangaDetail,
+  MangaMatchResult,
+  EnhancedAniListManga as BaseEnhancedAniListManga,
+} from "../types";
 import { MangaSource } from "../types";
 
 /**
@@ -14,20 +19,20 @@ import { MangaSource } from "../types";
  * @source
  */
 export interface ComickManga extends BaseMangaEntry {
-  source: MangaSource.COMICK;
+  source: MangaSource.Comick;
   rating?: string;
-  rating_count?: number;
-  follow_count?: number;
-  user_follow_count?: number;
-  content_rating?: string;
+  ratingCount?: number;
+  followCount?: number;
+  userFollowCount?: number;
+  contentRating?: string;
   demographic?: number;
   /** Multi-dimensional titles from Comick's data system */
-  md_titles?: Array<{
+  mdTitles?: Array<{
     title: string;
     lang: string;
   }>;
   /** MangaDex cross-reference data */
-  md_comics?: {
+  mdComics?: {
     id: string;
     title: string;
     slug: string;
@@ -52,7 +57,7 @@ export interface ComickSearchResponse {
  * @source
  */
 export interface ComickMangaDetail extends BaseMangaDetail {
-  source: MangaSource.COMICK;
+  source: MangaSource.Comick;
   comic: {
     id: string;
     title: string;
@@ -61,19 +66,19 @@ export interface ComickMangaDetail extends BaseMangaDetail {
     status?: number;
     year?: number;
     country?: string;
-    created_at?: string;
-    updated_at?: string;
+    createdAt?: string;
+    updatedAt?: string;
     demographic?: number;
     hentai?: boolean;
-    content_rating?: string;
+    contentRating?: string;
     /** MangaUpdates cross-reference */
-    mu_comics?: {
+    muComics?: {
       id: string;
       title: string;
       slug: string;
     };
     /** MangaDex cross-reference */
-    md_comics?: {
+    mdComics?: {
       id: string;
       title: string;
       slug: string;
@@ -94,7 +99,7 @@ export interface ComickMangaDetail extends BaseMangaDetail {
       slug: string;
     }>;
     /** Multi-dimensional titles */
-    md_titles?: Array<{
+    mdTitles?: Array<{
       title: string;
       lang: string;
     }>;
@@ -113,27 +118,11 @@ export interface ComickMangaDetail extends BaseMangaDetail {
 }
 
 /**
- * Represents a matched manga from Comick with AniList information.
- * @deprecated Use MangaMatchResult from manga-sources/types instead.
- * @source
+ * @deprecated Use MangaMatchResult<ComickManga> from manga-sources/types instead.
  */
-export interface ComickMatchResult {
-  comickManga: ComickManga;
-  anilistId?: number;
-  anilistUrl?: string;
-  source: "comick";
-}
+export type ComickMatchResult = MangaMatchResult<ComickManga>;
 
 /**
- * Represents an enhanced AniList manga entry that includes Comick source information.
  * @deprecated Use EnhancedAniListManga from manga-sources/types instead.
- * @source
  */
-export interface EnhancedAniListManga extends AniListManga {
-  comickSource?: {
-    title: string;
-    slug: string;
-    comickId: string;
-    foundViaComick: boolean;
-  };
-}
+export type EnhancedAniListManga = BaseEnhancedAniListManga;

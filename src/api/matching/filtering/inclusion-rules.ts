@@ -6,7 +6,7 @@
 
 import type { AniListManga } from "../../anilist/types";
 import type { KenmeiManga } from "@/api/kenmei/types";
-import { checkExactMatch } from "./exact-match-checker";
+import { isExactMatch } from "./exact-match-checker";
 import {
   shouldAcceptByCustomRules,
   ACCEPT_RULE_CONFIDENCE_FLOOR_EXACT,
@@ -15,12 +15,12 @@ import {
 
 /**
  * Decision result for manga inclusion with optional score adjustment.
- * @property include - Whether the manga should be included in results.
+ * @property shouldInclude - Whether the manga should be included in results.
  * @property adjustedScore - The match score, potentially adjusted based on match quality.
  * @source
  */
 export interface InclusionResult {
-  include: boolean;
+  shouldInclude: boolean;
   adjustedScore: number;
 }
 
@@ -57,7 +57,7 @@ export function shouldIncludeMangaExact(
         `[MangaSearchService] ✅ Auto-accepting manga "${manga.title?.romaji || manga.title?.english}" due to custom rule: ${matchedRule?.description}`,
       );
       return {
-        include: true,
+        shouldInclude: true,
         adjustedScore: Math.max(score, ACCEPT_RULE_CONFIDENCE_FLOOR_EXACT), // Boost to high confidence
       };
     }
@@ -65,16 +65,14 @@ export function shouldIncludeMangaExact(
 
   // In exact matching mode, do a thorough check of all titles
   // This ensures we don't miss matches due to normalization differences
-  const foundGoodMatch = checkExactMatch(manga, searchTitle);
+  const foundGoodMatch = isExactMatch(manga, searchTitle);
 
-  // If this is an exact match run and we have a good score or manually found a good match
-  // Increased threshold from 0.5 to 0.6 for stricter inclusion
   if (score > 0.6 || foundGoodMatch || results.length <= 2) {
     console.debug(
       `[MangaSearchService] ✅ Including manga "${manga.title?.romaji || manga.title?.english}" with score: ${score}`,
     );
     return {
-      include: true,
+      shouldInclude: true,
       adjustedScore: foundGoodMatch
         ? Math.max(score, ACCEPT_RULE_CONFIDENCE_FLOOR_REGULAR)
         : score,
@@ -83,7 +81,7 @@ export function shouldIncludeMangaExact(
     console.debug(
       `[MangaSearchService] ❌ Excluding manga "${manga.title?.romaji || manga.title?.english}" with score: ${score} (below threshold)`,
     );
-    return { include: false, adjustedScore: score };
+    return { shouldInclude: false, adjustedScore: score };
   }
 }
 
@@ -114,7 +112,7 @@ export function shouldIncludeMangaRegular(
         `[MangaSearchService] ✅ Auto-accepting manga "${manga.title?.romaji || manga.title?.english}" due to custom rule: ${matchedRule?.description}`,
       );
       return {
-        include: true,
+        shouldInclude: true,
         adjustedScore: Math.max(score, ACCEPT_RULE_CONFIDENCE_FLOOR_REGULAR), // Boost to high confidence
       };
     }
@@ -124,11 +122,11 @@ export function shouldIncludeMangaRegular(
     console.debug(
       `[MangaSearchService] ✅ Including manga "${manga.title?.romaji || manga.title?.english}" with score: ${score}`,
     );
-    return { include: true, adjustedScore: score };
+    return { shouldInclude: true, adjustedScore: score };
   } else {
     console.debug(
       `[MangaSearchService] ❌ Excluding manga "${manga.title?.romaji || manga.title?.english}" with score: ${score} (below threshold)`,
     );
-    return { include: false, adjustedScore: score };
+    return { shouldInclude: false, adjustedScore: score };
   }
 }

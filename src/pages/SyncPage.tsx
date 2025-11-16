@@ -1028,14 +1028,14 @@ export function SyncPage() {
     if (syncConfig.prioritizeAniListProgress) {
       if (userEntry?.progress && userEntry.progress > 0) {
         toProgress = Math.max(
-          kenmei.chapters_read || 0,
+          kenmei.chaptersRead || 0,
           userEntry.progress || 0,
         );
       } else {
-        toProgress = kenmei.chapters_read || 0;
+        toProgress = kenmei.chaptersRead || 0;
       }
     } else {
-      toProgress = kenmei.chapters_read || 0;
+      toProgress = kenmei.chaptersRead || 0;
     }
 
     if (fromProgress === toProgress) return null;
@@ -1165,14 +1165,14 @@ export function SyncPage() {
     if (syncConfig.prioritizeAniListProgress) {
       if (userEntry?.progress && userEntry.progress > 0) {
         afterSyncProgress = Math.max(
-          kenmei.chapters_read || 0,
+          kenmei.chaptersRead || 0,
           userEntry.progress || 0,
         );
       } else {
-        afterSyncProgress = kenmei.chapters_read || 0;
+        afterSyncProgress = kenmei.chaptersRead || 0;
       }
     } else {
-      afterSyncProgress = kenmei.chapters_read || 0;
+      afterSyncProgress = kenmei.chaptersRead || 0;
     }
 
     return (

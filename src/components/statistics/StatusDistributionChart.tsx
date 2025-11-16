@@ -227,7 +227,7 @@ export const StatusDistributionChart: FC<StatusDistributionChartProps> =
                               data: filtered
                                 .map((match) => ({
                                   title: match.kenmeiManga.title,
-                                  chapters: match.kenmeiManga.chapters_read,
+                                  chapters: match.kenmeiManga.chaptersRead,
                                   status: match.kenmeiManga.status,
                                   confidence:
                                     match.anilistMatches?.[0]?.confidence,

@@ -13,6 +13,7 @@ export {
   collectMangaTitles,
   isDifferenceOnlyArticles,
 } from "./title-normalizer";
+export type { NormalizedTitle } from "./title-normalizer";
 
 // Character utilities
 export { replaceSpecialChars, removePunctuation } from "./character-utils";
@@ -26,4 +27,8 @@ export {
 
 // Cache warmer service
 export { TitleNormalizationCacheWarmer, getCacheWarmer } from "./cache-warmer";
+export type {
+  WorkerNormalizationAlgorithm,
+  CacheNormalizationKey,
+} from "./cache-warmer";
 export type { NormalizationCacheResult } from "@/workers";

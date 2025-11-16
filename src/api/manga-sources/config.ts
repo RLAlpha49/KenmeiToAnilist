@@ -41,7 +41,7 @@ const makeConfig = (cfg: MangaSourceConfig): MangaSourceConfig => ({
  */
 export const COMICK_CONFIG: MangaSourceConfig = makeConfig({
   name: "Comick",
-  source: MangaSource.COMICK,
+  source: MangaSource.Comick,
   baseUrl: "https://api.comick.fun",
   endpoints: {
     search: "/v1.0/search?q={query}&limit={limit}&t=false",
@@ -60,7 +60,7 @@ export const COMICK_CONFIG: MangaSourceConfig = makeConfig({
  */
 export const MANGADEX_CONFIG: MangaSourceConfig = makeConfig({
   name: "MangaDex",
-  source: MangaSource.MANGADEX,
+  source: MangaSource.MangaDex,
   baseUrl: "https://api.mangadex.org",
   endpoints: {
     search:
@@ -80,8 +80,8 @@ export const MANGADEX_CONFIG: MangaSourceConfig = makeConfig({
  * @source
  */
 export const MANGA_SOURCE_CONFIGS: Record<MangaSource, MangaSourceConfig> = {
-  [MangaSource.COMICK]: COMICK_CONFIG,
-  [MangaSource.MANGADEX]: MANGADEX_CONFIG,
+  [MangaSource.Comick]: COMICK_CONFIG,
+  [MangaSource.MangaDex]: MANGADEX_CONFIG,
 };
 
 /**

@@ -62,7 +62,7 @@ export function initializeMangaService(): void {
 
         if (!Array.isArray(results) || results.length === 0) return;
 
-        const ts = timestamp ?? Date.now();
+        const cacheTimestamp = timestamp ?? Date.now();
 
         // Cache manga by both romaji and English titles for broader search coverage
         const cacheByTitle = (
@@ -71,7 +71,7 @@ export function initializeMangaService(): void {
         ) => {
           if (!title) return;
           const key = generateCacheKey(title);
-          mangaCache[key] = { manga: [manga], timestamp: ts };
+          mangaCache[key] = { manga: [manga], timestamp: cacheTimestamp };
         };
 
         for (const manga of results) {

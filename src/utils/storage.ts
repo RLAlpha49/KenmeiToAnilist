@@ -30,12 +30,12 @@ export interface KenmeiManga {
   title: string;
   status: string;
   score: number;
-  chapters_read: number;
-  volumes_read: number;
+  chaptersRead: number;
+  volumesRead: number;
   notes: string;
-  created_at: string;
-  updated_at: string;
-  last_read_at?: string;
+  createdAt: string;
+  updatedAt: string;
+  lastReadAt?: string;
 }
 
 /**
@@ -604,8 +604,8 @@ export const DEFAULT_TITLE_NORMALIZATION_CACHE: TitleNormalizationCache = {
 };
 
 export type MatchConfig = {
-  ignoreOneShots: boolean;
-  ignoreAdultContent: boolean;
+  shouldIgnoreOneShots: boolean;
+  shouldIgnoreAdultContent: boolean;
   blurAdultContent: boolean;
   enableComickSearch: boolean;
   enableMangaDexSearch: boolean;
@@ -760,8 +760,8 @@ export const MAX_READING_HISTORY_ENTRIES = 365;
  * @source
  */
 export const DEFAULT_MATCH_CONFIG: MatchConfig = {
-  ignoreOneShots: false,
-  ignoreAdultContent: false,
+  shouldIgnoreOneShots: false,
+  shouldIgnoreAdultContent: false,
   blurAdultContent: true,
   enableComickSearch: false, // Temporarily disabled - Comick unavailable
   enableMangaDexSearch: true,
@@ -1133,6 +1133,22 @@ export function getMatchConfig(): MatchConfig {
     }
 
     // Merge with defaults to ensure new fields like customRules are always populated
+    // Support legacy property names by mapping older keys to the new ones
+    if (
+      typeof parsed.ignoreOneShots === "boolean" &&
+      parsed.shouldIgnoreOneShots === undefined
+    ) {
+      parsed.shouldIgnoreOneShots = parsed.ignoreOneShots;
+      delete parsed.ignoreOneShots;
+    }
+    if (
+      typeof parsed.ignoreAdultContent === "boolean" &&
+      parsed.shouldIgnoreAdultContent === undefined
+    ) {
+      parsed.shouldIgnoreAdultContent = parsed.ignoreAdultContent;
+      delete parsed.ignoreAdultContent;
+    }
+
     return { ...DEFAULT_MATCH_CONFIG, ...parsed };
   } catch (error) {
     console.error(

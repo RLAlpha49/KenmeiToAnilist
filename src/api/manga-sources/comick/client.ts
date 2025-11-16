@@ -52,7 +52,7 @@ export class ComickClient extends BaseMangaSourceClient<
       try {
         // Use generic manga source API to call main process via IPC instead of direct fetch (CORS)
         const data = (await globalThis.electronAPI.mangaSource.search(
-          MangaSource.COMICK,
+          MangaSource.Comick,
           query,
           limit,
         )) as ComickManga[];
@@ -85,7 +85,7 @@ export class ComickClient extends BaseMangaSourceClient<
       try {
         // Use generic manga source API to call main process via IPC instead of direct fetch (CORS)
         const rawData = await globalThis.electronAPI.mangaSource.getMangaDetail(
-          MangaSource.COMICK,
+          MangaSource.Comick,
           slug,
         );
         const detail = this.parseDetailResponse(rawData);
@@ -136,15 +136,15 @@ export class ComickClient extends BaseMangaSourceClient<
           status: typeof obj.status === "number" ? obj.status : undefined,
           country: typeof obj.country === "string" ? obj.country : undefined,
           rating: typeof obj.rating === "string" ? obj.rating : undefined,
-          rating_count:
+          ratingCount:
             typeof obj.rating_count === "number" ? obj.rating_count : undefined,
-          follow_count:
+          followCount:
             typeof obj.follow_count === "number" ? obj.follow_count : undefined,
-          user_follow_count:
+          userFollowCount:
             typeof obj.user_follow_count === "number"
               ? obj.user_follow_count
               : undefined,
-          content_rating:
+          contentRating:
             typeof obj.content_rating === "string"
               ? obj.content_rating
               : undefined,
@@ -153,16 +153,16 @@ export class ComickClient extends BaseMangaSourceClient<
           alternativeTitles: Array.isArray(obj.md_titles)
             ? (obj.md_titles as Array<{ title: string; lang: string }>)
             : [],
-          md_titles: Array.isArray(obj.md_titles)
+          mdTitles: Array.isArray(obj.md_titles)
             ? (obj.md_titles as Array<{ title: string; lang: string }>)
             : undefined,
-          md_comics:
+          mdComics:
             obj.md_comics && typeof obj.md_comics === "object"
               ? (obj.md_comics as { id: string; title: string; slug: string })
               : undefined,
           highlight:
             typeof obj.highlight === "string" ? obj.highlight : undefined,
-          source: MangaSource.COMICK,
+          source: MangaSource.Comick,
         };
       })
       .filter((item): item is ComickManga => item !== null);
@@ -182,7 +182,7 @@ export class ComickClient extends BaseMangaSourceClient<
    * @returns String value or undefined.
    * @source
    */
-  private getStringField(
+  private getOptionalString(
     obj: Record<string, unknown>,
     key: string,
   ): string | undefined {
@@ -197,7 +197,7 @@ export class ComickClient extends BaseMangaSourceClient<
    * @returns Number value or undefined.
    * @source
    */
-  private getNumberField(
+  private getOptionalNumber(
     obj: Record<string, unknown>,
     key: string,
   ): number | undefined {
@@ -212,7 +212,7 @@ export class ComickClient extends BaseMangaSourceClient<
    * @returns Boolean value or undefined.
    * @source
    */
-  private getBooleanField(
+  private getOptionalBoolean(
     obj: Record<string, unknown>,
     key: string,
   ): boolean | undefined {
@@ -227,7 +227,7 @@ export class ComickClient extends BaseMangaSourceClient<
    * @returns Typed array or empty array.
    * @source
    */
-  private getArrayField<T>(obj: Record<string, unknown>, key: string): T[] {
+  private getArrayOrEmpty<T>(obj: Record<string, unknown>, key: string): T[] {
     const value = obj[key];
     return Array.isArray(value) ? (value as T[]) : [];
   }
@@ -239,7 +239,7 @@ export class ComickClient extends BaseMangaSourceClient<
    * @returns Typed object or undefined.
    * @source
    */
-  private getObjectField<T extends Record<string, unknown>>(
+  private getOptionalObject<T extends Record<string, unknown>>(
     obj: Record<string, unknown>,
     key: string,
   ): T | undefined {
@@ -253,46 +253,46 @@ export class ComickClient extends BaseMangaSourceClient<
    * @returns Parsed comic object.
    * @source
    */
-  private buildComickComicObject(comicObj: Record<string, unknown>) {
+  private buildComicObject(comicObj: Record<string, unknown>) {
     return {
       id: String(comicObj.id),
       title: String(comicObj.title),
       slug: String(comicObj.slug),
-      desc: this.getStringField(comicObj, "desc"),
-      status: this.getNumberField(comicObj, "status"),
-      year: this.getNumberField(comicObj, "year"),
-      country: this.getStringField(comicObj, "country"),
-      created_at: this.getStringField(comicObj, "created_at"),
-      updated_at: this.getStringField(comicObj, "updated_at"),
-      demographic: this.getNumberField(comicObj, "demographic"),
-      hentai: this.getBooleanField(comicObj, "hentai"),
-      content_rating: this.getStringField(comicObj, "content_rating"),
-      mu_comics: this.getObjectField<{
+      desc: this.getOptionalString(comicObj, "desc"),
+      status: this.getOptionalNumber(comicObj, "status"),
+      year: this.getOptionalNumber(comicObj, "year"),
+      country: this.getOptionalString(comicObj, "country"),
+      createdAt: this.getOptionalString(comicObj, "created_at"),
+      updatedAt: this.getOptionalString(comicObj, "updated_at"),
+      demographic: this.getOptionalNumber(comicObj, "demographic"),
+      hentai: this.getOptionalBoolean(comicObj, "hentai"),
+      contentRating: this.getOptionalString(comicObj, "content_rating"),
+      muComics: this.getOptionalObject<{
         id: string;
         title: string;
         slug: string;
       }>(comicObj, "mu_comics"),
-      md_comics: this.getObjectField<{
+      mdComics: this.getOptionalObject<{
         id: string;
         title: string;
         slug: string;
       }>(comicObj, "md_comics"),
-      authors: this.getArrayField<{
+      authors: this.getArrayOrEmpty<{
         id: string;
         name: string;
         slug: string;
       }>(comicObj, "authors"),
-      artists: this.getArrayField<{
+      artists: this.getArrayOrEmpty<{
         id: string;
         name: string;
         slug: string;
       }>(comicObj, "artists"),
-      genres: this.getArrayField<{
+      genres: this.getArrayOrEmpty<{
         id: string;
         name: string;
         slug: string;
       }>(comicObj, "genres"),
-      md_titles: this.getArrayField<{
+      mdTitles: this.getArrayOrEmpty<{
         title: string;
         lang: string;
       }>(comicObj, "md_titles"),
@@ -378,8 +378,8 @@ export class ComickClient extends BaseMangaSourceClient<
         comicObj.links && typeof comicObj.links === "object"
           ? this.parseExternalLinks(comicObj.links as Record<string, unknown>)
           : {},
-      source: MangaSource.COMICK,
-      comic: this.buildComickComicObject(comicObj),
+      source: MangaSource.Comick,
+      comic: this.buildComicObject(comicObj),
       langList: Array.isArray(response.langList)
         ? (response.langList as string[])
         : undefined,

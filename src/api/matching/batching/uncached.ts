@@ -17,9 +17,10 @@ import { generateCacheKey, isCacheValid, mangaCache } from "../cache";
 
 /**
  * Maximum concurrent manga searches (1 = sequential for rate limit compliance).
+ * Renamed to be explicit about its purpose.
  * @source
  */
-const MAX_CONCURRENT = 1;
+const MAX_CONCURRENT_SEARCHES = 1;
 
 /**
  * Search uncached manga sequentially with concurrency control.
@@ -54,8 +55,8 @@ export async function processUncachedManga(
   // Create a semaphore to strictly limit concurrency - process one manga at a time
   let activeCount = 0;
 
-  // Track processed manga to prevent duplicates
-  const processedMangas = new Set<number>();
+  // Track processed manga indices to prevent duplicates
+  const processedIndices = new Set<number>();
 
   // Create a queue that will be processed one by one
   const queue = [...uncachedManga];
@@ -161,7 +162,7 @@ export async function processUncachedManga(
         title: string;
         slug: string;
         comickId: string;
-        foundViaComick: boolean;
+        isFoundViaComick: boolean;
       }
     >();
     const mangaDexSourceMap = new Map<
@@ -170,7 +171,7 @@ export async function processUncachedManga(
         title: string;
         slug: string;
         mangaDexId: string;
-        foundViaMangaDex: boolean;
+        isFoundViaMangaDex: boolean;
       }
     >();
     for (const match of searchResponse.matches) {
@@ -189,7 +190,7 @@ export async function processUncachedManga(
           title: match.sourceInfo.title,
           slug: match.sourceInfo.slug,
           comickId: match.sourceInfo.sourceId,
-          foundViaComick: match.sourceInfo.foundViaAlternativeSearch,
+          isFoundViaComick: match.sourceInfo.isFoundViaAlternativeSearch,
         });
       }
 
@@ -201,7 +202,7 @@ export async function processUncachedManga(
           title: match.sourceInfo.title,
           slug: match.sourceInfo.slug,
           mangaDexId: match.sourceInfo.sourceId,
-          foundViaMangaDex: match.sourceInfo.foundViaAlternativeSearch,
+          isFoundViaMangaDex: match.sourceInfo.isFoundViaAlternativeSearch,
         });
       }
     }
@@ -250,7 +251,7 @@ export async function processUncachedManga(
 
   // Function to start processing the next manga in the queue
   /**
-   * Process next manga in queue, enforcing MAX_CONCURRENT concurrency limit.
+   * Process next manga in queue, enforcing MAX_CONCURRENT_SEARCHES concurrency limit.
    * @returns Promise resolving when next item is processed or queue is empty.
    * @source
    */
@@ -271,7 +272,7 @@ export async function processUncachedManga(
     }
 
     // If we're at max concurrency, wait
-    if (activeCount >= MAX_CONCURRENT) {
+    if (activeCount >= MAX_CONCURRENT_SEARCHES) {
       return;
     }
 
@@ -279,13 +280,13 @@ export async function processUncachedManga(
     const { index, manga } = queue.shift()!;
 
     // Skip if this manga has already been processed
-    if (processedMangas.has(index)) {
+    if (processedIndices.has(index)) {
       processNext();
       return;
     }
 
     // Mark this manga as being processed
-    processedMangas.add(index);
+    processedIndices.add(index);
     activeCount++;
 
     try {
@@ -333,8 +334,12 @@ export async function processUncachedManga(
     }
   };
 
-  // Start processing up to MAX_CONCURRENT manga
-  for (let i = 0; i < Math.min(MAX_CONCURRENT, uncachedManga.length); i++) {
+  // Start processing up to MAX_CONCURRENT_SEARCHES manga
+  for (
+    let i = 0;
+    i < Math.min(MAX_CONCURRENT_SEARCHES, uncachedManga.length);
+    i++
+  ) {
     processNext();
   }
 

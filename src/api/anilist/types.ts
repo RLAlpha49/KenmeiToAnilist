@@ -208,20 +208,20 @@ export interface MangaMatch {
     slug: string;
     sourceId: string;
     source: string;
-    foundViaAlternativeSearch: boolean;
+    isFoundViaAlternativeSearch: boolean;
   };
   // @deprecated Use sourceInfo instead
   comickSource?: {
     title: string;
     slug: string;
     comickId: string;
-    foundViaComick: boolean;
+    isFoundViaComick: boolean;
   };
   mangaDexSource?: {
     title: string;
     slug: string;
     mangaDexId: string;
-    foundViaMangaDex: boolean;
+    isFoundViaMangaDex: boolean;
   };
 }
 

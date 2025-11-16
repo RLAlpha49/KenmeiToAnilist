@@ -46,10 +46,10 @@ export function prepareAllEntriesToSync(
         // Reuse existing getEffectiveStatus logic which already handles auto-pause checks
         const km: KenmeiMangaData = {
           status: kenmei.status,
-          updated_at: kenmei.updated_at,
-          last_read_at: kenmei.last_read_at,
+          updatedAt: kenmei.updatedAt,
+          lastReadAt: kenmei.lastReadAt,
           title: kenmei.title,
-          chapters_read: kenmei.chapters_read,
+          chaptersRead: kenmei.chaptersRead,
           score: kenmei.score,
         };
         return getEffectiveStatus(km, syncConfig);
@@ -69,7 +69,7 @@ export function prepareAllEntriesToSync(
         mediaId: anilist.id,
         status:
           syncConfig.prioritizeAniListStatus && userEntry?.status
-            ? (userEntry.status as MediaListStatus)
+            ? userEntry.status
             : calculatedStatus,
         progress: (() => {
           if (
@@ -77,10 +77,10 @@ export function prepareAllEntriesToSync(
             userEntry?.progress &&
             userEntry.progress > 0
           ) {
-            const kenmeiProgress = kenmei.chapters_read || 0;
+            const kenmeiProgress = kenmei.chaptersRead || 0;
             return Math.max(userEntry.progress, kenmeiProgress);
           }
-          return kenmei.chapters_read || 0;
+          return kenmei.chaptersRead || 0;
         })(),
         private: privateStatus,
         score: (() => {

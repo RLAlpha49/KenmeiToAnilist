@@ -13,13 +13,13 @@ import { shouldSkipByCustomRules } from "./custom-rules";
 
 /**
  * Configuration for system content filtering.
- * @property ignoreOneShots - Whether to filter out one-shots
- * @property ignoreAdultContent - Whether to filter out adult content
+ * @property shouldIgnoreOneShots - Whether to filter out one-shots
+ * @property shouldIgnoreAdultContent - Whether to filter out adult content
  * @source
  */
 export interface SystemFilterConfig {
-  ignoreOneShots?: boolean;
-  ignoreAdultContent?: boolean;
+  shouldIgnoreOneShots?: boolean;
+  shouldIgnoreAdultContent?: boolean;
 }
 
 /**
@@ -43,7 +43,7 @@ export function applySystemContentFilters(
   );
 
   // Filter one-shots if enabled
-  if (matchConfig.ignoreOneShots) {
+  if (matchConfig.shouldIgnoreOneShots) {
     const beforeFilter = filteredResults.length;
     filteredResults = filteredResults.filter((manga) => !isOneShot(manga));
     const afterFilter = filteredResults.length;
@@ -56,7 +56,7 @@ export function applySystemContentFilters(
   }
 
   // Filter adult content if enabled
-  if (matchConfig.ignoreAdultContent) {
+  if (matchConfig.shouldIgnoreAdultContent) {
     const beforeFilter = filteredResults.length;
     filteredResults = filteredResults.filter((manga) => !manga.isAdult);
     const afterFilter = filteredResults.length;

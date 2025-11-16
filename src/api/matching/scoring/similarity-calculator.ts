@@ -9,44 +9,49 @@
  * Calculate word order similarity using longest common subsequence.
  * Combines order preservation (50%), position proximity (30%), and word coverage (20%).
  *
- * @param words1 - First array of words to compare
- * @param words2 - Second array of words to compare
+ * @param primaryWords - First array of words to compare
+ * @param comparisonWords - Second array of words to compare
  * @returns Order similarity score between 0 and 1
  * @source
  */
 export function calculateWordOrderSimilarity(
-  words1: string[],
-  words2: string[],
+  primaryWords: string[],
+  comparisonWords: string[],
 ): number {
   // If either array is empty, no match
-  if (words1.length === 0 || words2.length === 0) return 0;
+  if (primaryWords.length === 0 || comparisonWords.length === 0) return 0;
 
   // Filter for words that appear in both arrays
-  const commonWords1 = words1.filter((word) => words2.includes(word));
+  const commonPrimaryWords = primaryWords.filter((word) =>
+    comparisonWords.includes(word),
+  );
 
   // If no common words, no order similarity
-  if (commonWords1.length === 0) return 0;
+  if (commonPrimaryWords.length === 0) return 0;
 
   // Calculate longest common subsequence (LCS) length
   // This gives us the longest sequence of words that appear in same order
-  const lcsLength = calculateLCS(words1, words2);
+  const longestCommonSubsequenceLength = calculateLongestCommonSubsequenceLength(
+    primaryWords,
+    comparisonWords,
+  );
 
   // Calculate order preservation score
   // Higher LCS means better order preservation
-  const maxLength = Math.max(words1.length, words2.length);
-  const lcsScore = lcsLength / maxLength;
+  const maxLength = Math.max(primaryWords.length, comparisonWords.length);
+  const lcsScore = longestCommonSubsequenceLength / maxLength;
 
   // Calculate position distance penalty
   // Words at similar positions get bonus
   let positionScore = 0;
-  const minLength = Math.min(words1.length, words2.length);
+  const minLength = Math.min(primaryWords.length, comparisonWords.length);
 
   for (let i = 0; i < minLength; i++) {
-    if (words1[i] === words2[i]) {
+    if (primaryWords[i] === comparisonWords[i]) {
       positionScore += 1;
-    } else if (words2.includes(words1[i])) {
+    } else if (comparisonWords.includes(primaryWords[i])) {
       // Word exists but in different position, give partial credit
-      const actualPos = words2.indexOf(words1[i]);
+      const actualPos = comparisonWords.indexOf(primaryWords[i]);
       const distance = Math.abs(i - actualPos);
       positionScore += Math.max(0, 1 - distance / maxLength);
     }
@@ -54,7 +59,7 @@ export function calculateWordOrderSimilarity(
   positionScore /= maxLength;
 
   // Calculate coverage (what portion of words are common)
-  const coverage = commonWords1.length / maxLength;
+  const coverage = commonPrimaryWords.length / maxLength;
 
   // Combine scores with weights
   // LCS is most important for order, then position, then coverage
@@ -65,14 +70,17 @@ export function calculateWordOrderSimilarity(
  * Calculate longest common subsequence length between two word arrays.
  * Uses space-optimized dynamic programming (O(mn) time, O(n) space).
  *
- * @param words1 - First array of words
- * @param words2 - Second array of words
+ * @param primaryWords - First array of words
+ * @param comparisonWords - Second array of words
  * @returns Length of the longest common subsequence
  * @source
  */
-function calculateLCS(words1: string[], words2: string[]): number {
-  const m = words1.length;
-  const n = words2.length;
+function calculateLongestCommonSubsequenceLength(
+  primaryWords: string[],
+  comparisonWords: string[],
+): number {
+  const m = primaryWords.length;
+  const n = comparisonWords.length;
 
   // Use space-optimized DP (only need previous row)
   let previous = new Array<number>(n + 1).fill(0);
@@ -80,7 +88,7 @@ function calculateLCS(words1: string[], words2: string[]): number {
 
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
-      if (words1[i - 1] === words2[j - 1]) {
+      if (primaryWords[i - 1] === comparisonWords[j - 1]) {
         current[j] = previous[j - 1] + 1;
       } else {
         current[j] = Math.max(current[j - 1], previous[j]);

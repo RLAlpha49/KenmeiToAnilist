@@ -20,14 +20,14 @@ export interface MatchEngineConfig {
   confidenceThreshold: number;
 
   /** Boost scores for English title matches by 5%. */
-  preferEnglishTitles: boolean;
+  shouldPreferEnglishTitles: boolean;
   /** Boost scores for Romaji title matches by 5%. */
-  preferRomajiTitles: boolean;
+  shouldPreferRomajiTitles: boolean;
   /** Include AniList synonyms and alternative titles in scoring. */
-  useAlternativeTitles: boolean;
+  shouldUseAlternativeTitles: boolean;
 
   /** Preserve case in title comparison. */
-  caseSensitive: boolean;
+  isCaseSensitive: boolean;
 
   /** Minimum title length threshold; skip shorter titles to reduce false matches. */
   minTitleLength: number;
@@ -42,10 +42,10 @@ export interface MatchEngineConfig {
  */
 export const DEFAULT_MATCH_CONFIG: MatchEngineConfig = {
   confidenceThreshold: 75,
-  preferEnglishTitles: true,
-  preferRomajiTitles: false,
-  useAlternativeTitles: true,
-  caseSensitive: false,
+  shouldPreferEnglishTitles: true,
+  shouldPreferRomajiTitles: false,
+  shouldUseAlternativeTitles: true,
+  isCaseSensitive: false,
   minTitleLength: 3,
   maxMatches: 5,
 };
@@ -54,11 +54,11 @@ export const DEFAULT_MATCH_CONFIG: MatchEngineConfig = {
  * Normalizes a string by removing special characters and collapsing whitespace.
  * Optionally converts to lowercase based on case sensitivity setting.
  * @param text - String to normalize.
- * @param caseSensitive - Whether to preserve case (default: false).
+ * @param isCaseSensitive - Whether to preserve case (default: false).
  * @returns Normalized string with special characters and extra whitespace removed.
  * @source
  */
-export function normalizeString(text: string, caseSensitive = false): string {
+export function normalizeString(text: string, isCaseSensitive = false): string {
   if (!text) return "";
 
   // Replace special characters and normalize spacing
@@ -67,7 +67,7 @@ export function normalizeString(text: string, caseSensitive = false): string {
     .replaceAll(/\s+/g, " ") // Collapse multiple spaces
     .trim();
 
-  return caseSensitive ? replaced : replaced.toLowerCase();
+  return isCaseSensitive ? replaced : replaced.toLowerCase();
 }
 
 /**
@@ -165,13 +165,13 @@ function checkAlternativeTitleMatch(
       normalizedAltTitle,
       anilistManga.title.english,
     );
-    scores.push({ field: "alt_to_english", score: altEnglishScore });
+    scores.push({ field: "altToEnglish", score: altEnglishScore });
 
     if (altEnglishScore === 100) {
       return {
         confidence: 100,
         isExactMatch: true,
-        matchedField: "alt_to_english",
+        matchedField: "altToEnglish",
       };
     }
   }
@@ -182,13 +182,13 @@ function checkAlternativeTitleMatch(
       normalizedAltTitle,
       anilistManga.title.romaji,
     );
-    scores.push({ field: "alt_to_romaji", score: altRomajiScore });
+    scores.push({ field: "altToRomaji", score: altRomajiScore });
 
     if (altRomajiScore === 100) {
       return {
         confidence: 100,
         isExactMatch: true,
-        matchedField: "alt_to_romaji",
+        matchedField: "altToRomaji",
       };
     }
   }
@@ -200,7 +200,7 @@ function checkAlternativeTitleMatch(
  * Scores Kenmei alternative titles against AniList titles; early return on exact match.
  * @param kenmeiManga - Kenmei manga entry.
  * @param anilistManga - AniList manga entry to check.
- * @param caseSensitive - Whether comparison is case sensitive.
+ * @param isCaseSensitive - Whether comparison is case sensitive.
  * @param minTitleLength - Minimum length threshold for alternative titles.
  * @param scores - Accumulator array for similarity scores.
  * @returns Match result if exact match found, null otherwise.
@@ -209,16 +209,16 @@ function checkAlternativeTitleMatch(
 function scoreAlternativeTitles(
   kenmeiManga: KenmeiManga,
   anilistManga: AniListManga,
-  caseSensitive: boolean,
+  isCaseSensitive: boolean,
   minTitleLength: number,
   scores: Array<{ field: string; score: number }>,
 ): { confidence: number; isExactMatch: boolean; matchedField: string } | null {
-  if (!kenmeiManga.alternative_titles?.length) return null;
+  if (!kenmeiManga.alternativeTitles?.length) return null;
 
-  for (const altTitle of kenmeiManga.alternative_titles) {
+  for (const altTitle of kenmeiManga.alternativeTitles) {
     if (!altTitle) continue;
 
-    const normalizedAltTitle = normalizeString(altTitle, caseSensitive);
+    const normalizedAltTitle = normalizeString(altTitle, isCaseSensitive);
     if (normalizedAltTitle.length < minTitleLength) continue;
 
     const matchResult = checkAlternativeTitleMatch(
@@ -236,15 +236,15 @@ function scoreAlternativeTitles(
  * Calculates final adjusted score with language preference weighting.
  * Returns the highest score adjusted by title preference settings.
  * @param scores - Array of scores with field identifiers.
- * @param preferEnglishTitles - Whether to boost English title scores by 5%.
- * @param preferRomajiTitles - Whether to boost Romaji title scores by 5%.
+ * @param shouldPreferEnglishTitles - Whether to boost English title scores by 5%.
+ * @param shouldPreferRomajiTitles - Whether to boost Romaji title scores by 5%.
  * @returns Match result with final confidence (0-100), exact match status, and matched field.
  * @source
  */
 function calculateFinalScore(
   scores: Array<{ field: string; score: number }>,
-  preferEnglishTitles: boolean,
-  preferRomajiTitles: boolean,
+  shouldPreferEnglishTitles: boolean,
+  shouldPreferRomajiTitles: boolean,
 ): { confidence: number; isExactMatch: boolean; matchedField: string } {
   if (scores.length === 0) {
     return { confidence: 0, isExactMatch: false, matchedField: "none" };
@@ -259,8 +259,8 @@ function calculateFinalScore(
   // Apply title preference weighting
   let adjustedScore = topScore.score;
   if (
-    (topScore.field === "english" && preferEnglishTitles) ||
-    (topScore.field === "romaji" && preferRomajiTitles)
+    (topScore.field === "english" && shouldPreferEnglishTitles) ||
+    (topScore.field === "romaji" && shouldPreferRomajiTitles)
   ) {
     adjustedScore = Math.min(100, adjustedScore * 1.05);
   }
@@ -294,14 +294,14 @@ export function scoreMatch(
 ): { confidence: number; isExactMatch: boolean; matchedField: string } {
   const matchConfig = { ...DEFAULT_MATCH_CONFIG, ...config };
   const {
-    caseSensitive,
-    preferEnglishTitles,
-    preferRomajiTitles,
-    useAlternativeTitles,
+    isCaseSensitive,
+    shouldPreferEnglishTitles,
+    shouldPreferRomajiTitles,
+    shouldUseAlternativeTitles,
   } = matchConfig;
 
   // Normalize the Kenmei title
-  const kenmeiTitle = normalizeString(kenmeiManga.title, caseSensitive);
+  const kenmeiTitle = normalizeString(kenmeiManga.title, isCaseSensitive);
 
   // Skip extremely short titles (likely errors)
   if (kenmeiTitle.length < matchConfig.minTitleLength) {
@@ -316,14 +316,14 @@ export function scoreMatch(
   if (primaryMatch) return primaryMatch;
 
   // Check alternative titles if enabled - early return if exact match found
-  if (useAlternativeTitles) {
+  if (shouldUseAlternativeTitles) {
     const synonymMatch = scoreSynonyms(kenmeiTitle, anilistManga, scores);
     if (synonymMatch) return synonymMatch;
 
     const altTitleMatch = scoreAlternativeTitles(
       kenmeiManga,
       anilistManga,
-      caseSensitive,
+      isCaseSensitive,
       matchConfig.minTitleLength,
       scores,
     );
@@ -331,7 +331,11 @@ export function scoreMatch(
   }
 
   // Calculate final score with preferences
-  return calculateFinalScore(scores, preferEnglishTitles, preferRomajiTitles);
+  return calculateFinalScore(
+    scores,
+    shouldPreferEnglishTitles,
+    shouldPreferRomajiTitles,
+  );
 }
 
 /**

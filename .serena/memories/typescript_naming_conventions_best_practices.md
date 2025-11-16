@@ -111,6 +111,36 @@ This memory documents general, community-accepted TypeScript naming conventions 
 - Good: `function isValidEmail(email: string): boolean`.
 - React: `function UserCard({ user }: UserCardProps) { ... }`.
 
+## 17. Async & side-effectful APIs
+
+- Prefer verbs that describe what the function does to the system, especially for effects: `fetchManga`, `loadPreferences`, `saveCache`, `emitEvent`.
+- When the return type is a `Promise`, you can rely on the type information, but using an `Async` suffix (e.g., `deleteEntryAsync`) can be helpful in APIs where synchronous overloads also exist. Whatever you choose, apply it consistently across similar helpers.
+- Avoid vague prefixes like `do` or `handle`. Instead be explicit (`request`, `load`, `persist`, `bootstrap`, `initialize`).
+- Use boolean-returning guards like `shouldRetryFetch` or `canSubmit` to make control flow more readable and self-document the intent of side effects.
+
+## 18. Derived data and selectors
+
+- Use `get`, `select`, `compute`, or `build` prefixes for helpers that derive new data without causing side effects: `getNormalizedTitle`, `selectAvailableSources`, `computeScore`, `buildPayload`.
+- For cached values or memoized selectors, suffix with `Memo` or `Cache` when it clarifies behavior: `getMangaDetailsMemo`, `selectUserCache`.
+- When a function transforms one shape into another, describe both sides when practical: `mapApiResponseToDomain`, `convertLegacySettings`.
+
+## 19. Module boundaries and organization
+
+- Each directory or module should reflect a single responsibility and follow a naming convention that aligns with its purpose (e.g., `manga-sources/`, `user-context/`). Avoid overly generic module names that blur intent.
+- Use `index.ts` barrels sparingly and prefer named exports that describe what is being exposed; e.g., `export { MangaSourceRegistry } from './registry';` rather than re-exporting everything under ambiguous names.
+- For cross-cutting services, adopt suffixes such as `Service`, `Registry`, `Store`, `Bridge`, or `Adapter` to reveal their role: `MangaSourceService`, `MatchRegistry`, `StorageStore`, `SettingsBridge`.
+
+## 20. Error, event, and reason naming
+
+- Name custom errors to mirror the domain and the operation that failed: `MatchProcessingError`, `UnauthorizedStorageError`, `ValidationError`. Keep them in PascalCase and extend `Error` when possible for catchability.
+- When naming string constants or enums for events/reasons, use descriptive PascalCase values: `enum UpdateReason { Manual = 'manual', Sync = 'sync' }`.
+- For telemetry or logging keys, follow the same casing rules that apply to the surrounding system, and keep the names consistent with the emitted events.
+
+## 21. Naming gotchas and guardrails
+
+- Avoid cryptic abbreviations unless they are universally understood in the domain (e.g., `md` for manga-dex only if it is documented everywhere). Prefer clarity over saving a few keystrokes.
+- Resist the urge to reuse names from external APIs when they conflict with local semantics—wrap external payloads in domain-friendly types and map them with descriptive helpers (e.g., `mapAnilistTitleToDomain`).
+
 ---
 
 This memory is meant to be a canonical reference for naming style. When there are differences between this memory and a repository's local conventions, prefer the repository's documented standards for that repo — but when introducing new code or refactoring, use these TypeScript best-practices as a baseline where reasonable.

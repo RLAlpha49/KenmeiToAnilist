@@ -31,12 +31,12 @@ class MangaSourceRegistry {
     // not prevent other clients from registering.
     const loaders = [
       {
-        source: MangaSource.COMICK,
+        source: MangaSource.Comick,
         exportName: "comickClient",
         importFn: () => import("./comick/client"),
       },
       {
-        source: MangaSource.MANGADEX,
+        source: MangaSource.MangaDex,
         exportName: "mangaDexClient",
         importFn: () => import("./mangadex/client"),
       },

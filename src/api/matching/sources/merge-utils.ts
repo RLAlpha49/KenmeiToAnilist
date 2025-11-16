@@ -103,7 +103,7 @@ export function getSourceInfo(
       slug: comickInfo.slug,
       sourceId: comickInfo.comickId,
       source: "comick",
-      foundViaAlternativeSearch: comickInfo.foundViaComick,
+      isFoundViaAlternativeSearch: comickInfo.isFoundViaComick,
     };
   }
 
@@ -114,7 +114,7 @@ export function getSourceInfo(
       slug: mangaDexInfo.slug,
       sourceId: mangaDexInfo.mangaDexId,
       source: "mangadex",
-      foundViaAlternativeSearch: mangaDexInfo.foundViaMangaDex,
+      isFoundViaAlternativeSearch: mangaDexInfo.isFoundViaMangaDex,
     };
   }
 

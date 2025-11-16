@@ -13,7 +13,7 @@ import { MangaSource } from "../types";
  * @source
  */
 export interface MangaDexManga extends BaseMangaEntry {
-  source: MangaSource.MANGADEX;
+  source: MangaSource.MangaDex;
   type: string;
   /** External platform links including AniList */
   links?: {
@@ -141,7 +141,7 @@ export interface MangaDexSearchResponse {
  * @source
  */
 export interface MangaDexMangaDetail extends BaseMangaDetail {
-  source: MangaSource.MANGADEX;
+  source: MangaSource.MangaDex;
   data: {
     id: string;
     type: string;

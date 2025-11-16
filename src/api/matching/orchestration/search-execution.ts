@@ -44,7 +44,7 @@ async function executeSingleSearch(
  * @param currentPage - Current page number
  * @param resultsLength - Current number of results collected
  * @param maxResults - Maximum number of results allowed
- * @param singlePageMode - Whether operating in single page mode
+ * @param isSinglePageMode - Whether operating in single page mode
  * @returns True if pagination should continue
  *
  * @source
@@ -54,9 +54,9 @@ function shouldContinuePagination(
   currentPage: number,
   resultsLength: number,
   maxResults: number,
-  singlePageMode: boolean,
+  isSinglePageMode: boolean,
 ): boolean {
-  if (singlePageMode) {
+  if (isSinglePageMode) {
     console.debug(
       `[MangaSearchService] 🔍 Single page mode: Fetched page ${currentPage}, stopping search`,
     );
@@ -158,7 +158,7 @@ export async function executeSearchLoop(
   let currentPage = specificPage || 1;
   let hasNextPage = true;
   let lastPageInfo: PageInfo | undefined = undefined;
-  const singlePageMode = specificPage !== undefined;
+  const isSinglePageMode = specificPage !== undefined;
 
   console.info(
     `[MangaSearchService] 🌐 Making network request to AniList API for "${searchQuery}" - bypassCache=${searchConfig.bypassCache}`,
@@ -211,7 +211,7 @@ export async function executeSearchLoop(
         currentPage,
         results.length,
         searchConfig.maxSearchResults,
-        singlePageMode,
+        isSinglePageMode,
       );
 
       currentPage++;

@@ -207,16 +207,16 @@ export function MatchingSettingsSection({
       title: "Ignore one shots in automatic matching",
       description:
         "Skip one-shot manga during automatic matching. Useful for reducing noise in match results.",
-      field: "ignoreOneShots",
-      checked: matchConfig.ignoreOneShots,
+      field: "shouldIgnoreOneShots",
+      checked: matchConfig.shouldIgnoreOneShots,
     },
     "matching-adult-content": {
       id: "matching-adult-content",
       title: "Ignore adult content in automatic matching",
       description:
         "Skip manga marked as adult content during automatic matching. Helps filter NSFW titles.",
-      field: "ignoreAdultContent",
-      checked: matchConfig.ignoreAdultContent,
+      field: "shouldIgnoreAdultContent",
+      checked: matchConfig.shouldIgnoreAdultContent,
     },
     "matching-blur-adult": {
       id: "matching-blur-adult",

@@ -110,8 +110,8 @@ function getChangeCount(
     getEffectiveStatus(kenmei, syncConfig) !== userEntry.status;
 
   const progressWillChange = syncConfig.prioritizeAniListProgress
-    ? (kenmei.chapters_read || 0) > (userEntry.progress || 0)
-    : (kenmei.chapters_read || 0) !== (userEntry.progress || 0);
+    ? (kenmei.chaptersRead || 0) > (userEntry.progress || 0)
+    : (kenmei.chaptersRead || 0) !== (userEntry.progress || 0);
 
   const anilistScore = Number(userEntry.score);
   const kenmeiScore = Number(kenmei.score || 0);
@@ -166,8 +166,7 @@ export function sortMangaMatches(
         comparison = kenmeiA.status.localeCompare(kenmeiB.status);
         break;
       case "progress":
-        comparison =
-          (kenmeiA.chapters_read || 0) - (kenmeiB.chapters_read || 0);
+        comparison = (kenmeiA.chaptersRead || 0) - (kenmeiB.chaptersRead || 0);
         break;
       case "score":
         comparison = (kenmeiA.score || 0) - (kenmeiB.score || 0);

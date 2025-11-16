@@ -73,28 +73,30 @@ export class MangaDexClient extends BaseMangaSourceClient<
 
   /**
    * Get detailed information about a specific MangaDex manga.
-   * @param id - The MangaDex manga ID.
+   * @param slug - The MangaDex manga ID.
    * @returns Promise resolving to manga detail or null if not found.
    * @source
    */
-  public async getMangaDetail(id: string): Promise<MangaDexMangaDetail | null> {
-    return withGroupAsync(`[MangaDex] Detail: "${id}"`, async () => {
+  public async getMangaDetail(
+    slug: string,
+  ): Promise<MangaDexMangaDetail | null> {
+    return withGroupAsync(`[MangaDex] Detail: "${slug}"`, async () => {
       try {
         console.debug(
-          `[MangaDex] 📖 Getting MangaDex manga details for: ${id}`,
+          `[MangaDex] 📖 Getting MangaDex manga details for: ${slug}`,
         );
 
         // Make direct HTTP request using the base client's functionality
-        const url = this.buildDetailUrl(id);
+        const url = this.buildDetailUrl(slug);
         const rawData = await this.makeRequest(url);
         const detail = this.parseDetailResponse(rawData);
         if (detail) {
-          console.info(`[MangaDex] ✅ Retrieved details for manga ${id}`);
+          console.info(`[MangaDex] ✅ Retrieved details for manga ${slug}`);
         }
         return detail;
       } catch (error) {
         console.error(
-          `[MangaDex] ❌ Failed to get MangaDex manga details for ${id}:`,
+          `[MangaDex] ❌ Failed to get MangaDex manga details for ${slug}:`,
           error,
         );
         return null;
@@ -160,7 +162,7 @@ export class MangaDexClient extends BaseMangaSourceClient<
    * @returns Parsed tags array with validated structure.
    * @source
    */
-  private parseMangaDexTags(tagsArray: unknown):
+  private parseTags(tagsArray: unknown):
     | Array<{
         id: string;
         type: string;
@@ -172,7 +174,9 @@ export class MangaDexClient extends BaseMangaSourceClient<
         };
       }>
     | undefined {
-    if (!Array.isArray(tagsArray)) return undefined;
+    if (!Array.isArray(tagsArray)) {
+      return undefined;
+    }
 
     return tagsArray
       .map((tag: unknown) => {
@@ -186,14 +190,16 @@ export class MangaDexClient extends BaseMangaSourceClient<
           return null;
         }
 
-        const tagObj = tag as Record<string, unknown>;
-        const attrs = tagObj.attributes;
+        const tagRecord = tag as Record<string, unknown>;
+        const tagAttributes = tagRecord.attributes;
 
-        if (!attrs || typeof attrs !== "object") return null;
+        if (!tagAttributes || typeof tagAttributes !== "object") {
+          return null;
+        }
 
-        const attrObj = attrs as Record<string, unknown>;
-        const name = attrObj.name;
-        const description = attrObj.description;
+        const tagAttrObj = tagAttributes as Record<string, unknown>;
+        const name = tagAttrObj.name;
+        const description = tagAttrObj.description;
 
         // Ensure name and description have required structure
         if (
@@ -208,22 +214,32 @@ export class MangaDexClient extends BaseMangaSourceClient<
         }
 
         return {
-          id: String(tagObj.id),
-          type: String(tagObj.type),
+          id: String(tagRecord.id),
+          type: String(tagRecord.type),
           attributes: {
             name: name as { en: string; [key: string]: string },
             description: description as {
               en: string;
               [key: string]: string;
             },
-            group: String(attrObj.group),
-            version: typeof attrObj.version === "number" ? attrObj.version : 0,
+            group: String(tagAttrObj.group),
+            version:
+              typeof tagAttrObj.version === "number" ? tagAttrObj.version : 0,
           },
         };
       })
       .filter(
         (
-          tag,
+          tag: {
+            id: string;
+            type: string;
+            attributes: {
+              name: { en: string; [key: string]: string };
+              description: { en: string; [key: string]: string };
+              group: string;
+              version: number;
+            };
+          } | null,
         ): tag is {
           id: string;
           type: string;
@@ -252,7 +268,7 @@ export class MangaDexClient extends BaseMangaSourceClient<
    * @returns Attributes object or null if invalid.
    * @source
    */
-  private extractMangaDexAttributes(
+  private extractAttributes(
     item: Record<string, unknown>,
   ): Record<string, unknown> | null {
     const attributes = item.attributes;
@@ -267,7 +283,7 @@ export class MangaDexClient extends BaseMangaSourceClient<
    * @returns { id, type } or null if invalid.
    * @source
    */
-  private extractMangaDexItemIdAndType(
+  private extractItemIdAndType(
     item: Record<string, unknown>,
   ): { id: unknown; type: unknown } | null {
     if (!item.id || !item.type) {
@@ -283,18 +299,18 @@ export class MangaDexClient extends BaseMangaSourceClient<
    * @returns Parsed manga entry or null if invalid.
    * @source
    */
-  private buildMangaDexMangaFromItem(item: unknown): MangaDexManga | null {
+  private buildMangaFromItem(item: unknown): MangaDexManga | null {
     // Validate required fields
     if (!item || typeof item !== "object") {
       console.warn("[MangaDex] Skipping invalid search result item", item);
       return null;
     }
 
-    const obj = item as Record<string, unknown>;
-    const ids = this.extractMangaDexItemIdAndType(obj);
-    if (!ids) return null;
+    const itemObj = item as Record<string, unknown>;
+    const idAndType = this.extractItemIdAndType(itemObj);
+    if (!idAndType) return null;
 
-    const attributes = this.extractMangaDexAttributes(obj) || {};
+    const attributes = this.extractAttributes(itemObj) || {};
 
     const titleObj =
       attributes.title && typeof attributes.title === "object"
@@ -313,21 +329,21 @@ export class MangaDexClient extends BaseMangaSourceClient<
     );
 
     return {
-      id: String(ids.id),
+      id: String(idAndType.id),
       title: primaryTitle,
-      slug: String(ids.id),
+      slug: String(idAndType.id),
       year: typeof attributes.year === "number" ? attributes.year : undefined,
       status:
         typeof attributes.status === "string"
-          ? this.mapMangaDexStatus(attributes.status)
+          ? this.mapStatus(attributes.status)
           : 0,
       country:
         typeof attributes.originalLanguage === "string"
           ? attributes.originalLanguage
           : undefined,
       alternativeTitles,
-      source: MangaSource.MANGADEX,
-      type: String(ids.type),
+      source: MangaSource.MangaDex,
+      type: String(idAndType.type),
       links:
         attributes.links && typeof attributes.links === "object"
           ? (attributes.links as Record<string, string>)
@@ -352,7 +368,7 @@ export class MangaDexClient extends BaseMangaSourceClient<
         typeof attributes.contentRating === "string"
           ? attributes.contentRating
           : undefined,
-      tags: this.parseMangaDexTags(attributes.tags),
+      tags: this.parseTags(attributes.tags),
     };
   }
 
@@ -377,7 +393,7 @@ export class MangaDexClient extends BaseMangaSourceClient<
     const data = response.data as unknown[];
 
     return data
-      .map((item: unknown) => this.buildMangaDexMangaFromItem(item))
+      .map((item: unknown) => this.buildMangaFromItem(item))
       .filter((item): item is MangaDexManga => item !== null);
   }
 
@@ -438,7 +454,7 @@ export class MangaDexClient extends BaseMangaSourceClient<
       description:
         attributes.description?.en ||
         (Object.values(attributes.description || {})[0] as string),
-      status: this.mapMangaDexStatus(attributes.status),
+      status: this.mapStatus(attributes.status),
       year: attributes.year,
       country: attributes.originalLanguage,
       createdAt: attributes.createdAt,
@@ -455,7 +471,7 @@ export class MangaDexClient extends BaseMangaSourceClient<
             ...attributes.links,
           }
         : undefined,
-      source: MangaSource.MANGADEX,
+      source: MangaSource.MangaDex,
       data: rawResponse.data,
     } as MangaDexMangaDetail;
   }
@@ -522,7 +538,7 @@ export class MangaDexClient extends BaseMangaSourceClient<
    * @returns Numeric status: 1=ongoing, 2=completed, 3=hiatus, 4=cancelled, 0=unknown.
    * @source
    */
-  private mapMangaDexStatus(status: string): number {
+  private mapStatus(status: string): number {
     switch (status?.toLowerCase()) {
       case "ongoing":
         return 1;
@@ -537,6 +553,32 @@ export class MangaDexClient extends BaseMangaSourceClient<
     }
   }
 
+  /**
+   * Extract AniList ID from a MangaDex manga entry.
+   * Prefer using the existing links on the lightweight `MangaDexManga` object
+   * and fall back to fetching detail data if required.
+   * @param manga - The MangaDex manga entry.
+   * @returns AniList ID number or null.
+   */
+  public async extractAniListId(manga: MangaDexManga): Promise<number | null> {
+    if (manga.links && typeof manga.links === "object" && manga.links.al) {
+      const parsed = Number.parseInt(String(manga.links.al), 10);
+      if (!Number.isNaN(parsed)) return parsed;
+    }
+
+    // Fallback: fetch detail and attempt to extract from there
+    try {
+      const detail = await this.getMangaDetail(manga.id);
+      if (!detail) return null;
+      return this.extractAniListIdFromDetail(detail);
+    } catch (err) {
+      console.warn(
+        "[MangaDex] Failed to extract AniList ID by fetching details",
+        err,
+      );
+      return null;
+    }
+  }
   /**
    * Build search URL with parameters for MangaDex API.
    * Includes content rating filters and relevance ordering.
@@ -558,8 +600,8 @@ export class MangaDexClient extends BaseMangaSourceClient<
    * @returns The formatted detail URL.
    * @source
    */
-  protected buildDetailUrl(id: string): string {
-    return `${this.config.baseUrl}/manga/${id}?includes[]=author&includes[]=artist&includes[]=cover_art`;
+  protected buildDetailUrl(slug: string): string {
+    return `${this.config.baseUrl}/manga/${slug}?includes[]=author&includes[]=artist&includes[]=cover_art`;
   }
 }
 

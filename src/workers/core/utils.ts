@@ -36,7 +36,7 @@ export interface CancellableExecution {
  * @param anilistCandidatesMap - Candidate AniList entries keyed by ID.
  * @param config - Matching engine configuration overrides.
  * @param progressCallback - Optional progress callback.
- * @param useWorkers - Whether to try workers (default: true).
+ * @param shouldUseWorkers - Whether we should try workers (default: true).
  * @returns Cancellable execution descriptor.
  * @source
  */
@@ -49,16 +49,16 @@ export function executeMatchingWithWorkers(
     total: number,
     currentTitle?: string,
   ) => void,
-  useWorkers = true,
+  shouldUseWorkers = true,
 ): CancellableExecution {
   // Generate task ID upfront to ensure consistency and eliminate race condition
   // This ID is passed to the pool and used for all cancellation operations
   const taskId = `task-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-  const pool = useWorkers ? getWorkerPool() : null;
+  const pool = shouldUseWorkers ? getWorkerPool() : null;
 
   const promise = (async () => {
     // Check if workers should be used
-    if (useWorkers && pool) {
+    if (shouldUseWorkers && pool) {
       try {
         // Pass the upfront taskId to ensure pool uses same ID for all tracking
         const execution = await pool.executeMatchBatch(

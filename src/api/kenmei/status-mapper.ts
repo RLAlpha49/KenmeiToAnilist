@@ -4,20 +4,12 @@
  * @description Status mapper for Kenmei to AniList conversion, including mapping utilities and validation helpers.
  */
 
-import { KenmeiStatus, StatusMappingConfig } from "./types";
+import {
+  KenmeiStatus,
+  StatusMappingConfig,
+  DEFAULT_STATUS_MAPPING,
+} from "./types";
 import { MediaListStatus } from "../anilist/types";
-
-/**
- * Default bidirectional status mapping between Kenmei and AniList media list statuses.
- * @source
- */
-const DEFAULT_STATUS_MAPPING: Record<KenmeiStatus, MediaListStatus> = {
-  reading: "CURRENT",
-  completed: "COMPLETED",
-  on_hold: "PAUSED",
-  dropped: "DROPPED",
-  plan_to_read: "PLANNING",
-};
 
 /**
  * Map a Kenmei status to an AniList media list status.

@@ -512,7 +512,7 @@ export function MangaSearchPanel({
                 className="h-2 w-2 rounded-full bg-indigo-500"
                 aria-hidden="true"
               />
-              {kenmeiManga.chapters_read} chapters read
+              {kenmeiManga.chaptersRead} chapters read
             </span>
             {kenmeiManga.score > 0 && (
               <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-3 py-1 font-medium text-blue-800 shadow-sm ring-1 ring-blue-500/20 dark:bg-slate-900/60 dark:text-blue-200 dark:ring-blue-500/30">

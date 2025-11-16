@@ -82,8 +82,8 @@ function extractTitles(
 
   // Kenmei titles
   if (kenmeiManga.title) values.push(kenmeiManga.title);
-  if (kenmeiManga.alternative_titles) {
-    values.push(...kenmeiManga.alternative_titles);
+  if (kenmeiManga.alternativeTitles) {
+    values.push(...kenmeiManga.alternativeTitles);
   }
 
   return values;

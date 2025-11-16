@@ -97,8 +97,8 @@ export const ChangesSummary: React.FC<ChangesSummaryProps> = ({
       : getEffectiveStatus(kenmei, syncConfig) !== userEntry.status;
 
     const progressWillChange = syncConfig.prioritizeAniListProgress
-      ? (kenmei.chapters_read || 0) > (userEntry.progress || 0)
-      : (kenmei.chapters_read || 0) !== (userEntry.progress || 0);
+      ? (kenmei.chaptersRead || 0) > (userEntry.progress || 0)
+      : (kenmei.chaptersRead || 0) !== (userEntry.progress || 0);
 
     const anilistScore = Number(userEntry.score || 0);
     const kenmeiScore = Number(kenmei.score || 0);

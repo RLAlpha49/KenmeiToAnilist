@@ -24,14 +24,14 @@ export function isOneShot(manga: AniListManga): boolean {
 /**
  * Detects if two titles differ only by season/part/volume numbering patterns.
  * Supports Season, Part, Volume, Tome, Arc, and Cour patterns with Arabic and Roman numerals.
- * @param kenmeiTitle - The title from Kenmei.
- * @param anilistTitle - The title from AniList.
+ * @param leftTitle - The title from Kenmei (or left-hand side).
+ * @param rightTitle - The title from AniList (or right-hand side).
  * @returns Similarity score 0.95 if only season patterns differ, -1 if no pattern detected.
  * @source
  */
 export function checkSeasonPattern(
-  kenmeiTitle: string,
-  anilistTitle: string,
+  leftTitle: string,
+  rightTitle: string,
 ): number {
   // Patterns to detect season/part/volume indicators
   const seasonPatterns = [
@@ -62,36 +62,35 @@ export function checkSeasonPattern(
   ];
 
   // Check if either title contains any season pattern
-  let hasKenmeiPattern = false;
-  let hasAnilistPattern = false;
+  let hasLeftPattern = false;
+  let hasRightPattern = false;
 
   for (const pattern of seasonPatterns) {
-    if (pattern.test(kenmeiTitle)) hasKenmeiPattern = true;
-    if (pattern.test(anilistTitle)) hasAnilistPattern = true;
+    if (pattern.test(leftTitle)) hasLeftPattern = true;
+    if (pattern.test(rightTitle)) hasRightPattern = true;
   }
 
   // If only one has a season pattern, remove it and check similarity
-  if (hasKenmeiPattern || hasAnilistPattern) {
-    let cleanKenmei = kenmeiTitle;
-    let cleanAnilist = anilistTitle;
+  if (hasLeftPattern || hasRightPattern) {
+    let cleanLeft = leftTitle;
+    let cleanRight = rightTitle;
 
     // Remove all season patterns
     for (const pattern of seasonPatterns) {
-      cleanKenmei = cleanKenmei.replaceAll(pattern, "").trim();
-      cleanAnilist = cleanAnilist.replaceAll(pattern, "").trim();
+      cleanLeft = cleanLeft.replaceAll(pattern, "").trim();
+      cleanRight = cleanRight.replaceAll(pattern, "").trim();
     }
 
     // Normalize and compare
-    const normKenmei = cleanKenmei
+    const normalizedLeft = cleanLeft
       .toLowerCase()
       .replaceAll(/[^\w\s]/g, "")
       .trim();
-    const normAnilist = cleanAnilist
+    const normalizedRight = cleanRight
       .toLowerCase()
       .replaceAll(/[^\w\s]/g, "")
       .trim();
-
-    if (normKenmei === normAnilist) {
+    if (normalizedLeft === normalizedRight) {
       return 0.95; // High similarity, just season difference
     }
   }
@@ -102,20 +101,20 @@ export function checkSeasonPattern(
 /**
  * Detects season patterns between titles with debug logging.
  * Wraps `checkSeasonPattern` to log matches when season/part/volume differences are found.
- * @param kenmeiTitle - The title from Kenmei.
- * @param anilistTitle - The title from AniList.
+ * @param leftTitle - The title from Kenmei (or left-hand side).
+ * @param rightTitle - The title from AniList (or right-hand side).
  * @returns Similarity score 0.95 if only season patterns differ, -1 if no pattern detected.
  * @source
  */
 export function checkSeasonPatterns(
-  kenmeiTitle: string,
-  anilistTitle: string,
+  leftTitle: string,
+  rightTitle: string,
 ): number {
-  const result = checkSeasonPattern(kenmeiTitle, anilistTitle);
+  const result = checkSeasonPattern(leftTitle, rightTitle);
 
   if (result > 0) {
     console.debug(
-      `[MangaSearchService] 🎯 Season pattern match found: "${kenmeiTitle}" ↔ "${anilistTitle}" (score: ${result})`,
+      `[MangaSearchService] 🎯 Season pattern match found: "${leftTitle}" ↔ "${rightTitle}" (score: ${result})`,
     );
     console.debug(
       `[MangaSearchService]   Likely same series with different season/part numbering`,

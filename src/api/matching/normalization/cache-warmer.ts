@@ -18,6 +18,13 @@ import type {
   NormalizationProgressCallback,
 } from "@/workers";
 
+export type WorkerNormalizationAlgorithm =
+  | "normalizeForMatching"
+  | "processTitle";
+export type CacheNormalizationKey =
+  | WorkerNormalizationAlgorithm
+  | "collectMangaTitles";
+
 /**
  * Service for warming title normalization caches off-thread.
  * Maintains canonical caches on the main thread and applies worker deltas.
@@ -36,9 +43,7 @@ export class TitleNormalizationCacheWarmer {
    */
   async warmupCachesInBackground(
     titles: string[],
-    algorithms: Array<"normalizeForMatching" | "processTitle"> = [
-      "normalizeForMatching",
-    ],
+    algorithms: WorkerNormalizationAlgorithm[] = ["normalizeForMatching"],
     progressCallback?: NormalizationProgressCallback,
   ): Promise<string> {
     if (!titles || titles.length === 0) {
@@ -82,7 +87,7 @@ export class TitleNormalizationCacheWarmer {
    */
   private async performCacheWarmup(
     titles: string[],
-    algorithms: Array<"normalizeForMatching" | "processTitle">,
+    algorithms: WorkerNormalizationAlgorithm[],
     taskId: string,
   ): Promise<void> {
     try {
@@ -202,7 +207,7 @@ export class TitleNormalizationCacheWarmer {
    */
   getNormalizedTitle(
     title: string,
-    algorithm: string,
+    algorithm: CacheNormalizationKey,
     normalizer: (title: string) => string,
   ): string {
     try {
@@ -227,7 +232,7 @@ export class TitleNormalizationCacheWarmer {
    * @returns Map of original to normalized titles
    */
   getNormalizedTitlesForAlgorithm(
-    algorithm: string,
+    algorithm: CacheNormalizationKey,
   ): Record<string, string> | null {
     try {
       const cache = getTitleNormalizationCache();
@@ -250,7 +255,7 @@ export class TitleNormalizationCacheWarmer {
    */
   preloadTitles(
     titles: string[],
-    algorithm: string,
+    algorithm: CacheNormalizationKey,
     normalizer: (title: string) => string,
   ): void {
     try {

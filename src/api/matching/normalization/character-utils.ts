@@ -8,12 +8,12 @@
  * Replace Cyrillic and common homoglyph characters with Latin transliterations.
  * Handles single-letter homoglyphs, multi-letter transliterations, and removes
  * Cyrillic signs (soft/hard sign).
- * @param str - Input string to normalize.
+ * @param input - Input string to normalize.
  * @returns Normalized string with Cyrillic characters replaced by Latin equivalents.
  * @source
  */
-export function replaceSpecialChars(str: string): string {
-  const map = new Map<string, string>([
+export function replaceSpecialChars(input: string): string {
+  const charReplacementMap = new Map<string, string>([
     // Basic Cyrillic -> Latin
     ["\u043E", "o"],
     ["\u041E", "O"],
@@ -75,18 +75,18 @@ export function replaceSpecialChars(str: string): string {
     ["\u042A", ""],
   ]);
 
-  return Array.from(str)
-    .map((ch) => map.get(ch) ?? ch)
+  return Array.from(input)
+    .map((ch) => charReplacementMap.get(ch) ?? ch)
     .join("");
 }
 
 /**
  * Removes punctuation and special characters from a string.
  * Preserves word characters and spaces only.
- * @param str - The string to clean.
+ * @param input - The string to clean.
  * @returns String with punctuation and special characters removed.
  * @source
  */
-export function removePunctuation(str: string): string {
-  return str.replaceAll(/[^\w\s]/g, "");
+export function removePunctuation(input: string): string {
+  return input.replaceAll(/[^\w\s]/g, "");
 }

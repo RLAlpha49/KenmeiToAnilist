@@ -6,7 +6,7 @@
 import type { AniListManga, MangaMatchResult } from "@/api/anilist/types";
 import type { KenmeiManga } from "@/api/kenmei/types";
 import type { ComickSourceStorage, MangaDexSourceStorage } from "./types";
-import type { CustomRule } from "@/utils/storage";
+import type { CustomRule, MatchConfig } from "@/utils/storage";
 import { calculateConfidence } from "../scoring";
 import { getSourceInfo } from "../sources";
 import { getMatchConfig, getSavedMatchResults } from "@/utils/storage";
@@ -33,7 +33,7 @@ import { applySystemContentFilters } from "../filtering/system-filters";
  *
  * @param potentialMatches - Potential manga matches.
  * @param mangaTitle - Title of manga being matched.
- * @param matchConfig - Configuration with ignoreOneShots, ignoreAdultContent.
+ * @param matchConfig - Configuration with shouldIgnoreOneShots, shouldIgnoreAdultContent.
  * @param kenmeiManga - Kenmei manga for custom rule evaluation.
  * @returns Filtered list of manga matches (with internal accept rule tracking if applicable).
  * @source
@@ -41,11 +41,11 @@ import { applySystemContentFilters } from "../filtering/system-filters";
 export function applyMatchFiltering(
   potentialMatches: AniListManga[],
   mangaTitle: string,
-  matchConfig: { ignoreOneShots?: boolean; ignoreAdultContent?: boolean },
+  matchConfig: Partial<MatchConfig>,
   kenmeiManga: KenmeiManga,
-): Array<AniListManga & { __acceptRuleMatch?: CustomRule }> {
+): Array<AniListManga & { matchedAcceptRule?: CustomRule }> {
   let filteredMatches: Array<
-    AniListManga & { __acceptRuleMatch?: CustomRule }
+    AniListManga & { matchedAcceptRule?: CustomRule }
   > = potentialMatches.map((m) => ({ ...m }));
 
   // Apply system content filters (novels, one-shots, adult content)
@@ -57,7 +57,7 @@ export function applyMatchFiltering(
   );
   filteredMatches = systemFiltered.map((m) => ({
     ...m,
-  })) as Array<AniListManga & { __acceptRuleMatch?: CustomRule }>;
+  })) as Array<AniListManga & { matchedAcceptRule?: CustomRule }>;
 
   // Mark matches that satisfy custom accept rules (without removing them)
   // Confidence will be boosted later in createMangaMatchResult()
@@ -70,7 +70,7 @@ export function applyMatchFiltering(
       console.debug(
         `[MangaSearchService] ⭐ Marking confidence boost for "${match.title?.romaji || match.title?.english}" due to custom accept rule: "${matchedRule.description}"`,
       );
-      return { ...match, __acceptRuleMatch: matchedRule };
+      return { ...match, matchedAcceptRule: matchedRule };
     }
     return match;
   });
@@ -87,7 +87,7 @@ export function applyMatchFiltering(
  * - Other matches: boosted to 75% confidence minimum
  *
  * @param manga - Kenmei manga entry.
- * @param potentialMatches - AniList matches for this manga (may have __acceptRuleMatch tracking).
+ * @param potentialMatches - AniList matches for this manga (may have matchedAcceptRule tracking).
  * @param comickSourceMap - Map of manga ID to Comick source info.
  * @param mangaDexSourceMap - Map of manga ID to MangaDex source info.
  * @returns Complete match result with confidence and source info.
@@ -95,14 +95,14 @@ export function applyMatchFiltering(
  */
 export function createMangaMatchResult(
   manga: KenmeiManga,
-  potentialMatches: Array<AniListManga & { __acceptRuleMatch?: CustomRule }>,
+  potentialMatches: Array<AniListManga & { matchedAcceptRule?: CustomRule }>,
   comickSourceMap: Map<
     number,
     {
       title: string;
       slug: string;
       comickId: string;
-      foundViaComick: boolean;
+      isFoundViaComick: boolean;
     }
   >,
   mangaDexSourceMap: Map<
@@ -111,12 +111,12 @@ export function createMangaMatchResult(
       title: string;
       slug: string;
       mangaDexId: string;
-      foundViaMangaDex: boolean;
+      isFoundViaMangaDex: boolean;
     }
   >,
 ): MangaMatchResult {
   // Fix mapping to create proper MangaMatch objects with Comick source info
-  const potentialMatchesFixed = potentialMatches.map((match) => {
+  const normalizedMatches = potentialMatches.map((match) => {
     const sourceInfo = getSourceInfo(
       match.id,
       comickSourceMap,
@@ -126,7 +126,7 @@ export function createMangaMatchResult(
     let confidence = calculateConfidence(manga.title, match);
 
     // Apply confidence floor boost if accept rule matched
-    if (match.__acceptRuleMatch) {
+    if (match.matchedAcceptRule) {
       const isExactMatch =
         manga.title.toLowerCase() === match.title?.romaji?.toLowerCase() ||
         manga.title.toLowerCase() === match.title?.english?.toLowerCase();
@@ -153,11 +153,9 @@ export function createMangaMatchResult(
 
   return {
     kenmeiManga: manga,
-    anilistMatches: potentialMatchesFixed,
+    anilistMatches: normalizedMatches,
     selectedMatch:
-      potentialMatchesFixed.length > 0
-        ? potentialMatchesFixed[0].manga
-        : undefined,
+      normalizedMatches.length > 0 ? normalizedMatches[0].manga : undefined,
     status: "pending",
   };
 }
@@ -187,7 +185,7 @@ async function processWithWorkers(
     // Build candidates map for worker execution and track accept rule matches
     // Use index-based keys to avoid collision when manga.id is undefined
     const candidatesMap = new Map<string, AniListManga[]>();
-    const candidatesWithAcceptRule = new Map<string, Set<number>>(); // index -> Set of AniList IDs with accept rule
+    const acceptRuleMatchIdsByIndex = new Map<string, Set<number>>(); // index -> Set of AniList IDs with accept rule
 
     for (let i = 0; i < mangaList.length; i++) {
       const manga = mangaList[i];
@@ -202,25 +200,25 @@ async function processWithWorkers(
       );
 
       // Track which candidates had accept rule matches for this manga
-      const acceptRuleMatches = new Set<number>();
+      const acceptRuleMatchIds = new Set<number>();
       for (const match of potentialMatches) {
-        // Access the __acceptRuleMatch marker if present
+        // Access the matchedAcceptRule marker if present
         if (
-          (match as AniListManga & { __acceptRuleMatch?: CustomRule })
-            .__acceptRuleMatch
+          (match as AniListManga & { matchedAcceptRule?: CustomRule })
+            .matchedAcceptRule
         ) {
-          acceptRuleMatches.add(match.id);
+          acceptRuleMatchIds.add(match.id);
         }
       }
-      if (acceptRuleMatches.size > 0) {
-        candidatesWithAcceptRule.set(String(i), acceptRuleMatches);
+      if (acceptRuleMatchIds.size > 0) {
+        acceptRuleMatchIdsByIndex.set(String(i), acceptRuleMatchIds);
       }
 
-      // Strip off the __acceptRuleMatch marker before sending to worker
+      // Strip off the matchedAcceptRule marker before sending to worker
       const cleanedMatches = potentialMatches.map((match) => {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { __acceptRuleMatch, ...rest } = match as AniListManga & {
-          __acceptRuleMatch?: CustomRule;
+        const { matchedAcceptRule, ...rest } = match as AniListManga & {
+          matchedAcceptRule?: CustomRule;
         };
         return rest as AniListManga;
       });
@@ -278,8 +276,8 @@ async function processWithWorkers(
       };
 
       // Apply accept rule confidence floor boost if applicable
-      // Use index-based key to match candidatesWithAcceptRule
-      const acceptRuleIds = candidatesWithAcceptRule.get(String(i));
+      // Use index-based key to match acceptRuleMatchIdsByIndex
+      const acceptRuleIds = acceptRuleMatchIdsByIndex.get(String(i));
       if (acceptRuleIds && acceptRuleIds.size > 0) {
         enrichedResult = {
           ...enrichedResult,
@@ -336,7 +334,7 @@ async function processWithWorkers(
  * @param cachedMangaDexSources - MangaDex source information by index.
  * @param checkCancellation - Cancellation check function.
  * @param updateProgress - Progress update callback.
- * @param useWorkers - Whether to use Web Workers for parallel processing (default: true).
+ * @param shouldUseWorkers - Whether to use Web Workers for parallel processing (default: true).
  * @returns Array of complete match results.
  * @source
  */
@@ -347,7 +345,7 @@ export async function compileMatchResults(
   cachedMangaDexSources: MangaDexSourceStorage,
   checkCancellation: () => void,
   updateProgress: (index: number, title?: string) => void,
-  useWorkers = true,
+  shouldUseWorkers = true,
 ): Promise<MangaMatchResult[]> {
   const results: MangaMatchResult[] = [];
 
@@ -407,7 +405,7 @@ export async function compileMatchResults(
   const matchConfig = getMatchConfig();
 
   // Try using workers for parallel processing if enabled
-  if (useWorkers) {
+  if (shouldUseWorkers) {
     const workerResults = await processWithWorkers(
       mangaList,
       cachedResults,

@@ -28,19 +28,19 @@ export abstract class BaseMangaSourceClient<
 > {
   protected config: MangaSourceConfig;
   protected cache: MangaSourceCache = {};
-  protected cacheExpiry: number;
-  /** Track last request time for rate limiting */
-  private lastRequestTime: number = 0;
+  protected cacheExpiryMs: number;
+  /** Track last request timestamp (milliseconds) for rate limiting */
+  private lastRequestTimeMs: number = 0;
 
   constructor(config: MangaSourceConfig) {
     this.config = config;
     // Cache TTL in milliseconds; default to 30 minutes if not specified
-    this.cacheExpiry = (config.cache?.ttlMinutes ?? 30) * 60 * 1000;
+    this.cacheExpiryMs = (config.cache?.ttlMinutes ?? 30) * 60 * 1000;
   }
 
   /**
    * Get the source identifier for this client.
-   * @returns The source enum value (e.g., MangaSource.COMICK).
+   * @returns The source enum value (e.g., MangaSource.Comick).
    * @source
    */
   public getSource(): MangaSource {
@@ -240,7 +240,7 @@ export abstract class BaseMangaSourceClient<
 
     const now = Date.now();
     const minIntervalMs = 1000 / this.config.rateLimit.requestsPerSecond;
-    const timeSinceLastRequest = now - this.lastRequestTime;
+    const timeSinceLastRequest = now - this.lastRequestTimeMs;
 
     if (timeSinceLastRequest < minIntervalMs) {
       const delayMs = minIntervalMs - timeSinceLastRequest;
@@ -250,7 +250,7 @@ export abstract class BaseMangaSourceClient<
       await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
 
-    this.lastRequestTime = Date.now();
+    this.lastRequestTimeMs = Date.now();
   }
 
   /**
@@ -266,7 +266,7 @@ export abstract class BaseMangaSourceClient<
     if (!cached) return false;
 
     const age = Date.now() - (cached.timestamp ?? 0);
-    return age < this.cacheExpiry;
+    return age < this.cacheExpiryMs;
   }
 
   /**
@@ -418,7 +418,7 @@ export abstract class BaseMangaSourceClient<
                   slug: sourceInfo.slug,
                   sourceId: sourceInfo.id,
                   source: this.config.source,
-                  foundViaAlternativeSearch: true,
+                  isFoundViaAlternativeSearch: true,
                 }
               : undefined,
           };
@@ -474,7 +474,7 @@ export abstract class BaseMangaSourceClient<
   public getCacheStatus() {
     const totalEntries = Object.keys(this.cache).length;
     const expiredEntries = Object.keys(this.cache).filter(
-      (key) => Date.now() - this.cache[key].timestamp > this.cacheExpiry,
+      (key) => Date.now() - this.cache[key].timestamp > this.cacheExpiryMs,
     ).length;
 
     return {

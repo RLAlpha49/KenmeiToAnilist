@@ -697,8 +697,8 @@ export const useMatchingProcess = ({
             maxSearchResults: 20,
             matchConfig: {
               confidenceThreshold: 75,
-              preferEnglishTitles: true,
-              useAlternativeTitles: true,
+              shouldPreferEnglishTitles: true,
+              shouldUseAlternativeTitles: true,
             },
             bypassCache: forceSearch,
           },

@@ -45,7 +45,7 @@ interface RateLimitError extends Error {
  * In-memory search result cache with timestamp tracking.
  * @source
  */
-interface Cache<T> {
+interface SearchResultCache<T> {
   [key: string]: {
     data: T;
     timestamp: number;
@@ -56,14 +56,14 @@ interface Cache<T> {
  * Cache expiration time in milliseconds (30 minutes).
  * @source
  */
-const CACHE_EXPIRATION = 30 * 60 * 1000;
+const SEARCH_CACHE_EXPIRATION_MS = 30 * 60 * 1000;
 
 /**
  * Local search result cache for the renderer process to minimize IPC calls.
  * @source
  */
 
-const searchCache: Cache<SearchResult<AniListManga>> = {};
+const searchCache: SearchResultCache<SearchResult<AniListManga>> = {};
 
 /**
  * Flag indicating whether the search cache has been initialized from storage.
@@ -105,7 +105,7 @@ function initializeSearchCache(): void {
     // Merge with our in-memory cache
     for (const key of Object.keys(parsedCache)) {
       const entry = parsedCache[key];
-      if (entry && now - entry.timestamp < CACHE_EXPIRATION) {
+      if (entry && now - entry.timestamp < SEARCH_CACHE_EXPIRATION_MS) {
         searchCache[key] = entry;
         loadedCount++;
       }
@@ -165,14 +165,14 @@ function persistSearchCacheInternal(): void {
  * Waits 2 seconds after the last call before persisting.
  * @source
  */
-const persistSearchCache = debounce(persistSearchCacheInternal, 2000);
+const persistSearchCacheDebounced = debounce(persistSearchCacheInternal, 2000);
 
 /**
  * Immediately persists the search cache, bypassing debounce.
  * Use for critical saves like cache clearing or app shutdown.
  * @source
  */
-function persistSearchCacheImmediate(): void {
+function persistSearchCacheNow(): void {
   persistSearchCacheInternal();
 }
 
@@ -865,7 +865,7 @@ export async function getAccessToken(
  * @returns Cache key string.
  * @source
  */
-function generateCacheKey(
+function createCacheKey(
   search: string,
   page: number = 1,
   perPage: number = 50,
@@ -881,12 +881,12 @@ function generateCacheKey(
  * @returns true if entry exists and is not expired, false otherwise.
  * @source
  */
-function isCacheValid<T>(cache: Cache<T>, key: string): boolean {
+function isCacheValid<T>(cache: SearchResultCache<T>, key: string): boolean {
   const entry = cache[key];
   if (!entry) return false;
 
   const now = Date.now();
-  return now - entry.timestamp < CACHE_EXPIRATION;
+  return now - entry.timestamp < SEARCH_CACHE_EXPIRATION_MS;
 }
 
 /**
@@ -1002,7 +1002,7 @@ async function executeSearchQuery(
         timestamp: Date.now(),
       };
 
-      persistSearchCache();
+      persistSearchCacheDebounced();
       console.debug(
         `[AniListClient] 💾 Cached ${result.Page.media.length} ${searchType.toLowerCase()} results for "${search}"`,
       );
@@ -1072,7 +1072,7 @@ export async function searchManga(
   bypassCache?: boolean,
   noRetry?: boolean,
 ): Promise<SearchResult<AniListManga>> {
-  const cacheKey = generateCacheKey(search, page, perPage);
+  const cacheKey = createCacheKey(search, page, perPage);
   const variables = { search, page, perPage };
 
   return executeSearchQuery({
@@ -1322,7 +1322,7 @@ export function clearSearchCache(searchQuery?: string): void {
   }
 
   // Update storage with the cleared cache immediately (critical operation)
-  persistSearchCacheImmediate();
+  persistSearchCacheNow();
 
   // Also clear the cache in the main process
   globalThis.electronAPI.anilist
@@ -1359,7 +1359,7 @@ export function clearSearchCacheLocal(searchQuery?: string): void {
   }
 
   // Persist to storage immediately
-  persistSearchCacheImmediate();
+  persistSearchCacheNow();
 }
 
 // Subscribe to main process cache clear notifications so the renderer can invalidate local cache.

@@ -34,16 +34,16 @@ export function processSearchResults(
     `[MangaSearchService] 🔍 Found ${results.length} raw results for "${title}" before filtering/ranking`,
   );
 
-  let exactMatchMode = searchConfig.exactMatchingOnly;
+  let isExactMatchMode = searchConfig.exactMatchingOnly;
 
   if ((searchConfig.bypassCache && results.length > 0) || results.length <= 3) {
-    exactMatchMode = false;
+    isExactMatchMode = false;
   }
 
   const rankedResults = rankMangaResults(
     results,
     title,
-    exactMatchMode,
+    isExactMatchMode,
     searchConfig.bypassCache,
     kenmeiManga,
   );

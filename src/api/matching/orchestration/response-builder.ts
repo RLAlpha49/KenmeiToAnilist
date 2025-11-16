@@ -28,7 +28,7 @@ export function buildFinalResponse(
   title: string,
   comickSourceMap: Map<
     number,
-    { title: string; slug: string; comickId: string; foundViaComick: boolean }
+    { title: string; slug: string; comickId: string; isFoundViaComick: boolean }
   >,
   mangaDexSourceMap: Map<
     number,
@@ -36,7 +36,7 @@ export function buildFinalResponse(
       title: string;
       slug: string;
       mangaDexId: string;
-      foundViaMangaDex: boolean;
+      isFoundViaMangaDex: boolean;
     }
   >,
   lastPageInfo?: PageInfo,

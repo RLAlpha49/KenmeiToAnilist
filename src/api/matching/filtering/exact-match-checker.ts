@@ -16,7 +16,7 @@ import { calculateEnhancedSimilarity } from "../../../utils/enhanced-similarity"
  * @returns True if an exact or near-exact match is found
  * @source
  */
-export function checkExactMatch(
+export function isExactMatch(
   manga: AniListManga,
   searchTitle: string,
 ): boolean {

@@ -528,7 +528,7 @@ const renderKenmeiDetails = (
         <dt className="text-xs font-semibold uppercase tracking-wide text-indigo-500 dark:text-indigo-200">
           Chapters Read
         </dt>
-        <dd className="font-medium">{match.kenmeiManga.chapters_read}</dd>
+        <dd className="font-medium">{match.kenmeiManga.chaptersRead}</dd>
       </div>
       {match.kenmeiManga.score > 0 && (
         <div className="flex flex-col gap-0.5">
@@ -1080,7 +1080,7 @@ const AlternativeMatchItemComponent: React.FC<AlternativeMatchItemProps> = ({
                   Chapters Read
                 </dt>
                 <dd className="font-medium">
-                  {match.kenmeiManga.chapters_read}
+                  {match.kenmeiManga.chaptersRead}
                 </dd>
               </div>
               {match.kenmeiManga.score > 0 && (

@@ -183,7 +183,7 @@ export function MangaMatchingPanel({
   const containerRef = useRef<HTMLDivElement>(null);
   const lastExternalSearchQuery = useRef<string | undefined>(undefined);
 
-  type SortField = "title" | "status" | "confidence" | "chapters_read";
+  type SortField = "title" | "status" | "confidence" | "chaptersRead";
   const [sortOption, setSortOption] = useState<{
     field: SortField;
     direction: "asc" | "desc";
@@ -738,9 +738,9 @@ export function MangaMatchingPanel({
           ? confidenceA - confidenceB
           : confidenceB - confidenceA;
 
-      case "chapters_read":
-        chaptersA = a.kenmeiManga.chapters_read || 0;
-        chaptersB = b.kenmeiManga.chapters_read || 0;
+      case "chaptersRead":
+        chaptersA = a.kenmeiManga.chaptersRead || 0;
+        chaptersB = b.kenmeiManga.chaptersRead || 0;
         return sortOption.direction === "asc"
           ? chaptersA - chaptersB
           : chaptersB - chaptersA;
@@ -1163,7 +1163,7 @@ export function MangaMatchingPanel({
                       "from-violet-400/20 via-violet-500/10 to-transparent",
                   },
                   {
-                    field: "chapters_read" as const,
+                    field: "chaptersRead" as const,
                     label: "Chapters Read",
                     helper: "Deep progress",
                     icon: BookOpen,
