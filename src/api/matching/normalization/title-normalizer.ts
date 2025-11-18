@@ -181,8 +181,8 @@ export function collectMangaTitles(manga: AniListManga): string[] {
 /**
  * Checks if the difference between two titles is solely due to articles (a, an, the).
  * Useful for matching titles that differ only in article usage. Uses cache.
- * @param title1 - First title to compare.
- * @param title2 - Second title to compare.
+ * @param leftTitle - First title to compare.
+ * @param rightTitle - Second title to compare.
  * @returns True if titles are identical except for article presence/absence.
  * @source
  */

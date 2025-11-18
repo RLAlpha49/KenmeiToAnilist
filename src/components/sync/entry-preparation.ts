@@ -44,7 +44,7 @@ export function prepareAllEntriesToSync(
 
       const computeCalculatedStatus = (): MediaListStatus => {
         // Reuse existing getEffectiveStatus logic which already handles auto-pause checks
-        const km: KenmeiMangaData = {
+        const kenmeiStatusSnapshot: KenmeiMangaData = {
           status: kenmei.status,
           updatedAt: kenmei.updatedAt,
           lastReadAt: kenmei.lastReadAt,
@@ -52,18 +52,18 @@ export function prepareAllEntriesToSync(
           chaptersRead: kenmei.chaptersRead,
           score: kenmei.score,
         };
-        return getEffectiveStatus(km, syncConfig);
+        return getEffectiveStatus(kenmeiStatusSnapshot, syncConfig);
       };
       const calculatedStatus = computeCalculatedStatus();
-      let privateStatus: boolean;
+      let shouldSetPrivate: boolean;
       if (userEntry) {
         if (syncConfig.setPrivate) {
-          privateStatus = true;
+          shouldSetPrivate = true;
         } else {
-          privateStatus = userEntry.private || false;
+          shouldSetPrivate = userEntry.private || false;
         }
       } else {
-        privateStatus = syncConfig.setPrivate;
+        shouldSetPrivate = syncConfig.setPrivate;
       }
       const entry: AniListMediaEntry = {
         mediaId: anilist.id,
@@ -82,7 +82,7 @@ export function prepareAllEntriesToSync(
           }
           return kenmei.chaptersRead || 0;
         })(),
-        private: privateStatus,
+        private: shouldSetPrivate,
         score: (() => {
           if (
             userEntry &&
@@ -135,19 +135,19 @@ export function hasChanges(
   }
 
   // Status change
-  const statusWillChange = syncConfig.prioritizeAniListStatus
+  const shouldUpdateStatus = syncConfig.prioritizeAniListStatus
     ? false
     : entry.status !== entry.previousValues.status;
 
   // Progress change
-  const progressWillChange = syncConfig.prioritizeAniListProgress
+  const shouldUpdateProgress = syncConfig.prioritizeAniListProgress
     ? entry.progress > entry.previousValues.progress
     : entry.progress !== entry.previousValues.progress;
 
   // Score change
   const anilistScore = Number(entry.previousValues.score || 0);
   const kenmeiScore = Number(entry.score || 0);
-  const scoreWillChange =
+  const shouldUpdateScore =
     entry.previousValues.status === "COMPLETED" &&
     syncConfig.preserveCompletedStatus
       ? false
@@ -162,13 +162,13 @@ export function hasChanges(
         })();
 
   // Privacy change
-  const privacyWillChange =
+  const shouldUpdatePrivacy =
     syncConfig.setPrivate && !entry.previousValues.private;
 
   return (
-    statusWillChange ||
-    progressWillChange ||
-    scoreWillChange ||
-    privacyWillChange
+    shouldUpdateStatus ||
+    shouldUpdateProgress ||
+    shouldUpdateScore ||
+    shouldUpdatePrivacy
   );
 }

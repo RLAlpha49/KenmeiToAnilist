@@ -7,7 +7,7 @@ import type {
   AdvancedMatchFilters,
   FilterPreset,
 } from "../types/matching-filters";
-import { DEFAULT_ADVANCED_FILTERS } from "../types/matching-filters";
+import { defaultAdvancedFilters } from "../types/matching-filters";
 import { captureError, ErrorType } from "./error-handling";
 
 declare global {
@@ -499,7 +499,7 @@ export const CURRENT_CACHE_VERSION = 1;
  * Sync operation settings.
  * @source
  */
-export type SyncConfig = {
+export interface SyncConfig {
   prioritizeAniListStatus: boolean;
   prioritizeAniListProgress: boolean;
   prioritizeAniListScore: boolean;
@@ -512,7 +512,7 @@ export type SyncConfig = {
   updateStatus: boolean;
   updateProgress: boolean;
   overwriteExisting: boolean;
-};
+}
 
 /**
  * Default sync configuration.
@@ -552,7 +552,7 @@ export type CustomRuleTarget =
  * Regex-based custom matching rule for filtering manga.
  * @source
  */
-export type CustomRule = {
+export interface CustomRule {
   id: string;
   pattern: string;
   description: string;
@@ -560,16 +560,16 @@ export type CustomRule = {
   caseSensitive: boolean;
   targetFields: CustomRuleTarget[];
   createdAt: string;
-};
+}
 
 /**
  * Set of custom skip and accept rules.
  * @source
  */
-export type CustomRulesConfig = {
+export interface CustomRulesConfig {
   skipRules: CustomRule[];
   acceptRules: CustomRule[];
-};
+}
 
 /**
  * Title normalization cache storing per-algorithm normalized forms.
@@ -603,14 +603,14 @@ export const DEFAULT_TITLE_NORMALIZATION_CACHE: TitleNormalizationCache = {
   version: 1,
 };
 
-export type MatchConfig = {
+export interface MatchConfig {
   shouldIgnoreOneShots: boolean;
   shouldIgnoreAdultContent: boolean;
   blurAdultContent: boolean;
   enableComickSearch: boolean;
   enableMangaDexSearch: boolean;
   customRules?: CustomRulesConfig;
-};
+}
 
 /**
  * Backup interval options.
@@ -1245,7 +1245,7 @@ export function getMatchFilters(): AdvancedMatchFilters {
   try {
     const saved = storage.getItem(STORAGE_KEYS.MATCH_FILTERS);
     if (!saved) {
-      return DEFAULT_ADVANCED_FILTERS;
+      return defaultAdvancedFilters;
     }
 
     const parsed = JSON.parse(saved);
@@ -1268,7 +1268,7 @@ export function getMatchFilters(): AdvancedMatchFilters {
     };
   } catch (error) {
     console.error("[Storage] Failed to load match filters:", error);
-    return DEFAULT_ADVANCED_FILTERS;
+    return defaultAdvancedFilters;
   }
 }
 

@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
  * @property onDismiss - Callback when the dismiss button is clicked.
  * @source
  */
-interface Props {
+interface MatchingErrorToastProps {
   error: string | null;
   onDismiss: () => void;
 }
@@ -22,7 +22,7 @@ interface Props {
 export default function MatchingErrorToast({
   error,
   onDismiss,
-}: Readonly<Props>) {
+}: Readonly<MatchingErrorToastProps>) {
   if (!error) return null;
 
   return (

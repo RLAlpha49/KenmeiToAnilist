@@ -30,7 +30,7 @@ export interface AdvancedMatchFilters {
  * Default advanced filter values (no filtering applied).
  * @source
  */
-export const DEFAULT_ADVANCED_FILTERS: AdvancedMatchFilters = {
+export const defaultAdvancedFilters: AdvancedMatchFilters = {
   confidence: { min: 0, max: 100 },
   formats: [],
   genres: [],

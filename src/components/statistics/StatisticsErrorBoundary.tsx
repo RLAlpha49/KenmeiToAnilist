@@ -3,20 +3,20 @@
  * @module StatisticsErrorBoundary
  * @description Specialized error boundary for the statistics section with recovery actions
  */
-import React, { ReactNode } from "react";
+import React from "react";
 import {
   BaseErrorBoundary,
   RecoveryAction,
 } from "@/components/BaseErrorBoundary";
 import { RefreshCw, BarChart3 } from "lucide-react";
 
-interface Props {
+interface StatisticsErrorBoundaryProps {
   /** Child components to wrap */
-  children: ReactNode;
+  readonly children: React.ReactNode;
   /** Callback to refresh statistics data */
-  onRefresh?: () => void;
+  readonly onRefresh?: () => void;
   /** Callback to clear active filters */
-  onClearFilters?: () => void;
+  readonly onClearFilters?: () => void;
 }
 
 /**
@@ -24,18 +24,22 @@ interface Props {
  * Wraps BaseErrorBoundary with statistics-specific configuration.
  * @source
  */
-export const StatisticsErrorBoundary = (props: Props): ReactNode => {
+export function StatisticsErrorBoundary({
+  children,
+  onRefresh,
+  onClearFilters,
+}: StatisticsErrorBoundaryProps): React.ReactElement {
   const recoveryActions: RecoveryAction[] = [
     {
       label: "Refresh Data",
       Icon: RefreshCw,
-      handler: props.onRefresh || (() => {}),
+      handler: onRefresh ?? (() => {}),
       variant: "default",
     },
     {
       label: "Clear Filters",
       Icon: BarChart3,
-      handler: props.onClearFilters || (() => {}),
+      handler: onClearFilters ?? (() => {}),
       variant: "outline",
     },
   ];
@@ -48,7 +52,7 @@ export const StatisticsErrorBoundary = (props: Props): ReactNode => {
       recoveryActions={recoveryActions}
       section="statistics"
     >
-      {props.children}
+      {children}
     </BaseErrorBoundary>
   );
-};
+}

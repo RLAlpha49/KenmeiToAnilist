@@ -11,29 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { Separator } from "@/components/ui/Separator";
 import { highlightText } from "@/utils/text-highlight";
 import { cn } from "@/utils/tailwind";
-
-/**
- * Cache types that can be cleared individually.
- * @source
- */
-interface CachesToClear {
-  /** Authentication tokens and login state. */
-  auth: boolean;
-  /** Settings cache. */
-  settings: boolean;
-  /** Sync history and records. */
-  sync: boolean;
-  /** Import operation history. */
-  import: boolean;
-  /** Matching results. */
-  review: boolean;
-  /** Manga metadata. */
-  manga: boolean;
-  /** Search results. */
-  search: boolean;
-  /** Other caches. */
-  other: boolean;
-}
+import { CachesToClear } from "./types";
 
 /**
  * Props for CacheManagementSection component.
@@ -45,7 +23,7 @@ interface CacheManagementSectionProps {
   /** Whether cache clearing is in progress. */
   isClearing: boolean;
   /** Whether caches were successfully cleared. */
-  cacheCleared: boolean;
+  isCacheCleared: boolean;
   /** Current search query. */
   searchQuery: string;
   /** Currently highlighted section ID. */
@@ -81,7 +59,7 @@ const renderHighlightedText = (
 export function CacheManagementSection({
   cachesToClear,
   isClearing,
-  cacheCleared,
+  isCacheCleared,
   searchQuery,
   highlightedSectionId,
   onCachesToClearChange,
@@ -125,11 +103,11 @@ export function CacheManagementSection({
               id="auth-cache"
               type="checkbox"
               className="border-primary text-primary h-4 w-4 rounded"
-              checked={cachesToClear.auth}
+              checked={cachesToClear.shouldClearAuthCache}
               onChange={(e) =>
                 onCachesToClearChange({
                   ...cachesToClear,
-                  auth: e.target.checked,
+                  shouldClearAuthCache: e.target.checked,
                 })
               }
             />
@@ -154,11 +132,11 @@ export function CacheManagementSection({
               id="settings-cache"
               type="checkbox"
               className="border-primary text-primary h-4 w-4 rounded"
-              checked={cachesToClear.settings}
+              checked={cachesToClear.shouldClearSettingsCache}
               onChange={(e) =>
                 onCachesToClearChange({
                   ...cachesToClear,
-                  settings: e.target.checked,
+                  shouldClearSettingsCache: e.target.checked,
                 })
               }
             />
@@ -183,11 +161,11 @@ export function CacheManagementSection({
               id="sync-cache"
               type="checkbox"
               className="border-primary text-primary h-4 w-4 rounded"
-              checked={cachesToClear.sync}
+              checked={cachesToClear.shouldClearSyncCache}
               onChange={(e) =>
                 onCachesToClearChange({
                   ...cachesToClear,
-                  sync: e.target.checked,
+                  shouldClearSyncCache: e.target.checked,
                 })
               }
             />
@@ -212,11 +190,11 @@ export function CacheManagementSection({
               id="import-cache"
               type="checkbox"
               className="border-primary text-primary h-4 w-4 rounded"
-              checked={cachesToClear.import}
+              checked={cachesToClear.shouldClearImportCache}
               onChange={(e) =>
                 onCachesToClearChange({
                   ...cachesToClear,
-                  import: e.target.checked,
+                  shouldClearImportCache: e.target.checked,
                 })
               }
             />
@@ -244,11 +222,11 @@ export function CacheManagementSection({
               id="review-cache"
               type="checkbox"
               className="border-primary text-primary h-4 w-4 rounded"
-              checked={cachesToClear.review}
+              checked={cachesToClear.shouldClearReviewCache}
               onChange={(e) =>
                 onCachesToClearChange({
                   ...cachesToClear,
-                  review: e.target.checked,
+                  shouldClearReviewCache: e.target.checked,
                 })
               }
             />
@@ -273,11 +251,11 @@ export function CacheManagementSection({
               id="manga-cache"
               type="checkbox"
               className="border-primary text-primary h-4 w-4 rounded"
-              checked={cachesToClear.manga}
+              checked={cachesToClear.shouldClearMangaCache}
               onChange={(e) =>
                 onCachesToClearChange({
                   ...cachesToClear,
-                  manga: e.target.checked,
+                  shouldClearMangaCache: e.target.checked,
                 })
               }
             />
@@ -302,11 +280,11 @@ export function CacheManagementSection({
               id="search-cache"
               type="checkbox"
               className="border-primary text-primary h-4 w-4 rounded"
-              checked={cachesToClear.search}
+              checked={cachesToClear.shouldClearSearchCache}
               onChange={(e) =>
                 onCachesToClearChange({
                   ...cachesToClear,
-                  search: e.target.checked,
+                  shouldClearSearchCache: e.target.checked,
                 })
               }
             />
@@ -331,11 +309,11 @@ export function CacheManagementSection({
               id="other-caches"
               type="checkbox"
               className="border-primary text-primary h-4 w-4 rounded"
-              checked={cachesToClear.other}
+              checked={cachesToClear.shouldClearOtherCache}
               onChange={(e) =>
                 onCachesToClearChange({
                   ...cachesToClear,
-                  other: e.target.checked,
+                  shouldClearOtherCache: e.target.checked,
                 })
               }
             />
@@ -361,14 +339,14 @@ export function CacheManagementSection({
           className="h-auto p-0 text-xs text-blue-600 dark:text-blue-400"
           onClick={() =>
             onCachesToClearChange({
-              auth: true,
-              settings: true,
-              sync: true,
-              import: true,
-              review: true,
-              manga: true,
-              search: true,
-              other: true,
+              shouldClearAuthCache: true,
+              shouldClearSettingsCache: true,
+              shouldClearSyncCache: true,
+              shouldClearImportCache: true,
+              shouldClearReviewCache: true,
+              shouldClearMangaCache: true,
+              shouldClearSearchCache: true,
+              shouldClearOtherCache: true,
             })
           }
         >
@@ -380,14 +358,14 @@ export function CacheManagementSection({
           className="h-auto p-0 text-xs text-blue-600 dark:text-blue-400"
           onClick={() =>
             onCachesToClearChange({
-              auth: false,
-              settings: false,
-              sync: false,
-              import: false,
-              review: false,
-              manga: false,
-              search: false,
-              other: false,
+              shouldClearAuthCache: false,
+              shouldClearSettingsCache: false,
+              shouldClearSyncCache: false,
+              shouldClearImportCache: false,
+              shouldClearReviewCache: false,
+              shouldClearMangaCache: false,
+              shouldClearSearchCache: false,
+              shouldClearOtherCache: false,
             })
           }
         >
@@ -404,7 +382,7 @@ export function CacheManagementSection({
               Clearing cache...
             </>
           );
-        } else if (cacheCleared) {
+        } else if (isCacheCleared) {
           buttonContent = (
             <>
               <CheckCircle className="mr-2 h-4 w-4" />
@@ -422,10 +400,10 @@ export function CacheManagementSection({
         return (
           <Button
             onClick={onClearCaches}
-            variant={cacheCleared ? "outline" : "default"}
+            variant={isCacheCleared ? "outline" : "default"}
             disabled={isClearing || !Object.values(cachesToClear).some(Boolean)}
             className={`w-full disabled:cursor-not-allowed disabled:opacity-60 ${
-              cacheCleared
+              isCacheCleared
                 ? "bg-green-50 text-green-600 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/40"
                 : ""
             }`}

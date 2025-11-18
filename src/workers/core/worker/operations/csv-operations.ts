@@ -20,7 +20,7 @@ export const csvParserStates = new Map<string, CSVParserState>();
  * Returns array of lines with incomplete trailing line preserved.
  * @source
  */
-function splitCSVLines(csv: string): { lines: string[]; remainder: string } {
+function splitCsvLines(csv: string): { lines: string[]; remainder: string } {
   const lines: string[] = [];
   let remainder = "";
   let inQuotes = false;
@@ -69,7 +69,7 @@ function splitCSVLines(csv: string): { lines: string[]; remainder: string } {
  * Throws raw errors to be handled by the outermost handler.
  * @source
  */
-async function parseCSVBufferSegment(
+async function parseCsvBufferSegment(
   csvText: string,
   defaultStatus: string,
 ): Promise<KenmeiManga[]> {
@@ -93,7 +93,7 @@ async function parseCSVBufferSegment(
  * @returns Void; posts initial PROGRESS message.
  * @source
  */
-export function handleCSVStart(
+export function handleCsvStart(
   message: CSVStartMessage,
   activeTasks: Set<string>,
 ): void {
@@ -159,7 +159,7 @@ export function handleCSVStart(
  * @returns Promise that resolves after parsing and flushing if needed.
  * @source
  */
-async function processCSVChunkIncremental(
+async function processCsvChunkIncremental(
   chunk: string,
   state: ReturnType<typeof csvParserStates.get>,
 ): Promise<void> {
@@ -232,7 +232,7 @@ async function flushBufferAndParseRows(
   if (!state?.csvBuffer) return [];
 
   // Split buffer by lines, preserving incomplete trailing line
-  const { lines, remainder } = splitCSVLines(state.csvBuffer);
+  const { lines, remainder } = splitCsvLines(state.csvBuffer);
 
   let newlyParsedRows: KenmeiManga[] = [];
 
@@ -251,7 +251,7 @@ async function flushBufferAndParseRows(
 
     if (lines.length > 0) {
       // Parse the CSV segment
-      const manga = await parseCSVBufferSegment(
+      const manga = await parseCsvBufferSegment(
         csvWithHeader,
         state.defaultStatus,
       );
@@ -276,7 +276,7 @@ async function flushBufferAndParseRows(
  * @returns Promise that posts CSV_COMPLETE or throws on parse error.
  * @source
  */
-async function finalizeCSVParsing(
+async function finalizeCsvParsing(
   state: ReturnType<typeof csvParserStates.get>,
 ): Promise<void> {
   if (!state) return;
@@ -354,7 +354,7 @@ async function finalizeCSVParsing(
  * @returns Void; posts PROGRESS, CSV_COMPLETE, or ERROR.
  * @source
  */
-export function handleCSVChunk(
+export function handleCsvChunk(
   message: CSVChunkMessage,
   activeTasks: Set<string>,
 ): void {
@@ -383,11 +383,11 @@ export function handleCSVChunk(
 
   // Serialize chunk processing by chaining to the existing promise
   state.processingPromise = (state.processingPromise ?? Promise.resolve())
-    .then(() => processCSVChunkIncremental(chunk, state))
+    .then(() => processCsvChunkIncremental(chunk, state))
     .then(() => {
       if (isLastChunk) {
         // Finalize parsing and send complete results
-        return finalizeCSVParsing(state);
+        return finalizeCsvParsing(state);
       }
     })
     .then(() => {

@@ -180,7 +180,7 @@ export class StatisticsAggregationWorkerPool extends BaseWorkerPool {
         type: "statistics" as const,
         resolve: null as unknown as (result: unknown) => void,
         reject: null as unknown as (error: Error) => void,
-        cancelled: false,
+        isCancelled: false,
         onProgress: (message: unknown) => {
           // Adapt STATISTICS_AGGREGATION_PROGRESS message to typed callback
           const msgWithType = message as { type?: string; payload?: unknown };

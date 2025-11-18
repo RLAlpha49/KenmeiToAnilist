@@ -307,8 +307,8 @@ const generateStats = ({
  * @property onPauseProcess - Callback to pause the matching process (optional).
  * @property onResumeProcess - Callback to resume the matching process (optional).
  * @property bypassCache - Whether to bypass the cache for matching (optional).
- * @property freshSearch - Whether a fresh search is being performed (optional).
- * @property disableControls - Whether to disable control buttons (optional).
+ * @property isFreshSearch - Whether a fresh search is being performed (optional).
+ * @property shouldDisableControls - Whether to disable control buttons (optional).
  * @property isPaused - Whether the process is currently paused (optional).
  * @property isManuallyPaused - Whether the pause was triggered manually (optional).
  * @property isRateLimitActive - Whether pause is due to an active rate limit (optional).
@@ -324,8 +324,8 @@ export interface MatchingProgressProps {
   onPauseProcess?: () => void;
   onResumeProcess?: () => void;
   bypassCache?: boolean;
-  freshSearch?: boolean;
-  disableControls?: boolean;
+  isFreshSearch?: boolean;
+  shouldDisableControls?: boolean;
   isPaused?: boolean;
   isManuallyPaused?: boolean;
   isRateLimitActive?: boolean;
@@ -348,8 +348,8 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
   onPauseProcess,
   onResumeProcess,
   bypassCache,
-  freshSearch,
-  disableControls = false,
+  isFreshSearch,
+  shouldDisableControls = false,
   isPaused = false,
   isManuallyPaused = false,
   isRateLimitActive = false,
@@ -484,7 +484,7 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
     Math.round(averageSecondsPerManga),
   );
 
-  const showEta = progress.current > 0 && liveRemainingSeconds > 0;
+  const shouldShowEta = progress.current > 0 && liveRemainingSeconds > 0;
 
   const stats = useMemo(
     () =>
@@ -511,13 +511,13 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
   );
 
   const pauseButtonDisabled =
-    disableControls ||
+    shouldDisableControls ||
     isCancelling ||
     isPaused ||
     isRateLimitActive ||
     isPauseTransitioning;
   const resumeButtonDisabled =
-    disableControls ||
+    shouldDisableControls ||
     isCancelling ||
     !isManuallyPaused ||
     isRateLimitActive ||
@@ -548,7 +548,7 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
               </Badge>
             );
           })()}
-          {(bypassCache || freshSearch) && (
+          {(bypassCache || isFreshSearch) && (
             <Badge
               variant="outline"
               className="dark:bg-blue-500/12 flex items-center gap-1.5 rounded-full border-blue-500/30 bg-blue-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-600 dark:border-blue-500/25 dark:text-blue-200"
@@ -595,7 +595,7 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
           />
         </div>
 
-        {showEta && (
+        {shouldShowEta && (
           <motion.div
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
@@ -678,7 +678,7 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
           </motion.div>
         )}
 
-        {(bypassCache || freshSearch) && (
+        {(bypassCache || isFreshSearch) && (
           <motion.div
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
@@ -716,7 +716,7 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
             variant={isCancelling ? "outline" : "default"}
             size="lg"
             onClick={onCancelProcess}
-            disabled={isCancelling || disableControls}
+            disabled={isCancelling || shouldDisableControls}
             className={cn(
               "group relative w-full overflow-hidden rounded-2xl text-base font-semibold transition-all duration-200",
               isCancelling

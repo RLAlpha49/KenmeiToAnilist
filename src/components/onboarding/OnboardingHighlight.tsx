@@ -221,7 +221,7 @@ export function OnboardingHighlight({
     updatePosition();
 
     let isMounted = true;
-    let observerActive = false;
+    let isObserverActive = false;
 
     // Watch for DOM mutations to recompute position on element changes
     const observer = new MutationObserver(() => {
@@ -230,7 +230,7 @@ export function OnboardingHighlight({
       const element = resolveElement(currentSpotlight);
       if (element) {
         updatePosition();
-      } else if (observerActive) {
+      } else if (isObserverActive) {
         // Element was removed from DOM
         handleElementNotFound();
       }
@@ -242,7 +242,7 @@ export function OnboardingHighlight({
       subtree: true,
       attributes: false,
     });
-    observerActive = true;
+    isObserverActive = true;
 
     // Handle window scroll and resize events
     const handlePositionChange = () => {
@@ -253,7 +253,7 @@ export function OnboardingHighlight({
         // Element disappeared during scroll/resize
         handleElementNotFound();
         observer.disconnect();
-        observerActive = false;
+        isObserverActive = false;
         return;
       }
       updatePosition();
@@ -264,7 +264,7 @@ export function OnboardingHighlight({
 
     return () => {
       isMounted = false;
-      if (observerActive) {
+      if (isObserverActive) {
         observer.disconnect();
       }
       window.removeEventListener("scroll", handlePositionChange, true);

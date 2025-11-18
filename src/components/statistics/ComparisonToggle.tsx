@@ -73,14 +73,14 @@ export const ComparisonToggle: FC<ComparisonToggleProps> = ({
     });
   };
 
-  const rangeLabels: Record<TimeRange, string> = {
+  const comparisonRangeLabels: Record<TimeRange, string> = {
     "7d": "Last 7 days",
     "30d": "Last 30 days",
     "90d": "Last 90 days",
     all: "All time",
   };
 
-  const isInvalid =
+  const isComparisonRangeInvalid =
     comparisonMode.enabled &&
     comparisonMode.primaryRange === comparisonMode.secondaryRange;
 
@@ -145,9 +145,9 @@ export const ComparisonToggle: FC<ComparisonToggleProps> = ({
               </span>
               <select
                 value={comparisonMode.metric}
-                onChange={(e) =>
+                onChange={(event) =>
                   handleMetricChange(
-                    e.target.value as "chapters" | "velocity" | "habits",
+                    event.target.value as "chapters" | "velocity" | "habits",
                   )
                 }
                 className="flex-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800"
@@ -161,7 +161,7 @@ export const ComparisonToggle: FC<ComparisonToggleProps> = ({
             </div>
 
             {/* Validation Warning */}
-            {isInvalid && (
+            {isComparisonRangeInvalid && (
               <div className="flex items-start gap-2 rounded-md bg-amber-50 p-2 text-xs text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
                 <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
                 <span>
@@ -172,11 +172,15 @@ export const ComparisonToggle: FC<ComparisonToggleProps> = ({
             )}
 
             {/* Active Comparison Summary */}
-            {!isInvalid && (
+            {!isComparisonRangeInvalid && (
               <div className="rounded-md bg-blue-50 p-2 text-xs text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
                 Comparing{" "}
-                <strong>{rangeLabels[comparisonMode.primaryRange]}</strong> vs{" "}
-                <strong>{rangeLabels[comparisonMode.secondaryRange]}</strong>
+                <strong>
+                  {comparisonRangeLabels[comparisonMode.primaryRange]}
+                </strong>{" "}
+                <strong>
+                  {comparisonRangeLabels[comparisonMode.secondaryRange]}
+                </strong>
               </div>
             )}
           </div>

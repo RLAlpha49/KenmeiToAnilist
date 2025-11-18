@@ -32,7 +32,7 @@ import {
 } from "@/utils/storage";
 import { clearRegexCache } from "@/api/matching/filtering";
 import { debounce } from "@/utils/debounce";
-import { useDebugActions } from "@/contexts/DebugContext";
+import { useDebugActions } from "@/contexts/debug-context";
 import { truncateToastMessage } from "@/utils/text-highlight";
 
 import { Button } from "@/components/ui/Button";

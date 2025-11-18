@@ -33,14 +33,14 @@ interface ErrorStateDisplayProps {
  * @source
  */
 export function ErrorStateDisplay({
-  authError,
-  matchDataError,
-  validMatchesError,
+  authError: hasAuthError,
+  matchDataError: hasMatchDataError,
+  validMatchesError: hasValidMatchesError,
 }: Readonly<ErrorStateDisplayProps>) {
   const navigate = useNavigate();
 
   const errorState = (() => {
-    if (authError) {
+    if (hasAuthError) {
       return {
         title: "Authentication required",
         description:
@@ -57,7 +57,7 @@ export function ErrorStateDisplay({
       };
     }
 
-    if (matchDataError) {
+    if (hasMatchDataError) {
       return {
         title: "Matching required",
         description:
@@ -74,7 +74,7 @@ export function ErrorStateDisplay({
       };
     }
 
-    if (validMatchesError) {
+    if (hasValidMatchesError) {
       return {
         title: "No approved matches",
         description:

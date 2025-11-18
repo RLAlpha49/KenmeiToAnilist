@@ -97,12 +97,13 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
   const [confidenceThreshold, setConfidenceThreshold] = useState<number | null>(
     null,
   );
-  const [includeUnmatched, setIncludeUnmatched] = useState<boolean>(true);
-  const [unmatchedOnly, setUnmatchedOnly] = useState<boolean>(false);
+  const [shouldIncludeUnmatched, setShouldIncludeUnmatched] =
+    useState<boolean>(true);
+  const [isUnmatchedOnly, setIsUnmatchedOnly] = useState<boolean>(false);
   const [selectedFields, setSelectedFields] = useState<Set<ExportableFieldId>>(
     new Set(EXPORTABLE_FIELDS.map((f) => f.id)),
   );
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   // Calculate status counts
   const statusCounts = useMemo(() => {
@@ -128,16 +129,16 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
         match,
         statusFilters,
         confidenceThreshold,
-        includeUnmatched,
-        unmatchedOnly,
+        shouldIncludeUnmatched,
+        isUnmatchedOnly,
       ),
     ).length;
   }, [
     matches,
     statusFilters,
     confidenceThreshold,
-    includeUnmatched,
-    unmatchedOnly,
+    shouldIncludeUnmatched,
+    isUnmatchedOnly,
   ]);
 
   const handleExport = useCallback(async () => {
@@ -146,8 +147,8 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
         statusFilter:
           statusFilters.size > 0 ? Array.from(statusFilters) : undefined,
         confidenceThreshold: confidenceThreshold ?? undefined,
-        includeUnmatched: unmatchedOnly ? undefined : includeUnmatched,
-        unmatchedOnly: unmatchedOnly || undefined,
+        includeUnmatched: isUnmatchedOnly ? undefined : shouldIncludeUnmatched,
+        unmatchedOnly: isUnmatchedOnly || undefined,
         fields:
           selectedFields.size > 0 &&
           selectedFields.size < EXPORTABLE_FIELDS.length
@@ -161,7 +162,7 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
         filters,
       );
       toast.success(`Exported ${filteredCount} matches to ${filename}`);
-      setDropdownOpen(false);
+      setIsDropdownOpen(false);
     } catch (error) {
       console.error("[ExportMatchesButton] Export failed:", error);
       toast.error("Failed to export match results");
@@ -171,8 +172,8 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
     selectedFormat,
     statusFilters,
     confidenceThreshold,
-    includeUnmatched,
-    unmatchedOnly,
+    shouldIncludeUnmatched,
+    isUnmatchedOnly,
     selectedFields,
     filteredCount,
   ]);
@@ -234,12 +235,12 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
     } else {
       setConfidenceThreshold(null);
     }
-    setIncludeUnmatched(template.filters.includeUnmatched ?? true);
-    setUnmatchedOnly(template.filters.unmatchedOnly ?? false);
+    setShouldIncludeUnmatched(template.filters.includeUnmatched ?? true);
+    setIsUnmatchedOnly(template.filters.unmatchedOnly ?? false);
   }, []);
 
   return (
-    <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+    <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
       <DropdownMenuTrigger asChild>
         <Button
           variant={variant}
@@ -544,12 +545,12 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
 
         {/* Unmatched Filters */}
         <DropdownMenuCheckboxItem
-          checked={unmatchedOnly}
+          checked={isUnmatchedOnly}
           onCheckedChange={(checked) => {
-            setUnmatchedOnly(checked);
-            // When unmatchedOnly is enabled, includeUnmatched is forced to true and its control is disabled
+            setIsUnmatchedOnly(checked);
+            // When unmatched-only mode is enabled, shouldIncludeUnmatched is forced to true and its control is disabled
             if (checked) {
-              setIncludeUnmatched(true);
+              setShouldIncludeUnmatched(true);
             }
           }}
           onSelect={(e) => e.preventDefault()}
@@ -558,10 +559,10 @@ const ExportMatchesButtonComponent: React.FC<ExportMatchesButtonProps> = ({
         </DropdownMenuCheckboxItem>
 
         <DropdownMenuCheckboxItem
-          checked={includeUnmatched}
-          onCheckedChange={setIncludeUnmatched}
+          checked={shouldIncludeUnmatched}
+          onCheckedChange={setShouldIncludeUnmatched}
           onSelect={(e) => e.preventDefault()}
-          disabled={unmatchedOnly}
+          disabled={isUnmatchedOnly}
         >
           Include unmatched entries
         </DropdownMenuCheckboxItem>

@@ -6,11 +6,11 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { useDebugActions, useDebugState } from "../../contexts/DebugContext";
+import { useDebugActions, useDebugState } from "../../contexts/debug-context";
 import {
   type LogEntry,
   type LogLevel,
-  serialiseLogEntries,
+  serializeLogEntries,
 } from "../../utils/logging";
 import { cn } from "@/utils/tailwind";
 import { ScrollArea } from "../ui/ScrollArea";
@@ -252,8 +252,8 @@ export function LogViewer(): React.ReactElement {
 
   const handleCopyEntry = async (entry: LogEntry) => {
     try {
-      const [serialised] = serialiseLogEntries([entry]);
-      await navigator.clipboard.writeText(JSON.stringify(serialised, null, 2));
+      const [serialized] = serializeLogEntries([entry]);
+      await navigator.clipboard.writeText(JSON.stringify(serialized, null, 2));
       toast.success("Log entry copied to clipboard");
     } catch (error) {
       toast.error("Unable to copy log entry");
@@ -634,17 +634,17 @@ function TruncatedSource({
   source: string;
   query: string;
 }>): React.ReactElement {
-  const [expanded, setExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const maxChars = 80;
   const needsTruncate = source.length > maxChars;
   const display =
-    needsTruncate && !expanded ? `${source.slice(0, maxChars)}` : source;
+    needsTruncate && !isExpanded ? `${source.slice(0, maxChars)}` : source;
 
   return (
     <div className="text-muted-foreground mt-1 flex items-start gap-2 text-xs">
       <div className="wrap-break-word min-w-0 flex-1 whitespace-pre-wrap">
         {highlight(display, query)}
-        {needsTruncate && !expanded && (
+        {needsTruncate && !isExpanded && (
           <span className="text-muted-foreground">…</span>
         )}
       </div>
@@ -652,11 +652,11 @@ function TruncatedSource({
         <Button
           size="icon"
           variant="ghost"
-          onClick={() => setExpanded((s) => !s)}
+          onClick={() => setIsExpanded((s) => !s)}
           className="h-6 w-6 shrink-0"
-          title={expanded ? "Collapse source" : "Expand source"}
+          title={isExpanded ? "Collapse source" : "Expand source"}
         >
-          {expanded ? "−" : "+"}
+          {isExpanded ? "−" : "+"}
         </Button>
       )}
     </div>

@@ -37,7 +37,7 @@ import { captureError, ErrorType } from "../utils/error-handling";
 import {
   useDebugActions,
   StateInspectorHandle,
-} from "../contexts/DebugContext";
+} from "../contexts/debug-context";
 import { useAuthState } from "./use-auth";
 
 /**

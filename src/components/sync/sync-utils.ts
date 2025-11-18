@@ -147,7 +147,7 @@ export function calculateSyncChanges(
   userEntry: UserEntryData | undefined,
   syncConfig: SyncConfig,
 ): SyncChangesResult {
-  const determineStatusWillChange = (): boolean => {
+  const shouldUpdateStatus = (): boolean => {
     if (!userEntry) return true;
     if (syncConfig.prioritizeAniListStatus) return false;
     const effective = getEffectiveStatus(kenmei, syncConfig);
@@ -156,7 +156,7 @@ export function calculateSyncChanges(
     return effective !== userEntry.status && !preservesCompleted;
   };
 
-  const determineProgressWillChange = (): boolean => {
+  const shouldUpdateProgress = (): boolean => {
     if (!userEntry) return true;
     const kenmeiProgress = kenmei.chaptersRead || 0;
     const aniProgress = userEntry.progress || 0;
@@ -166,7 +166,7 @@ export function calculateSyncChanges(
     return kenmeiProgress !== aniProgress;
   };
 
-  const determineScoreWillChange = (): boolean => {
+  const shouldUpdateScore = (): boolean => {
     const kenmeiScore = Number(kenmei.score || 0);
     if (!userEntry) return kenmeiScore > 0;
 
@@ -194,21 +194,21 @@ export function calculateSyncChanges(
     );
   };
 
-  const statusWillChange = determineStatusWillChange();
-  const progressWillChange = determineProgressWillChange();
-  const scoreWillChange = determineScoreWillChange();
+  const statusWillChange = shouldUpdateStatus();
+  const progressWillChange = shouldUpdateProgress();
+  const scoreWillChange = shouldUpdateScore();
 
   const isNewEntry = !userEntry;
   const isCompleted = userEntry?.status === "COMPLETED";
 
-  const willSetPrivate = userEntry
+  const shouldSetPrivate = userEntry
     ? syncConfig.setPrivate && !userEntry.private
     : syncConfig.setPrivate;
   const changeCount = [
     statusWillChange,
     progressWillChange,
     scoreWillChange,
-    willSetPrivate,
+    shouldSetPrivate,
   ].filter(Boolean).length;
 
   return {

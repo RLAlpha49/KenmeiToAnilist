@@ -34,7 +34,7 @@ interface SyncSettingsTabProps {
   /** Current sync configuration. */
   syncConfig: SyncConfig;
   /** Whether custom threshold is enabled for auto-pause. */
-  useCustomThreshold: boolean;
+  isCustomThresholdEnabled: boolean;
   /** Current search query. */
   searchQuery: string;
   /** Currently highlighted section ID. */
@@ -60,7 +60,7 @@ interface SyncSettingsTabProps {
  */
 export function SyncSettingsTab({
   syncConfig,
-  useCustomThreshold,
+  isCustomThresholdEnabled,
   searchQuery,
   highlightedSectionId,
   onSyncConfigChange,
@@ -126,7 +126,7 @@ export function SyncSettingsTab({
             </div>
             <SyncAutoPauseSection
               syncConfig={syncConfig}
-              useCustomThreshold={useCustomThreshold}
+              isCustomThresholdEnabled={isCustomThresholdEnabled}
               searchQuery={searchQuery}
               highlightedSectionId={highlightedSectionId}
               onSyncConfigChange={onSyncConfigChange}

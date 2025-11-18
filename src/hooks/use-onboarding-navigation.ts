@@ -1,4 +1,4 @@
-import { useOnboarding } from "@/contexts/OnboardingContext";
+import { useOnboarding } from "@/contexts/onboarding-context";
 import { getRouteForStep } from "@/config/onboarding-routes";
 import { useEffect, useRef } from "react";
 import { router, history } from "@/routes/router";

@@ -21,7 +21,7 @@ import { generateUUID } from "../core/pool-utils";
  */
 export class MatchingWorkerPool {
   private readonly config: WorkerPoolConfig;
-  private initialized = false;
+  private isInitialized = false;
 
   constructor(config?: Partial<WorkerPoolConfig>) {
     this.config = {
@@ -37,7 +37,7 @@ export class MatchingWorkerPool {
    * @source
    */
   async initialize(): Promise<void> {
-    if (this.initialized) {
+    if (this.isInitialized) {
       return;
     }
     const pool = getGenericWorkerPool({
@@ -46,7 +46,7 @@ export class MatchingWorkerPool {
       fallbackToMainThread: this.config.fallbackToMainThread,
     });
     await pool.initialize();
-    this.initialized = true;
+    this.isInitialized = true;
   }
 
   /**
@@ -56,7 +56,7 @@ export class MatchingWorkerPool {
    */
   isAvailable(): boolean {
     const pool = getGenericWorkerPool();
-    return this.initialized && pool.isAvailable();
+    return this.isInitialized && pool.isAvailable();
   }
 
   /**
@@ -66,7 +66,7 @@ export class MatchingWorkerPool {
    */
   getAvailableWorkerCount(): number {
     const pool = getGenericWorkerPool();
-    return this.initialized ? pool.getAvailableWorkerCount() : 0;
+    return this.isInitialized ? pool.getAvailableWorkerCount() : 0;
   }
 
   /**
@@ -153,7 +153,7 @@ export class MatchingWorkerPool {
           resolve(adaptedResult);
         },
         reject,
-        cancelled: false,
+        isCancelled: false,
         progressCallback,
         onProgress: (message: unknown) => {
           // Adapt generic message to typed callback

@@ -95,7 +95,7 @@ export function handleTitleNormalization(
           `[Worker] ⚠️ Title normalization task ${taskId} was cancelled`,
         );
         globalThis.postMessage({
-          type: "TITLE_NORM_CANCELLED",
+          type: "TITLE_NORMALIZATION_CANCELLED",
           payload: {
             taskId,
             algorithm,
@@ -118,7 +118,7 @@ export function handleTitleNormalization(
         `[Worker] ⚠️ Title normalization task ${taskId} was cancelled before completion`,
       );
       globalThis.postMessage({
-        type: "TITLE_NORM_CANCELLED",
+        type: "TITLE_NORMALIZATION_CANCELLED",
         payload: {
           taskId,
           stage: "completion",

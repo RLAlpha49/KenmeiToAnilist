@@ -517,8 +517,8 @@ export interface MatchCancelledMessage {
  * Includes stage information indicating at which processing stage cancellation occurred.
  * @source
  */
-export interface StatsCancelledMessage {
-  type: "STATS_CANCELLED";
+export interface StatisticsAggregationCancelledMessage {
+  type: "STATISTICS_AGGREGATION_CANCELLED";
   payload: {
     taskId: string;
     stage: "filtering" | "aggregation" | "completion";
@@ -530,8 +530,8 @@ export interface StatsCancelledMessage {
  * Includes algorithm and stage information indicating when cancellation occurred.
  * @source
  */
-export interface TitleNormCancelledMessage {
-  type: "TITLE_NORM_CANCELLED";
+export interface TitleNormalizationCancelledMessage {
+  type: "TITLE_NORMALIZATION_CANCELLED";
   payload: {
     taskId: string;
     algorithm?: string;
@@ -554,8 +554,8 @@ export interface BatchSyncCancelledMessage {
  * Outbound terminal cancellation message for duplicate detection operations.
  * @source
  */
-export interface DupDetectionCancelledMessage {
-  type: "DUP_DETECTION_CANCELLED";
+export interface DuplicateDetectionCancelledMessage {
+  type: "DUPLICATE_DETECTION_CANCELLED";
   payload: {
     taskId: string;
   };
@@ -577,8 +577,8 @@ export interface DataTableCancelledMessage {
  * Includes stage information indicating at which processing stage cancellation occurred.
  * @source
  */
-export interface ReadHistCancelledMessage {
-  type: "READ_HIST_CANCELLED";
+export interface ReadingHistoryCancelledMessage {
+  type: "READING_HISTORY_CANCELLED";
   payload: {
     taskId: string;
     stage: "completion";
@@ -652,12 +652,12 @@ export type WorkerMessage =
   | FuzzySearchMessage
   | FuzzySearchResultMessage
   | MatchCancelledMessage
-  | StatsCancelledMessage
-  | TitleNormCancelledMessage
+  | StatisticsAggregationCancelledMessage
+  | TitleNormalizationCancelledMessage
   | BatchSyncCancelledMessage
-  | DupDetectionCancelledMessage
+  | DuplicateDetectionCancelledMessage
   | DataTableCancelledMessage
-  | ReadHistCancelledMessage;
+  | ReadingHistoryCancelledMessage;
 
 /**
  * Inbound request to filter and aggregate reading history.
@@ -949,14 +949,14 @@ export interface DataTablePreparationMessage {
       title: string;
       status: string;
       score?: number;
-      chapters_read?: number;
-      volumes_read?: number;
+      chaptersRead?: number;
+      volumesRead?: number;
       url?: string;
       source?: string;
       notes?: string;
-      last_read_at?: string;
-      created_at?: string;
-      updated_at?: string;
+      lastReadAt?: string;
+      createdAt?: string;
+      updatedAt?: string;
     }>;
     /**
      * Viewport parameters for slicing
@@ -1100,7 +1100,7 @@ export interface WorkerTask {
   taskId: string;
   resolve: (result: Record<string, unknown>) => void;
   reject: (error: Error) => void;
-  cancelled: boolean;
+  isCancelled: boolean;
 
   // Worker assignment
   workerIndex?: number;

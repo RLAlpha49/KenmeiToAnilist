@@ -21,17 +21,17 @@ import { ErrorType } from "../../utils/error-handling";
  * Props for the ErrorMessage component.
  * @property message - Error message text to display.
  * @property type - Error type determining icon and styling.
- * @property retry - Optional callback for retry button.
- * @property dismiss - Optional callback for dismiss button.
- * @property showTypeLabel - Whether to display the error type label.
+ * @property onRetry - Optional callback for retry button.
+ * @property onDismiss - Optional callback for dismiss button.
+ * @property shouldShowTypeLabel - Whether to display the error type label.
  * @source
  */
 interface ErrorMessageProps {
   message: string;
   type?: ErrorType;
-  retry?: () => void;
-  dismiss?: () => void;
-  showTypeLabel?: boolean;
+  onRetry?: () => void;
+  onDismiss?: () => void;
+  shouldShowTypeLabel?: boolean;
 }
 
 /**
@@ -44,7 +44,7 @@ type TypeConfig = {
   label: string;
 };
 
-const TYPE_CONFIG: Record<string, TypeConfig> = {
+const typeConfig: Record<string, TypeConfig> = {
   unknown: {
     icon: <AlertCircle className="h-5 w-5" />,
     classes:
@@ -110,46 +110,44 @@ const TYPE_CONFIG: Record<string, TypeConfig> = {
 export function ErrorMessage({
   message,
   type = ErrorType.UNKNOWN,
-  retry,
-  dismiss,
-  showTypeLabel = true,
+  onRetry,
+  onDismiss,
+  shouldShowTypeLabel = true,
 }: Readonly<ErrorMessageProps>) {
-  const cfg =
-    TYPE_CONFIG[type] ??
-    TYPE_CONFIG[ErrorType.UNKNOWN] ??
-    TYPE_CONFIG["unknown"];
+  const config =
+    typeConfig[type] ?? typeConfig[ErrorType.UNKNOWN] ?? typeConfig["unknown"];
 
   return (
     <div
-      className={`flex items-start gap-3 rounded-lg border p-4 transition-colors ${cfg.classes}`}
+      className={`flex items-start gap-3 rounded-lg border p-4 transition-colors ${config.classes}`}
       role="alert"
       aria-live="assertive"
     >
       <div className="shrink-0 pt-0.5" aria-hidden="true">
-        {cfg.icon}
+        {config.icon}
       </div>
       <div className="flex-1">
         <p className="mb-1 font-medium">
-          {showTypeLabel && (
+          {shouldShowTypeLabel && (
             <span className="mr-1 inline-block rounded bg-black/5 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide dark:bg-white/10">
-              {cfg.label}
+              {config.label}
             </span>
           )}
           {message}
         </p>
-        {(retry || dismiss) && (
+        {(onRetry || onDismiss) && (
           <div className="mt-2 flex gap-3">
-            {retry && (
+            {onRetry && (
               <button
-                onClick={retry}
+                onClick={onRetry}
                 className="rounded bg-white px-2 py-1 text-xs font-medium shadow-sm ring-1 ring-black/10 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:ring-white/10 dark:hover:bg-gray-700"
               >
                 Try Again
               </button>
             )}
-            {dismiss && (
+            {onDismiss && (
               <button
-                onClick={dismiss}
+                onClick={onDismiss}
                 className="rounded px-2 py-1 text-xs font-medium hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:hover:bg-black/20"
               >
                 Dismiss

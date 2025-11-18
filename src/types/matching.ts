@@ -149,13 +149,13 @@ export type MatchForExport = {
     title: string;
     status?: string;
     score?: number;
-    chapters_read?: number;
-    volumes_read?: number;
+    chaptersRead?: number;
+    volumesRead?: number;
     author?: string;
     notes?: string;
-    created_at?: string;
-    updated_at?: string;
-    last_read_at?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    lastReadAt?: string;
   };
   readonly anilistMatches?: Array<{
     confidence?: number;

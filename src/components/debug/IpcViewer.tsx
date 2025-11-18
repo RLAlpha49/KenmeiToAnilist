@@ -6,7 +6,7 @@
 
 import React, { useMemo, useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
-import { useDebugActions, useDebugState } from "../../contexts/DebugContext";
+import { useDebugActions, useDebugState } from "../../contexts/debug-context";
 import { ScrollArea } from "../ui/ScrollArea";
 import { Input } from "../ui/Input";
 import { Button } from "../ui/Button";
@@ -206,7 +206,7 @@ function matchesDirection(
  * @source
  */
 export function IpcViewer(): React.ReactElement {
-  const { ipcEvents, maxIpcEntries, logRedactionEnabled } = useDebugState();
+  const { ipcEvents, maxIpcEntries, isLogRedactionEnabled } = useDebugState();
   const { clearIpcEvents } = useDebugActions();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -214,7 +214,7 @@ export function IpcViewer(): React.ReactElement {
   const [directionFilters, setDirectionFilters] = useState<
     Record<DirectionFilter, boolean>
   >(DEFAULT_DIRECTION_FILTER);
-  const [clipboardFallbackOpen, setClipboardFallbackOpen] = useState(false);
+  const [isClipboardFallbackOpen, setIsClipboardFallbackOpen] = useState(false);
   const [clipboardFallbackText, setClipboardFallbackText] = useState("");
   const DEFAULT_WINDOW_SIZE = 100;
   const [visibleCount, setVisibleCount] = useState<number>(DEFAULT_WINDOW_SIZE);
@@ -295,7 +295,7 @@ export function IpcViewer(): React.ReactElement {
 
   const handleCopy = async (entry: IpcLogEntry) => {
     try {
-      const sanitized = logRedactionEnabled
+      const sanitized = isLogRedactionEnabled
         ? sanitizeForDebug(entry, { redactSensitive: true })
         : entry;
       const text = JSON.stringify(sanitized, null, 2);
@@ -305,7 +305,7 @@ export function IpcViewer(): React.ReactElement {
       // Fallback 1: use hidden textarea if clipboard API fails
       try {
         const textarea = document.createElement("textarea");
-        const sanitized = logRedactionEnabled
+        const sanitized = isLogRedactionEnabled
           ? sanitizeForDebug(entry, { redactSensitive: true })
           : entry;
         textarea.value = JSON.stringify(sanitized, null, 2);
@@ -327,11 +327,11 @@ export function IpcViewer(): React.ReactElement {
         // Fallback 2: Show modal with textarea for manual selection
         console.error("Failed to copy IPC log entry", error, fallbackError);
         try {
-          const sanitized = logRedactionEnabled
+          const sanitized = isLogRedactionEnabled
             ? sanitizeForDebug(entry, { redactSensitive: true })
             : entry;
           setClipboardFallbackText(JSON.stringify(sanitized, null, 2));
-          setClipboardFallbackOpen(true);
+          setIsClipboardFallbackOpen(true);
         } catch (modalError) {
           console.error("Failed to set clipboard fallback modal", modalError);
           toast.error(
@@ -485,7 +485,7 @@ export function IpcViewer(): React.ReactElement {
                   entry={entry}
                   onCopy={onCopy}
                   searchTerm={searchTerm}
-                  logRedactionEnabled={logRedactionEnabled}
+                  isLogRedactionEnabled={isLogRedactionEnabled}
                 />
               ))}
             </>
@@ -495,8 +495,8 @@ export function IpcViewer(): React.ReactElement {
 
       {/* Clipboard fallback modal */}
       <Dialog
-        open={clipboardFallbackOpen}
-        onOpenChange={setClipboardFallbackOpen}
+        open={isClipboardFallbackOpen}
+        onOpenChange={setIsClipboardFallbackOpen}
       >
         <DialogContent className="max-h-96 max-w-2xl">
           <DialogHeader>
@@ -511,7 +511,7 @@ export function IpcViewer(): React.ReactElement {
             readOnly
             value={clipboardFallbackText}
             className="max-h-64 min-h-48 font-mono text-xs"
-            onFocus={(e) => e.currentTarget.select()}
+            onFocus={(event) => event.currentTarget.select()}
           />
           <DialogFooter className="flex gap-2">
             <Button
@@ -531,7 +531,7 @@ export function IpcViewer(): React.ReactElement {
             </Button>
             <Button
               variant="default"
-              onClick={() => setClipboardFallbackOpen(false)}
+              onClick={() => setIsClipboardFallbackOpen(false)}
             >
               Close
             </Button>
@@ -550,7 +550,7 @@ type IpcEntryProps = {
   entry: IpcLogEntry;
   onCopy: (entry: IpcLogEntry) => void;
   searchTerm: string;
-  logRedactionEnabled: boolean;
+  isLogRedactionEnabled: boolean;
 };
 
 /**
@@ -563,14 +563,14 @@ const IpcEntry = React.memo(function IpcEntry({
   entry,
   onCopy,
   searchTerm,
-  logRedactionEnabled,
+  isLogRedactionEnabled,
 }: IpcEntryProps) {
   const directionMeta = DIRECTION_META[entry.direction as DirectionFilter];
   const transportMeta = TRANSPORT_META[entry.transport];
   const statusMeta = entry.status ? STATUS_META[entry.status] : null;
   const durationLabel = formatDuration(entry.durationMs);
-  const [expanded, setExpanded] = useState(false);
-  const [showJsonViewer, setShowJsonViewer] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isJsonViewerVisible, setIsJsonViewerVisible] = useState(false);
   const payloadRaw = entry.payload?.raw;
 
   // Detect invoke calls that send no payload (common pattern: invoke with empty array)
@@ -602,13 +602,13 @@ const IpcEntry = React.memo(function IpcEntry({
 
   // For received messages, null is a valid response value (e.g., store:getItem when key doesn't exist)
   const raw = entry.payload
-    ? formatPayload(payloadRaw, logRedactionEnabled)
+    ? formatPayload(payloadRaw, isLogRedactionEnabled)
     : "(no payload)";
   const isTooLong = raw.length > PREVIEW_MAX_CHARS;
   let previewText: string;
   if (isInvokeWithNoPayload) {
     previewText = "Invoked (no payload sent)";
-  } else if (isTooLong && !expanded) {
+  } else if (isTooLong && !isExpanded) {
     previewText = raw.slice(0, PREVIEW_MAX_CHARS) + "\n\n... (truncated)";
   } else {
     previewText = raw;
@@ -674,9 +674,9 @@ const IpcEntry = React.memo(function IpcEntry({
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => setExpanded((v) => !v)}
+              onClick={() => setIsExpanded((value) => !value)}
             >
-              {expanded ? "Show less" : "Show more"}
+              {isExpanded ? "Show less" : "Show more"}
             </Button>
             <div className="text-muted-foreground text-xs">
               Payload length: {raw.length.toLocaleString()}
@@ -688,16 +688,16 @@ const IpcEntry = React.memo(function IpcEntry({
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => setShowJsonViewer((v) => !v)}
+              onClick={() => setIsJsonViewerVisible((value) => !value)}
             >
-              {showJsonViewer ? "Hide JSON" : "View JSON"}
+              {isJsonViewerVisible ? "Hide JSON" : "View JSON"}
             </Button>
           </div>
         )}
-        {showJsonViewer && canShowJsonViewer && (
+        {isJsonViewerVisible && canShowJsonViewer && (
           <pre className="bg-muted/20 max-h-64 overflow-auto rounded p-2 text-xs">
             {JSON.stringify(
-              logRedactionEnabled
+              isLogRedactionEnabled
                 ? sanitizeForDebug(payloadRaw, { redactSensitive: true })
                 : payloadRaw,
               null,

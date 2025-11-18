@@ -42,16 +42,17 @@ export function BackgroundMatchingIndicator() {
   useEffect(() => {
     const updateState = () => {
       if (globalThis.matchingProcessState?.isRunning) {
-        const state = globalThis.matchingProcessState;
+        const currentMatchingProcessState = globalThis.matchingProcessState;
         setMatchingState({
           isRunning: true,
-          current: state.progress.current,
-          total: state.progress.total,
-          currentTitle: state.progress.currentTitle,
-          statusMessage: state.statusMessage,
+          current: currentMatchingProcessState.progress.current,
+          total: currentMatchingProcessState.progress.total,
+          currentTitle: currentMatchingProcessState.progress.currentTitle,
+          statusMessage: currentMatchingProcessState.statusMessage,
           estimatedRemainingSeconds:
-            state.timeEstimate?.estimatedRemainingSeconds,
-          averageTimePerManga: state.timeEstimate?.averageTimePerManga,
+            currentMatchingProcessState.timeEstimate?.estimatedRemainingSeconds,
+          averageTimePerManga:
+            currentMatchingProcessState.timeEstimate?.averageTimePerManga,
         });
       } else {
         setMatchingState(null);
@@ -62,9 +63,9 @@ export function BackgroundMatchingIndicator() {
     updateState();
 
     // Poll every second for updates
-    const interval = setInterval(updateState, 1000);
+    const pollingInterval = setInterval(updateState, 1000);
 
-    return () => clearInterval(interval);
+    return () => clearInterval(pollingInterval);
   }, []);
 
   // Don't show if not matching or if on the matching page
@@ -88,13 +89,13 @@ export function BackgroundMatchingIndicator() {
     if (!seconds || seconds <= 0) return "calculating...";
     if (seconds < 60) return `${Math.round(seconds)}s`;
     if (seconds < 3600) {
-      const mins = Math.floor(seconds / 60);
-      const secs = Math.round(seconds % 60);
-      return `${mins}m ${secs}s`;
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = Math.round(seconds % 60);
+      return `${minutes}m ${remainingSeconds}s`;
     }
     const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    return `${hours}h ${mins}m`;
+    const remainingMinutes = Math.floor((seconds % 3600) / 60);
+    return `${hours}h ${remainingMinutes}m`;
   };
 
   return (

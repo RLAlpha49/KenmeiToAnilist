@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/Input";
  * @property selectedItems - Currently selected items
  * @property onToggle - Callback when an item checkbox is toggled
  * @property label - Label formatter function (optional, defaults to item toString)
- * @property showSelectClear - Whether to show Select All/Clear buttons
+ * @property shouldShowSelectClear - Whether to show Select All/Clear buttons
  * @property onSelectAll - Callback for select all button
  * @property onClearAll - Callback for clear all button
  * @property maxHeight - Max height for scrollable container
@@ -21,7 +21,7 @@ interface SearchableFilterListProps<T> {
   selectedItems: T[];
   onToggle: (item: T) => void;
   label?: (item: T) => string;
-  showSelectClear?: boolean;
+  shouldShowSelectClear?: boolean;
   onSelectAll?: () => void;
   onClearAll?: () => void;
   maxHeight?: string;
@@ -41,7 +41,7 @@ export function SearchableFilterList<T extends string | { name: string }>({
   selectedItems,
   onToggle,
   label = (item) => (typeof item === "string" ? item : item.name),
-  showSelectClear = true,
+  shouldShowSelectClear = true,
   onSelectAll,
   onClearAll,
   maxHeight = "12rem",
@@ -51,7 +51,7 @@ export function SearchableFilterList<T extends string | { name: string }>({
       return item;
     }
     const namedItem = item as { name: string };
-    return namedItem.name || String(item);
+    return namedItem.name || JSON.stringify(item);
   },
 }: Readonly<SearchableFilterListProps<T>>): React.ReactElement {
   const [searchValue, setSearchValue] = React.useState("");
@@ -88,7 +88,7 @@ export function SearchableFilterList<T extends string | { name: string }>({
           )}
         </div>
 
-        {showSelectClear && (
+        {shouldShowSelectClear && (
           <div className="flex gap-2">
             {onSelectAll && (
               <Button

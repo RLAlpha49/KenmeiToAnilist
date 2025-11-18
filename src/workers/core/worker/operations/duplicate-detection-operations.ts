@@ -14,7 +14,7 @@ import { getErrorDetails } from "../error-utils";
  * @returns Map and comparison count.
  * @source
  */
-function buildAniListIdMap(
+function buildAnilistIdMap(
   matches: MangaMatchResult[],
   taskId: string,
   activeTasks: Set<string>,
@@ -119,7 +119,7 @@ export function handleDuplicateDetection(
   try {
     const ignoredIds = new Set(ignoredDuplicateIds);
 
-    const { map: anilistIdMap, comparisonCount } = buildAniListIdMap(
+    const { map: anilistIdMap, comparisonCount } = buildAnilistIdMap(
       matches,
       taskId,
       activeTasks,
@@ -130,7 +130,7 @@ export function handleDuplicateDetection(
         `[Worker] ⚠️ Duplicate detection task ${taskId} was cancelled after ${comparisonCount} comparisons`,
       );
       globalThis.postMessage({
-        type: "DUP_DETECTION_CANCELLED",
+        type: "DUPLICATE_DETECTION_CANCELLED",
         payload: {
           taskId,
           comparisonsCompleted: comparisonCount,
@@ -157,7 +157,7 @@ export function handleDuplicateDetection(
         `[Worker] ⚠️ Duplicate detection task ${taskId} was cancelled before completion`,
       );
       globalThis.postMessage({
-        type: "DUP_DETECTION_CANCELLED",
+        type: "DUPLICATE_DETECTION_CANCELLED",
         payload: {
           taskId,
           stage: "completion",

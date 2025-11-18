@@ -231,19 +231,21 @@ export const ViewControls: React.FC<ViewControlsProps> = ({
               { key: "progress", label: "Progress" },
               { key: "score", label: "Score" },
               { key: "changes", label: "Changes count" },
-            ].map((opt) => (
+            ].map((sortFieldOption) => (
               <DropdownMenuItem
-                key={opt.key}
+                key={sortFieldOption.key}
                 onClick={() =>
                   setSortOption((prev) => ({
                     ...prev,
-                    field: opt.key as SortOption["field"],
+                    field: sortFieldOption.key as SortOption["field"],
                   }))
                 }
                 className="flex items-center justify-between text-sm"
               >
-                {opt.label}
-                {sortOption.field === opt.key && <Check className="h-4 w-4" />}
+                {sortFieldOption.label}
+                {sortOption.field === sortFieldOption.key && (
+                  <Check className="h-4 w-4" />
+                )}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
@@ -276,19 +278,21 @@ export const ViewControls: React.FC<ViewControlsProps> = ({
               { key: "planned", label: "Plan to Read" },
               { key: "paused", label: "On Hold" },
               { key: "dropped", label: "Dropped" },
-            ].map((s) => (
+            ].map((statusFilterOption) => (
               <DropdownMenuItem
-                key={s.key}
+                key={statusFilterOption.key}
                 onClick={() =>
                   setFilters((prev) => ({
                     ...prev,
-                    status: s.key as FilterOptions["status"],
+                    status: statusFilterOption.key as FilterOptions["status"],
                   }))
                 }
                 className="flex items-center justify-between text-sm"
               >
-                {s.label}
-                {filters.status === s.key && <Check className="h-4 w-4" />}
+                {statusFilterOption.label}
+                {filters.status === statusFilterOption.key && (
+                  <Check className="h-4 w-4" />
+                )}
               </DropdownMenuItem>
             ))}
 
@@ -298,19 +302,21 @@ export const ViewControls: React.FC<ViewControlsProps> = ({
               { key: "all", label: "All entries" },
               { key: "with-changes", label: "With changes" },
               { key: "no-changes", label: "No changes" },
-            ].map((c) => (
+            ].map((changeFilterOption) => (
               <DropdownMenuItem
-                key={c.key}
+                key={changeFilterOption.key}
                 onClick={() =>
                   setFilters((prev) => ({
                     ...prev,
-                    changes: c.key as FilterOptions["changes"],
+                    changes: changeFilterOption.key as FilterOptions["changes"],
                   }))
                 }
                 className="flex items-center justify-between text-sm"
               >
-                {c.label}
-                {filters.changes === c.key && <Check className="h-4 w-4" />}
+                {changeFilterOption.label}
+                {filters.changes === changeFilterOption.key && (
+                  <Check className="h-4 w-4" />
+                )}
               </DropdownMenuItem>
             ))}
 
@@ -320,19 +326,22 @@ export const ViewControls: React.FC<ViewControlsProps> = ({
               { key: "all", label: "All entries" },
               { key: "new", label: "New to library" },
               { key: "existing", label: "Already in library" },
-            ].map((l) => (
+            ].map((libraryFilterOption) => (
               <DropdownMenuItem
-                key={l.key}
+                key={libraryFilterOption.key}
                 onClick={() =>
                   setFilters((prev) => ({
                     ...prev,
-                    library: l.key as FilterOptions["library"],
+                    library:
+                      libraryFilterOption.key as FilterOptions["library"],
                   }))
                 }
                 className="flex items-center justify-between text-sm"
               >
-                {l.label}
-                {filters.library === l.key && <Check className="h-4 w-4" />}
+                {libraryFilterOption.label}
+                {filters.library === libraryFilterOption.key && (
+                  <Check className="h-4 w-4" />
+                )}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>

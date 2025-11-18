@@ -113,7 +113,7 @@ export class DuplicateDetectionWorkerPool extends BaseWorkerPool {
         type: "duplicate_detection" as const,
         resolve: null as unknown as (result: unknown) => void,
         reject: null as unknown as (error: Error) => void,
-        cancelled: false,
+        isCancelled: false,
         workerIndex,
       };
 
@@ -205,7 +205,6 @@ let duplicateDetectionPoolInstance: DuplicateDetectionWorkerPool | null = null;
 
 /**
  * Returns the singleton duplicate detection worker pool, creating it if needed.
- * @param maxWorkers - Optional max worker count for initial creation.
  * @returns Shared duplicate detection worker pool instance.
  * @source
  */

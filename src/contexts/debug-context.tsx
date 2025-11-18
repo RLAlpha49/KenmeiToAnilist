@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module DebugContext
+ * @module debug-context
  * @description React context and provider for managing debug mode state throughout the application.
  */
 
@@ -17,7 +17,7 @@ import {
   installConsoleInterceptor,
   logCollector,
   type LogEntry,
-  serialiseLogEntries,
+  serializeLogEntries,
   MAX_LOG_ENTRIES,
   setLogRedactionEnabled as setCollectorLogRedactionEnabled,
 } from "../utils/logging";
@@ -40,7 +40,7 @@ import type {
   MemoryMetrics,
   ApiLatencySample,
 } from "@/types/debug";
-import { DEFAULT_PERFORMANCE_METRICS } from "@/types/debug";
+import { defaultPerformanceMetrics } from "@/types/debug";
 
 /**
  * Read-only state value provided by DebugStateContext.
@@ -48,15 +48,15 @@ import { DEFAULT_PERFORMANCE_METRICS } from "@/types/debug";
  *
  * @property isDebugEnabled - Whether debug mode is currently enabled globally.
  * @property debugMenuOpen - Whether the debug menu panel is visible.
- * @property storageDebuggerEnabled - Whether the storage inspector feature is enabled.
- * @property logViewerEnabled - Whether console log interception and viewing is enabled.
- * @property logRedactionEnabled - Whether sensitive log content is redacted in logs.
- * @property stateInspectorEnabled - Whether state inspection and time-travel debugging is enabled.
+ * @property isStorageDebuggerEnabled - Whether the storage inspector feature is enabled.
+ * @property isLogViewerEnabled - Whether console log interception and viewing is enabled.
+ * @property isLogRedactionEnabled - Whether sensitive log content is redacted in logs.
+ * @property isStateInspectorEnabled - Whether state inspection and time-travel debugging is enabled.
  * @property stateInspectorSources - Array of registered state inspector sources for inspection.
- * @property ipcViewerEnabled - Whether IPC communication tracking is enabled.
- * @property eventLoggerEnabled - Whether debug event logging is enabled.
- * @property confidenceTestExporterEnabled - Whether confidence test export feature is enabled.
- * @property performanceMonitorEnabled - Whether performance metrics collection is enabled.
+ * @property isIpcViewerEnabled - Whether IPC communication tracking is enabled.
+ * @property isEventLoggerEnabled - Whether debug event logging is enabled.
+ * @property isConfidenceTestExporterEnabled - Whether confidence test export feature is enabled.
+ * @property isPerformanceMonitorEnabled - Whether performance metrics collection is enabled.
  * @property performanceMetrics - Current performance metrics (API latency, cache stats, etc.).
  * @property eventLogEntries - Array of recorded debug events.
  * @property maxEventLogEntries - Maximum number of event log entries retained.
@@ -69,15 +69,15 @@ import { DEFAULT_PERFORMANCE_METRICS } from "@/types/debug";
 interface DebugStateContextValue {
   isDebugEnabled: boolean;
   debugMenuOpen: boolean;
-  storageDebuggerEnabled: boolean;
-  logViewerEnabled: boolean;
-  logRedactionEnabled: boolean;
-  stateInspectorEnabled: boolean;
+  isStorageDebuggerEnabled: boolean;
+  isLogViewerEnabled: boolean;
+  isLogRedactionEnabled: boolean;
+  isStateInspectorEnabled: boolean;
   stateInspectorSources: StateInspectorSourceSnapshot[];
-  ipcViewerEnabled: boolean;
-  eventLoggerEnabled: boolean;
-  confidenceTestExporterEnabled: boolean;
-  performanceMonitorEnabled: boolean;
+  isIpcViewerEnabled: boolean;
+  isEventLoggerEnabled: boolean;
+  isConfidenceTestExporterEnabled: boolean;
+  isPerformanceMonitorEnabled: boolean;
   performanceMetrics: PerformanceMetrics;
   currentFPS: number;
   eventLogEntries: DebugEventEntry[];
@@ -97,24 +97,24 @@ interface DebugStateContextValue {
  * @property openDebugMenu - Opens the debug menu UI panel.
  * @property closeDebugMenu - Closes the debug menu UI panel.
  * @property toggleDebugMenu - Toggles debug menu visibility.
- * @property setStorageDebuggerEnabled - Enables/disables storage inspector feature.
+ * @property setIsStorageDebuggerEnabled - Enables/disables storage inspector feature.
  * @property toggleStorageDebugger - Toggles storage debugger feature.
- * @property setLogViewerEnabled - Enables/disables console log interception and viewing.
+ * @property setIsLogViewerEnabled - Enables/disables console log interception and viewing.
  * @property toggleLogViewer - Toggles log viewer feature.
- * @property setLogRedactionEnabled - Enables/disables log content redaction for sensitive data.
+ * @property setIsLogRedactionEnabled - Enables/disables log content redaction for sensitive data.
  * @property toggleLogRedaction - Toggles log redaction feature.
- * @property setStateInspectorEnabled - Enables/disables state inspection and time-travel debugging.
+ * @property setIsStateInspectorEnabled - Enables/disables state inspection and time-travel debugging.
  * @property toggleStateInspector - Toggles state inspector feature.
  * @property registerStateInspector - Registers a new state source for inspection.
  * @property applyStateInspectorUpdate - Applies a state mutation via state inspector.
  * @property refreshStateInspectorSource - Manually refreshes a state inspector source snapshot.
- * @property setIpcViewerEnabled - Enables/disables IPC communication tracking.
+ * @property setIsIpcViewerEnabled - Enables/disables IPC communication tracking.
  * @property toggleIpcViewer - Toggles IPC viewer feature.
- * @property setEventLoggerEnabled - Enables/disables debug event logging.
+ * @property setIsEventLoggerEnabled - Enables/disables debug event logging.
  * @property toggleEventLogger - Toggles event logger feature.
- * @property setConfidenceTestExporterEnabled - Enables/disables confidence test export feature.
+ * @property setIsConfidenceTestExporterEnabled - Enables/disables confidence test export feature.
  * @property toggleConfidenceTestExporter - Toggles confidence test exporter feature.
- * @property setPerformanceMonitorEnabled - Enables/disables performance metrics collection.
+ * @property setIsPerformanceMonitorEnabled - Enables/disables performance metrics collection.
  * @property togglePerformanceMonitor - Toggles performance monitor feature.
  * @property recordApiLatency - Records an API request latency sample.
  * @property recordCacheAccess - Records a cache hit or miss event.
@@ -135,26 +135,26 @@ interface DebugActionsContextValue {
   openDebugMenu: () => void;
   closeDebugMenu: () => void;
   toggleDebugMenu: () => void;
-  setStorageDebuggerEnabled: (enabled: boolean) => void;
+  setIsStorageDebuggerEnabled: (enabled: boolean) => void;
   toggleStorageDebugger: () => void;
-  setLogViewerEnabled: (enabled: boolean) => void;
+  setIsLogViewerEnabled: (enabled: boolean) => void;
   toggleLogViewer: () => void;
-  setLogRedactionEnabled: (enabled: boolean) => void;
+  setIsLogRedactionEnabled: (enabled: boolean) => void;
   toggleLogRedaction: () => void;
-  setStateInspectorEnabled: (enabled: boolean) => void;
+  setIsStateInspectorEnabled: (enabled: boolean) => void;
   toggleStateInspector: () => void;
   registerStateInspector: <T>(
     config: StateInspectorRegistration<T>,
   ) => StateInspectorHandle<T>;
   applyStateInspectorUpdate: (id: string, value: unknown) => void;
   refreshStateInspectorSource: (id: string) => void;
-  setIpcViewerEnabled: (enabled: boolean) => void;
+  setIsIpcViewerEnabled: (enabled: boolean) => void;
   toggleIpcViewer: () => void;
-  setEventLoggerEnabled: (enabled: boolean) => void;
+  setIsEventLoggerEnabled: (enabled: boolean) => void;
   toggleEventLogger: () => void;
-  setConfidenceTestExporterEnabled: (enabled: boolean) => void;
+  setIsConfidenceTestExporterEnabled: (enabled: boolean) => void;
   toggleConfidenceTestExporter: () => void;
-  setPerformanceMonitorEnabled: (enabled: boolean) => void;
+  setIsPerformanceMonitorEnabled: (enabled: boolean) => void;
   togglePerformanceMonitor: () => void;
   recordApiLatency: (
     duration: number,
@@ -395,7 +395,7 @@ export function DebugProvider({
     new Map<string, StateInspectorSourceInternal>(),
   );
   const [performanceMetrics, setPerformanceMetrics] =
-    useState<PerformanceMetrics>(DEFAULT_PERFORMANCE_METRICS);
+    useState<PerformanceMetrics>(defaultPerformanceMetrics);
   const memoryPollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const pendingApiSamplesRef = useRef<
     Array<{
@@ -409,30 +409,31 @@ export function DebugProvider({
   const fpsMonitorRef = useRef<FPSMonitor | null>(null);
   const [currentFPS, setCurrentFPS] = useState<number>(60);
 
-  const storageDebuggerEnabled = featureToggles.storageDebugger;
-  const logViewerEnabled = featureToggles.logViewer;
-  const logRedactionEnabled = featureToggles.redactLogs;
-  const stateInspectorEnabled = featureToggles.stateInspector;
-  const ipcViewerEnabled = featureToggles.ipcViewer;
-  const eventLoggerEnabled = featureToggles.eventLogger;
-  const performanceMonitorEnabled = featureToggles.performanceMonitor;
+  const isStorageDebuggerEnabled = featureToggles.storageDebugger;
+  const isLogViewerEnabled = featureToggles.logViewer;
+  const isLogRedactionEnabled = featureToggles.redactLogs;
+  const isStateInspectorEnabled = featureToggles.stateInspector;
+  const isIpcViewerEnabled = featureToggles.ipcViewer;
+  const isEventLoggerEnabled = featureToggles.eventLogger;
+  const isConfidenceTestExporterEnabled = featureToggles.confidenceTestExporter;
+  const isPerformanceMonitorEnabled = featureToggles.performanceMonitor;
 
   useEffect(() => {
     // Only install the console interceptor when BOTH debug mode AND the log viewer feature are enabled.
-    if (!(isDebugEnabled && logViewerEnabled)) return;
+    if (!(isDebugEnabled && isLogViewerEnabled)) return;
 
     const detachConsole = installConsoleInterceptor();
     return () => {
       detachConsole?.();
     };
-  }, [isDebugEnabled, logViewerEnabled]);
+  }, [isDebugEnabled, isLogViewerEnabled]);
 
   useEffect(() => {
-    setCollectorLogRedactionEnabled(logRedactionEnabled);
-  }, [logRedactionEnabled]);
+    setCollectorLogRedactionEnabled(isLogRedactionEnabled);
+  }, [isLogRedactionEnabled]);
 
   useEffect(() => {
-    if (!isDebugEnabled && !logViewerEnabled) {
+    if (!isDebugEnabled && !isLogViewerEnabled) {
       return;
     }
 
@@ -447,7 +448,7 @@ export function DebugProvider({
     return () => {
       unsubscribe();
     };
-  }, [isDebugEnabled, logViewerEnabled]);
+  }, [isDebugEnabled, isLogViewerEnabled]);
 
   useEffect(() => {
     if (globalThis.window === undefined) return;
@@ -467,7 +468,7 @@ export function DebugProvider({
     }
 
     // Enable/disable IPC tracking based on debug mode and feature toggle
-    const shouldTrack = isDebugEnabled && ipcViewerEnabled;
+    const shouldTrack = isDebugEnabled && isIpcViewerEnabled;
     bridge.setEnabled(shouldTrack);
 
     if (!shouldTrack) {
@@ -483,7 +484,7 @@ export function DebugProvider({
     return () => {
       unsubscribe();
     };
-  }, [isDebugEnabled, ipcViewerEnabled]);
+  }, [isDebugEnabled, isIpcViewerEnabled]);
 
   useEffect(() => {
     if (!isDebugEnabled) {
@@ -492,10 +493,10 @@ export function DebugProvider({
   }, [isDebugEnabled]);
 
   useEffect(() => {
-    if (!eventLoggerEnabled) {
+    if (!isEventLoggerEnabled) {
       setEventLogEntries([]);
     }
-  }, [eventLoggerEnabled]);
+  }, [isEventLoggerEnabled]);
 
   // Load debug state from localStorage on initialization
   useEffect(() => {
@@ -539,7 +540,7 @@ export function DebugProvider({
   const recordEvent = useCallback(
     (entry: DebugEventRecord, options?: RecordEventOptions) => {
       const shouldRecord =
-        options?.force === true || (isDebugEnabled && eventLoggerEnabled);
+        options?.force === true || (isDebugEnabled && isEventLoggerEnabled);
       if (!shouldRecord) {
         return;
       }
@@ -571,7 +572,7 @@ export function DebugProvider({
         return next;
       });
     },
-    [eventLoggerEnabled, isDebugEnabled],
+    [isEventLoggerEnabled, isDebugEnabled],
   );
 
   const clearEventLog = useCallback(() => {
@@ -622,7 +623,7 @@ export function DebugProvider({
     [],
   );
 
-  const setStorageDebuggerEnabled = useCallback(
+  const setIsStorageDebuggerEnabled = useCallback(
     (enabled: boolean) => {
       persistFeatureToggles((prev) => ({
         ...prev,
@@ -641,10 +642,10 @@ export function DebugProvider({
   );
 
   const toggleStorageDebugger = useCallback(() => {
-    setStorageDebuggerEnabled(!storageDebuggerEnabled);
-  }, [setStorageDebuggerEnabled, storageDebuggerEnabled]);
+    setIsStorageDebuggerEnabled(!isStorageDebuggerEnabled);
+  }, [setIsStorageDebuggerEnabled, isStorageDebuggerEnabled]);
 
-  const setLogViewerEnabled = useCallback(
+  const setIsLogViewerEnabled = useCallback(
     (enabled: boolean) => {
       persistFeatureToggles((prev) => ({
         ...prev,
@@ -661,10 +662,10 @@ export function DebugProvider({
   );
 
   const toggleLogViewer = useCallback(() => {
-    setLogViewerEnabled(!logViewerEnabled);
-  }, [logViewerEnabled, setLogViewerEnabled]);
+    setIsLogViewerEnabled(!isLogViewerEnabled);
+  }, [isLogViewerEnabled, setIsLogViewerEnabled]);
 
-  const setLogRedactionEnabled = useCallback(
+  const setIsLogRedactionEnabled = useCallback(
     (enabled: boolean) => {
       persistFeatureToggles((prev) => ({
         ...prev,
@@ -681,10 +682,10 @@ export function DebugProvider({
   );
 
   const toggleLogRedaction = useCallback(() => {
-    setLogRedactionEnabled(!logRedactionEnabled);
-  }, [logRedactionEnabled, setLogRedactionEnabled]);
+    setIsLogRedactionEnabled(!isLogRedactionEnabled);
+  }, [isLogRedactionEnabled, setIsLogRedactionEnabled]);
 
-  const setStateInspectorEnabled = useCallback(
+  const setIsStateInspectorEnabled = useCallback(
     (enabled: boolean) => {
       persistFeatureToggles((prev) => ({
         ...prev,
@@ -703,10 +704,10 @@ export function DebugProvider({
   );
 
   const toggleStateInspector = useCallback(() => {
-    setStateInspectorEnabled(!stateInspectorEnabled);
-  }, [setStateInspectorEnabled, stateInspectorEnabled]);
+    setIsStateInspectorEnabled(!isStateInspectorEnabled);
+  }, [setIsStateInspectorEnabled, isStateInspectorEnabled]);
 
-  const setIpcViewerEnabled = useCallback(
+  const setIsIpcViewerEnabled = useCallback(
     (enabled: boolean) => {
       persistFeatureToggles((prev) => ({
         ...prev,
@@ -723,10 +724,10 @@ export function DebugProvider({
   );
 
   const toggleIpcViewer = useCallback(() => {
-    setIpcViewerEnabled(!ipcViewerEnabled);
-  }, [ipcViewerEnabled, setIpcViewerEnabled]);
+    setIsIpcViewerEnabled(!isIpcViewerEnabled);
+  }, [isIpcViewerEnabled, setIsIpcViewerEnabled]);
 
-  const setEventLoggerEnabled = useCallback(
+  const setIsEventLoggerEnabled = useCallback(
     (enabled: boolean) => {
       persistFeatureToggles((prev) => ({
         ...prev,
@@ -746,10 +747,10 @@ export function DebugProvider({
   );
 
   const toggleEventLogger = useCallback(() => {
-    setEventLoggerEnabled(!eventLoggerEnabled);
-  }, [eventLoggerEnabled, setEventLoggerEnabled]);
+    setIsEventLoggerEnabled(!isEventLoggerEnabled);
+  }, [isEventLoggerEnabled, setIsEventLoggerEnabled]);
 
-  const setConfidenceTestExporterEnabled = useCallback(
+  const setIsConfidenceTestExporterEnabled = useCallback(
     (enabled: boolean) => {
       persistFeatureToggles((prev) => ({
         ...prev,
@@ -771,10 +772,10 @@ export function DebugProvider({
   );
 
   const toggleConfidenceTestExporter = useCallback(() => {
-    setConfidenceTestExporterEnabled(!featureToggles.confidenceTestExporter);
-  }, [featureToggles.confidenceTestExporter, setConfidenceTestExporterEnabled]);
+    setIsConfidenceTestExporterEnabled(!isConfidenceTestExporterEnabled);
+  }, [isConfidenceTestExporterEnabled, setIsConfidenceTestExporterEnabled]);
 
-  const setPerformanceMonitorEnabled = useCallback(
+  const setIsPerformanceMonitorEnabled = useCallback(
     (enabled: boolean) => {
       persistFeatureToggles((prev) => ({
         ...prev,
@@ -796,8 +797,8 @@ export function DebugProvider({
   );
 
   const togglePerformanceMonitor = useCallback(() => {
-    setPerformanceMonitorEnabled(!featureToggles.performanceMonitor);
-  }, [featureToggles.performanceMonitor, setPerformanceMonitorEnabled]);
+    setIsPerformanceMonitorEnabled(!isPerformanceMonitorEnabled);
+  }, [isPerformanceMonitorEnabled, setIsPerformanceMonitorEnabled]);
 
   const flushPendingApiSamples = useCallback(() => {
     const samples = pendingApiSamplesRef.current;
@@ -918,7 +919,7 @@ export function DebugProvider({
       provider?: string,
       endpoint?: string,
     ) => {
-      if (!featureToggles.performanceMonitor) return;
+      if (!isPerformanceMonitorEnabled) return;
 
       // Validate duration: ignore non-finite values, clamp at 0
       if (!Number.isFinite(duration) || duration < 0) {
@@ -938,12 +939,12 @@ export function DebugProvider({
       // Schedule throttled flush
       throttledFlush();
     },
-    [featureToggles.performanceMonitor, throttledFlush],
+    [isPerformanceMonitorEnabled, throttledFlush],
   );
 
   const recordCacheAccess = useCallback(
     (hit: boolean) => {
-      if (!featureToggles.performanceMonitor) return;
+      if (!isPerformanceMonitorEnabled) return;
 
       setPerformanceMetrics((prev) => {
         const newHits = hit ? prev.cache.hits + 1 : prev.cache.hits;
@@ -961,12 +962,12 @@ export function DebugProvider({
         };
       });
     },
-    [featureToggles.performanceMonitor],
+    [isPerformanceMonitorEnabled],
   );
 
   const recordMatchingProgress = useCallback(
     (current: number, total: number, elapsedMs: number) => {
-      if (!featureToggles.performanceMonitor) return;
+      if (!isPerformanceMonitorEnabled) return;
 
       setPerformanceMetrics((prev) => {
         const speed = elapsedMs > 0 ? (current / elapsedMs) * 60000 : 0; // titles per minute
@@ -983,12 +984,12 @@ export function DebugProvider({
         };
       });
     },
-    [featureToggles.performanceMonitor],
+    [isPerformanceMonitorEnabled],
   );
 
   const updateMemoryStats = useCallback(
     (stats: MemoryMetrics) => {
-      if (!featureToggles.performanceMonitor) return;
+      if (!isPerformanceMonitorEnabled) return;
 
       setPerformanceMetrics((prev) => {
         const newHistory = [...prev.memory.history, stats].slice(-50); // Keep last 50 samples
@@ -1012,11 +1013,11 @@ export function DebugProvider({
         });
       }
     },
-    [featureToggles.performanceMonitor, recordEvent],
+    [isPerformanceMonitorEnabled, recordEvent],
   );
 
   const resetPerformanceMetrics = useCallback(() => {
-    setPerformanceMetrics(DEFAULT_PERFORMANCE_METRICS);
+    setPerformanceMetrics(defaultPerformanceMetrics);
     recordEvent({
       type: "debug.performance-monitor",
       message: "Performance metrics reset",
@@ -1288,7 +1289,7 @@ export function DebugProvider({
           typeof navigator === "undefined" ? undefined : navigator.userAgent,
         totalEntries: entries.length,
         maxEntries: MAX_LOG_ENTRIES,
-        logs: serialiseLogEntries(entries),
+        logs: serializeLogEntries(entries),
       };
 
       await exportToJson(payload, "kenmei-debug-logs");
@@ -1316,7 +1317,7 @@ export function DebugProvider({
 
   // Poll memory stats when performance monitor is enabled
   useEffect(() => {
-    if (!isDebugEnabled || !featureToggles.performanceMonitor) {
+    if (!isDebugEnabled || !isPerformanceMonitorEnabled) {
       if (memoryPollingIntervalRef.current) {
         clearInterval(memoryPollingIntervalRef.current);
         memoryPollingIntervalRef.current = null;
@@ -1345,11 +1346,11 @@ export function DebugProvider({
         memoryPollingIntervalRef.current = null;
       }
     };
-  }, [isDebugEnabled, featureToggles.performanceMonitor, updateMemoryStats]);
+  }, [isDebugEnabled, isPerformanceMonitorEnabled, updateMemoryStats]);
 
   // Monitor FPS when performance monitor is enabled
   useEffect(() => {
-    if (!isDebugEnabled || !featureToggles.performanceMonitor) {
+    if (!isDebugEnabled || !isPerformanceMonitorEnabled) {
       // Cancel throttled flush and clear pending samples on disable
       throttledFlush.cancel?.();
       pendingApiSamplesRef.current = [];
@@ -1395,14 +1396,14 @@ export function DebugProvider({
     };
   }, [
     isDebugEnabled,
-    featureToggles.performanceMonitor,
+    isPerformanceMonitorEnabled,
     recordEvent,
     throttledFlush,
   ]);
 
   // Listen for API performance events
   useEffect(() => {
-    if (!isDebugEnabled || !featureToggles.performanceMonitor) return;
+    if (!isDebugEnabled || !isPerformanceMonitorEnabled) return;
 
     const handleApiPerformance = (event: Event) => {
       const customEvent = event as CustomEvent<{
@@ -1457,11 +1458,11 @@ export function DebugProvider({
         handleGenericApiRequest,
       );
     };
-  }, [isDebugEnabled, featureToggles.performanceMonitor, recordApiLatency]);
+  }, [isDebugEnabled, isPerformanceMonitorEnabled, recordApiLatency]);
 
   // Listen for cache hit/miss events
   useEffect(() => {
-    if (!isDebugEnabled || !featureToggles.performanceMonitor) return;
+    if (!isDebugEnabled || !isPerformanceMonitorEnabled) return;
 
     const handleCacheHit = () => recordCacheAccess(true);
     const handleCacheMiss = () => recordCacheAccess(false);
@@ -1473,11 +1474,11 @@ export function DebugProvider({
       globalThis.removeEventListener("matching:cache-hit", handleCacheHit);
       globalThis.removeEventListener("matching:cache-miss", handleCacheMiss);
     };
-  }, [isDebugEnabled, featureToggles.performanceMonitor, recordCacheAccess]);
+  }, [isDebugEnabled, isPerformanceMonitorEnabled, recordCacheAccess]);
 
   // Listen for matching progress events
   useEffect(() => {
-    if (!isDebugEnabled || !featureToggles.performanceMonitor) return;
+    if (!isDebugEnabled || !isPerformanceMonitorEnabled) return;
 
     const handleMatchingProgress = (event: Event) => {
       const customEvent = event as CustomEvent<{
@@ -1500,25 +1501,21 @@ export function DebugProvider({
         handleMatchingProgress,
       );
     };
-  }, [
-    isDebugEnabled,
-    featureToggles.performanceMonitor,
-    recordMatchingProgress,
-  ]);
+  }, [isDebugEnabled, isPerformanceMonitorEnabled, recordMatchingProgress]);
 
   const stateContextValue = React.useMemo<DebugStateContextValue>(
     () => ({
       isDebugEnabled,
       debugMenuOpen,
-      storageDebuggerEnabled,
-      logViewerEnabled,
-      logRedactionEnabled,
-      stateInspectorEnabled,
+      isStorageDebuggerEnabled,
+      isLogViewerEnabled,
+      isLogRedactionEnabled,
+      isStateInspectorEnabled,
       stateInspectorSources: stateSourceSnapshots,
-      ipcViewerEnabled,
-      eventLoggerEnabled,
-      confidenceTestExporterEnabled: featureToggles.confidenceTestExporter,
-      performanceMonitorEnabled,
+      isIpcViewerEnabled,
+      isEventLoggerEnabled,
+      isConfidenceTestExporterEnabled,
+      isPerformanceMonitorEnabled,
       performanceMetrics,
       currentFPS,
       eventLogEntries,
@@ -1532,20 +1529,20 @@ export function DebugProvider({
       currentFPS,
       debugMenuOpen,
       eventLogEntries,
-      eventLoggerEnabled,
-      featureToggles.confidenceTestExporter,
-      performanceMonitorEnabled,
+      isEventLoggerEnabled,
+      setIsConfidenceTestExporterEnabled,
+      isPerformanceMonitorEnabled,
       performanceMetrics,
       ipcEvents,
-      ipcViewerEnabled,
+      isIpcViewerEnabled,
       isDebugEnabled,
       logEntries,
-      logRedactionEnabled,
-      logViewerEnabled,
+      isLogRedactionEnabled,
+      isLogViewerEnabled,
       maxIpcEntries,
-      stateInspectorEnabled,
+      isStateInspectorEnabled,
       stateSourceSnapshots,
-      storageDebuggerEnabled,
+      isStorageDebuggerEnabled,
     ],
   );
 
@@ -1556,24 +1553,24 @@ export function DebugProvider({
       openDebugMenu,
       closeDebugMenu,
       toggleDebugMenu,
-      setStorageDebuggerEnabled,
+      setIsStorageDebuggerEnabled,
       toggleStorageDebugger,
-      setLogViewerEnabled,
+      setIsLogViewerEnabled,
       toggleLogViewer,
-      setLogRedactionEnabled,
+      setIsLogRedactionEnabled,
       toggleLogRedaction,
-      setStateInspectorEnabled,
+      setIsStateInspectorEnabled,
       toggleStateInspector,
       registerStateInspector,
       applyStateInspectorUpdate,
       refreshStateInspectorSource,
-      setIpcViewerEnabled,
+      setIsIpcViewerEnabled,
       toggleIpcViewer,
-      setEventLoggerEnabled,
+      setIsEventLoggerEnabled,
       toggleEventLogger,
-      setConfidenceTestExporterEnabled,
+      setIsConfidenceTestExporterEnabled,
       toggleConfidenceTestExporter,
-      setPerformanceMonitorEnabled,
+      setIsPerformanceMonitorEnabled,
       togglePerformanceMonitor,
       recordApiLatency,
       recordCacheAccess,
@@ -1601,15 +1598,15 @@ export function DebugProvider({
       refreshStateInspectorSource,
       registerStateInspector,
       resetPerformanceMetrics,
-      setConfidenceTestExporterEnabled,
+      setIsConfidenceTestExporterEnabled,
       setDebugEnabled,
-      setEventLoggerEnabled,
-      setIpcViewerEnabled,
-      setLogRedactionEnabled,
-      setLogViewerEnabled,
-      setPerformanceMonitorEnabled,
-      setStateInspectorEnabled,
-      setStorageDebuggerEnabled,
+      setIsEventLoggerEnabled,
+      setIsIpcViewerEnabled,
+      setIsLogRedactionEnabled,
+      setIsLogViewerEnabled,
+      setIsPerformanceMonitorEnabled,
+      setIsStateInspectorEnabled,
+      setIsStorageDebuggerEnabled,
       toggleConfidenceTestExporter,
       toggleDebug,
       toggleEventLogger,

@@ -53,7 +53,7 @@ import {
   extractYearRange,
 } from "../sync/filtering";
 import {
-  DEFAULT_ADVANCED_FILTERS,
+  defaultAdvancedFilters,
   type AdvancedMatchFilters,
   type FilterPreset,
 } from "../../types/matching-filters";
@@ -102,7 +102,7 @@ import { openExternalSafe } from "@/helpers/external/open-external";
  * @property onResetToPending - Optional callback to reset a match to pending status.
  * @property searchQuery - Optional search query string to filter results.
  * @property onSetMatchedToPending - Optional callback to reset all matched to pending.
- * @property disableSetMatchedToPending - Optional flag to disable the set-to-pending action.
+ * @property isSetMatchedToPendingDisabled - Optional flag to disable the set-to-pending action.
  * @property isLoadingInitial - Optional flag to show skeleton loaders during initial load.
  * @property selectedMatchIds - Optional set of selected match IDs for batch operations.
  * @property onToggleSelection - Optional callback to toggle selection of a match.
@@ -136,7 +136,7 @@ export interface MangaMatchingPanelProps {
   ) => void;
   searchQuery?: string;
   onSetMatchedToPending?: () => void;
-  disableSetMatchedToPending?: boolean;
+  isSetMatchedToPendingDisabled?: boolean;
   isLoadingInitial?: boolean;
   selectedMatchIds?: Set<number>;
   onToggleSelection?: (matchId: number) => void;
@@ -160,6 +160,7 @@ export function MangaMatchingPanel({
   onResetToPending,
   searchQuery,
   onSetMatchedToPending,
+  isSetMatchedToPendingDisabled,
   isLoadingInitial = false,
   selectedMatchIds,
   onToggleSelection,
@@ -168,17 +169,17 @@ export function MangaMatchingPanel({
 }: Readonly<MangaMatchingPanelProps>) {
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilters, setStatusFilters] = useState<StatusFiltersState>({
-    matched: true,
-    pending: true,
-    manual: true,
-    skipped: true,
+    isMatchedVisible: true,
+    isPendingVisible: true,
+    isManualVisible: true,
+    isSkippedVisible: true,
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedMatchFilters>(
-    DEFAULT_ADVANCED_FILTERS,
+    defaultAdvancedFilters,
   );
   const [userPresets, setUserPresets] = useState<FilterPreset[]>([]);
-  const [useFuzzySearch, setUseFuzzySearch] = useState(true);
+  const [isFuzzySearchEnabled, setIsFuzzySearchEnabled] = useState(true);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const lastExternalSearchQuery = useRef<string | undefined>(undefined);
@@ -315,25 +316,25 @@ export function MangaMatchingPanel({
   const [isBulkActionsOpen, setIsBulkActionsOpen] = useState(false);
 
   // State for adult content settings and blur management
-  const [blurAdultContent, setBlurAdultContent] = useState(true);
+  const [shouldBlurAdultContent, setShouldBlurAdultContent] = useState(true);
   const [unblurredImages, setUnblurredImages] = useState<Set<string>>(
     new Set(),
   );
 
   // State for Comick search setting (disabled - Comick temporarily unavailable)
   // eslint-disable-next-line
-  const [enableComickSearch, setEnableComickSearch] = useState(false);
+  const [isComickSearchEnabled, setIsComickSearchEnabled] = useState(false);
   // State for MangaDex search setting
-  const [enableMangaDexSearch, setEnableMangaDexSearch] = useState(true);
+  const [isMangaDexSearchEnabled, setIsMangaDexSearchEnabled] = useState(true);
 
   // Load blur settings from match config
   useEffect(() => {
     const loadBlurSettings = async () => {
       const matchConfig = getMatchConfig();
-      setBlurAdultContent(matchConfig.blurAdultContent);
+      setShouldBlurAdultContent(matchConfig.blurAdultContent);
       // Comick is temporarily disabled, keep it false
-      setEnableComickSearch(false);
-      setEnableMangaDexSearch(matchConfig.enableMangaDexSearch);
+      setIsComickSearchEnabled(false);
+      setIsMangaDexSearchEnabled(matchConfig.enableMangaDexSearch);
     };
     loadBlurSettings();
   }, []);
@@ -371,7 +372,7 @@ export function MangaMatchingPanel({
   };
 
   const shouldBlurImage = (mangaId: string) => {
-    return blurAdultContent && !unblurredImages.has(mangaId);
+    return shouldBlurAdultContent && !unblurredImages.has(mangaId);
   };
 
   const toggleImageBlur = (mangaId: string) => {
@@ -388,7 +389,7 @@ export function MangaMatchingPanel({
 
   // Handler for toggling Comick search setting
   const handleComickSearchToggle = async (enabled: boolean) => {
-    setEnableComickSearch(enabled);
+    setIsComickSearchEnabled(enabled);
     try {
       const currentConfig = getMatchConfig();
       const updatedConfig = {
@@ -402,13 +403,13 @@ export function MangaMatchingPanel({
         error,
       );
       // Revert the state if saving failed
-      setEnableComickSearch(!enabled);
+      setIsComickSearchEnabled(!enabled);
     }
   };
 
   // Handler for toggling MangaDex search setting
   const handleMangaDexSearchToggle = async (enabled: boolean) => {
-    setEnableMangaDexSearch(enabled);
+    setIsMangaDexSearchEnabled(enabled);
     try {
       const currentConfig = getMatchConfig();
       const updatedConfig = {
@@ -422,7 +423,7 @@ export function MangaMatchingPanel({
         error,
       );
       // Revert the state if saving failed
-      setEnableMangaDexSearch(!enabled);
+      setIsMangaDexSearchEnabled(!enabled);
     }
   };
 
@@ -497,7 +498,7 @@ export function MangaMatchingPanel({
 
   // Handler for clearing all advanced filters
   const handleClearAllFilters = useCallback(() => {
-    setAdvancedFilters(DEFAULT_ADVANCED_FILTERS);
+    setAdvancedFilters(defaultAdvancedFilters);
     setCurrentPage(1);
   }, []);
 
@@ -607,10 +608,10 @@ export function MangaMatchingPanel({
       if (match.kenmeiManga.id === undefined) return false;
 
       const statusMatch =
-        (match.status === "matched" && statusFilters.matched) ||
-        (match.status === "pending" && statusFilters.pending) ||
-        (match.status === "manual" && statusFilters.manual) ||
-        (match.status === "skipped" && statusFilters.skipped);
+        (match.status === "matched" && statusFilters.isMatchedVisible) ||
+        (match.status === "pending" && statusFilters.isPendingVisible) ||
+        (match.status === "manual" && statusFilters.isManualVisible) ||
+        (match.status === "skipped" && statusFilters.isSkippedVisible);
 
       return statusMatch;
     });
@@ -625,7 +626,7 @@ export function MangaMatchingPanel({
 
   // Prepare search query for fuzzy search (extract text tokens only)
   const fuzzySearchQuery = useMemo(() => {
-    if (!searchTerm || !useFuzzySearch) {
+    if (!searchTerm || !isFuzzySearchEnabled) {
       return "";
     }
 
@@ -644,7 +645,7 @@ export function MangaMatchingPanel({
 
     // Only field tokens, no fuzzy search
     return "";
-  }, [searchTerm, useFuzzySearch]);
+  }, [searchTerm, isFuzzySearchEnabled]);
 
   // Use the async fuzzy search hook for large datasets
   const { results: fuzzySearchedMatches } = useFuzzySearchResults(
@@ -652,7 +653,7 @@ export function MangaMatchingPanel({
     advancedFilteredMatches,
     {
       debounceMs: 150,
-      enabled: useFuzzySearch && fuzzySearchQuery.length > 0,
+      enabled: isFuzzySearchEnabled && fuzzySearchQuery.length > 0,
     },
   );
 
@@ -661,7 +662,7 @@ export function MangaMatchingPanel({
     let filtered = fuzzySearchedMatches;
 
     // Apply field-based filters from query syntax if present
-    if (searchTerm && useFuzzySearch) {
+    if (searchTerm && isFuzzySearchEnabled) {
       const tokens = parseQuerySyntax(searchTerm);
       const hasFieldTokens = tokens.some((t) => t.type === "field");
 
@@ -670,7 +671,7 @@ export function MangaMatchingPanel({
         const queryFilters = applyQueryToFilters(tokens, advancedFilters);
         filtered = filterByAdvancedCriteria(filtered, queryFilters);
       }
-    } else if (searchTerm && !useFuzzySearch) {
+    } else if (searchTerm && !isFuzzySearchEnabled) {
       // Fallback to substring search when fuzzy search is disabled
       filtered = filtered.filter(
         (match) =>
@@ -687,7 +688,7 @@ export function MangaMatchingPanel({
     }
 
     return filtered;
-  }, [fuzzySearchedMatches, searchTerm, advancedFilters, useFuzzySearch]);
+  }, [fuzzySearchedMatches, searchTerm, advancedFilters, isFuzzySearchEnabled]);
 
   // Sort the filtered matches
   const sortedMatches = [...filteredMatches].sort((a, b) => {
@@ -1286,8 +1287,8 @@ export function MangaMatchingPanel({
                 <input
                   id="fuzzy-search-toggle"
                   type="checkbox"
-                  checked={useFuzzySearch}
-                  onChange={(e) => setUseFuzzySearch(e.target.checked)}
+                  checked={isFuzzySearchEnabled}
+                  onChange={(e) => setIsFuzzySearchEnabled(e.target.checked)}
                   className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:border-slate-600"
                   title="Enable fuzzy matching for more flexible search results"
                 />
@@ -1311,7 +1312,7 @@ export function MangaMatchingPanel({
 
               {/* Alternative Search Settings */}
               <AlternativeSearchSettingsCard
-                enableMangaDexSearch={enableMangaDexSearch}
+                isMangaDexSearchEnabled={isMangaDexSearchEnabled}
                 onComickSearchToggle={handleComickSearchToggle}
                 onMangaDexSearchToggle={handleMangaDexSearchToggle}
               />
@@ -1398,6 +1399,7 @@ export function MangaMatchingPanel({
                   isAcceptingAllMatches={isAcceptingAllMatches}
                   onSetMatchedToPending={onSetMatchedToPending}
                   isResettingMatchedToPending={isResettingMatchedToPending}
+                  isSetMatchedToPendingDisabled={isSetMatchedToPendingDisabled}
                   matchedCount={matchedCount}
                 />
               </CardContent>

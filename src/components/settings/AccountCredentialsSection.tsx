@@ -22,8 +22,8 @@ interface AccountCredentialsSectionProps {
   authState: AuthState;
   /** Whether an authentication operation is in progress. */
   isLoading: boolean;
-  /** Whether to use custom OAuth credentials. */
-  useCustomCredentials: boolean;
+  /** Whether custom OAuth credentials are active. */
+  isUsingCustomCredentials: boolean;
   /** Custom OAuth client ID. */
   clientId: string;
   /** Custom OAuth client secret. */
@@ -33,7 +33,7 @@ interface AccountCredentialsSectionProps {
   /** Status of default AniList credentials. */
   defaultCredentialStatus: { hasCredentials: boolean; missing: string[] };
   /** Status of custom credentials. */
-  customCredentialStatus: { complete: boolean; missing: string[] };
+  customCredentialStatus: { isComplete: boolean; missing: string[] };
   /** Callback to toggle custom credentials mode. */
   onToggleCustomCredentials: (value: boolean) => void;
   /** Callback when client ID is changed. */
@@ -53,7 +53,7 @@ interface AccountCredentialsSectionProps {
 export function AccountCredentialsSection({
   authState,
   isLoading,
-  useCustomCredentials,
+  isUsingCustomCredentials,
   clientId,
   clientSecret,
   redirectUri,
@@ -92,7 +92,7 @@ export function AccountCredentialsSection({
               Use custom credentials
             </span>
             <Switch
-              checked={useCustomCredentials}
+              checked={isUsingCustomCredentials}
               onCheckedChange={onToggleCustomCredentials}
               disabled={authState.isAuthenticated || isLoading}
             />
@@ -125,7 +125,7 @@ export function AccountCredentialsSection({
         </Alert>
       )}
 
-      {!useCustomCredentials && !defaultCredentialStatus.hasCredentials && (
+      {!isUsingCustomCredentials && !defaultCredentialStatus.hasCredentials && (
         <Alert className="mt-4 border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-400/40 dark:bg-amber-500/10 dark:text-amber-100">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle className="text-amber-700 dark:text-amber-100">
@@ -140,7 +140,7 @@ export function AccountCredentialsSection({
         </Alert>
       )}
 
-      {useCustomCredentials && (
+      {isUsingCustomCredentials && (
         <div className="mt-6 grid gap-4 md:grid-cols-2">
           <div className="grid gap-1.5">
             <label
@@ -208,7 +208,7 @@ export function AccountCredentialsSection({
             </a>{" "}
             . Use the redirect URI exactly as specified above.
           </p>
-          {!customCredentialStatus.complete && (
+          {!customCredentialStatus.isComplete && (
             <Alert className="border-rose-200 bg-rose-50 text-rose-700 md:col-span-2 dark:border-rose-400/40 dark:bg-rose-500/10 dark:text-rose-100">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription className="text-xs text-rose-600 dark:text-rose-100">

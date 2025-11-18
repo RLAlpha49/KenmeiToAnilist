@@ -33,7 +33,8 @@ import type { ExportFormat } from "@/utils/export-utils";
  * @source
  */
 interface DrillDownModalProps {
-  open: boolean;
+  /** Controls whether the modal is visible. */
+  isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   drillDownData: DrillDownData | null;
   onExport?: (format: ExportFormat, rows: Record<string, unknown>[]) => void;
@@ -59,7 +60,7 @@ type SortableColumn = "title" | "chapters" | "status" | "confidence";
  * @source
  */
 export function DrillDownModal({
-  open,
+  isOpen,
   onOpenChange,
   drillDownData,
   onExport,
@@ -69,10 +70,10 @@ export function DrillDownModal({
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>("json");
-  const itemsPerPage = 50;
+  const ITEMS_PER_PAGE = 50;
 
   // Filter and sort data
-  const processedData = useMemo(() => {
+  const filteredDrillDownData = useMemo(() => {
     if (!drillDownData) return [];
 
     let filtered = drillDownData.data;
@@ -107,22 +108,22 @@ export function DrillDownModal({
   }, [drillDownData, searchTerm, sortColumn, sortDirection]);
 
   // Pagination
-  const totalPages = Math.ceil(processedData.length / itemsPerPage);
-  const paginatedData = processedData.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
+  const totalPages = Math.ceil(filteredDrillDownData.length / ITEMS_PER_PAGE);
+  const paginatedData = filteredDrillDownData.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE,
   );
 
   // Derive export rows from processed data (filtered and sorted)
-  const exportRows = useMemo(() => {
-    return processedData.map((item) => ({
+  const drillDownExportRows = useMemo(() => {
+    return filteredDrillDownData.map((item) => ({
       title: item.title,
       chapters: item.chapters,
       status: item.status,
       confidence: item.confidence ?? null,
       format: item.format ?? null,
     }));
-  }, [processedData]);
+  }, [filteredDrillDownData]);
 
   // Handle sort toggle
   const handleSort = (column: SortableColumn) => {
@@ -153,14 +154,14 @@ export function DrillDownModal({
   };
 
   // Calculate summary stats
-  const summaryStats = useMemo(() => {
+  const drillDownSummaryStats = useMemo(() => {
     if (!drillDownData) return null;
 
     const totalChapters = drillDownData.data.reduce(
       (sum, item) => sum + item.chapters,
       0,
     );
-    const avgConfidence =
+    const averageConfidence =
       drillDownData.data.reduce(
         (sum, item) => sum + (item.confidence ?? 0),
         0,
@@ -175,7 +176,7 @@ export function DrillDownModal({
 
     return {
       totalChapters,
-      avgConfidence: avgConfidence.toFixed(1),
+      averageConfidence: averageConfidence.toFixed(1),
       statusBreakdown,
     };
   }, [drillDownData]);
@@ -192,7 +193,7 @@ export function DrillDownModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-4xl overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
@@ -209,22 +210,22 @@ export function DrillDownModal({
         </DialogHeader>
 
         {/* Summary Stats */}
-        {summaryStats && (
+        {drillDownSummaryStats && (
           <div className="grid grid-cols-3 gap-4 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
             <div>
               <div className="text-xs text-slate-600 dark:text-slate-400">
                 Total Chapters
               </div>
               <div className="text-lg font-semibold text-slate-900 dark:text-white">
-                {summaryStats.totalChapters.toLocaleString()}
+                {drillDownSummaryStats.totalChapters.toLocaleString()}
               </div>
             </div>
             <div>
               <div className="text-xs text-slate-600 dark:text-slate-400">
-                Avg Confidence
+                Average Confidence
               </div>
               <div className="text-lg font-semibold text-slate-900 dark:text-white">
-                {summaryStats.avgConfidence}%
+                {drillDownSummaryStats.averageConfidence}%
               </div>
             </div>
             <div>
@@ -232,7 +233,7 @@ export function DrillDownModal({
                 Status Breakdown
               </div>
               <div className="flex flex-wrap gap-1">
-                {Object.entries(summaryStats.statusBreakdown).map(
+                {Object.entries(drillDownSummaryStats.statusBreakdown).map(
                   ([status, count]) => (
                     <Badge key={status} variant="outline" className="text-xs">
                       {status}: {count}
@@ -253,8 +254,8 @@ export function DrillDownModal({
                 type="text"
                 placeholder="Search manga titles..."
                 value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
+                onChange={(event) => {
+                  setSearchTerm(event.target.value);
                   setCurrentPage(1); // Reset to first page on search
                 }}
                 className="w-full rounded-md border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800"
@@ -264,7 +265,7 @@ export function DrillDownModal({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onExport(selectedFormat, exportRows)}
+                onClick={() => onExport(selectedFormat, drillDownExportRows)}
               >
                 <Download className="mr-2 h-4 w-4" />
                 Export as {selectedFormat.toUpperCase()}
@@ -408,7 +409,7 @@ export function DrillDownModal({
         {totalPages > 1 && (
           <div className="flex items-center justify-between">
             <span className="text-sm text-slate-600 dark:text-slate-400">
-              Page {currentPage} of {totalPages} ({processedData.length}{" "}
+              Page {currentPage} of {totalPages} ({filteredDrillDownData.length}{" "}
               entries)
             </span>
             <div className="flex gap-2">

@@ -13,7 +13,7 @@ import {
   isManualMatchingPaused,
   cacheDebugger,
 } from "../api/matching/search-service";
-import { RateLimitState } from "../contexts/RateLimitContext";
+import { RateLimitState } from "../contexts/rate-limit-context";
 import {
   STORAGE_KEYS,
   storage,
@@ -58,7 +58,7 @@ export const useMatchingProcess = ({
   const [error, setError] = useState<string | null>(null);
   const [detailedError, setDetailedError] = useState<ApiError | null>(null);
   const [bypassCache, setBypassCache] = useState(false);
-  const [freshSearch, setFreshSearch] = useState(false);
+  const [isFreshSearch, setIsFreshSearch] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isRateLimitPaused, setIsRateLimitPaused] = useState(false);
 
@@ -766,7 +766,7 @@ export const useMatchingProcess = ({
         setIsLoading(false);
         setIsCancelling(false);
         cancelMatchingRef.current = false;
-        setFreshSearch(false);
+        setIsFreshSearch(false);
         if (globalThis.matchingProcessState) {
           globalThis.matchingProcessState.isRunning = false;
           globalThis.matchingProcessState.wasRateLimitPaused = false;
@@ -1284,7 +1284,7 @@ export const useMatchingProcess = ({
     detailedError,
     timeEstimate,
     bypassCache,
-    freshSearch,
+    isFreshSearch,
     isCancelling,
     isInitializing,
     isCacheClearing,
@@ -1298,7 +1298,7 @@ export const useMatchingProcess = ({
     setStatusMessage,
     setDetailMessage,
     setBypassCache,
-    setFreshSearch,
+    setIsFreshSearch,
     setIsCancelling,
     setIsInitializing,
     setIsCacheClearing,

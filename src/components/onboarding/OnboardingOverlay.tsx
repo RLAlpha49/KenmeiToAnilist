@@ -20,11 +20,11 @@ import {
   AlertDialogDescription,
   AlertDialogTitle,
 } from "@/components/ui/AlertDialog";
-import { useOnboarding, STEP_CONFIGS } from "@/contexts/OnboardingContext";
+import { useOnboarding, STEP_CONFIGS } from "@/contexts/onboarding-context";
 import { useOnboardingNavigation } from "@/hooks/use-onboarding-navigation";
 import { OnboardingHighlight } from "@/components/onboarding/OnboardingHighlight";
 import { getSpotlightForStep } from "@/config/onboarding-routes";
-import type { OnboardingStep } from "@/contexts/OnboardingContext";
+import type { OnboardingStep } from "@/contexts/onboarding-context";
 
 /**
  * Step icon mappings for visual reference in the onboarding overlay.
@@ -53,7 +53,7 @@ interface OnboardingOverlayProps {
     | "top-left"
     | "center";
   /** Whether to display the step progress indicator. Defaults to true. */
-  showProgress?: boolean;
+  shouldShowProgress?: boolean;
 }
 
 /**
@@ -70,7 +70,7 @@ interface OnboardingOverlayProps {
  */
 export function OnboardingOverlay({
   position = "bottom-right",
-  showProgress = true,
+  shouldShowProgress = true,
 }: Readonly<OnboardingOverlayProps>) {
   const {
     isActive,
@@ -80,7 +80,8 @@ export function OnboardingOverlay({
     dismissOnboarding,
     finishOnboarding,
   } = useOnboarding();
-  const [showSkipConfirmDialog, setShowSkipConfirmDialog] = useState(false);
+  const [isSkipConfirmDialogVisible, setIsSkipConfirmDialogVisible] =
+    useState(false);
 
   // Auto-navigate pages during onboarding steps
   useOnboardingNavigation();
@@ -110,12 +111,12 @@ export function OnboardingOverlay({
 
   // Show confirmation before skipping
   const handleSkip = () => {
-    setShowSkipConfirmDialog(true);
+    setIsSkipConfirmDialogVisible(true);
   };
 
   // Confirm and dismiss onboarding
   const handleConfirmSkip = () => {
-    setShowSkipConfirmDialog(false);
+    setIsSkipConfirmDialogVisible(false);
     dismissOnboarding();
   };
 
@@ -140,8 +141,8 @@ export function OnboardingOverlay({
     <>
       {/* Skip confirmation dialog */}
       <AlertDialog
-        open={showSkipConfirmDialog}
-        onOpenChange={setShowSkipConfirmDialog}
+        open={isSkipConfirmDialogVisible}
+        onOpenChange={setIsSkipConfirmDialogVisible}
       >
         <AlertDialogContent>
           <AlertDialogTitle>Skip Onboarding?</AlertDialogTitle>
@@ -240,7 +241,7 @@ export function OnboardingOverlay({
               </div>
 
               {/* Progress indicator */}
-              {showProgress && (
+              {shouldShowProgress && (
                 <div className="flex gap-1 px-4 pt-3">
                   {Object.keys(STEP_CONFIGS).map((stepName, index) => {
                     const isCompleted = index < stepIndex;

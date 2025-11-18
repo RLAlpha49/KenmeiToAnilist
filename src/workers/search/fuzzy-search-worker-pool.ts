@@ -127,7 +127,7 @@ export class FuzzySearchWorkerPool extends BaseWorkerPool {
         type: "fuzzy_search" as const,
         resolve: null as unknown as (result: unknown) => void,
         reject: null as unknown as (error: Error) => void,
-        cancelled: false,
+        isCancelled: false,
         workerIndex,
       };
 

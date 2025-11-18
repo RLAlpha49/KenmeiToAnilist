@@ -71,17 +71,17 @@ function DropdownMenuGroup({
 
 function DropdownMenuItem({
   className,
-  inset,
+  isInset,
   variant = "default",
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Item> & {
-  inset?: boolean;
+  isInset?: boolean;
   variant?: "default" | "destructive";
 }) {
   return (
     <DropdownMenuPrimitive.Item
       data-slot="dropdown-menu-item"
-      data-inset={inset}
+      data-inset={isInset}
       data-variant={variant}
       className={cn(
         "focus:bg-accent focus:text-accent-foreground data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 dark:data-[variant=destructive]:focus:bg-destructive/20 data-[variant=destructive]:focus:text-destructive data-[variant=destructive]:*:[svg]:text-destructive! [&_svg:not([class*='text-'])]:text-muted-foreground outline-hidden data-disabled:pointer-events-none data-inset:pl-8 data-disabled:opacity-50&_svg:not([class*='size-'])]:size-4 relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm [&_svg]:pointer-events-none [&_svg]:shrink-0",
@@ -155,15 +155,15 @@ function DropdownMenuRadioItem({
 
 function DropdownMenuLabel({
   className,
-  inset,
+  isInset,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Label> & {
-  inset?: boolean;
+  isInset?: boolean;
 }) {
   return (
     <DropdownMenuPrimitive.Label
       data-slot="dropdown-menu-label"
-      data-inset={inset}
+      data-inset={isInset}
       className={cn(
         "data-inset:pl-8 px-2 py-1.5 text-sm font-medium",
         className,
@@ -210,16 +210,16 @@ function DropdownMenuSub({
 
 function DropdownMenuSubTrigger({
   className,
-  inset,
+  isInset,
   children,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.SubTrigger> & {
-  inset?: boolean;
+  isInset?: boolean;
 }) {
   return (
     <DropdownMenuPrimitive.SubTrigger
       data-slot="dropdown-menu-sub-trigger"
-      data-inset={inset}
+      data-inset={isInset}
       className={cn(
         "focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground outline-hidden data-inset:pl-8 flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm",
         className,

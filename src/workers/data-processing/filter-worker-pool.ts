@@ -113,7 +113,7 @@ export class AdvancedFilterWorkerPool extends BaseWorkerPool {
         filters,
         resolve: null as unknown as (result: unknown) => void,
         reject: null as unknown as (error: Error) => void,
-        cancelled: false,
+        isCancelled: false,
         workerIndex,
       };
 

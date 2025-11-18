@@ -80,12 +80,12 @@ export function SyncPrivacySection({
             id="set-private"
             checked={syncConfig.setPrivate}
             onCheckedChange={(checked) => {
-              const newConfig = {
+              const updatedConfig = {
                 ...syncConfig,
                 setPrivate: checked,
               };
-              setSyncConfig(newConfig);
-              onSyncConfigChange(newConfig, "setPrivate");
+              setSyncConfig(updatedConfig);
+              onSyncConfigChange(updatedConfig, "setPrivate");
             }}
           />
         </div>

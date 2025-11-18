@@ -7,7 +7,7 @@ import { Button } from "../ui/Button";
  * @property onGoToImport - Callback to navigate back to the import page.
  * @source
  */
-interface Props {
+interface NoResultsViewProps {
   onGoToImport: () => void;
 }
 
@@ -18,7 +18,9 @@ interface Props {
  * @returns Rendered empty state view with action button.
  * @source
  */
-export default function NoResultsView({ onGoToImport }: Readonly<Props>) {
+export default function NoResultsView({
+  onGoToImport,
+}: Readonly<NoResultsViewProps>) {
   return (
     <motion.div
       className="bg-background/50 flex h-full min-h-[60vh] flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 p-12 text-center backdrop-blur-sm dark:border-gray-700"

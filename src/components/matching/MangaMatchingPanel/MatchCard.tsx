@@ -15,7 +15,7 @@ import { Separator } from "../../ui/Separator";
 import { ConfidenceBadge } from "./ConfidenceBadge";
 import { createKenmeiUrl } from "./create-kenmei-url";
 import MatchActions from "./MatchActions";
-import { useDebug } from "../../../contexts/DebugContext";
+import { useDebug } from "../../../contexts/debug-context";
 import { ConfidenceTestExporter } from "../../debug/ConfidenceTestExporter.lazy";
 import {
   formatMediaListStatus,
@@ -78,16 +78,16 @@ export interface MatchCardProps {
  * Renders alternative manga cover image with adult content handling.
  * @source
  */
-const renderAltCover = (
-  altCoverImage: string | undefined,
-  altIsAdult: boolean,
-  altIsBlurred: boolean,
-  altBlurKey: string,
-  altCoverAlt: string,
+const renderAlternativeCover = (
+  alternativeCoverImage: string | undefined,
+  isAlternativeMangaAdult: boolean,
+  isAlternativeCoverBlurred: boolean,
+  alternativeBlurKey: string,
+  alternativeCoverAlt: string,
   toggleImageBlur: (key: string) => void,
   sourceBadgeBaseClasses: string,
 ) => {
-  if (!altCoverImage) {
+  if (!alternativeCoverImage) {
     return (
       <div className="flex h-44 w-32 items-center justify-center rounded-[1.35rem] border border-white/40 bg-slate-100/80 text-xs font-semibold uppercase tracking-wider text-slate-500 shadow-inner dark:border-slate-800 dark:bg-slate-800/70 dark:text-slate-300">
         No Image
@@ -98,47 +98,47 @@ const renderAltCover = (
   return (
     <div className="bg-linear-to-br relative overflow-hidden rounded-3xl from-indigo-200/60 via-white/70 to-indigo-100/40 p-[3px] shadow-[0_22px_60px_-28px_rgba(37,99,235,0.55)] transition-all duration-500 group-hover/cover:-translate-y-1 group-hover/cover:shadow-[0_32px_70px_-25px_rgba(59,130,246,0.65)] dark:from-slate-900/70 dark:via-slate-900/50 dark:to-indigo-500/20">
       <div className="relative h-44 w-32 overflow-hidden rounded-[1.35rem] ring-1 ring-white/60 backdrop-blur-sm dark:ring-slate-800/60">
-        {altIsAdult ? (
+        {isAlternativeMangaAdult ? (
           <button
             type="button"
             tabIndex={0}
             aria-label={
-              altIsBlurred
+              isAlternativeCoverBlurred
                 ? "Reveal adult content cover image"
                 : "Hide adult content cover image"
             }
             onClick={(e) => {
               e.stopPropagation();
-              toggleImageBlur(altBlurKey);
+              toggleImageBlur(alternativeBlurKey);
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
                 e.stopPropagation();
-                toggleImageBlur(altBlurKey);
+                toggleImageBlur(alternativeBlurKey);
               }
             }}
             className="absolute inset-0 h-full w-full focus:outline-none"
           >
             <img
-              src={altCoverImage}
-              alt={altCoverAlt}
-              className={`h-full w-full object-cover transition duration-500 ${altIsBlurred ? "scale-105 blur-xl" : ""}`}
+              src={alternativeCoverImage}
+              alt={alternativeCoverAlt}
+              className={`h-full w-full object-cover transition duration-500 ${isAlternativeCoverBlurred ? "scale-105 blur-xl" : ""}`}
               loading="lazy"
               draggable={false}
             />
           </button>
         ) : (
           <img
-            src={altCoverImage}
-            alt={altCoverAlt}
+            src={alternativeCoverImage}
+            alt={alternativeCoverAlt}
             className="h-full w-full object-cover transition-transform duration-500 group-hover/cover:scale-[1.04]"
             loading="lazy"
             draggable={false}
           />
         )}
 
-        {altIsAdult && (
+        {isAlternativeMangaAdult && (
           <div className="absolute left-1 top-1">
             <Badge
               variant="destructive"
@@ -150,14 +150,14 @@ const renderAltCover = (
           </div>
         )}
 
-        {altIsAdult && altIsBlurred && (
+        {isAlternativeMangaAdult && isAlternativeCoverBlurred && (
           <div className="absolute inset-0 flex items-center justify-center">
             <Badge
               variant="secondary"
               className="cursor-pointer rounded-full border border-white/30 bg-black/45 px-2 py-0.5 text-[11px] font-semibold uppercase text-white shadow-[0_10px_26px_-14px_rgba(15,23,42,0.6)] backdrop-blur"
               onClick={(e) => {
                 e.stopPropagation();
-                toggleImageBlur(altBlurKey);
+                toggleImageBlur(alternativeBlurKey);
               }}
             >
               Reveal
@@ -174,13 +174,13 @@ const renderAltCover = (
  * @source
  */
 const renderAniListDetails = (
-  altManga: AniListManga | undefined | null,
-  altFormat: string,
-  altStatus: string,
-  altChapters: number,
-  altVolumes: number | null | undefined,
+  alternativeManga: AniListManga | undefined | null,
+  alternativeFormat: string,
+  alternativeStatus: string,
+  alternativeChapters: number,
+  alternativeVolumes: number | null | undefined,
 ) => {
-  if (!altManga) {
+  if (!alternativeManga) {
     return (
       <p className="mt-3 text-sm italic text-gray-500 dark:text-gray-400">
         No AniList details available for this match yet.
@@ -195,7 +195,7 @@ const renderAniListDetails = (
           Format
         </dt>
         <dd className="font-medium text-gray-900 dark:text-gray-100">
-          {altFormat}
+          {alternativeFormat}
         </dd>
       </div>
       <div className="flex flex-col gap-0.5">
@@ -203,26 +203,26 @@ const renderAniListDetails = (
           Status
         </dt>
         <dd className="font-medium text-gray-900 dark:text-gray-100">
-          {altStatus}
+          {alternativeStatus}
         </dd>
       </div>
-      {altChapters > 0 && (
+      {alternativeChapters > 0 && (
         <div className="flex flex-col gap-0.5">
           <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
             Chapters
           </dt>
           <dd className="font-medium text-gray-900 dark:text-gray-100">
-            {altChapters}
+            {alternativeChapters}
           </dd>
         </div>
       )}
-      {altVolumes && Number(altVolumes) > 0 && (
+      {alternativeVolumes && Number(alternativeVolumes) > 0 && (
         <div className="flex flex-col gap-0.5">
           <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
             Volumes
           </dt>
           <dd className="font-medium text-gray-900 dark:text-gray-100">
-            {altVolumes}
+            {alternativeVolumes}
           </dd>
         </div>
       )}
@@ -235,11 +235,15 @@ const renderAniListDetails = (
  * @source
  */
 const renderUserListStatus = (
-  altMediaListEntry: AniListMediaEntry | UserMediaEntry | undefined | null,
-  altChapters: number,
+  alternativeMediaListEntry:
+    | AniListMediaEntry
+    | UserMediaEntry
+    | undefined
+    | null,
+  alternativeChapters: number,
   listStatusBadgeBaseClasses: string,
 ) => {
-  if (!altMediaListEntry || !isOnUserList(altMediaListEntry)) {
+  if (!alternativeMediaListEntry || !isOnUserList(alternativeMediaListEntry)) {
     return null;
   }
 
@@ -250,15 +254,15 @@ const renderUserListStatus = (
         On Your AniList
       </span>
       <Badge
-        className={`${listStatusBadgeBaseClasses} ${getStatusBadgeColor(altMediaListEntry.status)}`}
+        className={`${listStatusBadgeBaseClasses} ${getStatusBadgeColor(alternativeMediaListEntry.status)}`}
       >
-        {formatMediaListStatus(altMediaListEntry.status)}
+        {formatMediaListStatus(alternativeMediaListEntry.status)}
       </Badge>
       <span>
-        Progress: {altMediaListEntry.progress || 0}
-        {altChapters > 0 && ` / ${altChapters}`}
+        Progress: {alternativeMediaListEntry.progress || 0}
+        {alternativeChapters > 0 && ` / ${alternativeChapters}`}
       </span>
-      <span>Score: {formatScore(altMediaListEntry.score)}</span>
+      <span>Score: {formatScore(alternativeMediaListEntry.score)}</span>
     </div>
   );
 };
@@ -268,32 +272,32 @@ const renderUserListStatus = (
  * @source
  */
 const buildTitleEntries = (
-  altManga: AniListManga | undefined | null,
-  altPrimaryTitle: string,
+  alternativeManga: AniListManga | undefined | null,
+  alternativePrimaryTitle: string,
 ) => {
-  const altTitleEntries: Array<{ label: string; value: string }> = [];
+  const alternativeTitleEntries: Array<{ label: string; value: string }> = [];
 
-  if (altManga?.title) {
-    const { english, romaji, native } = altManga.title;
-    if (english && english !== altPrimaryTitle) {
-      altTitleEntries.push({ label: "English", value: english });
+  if (alternativeManga?.title) {
+    const { english, romaji, native } = alternativeManga.title;
+    if (english && english !== alternativePrimaryTitle) {
+      alternativeTitleEntries.push({ label: "English", value: english });
     }
     if (romaji && romaji !== english) {
-      altTitleEntries.push({ label: "Romaji", value: romaji });
+      alternativeTitleEntries.push({ label: "Romaji", value: romaji });
     }
     if (native) {
-      altTitleEntries.push({ label: "Native", value: native });
+      alternativeTitleEntries.push({ label: "Native", value: native });
     }
   }
 
-  if (altManga?.synonyms?.length) {
-    altTitleEntries.push({
+  if (alternativeManga?.synonyms?.length) {
+    alternativeTitleEntries.push({
       label: "Synonyms",
-      value: altManga.synonyms.join(", "),
+      value: alternativeManga.synonyms.join(", "),
     });
   }
 
-  return altTitleEntries;
+  return alternativeTitleEntries;
 };
 
 /**
@@ -632,8 +636,8 @@ const renderKenmeiHeaderLink = (
  * Renders skipped badge for items with no match.
  * @source
  */
-const renderSkippedBadge = (showSkippedBadge: boolean) => {
-  if (!showSkippedBadge) {
+const renderSkippedBadge = (shouldShowSkippedBadge: boolean) => {
+  if (!shouldShowSkippedBadge) {
     return null;
   }
 
@@ -740,8 +744,8 @@ const getDisplayTitle = (
  */
 const renderPrimaryCover = (
   primaryCoverImage: string | undefined,
-  primaryIsAdult: boolean,
-  primaryIsBlurred: boolean,
+  isPrimaryAdult: boolean,
+  isPrimaryBlurred: boolean,
   primaryBlurKey: string | undefined,
   primaryCoverAlt: string,
   toggleImageBlur: (mangaId: string) => void,
@@ -758,12 +762,12 @@ const renderPrimaryCover = (
   return (
     <div className="bg-linear-to-br relative overflow-hidden rounded-3xl from-indigo-200/60 via-white/70 to-indigo-100/40 p-[3px] shadow-[0_22px_60px_-28px_rgba(37,99,235,0.55)] transition-all duration-500 group-hover/cover:-translate-y-1 group-hover/cover:shadow-[0_32px_70px_-25px_rgba(59,130,246,0.65)] dark:from-slate-900/70 dark:via-slate-900/50 dark:to-indigo-500/20">
       <div className="relative h-44 w-32 overflow-hidden rounded-[1.35rem] ring-1 ring-white/60 backdrop-blur-sm dark:ring-slate-800/60">
-        {primaryIsAdult ? (
+        {isPrimaryAdult ? (
           <button
             type="button"
             tabIndex={0}
             aria-label={
-              primaryIsBlurred
+              isPrimaryBlurred
                 ? "Reveal adult content cover image"
                 : "Hide adult content cover image"
             }
@@ -785,7 +789,7 @@ const renderPrimaryCover = (
             <img
               src={primaryCoverImage}
               alt={primaryCoverAlt}
-              className={`h-full w-full object-cover transition duration-500 ${primaryIsBlurred ? "scale-105 blur-xl" : ""}`}
+              className={`h-full w-full object-cover transition duration-500 ${isPrimaryBlurred ? "scale-105 blur-xl" : ""}`}
               loading="lazy"
               draggable={false}
             />
@@ -800,7 +804,7 @@ const renderPrimaryCover = (
           />
         )}
 
-        {primaryIsAdult && (
+        {isPrimaryAdult && (
           <div className="absolute left-1 top-1">
             <Badge
               variant="destructive"
@@ -812,7 +816,7 @@ const renderPrimaryCover = (
           </div>
         )}
 
-        {primaryIsAdult && primaryIsBlurred && primaryBlurKey && (
+        {isPrimaryAdult && isPrimaryBlurred && primaryBlurKey && (
           <div className="absolute inset-0 flex items-center justify-center">
             <Badge
               variant="secondary"
@@ -831,7 +835,7 @@ const renderPrimaryCover = (
 /**
  * Props for individual alternative match item.
  *
- * @property altMatch - Alternative manga match data.
+ * @property alternativeMatch - Alternative manga match data.
  * @property index - Index of alternative in list.
  * @property match - Parent match result.
  * @property isAdultContent - Function to check adult content.
@@ -848,7 +852,7 @@ const renderPrimaryCover = (
  */
 interface AlternativeMatchItemProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  altMatch: any;
+  alternativeMatch: any;
   index: number;
   match: MangaMatchResult;
   isAdultContent: (manga: AniListManga | undefined | null) => boolean;
@@ -873,7 +877,7 @@ interface AlternativeMatchItemProps {
  * @source
  */
 const AlternativeMatchItemComponent: React.FC<AlternativeMatchItemProps> = ({
-  altMatch,
+  alternativeMatch,
   index,
   match,
   isAdultContent,
@@ -887,62 +891,70 @@ const AlternativeMatchItemComponent: React.FC<AlternativeMatchItemProps> = ({
   kenmeiLinkClasses,
   listStatusBadgeBaseClasses,
 }) => {
-  const altBlurKey = `alt-${altMatch.manga?.id ?? index}`;
-  const altIsBlurred = shouldBlurImage(altBlurKey);
-  const altPrimaryTitle =
-    altMatch.manga?.title?.english ||
-    altMatch.manga?.title?.romaji ||
+  const alternativeBlurKey = `alternative-${alternativeMatch.manga?.id ?? index}`;
+  const isAlternativeCoverBlurred = shouldBlurImage(alternativeBlurKey);
+  const alternativePrimaryTitle =
+    alternativeMatch.manga?.title?.english ||
+    alternativeMatch.manga?.title?.romaji ||
     "Unknown Manga";
-  const altAccessibleTitle =
-    altMatch.manga?.title?.english ||
-    altMatch.manga?.title?.romaji ||
+  const alternativeAccessibleTitle =
+    alternativeMatch.manga?.title?.english ||
+    alternativeMatch.manga?.title?.romaji ||
     "Alternative manga";
-  const altManga = altMatch.manga;
-  const altCoverImage =
-    altManga?.coverImage?.large || altManga?.coverImage?.medium;
-  const altCoverAlt =
-    altManga?.title?.english ||
-    altManga?.title?.romaji ||
-    altManga?.title?.native ||
-    altAccessibleTitle;
+  const alternativeManga = alternativeMatch.manga;
+  const alternativeCoverImage =
+    alternativeManga?.coverImage?.large || alternativeManga?.coverImage?.medium;
+  const alternativeCoverAlt =
+    alternativeManga?.title?.english ||
+    alternativeManga?.title?.romaji ||
+    alternativeManga?.title?.native ||
+    alternativeAccessibleTitle;
 
-  const altTitleEntries = buildTitleEntries(altManga, altPrimaryTitle);
+  const alternativeTitleEntries = buildTitleEntries(
+    alternativeManga,
+    alternativePrimaryTitle,
+  );
 
-  const altFormat = altManga?.format || "Unknown Format";
-  const altStatus = altManga?.status || "Unknown Status";
-  const altChapters = altManga?.chapters || 0;
-  const altVolumes = altManga?.volumes;
-  const altMediaListEntry = altManga?.mediaListEntry;
-  const altAniListId = altManga?.id ?? "unknown";
-  const altAniListUrl = `https://anilist.co/manga/${altAniListId}`;
-  const altKenmeiTitle =
-    altManga?.title?.english ||
-    altManga?.title?.romaji ||
+  const alternativeFormat = alternativeManga?.format || "Unknown Format";
+  const alternativeStatus = alternativeManga?.status || "Unknown Status";
+  const alternativeChapters = alternativeManga?.chapters || 0;
+  const alternativeVolumes = alternativeManga?.volumes;
+  const alternativeMediaListEntry = alternativeManga?.mediaListEntry;
+  const alternativeAniListId = alternativeManga?.id ?? "unknown";
+  const alternativeAniListUrl = `https://anilist.co/manga/${alternativeAniListId}`;
+  const alternativeKenmeiTitle =
+    alternativeManga?.title?.english ||
+    alternativeManga?.title?.romaji ||
     match.kenmeiManga.title;
-  const altKenmeiUrl = createKenmeiUrl(altKenmeiTitle);
-  const altIsAdult = isAdultContent(altManga);
+  const alternativeKenmeiUrl = createKenmeiUrl(alternativeKenmeiTitle);
+  const isAlternativeMangaAdult = isAdultContent(alternativeManga);
 
   const hasComick =
-    altMatch.sourceInfo?.source === "comick" || Boolean(altMatch.comickSource);
+    alternativeMatch.sourceInfo?.source === "comick" ||
+    Boolean(alternativeMatch.comickSource);
   const hasMangaDex =
-    altMatch.sourceInfo?.source === "mangadex" ||
-    Boolean(altMatch.mangaDexSource);
+    alternativeMatch.sourceInfo?.source === "mangadex" ||
+    Boolean(alternativeMatch.mangaDexSource);
 
-  const coverContent = renderAltCover(
-    altCoverImage,
-    altIsAdult,
-    altIsBlurred,
-    altBlurKey,
-    altCoverAlt,
+  const coverContent = renderAlternativeCover(
+    alternativeCoverImage,
+    isAlternativeMangaAdult,
+    isAlternativeCoverBlurred,
+    alternativeBlurKey,
+    alternativeCoverAlt,
     toggleImageBlur,
     sourceBadgeBaseClasses,
   );
 
   return (
     <div
-      key={altManga?.id || altMatch.id || `alt-match-${index}`}
+      key={
+        alternativeManga?.id ||
+        alternativeMatch.id ||
+        `alternative-match-${index}`
+      }
       className="rounded-2xl border border-white/40 bg-white/75 px-6 py-6 shadow-lg shadow-slate-900/10 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_32px_80px_-32px_rgba(30,41,59,0.55)] dark:border-slate-800/60 dark:bg-slate-900/70 dark:shadow-black/10 dark:hover:shadow-[0_32px_80px_-30px_rgba(30,41,59,0.6)]"
-      aria-label={`Select ${altAccessibleTitle} as match`}
+      aria-label={`Select ${alternativeAccessibleTitle} as match`}
     >
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
@@ -955,7 +967,7 @@ const AlternativeMatchItemComponent: React.FC<AlternativeMatchItemProps> = ({
                   {hasComick && (
                     <Badge
                       className={`${sourceBadgeBaseClasses} bg-linear-to-r border-orange-300/70 from-orange-500/95 via-orange-400/85 to-orange-500/90 text-white shadow-[0_14px_34px_-18px_rgba(249,115,22,0.55)]`}
-                      title={`Found via Comick: ${altMatch.sourceInfo?.title || altMatch.comickSource?.title}`}
+                      title={`Found via Comick: ${alternativeMatch.sourceInfo?.title || alternativeMatch.comickSource?.title}`}
                     >
                       Comick
                     </Badge>
@@ -963,7 +975,7 @@ const AlternativeMatchItemComponent: React.FC<AlternativeMatchItemProps> = ({
                   {hasMangaDex && (
                     <Badge
                       className={`${sourceBadgeBaseClasses} bg-linear-to-r border-sky-300/70 from-sky-500/95 via-sky-400/85 to-sky-500/90 text-white shadow-[0_14px_34px_-18px_rgba(56,189,248,0.55)]`}
-                      title={`Found via MangaDex: ${altMatch.sourceInfo?.title || altMatch.mangaDexSource?.title}`}
+                      title={`Found via MangaDex: ${alternativeMatch.sourceInfo?.title || alternativeMatch.mangaDexSource?.title}`}
                     >
                       MangaDex
                     </Badge>
@@ -974,61 +986,63 @@ const AlternativeMatchItemComponent: React.FC<AlternativeMatchItemProps> = ({
             <div className="flex min-w-0 flex-1 flex-col gap-4">
               <div className="flex flex-wrap items-center gap-3">
                 <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {altPrimaryTitle}
+                  {alternativePrimaryTitle}
                 </h4>
               </div>
-              {altTitleEntries.length > 0 && (
+              {alternativeTitleEntries.length > 0 && (
                 <ul className="max-w-full list-disc space-y-1 pl-5 text-sm text-gray-500 dark:text-gray-400">
-                  {altTitleEntries.map((entry, altIdx) => (
-                    <li
-                      key={`${entry.label}-${altIdx}`}
-                      className="wrap-break-word leading-snug [word-break:break-word]"
-                    >
-                      <span className="font-semibold text-gray-600 dark:text-gray-300">
-                        {entry.label}:
-                      </span>{" "}
-                      <span>{entry.value}</span>
-                    </li>
-                  ))}
+                  {alternativeTitleEntries.map(
+                    (entry, alternativeEntryIndex) => (
+                      <li
+                        key={`${entry.label}-${alternativeEntryIndex}`}
+                        className="wrap-break-word leading-snug [word-break:break-word]"
+                      >
+                        <span className="font-semibold text-gray-600 dark:text-gray-300">
+                          {entry.label}:
+                        </span>{" "}
+                        <span>{entry.value}</span>
+                      </li>
+                    ),
+                  )}
                 </ul>
               )}
             </div>
           </div>
           <div className="flex w-full flex-col gap-2 sm:min-w-60 sm:max-w-[360px] sm:shrink-0 sm:items-end sm:self-start">
             <div className="flex w-full flex-col items-end gap-2 self-stretch sm:w-auto sm:self-end">
-              {altMatch.confidence !== undefined && (
+              {alternativeMatch.confidence !== undefined && (
                 <ConfidenceBadge
-                  confidence={altMatch.confidence}
+                  confidence={alternativeMatch.confidence}
                   className="w-full self-stretch"
                 />
               )}
               <div className="flex flex-wrap justify-end gap-2 self-stretch">
-                {altManga && (
+                {alternativeManga && (
                   <a
-                    href={altAniListUrl}
+                    href={alternativeAniListUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={aniListLinkClasses}
                     aria-label="View on AniList (opens in new tab)"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleOpenExternal(altAniListUrl)(e);
+                      handleOpenExternal(alternativeAniListUrl)(e);
                     }}
                   >
                     <ExternalLink className="mr-1 h-3 w-3" aria-hidden="true" />
                     AniList
                   </a>
                 )}
-                {altKenmeiUrl && (
+                {alternativeKenmeiUrl && (
                   <a
-                    href={altKenmeiUrl}
+                    href={alternativeKenmeiUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={kenmeiLinkClasses}
                     aria-label="View on Kenmei (opens in new tab)"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleOpenExternal(altKenmeiUrl)(e);
+                      handleOpenExternal(alternativeKenmeiUrl)(e);
                     }}
                   >
                     <ExternalLink className="mr-1 h-3 w-3" aria-hidden="true" />
@@ -1047,17 +1061,17 @@ const AlternativeMatchItemComponent: React.FC<AlternativeMatchItemProps> = ({
                 AniList details
               </span>
               {renderAniListDetails(
-                altManga,
-                altFormat,
-                altStatus,
-                altChapters,
-                altVolumes,
+                alternativeManga,
+                alternativeFormat,
+                alternativeStatus,
+                alternativeChapters,
+                alternativeVolumes,
               )}
             </div>
 
             {renderUserListStatus(
-              altMediaListEntry,
-              altChapters,
+              alternativeMediaListEntry,
+              alternativeChapters,
               listStatusBadgeBaseClasses,
             )}
           </div>
@@ -1102,10 +1116,10 @@ const AlternativeMatchItemComponent: React.FC<AlternativeMatchItemProps> = ({
             onClick={() => onSelectAlternative?.(match, index + 1, false, true)}
             aria-label={
               "Accept " +
-              altPrimaryTitle +
+              alternativePrimaryTitle +
               " as match (" +
-              (typeof altMatch.confidence === "number"
-                ? Math.round(altMatch.confidence) + "%"
+              (typeof alternativeMatch.confidence === "number"
+                ? Math.round(alternativeMatch.confidence) + "%"
                 : "Unknown confidence") +
               ")"
             }
@@ -1173,7 +1187,7 @@ function MatchCard({
   onToggleSelection,
   isUpdating = false,
 }: Readonly<MatchCardProps>) {
-  const { confidenceTestExporterEnabled } = useDebug();
+  const { isConfidenceTestExporterEnabled } = useDebug();
 
   const primaryMatchCandidate =
     match.selectedMatch ?? match.anilistMatches?.[0]?.manga;
@@ -1193,11 +1207,11 @@ function MatchCard({
 
   const primaryBlurKey = computePrimaryBlurKey(primaryMatchCandidate, match);
 
-  const primaryIsAdult = isAdultContent(
+  const isPrimaryAdult = isAdultContent(
     primaryMatchCandidate ?? match.anilistMatches?.[0]?.manga,
   );
 
-  const primaryIsBlurred = primaryBlurKey
+  const isPrimaryBlurred = primaryBlurKey
     ? shouldBlurImage(primaryBlurKey)
     : false;
 
@@ -1236,7 +1250,7 @@ function MatchCard({
 
   const displayTitle = getDisplayTitle(match, primaryDisplayTitle);
 
-  const showSkippedBadge =
+  const shouldShowSkippedBadge =
     match.status === "skipped" &&
     !match.selectedMatch &&
     !match.anilistMatches?.length;
@@ -1366,8 +1380,8 @@ function MatchCard({
                     {/* Cover image with proper fallbacks and adult content handling */}
                     {renderPrimaryCover(
                       primaryCoverImage,
-                      primaryIsAdult,
-                      primaryIsBlurred,
+                      isPrimaryAdult,
+                      isPrimaryBlurred,
                       primaryBlurKey,
                       primaryCoverAlt,
                       toggleImageBlur,
@@ -1382,7 +1396,7 @@ function MatchCard({
                       <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
                         {displayTitle}
                       </h4>
-                      {renderSkippedBadge(showSkippedBadge)}
+                      {renderSkippedBadge(shouldShowSkippedBadge)}
                     </div>
                     {renderTitleEntries(titleEntries)}
                   </div>
@@ -1390,7 +1404,7 @@ function MatchCard({
                 <div className="flex w-full flex-col gap-2 sm:min-w-60 sm:max-w-[360px] sm:shrink-0 sm:items-end sm:self-start">
                   <div className="flex w-full flex-col items-end gap-2 self-stretch sm:w-auto sm:self-end">
                     {renderConfidenceBadge(match)}
-                    {confidenceTestExporterEnabled && (
+                    {isConfidenceTestExporterEnabled && (
                       <ConfidenceTestExporter match={match} />
                     )}
                     <div className="flex flex-wrap justify-end gap-2 self-stretch">
@@ -1468,26 +1482,30 @@ function MatchCard({
               Alternative Matches
             </h4>
             <div id={`alternatives-list-${uniqueKey}`} className="space-y-3">
-              {match.anilistMatches?.slice(1, 5).map((altMatch, index) => (
-                <AlternativeMatchItem
-                  key={
-                    altMatch.manga?.id || altMatch.id || `alt-match-${index}`
-                  }
-                  altMatch={altMatch}
-                  index={index}
-                  match={match}
-                  isAdultContent={isAdultContent}
-                  shouldBlurImage={shouldBlurImage}
-                  toggleImageBlur={toggleImageBlur}
-                  handleOpenExternal={handleOpenExternal}
-                  formatStatusText={formatStatusText}
-                  onSelectAlternative={onSelectAlternative}
-                  sourceBadgeBaseClasses={sourceBadgeBaseClasses}
-                  aniListLinkClasses={aniListLinkClasses}
-                  kenmeiLinkClasses={kenmeiLinkClasses}
-                  listStatusBadgeBaseClasses={listStatusBadgeBaseClasses}
-                />
-              ))}
+              {match.anilistMatches
+                ?.slice(1, 5)
+                .map((alternativeMatch, index) => (
+                  <AlternativeMatchItem
+                    key={
+                      alternativeMatch.manga?.id ||
+                      alternativeMatch.id ||
+                      `alternative-match-${index}`
+                    }
+                    alternativeMatch={alternativeMatch}
+                    index={index}
+                    match={match}
+                    isAdultContent={isAdultContent}
+                    shouldBlurImage={shouldBlurImage}
+                    toggleImageBlur={toggleImageBlur}
+                    handleOpenExternal={handleOpenExternal}
+                    formatStatusText={formatStatusText}
+                    onSelectAlternative={onSelectAlternative}
+                    sourceBadgeBaseClasses={sourceBadgeBaseClasses}
+                    aniListLinkClasses={aniListLinkClasses}
+                    kenmeiLinkClasses={kenmeiLinkClasses}
+                    listStatusBadgeBaseClasses={listStatusBadgeBaseClasses}
+                  />
+                ))}
             </div>
           </div>
         )}

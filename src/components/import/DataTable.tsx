@@ -58,12 +58,12 @@ export function DataTable({
     (item) => item.score !== undefined && item.score > 0,
   );
   const hasChapters = data.some(
-    (item) => item.chapters_read !== undefined && item.chapters_read > 0,
+    (item) => item.chaptersRead !== undefined && item.chaptersRead > 0,
   );
   const hasVolumes = data.some(
-    (item) => item.volumes_read !== undefined && item.volumes_read > 0,
+    (item) => item.volumesRead !== undefined && item.volumesRead > 0,
   );
-  const hasLastRead = data.some((item) => item.updated_at || item.created_at);
+  const hasLastRead = data.some((item) => item.updatedAt || item.createdAt);
 
   const columnVisibility = useMemo(
     () => ({
@@ -112,7 +112,7 @@ export function DataTable({
 
       // Log worker performance metrics
       console.debug(
-        `[DataTable] Loaded ${prepResult.preparedData.length} rows in ${prepResult.timing.totalTimeMs.toFixed(2)}ms (worker: ${prepResult.executedOnWorker ? "yes" : "no"})`,
+        `[DataTable] Loaded ${prepResult.preparedData.length} rows in ${prepResult.timing.totalTimeMs.toFixed(2)}ms (worker: ${prepResult.ranOnWorker ? "yes" : "no"})`,
       );
 
       // Update display count and visible data
@@ -275,7 +275,7 @@ export function DataTable({
                 ))
               : visibleData.map((item) => (
                   <TableRow
-                    key={`${item.title}-${item.status}-${item.updated_at ?? item.created_at}`}
+                    key={`${item.title}-${item.status}-${item.updatedAt ?? item.createdAt}`}
                     className="hover:bg-muted/40"
                   >
                     <TableCell
@@ -289,13 +289,13 @@ export function DataTable({
 
                     {hasChapters && (
                       <TableCell className="text-muted-foreground">
-                        {item.chapters_read || "-"}
+                        {item.chaptersRead || "-"}
                       </TableCell>
                     )}
 
                     {hasVolumes && (
                       <TableCell className="text-muted-foreground">
-                        {item.volumes_read || "-"}
+                        {item.volumesRead || "-"}
                       </TableCell>
                     )}
 
@@ -308,9 +308,9 @@ export function DataTable({
                     {hasLastRead && (
                       <TableCell
                         className="text-muted-foreground"
-                        title={item.updated_at || item.created_at}
+                        title={item.updatedAt || item.createdAt}
                       >
-                        {formatDate(item.updated_at || item.created_at)}
+                        {formatDate(item.updatedAt || item.createdAt)}
                       </TableCell>
                     )}
                   </TableRow>

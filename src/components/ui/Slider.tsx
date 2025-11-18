@@ -45,8 +45,8 @@ export function RangeSlider({
   className,
 }: Readonly<RangeSliderProps>) {
   const handleMinChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newMin = Number(e.target.value);
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const newMin = Number(event.target.value);
       if (newMin <= value.max) {
         onChange({ min: newMin, max: value.max });
       }
@@ -55,8 +55,8 @@ export function RangeSlider({
   );
 
   const handleMaxChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newMax = Number(e.target.value);
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const newMax = Number(event.target.value);
       if (newMax >= value.min) {
         onChange({ min: value.min, max: newMax });
       }

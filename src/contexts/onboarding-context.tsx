@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module OnboardingContext
+ * @module onboarding-context
  * @description React context and provider for managing onboarding flow state and progression.
  */
 

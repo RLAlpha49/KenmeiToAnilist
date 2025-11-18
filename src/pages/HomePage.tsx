@@ -30,7 +30,7 @@ import {
   getSavedMatchResults,
 } from "../utils/storage";
 import { motion, AnimatePresence } from "framer-motion";
-import { useOnboarding } from "@/contexts/OnboardingContext";
+import { useOnboarding } from "@/contexts/onboarding-context";
 import {
   Card,
   CardContent,

@@ -10,7 +10,7 @@ import {
 } from "@/components/BaseErrorBoundary";
 import { RefreshCw, Trash2 } from "lucide-react";
 
-interface Props {
+interface MatchingErrorBoundaryProps {
   /** Child components to wrap */
   children: ReactNode;
   /** Callback to reset matching state */
@@ -24,7 +24,9 @@ interface Props {
  * Wraps BaseErrorBoundary with matching-specific configuration.
  * @source
  */
-export const MatchingErrorBoundary = (props: Props): ReactNode => {
+export const MatchingErrorBoundary = (
+  props: MatchingErrorBoundaryProps,
+): ReactNode => {
   const recoveryActions: RecoveryAction[] = [
     {
       label: "Clear Cache & Retry",

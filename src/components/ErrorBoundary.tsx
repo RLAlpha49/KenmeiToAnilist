@@ -16,7 +16,7 @@ import {
 import { AlertTriangle, RotateCcw, Home } from "lucide-react";
 import * as Sentry from "@sentry/electron/renderer";
 
-interface Props {
+interface ErrorBoundaryProps {
   /** Child components to render or fallback UI on error. */
   children: ReactNode;
   /** Optional custom fallback UI to display when an error is caught. */
@@ -27,7 +27,7 @@ interface Props {
   recoveryAction?: () => void;
 }
 
-interface State {
+interface ErrorBoundaryState {
   /** Indicates whether an error has been caught. */
   hasError: boolean;
   /** The caught error object. */
@@ -41,8 +41,11 @@ interface State {
  * Logs errors for debugging and attempts to dispatch to debug context.
  * @source
  */
-export class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
+export class ErrorBoundary extends Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
+  constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = {
       hasError: false,
@@ -57,7 +60,7 @@ export class ErrorBoundary extends Component<Props, State> {
    * @returns Partial state to set hasError flag.
    * @source
    */
-  static getDerivedStateFromError(error: Error): Partial<State> {
+  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
     // Trigger fallback UI on next render
     return {
       hasError: true,

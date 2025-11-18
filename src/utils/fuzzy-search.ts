@@ -11,7 +11,7 @@ import type {
   QuerySyntaxToken,
   AdvancedMatchFilters,
 } from "@/types/matching-filters";
-import { DEFAULT_ADVANCED_FILTERS } from "@/types/matching-filters";
+import { defaultAdvancedFilters } from "@/types/matching-filters";
 import { getFuzzySearchWorkerPool } from "@/workers/search/fuzzy-search-worker-pool";
 
 /**
@@ -230,7 +230,7 @@ function applyTagFilter(
 
 export function applyQueryToFilters(
   tokens: QuerySyntaxToken[],
-  existingFilters: AdvancedMatchFilters = DEFAULT_ADVANCED_FILTERS,
+  existingFilters: AdvancedMatchFilters = defaultAdvancedFilters,
 ): AdvancedMatchFilters {
   let filters = { ...existingFilters };
 

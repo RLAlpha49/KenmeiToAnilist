@@ -24,16 +24,16 @@ import { SyncConfig, saveSyncConfig } from "../../utils/storage";
  * Props for the SyncConfigurationPanel component.
  * @property syncConfig - Current sync configuration settings object.
  * @property setSyncConfig - Dispatch function to update sync configuration state.
- * @property useCustomThreshold - Whether user has selected custom auto-pause threshold.
- * @property setUseCustomThreshold - Dispatch function to toggle custom threshold mode.
+ * @property isCustomThresholdEnabled - Whether user has selected custom auto-pause threshold.
+ * @property setIsCustomThresholdEnabled - Dispatch function to toggle custom threshold mode.
  * @property handleToggleOption - Callback invoked when toggling a sync configuration option.
  * @source
  */
 interface SyncConfigurationPanelProps {
   syncConfig: SyncConfig;
   setSyncConfig: React.Dispatch<React.SetStateAction<SyncConfig>>;
-  useCustomThreshold: boolean;
-  setUseCustomThreshold: React.Dispatch<React.SetStateAction<boolean>>;
+  isCustomThresholdEnabled: boolean;
+  setIsCustomThresholdEnabled: React.Dispatch<React.SetStateAction<boolean>>;
   handleToggleOption: (option: keyof SyncConfig) => void;
 }
 
@@ -55,8 +55,8 @@ interface SyncConfigurationPanelProps {
 export function SyncConfigurationPanel({
   syncConfig,
   setSyncConfig,
-  useCustomThreshold,
-  setUseCustomThreshold,
+  isCustomThresholdEnabled,
+  setIsCustomThresholdEnabled,
   handleToggleOption,
 }: Readonly<SyncConfigurationPanelProps>) {
   const toggleOptions: Array<{
@@ -197,7 +197,7 @@ export function SyncConfigurationPanel({
               >
                 Pause after
               </Label>
-              {useCustomThreshold ? (
+              {isCustomThresholdEnabled ? (
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <input
                     id="customAutoPauseThreshold"
@@ -223,7 +223,7 @@ export function SyncConfigurationPanel({
                   <Button
                     variant="outline"
                     className="h-9 rounded-lg border-amber-200/70 px-3 text-xs font-semibold text-amber-700 hover:border-amber-300 hover:bg-amber-100/60 dark:border-amber-800/40 dark:text-amber-300 dark:hover:border-amber-600 dark:hover:bg-amber-900/20"
-                    onClick={() => setUseCustomThreshold(false)}
+                    onClick={() => setIsCustomThresholdEnabled(false)}
                   >
                     Use Presets
                   </Button>
@@ -235,7 +235,7 @@ export function SyncConfigurationPanel({
                   onChange={(e) => {
                     const value = e.target.value;
                     if (value === "custom") {
-                      setUseCustomThreshold(true);
+                      setIsCustomThresholdEnabled(true);
                     } else {
                       setSyncConfig((prev) => {
                         const newConfig = {

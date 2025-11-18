@@ -41,12 +41,12 @@ export function normalizeMangaItems(
     title: item.title,
     status: item.status,
     score: item.score ?? 0,
-    chapters_read: item.chapters_read ?? 0,
-    volumes_read: item.volumes_read ?? 0,
+    chaptersRead: item.chaptersRead ?? 0,
+    volumesRead: item.volumesRead ?? 0,
     notes: item.notes ?? "",
-    created_at: item.created_at,
-    updated_at: item.updated_at,
-    last_read_at: item.last_read_at,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+    lastReadAt: item.lastReadAt,
   }));
 
   console.debug(
@@ -169,12 +169,12 @@ export function validateMangaData(manga: NormalizedMangaItem[]): KenmeiManga[] {
     title: mangaItem.title,
     status: mangaItem.status,
     score: mangaItem.score ?? 0,
-    chaptersRead: mangaItem.chapters_read ?? 0,
-    volumesRead: mangaItem.volumes_read ?? 0,
+    chaptersRead: mangaItem.chaptersRead ?? 0,
+    volumesRead: mangaItem.volumesRead ?? 0,
     notes: mangaItem.notes ?? "",
-    createdAt: mangaItem.created_at ?? new Date().toISOString(),
-    updatedAt: mangaItem.updated_at ?? new Date().toISOString(),
-    lastReadAt: mangaItem.last_read_at,
+    createdAt: mangaItem.createdAt ?? new Date().toISOString(),
+    updatedAt: mangaItem.updatedAt ?? new Date().toISOString(),
+    lastReadAt: mangaItem.lastReadAt,
   }));
 
   console.debug(

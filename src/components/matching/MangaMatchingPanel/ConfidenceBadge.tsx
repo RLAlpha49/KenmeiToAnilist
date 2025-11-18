@@ -44,7 +44,7 @@ export function ConfidenceBadge({
   let chipClass = "";
   let trackClass = "";
   let barClass = "";
-  let label = "";
+  let confidenceLabel = "";
 
   if (roundedConfidence >= 90) {
     containerClass =
@@ -53,7 +53,7 @@ export function ConfidenceBadge({
       "bg-white/85 text-emerald-600 shadow-inner dark:bg-emerald-950/70 dark:text-emerald-100";
     trackClass = "bg-emerald-200/70 dark:bg-emerald-900/40";
     barClass = "bg-emerald-500 dark:bg-emerald-400";
-    label = "High";
+    confidenceLabel = "High";
   } else if (roundedConfidence >= 75) {
     containerClass =
       "border-blue-200/70 bg-gradient-to-r from-blue-100/80 via-blue-50/65 to-blue-100/75 text-blue-900 shadow-[0_14px_38px_-18px_rgba(37,99,235,0.35)] dark:border-blue-500/35 dark:from-blue-950/40 dark:via-blue-900/25 dark:to-blue-800/35 dark:text-blue-100";
@@ -61,7 +61,7 @@ export function ConfidenceBadge({
       "bg-white/85 text-blue-600 shadow-inner dark:bg-blue-950/70 dark:text-blue-100";
     trackClass = "bg-blue-200/70 dark:bg-blue-900/40";
     barClass = "bg-blue-500 dark:bg-blue-400";
-    label = "Good";
+    confidenceLabel = "Good";
   } else if (roundedConfidence >= 50) {
     containerClass =
       "border-amber-200/70 bg-gradient-to-r from-amber-50/80 via-amber-100/65 to-amber-50/75 text-amber-900 shadow-[0_14px_32px_-18px_rgba(217,119,6,0.35)] dark:border-amber-500/30 dark:from-amber-950/50 dark:via-amber-900/30 dark:to-amber-800/35 dark:text-amber-100";
@@ -69,7 +69,7 @@ export function ConfidenceBadge({
       "bg-white/85 text-amber-600 shadow-inner dark:bg-amber-950/70 dark:text-amber-100";
     trackClass = "bg-amber-200/70 dark:bg-amber-900/40";
     barClass = "bg-amber-500 dark:bg-amber-400";
-    label = "Medium";
+    confidenceLabel = "Medium";
   } else {
     containerClass =
       "border-rose-200/70 bg-gradient-to-r from-rose-100/80 via-rose-50/65 to-rose-100/75 text-rose-900 shadow-[0_14px_32px_-18px_rgba(225,29,72,0.35)] dark:border-rose-500/35 dark:from-rose-950/40 dark:via-rose-900/25 dark:to-rose-800/35 dark:text-rose-100";
@@ -77,7 +77,7 @@ export function ConfidenceBadge({
       "bg-white/85 text-rose-600 shadow-inner dark:bg-rose-950/70 dark:text-rose-100";
     trackClass = "bg-rose-200/60 dark:bg-rose-900/40";
     barClass = "bg-rose-500 dark:bg-rose-400";
-    label = "Low";
+    confidenceLabel = "Low";
   }
 
   return (
@@ -88,7 +88,7 @@ export function ConfidenceBadge({
         className,
       )}
       title={`${roundedConfidence}% confidence match`}
-      aria-label={`${label} confidence match: ${roundedConfidence}%`}
+      aria-label={`${confidenceLabel} confidence match: ${roundedConfidence}%`}
     >
       <div
         className={`flex h-9 w-9 items-center justify-center rounded-full text-[13px] font-bold ${chipClass}`}
@@ -100,7 +100,7 @@ export function ConfidenceBadge({
           Confidence
         </span>
         <span className="text-xs font-bold tracking-normal text-current">
-          {label}
+          {confidenceLabel}
         </span>
         <div
           className={`h-1.5 w-28 overflow-hidden rounded-full ${trackClass}`}

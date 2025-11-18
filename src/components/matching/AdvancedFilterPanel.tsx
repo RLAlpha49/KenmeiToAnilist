@@ -40,7 +40,7 @@ import type {
   AdvancedMatchFilters,
   FilterPreset,
 } from "@/types/matching-filters";
-import { formatLabel, statusLabel } from "./labels";
+import { formatLabel, formatPublicationStatusLabel } from "./labels";
 import { SearchableFilterList } from "./SearchableFilterList";
 
 /**
@@ -177,7 +177,7 @@ export function AdvancedFilterPanel({
   onDeletePreset,
 }: Readonly<AdvancedFilterPanelProps>) {
   const [isOpen, setIsOpen] = useState(false);
-  const [showPresetDialog, setShowPresetDialog] = useState(false);
+  const [isPresetDialogVisible, setIsPresetDialogVisible] = useState(false);
   const [presetName, setPresetName] = useState("");
   const [presetDescription, setPresetDescription] = useState("");
 
@@ -270,7 +270,7 @@ export function AdvancedFilterPanel({
       onSavePreset(presetName.trim(), presetDescription.trim() || undefined);
       setPresetName("");
       setPresetDescription("");
-      setShowPresetDialog(false);
+      setIsPresetDialogVisible(false);
     }
   };
 
@@ -407,7 +407,7 @@ export function AdvancedFilterPanel({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setShowPresetDialog(true)}
+              onClick={() => setIsPresetDialogVisible(true)}
               className="h-7 gap-1.5 text-xs"
             >
               <Save className="h-3 w-3" />
@@ -551,7 +551,7 @@ export function AdvancedFilterPanel({
                 selectedItems={filters.genres}
                 onToggle={handleGenreToggle}
                 label={(genre) => genre}
-                showSelectClear
+                shouldShowSelectClear
                 onSelectAll={handleSelectAllGenres}
                 onClearAll={handleClearAllGenres}
                 searchPlaceholder="Search genres..."
@@ -565,7 +565,7 @@ export function AdvancedFilterPanel({
                 selectedItems={filters.tags || []}
                 onToggle={handleTagToggle}
                 label={(tag) => tag}
-                showSelectClear
+                shouldShowSelectClear
                 onSelectAll={handleSelectAllTags}
                 onClearAll={handleClearAllTags}
                 searchPlaceholder="Search tags..."
@@ -590,7 +590,7 @@ export function AdvancedFilterPanel({
                         htmlFor={`status-${status}`}
                         className="cursor-pointer text-sm text-slate-700 dark:text-slate-300"
                       >
-                        {statusLabel(status)}
+                        {formatPublicationStatusLabel(status)}
                       </label>
                     </div>
                   ))}
@@ -617,7 +617,10 @@ export function AdvancedFilterPanel({
       </Collapsible>
 
       {/* Preset Save Dialog */}
-      <Dialog open={showPresetDialog} onOpenChange={setShowPresetDialog}>
+      <Dialog
+        open={isPresetDialogVisible}
+        onOpenChange={setIsPresetDialogVisible}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Save Filter Preset</DialogTitle>
@@ -662,7 +665,7 @@ export function AdvancedFilterPanel({
             <Button
               variant="outline"
               onClick={() => {
-                setShowPresetDialog(false);
+                setIsPresetDialogVisible(false);
                 setPresetName("");
                 setPresetDescription("");
               }}

@@ -17,14 +17,14 @@ import type { KenmeiManga } from "../../api/kenmei/types";
  * @property onProceedToSync - Callback to proceed to the sync stage.
  * @property onBackToImport - Callback to return to the import stage.
  * @property onSetMatchedToPending - Optional callback to reset matched items to pending.
- * @property disableSetMatchedToPending - Whether to disable the pending reset button.
+ * @property isSetMatchedToPendingDisabled - Whether to disable the pending reset button.
  * @property selectedMatchIds - Optional set of selected match IDs for batch operations.
  * @property onToggleSelection - Optional callback to toggle selection of a match.
  * @property onSelectAll - Optional callback to select all visible matches.
  * @property onClearSelection - Optional callback to clear all selections.
  * @source
  */
-interface Props {
+interface MatchingPanelProps {
   matches: MangaMatchResult[];
   onManualSearch: (manga: KenmeiManga) => void;
   onAcceptMatch: (
@@ -52,7 +52,7 @@ interface Props {
   onProceedToSync: () => void;
   onBackToImport: () => void;
   onSetMatchedToPending?: () => void;
-  disableSetMatchedToPending?: boolean;
+  isSetMatchedToPendingDisabled?: boolean;
   selectedMatchIds?: Set<number>;
   onToggleSelection?: (matchId: number) => void;
   onSelectAll?: (ids: number[]) => void;
@@ -77,11 +77,12 @@ export function MatchingPanel({
   onProceedToSync,
   onBackToImport,
   onSetMatchedToPending,
+  isSetMatchedToPendingDisabled,
   selectedMatchIds,
   onToggleSelection,
   onSelectAll,
   onClearSelection,
-}: Readonly<Props>) {
+}: Readonly<MatchingPanelProps>) {
   return (
     <motion.div
       className="mb-6 flex h-full flex-col gap-6"
@@ -103,6 +104,7 @@ export function MatchingPanel({
             onResetToPending={onResetToPending}
             searchQuery={searchQuery}
             onSetMatchedToPending={onSetMatchedToPending}
+            isSetMatchedToPendingDisabled={isSetMatchedToPendingDisabled}
             isLoadingInitial={matches.length === 0}
             selectedMatchIds={selectedMatchIds}
             onToggleSelection={onToggleSelection}

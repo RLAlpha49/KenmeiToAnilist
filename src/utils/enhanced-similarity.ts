@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @packageDocumentation
  * @module enhanced-similarity
  * @description Enhanced title similarity calculation for manga matching with improved normalization and multiple scoring algorithms.

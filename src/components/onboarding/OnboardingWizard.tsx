@@ -139,7 +139,8 @@ export function OnboardingWizard({
 }: Readonly<OnboardingWizardProps>) {
   const [currentStep, setCurrentStep] = useState(1);
   const [isCompleting, setIsCompleting] = useState(false);
-  const [showEscapeConfirmDialog, setShowEscapeConfirmDialog] = useState(false);
+  const [isEscapeConfirmDialogVisible, setIsEscapeConfirmDialogVisible] =
+    useState(false);
 
   // Define step configuration with icons, titles, and content
   const steps: StepConfig[] = [
@@ -419,7 +420,7 @@ export function OnboardingWizard({
         handleNext();
       } else if (event.key === "Escape") {
         event.preventDefault();
-        setShowEscapeConfirmDialog(true);
+        setIsEscapeConfirmDialogVisible(true);
       }
     };
 
@@ -436,8 +437,8 @@ export function OnboardingWizard({
     <>
       {/* Escape confirmation dialog */}
       <AlertDialog
-        open={showEscapeConfirmDialog}
-        onOpenChange={setShowEscapeConfirmDialog}
+        open={isEscapeConfirmDialogVisible}
+        onOpenChange={setIsEscapeConfirmDialogVisible}
       >
         <AlertDialogContent>
           <AlertDialogTitle>Skip Onboarding?</AlertDialogTitle>
@@ -449,7 +450,7 @@ export function OnboardingWizard({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                setShowEscapeConfirmDialog(false);
+                setIsEscapeConfirmDialogVisible(false);
                 handleSkip();
               }}
             >

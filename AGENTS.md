@@ -21,18 +21,18 @@ tools to resolve library id and get library docs without me having to explicitly
 
 ## Serena Modes & Adaptive Behavior
 
-**Default modes:** `["planning", "interactive", "editing"]`
+**Default modes:** `["planning", "editing"]`
 
 Always assume the default modes are active to ensure modes are correctly set and you don't forget to change them.
 
-Always use the `switch_modes` tool to adapt modes based on task complexity:
+Always use the `switch_modes` tool to adapt modes based on task complexity. NOTE: Reserve `interactive` only for large or risky changes that require clarification; avoid `interactive` for routine small edits to reduce unnecessary prompts.
 
-| Task Type               | Modes                                                         | When to Use                                          |
-| ----------------------- | ------------------------------------------------------------- | ---------------------------------------------------- |
-| **Trivial fixes**       | `["one-shot", "editing"]`                                     | Skip planning overhead, make & verify immediately    |
-| **Small edits**         | `["interactive", "editing"]`                                  | Still ask questions, skip detailed planning          |
-| **Medium features**     | `["planning", "interactive", "editing"]`                      | Brief 3–6 item plan, explore, edit incrementally     |
-| **Large/risky changes** | `["planning", "interactive", "editing"]` + extra verification | Thorough planning & verification at every checkpoint |
+| Task Type               | Modes                                                         | When to Use                                                                                           |
+| ----------------------- | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Trivial fixes**       | `["one-shot", "editing"]`                                     | Skip planning overhead, make & verify immediately                                                     |
+| **Small edits**         | `["one-shot", "editing"]`                                     | Quick changes — avoid interactive prompts; no detailed planning needed                                |
+| **Medium features**     | `["planning", "editing"]`                                     | Brief 3–6 item plan, explore, edit incrementally; only use interactive when clarification is required |
+| **Large/risky changes** | `["planning", "interactive", "editing"]` + extra verification | Thorough planning & verification at every checkpoint                                                  |
 
 **Thinking Tools — Use at Relevant Checkpoints:**
 
@@ -53,6 +53,12 @@ _Use these thinking tools whenever applicable, not just for the largest changes.
 - **`find_file`**: Search files by glob pattern
 
 **Best Practice**: Always explore with these tools BEFORE reading files. Saves tokens and time.
+
+## Subagent (runSubagent)
+
+- This workspace supports a `runSubagent` tool to launch a single-run, stateless autonomous agent for bounded, repeatable tasks (e.g., repo-scoped refactors, triage, or research).
+- Use the subagent where tasks can be completed autonomously and include explicit validation steps (e.g., lints/tests). Use the subagent when possible/useful to automate repeatable, bounded tasks that don't require continuous human interaction.
+- For templates, examples, and detailed guidance, see the Serena memory `subagent-usage` (use `read_memory` to access the reference).
 
 ## Memory Strategy
 

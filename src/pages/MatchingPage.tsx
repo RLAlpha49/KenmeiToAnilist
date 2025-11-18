@@ -26,11 +26,11 @@ import { MangaMatchResult } from "../api/anilist/types";
 import { useMatchingProcess } from "../hooks/use-matching-process";
 import { usePendingManga } from "../hooks/use-pending-manga";
 import { useMatchHandlers } from "../hooks/use-match-handlers";
-import { useOnboarding } from "../contexts/OnboardingContext";
+import { useOnboarding } from "../contexts/onboarding-context";
 import { clearCacheForTitles } from "../api/matching/search-service";
-import { useRateLimit } from "../contexts/RateLimitContext";
+import { useRateLimit } from "../contexts/rate-limit-context";
 import { UndoRedoManager } from "../utils/undo-redo";
-import { useDebugActions } from "../contexts/DebugContext";
+import { useDebugActions } from "../contexts/debug-context";
 import { debounce } from "../utils/debounce";
 import { AbortError } from "../utils/chunked-processing";
 import { truncateToastMessage } from "../utils/text-highlight";
@@ -69,7 +69,7 @@ import { detectDuplicateAniListIds } from "../components/matching/detect-duplica
 import { getDuplicateDetectionWorkerPool } from "../workers";
 import { LoadingView } from "../components/matching/LoadingView";
 import { SkeletonCard } from "../components/ui/Skeleton";
-import EmptyState from "../components/ui/EmptyState";
+import { EmptyState } from "../components/ui/EmptyState";
 import { FileSearch } from "lucide-react";
 
 // Animation variants
@@ -179,7 +179,7 @@ export function MatchingPage() {
       unmatched: true,
     },
   );
-  const [showRematchOptions, setShowRematchOptions] = useState(false);
+  const [isRematchOptionsVisible, setIsRematchOptionsVisible] = useState(false);
   const [rematchWarning, setRematchWarning] = useState<string | null>(null);
 
   // State for duplicate detection
@@ -1305,10 +1305,10 @@ export function MatchingPage() {
     const defaultHeaderProps = {
       headerVariants,
       matchResultsLength: 0,
-      showRematchOptions: false,
-      setShowRematchOptions: () => {},
-      matchingProcessIsLoading: false,
-      rateLimitIsRateLimited: false,
+      isRematchOptionsVisible: false,
+      setIsRematchOptionsVisible: () => {},
+      isMatchingProcessLoading: false,
+      isRateLimited: false,
       statusSummary: matchStatusSummary,
       pendingBacklog: 0,
       handleUndo: () => {},
@@ -1879,7 +1879,7 @@ export function MatchingPage() {
       );
 
       // Reset the options panel and start matching
-      setShowRematchOptions(false);
+      setIsRematchOptionsVisible(false);
 
       // Before starting the matching process, save the existing matchResults
       // Filter out the ones we're about to rematch to avoid duplicates
@@ -1979,10 +1979,10 @@ export function MatchingPage() {
           <MatchingPageHeader
             headerVariants={headerVariants}
             matchResultsLength={matchResults.length}
-            showRematchOptions={showRematchOptions}
-            setShowRematchOptions={setShowRematchOptions}
-            matchingProcessIsLoading={matchingProcess.isLoading}
-            rateLimitIsRateLimited={rateLimitState.isRateLimited}
+            isRematchOptionsVisible={isRematchOptionsVisible}
+            setIsRematchOptionsVisible={setIsRematchOptionsVisible}
+            isMatchingProcessLoading={matchingProcess.isLoading}
+            isRateLimited={rateLimitState.isRateLimited}
             statusSummary={matchStatusSummary}
             pendingBacklog={pendingMangaState.pendingManga.length}
             handleUndo={handleUndo}
@@ -1995,7 +1995,7 @@ export function MatchingPage() {
 
           {/* Rematch by status options */}
           <AnimatePresence>
-            {showRematchOptions &&
+            {isRematchOptionsVisible &&
               !matchingProcess.isLoading &&
               matchResults.length > 0 && (
                 <RematchOptions
@@ -2004,7 +2004,7 @@ export function MatchingPage() {
                   matchResults={matchResults}
                   rematchWarning={rematchWarning}
                   onRematchByStatus={handleRematchByStatus}
-                  onCloseOptions={() => setShowRematchOptions(false)}
+                  onCloseOptions={() => setIsRematchOptionsVisible(false)}
                 />
               )}
           </AnimatePresence>
@@ -2085,7 +2085,7 @@ export function MatchingPage() {
                   onResetToPending={matchHandlers.handleResetToPending}
                   searchQuery={searchQuery}
                   onSetMatchedToPending={handleSetAllMatchedToPending}
-                  disableSetMatchedToPending={
+                  isSetMatchedToPendingDisabled={
                     matchingProcess.isLoading || rateLimitState.isRateLimited
                   }
                   onProceedToSync={handleProceedToSync}

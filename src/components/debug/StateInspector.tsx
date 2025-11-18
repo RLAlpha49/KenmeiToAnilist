@@ -6,7 +6,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { useDebugActions, useDebugState } from "../../contexts/DebugContext";
+import { useDebugActions, useDebugState } from "../../contexts/debug-context";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { Textarea } from "../ui/Textarea";

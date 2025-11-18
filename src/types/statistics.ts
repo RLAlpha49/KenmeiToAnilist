@@ -80,7 +80,7 @@ export interface FilteredStatisticsData {
 /**
  * Default filter values (no filtering)
  */
-export const DEFAULT_STATISTICS_FILTERS: StatisticsFilters = {
+export const defaultStatisticsFilters: StatisticsFilters = {
   genres: [],
   formats: [],
   tags: [],

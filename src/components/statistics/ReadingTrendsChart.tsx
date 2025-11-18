@@ -349,9 +349,9 @@ export const ReadingTrendsChart: FC<ReadingTrendsChartProps> = ({
             <div className="space-y-2">
               {/* Placeholder bars showing expected chart shape */}
               <div className="flex items-end justify-between gap-1 px-2">
-                {[40, 55, 45, 70, 50, 65, 60].map((height, idx) => (
+                {[40, 55, 45, 70, 50, 65, 60].map((height, index) => (
                   <div
-                    key={`trends-placeholder-${height}-${idx}`}
+                    key={`trends-placeholder-${height}-${index}`}
                     className="bg-linear-to-t flex-1 rounded-t from-blue-300 to-blue-200 opacity-40 dark:from-blue-800/40 dark:to-blue-700/40"
                     style={{ height: `${height}px` }}
                   />

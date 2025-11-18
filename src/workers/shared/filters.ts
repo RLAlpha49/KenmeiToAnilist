@@ -18,19 +18,20 @@ export function failsConfidenceFilter(
   match: MangaMatchResult,
   filters: AdvancedMatchFilters,
 ): boolean {
-  let confidence = 0;
+  let matchConfidence = 0;
 
   if (match.selectedMatch && match.anilistMatches) {
     const selectedEntry = match.anilistMatches.find(
       (m) => m.manga?.id === match.selectedMatch?.id,
     );
-    confidence = selectedEntry?.confidence ?? 0;
+    matchConfidence = selectedEntry?.confidence ?? 0;
   } else if (match.anilistMatches?.length) {
-    confidence = match.anilistMatches[0].confidence ?? 0;
+    matchConfidence = match.anilistMatches[0].confidence ?? 0;
   }
 
   return (
-    confidence < filters.confidence.min || confidence > filters.confidence.max
+    matchConfidence < filters.confidence.min ||
+    matchConfidence > filters.confidence.max
   );
 }
 
@@ -48,8 +49,8 @@ export function failsFormatFilter(
   if (filters.formats.length === 0) {
     return false;
   }
-  const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
-  return !matchData?.format || !filters.formats.includes(matchData.format);
+  const matchManga = match.selectedMatch || match.anilistMatches?.[0]?.manga;
+  return !matchManga?.format || !filters.formats.includes(matchManga.format);
 }
 
 /**
@@ -66,11 +67,13 @@ export function failsGenreFilter(
   if (filters.genres.length === 0) {
     return false;
   }
-  const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
-  const genres = matchData?.genres || [];
-  const genresLower = new Set(genres.map((g: string) => g.toLowerCase()));
-  return !filters.genres.some((fg: string) =>
-    genresLower.has(fg.toLowerCase()),
+  const matchManga = match.selectedMatch || match.anilistMatches?.[0]?.manga;
+  const genres = matchManga?.genres || [];
+  const genresLower = new Set(
+    genres.map((genre: string) => genre.toLowerCase()),
+  );
+  return !filters.genres.some((filterGenre: string) =>
+    genresLower.has(filterGenre.toLowerCase()),
   );
 }
 
@@ -88,10 +91,10 @@ export function failsStatusFilter(
   if (filters.publicationStatuses.length === 0) {
     return false;
   }
-  const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
+  const matchManga = match.selectedMatch || match.anilistMatches?.[0]?.manga;
   return (
-    !matchData?.status ||
-    !filters.publicationStatuses.includes(matchData.status)
+    !matchManga?.status ||
+    !filters.publicationStatuses.includes(matchManga.status)
   );
 }
 
@@ -112,8 +115,8 @@ export function failsYearFilter(
   if (filters.yearRange.min === null && filters.yearRange.max === null) {
     return false;
   }
-  const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
-  const year = matchData?.startDate?.year;
+  const matchManga = match.selectedMatch || match.anilistMatches?.[0]?.manga;
+  const year = matchManga?.startDate?.year;
 
   if (year === undefined) {
     return true;
@@ -144,11 +147,11 @@ export function failsTagFilter(
   if (!filters.tags || filters.tags.length === 0) {
     return false;
   }
-  const matchData = match.selectedMatch || match.anilistMatches?.[0]?.manga;
-  const tags = matchData?.tags || [];
-  const tagNamesLower = new Set(tags.map((t) => t.name.toLowerCase()));
-  return !filters.tags.some((ft: string) =>
-    tagNamesLower.has(ft.toLowerCase()),
+  const matchManga = match.selectedMatch || match.anilistMatches?.[0]?.manga;
+  const tags = matchManga?.tags || [];
+  const tagNamesLower = new Set(tags.map((tag) => tag.name.toLowerCase()));
+  return !filters.tags.some((filterTag: string) =>
+    tagNamesLower.has(filterTag.toLowerCase()),
   );
 }
 

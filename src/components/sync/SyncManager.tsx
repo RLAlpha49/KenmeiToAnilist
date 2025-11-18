@@ -38,7 +38,7 @@ import { Alert, AlertDescription, AlertTitle } from "../ui/Alert";
 import { Button } from "../ui/Button";
 import { Switch } from "../ui/Switch";
 import { Label } from "../ui/Label";
-import { useRateLimit } from "../../contexts/RateLimitContext";
+import { useRateLimit } from "../../contexts/rate-limit-context";
 
 /**
  * Type alias for error recovery action types.
@@ -103,6 +103,10 @@ const ProgressDisplay: React.FC<{
           <div className="bg-linear-to-br flex h-12 w-12 shrink-0 items-center justify-center rounded-full from-blue-500 to-indigo-500 text-white shadow-lg">
             <Activity className="h-6 w-6" />
           </div>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/70 bg-white/70 px-3 py-1 text-slate-600 backdrop-blur dark:border-slate-700/60 dark:bg-slate-950/60 dark:text-slate-200">
+            <Clock className="h-3.5 w-3.5 text-slate-500 dark:text-slate-300" />
+            {progressPercentage}% complete
+          </span>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
               Synchronization progress
@@ -146,9 +150,9 @@ const ProgressDisplay: React.FC<{
  * @param props - Object containing sync status and configuration data.
  * @param props.status - Current sync status affecting alert display.
  * @param props.entries - Array of entries staged for sync.
- * @param props.incrementalSync - Whether incremental sync is enabled.
+ * @param props.isIncrementalSync - Whether incremental sync is enabled.
  * @param props.onIncrementalSyncChange - Optional callback when incremental sync toggle changes.
- * @param props.autoStart - Whether sync should auto-start without user action.
+ * @param props.shouldAutoStart - Whether sync should auto-start without user action.
  * @param props.syncState - Optional current sync state with error/progress/resume metadata.
  * @returns Alert component with status-specific messaging and controls.
  * @source
@@ -156,9 +160,9 @@ const ProgressDisplay: React.FC<{
 const StatusAlerts: React.FC<{
   status: string;
   entries: AniListMediaEntry[];
-  incrementalSync: boolean;
+  isIncrementalSync: boolean;
   onIncrementalSyncChange?: (value: boolean) => void;
-  autoStart: boolean;
+  shouldAutoStart: boolean;
   syncState?: {
     error?: string | null;
     progress?: SyncProgress | null;
@@ -170,13 +174,13 @@ const StatusAlerts: React.FC<{
 }> = ({
   status,
   entries,
-  incrementalSync,
+  isIncrementalSync,
   onIncrementalSyncChange,
-  autoStart,
+  shouldAutoStart,
   syncState,
 }) => {
   const renderIdle = () => {
-    if (autoStart) return null;
+    if (shouldAutoStart) return null;
     return (
       <div className="mb-6 text-center">
         <div className="relative overflow-hidden rounded-3xl border border-blue-200/70 bg-blue-50/70 p-6 shadow-sm dark:border-blue-800/60 dark:bg-blue-900/30">
@@ -198,7 +202,7 @@ const StatusAlerts: React.FC<{
             <div className="flex items-center gap-3 rounded-2xl border border-white/60 bg-white/80 px-3 py-2 shadow-sm dark:border-blue-800/50 dark:bg-blue-950/40">
               <Switch
                 id="incrementalSync"
-                checked={incrementalSync}
+                checked={isIncrementalSync}
                 onCheckedChange={onIncrementalSyncChange}
                 data-testid="switch"
               />
@@ -232,7 +236,7 @@ const StatusAlerts: React.FC<{
             Synchronization in progress
           </AlertTitle>
           <AlertDescription className="mt-1 text-sm text-blue-700/80 dark:text-blue-200/80">
-            {incrementalSync
+            {isIncrementalSync
               ? "Applying incremental updates to trigger AniList activity merges. Larger entries may take an extra moment."
               : "Updating your AniList library with the latest Kenmei data. Sit tight — this won't take long."}
           </AlertDescription>
@@ -341,8 +345,8 @@ const CurrentEntryDisplay: React.FC<{
   progress: SyncProgress;
   entries: AniListMediaEntry[];
   status: string;
-  incrementalSync: boolean;
-}> = ({ progress, entries, status, incrementalSync }) => {
+  isIncrementalSync: boolean;
+}> = ({ progress, entries, status, isIncrementalSync }) => {
   if (status !== "syncing" || !progress.currentEntry) return null;
 
   return (
@@ -371,21 +375,23 @@ const CurrentEntryDisplay: React.FC<{
               </h3>
             </div>
 
-            {incrementalSync && progress.totalSteps && progress.currentStep && (
-              <div className="flex items-center gap-3 rounded-2xl border border-blue-200/60 bg-blue-100/60 px-3 py-2 text-xs font-medium text-blue-700 dark:border-blue-900/60 dark:bg-blue-900/40 dark:text-blue-200">
-                <Gauge className="h-4 w-4" />
-                Step {progress.currentStep} of {progress.totalSteps}
-                <span className="inline-flex items-center rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700 dark:bg-blue-950/60 dark:text-blue-200">
-                  {Math.round(
-                    (progress.currentStep / progress.totalSteps) * 100,
-                  )}
-                  %
-                </span>
-              </div>
-            )}
+            {isIncrementalSync &&
+              progress.totalSteps &&
+              progress.currentStep && (
+                <div className="flex items-center gap-3 rounded-2xl border border-blue-200/60 bg-blue-100/60 px-3 py-2 text-xs font-medium text-blue-700 dark:border-blue-900/60 dark:bg-blue-900/40 dark:text-blue-200">
+                  <Gauge className="h-4 w-4" />
+                  Step {progress.currentStep} of {progress.totalSteps}
+                  <span className="inline-flex items-center rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700 dark:bg-blue-950/60 dark:text-blue-200">
+                    {Math.round(
+                      (progress.currentStep / progress.totalSteps) * 100,
+                    )}
+                    %
+                  </span>
+                </div>
+              )}
           </div>
 
-          {incrementalSync && progress.totalSteps && progress.currentStep && (
+          {isIncrementalSync && progress.totalSteps && progress.currentStep && (
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-blue-200/70 dark:bg-blue-900/40">
               <div
                 className="bg-linear-to-r h-full rounded-full from-blue-500 via-indigo-500 to-purple-500 transition-all duration-300"
@@ -901,10 +907,10 @@ const SyncManager: React.FC<SyncManagerProps> = ({
   token,
   onComplete,
   onCancel,
-  autoStart = true,
+  autoStart: shouldAutoStart = true,
   syncState,
   syncActions,
-  incrementalSync = false,
+  incrementalSync: isIncrementalSync = false,
   onIncrementalSyncChange,
   displayOrderMediaIds,
 }) => {
@@ -1149,11 +1155,11 @@ const SyncManager: React.FC<SyncManagerProps> = ({
   // Handle start synchronization
   const handleStartSync = async () => {
     console.info(
-      `[SyncManager] 🚀 Starting sync with ${entries.length} entries (incremental: ${incrementalSync})`,
+      `[SyncManager] 🚀 Starting sync with ${entries.length} entries (incremental: ${isIncrementalSync})`,
     );
     setProgressBaseline(null);
     if (syncActions?.startSync) {
-      if (incrementalSync) {
+      if (isIncrementalSync) {
         console.debug(
           "[SyncManager] 🔍 Processing entries for incremental sync...",
         );
@@ -1276,10 +1282,10 @@ const SyncManager: React.FC<SyncManagerProps> = ({
 
   // Auto-start synchronization if enabled
   useEffect(() => {
-    if (autoStart && status === "idle" && entries.length > 0) {
+    if (shouldAutoStart && status === "idle" && entries.length > 0) {
       handleStartSync();
     }
-  }, [autoStart, status, entries.length]);
+  }, [shouldAutoStart, status, entries.length]);
 
   return (
     <Card className="relative mx-auto w-full max-w-3xl overflow-hidden border border-slate-200/70 bg-white/85 shadow-xl shadow-blue-500/10 backdrop-blur-2xl dark:border-slate-800/60 dark:bg-slate-950/75">
@@ -1317,7 +1323,7 @@ const SyncManager: React.FC<SyncManagerProps> = ({
           </span>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/70 bg-white/70 px-3 py-1 text-slate-600 backdrop-blur dark:border-slate-700/60 dark:bg-slate-950/60 dark:text-slate-200">
             <TimerReset className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-300" />
-            {incrementalSync ? "Incremental mode" : "Direct mode"}
+            {isIncrementalSync ? "Incremental mode" : "Direct mode"}
           </span>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/70 bg-white/70 px-3 py-1 text-slate-600 backdrop-blur dark:border-slate-700/60 dark:bg-slate-950/60 dark:text-slate-200">
             <Clock className="h-3.5 w-3.5 text-slate-500 dark:text-slate-300" />
@@ -1337,9 +1343,9 @@ const SyncManager: React.FC<SyncManagerProps> = ({
         <StatusAlerts
           status={status}
           entries={entries}
-          incrementalSync={incrementalSync}
+          isIncrementalSync={isIncrementalSync}
           onIncrementalSyncChange={onIncrementalSyncChange}
-          autoStart={autoStart}
+          shouldAutoStart={shouldAutoStart}
           syncState={syncState}
         />
 
@@ -1347,7 +1353,7 @@ const SyncManager: React.FC<SyncManagerProps> = ({
           progress={displayProgress}
           entries={entries}
           status={status}
-          incrementalSync={incrementalSync}
+          isIncrementalSync={isIncrementalSync}
         />
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -1397,7 +1403,7 @@ const SyncManager: React.FC<SyncManagerProps> = ({
           </div>
         </div>
 
-        {status === "syncing" && incrementalSync && (
+        {status === "syncing" && isIncrementalSync && (
           <div className="overflow-hidden rounded-3xl border border-amber-200/60 bg-amber-50/70 p-5 shadow-sm dark:border-amber-900/50 dark:bg-amber-950/30">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex items-start gap-3">

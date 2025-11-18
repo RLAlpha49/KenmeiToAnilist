@@ -35,7 +35,7 @@ export interface AuthState {
  * @property redirectUri - The redirect URI for OAuth.
  * @source
  */
-export interface APICredentials {
+export interface ApiCredentials {
   source: "default" | "custom";
   clientId: string;
   clientSecret: string;
@@ -82,7 +82,7 @@ export interface AuthStateContextValue {
   isLoading: boolean;
   error: string | null;
   statusMessage: string | null;
-  customCredentials: APICredentials | null;
+  customCredentials: ApiCredentials | null;
   isOnline: boolean;
   wasOffline: boolean;
 }
@@ -121,7 +121,7 @@ export interface OfflineQueueTask {
  * @source
  */
 export interface AuthActionsContextValue {
-  login: (credentials: APICredentials) => Promise<void>;
+  login: (credentials: ApiCredentials) => Promise<void>;
   refreshToken: () => Promise<void>;
   logout: () => void;
   cancelAuth: () => Promise<void>;

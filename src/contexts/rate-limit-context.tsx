@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module RateLimitContext
+ * @module rate-limit-context
  * @description React context and provider for managing AniList API rate limit state and notifications throughout the application.
  */
 
@@ -14,7 +14,7 @@ import React, {
   useCallback,
 } from "react";
 import { toast } from "sonner";
-import { useDebugActions, StateInspectorHandle } from "./DebugContext";
+import { useDebugActions, StateInspectorHandle } from "./debug-context";
 
 /**
  * The rate limit state indicating whether the API is currently rate limited.

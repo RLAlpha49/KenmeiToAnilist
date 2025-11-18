@@ -8,7 +8,7 @@ import { useCallback } from "react";
 import { KenmeiManga } from "../api/kenmei/types";
 import { AniListManga, MangaMatchResult } from "../api/anilist/types";
 import { STORAGE_KEYS, storage } from "../utils/storage";
-import { useDebugActions } from "../contexts/DebugContext";
+import { useDebugActions } from "../contexts/debug-context";
 import type { UndoRedoManager } from "../utils/undo-redo";
 import {
   AcceptMatchCommand,

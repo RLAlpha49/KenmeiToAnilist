@@ -7,7 +7,7 @@
 import { Moon, Sun } from "lucide-react";
 import React from "react";
 import { Button } from "@/components/ui/Button";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useTheme } from "@/contexts/theme-context";
 import {
   Tooltip,
   TooltipContent,

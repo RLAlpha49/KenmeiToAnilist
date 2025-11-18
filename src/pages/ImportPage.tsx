@@ -16,7 +16,7 @@ import {
 } from "../utils/error-handling";
 import { KenmeiData } from "../types/kenmei";
 import { saveKenmeiData, getSavedMatchResults } from "../utils/storage";
-import { useOnboarding } from "../contexts/OnboardingContext";
+import { useOnboarding } from "../contexts/onboarding-context";
 import {
   ImportSuccessContent,
   FileUploadContent,
@@ -34,7 +34,7 @@ import { getStatusCounts } from "../utils/manga-status-utils";
 import { truncateToastMessage } from "../utils/text-highlight";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { useDebugActions } from "../contexts/DebugContext";
+import { useDebugActions } from "../contexts/debug-context";
 import { getCacheWarmer } from "../api/matching/normalization";
 
 /**
@@ -371,8 +371,8 @@ export function ImportPage() {
           <ErrorMessage
             message={error.message}
             type={error.type}
-            dismiss={dismissError}
-            retry={importData ? handleImport : undefined}
+            onDismiss={dismissError}
+            onRetry={importData ? handleImport : undefined}
           />
         </motion.div>
       )}

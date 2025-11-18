@@ -67,7 +67,7 @@ import type {
   ComparisonMode,
   DrillDownData,
 } from "@/types/statistics";
-import { DEFAULT_STATISTICS_FILTERS } from "@/types/statistics";
+import { defaultStatisticsFilters } from "@/types/statistics";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
 import { StatisticsErrorBoundary } from "@/components/statistics/StatisticsErrorBoundary";
@@ -269,7 +269,7 @@ export function StatisticsPage() {
   });
   const [selectedTimeRange, setSelectedTimeRange] = useState<TimeRange>("30d");
   const [statisticsFilters, setStatisticsFilters] = useState<StatisticsFilters>(
-    DEFAULT_STATISTICS_FILTERS,
+    defaultStatisticsFilters,
   );
   const [comparisonMode, setComparisonMode] = useState<ComparisonMode>({
     enabled: false,
@@ -280,7 +280,7 @@ export function StatisticsPage() {
   const [drillDownData, setDrillDownData] = useState<DrillDownData | null>(
     null,
   );
-  const [drillDownOpen, setDrillDownOpen] = useState(false);
+  const [isDrillDownOpen, setIsDrillDownOpen] = useState(false);
 
   /**
    * Loads all statistics data from storage and normalizes for display.
@@ -356,7 +356,7 @@ export function StatisticsPage() {
    * @source
    */
   const handleClearFiltersFromBoundary = useCallback(() => {
-    setStatisticsFilters(DEFAULT_STATISTICS_FILTERS);
+    setStatisticsFilters(defaultStatisticsFilters);
     setComparisonMode({
       enabled: false,
       primaryRange: "30d",
@@ -474,7 +474,7 @@ export function StatisticsPage() {
    */
   const handleDrillDown = useCallback((data: DrillDownData) => {
     setDrillDownData(data);
-    setDrillDownOpen(true);
+    setIsDrillDownOpen(true);
   }, []);
 
   /**
@@ -989,7 +989,7 @@ export function StatisticsPage() {
                   comparisonMode={comparisonMode}
                   isFiltered={areFiltersActive(
                     statisticsFilters,
-                    DEFAULT_STATISTICS_FILTERS,
+                    defaultStatisticsFilters,
                   )}
                 />
                 {shouldShowHeaderControls ? (
@@ -1016,8 +1016,8 @@ export function StatisticsPage() {
 
         {/* Drill-Down Modal */}
         <DrillDownModal
-          open={drillDownOpen}
-          onOpenChange={setDrillDownOpen}
+          isOpen={isDrillDownOpen}
+          onOpenChange={setIsDrillDownOpen}
           drillDownData={drillDownData}
           onExport={handleDrillDownExport}
         />

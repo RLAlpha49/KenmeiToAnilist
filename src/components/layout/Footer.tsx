@@ -12,7 +12,7 @@ import { Heart, GitBranch } from "lucide-react";
  * @returns GitHub icon SVG element.
  * @source
  */
-const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
+const GitHubIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     viewBox="0 0 24 24"
     fill="currentColor"
@@ -99,7 +99,7 @@ export function Footer() {
                   )}
                 >
                   <span className="flex items-center gap-2 text-[0.65rem] font-semibold uppercase tracking-[0.3em]">
-                    <GithubIcon className="h-4 w-4" />
+                    <GitHubIcon className="h-4 w-4" />
                     <GitBranch className="h-3 w-3" />
                     Open source
                   </span>

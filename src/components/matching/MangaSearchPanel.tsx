@@ -137,7 +137,7 @@ export function MangaSearchPanel({
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [page, setPage] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(false);
-  const [blurAdultContent, setBlurAdultContent] = useState(true);
+  const [shouldBlurAdultContent, setShouldBlurAdultContent] = useState(true);
   const [unblurredImages, setUnblurredImages] = useState<Set<string>>(
     new Set(),
   );
@@ -149,7 +149,7 @@ export function MangaSearchPanel({
   useEffect(() => {
     const loadBlurSettings = async () => {
       const matchConfig = getMatchConfig();
-      setBlurAdultContent(matchConfig.blurAdultContent);
+      setShouldBlurAdultContent(matchConfig.blurAdultContent);
     };
     loadBlurSettings();
   }, []);
@@ -160,7 +160,7 @@ export function MangaSearchPanel({
   };
 
   const shouldBlurImage = (mangaId: string) => {
-    return blurAdultContent && !unblurredImages.has(mangaId);
+    return shouldBlurAdultContent && !unblurredImages.has(mangaId);
   };
 
   const toggleImageBlur = (mangaId: string) => {

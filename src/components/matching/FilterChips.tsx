@@ -3,7 +3,11 @@ import { X } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import type { AdvancedMatchFilters } from "@/types/matching-filters";
-import { formatLabel, statusLabel, yearRangeLabel } from "./labels";
+import {
+  formatLabel,
+  formatPublicationStatusLabel,
+  formatYearRangeLabel,
+} from "./labels";
 
 /**
  * Props for the FilterChips component.
@@ -93,7 +97,7 @@ export function FilterChips({
             variant="secondary"
             className="gap-1.5 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:hover:bg-amber-900/60"
           >
-            <span>Year: {yearRangeLabel(filters.yearRange)}</span>
+            <span>Year: {formatYearRangeLabel(filters.yearRange)}</span>
             <button
               type="button"
               onClick={() => onRemoveFilter("year")}
@@ -189,11 +193,11 @@ export function FilterChips({
             variant="secondary"
             className="gap-1.5 rounded-full bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900/40 dark:text-orange-300 dark:hover:bg-orange-900/60"
           >
-            <span>{statusLabel(status)}</span>
+            <span>{formatPublicationStatusLabel(status)}</span>
             <button
               type="button"
               onClick={() => onRemoveFilter("status", status)}
-              aria-label={`Remove ${statusLabel(status)} status filter`}
+              aria-label={`Remove ${formatPublicationStatusLabel(status)} status filter`}
               className="rounded-full p-0.5 transition-colors hover:bg-orange-200 dark:hover:bg-orange-800/60"
             >
               <X className="h-3 w-3" />

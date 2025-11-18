@@ -17,7 +17,7 @@ import {
   AreaChart,
   Area,
 } from "recharts";
-import { useDebugState } from "../../contexts/DebugContext";
+import { useDebugState } from "../../contexts/debug-context";
 import {
   Card,
   CardContent,
@@ -519,7 +519,9 @@ export const PerformanceMonitor = React.memo(function PerformanceMonitor() {
                     </span>
                     <select
                       value={selectedProvider}
-                      onChange={(e) => setSelectedProvider(e.target.value)}
+                      onChange={(event) =>
+                        setSelectedProvider(event.target.value)
+                      }
                       className="border-border/40 bg-background/80 text-foreground rounded border px-2 py-1 text-sm"
                     >
                       <option value="all">All</option>

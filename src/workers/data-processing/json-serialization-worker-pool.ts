@@ -349,7 +349,7 @@ export class JSONSerializationWorkerPool {
       type: operation === "serialize" ? "serialize" : ("deserialize" as const),
       resolve: wrappedResolve,
       reject,
-      cancelled: false,
+      isCancelled: false,
       workerIndex,
     };
 

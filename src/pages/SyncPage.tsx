@@ -8,8 +8,8 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuthState } from "../hooks/use-auth";
 import { useSynchronization } from "../hooks/use-synchronization";
-import { useRateLimit } from "../contexts/RateLimitContext";
-import { useOnboarding } from "../contexts/OnboardingContext";
+import { useRateLimit } from "../contexts/rate-limit-context";
+import { useOnboarding } from "../contexts/onboarding-context";
 import {
   UserMediaList,
   MangaMatchResult,
@@ -85,7 +85,7 @@ import { SyncConfigurationPanel } from "../components/sync/SyncConfigurationPane
 import { ChangesSummary } from "../components/sync/ChangesSummary";
 import { ViewControls } from "../components/sync/ViewControls";
 import { SkeletonCard, SkeletonList } from "../components/ui/Skeleton";
-import EmptyState from "../components/ui/EmptyState";
+import { EmptyState } from "../components/ui/EmptyState";
 import { SyncResumeNotification } from "../components/sync/SyncResumeNotification";
 import { SyncErrorBoundary } from "../components/sync/SyncErrorBoundary";
 import {
@@ -179,9 +179,10 @@ export function SyncPage() {
   // Sync configuration options
   const [syncConfig, setSyncConfig] = useState<SyncConfig>(getSyncConfig());
   // Track if we're using a custom threshold
-  const [useCustomThreshold, setUseCustomThreshold] = useState<boolean>(
-    ![1, 7, 14, 30, 60, 90, 180, 365].includes(syncConfig.autoPauseThreshold),
-  );
+  const [isCustomThresholdEnabled, setIsCustomThresholdEnabled] =
+    useState<boolean>(
+      ![1, 7, 14, 30, 60, 90, 180, 365].includes(syncConfig.autoPauseThreshold),
+    );
 
   /**
    * Toggles a sync configuration option and persists the updated config to storage.
@@ -1680,8 +1681,8 @@ export function SyncPage() {
                 <SyncConfigurationPanel
                   syncConfig={syncConfig}
                   setSyncConfig={setSyncConfig}
-                  useCustomThreshold={useCustomThreshold}
-                  setUseCustomThreshold={setUseCustomThreshold}
+                  isCustomThresholdEnabled={isCustomThresholdEnabled}
+                  setIsCustomThresholdEnabled={setIsCustomThresholdEnabled}
                   handleToggleOption={handleToggleOption}
                 />
 
@@ -1848,8 +1849,8 @@ export function SyncPage() {
   // Render individual card item
   const renderCardItem = (match: MangaMatchResult, index: number) => {
     const kenmei = match.kenmeiManga;
-    const anilist = match.selectedMatch!;
-    const userEntry = userLibrary[anilist.id];
+    const anilist = match.selectedMatch;
+    const userEntry = anilist ? userLibrary[anilist.id] : undefined;
 
     const {
       statusWillChange,
@@ -1862,7 +1863,7 @@ export function SyncPage() {
 
     return (
       <motion.div
-        key={`${anilist.id}-${index}`}
+        key={`${anilist?.id}-${index}`}
         layout="position"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -1877,7 +1878,7 @@ export function SyncPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="line-clamp-2 max-w-[580px] text-base font-semibold">
-                    {anilist.title.romaji || kenmei.title}
+                    {anilist?.title.romaji || kenmei.title}
                   </h3>
                   {changeCount > 0 && !isCompleted ? (
                     renderChangeBadges(
@@ -1976,8 +1977,8 @@ export function SyncPage() {
   // Render individual compact item
   const renderCompactItem = (match: MangaMatchResult, index: number) => {
     const kenmei = match.kenmeiManga;
-    const anilist = match.selectedMatch!;
-    const userEntry = userLibrary[anilist.id];
+    const anilist = match.selectedMatch;
+    const userEntry = anilist ? userLibrary[anilist.id] : undefined;
 
     const {
       statusWillChange,
@@ -2003,7 +2004,9 @@ export function SyncPage() {
 
     return (
       <motion.div
-        key={`${anilist.id}-${index}`}
+        key={
+          (anilist?.id ? String(anilist.id) : "unknown-" + index) + "-" + index
+        }
         layout="position"
         initial={{ opacity: 0, y: 5 }}
         animate={{ opacity: 1, y: 0 }}
@@ -2015,7 +2018,8 @@ export function SyncPage() {
           className={`${baseRowClasses} ${backgroundClass} hover:bg-blue-50/70 dark:hover:bg-slate-900/60`}
         >
           <div className="mr-3 flex shrink-0 items-center pl-2">
-            {anilist.coverImage?.large || anilist.coverImage?.medium ? (
+            {anilist &&
+            (anilist.coverImage?.large || anilist.coverImage?.medium) ? (
               <motion.div
                 layout="position"
                 animate={{
@@ -2038,7 +2042,7 @@ export function SyncPage() {
           </div>
           <div className="mr-2 min-w-0 flex-1">
             <div className="truncate text-sm font-medium">
-              {anilist.title.romaji || kenmei.title}
+              {anilist?.title.romaji || kenmei.title}
             </div>
             <div className="mt-0.5 flex items-center gap-1">
               {isNewEntry && (

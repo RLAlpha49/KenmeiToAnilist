@@ -37,13 +37,13 @@ export function filterMangaMatches(
     dropped: "dropped",
   } as const;
 
-  const matchesStatus = (match: MangaMatchResult) => {
+  const isStatusMatch = (match: MangaMatchResult) => {
     if (filters.status === "all") return true;
     const mapped = (statusMap as Record<string, string>)[filters.status];
     return mapped === match.kenmeiManga.status.toLowerCase();
   };
 
-  const matchesChanges = (match: MangaMatchResult) => {
+  const doesMatchChangeFilter = (match: MangaMatchResult) => {
     if (filters.changes === "all") return true;
 
     const anilist = match.selectedMatch!;
@@ -64,7 +64,7 @@ export function filterMangaMatches(
     return true;
   };
 
-  const matchesLibrary = (match: MangaMatchResult) => {
+  const isLibraryMatch = (match: MangaMatchResult) => {
     if (filters.library === "all") return true;
     const anilist = match.selectedMatch!;
     const isNewEntry = !userLibrary[anilist.id];
@@ -78,7 +78,9 @@ export function filterMangaMatches(
     .filter((match) => match.selectedMatch !== undefined)
     .filter(
       (match) =>
-        matchesStatus(match) && matchesChanges(match) && matchesLibrary(match),
+        isStatusMatch(match) &&
+        doesMatchChangeFilter(match) &&
+        isLibraryMatch(match),
     );
 }
 
@@ -105,30 +107,30 @@ function getChangeCount(
   if (isCompleted) return 0;
   if (!userEntry) return 3; // New entry, all fields will change
 
-  const statusWillChange =
+  const shouldUpdateStatus =
     !syncConfig.prioritizeAniListStatus &&
     getEffectiveStatus(kenmei, syncConfig) !== userEntry.status;
 
-  const progressWillChange = syncConfig.prioritizeAniListProgress
+  const shouldUpdateProgress = syncConfig.prioritizeAniListProgress
     ? (kenmei.chaptersRead || 0) > (userEntry.progress || 0)
     : (kenmei.chaptersRead || 0) !== (userEntry.progress || 0);
 
   const anilistScore = Number(userEntry.score);
   const kenmeiScore = Number(kenmei.score || 0);
 
-  const scoreWillChange =
+  const shouldUpdateScore =
     !syncConfig.prioritizeAniListScore &&
     kenmei.score > 0 &&
     (anilistScore === 0 || Math.abs(kenmeiScore - anilistScore) >= 0.5);
 
   // Check if privacy will change
-  const privacyWillChange = syncConfig.setPrivate && !userEntry.private;
+  const shouldUpdatePrivacy = syncConfig.setPrivate && !userEntry.private;
 
   return (
-    (statusWillChange ? 1 : 0) +
-    (progressWillChange ? 1 : 0) +
-    (scoreWillChange ? 1 : 0) +
-    (privacyWillChange ? 1 : 0)
+    (shouldUpdateStatus ? 1 : 0) +
+    (shouldUpdateProgress ? 1 : 0) +
+    (shouldUpdateScore ? 1 : 0) +
+    (shouldUpdatePrivacy ? 1 : 0)
   );
 }
 
@@ -201,12 +203,12 @@ function computeMatchConfidence(match: MangaMatchResult): number {
 }
 
 /**
- * Checks if a manga match passes the confidence filter.
+ * Checks if a manga match confidence score is within the configured range.
  * @param confidence - The match confidence score
  * @param confidenceRange - The acceptable confidence range
- * @returns True if match passes the filter
+ * @returns True if the confidence value falls inside the acceptable range
  */
-function passesConfidenceFilter(
+function isConfidenceWithinRange(
   confidence: number,
   confidenceRange: { min: number; max: number },
 ): boolean {
@@ -214,12 +216,12 @@ function passesConfidenceFilter(
 }
 
 /**
- * Checks if a manga match passes the format filter.
+ * Checks if a manga match format is allowed by the filters.
  * @param matchData - The manga data to check
  * @param formats - Array of acceptable formats
- * @returns True if match passes the filter
+ * @returns True if the manga format is listed or no formats are configured
  */
-function passesFormatFilter(
+function isFormatAllowed(
   matchData: AniListManga | undefined,
   formats: string[],
 ): boolean {
@@ -228,12 +230,12 @@ function passesFormatFilter(
 }
 
 /**
- * Checks if a manga match passes the genre filter.
+ * Checks if a manga match genres contain at least one configured genre.
  * @param matchData - The manga data to check
  * @param genres - Array of acceptable genres
- * @returns True if match passes the filter
+ * @returns True if any filter genres appear in the match data
  */
-function passesGenreFilter(
+function isGenreAllowed(
   matchData: AniListManga | undefined,
   genres: string[],
 ): boolean {
@@ -246,12 +248,12 @@ function passesGenreFilter(
 }
 
 /**
- * Checks if a manga match passes the publication status filter.
+ * Checks if the publication status of the match is part of the configured list.
  * @param matchData - The manga data to check
  * @param statuses - Array of acceptable statuses
- * @returns True if match passes the filter
+ * @returns True if the match status matches one of the filter statuses
  */
-function passesStatusFilter(
+function isStatusAllowed(
   matchData: AniListManga | undefined,
   statuses: string[],
 ): boolean {
@@ -260,12 +262,12 @@ function passesStatusFilter(
 }
 
 /**
- * Checks if a manga match passes the year range filter.
+ * Checks if a manga match start year is within the configured bounds.
  * @param matchData - The manga data to check
  * @param yearRange - The acceptable year range
- * @returns True if match passes the filter
+ * @returns True if the manga start year falls between the configured minimum and maximum
  */
-function passesYearFilter(
+function isYearWithinRange(
   matchData: AniListManga | undefined,
   yearRange: { min: number | null; max: number | null } | undefined,
 ): boolean {
@@ -283,12 +285,12 @@ function passesYearFilter(
 }
 
 /**
- * Checks if a manga match passes the tags filter.
+ * Checks if a manga match contains at least one of the configured tags.
  * @param matchData - The manga data to check
  * @param tags - Array of acceptable tags
- * @returns True if match passes the filter
+ * @returns True if any filter tag is present on the match
  */
-function passesTagFilter(
+function isTagAllowed(
   matchData: AniListManga | undefined,
   tags: string[] | undefined,
 ): boolean {
@@ -316,17 +318,17 @@ export function filterByAdvancedCriteria(
 
     // Compute and check confidence
     const confidence = computeMatchConfidence(match);
-    if (!passesConfidenceFilter(confidence, filters.confidence)) {
+    if (!isConfidenceWithinRange(confidence, filters.confidence)) {
       return false;
     }
 
     // Check all filters
     return (
-      passesFormatFilter(matchData, filters.formats) &&
-      passesGenreFilter(matchData, filters.genres) &&
-      passesStatusFilter(matchData, filters.publicationStatuses) &&
-      passesYearFilter(matchData, filters.yearRange) &&
-      passesTagFilter(matchData, filters.tags)
+      isFormatAllowed(matchData, filters.formats) &&
+      isGenreAllowed(matchData, filters.genres) &&
+      isStatusAllowed(matchData, filters.publicationStatuses) &&
+      isYearWithinRange(matchData, filters.yearRange) &&
+      isTagAllowed(matchData, filters.tags)
     );
   });
 }

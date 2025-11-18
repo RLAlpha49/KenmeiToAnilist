@@ -66,7 +66,7 @@ type StatsSummary = {
   readonly modeRange: string | null;
 };
 
-const BINS: BinDefinition[] = [
+const BIN_DEFINITIONS: BinDefinition[] = [
   { label: "1-10", min: 1, max: 10 },
   { label: "11-25", min: 11, max: 25 },
   { label: "26-50", min: 26, max: 50 },
@@ -83,8 +83,8 @@ const BINS: BinDefinition[] = [
  * @source
  */
 function computeBinIndex(value: number): number {
-  for (let index = 0; index < BINS.length; index++) {
-    const bin = BINS[index];
+  for (let index = 0; index < BIN_DEFINITIONS.length; index++) {
+    const bin = BIN_DEFINITIONS[index];
     if (bin.max === null) {
       if (value >= bin.min) return index;
     } else if (value >= bin.min && value <= bin.max) {
@@ -120,7 +120,7 @@ function calculateStatistics(values: number[]): StatsSummary {
       ? (sorted[middle - 1] + sorted[middle]) / 2
       : sorted[middle];
 
-  const binCounts = new Array<number>(BINS.length).fill(0);
+  const binCounts = new Array<number>(BIN_DEFINITIONS.length).fill(0);
   for (const value of values) {
     const index = computeBinIndex(value);
     if (index >= 0) {
@@ -136,7 +136,7 @@ function calculateStatistics(values: number[]): StatsSummary {
     totalChapters,
     averageChapters,
     medianChapters,
-    modeRange: modeIndex >= 0 ? BINS[modeIndex].label : null,
+    modeRange: modeIndex >= 0 ? BIN_DEFINITIONS[modeIndex].label : null,
   };
 }
 
@@ -182,7 +182,7 @@ function buildHistogram(matchResults?: Array<MinimalMatchResult> | null): {
     return { bins: [], stats };
   }
 
-  const counts = new Array<number>(BINS.length).fill(0);
+  const counts = new Array<number>(BIN_DEFINITIONS.length).fill(0);
   for (const value of values) {
     const index = computeBinIndex(value);
     if (index >= 0) {
@@ -190,7 +190,7 @@ function buildHistogram(matchResults?: Array<MinimalMatchResult> | null): {
     }
   }
 
-  const bins: BinDatum[] = BINS.map((bin, index) => ({
+  const bins: BinDatum[] = BIN_DEFINITIONS.map((bin, index) => ({
     range: bin.label,
     count: counts[index],
   })).filter((item) => item.count > 0);

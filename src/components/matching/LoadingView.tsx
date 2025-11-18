@@ -6,7 +6,7 @@ import { AlertCircle } from "lucide-react";
 import { MatchingProgressPanel } from "./MatchingProgress";
 import type { Variants } from "framer-motion";
 import { useMatchingProcess } from "../../hooks/use-matching-process";
-import { useRateLimit } from "../../contexts/RateLimitContext";
+import { useRateLimit } from "../../contexts/rate-limit-context";
 
 type MatchingProcessType = ReturnType<typeof useMatchingProcess>;
 type RateLimitType = ReturnType<typeof useRateLimit>;
@@ -83,8 +83,8 @@ export function LoadingView({
           onPauseProcess={matchingProcess.handlePauseMatching}
           onResumeProcess={matchingProcess.handleResumeMatchingRequests}
           bypassCache={matchingProcess.bypassCache}
-          freshSearch={matchingProcess.freshSearch}
-          disableControls={rateLimitState.isRateLimited}
+          isFreshSearch={matchingProcess.isFreshSearch}
+          shouldDisableControls={rateLimitState.isRateLimited}
           isPaused={matchingProcess.isTimeEstimatePaused}
           isManuallyPaused={matchingProcess.isManuallyPaused}
           isPauseTransitioning={matchingProcess.isPauseTransitioning}

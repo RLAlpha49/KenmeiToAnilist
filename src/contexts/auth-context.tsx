@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module AuthContext
+ * @module auth-context
  * @description React context provider for authentication state and actions, including login, logout, and credential management.
  */
 
@@ -24,7 +24,7 @@ import {
 import { truncateToastMessage } from "../utils/text-highlight";
 import {
   AuthState,
-  APICredentials,
+  ApiCredentials,
   ViewerResponse,
   AuthStateContextValue,
   AuthActionsContextValue,
@@ -35,7 +35,7 @@ import {
   AuthStateContext,
 } from "./auth-context-definition";
 import { DEFAULT_ANILIST_CONFIG } from "../config/anilist";
-import { useDebugActions, StateInspectorHandle } from "./DebugContext";
+import { useDebugActions, StateInspectorHandle } from "./debug-context";
 import { request } from "../api/anilist/client";
 import { GET_VIEWER } from "../api/anilist/queries";
 
@@ -67,7 +67,7 @@ interface AuthDebugSnapshot {
   error: string | null;
   statusMessage: string | null;
   isBrowserAuthFlow: boolean;
-  customCredentials: APICredentials | null;
+  customCredentials: ApiCredentials | null;
   isOnline: boolean;
   wasOffline: boolean;
 }
@@ -119,7 +119,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [customCredentials, setCustomCredentials] =
-    useState<APICredentials | null>(null);
+    useState<ApiCredentials | null>(null);
   const [isBrowserAuthFlow, setIsBrowserAuthFlow] = useState(false);
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const [wasOffline, setWasOffline] = useState<boolean>(false);
@@ -251,7 +251,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
    * @throws {Error} If any required credential field is missing.
    * @source
    */
-  const validateCredentials = (credentials: APICredentials) => {
+  const validateCredentials = (credentials: ApiCredentials) => {
     const { clientId, clientSecret, redirectUri } = credentials;
     if (!clientId || !clientSecret || !redirectUri) {
       toast.error(
@@ -558,7 +558,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
 
   const storeCredentialsAndBuildUrl = useCallback(
     async (
-      incoming: APICredentials,
+      incoming: ApiCredentials,
     ): Promise<{ oauthUrl: string; redirectUri: string }> => {
       // Normalize redirect URI to include protocol
       let redirectUri = incoming.redirectUri;
@@ -703,7 +703,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
       lockedCredentialSourceRef.current = authState.credentialSource;
 
       // Get current credentials based on credential source
-      const credentials: APICredentials =
+      const credentials: ApiCredentials =
         authState.credentialSource === "custom" && customCredentials
           ? customCredentials
           : {
@@ -790,7 +790,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
 
   // Login function
   const login = useCallback(
-    async (credentials: APICredentials) => {
+    async (credentials: ApiCredentials) => {
       try {
         // Check if online before attempting to authenticate
         if (!isOnline) {

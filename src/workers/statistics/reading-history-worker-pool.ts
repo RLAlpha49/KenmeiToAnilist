@@ -220,7 +220,7 @@ export class ReadingHistoryWorkerPool {
           });
         },
         reject,
-        cancelled: false,
+        isCancelled: false,
         progressCallback,
         onProgress: (message: MessageEvent) => {
           // Adapt READING_HISTORY_FILTER_PROGRESS message to typed callback

@@ -14,13 +14,13 @@ import { Badge } from "../../ui/Badge";
 /**
  * Props for the AlternativeSearchSettingsCard component.
  *
- * @property enableMangaDexSearch - Whether MangaDex search fallback is enabled.
+ * @property isMangaDexSearchEnabled - Whether the MangaDex search fallback is enabled.
  * @property onComickSearchToggle - Callback to toggle Comick search fallback.
  * @property onMangaDexSearchToggle - Callback to toggle MangaDex search fallback.
  * @source
  */
 export interface AlternativeSearchSettingsCardProps {
-  enableMangaDexSearch: boolean;
+  isMangaDexSearchEnabled: boolean;
   onComickSearchToggle: (enabled: boolean) => void;
   onMangaDexSearchToggle: (enabled: boolean) => void;
 }
@@ -36,7 +36,7 @@ export interface AlternativeSearchSettingsCardProps {
  * @source
  */
 function AlternativeSearchSettingsCardComponent({
-  enableMangaDexSearch,
+  isMangaDexSearchEnabled,
   onComickSearchToggle,
   onMangaDexSearchToggle,
 }: Readonly<AlternativeSearchSettingsCardProps>) {
@@ -98,7 +98,7 @@ function AlternativeSearchSettingsCardComponent({
                 <div className="flex items-center gap-2">
                   <Switch
                     id="mangadex-search-toggle"
-                    checked={enableMangaDexSearch}
+                    checked={isMangaDexSearchEnabled}
                     onCheckedChange={onMangaDexSearchToggle}
                   />
                   <Label
@@ -112,7 +112,7 @@ function AlternativeSearchSettingsCardComponent({
                   variant="secondary"
                   className="flex items-center gap-1 rounded-full border border-sky-500/20 bg-sky-100/70 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:border-sky-500/30 dark:bg-sky-900/40 dark:text-sky-200"
                 >
-                  {enableMangaDexSearch ? "Active" : "Disabled"}
+                  {isMangaDexSearchEnabled ? "Active" : "Disabled"}
                 </Badge>
               </div>
               <p className="text-xs text-sky-900/90 dark:text-sky-100">

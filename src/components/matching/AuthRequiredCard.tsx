@@ -10,7 +10,7 @@ import { Badge } from "../ui/Badge";
  * @property onGoToSettings - Callback to navigate to settings for AniList authentication.
  * @source
  */
-interface Props {
+interface AuthRequiredCardProps {
   onGoToSettings: () => void;
 }
 
@@ -21,7 +21,9 @@ interface Props {
  * @returns Rendered authentication prompt card with action button.
  * @source
  */
-export default function AuthRequiredCard({ onGoToSettings }: Readonly<Props>) {
+export default function AuthRequiredCard({
+  onGoToSettings,
+}: Readonly<AuthRequiredCardProps>) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}

@@ -61,8 +61,8 @@ function MatchActionsComponent({
   const buttonBaseClass =
     "relative overflow-hidden rounded-xl px-4 py-2 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
 
-  /** Common search button component used across different match statuses. */
-  const commonSearchButton = (text: string, ariaLabel: string) => (
+  /** Renders the shared manual search button used across match statuses. */
+  const renderCommonSearchButton = (text: string, ariaLabel: string) => (
     <Button
       className={`${buttonBaseClass} bg-linear-to-r from-indigo-500 via-indigo-400 to-sky-400 text-white shadow-[0_10px_30px_-12px_rgba(79,70,229,0.65)] hover:shadow-[0_18px_40px_-15px_rgba(14,165,233,0.55)] focus-visible:ring-indigo-400/70 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none dark:from-indigo-500 dark:via-indigo-400 dark:to-sky-500`}
       onClick={() => {
@@ -106,7 +106,7 @@ function MatchActionsComponent({
             </Button>
           )}
 
-          {commonSearchButton(
+          {renderCommonSearchButton(
             "Search Manually",
             `Search manually for ${match.kenmeiManga.title}`,
           )}
@@ -130,7 +130,7 @@ function MatchActionsComponent({
     case "manual":
       return (
         <>
-          {commonSearchButton(
+          {renderCommonSearchButton(
             "Change Match",
             `Change match for ${match.kenmeiManga.title}`,
           )}
@@ -153,7 +153,7 @@ function MatchActionsComponent({
     case "skipped":
       return (
         <>
-          {commonSearchButton(
+          {renderCommonSearchButton(
             "Search Manually",
             `Find match for ${match.kenmeiManga.title}`,
           )}

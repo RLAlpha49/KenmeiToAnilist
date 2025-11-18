@@ -163,7 +163,7 @@ export function handleReadingHistoryFilter(
         `[Worker] ⚠️ Reading history filter task ${taskId} was cancelled before completion`,
       );
       globalThis.postMessage({
-        type: "READ_HIST_CANCELLED",
+        type: "READING_HISTORY_CANCELLED",
         payload: {
           taskId,
           stage: "completion",

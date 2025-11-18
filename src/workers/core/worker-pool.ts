@@ -189,7 +189,7 @@ export class WorkerPool {
     }
 
     // If task is cancelled, handle terminal messages and skip non-terminal
-    if (task.cancelled) {
+    if (task.isCancelled) {
       this.handleCancelledTaskMessage(taskId, task, workerIndex, message);
       return;
     }
@@ -294,12 +294,12 @@ export class WorkerPool {
       message.type === "DUPLICATE_DETECTION_RESULT" ||
       message.type === "READING_HISTORY_FILTER_RESULT" ||
       message.type === "MATCH_CANCELLED" ||
-      message.type === "STATS_CANCELLED" ||
-      message.type === "TITLE_NORM_CANCELLED" ||
+      message.type === "STATISTICS_AGGREGATION_CANCELLED" ||
+      message.type === "TITLE_NORMALIZATION_CANCELLED" ||
       message.type === "BATCH_SYNC_CANCELLED" ||
-      message.type === "DUP_DETECTION_CANCELLED" ||
+      message.type === "DUPLICATE_DETECTION_CANCELLED" ||
       message.type === "DATA_TABLE_CANCELLED" ||
-      message.type === "READ_HIST_CANCELLED" ||
+      message.type === "READING_HISTORY_CANCELLED" ||
       message.type === "ERROR";
 
     if (!isTerminalMessage) {
@@ -381,7 +381,7 @@ export class WorkerPool {
     const task = this.tasks.get(taskId);
     if (task?.workerIndex !== undefined) {
       // Mark task as cancelled
-      task.cancelled = true;
+      task.isCancelled = true;
 
       // Post CANCEL message to worker
       this.workers[task.workerIndex].postMessage({

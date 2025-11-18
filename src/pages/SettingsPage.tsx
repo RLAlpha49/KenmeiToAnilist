@@ -23,11 +23,12 @@ import {
   TooltipTrigger,
 } from "../components/ui/Tooltip";
 import { SettingsSection, SettingsSearchResult } from "../types/settings";
+import type { CachesToClear } from "../components/settings/types";
 import { useAuthActions, useAuthState } from "../hooks/use-auth";
 import { useAutoUpdater } from "../hooks/use-auto-updater";
-import { useDebugActions, useDebugState } from "../contexts/DebugContext";
-import { useOnboarding } from "../contexts/OnboardingContext";
-import { APICredentials } from "../types/auth";
+import { useDebugActions, useDebugState } from "../contexts/debug-context";
+import { useOnboarding } from "../contexts/onboarding-context";
+import { ApiCredentials } from "../types/auth";
 import { DEFAULT_ANILIST_CONFIG, DEFAULT_AUTH_PORT } from "../config/anilist";
 import {
   STORAGE_KEYS,
@@ -51,6 +52,17 @@ import { AccountCredentialsSection } from "../components/settings/AccountCredent
 import { SettingsTabsContainer } from "../components/settings/SettingsTabsContainer";
 import { UpdateManagementSection } from "@/components/settings/UpdateManagementSection";
 import { openExternalSafe } from "@/helpers/external/open-external";
+
+const CACHE_TYPE_LABELS: Record<keyof CachesToClear, string> = {
+  shouldClearAuthCache: "Auth",
+  shouldClearSettingsCache: "Settings",
+  shouldClearSyncCache: "Sync",
+  shouldClearImportCache: "Import",
+  shouldClearReviewCache: "Review",
+  shouldClearMangaCache: "Manga",
+  shouldClearSearchCache: "Search",
+  shouldClearOtherCache: "Other",
+};
 
 /**
  * Settings page component for the Kenmei to AniList sync tool.
@@ -89,26 +101,26 @@ export function SettingsPage() {
 
   const {
     isDebugEnabled,
-    storageDebuggerEnabled,
-    logViewerEnabled,
-    logRedactionEnabled,
-    stateInspectorEnabled,
-    ipcViewerEnabled,
-    eventLoggerEnabled,
-    confidenceTestExporterEnabled,
-    performanceMonitorEnabled,
+    isStorageDebuggerEnabled,
+    isLogViewerEnabled,
+    isLogRedactionEnabled,
+    isStateInspectorEnabled,
+    isIpcViewerEnabled,
+    isEventLoggerEnabled,
+    isConfidenceTestExporterEnabled,
+    isPerformanceMonitorEnabled,
   } = useDebugState();
 
   const {
     toggleDebug,
-    setStorageDebuggerEnabled,
-    setLogViewerEnabled,
-    setLogRedactionEnabled,
-    setStateInspectorEnabled,
-    setIpcViewerEnabled,
-    setEventLoggerEnabled,
-    setConfidenceTestExporterEnabled,
-    setPerformanceMonitorEnabled,
+    setIsStorageDebuggerEnabled,
+    setIsLogViewerEnabled,
+    setIsLogRedactionEnabled,
+    setIsStateInspectorEnabled,
+    setIsIpcViewerEnabled,
+    setIsEventLoggerEnabled,
+    setIsConfidenceTestExporterEnabled,
+    setIsPerformanceMonitorEnabled,
     recordEvent,
   } = useDebugActions();
 
@@ -122,20 +134,20 @@ export function SettingsPage() {
   );
 
   const [error, setError] = useState<AppError | null>(null);
-  const [cacheCleared, setCacheCleared] = useState(false);
+  const [isCacheCleared, setIsCacheCleared] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [showStatusMessage, setShowStatusMessage] = useState(true);
-  const [cachesToClear, setCachesToClear] = useState({
-    auth: false,
-    settings: false,
-    sync: false,
-    import: false,
-    review: false,
-    manga: false,
-    search: false,
-    other: false,
+  const [cachesToClear, setCachesToClear] = useState<CachesToClear>({
+    shouldClearAuthCache: false,
+    shouldClearSettingsCache: false,
+    shouldClearSyncCache: false,
+    shouldClearImportCache: false,
+    shouldClearReviewCache: false,
+    shouldClearMangaCache: false,
+    shouldClearSearchCache: false,
+    shouldClearOtherCache: false,
   });
-  const [useCustomCredentials, setUseCustomCredentials] = useState(
+  const [isUsingCustomCredentials, setIsUsingCustomCredentials] = useState(
     authState.credentialSource === "custom",
   );
   const [clientId, setClientId] = useState("");
@@ -145,12 +157,13 @@ export function SettingsPage() {
   );
   const [syncConfig, setSyncConfig] = useState<SyncConfig>(getSyncConfig());
   const [matchConfig, setMatchConfig] = useState<MatchConfig>(getMatchConfig());
-  const [useCustomThreshold, setUseCustomThreshold] = useState<boolean>(
-    typeof syncConfig.autoPauseThreshold === "string" ||
-      ![1, 7, 14, 30, 60, 90, 180, 365].includes(
-        Number(syncConfig.autoPauseThreshold),
-      ),
-  );
+  const [isCustomThresholdEnabled, setIsCustomThresholdEnabled] =
+    useState<boolean>(
+      typeof syncConfig.autoPauseThreshold === "string" ||
+        ![1, 7, 14, 30, 60, 90, 180, 365].includes(
+          Number(syncConfig.autoPauseThreshold),
+        ),
+    );
   // Update Check State
   const [updateChannel, setUpdateChannel] = useState<"stable" | "beta">(
     "stable",
@@ -519,25 +532,25 @@ export function SettingsPage() {
 
   // Update credential source when toggle changes, but avoid infinite loop
   useEffect(() => {
-    const newSource = useCustomCredentials ? "custom" : "default";
+    const newSource = isUsingCustomCredentials ? "custom" : "default";
     // Only update if actually changed and not from authState sync
     if (newSource !== prevCredentialSourceRef.current) {
       prevCredentialSourceRef.current = newSource;
       setCredentialSource(newSource);
     }
-  }, [useCustomCredentials, setCredentialSource]);
+  }, [isUsingCustomCredentials, setCredentialSource]);
 
   // Update local state if authState.credentialSource changes externally
   useEffect(() => {
     if (authState.credentialSource !== prevCredentialSourceRef.current) {
       prevCredentialSourceRef.current = authState.credentialSource;
-      setUseCustomCredentials(authState.credentialSource === "custom");
+      setIsUsingCustomCredentials(authState.credentialSource === "custom");
     }
   }, [authState.credentialSource]);
 
   // Update custom credentials when fields change
   useEffect(() => {
-    if (useCustomCredentials && clientId && clientSecret && redirectUri) {
+    if (isUsingCustomCredentials && clientId && clientSecret && redirectUri) {
       // Only update if values actually changed
       if (
         clientId !== prevCredentialsRef.current.id ||
@@ -556,7 +569,7 @@ export function SettingsPage() {
       }
     }
   }, [
-    useCustomCredentials,
+    isUsingCustomCredentials,
     clientId,
     clientSecret,
     redirectUri,
@@ -617,7 +630,7 @@ export function SettingsPage() {
       // Load custom credentials toggle state
       const savedUseCustom = localStorage.getItem("useCustomCredentials");
       if (savedUseCustom) {
-        setUseCustomCredentials(JSON.parse(savedUseCustom));
+        setIsUsingCustomCredentials(JSON.parse(savedUseCustom));
         console.debug(
           `[Settings] 🔍 Custom credentials enabled: ${savedUseCustom}`,
         );
@@ -660,13 +673,13 @@ export function SettingsPage() {
   // Save custom credentials toggle state whenever it changes
   useEffect(() => {
     console.debug(
-      `[Settings] 🔍 Saving custom credentials toggle: ${useCustomCredentials}`,
+      `[Settings] 🔍 Saving custom credentials toggle: ${isUsingCustomCredentials}`,
     );
     localStorage.setItem(
       "useCustomCredentials",
-      JSON.stringify(useCustomCredentials),
+      JSON.stringify(isUsingCustomCredentials),
     );
-  }, [useCustomCredentials]);
+  }, [isUsingCustomCredentials]);
 
   // Save custom credentials whenever they change
   useEffect(() => {
@@ -877,11 +890,11 @@ export function SettingsPage() {
   const handleLogin = async () => {
     try {
       console.info(
-        `[Settings] 🔐 Initiating AniList login (${useCustomCredentials ? "custom" : "default"} credentials)`,
+        `[Settings] 🔐 Initiating AniList login (${isUsingCustomCredentials ? "custom" : "default"} credentials)`,
       );
 
       // Create credentials object based on source
-      const credentials: APICredentials = useCustomCredentials
+      const credentials: ApiCredentials = isUsingCustomCredentials
         ? {
             source: "custom",
             clientId,
@@ -939,7 +952,7 @@ export function SettingsPage() {
    */
   const handleClearCache = async () => {
     console.info("[Settings] 🗑️ Starting cache clear operation...");
-    setCacheCleared(false);
+    setIsCacheCleared(false);
     setIsClearing(true);
     setError(null);
 
@@ -954,7 +967,7 @@ export function SettingsPage() {
       "[Settings] 🔍 Cache types selected:",
       Object.entries(cachesToClear)
         .filter(([, v]) => v)
-        .map(([k]) => k),
+        .map(([k]) => CACHE_TYPE_LABELS[k as keyof CachesToClear] ?? k),
     );
 
     const pushIfMissing = (arr: string[], value: string) => {
@@ -975,30 +988,45 @@ export function SettingsPage() {
       return false;
     };
 
-    const getCacheKeysByType = (): Record<string, string[]> => {
-      const base: Record<string, string[]> = {
-        auth: ["authState", "customCredentials", "useCustomCredentials"],
-        search: ["anilist_search_cache"],
-        manga: ["anilist_manga_cache"],
-        review: ["match_results", "pending_manga", "matching_progress"],
-        import: ["kenmei_data", "import_history", "import_stats"],
-        sync: ["anilist_sync_history"],
-        settings: ["sync_config", "theme"],
-        other: ["cache_version"],
+    const getCacheKeysByType = (): Record<keyof CachesToClear, string[]> => {
+      const base: Record<keyof CachesToClear, string[]> = {
+        shouldClearAuthCache: [
+          "authState",
+          "customCredentials",
+          "useCustomCredentials",
+        ],
+        shouldClearSearchCache: ["anilist_search_cache"],
+        shouldClearMangaCache: ["anilist_manga_cache"],
+        shouldClearReviewCache: [
+          "match_results",
+          "pending_manga",
+          "matching_progress",
+        ],
+        shouldClearImportCache: [
+          "kenmei_data",
+          "import_history",
+          "import_stats",
+        ],
+        shouldClearSyncCache: ["anilist_sync_history"],
+        shouldClearSettingsCache: ["sync_config", "theme"],
+        shouldClearOtherCache: ["cache_version"],
       };
 
       if (STORAGE_KEYS && typeof STORAGE_KEYS === "object") {
         const rules: { patterns: string[]; target: string[] }[] = [
-          { patterns: ["MATCH", "REVIEW"], target: base.review },
-          { patterns: ["IMPORT"], target: base.import },
-          { patterns: ["CACHE"], target: base.other },
+          {
+            patterns: ["MATCH", "REVIEW"],
+            target: base.shouldClearReviewCache,
+          },
+          { patterns: ["IMPORT"], target: base.shouldClearImportCache },
+          { patterns: ["CACHE"], target: base.shouldClearOtherCache },
         ];
 
         for (const [key, value] of Object.entries(STORAGE_KEYS)) {
           if (typeof value !== "string") continue;
           const matched = matchStorageKeyToRule(key, value, rules);
           if (!matched) {
-            pushIfMissing(base.other, value);
+            pushIfMissing(base.shouldClearOtherCache, value);
           }
         }
       }
@@ -1013,22 +1041,22 @@ export function SettingsPage() {
     }) => {
       try {
         if (
-          cachesToClear.search &&
+          cachesToClear.shouldClearSearchCache &&
           typeof services.clearSearchCache === "function"
         ) {
           services.clearSearchCache();
           console.debug("[Settings] 🧹 Search cache cleared");
         }
         if (
-          cachesToClear.manga &&
+          cachesToClear.shouldClearMangaCache &&
           typeof services.clearMangaCache === "function"
         ) {
           services.clearMangaCache();
           console.debug("[Settings] 🧹 Manga cache cleared");
         }
         if (
-          cachesToClear.search &&
-          cachesToClear.manga &&
+          cachesToClear.shouldClearSearchCache &&
+          cachesToClear.shouldClearMangaCache &&
           services.cacheDebugger?.resetAllCaches
         ) {
           services.cacheDebugger.resetAllCaches();
@@ -1077,7 +1105,10 @@ export function SettingsPage() {
     const showResultSummary = () => {
       const clearedSummary = Object.entries(cachesToClear)
         .filter(([, selected]) => selected)
-        .map(([type]) => `✅ Cleared ${type} cache`)
+        .map(([type]) => {
+          const label = CACHE_TYPE_LABELS[type as keyof CachesToClear] ?? type;
+          return `✅ Cleared ${label} cache`;
+        })
         .join("\n");
 
       try {
@@ -1107,10 +1138,13 @@ export function SettingsPage() {
       const keysByType = getCacheKeysByType();
       const keysToRemove: string[] = [];
 
-      for (const [type, selected] of Object.entries(cachesToClear)) {
+      for (const [type, selected] of Object.entries(cachesToClear) as [
+        keyof CachesToClear,
+        boolean,
+      ][]) {
         if (!selected) continue;
         const keys = keysByType[type];
-        if (Array.isArray(keys)) keysToRemove.push(...keys);
+        keysToRemove.push(...keys);
       }
 
       const uniqueKeys = [...new Set(keysToRemove)];
@@ -1124,9 +1158,9 @@ export function SettingsPage() {
       if (anySelected) deleteIndexedDB();
 
       console.info("[Settings] ✅ Selected caches cleared successfully");
-      setCacheCleared(true);
+      setIsCacheCleared(true);
       showResultSummary();
-      setTimeout(() => setCacheCleared(false), 5000);
+      setTimeout(() => setIsCacheCleared(false), 5000);
     } catch (err) {
       console.error("[Settings] ❌ Error clearing cache:", err);
       setError(
@@ -1538,15 +1572,15 @@ export function SettingsPage() {
     if (!trimmedClientSecret) missing.push("Client Secret");
     if (!trimmedRedirectUri) missing.push("Redirect URI");
     return {
-      complete: missing.length === 0,
+      isComplete: missing.length === 0,
       missing,
     };
   }, [clientId, clientSecret, redirectUri]);
 
-  const credentialsBlocked = useCustomCredentials
-    ? !customCredentialStatus.complete
+  const credentialsBlocked = isUsingCustomCredentials
+    ? !customCredentialStatus.isComplete
     : !defaultCredentialStatus.hasCredentials;
-  const disableAuthActions = isLoading || credentialsBlocked;
+  const areAuthActionsDisabled = isLoading || credentialsBlocked;
 
   const expiresLabel = useMemo(
     () => (authState.isAuthenticated ? calculateExpiryTime() : undefined),
@@ -1554,8 +1588,9 @@ export function SettingsPage() {
   );
 
   const credentialSourceLabel = useMemo(
-    () => (useCustomCredentials ? "Custom credentials" : "Default credentials"),
-    [useCustomCredentials],
+    () =>
+      isUsingCustomCredentials ? "Custom credentials" : "Default credentials",
+    [isUsingCustomCredentials],
   );
 
   // Computed value for button state
@@ -1576,7 +1611,7 @@ export function SettingsPage() {
           statusMessage && showStatusMessage && !error ? statusMessage : null
         }
         isLoading={isLoading}
-        disableLogin={disableAuthActions}
+        isLoginDisabled={areAuthActionsDisabled}
         onLogin={handleLogin}
         onRefreshToken={refreshToken}
         onLogout={logout}
@@ -1588,8 +1623,8 @@ export function SettingsPage() {
         <AccountCredentialsSection
           authState={authState}
           isLoading={isLoading}
-          useCustomCredentials={useCustomCredentials}
-          onToggleCustomCredentials={setUseCustomCredentials}
+          isUsingCustomCredentials={isUsingCustomCredentials}
+          onToggleCustomCredentials={setIsUsingCustomCredentials}
           clientId={clientId}
           onClientIdChange={setClientId}
           clientSecret={clientSecret}
@@ -1650,13 +1685,13 @@ export function SettingsPage() {
           <ErrorMessage
             message={error.message}
             type={error.type}
-            dismiss={dismissError}
-            retry={error.type === ErrorType.AUTH ? handleLogin : undefined}
+            onDismiss={dismissError}
+            onRetry={error.type === ErrorType.AUTH ? handleLogin : undefined}
           />
         </motion.div>
       )}
 
-      {cacheCleared && (
+      {isCacheCleared && (
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1676,25 +1711,25 @@ export function SettingsPage() {
         highlightedSectionId={highlightedSectionId}
         matchConfig={matchConfig}
         syncConfig={syncConfig}
-        useCustomThreshold={useCustomThreshold}
+        isCustomThresholdEnabled={isCustomThresholdEnabled}
         cachesToClear={cachesToClear}
         isClearing={isClearing}
-        cacheCleared={cacheCleared}
+        isCacheCleared={isCacheCleared}
         isRestoringBackup={isRestoringBackup}
         selectedBackupFile={selectedBackupFile}
         backupValidationError={backupValidationError}
         isDebugEnabled={isDebugEnabled}
-        storageDebuggerEnabled={storageDebuggerEnabled}
-        logViewerEnabled={logViewerEnabled}
-        logRedactionEnabled={logRedactionEnabled}
-        stateInspectorEnabled={stateInspectorEnabled}
-        ipcViewerEnabled={ipcViewerEnabled}
-        eventLoggerEnabled={eventLoggerEnabled}
-        confidenceTestExporterEnabled={confidenceTestExporterEnabled}
-        performanceMonitorEnabled={performanceMonitorEnabled}
+        isStorageDebuggerEnabled={isStorageDebuggerEnabled}
+        isLogViewerEnabled={isLogViewerEnabled}
+        isLogRedactionEnabled={isLogRedactionEnabled}
+        isStateInspectorEnabled={isStateInspectorEnabled}
+        isIpcViewerEnabled={isIpcViewerEnabled}
+        isEventLoggerEnabled={isEventLoggerEnabled}
+        isConfidenceTestExporterEnabled={isConfidenceTestExporterEnabled}
+        isPerformanceMonitorEnabled={isPerformanceMonitorEnabled}
         onMatchConfigChange={saveMatchConfigWithEvent}
         onSyncConfigChange={saveSyncConfigWithEvent}
-        onCustomThresholdToggle={setUseCustomThreshold}
+        onCustomThresholdToggle={setIsCustomThresholdEnabled}
         setSyncConfig={setSyncConfig}
         onCachesToClearChange={setCachesToClear}
         onClearCaches={handleClearCache}
@@ -1708,14 +1743,14 @@ export function SettingsPage() {
         onScheduleConfigChange={handleScheduleConfigChange}
         onTriggerBackup={handleTriggerScheduledBackup}
         onToggleDebug={toggleDebug}
-        onStorageDebuggerChange={setStorageDebuggerEnabled}
-        onLogViewerChange={setLogViewerEnabled}
-        onLogRedactionChange={setLogRedactionEnabled}
-        onStateInspectorChange={setStateInspectorEnabled}
-        onIpcViewerChange={setIpcViewerEnabled}
-        onEventLoggerChange={setEventLoggerEnabled}
-        onConfidenceTestExporterChange={setConfidenceTestExporterEnabled}
-        onPerformanceMonitorChange={setPerformanceMonitorEnabled}
+        onStorageDebuggerChange={setIsStorageDebuggerEnabled}
+        onLogViewerChange={setIsLogViewerEnabled}
+        onLogRedactionChange={setIsLogRedactionEnabled}
+        onStateInspectorChange={setIsStateInspectorEnabled}
+        onIpcViewerChange={setIsIpcViewerEnabled}
+        onEventLoggerChange={setIsEventLoggerEnabled}
+        onConfidenceTestExporterChange={setIsConfidenceTestExporterEnabled}
+        onPerformanceMonitorChange={setIsPerformanceMonitorEnabled}
         collapsedSections={collapsedSections}
         onToggleSection={handleToggleSection}
       />

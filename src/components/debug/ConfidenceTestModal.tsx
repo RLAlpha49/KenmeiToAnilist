@@ -33,16 +33,16 @@ interface ConfidenceTestModalProps {
 export function ConfidenceTestModal({
   match,
 }: Readonly<ConfidenceTestModalProps>): React.ReactNode {
-  const [open, setOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [copiedFormat, setCopiedFormat] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const searchTitle = match.kenmeiManga.title;
   const firstMatch = match.anilistMatches?.[0];
 
-  const handleCopy = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
+  const handleCopy = async (event: React.MouseEvent) => {
+    event.stopPropagation();
+    event.preventDefault();
 
     try {
       setError(null);
@@ -93,8 +93,9 @@ export function ConfidenceTestModal({
 
       setCopiedFormat("command");
       setTimeout(() => setCopiedFormat(null), 2000);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       setError(errorMessage);
       setTimeout(() => setError(null), 3000);
     }
@@ -131,7 +132,7 @@ export function ConfidenceTestModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
       <DialogTrigger asChild>
         <Button
           variant="ghost"
@@ -207,7 +208,7 @@ export function ConfidenceTestModal({
         </Tabs>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
+          <Button variant="outline" onClick={() => setIsModalOpen(false)}>
             Close
           </Button>
         </DialogFooter>

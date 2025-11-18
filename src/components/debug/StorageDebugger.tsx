@@ -72,9 +72,9 @@ const tryParseJSON = (
   try {
     const data = JSON.parse(value);
     return { ok: true, data };
-  } catch (e) {
-    const err = e as { message?: string };
-    return { ok: false, error: err?.message || "Invalid JSON" };
+  } catch (error) {
+    const typedError = error as { message?: string };
+    return { ok: false, error: typedError?.message || "Invalid JSON" };
   }
 };
 
@@ -453,8 +453,8 @@ export function StorageDebugger() {
         `Imported ${applied} items${isElectronStore ? ". localStorage and cache automatically synced." : ""}`,
       );
       await refreshData();
-    } catch (e) {
-      const err = e as { message?: string };
+    } catch (error) {
+      const err = error as { message?: string };
       toast.error(err?.message || "Import failed");
     }
   };
@@ -527,9 +527,9 @@ export function StorageDebugger() {
                   type="file"
                   accept="application/json"
                   className="hidden"
-                  onChange={(e) =>
-                    e.target.files &&
-                    onImportJson(e.target.files[0], isElectronStore)
+                  onChange={(event) =>
+                    event.target.files &&
+                    onImportJson(event.target.files[0], isElectronStore)
                   }
                 />
                 <Button asChild variant="outline" size="sm">
@@ -717,7 +717,7 @@ export function StorageDebugger() {
               <Input
                 placeholder="Search by key or value…"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(event) => setSearchQuery(event.target.value)}
                 className="border-border/60 bg-background/80 w-full rounded-full pl-9 pr-4 text-sm shadow-inner"
               />
             </div>
@@ -935,10 +935,10 @@ export function StorageDebugger() {
                     <Textarea
                       id="edit-value"
                       value={editingItem.value}
-                      onChange={(e) =>
+                      onChange={(event) =>
                         setEditingItem({
                           ...editingItem,
-                          value: e.target.value,
+                          value: event.target.value,
                         })
                       }
                       className="wrap-break-word h-64 w-full max-w-xl resize-y overflow-auto whitespace-pre-wrap font-mono"
@@ -984,8 +984,8 @@ export function StorageDebugger() {
                 <Input
                   id="new-key"
                   value={newItem.key}
-                  onChange={(e) =>
-                    setNewItem({ ...newItem, key: e.target.value })
+                  onChange={(event) =>
+                    setNewItem({ ...newItem, key: event.target.value })
                   }
                   className="font-mono"
                   placeholder="Enter key..."
@@ -996,8 +996,8 @@ export function StorageDebugger() {
                 <Textarea
                   id="new-value"
                   value={newItem.value}
-                  onChange={(e) =>
-                    setNewItem({ ...newItem, value: e.target.value })
+                  onChange={(event) =>
+                    setNewItem({ ...newItem, value: event.target.value })
                   }
                   className="h-64 resize-y overflow-y-auto font-mono"
                   style={{ width: "100%", maxWidth: "100%" }}

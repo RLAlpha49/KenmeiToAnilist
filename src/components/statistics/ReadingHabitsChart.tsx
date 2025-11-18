@@ -75,9 +75,9 @@ export const ReadingHabitsChart: FC<ReadingHabitsChartProps> = ({
   // Merge comparison data for day of week if available
   const dayOfWeekChartData = useMemo(() => {
     if (!comparisonData) return byDayOfWeek;
-    return byDayOfWeek.map((current, idx) => ({
+    return byDayOfWeek.map((current, index) => ({
       ...current,
-      comparisonChapters: comparisonData.byDayOfWeek[idx]?.chapters || 0,
+      comparisonChapters: comparisonData.byDayOfWeek[index]?.chapters || 0,
     }));
   }, [byDayOfWeek, comparisonData]);
 
@@ -388,9 +388,9 @@ export const ReadingHabitsChart: FC<ReadingHabitsChartProps> = ({
               </div>
               <div className="space-y-1">
                 {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
-                  (day, idx) => {
+                  (day, index) => {
                     const placeholderHeight =
-                      [30, 45, 50, 48, 55, 40, 35][idx] || 40;
+                      [30, 45, 50, 48, 55, 40, 35][index] || 40;
                     return (
                       <div
                         key={`habits-day-${day}`}

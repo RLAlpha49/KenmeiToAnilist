@@ -93,18 +93,18 @@ interface ExportRow {
  * Builds export rows from import and sync statistics.
  * @param importStats - Import statistics object or null.
  * @param syncStats - Sync statistics object or null.
- * @param sections - Active sections to include in export.
+ * @param activeSections - Active sections to include in export.
  * @returns Array of export row objects with summary metrics.
  * @source
  */
 function buildSummaryRows(
   importStats: ImportStats | null,
   syncStats: SyncStats | null,
-  sections: Set<ExportSection>,
+  activeSections: Set<ExportSection>,
 ): ExportRow[] {
   const rows: ExportRow[] = [];
 
-  if (sections.has("import") && importStats) {
+  if (activeSections.has("import") && importStats) {
     const statusRows = Object.entries(importStats.statusCounts).map(
       ([status, count]) => ({
         section: "Import Status",
@@ -129,7 +129,7 @@ function buildSummaryRows(
     rows.push(...statusRows, ...metaRows);
   }
 
-  if (sections.has("sync") && syncStats) {
+  if (activeSections.has("sync") && syncStats) {
     const syncRows: ExportRow[] = [
       {
         section: "Sync Metrics",
@@ -202,15 +202,15 @@ export function ExportStatisticsButton({
   isFiltered,
 }: Readonly<ExportStatisticsButtonProps>) {
   const [format, setFormat] = useState<StatisticsExportFormat>("json");
-  const [sections, setSections] = useState<Set<ExportSection>>(
+  const [selectedSections, setSelectedSections] = useState<Set<ExportSection>>(
     () => new Set<ExportSection>(["import", "sync", "matches"]),
   );
-  const [open, setOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const matchCount = useMemo(() => matchResults.length, [matchResults]);
 
-  const toggleSection = useCallback((section: ExportSection) => {
-    setSections((prev) => {
+  const toggleExportSection = useCallback((section: ExportSection) => {
+    setSelectedSections((prev) => {
       const next = new Set(prev);
       if (next.has(section)) {
         next.delete(section);
@@ -226,7 +226,7 @@ export function ExportStatisticsButton({
       "json",
       matchResults.length,
       undefined,
-      Array.from(sections),
+      Array.from(selectedSections),
     );
 
     const enrichedMetadata = {
@@ -241,15 +241,15 @@ export function ExportStatisticsButton({
       generatedAt: new Date().toISOString(),
     };
 
-    if (sections.has("import") && importStats) {
+    if (selectedSections.has("import") && importStats) {
       payload.importStats = importStats;
     }
 
-    if (sections.has("sync") && syncStats) {
+    if (selectedSections.has("sync") && syncStats) {
       payload.syncStats = syncStats;
     }
 
-    if (sections.has("matches") && matchResults.length > 0) {
+    if (selectedSections.has("matches") && matchResults.length > 0) {
       payload.matchResults = matchResults;
     }
 
@@ -258,19 +258,23 @@ export function ExportStatisticsButton({
     importStats,
     syncStats,
     matchResults,
-    sections,
+    selectedSections,
     appliedFilters,
     comparisonMode,
     isFiltered,
   ]);
 
   const buildTabularRows = useCallback((): ExportRow[] => {
-    const rows = buildSummaryRows(importStats, syncStats, sections);
-    if (sections.has("matches") && matchResults.length > 0) {
-      rows.push(...buildMatchRows(matchResults));
+    const summaryRows = buildSummaryRows(
+      importStats,
+      syncStats,
+      selectedSections,
+    );
+    if (selectedSections.has("matches") && matchResults.length > 0) {
+      summaryRows.push(...buildMatchRows(matchResults));
     }
-    return rows;
-  }, [importStats, syncStats, sections, matchResults]);
+    return summaryRows;
+  }, [importStats, syncStats, selectedSections, matchResults]);
 
   /**
    * Handles JSON export format.
@@ -280,26 +284,26 @@ export function ExportStatisticsButton({
     const payload = buildJsonPayload();
     const file = await exportToJson(payload, "statistics");
     toast.success(`Statistics exported to ${file}`);
-    setOpen(false);
+    setIsMenuOpen(false);
   }, [buildJsonPayload]);
 
   /**
    * Builds metadata comments for CSV export including filters and comparison mode.
    * @param baseMetadata - Base export metadata
-   * @param sectionArray - Array of export section names
+   * @param sectionNames - Array of export section names
    * @returns Array of comment rows with metadata
    */
   const buildCsvMetadataComments = useCallback(
     (
       baseMetadata: Record<string, unknown>,
-      sectionArray: string[],
+      sectionNames: string[],
     ): Array<Record<string, unknown>> => {
       const baseComments: Array<Record<string, unknown>> = [
         {
           comment: `Exported: ${baseMetadata.exportedAt ?? new Date().toISOString()}`,
         },
         { comment: `App Version: v${baseMetadata.appVersion ?? "unknown"}` },
-        { comment: `Sections: ${sectionArray.join(", ")}` },
+        { comment: `Sections: ${sectionNames.join(", ")}` },
       ];
 
       const filterComments: Array<Record<string, unknown>> = appliedFilters
@@ -361,11 +365,11 @@ export function ExportStatisticsButton({
 
   /**
    * Handles CSV export format.
-   * @param sectionArray - Array of export section names
+   * @param sectionNames - Array of export section names
    * @returns Promise that resolves when export is complete
    */
   const handleCsvExport = useCallback(
-    async (sectionArray: string[]): Promise<void> => {
+    async (selectedSectionNames: string[]): Promise<void> => {
       const rows = buildTabularRows();
 
       if (rows.length === 0) {
@@ -377,12 +381,12 @@ export function ExportStatisticsButton({
         "csv",
         matchResults.length,
         undefined,
-        sectionArray,
+        selectedSectionNames,
       );
 
       const metadataComments = buildCsvMetadataComments(
         baseMetadata as unknown as Record<string, unknown>,
-        sectionArray,
+        selectedSectionNames,
       );
       const withMetadata = [...metadataComments, ...rows];
 
@@ -390,24 +394,27 @@ export function ExportStatisticsButton({
       const file = await exportToCSV(tabularData, "statistics");
 
       toast.success(`Statistics exported to ${file}`);
-      setOpen(false);
+      setIsMenuOpen(false);
     },
     [buildTabularRows, matchResults.length, buildCsvMetadataComments],
   );
 
   /**
    * Handles Markdown export format.
-   * @param sectionArray - Array of export section names
+   * @param sectionNames - Array of export section names
    * @param totalEntries - Total number of entries being exported
    * @returns Promise that resolves when export is complete
    */
   const handleMarkdownExport = useCallback(
-    async (sectionArray: string[], totalEntries: number): Promise<void> => {
+    async (
+      selectedSectionNames: string[],
+      totalEntries: number,
+    ): Promise<void> => {
       const baseMetadata = buildExportMetadata(
         "markdown",
         totalEntries,
         undefined,
-        sectionArray,
+        selectedSectionNames,
       );
 
       const markdownData: Record<string, unknown> = {};
@@ -422,25 +429,25 @@ export function ExportStatisticsButton({
         markdownData.isFiltered = true;
       }
 
-      if (sections.has("import") && importStats) {
+      if (selectedSections.has("import") && importStats) {
         markdownData.importStats = importStats;
       }
 
-      if (sections.has("sync") && syncStats) {
+      if (selectedSections.has("sync") && syncStats) {
         markdownData.syncStats = syncStats;
       }
 
-      if (sections.has("matches") && matchResults.length > 0) {
+      if (selectedSections.has("matches") && matchResults.length > 0) {
         const flattened = matchResults.map(flattenMatchResult);
         markdownData.matchResults = flattened;
       }
 
       const file = exportToMarkdown(markdownData, "statistics", baseMetadata);
       toast.success(`Statistics exported to ${file}`);
-      setOpen(false);
+      setIsMenuOpen(false);
     },
     [
-      sections,
+      selectedSections,
       appliedFilters,
       comparisonMode,
       isFiltered,
@@ -451,13 +458,13 @@ export function ExportStatisticsButton({
   );
 
   const handleExport = useCallback(async () => {
-    if (sections.size === 0) {
+    if (selectedSections.size === 0) {
       toast.error("Select at least one dataset to export");
       return;
     }
 
     try {
-      const sectionArray = Array.from(sections);
+      const selectedSectionNames = Array.from(selectedSections);
       const totalEntries = matchResults.length;
 
       if (format === "json") {
@@ -466,17 +473,17 @@ export function ExportStatisticsButton({
       }
 
       if (format === "markdown") {
-        await handleMarkdownExport(sectionArray, totalEntries);
+        await handleMarkdownExport(selectedSectionNames, totalEntries);
         return;
       }
 
-      await handleCsvExport(sectionArray);
+      await handleCsvExport(selectedSectionNames);
     } catch (error) {
       console.error("[ExportStatistics] ❌ Export failed", error);
       toast.error("Failed to export statistics");
     }
   }, [
-    sections,
+    selectedSections,
     format,
     matchResults,
     handleJsonExport,
@@ -485,7 +492,7 @@ export function ExportStatisticsButton({
   ]);
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
       <DropdownMenuTrigger asChild>
         <Button
           variant={variant}
@@ -498,7 +505,8 @@ export function ExportStatisticsButton({
             {isFiltered ? "Export Filtered Statistics" : "Export Statistics"}
           </span>
           <span className="text-muted-foreground text-xs font-medium">
-            {sections.size} dataset{sections.size === 1 ? "" : "s"}
+            {selectedSections.size} dataset
+            {selectedSections.size === 1 ? "" : "s"}
           </span>
         </Button>
       </DropdownMenuTrigger>
@@ -584,8 +592,8 @@ export function ExportStatisticsButton({
           Include Sections
         </DropdownMenuLabel>
         <DropdownMenuCheckboxItem
-          checked={sections.has("import")}
-          onCheckedChange={() => toggleSection("import")}
+          checked={selectedSections.has("import")}
+          onCheckedChange={() => toggleExportSection("import")}
         >
           <BarChart2
             className="mr-2 h-4 w-4 text-blue-500"
@@ -594,8 +602,8 @@ export function ExportStatisticsButton({
           Import statistics
         </DropdownMenuCheckboxItem>
         <DropdownMenuCheckboxItem
-          checked={sections.has("sync")}
-          onCheckedChange={() => toggleSection("sync")}
+          checked={selectedSections.has("sync")}
+          onCheckedChange={() => toggleExportSection("sync")}
         >
           <Activity
             className="mr-2 h-4 w-4 text-emerald-500"
@@ -604,8 +612,8 @@ export function ExportStatisticsButton({
           Sync performance
         </DropdownMenuCheckboxItem>
         <DropdownMenuCheckboxItem
-          checked={sections.has("matches")}
-          onCheckedChange={() => toggleSection("matches")}
+          checked={selectedSections.has("matches")}
+          onCheckedChange={() => toggleExportSection("matches")}
           disabled={matchCount === 0}
         >
           <BarChart3

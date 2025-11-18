@@ -42,10 +42,10 @@ type HighlightStat = {
  * Props for the MatchingPageHeader component.
  * @property headerVariants - Framer Motion animation variants.
  * @property matchResultsLength - Total number of matches to process.
- * @property showRematchOptions - Whether to display rematch options panel.
- * @property setShowRematchOptions - Callback to toggle rematch options visibility.
- * @property matchingProcessIsLoading - Whether the matching process is running.
- * @property rateLimitIsRateLimited - Whether AniList rate limit is active.
+ * @property isRematchOptionsVisible - Whether to display rematch options panel.
+ * @property setIsRematchOptionsVisible - Callback to toggle rematch options visibility.
+ * @property isMatchingProcessLoading - Whether the matching process is running.
+ * @property isRateLimited - Whether AniList rate limit is active.
  * @property statusSummary - Statistics summary with match counts and completion percent.
  * @property pendingBacklog - Number of pending items in the queue.
  * @property handleUndo - Callback for undo action.
@@ -56,13 +56,13 @@ type HighlightStat = {
  * @property onImportComplete - Callback after successful import with statistics.
  * @source
  */
-interface Props {
+interface MatchingPageHeaderProps {
   headerVariants: Variants;
   matchResultsLength: number;
-  showRematchOptions: boolean;
-  setShowRematchOptions: (v: boolean) => void;
-  matchingProcessIsLoading: boolean;
-  rateLimitIsRateLimited: boolean;
+  isRematchOptionsVisible: boolean;
+  setIsRematchOptionsVisible: (isVisible: boolean) => void;
+  isMatchingProcessLoading: boolean;
+  isRateLimited: boolean;
   statusSummary: {
     total: number;
     matched: number;
@@ -96,10 +96,10 @@ interface Props {
 export function MatchingPageHeader({
   headerVariants,
   matchResultsLength,
-  showRematchOptions,
-  setShowRematchOptions,
-  matchingProcessIsLoading,
-  rateLimitIsRateLimited,
+  isRematchOptionsVisible,
+  setIsRematchOptionsVisible,
+  isMatchingProcessLoading,
+  isRateLimited,
   statusSummary,
   pendingBacklog,
   handleUndo,
@@ -108,7 +108,7 @@ export function MatchingPageHeader({
   canRedo = false,
   matchResults,
   onImportComplete,
-}: Readonly<Props>) {
+}: Readonly<MatchingPageHeaderProps>) {
   const { matched, manual, pending, reviewed, total, completionPercent } =
     statusSummary;
 
@@ -162,7 +162,7 @@ export function MatchingPageHeader({
             </p>
 
             <div className="flex flex-wrap items-center gap-2">
-              {rateLimitIsRateLimited && (
+              {isRateLimited && (
                 <Badge className="flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-100/60 px-3 py-1 text-amber-700 shadow-sm dark:border-amber-400/40 dark:bg-amber-500/10 dark:text-amber-200">
                   <AlertTriangle className="h-3.5 w-3.5" />
                   Rate limited
@@ -217,7 +217,7 @@ export function MatchingPageHeader({
             </div>
           </div>
 
-          {matchResultsLength > 0 && !matchingProcessIsLoading && (
+          {matchResultsLength > 0 && !isMatchingProcessLoading && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -227,18 +227,20 @@ export function MatchingPageHeader({
               {/* Primary Action Row - Most prominent */}
               <div className="flex w-full flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
                 <Button
-                  onClick={() => setShowRematchOptions(!showRematchOptions)}
+                  onClick={() =>
+                    setIsRematchOptionsVisible(!isRematchOptionsVisible)
+                  }
                   variant="default"
                   size="lg"
                   className="bg-linear-to-r group relative rounded-2xl from-indigo-500 via-sky-500 to-blue-500 px-6 py-3 text-base font-semibold shadow-lg transition-all hover:scale-[1.02] hover:from-indigo-600 hover:via-sky-600 hover:to-blue-600 hover:shadow-xl active:scale-[0.98]"
                   aria-label={
-                    showRematchOptions
+                    isRematchOptionsVisible
                       ? "Hide rematch options panel"
                       : "Open fresh search options to clear cache and rematch"
                   }
                 >
                   <Sparkles className="mr-2 h-5 w-5" aria-hidden="true" />
-                  {showRematchOptions
+                  {isRematchOptionsVisible
                     ? "Hide Rematch Options"
                     : "Fresh Search (Clear Cache)"}
                 </Button>
@@ -312,7 +314,7 @@ export function MatchingPageHeader({
                     <ImportMatchesButton
                       variant="outline"
                       size="default"
-                      disabled={matchingProcessIsLoading}
+                      disabled={isMatchingProcessLoading}
                       onImportComplete={onImportComplete}
                     />
                   )}
@@ -322,7 +324,7 @@ export function MatchingPageHeader({
                       matches={matchResults}
                       variant="outline"
                       size="default"
-                      disabled={matchingProcessIsLoading}
+                      disabled={isMatchingProcessLoading}
                     />
                   )}
                 </div>

@@ -4,7 +4,7 @@
  * @description Exposes the Electron authentication context bridge (OAuth, credentials, token exchange, event listeners) to the renderer process.
  */
 
-import { APICredentials } from "@/types/auth";
+import { ApiCredentials } from "@/types/auth";
 import { contextBridge, ipcRenderer } from "electron";
 
 /**
@@ -49,7 +49,7 @@ export function exposeAuthContext() {
        * @param credentials - The credentials object with source, clientId, clientSecret, and redirectUri.
        * @returns Promise resolving to success status.
        */
-      storeCredentials: (credentials: APICredentials) => {
+      storeCredentials: (credentials: ApiCredentials) => {
         console.debug(
           "[AuthContext] Renderer requesting to store credentials",
           {

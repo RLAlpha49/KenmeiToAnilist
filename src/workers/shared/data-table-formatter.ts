@@ -34,35 +34,27 @@ export function formatTableRow<T extends { title: string; status: string }>(
   // Chapters
   let chaptersDisplayValue = "-";
   if (columnVisibility.chapters) {
-    const c =
-      (item as unknown as { chaptersRead?: number }).chaptersRead ??
-      (item as unknown as { chapters_read?: number }).chapters_read ??
-      0;
+    const c = (item as unknown as { chaptersRead?: number }).chaptersRead ?? 0;
     chaptersDisplayValue = c > 0 ? String(c) : "0";
   }
 
   // Volumes
   let volumesDisplayValue = "-";
   if (columnVisibility.volumes) {
-    const v =
-      (item as unknown as { volumesRead?: number }).volumesRead ??
-      (item as unknown as { volumes_read?: number }).volumes_read ??
-      0;
+    const v = (item as unknown as { volumesRead?: number }).volumesRead ?? 0;
     volumesDisplayValue = v > 0 ? String(v) : "0";
   }
 
   // Last read date
-  const maybeLastRead =
+  const hasLastRead =
     (item as unknown as { lastReadAt?: string }).lastReadAt ??
-    (item as unknown as { last_read_at?: string }).last_read_at ??
-    (item as unknown as { updatedAt?: string }).updatedAt ??
-    (item as unknown as { updated_at?: string }).updated_at;
+    (item as unknown as { updatedAt?: string }).updatedAt;
 
   const lastReadDisplayValue =
-    columnVisibility.lastRead && maybeLastRead
+    columnVisibility.lastRead && hasLastRead
       ? (() => {
           try {
-            const date = new Date(String(maybeLastRead));
+            const date = new Date(String(hasLastRead));
             return date.toLocaleDateString();
           } catch {
             return "-";

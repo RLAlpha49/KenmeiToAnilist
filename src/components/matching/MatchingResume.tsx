@@ -9,7 +9,7 @@ import { ResumeNotification } from "./ResumeNotification";
  * @property onCancelResume - Callback to cancel resuming and continue normally.
  * @source
  */
-interface Props {
+interface MatchingResumeProps {
   pendingMangaCount: number;
   onResumeMatching: () => void;
   onCancelResume: () => void;
@@ -26,7 +26,7 @@ export function MatchingResume({
   pendingMangaCount,
   onResumeMatching,
   onCancelResume,
-}: Readonly<Props>) {
+}: Readonly<MatchingResumeProps>) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}

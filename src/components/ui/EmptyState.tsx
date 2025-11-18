@@ -60,7 +60,7 @@ interface EmptyStateProps {
  * @returns The rendered empty state.
  * @source
  */
-export default function EmptyState({
+export function EmptyState({
   icon,
   title,
   description,

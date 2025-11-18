@@ -21,7 +21,7 @@ import { Input } from "../ui/Input";
 import { Badge } from "../ui/Badge";
 import { ScrollArea } from "../ui/ScrollArea";
 import { Separator } from "../ui/Separator";
-import { useDebugActions, useDebugState } from "../../contexts/DebugContext";
+import { useDebugActions, useDebugState } from "../../contexts/debug-context";
 import { cn } from "@/utils/tailwind";
 import { exportToJson } from "@/utils/export-utils";
 import type { DebugEventEntry, DebugEventLevel } from "@/types/debug";
@@ -668,7 +668,7 @@ interface EventCardProps {
  * @source
  */
 function EventCard({ entry }: Readonly<EventCardProps>) {
-  const [metadataExpanded, setMetadataExpanded] = useState(false);
+  const [isMetadataExpanded, setIsMetadataExpanded] = useState(false);
 
   const handleCopy = async () => {
     try {
@@ -698,8 +698,8 @@ function EventCard({ entry }: Readonly<EventCardProps>) {
       <EventCardHeader entry={entry} onCopy={handleCopy} />
       <EventCardBody
         entry={entry}
-        metadataExpanded={metadataExpanded}
-        onToggleMetadata={() => setMetadataExpanded((value) => !value)}
+        isMetadataExpanded={isMetadataExpanded}
+        onToggleMetadata={() => setIsMetadataExpanded((value) => !value)}
         onMetadataCopy={handleMetadataCopy}
       />
     </div>
@@ -790,7 +790,7 @@ function EventBadges({ entry, levelMeta }: Readonly<EventBadgesProps>) {
  */
 interface EventCardBodyProps {
   entry: DebugEventEntry;
-  metadataExpanded: boolean;
+  isMetadataExpanded: boolean;
   onToggleMetadata: () => void;
   onMetadataCopy: () => void;
 }
@@ -801,7 +801,7 @@ interface EventCardBodyProps {
  */
 function EventCardBody({
   entry,
-  metadataExpanded,
+  isMetadataExpanded,
   onToggleMetadata,
   onMetadataCopy,
 }: Readonly<EventCardBodyProps>) {
@@ -812,7 +812,7 @@ function EventCardBody({
       {entry.metadata && (
         <EventMetadata
           metadata={entry.metadata}
-          expanded={metadataExpanded}
+          expanded={isMetadataExpanded}
           onToggle={onToggleMetadata}
           onCopy={onMetadataCopy}
         />

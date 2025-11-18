@@ -54,7 +54,7 @@ export interface DataTablePreparationResult {
    * Indicates whether computation ran on a worker.
    * @source
    */
-  executedOnWorker: boolean;
+  ranOnWorker: boolean;
 }
 
 /**
@@ -70,7 +70,7 @@ function generateTaskId(): string {
  * @source
  */
 export class DataTableWorkerPool {
-  private initialized = false;
+  private isInitialized = false;
   private readonly maxWorkers: number;
 
   constructor(maxWorkers?: number) {
@@ -82,19 +82,19 @@ export class DataTableWorkerPool {
    * @source
    */
   async initialize(): Promise<void> {
-    if (this.initialized) {
+    if (this.isInitialized) {
       return;
     }
 
     try {
       const pool = getGenericWorkerPool();
       await pool.initialize();
-      this.initialized = true;
+      this.isInitialized = true;
       console.info("[DataTableWorkerPool] Pool initialized");
     } catch (error) {
       console.warn("[DataTableWorkerPool] Failed to initialize pool:", error);
       // Still mark as initialized to use main thread fallback
-      this.initialized = true;
+      this.isInitialized = true;
     }
   }
 
@@ -123,7 +123,7 @@ export class DataTableWorkerPool {
     const taskId = generateTaskId();
 
     // Ensure pool is initialized
-    if (!this.initialized) {
+    if (!this.isInitialized) {
       await this.initialize();
     }
 
@@ -209,7 +209,7 @@ export class DataTableWorkerPool {
         columnVisibility,
         resolve: null as unknown as (result: unknown) => void,
         reject: null as unknown as (error: Error) => void,
-        cancelled: false,
+        isCancelled: false,
         workerIndex,
       };
 
@@ -224,7 +224,7 @@ export class DataTableWorkerPool {
                 typedResult.indexInfo as DataTablePreparationResult["indexInfo"],
               timing:
                 typedResult.timing as DataTablePreparationResult["timing"],
-              executedOnWorker: true,
+              ranOnWorker: true,
             });
           };
           task.reject = reject;
@@ -334,7 +334,7 @@ export class DataTableWorkerPool {
         metadataComputationTimeMs,
         totalTimeMs,
       },
-      executedOnWorker: false,
+      ranOnWorker: false,
     };
   }
 
@@ -343,10 +343,10 @@ export class DataTableWorkerPool {
    * @source
    */
   getStats(): {
-    initialized: boolean;
+    isInitialized: boolean;
   } {
     return {
-      initialized: this.initialized,
+      isInitialized: this.isInitialized,
     };
   }
 
@@ -356,7 +356,7 @@ export class DataTableWorkerPool {
    */
   getAvailableWorkerCount(): number {
     const pool = getGenericWorkerPool();
-    return this.initialized ? pool.getAvailableWorkerCount() : 0;
+    return this.isInitialized ? pool.getAvailableWorkerCount() : 0;
   }
 
   /**
@@ -364,11 +364,11 @@ export class DataTableWorkerPool {
    * @source
    */
   terminate(): void {
-    if (this.initialized) {
+    if (this.isInitialized) {
       try {
         const pool = getGenericWorkerPool();
         pool.terminate();
-        this.initialized = false;
+        this.isInitialized = false;
       } catch (error) {
         console.warn("[DataTableWorkerPool] Error terminating pool:", error);
       }

@@ -10,7 +10,7 @@ import {
 } from "@/components/BaseErrorBoundary";
 import { RefreshCw, AlertTriangle, XCircle } from "lucide-react";
 
-interface Props {
+interface SyncErrorBoundaryProps {
   /** Child components to wrap */
   children: ReactNode;
   /** Callback to reset sync state */
@@ -26,24 +26,29 @@ interface Props {
  * Wraps BaseErrorBoundary with sync-specific configuration.
  * @source
  */
-export const SyncErrorBoundary = (props: Props): ReactNode => {
+export const SyncErrorBoundary: React.FC<SyncErrorBoundaryProps> = ({
+  children,
+  onReset,
+  onRetryFailed,
+  onCancelSync,
+}) => {
   const recoveryActions: RecoveryAction[] = [
     {
       label: "Retry Failed Operations",
       Icon: RefreshCw,
-      handler: props.onRetryFailed || (() => {}),
+      handler: onRetryFailed ?? (() => {}),
       variant: "default",
     },
     {
       label: "Cancel Sync",
       Icon: XCircle,
-      handler: props.onCancelSync || (() => {}),
+      handler: onCancelSync ?? (() => {}),
       variant: "outline",
     },
     {
       label: "Reset Sync State",
       Icon: RefreshCw,
-      handler: props.onReset || (() => {}),
+      handler: onReset ?? (() => {}),
       variant: "outline",
     },
   ];
@@ -56,7 +61,7 @@ export const SyncErrorBoundary = (props: Props): ReactNode => {
       recoveryActions={recoveryActions}
       section="sync"
     >
-      {props.children}
+      {children}
     </BaseErrorBoundary>
   );
 };

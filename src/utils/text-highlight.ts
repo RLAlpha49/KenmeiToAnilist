@@ -226,5 +226,3 @@ export const truncateToastMessage = (
     }),
   };
 };
-
-export { sliceText };

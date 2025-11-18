@@ -29,7 +29,7 @@ export function formatLabel(format: string): string {
  * @returns Human-readable label for the status.
  * @source
  */
-export function statusLabel(status: string): string {
+export function formatPublicationStatusLabel(status: string): string {
   switch (status) {
     case "FINISHED":
       return "Finished";
@@ -52,7 +52,7 @@ export function statusLabel(status: string): string {
  * @returns Formatted year range string.
  * @source
  */
-export function yearRangeLabel(yearRange: {
+export function formatYearRangeLabel(yearRange: {
   min: number | null;
   max: number | null;
 }): string {

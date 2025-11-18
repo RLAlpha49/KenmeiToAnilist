@@ -1,19 +1,11 @@
 import { getGenericWorkerPool } from "../core/worker-pool";
+import { generateUUID } from "../core/pool-utils";
 import type {
   WorkerPoolConfig,
   BatchSyncMessage,
   PreparedSyncOperation,
 } from "../core/types";
 import type { AniListMediaEntry } from "@/api/anilist/types";
-
-/**
- * Generates a unique ID for batch sync tasks.
- * @returns A unique task identifier.
- * @source
- */
-function generateUUID(): string {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-}
 
 /**
  * Describes an in-flight batch sync task.
@@ -30,7 +22,7 @@ export interface BatchSyncExecution {
  */
 export class BatchSyncWorkerPool {
   private readonly config: WorkerPoolConfig;
-  private initialized = false;
+  private isInitialized = false;
 
   constructor(config?: Partial<WorkerPoolConfig>) {
     this.config = {
@@ -46,7 +38,7 @@ export class BatchSyncWorkerPool {
    * @source
    */
   async initialize(): Promise<void> {
-    if (this.initialized) {
+    if (this.isInitialized) {
       return;
     }
     const pool = getGenericWorkerPool({
@@ -55,7 +47,7 @@ export class BatchSyncWorkerPool {
       fallbackToMainThread: this.config.fallbackToMainThread,
     });
     await pool.initialize();
-    this.initialized = true;
+    this.isInitialized = true;
   }
 
   /**
@@ -65,7 +57,7 @@ export class BatchSyncWorkerPool {
    */
   isAvailable(): boolean {
     const pool = getGenericWorkerPool();
-    return this.initialized && pool.isAvailable();
+    return this.isInitialized && pool.isAvailable();
   }
 
   /**
@@ -75,7 +67,7 @@ export class BatchSyncWorkerPool {
    */
   getAvailableWorkerCount(): number {
     const pool = getGenericWorkerPool();
-    return this.initialized ? pool.getAvailableWorkerCount() : 0;
+    return this.isInitialized ? pool.getAvailableWorkerCount() : 0;
   }
 
   /**
@@ -138,7 +130,7 @@ export class BatchSyncWorkerPool {
           resolve(adaptedResult);
         },
         reject,
-        cancelled: false,
+        isCancelled: false,
         onProgress: (message: unknown) => {
           // Adapt generic message to typed callback
           const msgWithType = message as {

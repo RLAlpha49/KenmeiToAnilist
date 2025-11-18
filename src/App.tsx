@@ -9,12 +9,12 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { router } from "./routes/router";
 import { RouterProvider } from "@tanstack/react-router";
-import { AuthProvider } from "./contexts/AuthContext";
-import { OnboardingProvider } from "./contexts/OnboardingContext";
+import { AuthProvider } from "./contexts/auth-context";
+import { OnboardingProvider } from "./contexts/onboarding-context";
 import { SonnerProvider } from "./components/ui/SonnerProvider";
-import { RateLimitProvider } from "./contexts/RateLimitContext";
-import { ThemeProvider } from "./contexts/ThemeContext";
-import { DebugProvider } from "./contexts/DebugContext";
+import { RateLimitProvider } from "./contexts/rate-limit-context";
+import { ThemeProvider } from "./contexts/theme-context";
+import { DebugProvider } from "./contexts/debug-context";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AnimatePresence } from "framer-motion";
 import { UpdateNotification } from "./components/UpdateNotification";
@@ -49,7 +49,10 @@ function AppContent() {
               <OnboardingProvider>
                 <RouterProvider router={router} />
                 <SonnerProvider />
-                <OnboardingOverlay position="bottom-left" showProgress={true} />
+                <OnboardingOverlay
+                  position="bottom-left"
+                  shouldShowProgress={true}
+                />
 
                 {/* Display update notification when available */}
                 <AnimatePresence>

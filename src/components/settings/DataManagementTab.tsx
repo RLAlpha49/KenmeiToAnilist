@@ -27,17 +27,17 @@ import type { DataManagementProps } from "./types";
 /**
  * Get the cache status label based on current state.
  * @param isClearing - Whether caches are currently being cleared.
- * @param cacheCleared - Whether caches have been cleared.
+ * @param isCacheCleared - Whether caches have been cleared.
  * @param selectedCacheCount - Number of selected caches.
  * @returns The status label string.
  */
 function getCacheStatusLabel(
   isClearing: boolean,
-  cacheCleared: boolean,
+  isCacheCleared: boolean,
   selectedCacheCount: number,
 ): string {
   if (isClearing) return "Clearing";
-  if (cacheCleared) return "Cleared";
+  if (isCacheCleared) return "Cleared";
   if (selectedCacheCount > 0) return "Ready";
   return "Idle";
 }
@@ -46,14 +46,14 @@ function getCacheStatusLabel(
  * Get the cache badge CSS class based on current state.
  * @param pillBaseClass - Base pill styling class.
  * @param isClearing - Whether caches are currently being cleared.
- * @param cacheCleared - Whether caches have been cleared.
+ * @param isCacheCleared - Whether caches have been cleared.
  * @param selectedCacheCount - Number of selected caches.
  * @returns The badge CSS class string.
  */
 function getCacheBadgeClass(
   pillBaseClass: string,
   isClearing: boolean,
-  cacheCleared: boolean,
+  isCacheCleared: boolean,
   selectedCacheCount: number,
 ): string {
   if (isClearing)
@@ -61,7 +61,7 @@ function getCacheBadgeClass(
       pillBaseClass,
       "bg-cyan-500/15 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-100",
     );
-  if (cacheCleared)
+  if (isCacheCleared)
     return cn(
       pillBaseClass,
       "bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100",
@@ -93,12 +93,12 @@ function getCacheDescription(selectedCacheCount: number): string {
 /**
  * Get the cache caption based on current state.
  * @param isClearing - Whether caches are currently being cleared.
- * @param cacheCleared - Whether caches have been cleared.
+ * @param isCacheCleared - Whether caches have been cleared.
  * @returns The caption string.
  */
-function getCacheCaption(isClearing: boolean, cacheCleared: boolean): string {
+function getCacheCaption(isClearing: boolean, isCacheCleared: boolean): string {
   if (isClearing) return "Currently clearing caches…";
-  if (cacheCleared) return "Last action: caches cleared successfully.";
+  if (isCacheCleared) return "Last action: caches cleared successfully.";
   return "No recent cache clear.";
 }
 
@@ -233,18 +233,18 @@ type QuickStat = {
 export function DataManagementTab({
   cachesToClear,
   isClearing,
-  cacheCleared,
+  isCacheCleared,
   selectedBackupFile,
   backupValidationError,
   isDebugEnabled,
-  storageDebuggerEnabled,
-  logViewerEnabled,
-  logRedactionEnabled,
-  stateInspectorEnabled,
-  ipcViewerEnabled,
-  eventLoggerEnabled,
-  confidenceTestExporterEnabled,
-  performanceMonitorEnabled,
+  isStorageDebuggerEnabled,
+  isLogViewerEnabled,
+  isLogRedactionEnabled,
+  isStateInspectorEnabled,
+  isIpcViewerEnabled,
+  isEventLoggerEnabled,
+  isConfidenceTestExporterEnabled,
+  isPerformanceMonitorEnabled,
   searchQuery,
   highlightedSectionId,
   scheduleConfig,
@@ -295,19 +295,19 @@ export function DataManagementTab({
 
   const cacheStatusLabel = getCacheStatusLabel(
     isClearing,
-    cacheCleared,
+    isCacheCleared,
     selectedCacheCount,
   );
 
   const cacheBadgeClass = getCacheBadgeClass(
     pillBaseClass,
     isClearing,
-    cacheCleared,
+    isCacheCleared,
     selectedCacheCount,
   );
 
   const cacheDescription = getCacheDescription(selectedCacheCount);
-  const cacheCaption = getCacheCaption(isClearing, cacheCleared);
+  const cacheCaption = getCacheCaption(isClearing, isCacheCleared);
 
   const nextBackupDisplay = formatTimestamp(
     nextScheduledBackup ?? scheduleConfig.nextBackupTimestamp ?? null,
@@ -338,14 +338,14 @@ export function DataManagementTab({
   const debugBadgeClass = getDebugBadgeClass(pillBaseClass, isDebugEnabled);
 
   const activeDebugTools = [
-    storageDebuggerEnabled,
-    logViewerEnabled,
-    logRedactionEnabled,
-    stateInspectorEnabled,
-    ipcViewerEnabled,
-    eventLoggerEnabled,
-    confidenceTestExporterEnabled,
-    performanceMonitorEnabled,
+    isStorageDebuggerEnabled,
+    isLogViewerEnabled,
+    isLogRedactionEnabled,
+    isStateInspectorEnabled,
+    isIpcViewerEnabled,
+    isEventLoggerEnabled,
+    isConfidenceTestExporterEnabled,
+    isPerformanceMonitorEnabled,
   ].filter(Boolean).length;
 
   const debugDescription = isDebugEnabled
@@ -488,7 +488,7 @@ export function DataManagementTab({
         <CacheManagementSection
           cachesToClear={cachesToClear}
           isClearing={isClearing}
-          cacheCleared={cacheCleared}
+          isCacheCleared={isCacheCleared}
           searchQuery={searchQuery}
           highlightedSectionId={highlightedSectionId}
           onCachesToClearChange={onCachesToClearChange}
@@ -563,14 +563,14 @@ export function DataManagementTab({
       >
         <DebugToolsSection
           isDebugEnabled={isDebugEnabled}
-          storageDebuggerEnabled={storageDebuggerEnabled}
-          logViewerEnabled={logViewerEnabled}
-          logRedactionEnabled={logRedactionEnabled}
-          stateInspectorEnabled={stateInspectorEnabled}
-          ipcViewerEnabled={ipcViewerEnabled}
-          eventLoggerEnabled={eventLoggerEnabled}
-          confidenceTestExporterEnabled={confidenceTestExporterEnabled}
-          performanceMonitorEnabled={performanceMonitorEnabled}
+          isStorageDebuggerEnabled={isStorageDebuggerEnabled}
+          isLogViewerEnabled={isLogViewerEnabled}
+          isLogRedactionEnabled={isLogRedactionEnabled}
+          isStateInspectorEnabled={isStateInspectorEnabled}
+          isIpcViewerEnabled={isIpcViewerEnabled}
+          isEventLoggerEnabled={isEventLoggerEnabled}
+          isConfidenceTestExporterEnabled={isConfidenceTestExporterEnabled}
+          isPerformanceMonitorEnabled={isPerformanceMonitorEnabled}
           searchQuery={searchQuery}
           highlightedSectionId={highlightedSectionId}
           onToggleDebug={onToggleDebug}

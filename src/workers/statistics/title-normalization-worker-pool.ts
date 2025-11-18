@@ -163,7 +163,7 @@ export class TitleNormalizationWorkerPool {
           );
           reject(error);
         },
-        cancelled: false,
+        isCancelled: false,
         onProgress: (message: unknown) => {
           const msgWithType = message as {
             type?: string;

@@ -54,7 +54,7 @@ interface SettingsTabsContainerProps extends DataManagementProps {
   /** Current sync configuration. */
   syncConfig: SyncConfig;
   /** Whether custom threshold is enabled for auto-pause. */
-  useCustomThreshold: boolean;
+  isCustomThresholdEnabled: boolean;
   /** Callback when matching config changes. */
   onMatchConfigChange: (config: MatchConfig, field: string) => void;
   /** Callback when sync config changes. */
@@ -92,22 +92,22 @@ export function SettingsTabsContainer({
   highlightedSectionId,
   matchConfig,
   syncConfig,
-  useCustomThreshold,
+  isCustomThresholdEnabled,
   cachesToClear,
   isClearing,
-  cacheCleared,
+  isCacheCleared,
   selectedBackupFile,
   backupValidationError,
   isRestoringBackup,
   isDebugEnabled,
-  storageDebuggerEnabled,
-  logViewerEnabled,
-  logRedactionEnabled,
-  stateInspectorEnabled,
-  ipcViewerEnabled,
-  eventLoggerEnabled,
-  confidenceTestExporterEnabled,
-  performanceMonitorEnabled,
+  isStorageDebuggerEnabled,
+  isLogViewerEnabled,
+  isLogRedactionEnabled,
+  isStateInspectorEnabled,
+  isIpcViewerEnabled,
+  isEventLoggerEnabled,
+  isConfidenceTestExporterEnabled,
+  isPerformanceMonitorEnabled,
   onMatchConfigChange,
   onSyncConfigChange,
   onCustomThresholdToggle,
@@ -182,7 +182,7 @@ export function SettingsTabsContainer({
           {searchResults.some((r) => r.section.id === "sync-auto-pause") && (
             <SyncAutoPauseSection
               syncConfig={syncConfig}
-              useCustomThreshold={useCustomThreshold}
+              isCustomThresholdEnabled={isCustomThresholdEnabled}
               searchQuery={searchQuery}
               highlightedSectionId={highlightedSectionId}
               onSyncConfigChange={onSyncConfigChange}
@@ -222,7 +222,7 @@ export function SettingsTabsContainer({
             <CacheManagementSection
               cachesToClear={cachesToClear}
               isClearing={isClearing}
-              cacheCleared={cacheCleared}
+              isCacheCleared={isCacheCleared}
               searchQuery={searchQuery}
               highlightedSectionId={highlightedSectionId}
               onCachesToClearChange={onCachesToClearChange}
@@ -250,14 +250,14 @@ export function SettingsTabsContainer({
           {searchResults.some((r) => r.section.id === "data-debug") && (
             <DebugToolsSection
               isDebugEnabled={isDebugEnabled}
-              storageDebuggerEnabled={storageDebuggerEnabled}
-              logViewerEnabled={logViewerEnabled}
-              logRedactionEnabled={logRedactionEnabled}
-              stateInspectorEnabled={stateInspectorEnabled}
-              ipcViewerEnabled={ipcViewerEnabled}
-              eventLoggerEnabled={eventLoggerEnabled}
-              confidenceTestExporterEnabled={confidenceTestExporterEnabled}
-              performanceMonitorEnabled={performanceMonitorEnabled}
+              isStorageDebuggerEnabled={isStorageDebuggerEnabled}
+              isLogViewerEnabled={isLogViewerEnabled}
+              isLogRedactionEnabled={isLogRedactionEnabled}
+              isStateInspectorEnabled={isStateInspectorEnabled}
+              isIpcViewerEnabled={isIpcViewerEnabled}
+              isEventLoggerEnabled={isEventLoggerEnabled}
+              isConfidenceTestExporterEnabled={isConfidenceTestExporterEnabled}
+              isPerformanceMonitorEnabled={isPerformanceMonitorEnabled}
               searchQuery={searchQuery}
               highlightedSectionId={highlightedSectionId}
               onToggleDebug={onToggleDebug}
@@ -322,7 +322,7 @@ export function SettingsTabsContainer({
       <TabsContent value="sync" className="space-y-6">
         <SyncSettingsTab
           syncConfig={syncConfig}
-          useCustomThreshold={useCustomThreshold}
+          isCustomThresholdEnabled={isCustomThresholdEnabled}
           searchQuery={searchQuery}
           highlightedSectionId={highlightedSectionId}
           onSyncConfigChange={onSyncConfigChange}
@@ -337,19 +337,19 @@ export function SettingsTabsContainer({
         <DataManagementTab
           cachesToClear={cachesToClear}
           isClearing={isClearing}
-          cacheCleared={cacheCleared}
+          isCacheCleared={isCacheCleared}
           selectedBackupFile={selectedBackupFile}
           backupValidationError={backupValidationError}
           isRestoringBackup={isRestoringBackup}
           isDebugEnabled={isDebugEnabled}
-          storageDebuggerEnabled={storageDebuggerEnabled}
-          logViewerEnabled={logViewerEnabled}
-          logRedactionEnabled={logRedactionEnabled}
-          stateInspectorEnabled={stateInspectorEnabled}
-          ipcViewerEnabled={ipcViewerEnabled}
-          eventLoggerEnabled={eventLoggerEnabled}
-          confidenceTestExporterEnabled={confidenceTestExporterEnabled}
-          performanceMonitorEnabled={performanceMonitorEnabled}
+          isStorageDebuggerEnabled={isStorageDebuggerEnabled}
+          isLogViewerEnabled={isLogViewerEnabled}
+          isLogRedactionEnabled={isLogRedactionEnabled}
+          isStateInspectorEnabled={isStateInspectorEnabled}
+          isIpcViewerEnabled={isIpcViewerEnabled}
+          isEventLoggerEnabled={isEventLoggerEnabled}
+          isConfidenceTestExporterEnabled={isConfidenceTestExporterEnabled}
+          isPerformanceMonitorEnabled={isPerformanceMonitorEnabled}
           searchQuery={searchQuery}
           highlightedSectionId={highlightedSectionId}
           scheduleConfig={scheduleConfig}

@@ -8,7 +8,7 @@ import { Loader2 } from "lucide-react";
  * @property message - Optional custom message to display during initialization.
  * @source
  */
-interface Props {
+interface InitializationCardProps {
   message?: string;
 }
 
@@ -19,7 +19,9 @@ interface Props {
  * @returns Rendered initialization card with animated entrance.
  * @source
  */
-export default function InitializationCard({ message }: Readonly<Props>) {
+export default function InitializationCard({
+  message,
+}: Readonly<InitializationCardProps>) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}

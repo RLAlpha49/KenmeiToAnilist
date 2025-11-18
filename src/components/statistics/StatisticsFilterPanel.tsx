@@ -1,5 +1,8 @@
 import React, { useState, useMemo } from "react";
-import { formatLabel, statusLabel } from "@/components/matching/labels";
+import {
+  formatLabel,
+  formatPublicationStatusLabel,
+} from "@/components/matching/labels";
 import {
   SlidersHorizontal,
   Target,
@@ -27,7 +30,7 @@ import {
 import { RangeSlider } from "@/components/ui/Slider";
 import type { StatisticsFilters } from "@/types/statistics";
 import type { MatchStatus } from "@/api/anilist/types";
-import { DEFAULT_STATISTICS_FILTERS } from "@/types/statistics";
+import { defaultStatisticsFilters } from "@/types/statistics";
 import { SearchableFilterList } from "@/components/matching/SearchableFilterList";
 import {
   toDateInputValue,
@@ -181,7 +184,7 @@ export function StatisticsFilterPanel({
   };
 
   const handleClearAllFilters = () => {
-    onFiltersChange(DEFAULT_STATISTICS_FILTERS);
+    onFiltersChange(defaultStatisticsFilters);
   };
 
   const handlePresetClick = (preset: FilterPreset) => {
@@ -307,8 +310,8 @@ export function StatisticsFilterPanel({
                         ? toDateInputValue(filters.dateRange.start)
                         : ""
                     }
-                    onChange={(e) =>
-                      handleDateRangeChange("start", e.target.value || null)
+                    onChange={(event) =>
+                      handleDateRangeChange("start", event.target.value || null)
                     }
                     className="w-full rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800"
                   />
@@ -328,8 +331,8 @@ export function StatisticsFilterPanel({
                         ? toDateInputValue(filters.dateRange.end)
                         : ""
                     }
-                    onChange={(e) =>
-                      handleDateRangeChange("end", e.target.value || null)
+                    onChange={(event) =>
+                      handleDateRangeChange("end", event.target.value || null)
                     }
                     className="w-full rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800"
                   />
@@ -384,7 +387,7 @@ export function StatisticsFilterPanel({
                   onFiltersChange({ ...filters, genres: newGenres });
                 }}
                 label={(genre) => genre}
-                showSelectClear
+                shouldShowSelectClear
                 onSelectAll={() =>
                   onFiltersChange({ ...filters, genres: [...availableGenres] })
                 }
@@ -405,7 +408,7 @@ export function StatisticsFilterPanel({
                   onFiltersChange({ ...filters, tags: newTags });
                 }}
                 label={(tag) => tag}
-                showSelectClear
+                shouldShowSelectClear
                 onSelectAll={() =>
                   onFiltersChange({ ...filters, tags: [...availableTags] })
                 }
@@ -434,7 +437,7 @@ export function StatisticsFilterPanel({
                         htmlFor={`status-${status}`}
                         className="cursor-pointer text-sm text-slate-700 dark:text-slate-300"
                       >
-                        {statusLabel(status)}
+                        {formatPublicationStatusLabel(status)}
                       </label>
                     </div>
                   ))}

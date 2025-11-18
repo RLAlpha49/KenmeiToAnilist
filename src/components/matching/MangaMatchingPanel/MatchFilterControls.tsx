@@ -7,17 +7,17 @@ import { cn } from "../../../utils/tailwind";
 /**
  * State object for match status filters.
  *
- * @property matched - Whether to show matched results.
- * @property pending - Whether to show pending results.
- * @property manual - Whether to show manual search results.
- * @property skipped - Whether to show skipped results.
+ * @property isMatchedVisible - Whether matched results are visible.
+ * @property isPendingVisible - Whether pending results are visible.
+ * @property isManualVisible - Whether manual search results are visible.
+ * @property isSkippedVisible - Whether skipped results are visible.
  * @source
  */
 export interface StatusFiltersState {
-  matched: boolean;
-  pending: boolean;
-  manual: boolean;
-  skipped: boolean;
+  isMatchedVisible: boolean;
+  isPendingVisible: boolean;
+  isManualVisible: boolean;
+  isSkippedVisible: boolean;
 }
 
 /**
@@ -75,7 +75,7 @@ function MatchFilterControlsComponent({
     badgeClass: string;
   }> = [
     {
-      key: "matched",
+      key: "isMatchedVisible",
       label: "Matched",
       count: matchStats.matched,
       icon: CheckCircle2,
@@ -85,7 +85,7 @@ function MatchFilterControlsComponent({
         "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-200",
     },
     {
-      key: "pending",
+      key: "isPendingVisible",
       label: "Pending",
       count: matchStats.pending,
       icon: Clock3,
@@ -95,7 +95,7 @@ function MatchFilterControlsComponent({
         "bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-200",
     },
     {
-      key: "manual",
+      key: "isManualVisible",
       label: "Manual",
       count: matchStats.manual,
       icon: Wand2,
@@ -105,7 +105,7 @@ function MatchFilterControlsComponent({
         "bg-sky-500/10 text-sky-600 dark:bg-sky-500/20 dark:text-sky-200",
     },
     {
-      key: "skipped",
+      key: "isSkippedVisible",
       label: "Skipped",
       count: matchStats.skipped,
       icon: XOctagon,

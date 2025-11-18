@@ -64,7 +64,7 @@ interface BackupFile {
  */
 interface BackupListProps {
   backups: BackupFile[];
-  showAll: boolean;
+  isShowingAllBackups: boolean;
   isRestoringFromList: string | null;
   isDeletingBackup: string | null;
   onRestore: (backup: BackupFile) => Promise<void>;
@@ -74,7 +74,7 @@ interface BackupListProps {
 
 function BackupList({
   backups,
-  showAll,
+  isShowingAllBackups,
   isRestoringFromList,
   isDeletingBackup,
   onRestore,
@@ -83,7 +83,7 @@ function BackupList({
 }: Readonly<BackupListProps>) {
   return (
     <div className="space-y-2">
-      {backups.slice(0, showAll ? undefined : 2).map((backup) => (
+      {backups.slice(0, isShowingAllBackups ? undefined : 2).map((backup) => (
         <div
           key={backup.name}
           className="hover:bg-muted/60 flex items-center justify-between rounded-md p-3 transition-colors"
@@ -140,7 +140,9 @@ function BackupList({
           className="w-full"
           size="sm"
         >
-          {showAll ? "Show Less" : formatMoreBackupsLabel(backups.length - 2)}
+          {isShowingAllBackups
+            ? "Show Less"
+            : formatMoreBackupsLabel(backups.length - 2)}
         </Button>
       )}
     </div>
@@ -153,7 +155,7 @@ function BackupList({
 interface BackupListContentProps {
   readonly isLoading: boolean;
   readonly backups: BackupFile[];
-  readonly showAll: boolean;
+  readonly isShowingAllBackups: boolean;
   readonly isRestoringFromList: string | null;
   readonly isDeletingBackup: string | null;
   readonly onRestore: (backup: BackupFile) => Promise<void>;
@@ -164,7 +166,7 @@ interface BackupListContentProps {
 function BackupListContent({
   isLoading,
   backups,
-  showAll,
+  isShowingAllBackups,
   isRestoringFromList,
   isDeletingBackup,
   onRestore,
@@ -190,7 +192,7 @@ function BackupListContent({
   return (
     <BackupList
       backups={backups}
-      showAll={showAll}
+      isShowingAllBackups={isShowingAllBackups}
       isRestoringFromList={isRestoringFromList}
       isDeletingBackup={isDeletingBackup}
       onRestore={onRestore}
@@ -261,11 +263,11 @@ export function BackupRestoreSection({
   const [isRestoringFromList, setIsRestoringFromList] = useState<string | null>(
     null,
   );
-  const [refreshCooldown, setRefreshCooldown] = useState(false);
+  const [isRefreshCooldownActive, setIsRefreshCooldownActive] = useState(false);
   const [resolvedDefaultBackupLocation, setResolvedDefaultBackupLocation] =
     useState<string>("");
   const [isContextMissing, setIsContextMissing] = useState(false);
-  const [showAllBackups, setShowAllBackups] = useState(false);
+  const [isShowingAllBackups, setIsShowingAllBackups] = useState(false);
   const refreshCooldownRef = useRef<NodeJS.Timeout | null>(null);
 
   // Detect if electronBackup context is missing on mount
@@ -351,9 +353,9 @@ export function BackupRestoreSection({
     await loadBackups();
 
     // Set cooldown: disable button for 1000ms
-    setRefreshCooldown(true);
+    setIsRefreshCooldownActive(true);
     refreshCooldownRef.current = setTimeout(() => {
-      setRefreshCooldown(false);
+      setIsRefreshCooldownActive(false);
       refreshCooldownRef.current = null;
     }, 1000);
   };
@@ -476,22 +478,22 @@ export function BackupRestoreSection({
         toast.success("Backup location updated");
       } else {
         const errorMsg = result?.error || "Failed to set backup location";
-        let friendlyMsg = errorMsg;
+        let friendlyMessage = errorMsg;
 
         // Map error codes to friendly messages
         if (result?.code === "ENOENT") {
-          friendlyMsg = "Directory does not exist";
+          friendlyMessage = "Directory does not exist";
         } else if (result?.code === "EACCES") {
-          friendlyMsg = "Permission denied";
+          friendlyMessage = "Permission denied";
         } else if (result?.code === "INVALID_PATH") {
-          friendlyMsg = "Invalid backup location path";
+          friendlyMessage = "Invalid backup location path";
         }
 
         console.error(
           "[BackupRestoreSection] Failed to set backup location:",
           result?.error,
         );
-        toast.error(friendlyMsg);
+        toast.error(friendlyMessage);
       }
     } catch (error) {
       console.error(
@@ -865,13 +867,13 @@ export function BackupRestoreSection({
           </div>
           <Button
             onClick={handleRefreshBackups}
-            disabled={isLoadingBackups || refreshCooldown}
+            disabled={isLoadingBackups || isRefreshCooldownActive}
             aria-busy={isLoadingBackups}
-            aria-disabled={isLoadingBackups || refreshCooldown}
+            aria-disabled={isLoadingBackups || isRefreshCooldownActive}
             variant="ghost"
             size="sm"
             title={
-              refreshCooldown
+              isRefreshCooldownActive
                 ? "Please wait before refreshing again"
                 : "Refresh backup list"
             }
@@ -889,12 +891,12 @@ export function BackupRestoreSection({
         <BackupListContent
           isLoading={isLoadingBackups}
           backups={localBackups}
-          showAll={showAllBackups}
+          isShowingAllBackups={isShowingAllBackups}
           isRestoringFromList={isRestoringFromList}
           isDeletingBackup={isDeletingBackup}
           onRestore={handleRestoreFromList}
           onDelete={handleDeleteBackup}
-          onToggleShowAll={() => setShowAllBackups(!showAllBackups)}
+          onToggleShowAll={() => setIsShowingAllBackups(!isShowingAllBackups)}
         />
       </motion.div>
 

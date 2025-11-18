@@ -21,7 +21,7 @@ interface SyncAutoPauseSectionProps {
   /** Current sync configuration. */
   syncConfig: SyncConfig;
   /** Whether custom threshold is currently enabled. */
-  useCustomThreshold: boolean;
+  isCustomThresholdEnabled: boolean;
   /** Current search query. */
   searchQuery: string;
   /** Currently highlighted section ID. */
@@ -43,7 +43,7 @@ interface SyncAutoPauseSectionProps {
  */
 export function SyncAutoPauseSection({
   syncConfig,
-  useCustomThreshold,
+  isCustomThresholdEnabled,
   searchQuery,
   highlightedSectionId,
   onSyncConfigChange,
@@ -82,12 +82,12 @@ export function SyncAutoPauseSection({
           id="auto-pause"
           checked={syncConfig.autoPauseInactive}
           onCheckedChange={(checked) => {
-            const newConfig = {
+            const updatedConfig = {
               ...syncConfig,
               autoPauseInactive: checked,
             };
-            setSyncConfig(newConfig);
-            onSyncConfigChange(newConfig, "autoPauseInactive");
+            setSyncConfig(updatedConfig);
+            onSyncConfigChange(updatedConfig, "autoPauseInactive");
           }}
         />
       </div>
@@ -103,7 +103,7 @@ export function SyncAutoPauseSection({
             id="auto-pause-threshold"
             className="border-input bg-background ring-offset-background focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             value={
-              useCustomThreshold
+              isCustomThresholdEnabled
                 ? "custom"
                 : syncConfig.autoPauseThreshold.toString()
             }
@@ -113,12 +113,12 @@ export function SyncAutoPauseSection({
                 onCustomThresholdToggle(true);
               } else {
                 onCustomThresholdToggle(false);
-                const newConfig = {
+                const updatedConfig = {
                   ...syncConfig,
                   autoPauseThreshold: Number(value),
                 };
-                setSyncConfig(newConfig);
-                onSyncConfigChange(newConfig, "autoPauseThreshold");
+                setSyncConfig(updatedConfig);
+                onSyncConfigChange(updatedConfig, "autoPauseThreshold");
               }
             }}
             disabled={!syncConfig.autoPauseInactive}
@@ -135,7 +135,7 @@ export function SyncAutoPauseSection({
           </select>
         </div>
 
-        {useCustomThreshold && (
+        {isCustomThresholdEnabled && (
           <div className="grid gap-1.5">
             <label
               htmlFor="custom-auto-pause-threshold"
@@ -158,13 +158,13 @@ export function SyncAutoPauseSection({
               onChange={(e) => {
                 const value = Number.parseInt(e.target.value, 10);
                 if (!Number.isNaN(value) && value > 0) {
-                  const newConfig = {
+                  const updatedConfig = {
                     ...syncConfig,
                     autoPauseThreshold: value,
                     customAutoPauseThreshold: value,
                   };
-                  setSyncConfig(newConfig);
-                  onSyncConfigChange(newConfig, "customAutoPauseThreshold");
+                  setSyncConfig(updatedConfig);
+                  onSyncConfigChange(updatedConfig, "customAutoPauseThreshold");
                 }
               }}
               disabled={!syncConfig.autoPauseInactive}

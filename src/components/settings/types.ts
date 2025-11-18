@@ -6,22 +6,22 @@ import type { BackupScheduleConfig } from "@/utils/storage";
  * @source
  */
 export interface CachesToClear {
-  /** Authentication tokens and login state. */
-  auth: boolean;
-  /** Sync settings and preferences. */
-  settings: boolean;
-  /** Synchronization history. */
-  sync: boolean;
-  /** Import operation history. */
-  import: boolean;
-  /** Matching results. */
-  review: boolean;
-  /** Manga titles and metadata. */
-  manga: boolean;
-  /** Search queries and results. */
-  search: boolean;
-  /** Miscellaneous cache data. */
-  other: boolean;
+  /** Whether to clear authentication tokens and login state cache. */
+  shouldClearAuthCache: boolean;
+  /** Whether to clear sync settings and preferences cache. */
+  shouldClearSettingsCache: boolean;
+  /** Whether to clear synchronization history cache. */
+  shouldClearSyncCache: boolean;
+  /** Whether to clear import operation history cache. */
+  shouldClearImportCache: boolean;
+  /** Whether to clear matching results cache. */
+  shouldClearReviewCache: boolean;
+  /** Whether to clear manga titles and metadata cache. */
+  shouldClearMangaCache: boolean;
+  /** Whether to clear search queries and results cache. */
+  shouldClearSearchCache: boolean;
+  /** Whether to clear miscellaneous cache data. */
+  shouldClearOtherCache: boolean;
 }
 
 /**
@@ -36,7 +36,7 @@ export interface DataManagementProps {
   /** Whether caches are currently being cleared. */
   isClearing: boolean;
   /** Whether caches were successfully cleared (success flag). */
-  cacheCleared: boolean;
+  isCacheCleared: boolean;
 
   // Backup/restore state
   /** Currently selected backup file for restore operations. */
@@ -58,21 +58,21 @@ export interface DataManagementProps {
   /** Whether the debug menu is enabled. */
   isDebugEnabled: boolean;
   /** Whether storage debugger panel is enabled. */
-  storageDebuggerEnabled: boolean;
+  isStorageDebuggerEnabled: boolean;
   /** Whether log viewer panel is enabled. */
-  logViewerEnabled: boolean;
+  isLogViewerEnabled: boolean;
   /** Whether log redaction is enabled in the log viewer. */
-  logRedactionEnabled: boolean;
+  isLogRedactionEnabled: boolean;
   /** Whether state inspector panel is enabled. */
-  stateInspectorEnabled: boolean;
+  isStateInspectorEnabled: boolean;
   /** Whether IPC viewer panel is enabled. */
-  ipcViewerEnabled: boolean;
+  isIpcViewerEnabled: boolean;
   /** Whether event logger panel is enabled. */
-  eventLoggerEnabled: boolean;
+  isEventLoggerEnabled: boolean;
   /** Whether confidence test exporter is enabled. */
-  confidenceTestExporterEnabled: boolean;
+  isConfidenceTestExporterEnabled: boolean;
   /** Whether performance monitor is enabled. */
-  performanceMonitorEnabled: boolean;
+  isPerformanceMonitorEnabled: boolean;
 
   // Search/UI state
   /** Current search query for filtering sections. */

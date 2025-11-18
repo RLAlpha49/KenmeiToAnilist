@@ -34,7 +34,7 @@ function Progress({
   indicatorClassName,
   ...props
 }: ProgressProps) {
-  const ariaValuenow = typeof value === "number" ? value : undefined;
+  const ariaValueNow = typeof value === "number" ? value : undefined;
 
   return (
     <ProgressPrimitive.Progress
@@ -43,7 +43,7 @@ function Progress({
         "bg-primary/20 relative h-2 w-full overflow-hidden rounded-full",
         className,
       )}
-      {...(ariaValuenow !== undefined && { "aria-valuenow": ariaValuenow })}
+      {...(ariaValueNow !== undefined && { "aria-valuenow": ariaValueNow })}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-label={props["aria-label"] || "Progress"}

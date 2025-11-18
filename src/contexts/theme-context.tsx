@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module ThemeContext
+ * @module theme-context
  * @description React context and provider for managing and accessing theme preferences (dark, light, system) throughout the application.
  */
 
@@ -21,7 +21,7 @@ import {
   enableLightMode,
   applySystemTheme,
 } from "@/helpers/theme-helpers";
-import { useDebugActions, StateInspectorHandle } from "./DebugContext";
+import { useDebugActions, StateInspectorHandle } from "./debug-context";
 
 /**
  * Context value providing theme state and action functions.

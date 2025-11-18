@@ -20,21 +20,21 @@ interface DebugToolsSectionProps {
   /** Whether debug mode is enabled. */
   isDebugEnabled: boolean;
   /** Whether storage debugger is enabled. */
-  storageDebuggerEnabled: boolean;
+  isStorageDebuggerEnabled: boolean;
   /** Whether log viewer is enabled. */
-  logViewerEnabled: boolean;
+  isLogViewerEnabled: boolean;
   /** Whether log redaction is enabled. */
-  logRedactionEnabled: boolean;
+  isLogRedactionEnabled: boolean;
   /** Whether state inspector is enabled. */
-  stateInspectorEnabled: boolean;
+  isStateInspectorEnabled: boolean;
   /** Whether IPC viewer is enabled. */
-  ipcViewerEnabled: boolean;
+  isIpcViewerEnabled: boolean;
   /** Whether event logger is enabled. */
-  eventLoggerEnabled: boolean;
+  isEventLoggerEnabled: boolean;
   /** Whether confidence test exporter is enabled. */
-  confidenceTestExporterEnabled: boolean;
+  isConfidenceTestExporterEnabled: boolean;
   /** Whether performance monitor is enabled. */
-  performanceMonitorEnabled: boolean;
+  isPerformanceMonitorEnabled: boolean;
   /** Current search query. */
   searchQuery: string;
   /** Currently highlighted section ID. */
@@ -82,14 +82,14 @@ const renderHighlightedText = (
  */
 export function DebugToolsSection({
   isDebugEnabled,
-  storageDebuggerEnabled,
-  logViewerEnabled,
-  logRedactionEnabled,
-  stateInspectorEnabled,
-  ipcViewerEnabled,
-  eventLoggerEnabled,
-  confidenceTestExporterEnabled,
-  performanceMonitorEnabled,
+  isStorageDebuggerEnabled,
+  isLogViewerEnabled,
+  isLogRedactionEnabled,
+  isStateInspectorEnabled,
+  isIpcViewerEnabled,
+  isEventLoggerEnabled,
+  isConfidenceTestExporterEnabled,
+  isPerformanceMonitorEnabled,
   searchQuery,
   highlightedSectionId,
   onToggleDebug,
@@ -139,7 +139,7 @@ export function DebugToolsSection({
             </span>
             <Switch
               id="confidence-test-exporter-enabled"
-              checked={confidenceTestExporterEnabled}
+              checked={isConfidenceTestExporterEnabled}
               onCheckedChange={(checked) =>
                 onConfidenceTestExporterChange(Boolean(checked))
               }
@@ -211,7 +211,7 @@ export function DebugToolsSection({
                 title: "Log viewer",
                 description:
                   "Inspect and filter captured console logs by severity. Export logger output for support.",
-                checked: logViewerEnabled,
+                checked: isLogViewerEnabled,
                 onChange: (v) => onLogViewerChange(Boolean(v)),
                 label: "Enable panel",
                 extra: (
@@ -236,11 +236,11 @@ export function DebugToolsSection({
                       </span>
                       <Switch
                         id="log-redaction-enabled"
-                        checked={logRedactionEnabled}
+                        checked={isLogRedactionEnabled}
                         onCheckedChange={(checked) =>
                           onLogRedactionChange(Boolean(checked))
                         }
-                        disabled={!logViewerEnabled}
+                        disabled={!isLogViewerEnabled}
                       />
                     </div>
                   </div>
@@ -253,7 +253,7 @@ export function DebugToolsSection({
                 title: "Storage debugger",
                 description:
                   "Inspect, debug, and edit Electron Store and localStorage data from the command center.",
-                checked: storageDebuggerEnabled,
+                checked: isStorageDebuggerEnabled,
                 onChange: (v) => onStorageDebuggerChange(Boolean(v)),
                 label: "Enable panel",
               },
@@ -262,7 +262,7 @@ export function DebugToolsSection({
                 title: "State inspector",
                 description:
                   "Inspect and edit live application state: auth, sync state, and settings. Export and simulate scenarios.",
-                checked: stateInspectorEnabled,
+                checked: isStateInspectorEnabled,
                 onChange: (v) => onStateInspectorChange(Boolean(v)),
                 label: "Enable panel",
                 footer:
@@ -273,7 +273,7 @@ export function DebugToolsSection({
                 title: "Event logger",
                 description:
                   "Record and review user actions, events, and system timeline. Filter by event type and time window.",
-                checked: eventLoggerEnabled,
+                checked: isEventLoggerEnabled,
                 onChange: (v) => onEventLoggerChange(Boolean(v)),
                 label: "Enable panel",
                 footer:
@@ -284,7 +284,7 @@ export function DebugToolsSection({
                 title: "IPC traffic monitor",
                 description:
                   "Record and capture inter-process communication (IPC) messages between renderer and main process.",
-                checked: ipcViewerEnabled,
+                checked: isIpcViewerEnabled,
                 onChange: (v) => onIpcViewerChange(Boolean(v)),
                 label: "Enable panel",
                 footer:
@@ -295,7 +295,7 @@ export function DebugToolsSection({
                 title: "Performance monitor",
                 description:
                   "Real-time monitoring of API latency, cache hit rates, matching speed, and memory usage with interactive charts.",
-                checked: performanceMonitorEnabled,
+                checked: isPerformanceMonitorEnabled,
                 onChange: (v) => onPerformanceMonitorChange(Boolean(v)),
                 label: "Enable panel",
                 footer:

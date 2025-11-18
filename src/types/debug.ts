@@ -182,7 +182,7 @@ export interface PerformanceMetrics {
  * Default/initial performance metrics state.
  * @source
  */
-export const DEFAULT_PERFORMANCE_METRICS: PerformanceMetrics = {
+export const defaultPerformanceMetrics: PerformanceMetrics = {
   api: {
     totalRequests: 0,
     successfulRequests: 0,

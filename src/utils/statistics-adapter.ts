@@ -61,24 +61,24 @@ export type TimeRange = "7d" | "30d" | "90d" | "all";
  * Optionally includes confidence score if known at normalization time.
  * @source
  */
-export type SelectedMatchLite = {
+export interface SelectedMatchLite {
   readonly format?: string;
   readonly genres: string[];
   readonly tags: string[];
   readonly confidence?: number;
-};
+}
 
 /**
  * Match result optimized for statistics dashboard; uses minimal local types to prevent reliance on unguaranteed fields.
  * @source
  */
-export type NormalizedMatchForStats = {
+export interface NormalizedMatchForStats {
   readonly kenmeiManga: KenmeiManga;
   readonly anilistMatches?: MangaMatch[];
   readonly selectedMatch?: SelectedMatchLite;
   readonly status: MatchStatus;
   readonly matchDate?: Date;
-};
+}
 
 /**
  * Validates and extracts kenmeiManga from raw object; returns null if required fields missing.

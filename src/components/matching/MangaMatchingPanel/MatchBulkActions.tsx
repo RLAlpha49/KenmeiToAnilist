@@ -26,6 +26,7 @@ import {
  * @property isAcceptingAllMatches - Whether accept operation is in progress.
  * @property onSetMatchedToPending - Optional callback to reset matched to pending.
  * @property isResettingMatchedToPending - Whether reset matched operation is in progress.
+ * @property isSetMatchedToPendingDisabled - Whether the reset matched action should be disabled.
  * @property matchedCount - Optional count of matched items.
  * @source
  */
@@ -44,6 +45,7 @@ export interface MatchBulkActionsProps {
   isAcceptingAllMatches: boolean;
   onSetMatchedToPending?: () => void;
   isResettingMatchedToPending?: boolean;
+  isSetMatchedToPendingDisabled?: boolean;
   matchedCount?: number;
 }
 
@@ -72,6 +74,7 @@ function MatchBulkActionsComponent({
   isAcceptingAllMatches,
   onSetMatchedToPending,
   isResettingMatchedToPending,
+  isSetMatchedToPendingDisabled,
   matchedCount,
 }: Readonly<MatchBulkActionsProps>) {
   const hasMatched = (matchedCount ?? 0) > 0;
@@ -236,7 +239,9 @@ function MatchBulkActionsComponent({
             <Button
               variant="outline"
               onClick={onSetMatchedToPending}
-              disabled={isResettingMatchedToPending}
+              disabled={
+                isResettingMatchedToPending || isSetMatchedToPendingDisabled
+              }
               className="w-full border-indigo-400/40 bg-indigo-500/90 text-white shadow-md shadow-indigo-500/40 transition hover:border-indigo-400/60 hover:bg-indigo-500 sm:w-auto"
               aria-label={`Reset ${matchedCount || 0} matched ${(matchedCount ?? 0) === 1 ? "item" : "items"} to pending`}
             >

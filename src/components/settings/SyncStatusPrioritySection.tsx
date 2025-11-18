@@ -80,12 +80,12 @@ export function SyncStatusPrioritySection({
             id="preserve-completed"
             checked={syncConfig.preserveCompletedStatus}
             onCheckedChange={(checked) => {
-              const newConfig = {
+              const updatedConfig = {
                 ...syncConfig,
                 preserveCompletedStatus: checked,
               };
-              setSyncConfig(newConfig);
-              onSyncConfigChange(newConfig, "preserveCompletedStatus");
+              setSyncConfig(updatedConfig);
+              onSyncConfigChange(updatedConfig, "preserveCompletedStatus");
             }}
           />
         </div>
@@ -99,12 +99,12 @@ export function SyncStatusPrioritySection({
             id="prioritize-anilist-status"
             checked={syncConfig.prioritizeAniListStatus}
             onCheckedChange={(checked) => {
-              const newConfig = {
+              const updatedConfig = {
                 ...syncConfig,
                 prioritizeAniListStatus: checked,
               };
-              setSyncConfig(newConfig);
-              onSyncConfigChange(newConfig, "prioritizeAniListStatus");
+              setSyncConfig(updatedConfig);
+              onSyncConfigChange(updatedConfig, "prioritizeAniListStatus");
             }}
           />
         </div>
@@ -118,12 +118,12 @@ export function SyncStatusPrioritySection({
             id="prioritize-anilist-progress"
             checked={syncConfig.prioritizeAniListProgress}
             onCheckedChange={(checked) => {
-              const newConfig = {
+              const updatedConfig = {
                 ...syncConfig,
                 prioritizeAniListProgress: checked,
               };
-              setSyncConfig(newConfig);
-              onSyncConfigChange(newConfig, "prioritizeAniListProgress");
+              setSyncConfig(updatedConfig);
+              onSyncConfigChange(updatedConfig, "prioritizeAniListProgress");
             }}
           />
         </div>
@@ -137,12 +137,12 @@ export function SyncStatusPrioritySection({
             id="prioritize-anilist-score"
             checked={syncConfig.prioritizeAniListScore}
             onCheckedChange={(checked) => {
-              const newConfig = {
+              const updatedConfig = {
                 ...syncConfig,
                 prioritizeAniListScore: checked,
               };
-              setSyncConfig(newConfig);
-              onSyncConfigChange(newConfig, "prioritizeAniListScore");
+              setSyncConfig(updatedConfig);
+              onSyncConfigChange(updatedConfig, "prioritizeAniListScore");
             }}
           />
         </div>

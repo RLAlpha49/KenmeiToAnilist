@@ -1,7 +1,7 @@
 import {
   useOnboarding,
   type OnboardingStep,
-} from "@/contexts/OnboardingContext";
+} from "@/contexts/onboarding-context";
 
 /**
  * Hook for tracking and controlling onboarding progress for a specific step.

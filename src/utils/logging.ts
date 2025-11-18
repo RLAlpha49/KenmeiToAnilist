@@ -315,7 +315,7 @@ const maybeRedact = (text: string): string =>
  * @returns A string representation of the value.
  * @source
  */
-const serialiseArgument = (value: unknown): string => {
+const serializeArgument = (value: unknown): string => {
   if (value instanceof Error) {
     const stack = value.stack?.split("\n").slice(0, 5).join("\n");
     const errorStr =
@@ -565,13 +565,13 @@ class LogCollector {
       const consumed = countPlaceholders(primary);
       const consumedArgs = rest.slice(0, consumed);
       message = applyFormat(primary, consumedArgs);
-      details = rest.slice(consumed).map(serialiseArgument);
+      details = rest.slice(consumed).map(serializeArgument);
     } else {
       message =
         primary === undefined && rest.length === 0
           ? ""
-          : serialiseArgument(primary);
-      details = rest.map(serialiseArgument);
+          : serializeArgument(primary);
+      details = rest.map(serializeArgument);
     }
 
     const entry: LogEntry = {
@@ -728,7 +728,7 @@ export interface SerializableLogEntry {
  * @returns Array of serializable log entries.
  * @source
  */
-export function serialiseLogEntries(
+export function serializeLogEntries(
   entries: LogEntry[],
 ): SerializableLogEntry[] {
   return entries.map(

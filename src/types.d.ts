@@ -25,7 +25,7 @@ declare module "*.ts?worker" {
   export default workerConstructor;
 }
 
-import type { APICredentials } from "./types/auth";
+import type { ApiCredentials } from "./types/auth";
 import type { TokenExchangeResponse } from "./types/api";
 import type { AniListRequest } from "./helpers/ipc/api/api-context";
 import type { ShellOperationResult } from "./helpers/ipc/types";
@@ -500,7 +500,7 @@ declare global {
        * @source
        */
       storeCredentials: (
-        credentials: APICredentials,
+        credentials: ApiCredentials,
       ) => Promise<{ success: boolean; error?: string }>;
 
       /**
@@ -511,7 +511,7 @@ declare global {
        */
       getCredentials: (source: "default" | "custom") => Promise<{
         success: boolean;
-        credentials?: APICredentials;
+        credentials?: ApiCredentials;
         error?: string;
       }>;
 

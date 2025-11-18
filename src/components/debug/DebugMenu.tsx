@@ -28,7 +28,7 @@ import { EventLogger } from "./EventLogger";
 import { PerformanceMonitor } from "./PerformanceMonitor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/Tabs";
 import { Badge } from "../ui/Badge";
-import { useDebugState } from "../../contexts/DebugContext";
+import { useDebugState } from "../../contexts/debug-context";
 import { cn } from "@/utils/tailwind";
 import { Button } from "../ui/Button";
 import { ScrollArea } from "../ui/ScrollArea";
@@ -64,12 +64,12 @@ export interface DebugMenuProps {
  */
 export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
   const {
-    storageDebuggerEnabled,
-    logViewerEnabled,
-    stateInspectorEnabled,
-    ipcViewerEnabled,
-    eventLoggerEnabled,
-    performanceMonitorEnabled,
+    isStorageDebuggerEnabled,
+    isLogViewerEnabled,
+    isStateInspectorEnabled,
+    isIpcViewerEnabled,
+    isEventLoggerEnabled,
+    isPerformanceMonitorEnabled,
   } = useDebugState();
 
   const [activePanel, setActivePanel] = useState<string>("");
@@ -78,7 +78,7 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
   const panels = useMemo(() => {
     const entries: DebugPanelDefinition[] = [];
 
-    if (storageDebuggerEnabled) {
+    if (isStorageDebuggerEnabled) {
       entries.push({
         id: "storage",
         label: "Storage Explorer",
@@ -107,7 +107,7 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
       });
     }
 
-    if (logViewerEnabled) {
+    if (isLogViewerEnabled) {
       entries.push({
         id: "logs",
         label: "Log Viewer",
@@ -122,7 +122,7 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
       });
     }
 
-    if (stateInspectorEnabled) {
+    if (isStateInspectorEnabled) {
       entries.push({
         id: "state",
         label: "State Inspector",
@@ -137,7 +137,7 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
       });
     }
 
-    if (ipcViewerEnabled) {
+    if (isIpcViewerEnabled) {
       entries.push({
         id: "ipc",
         label: "IPC Traffic",
@@ -152,7 +152,7 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
       });
     }
 
-    if (eventLoggerEnabled) {
+    if (isEventLoggerEnabled) {
       entries.push({
         id: "events",
         label: "Event Logger",
@@ -167,7 +167,7 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
       });
     }
 
-    if (performanceMonitorEnabled) {
+    if (isPerformanceMonitorEnabled) {
       entries.push({
         id: "performance",
         label: "Performance Monitor",
@@ -184,12 +184,12 @@ export function DebugMenu({ isOpen, onClose }: Readonly<DebugMenuProps>) {
 
     return entries;
   }, [
-    ipcViewerEnabled,
-    eventLoggerEnabled,
-    logViewerEnabled,
-    stateInspectorEnabled,
-    storageDebuggerEnabled,
-    performanceMonitorEnabled,
+    isIpcViewerEnabled,
+    isEventLoggerEnabled,
+    isLogViewerEnabled,
+    isStateInspectorEnabled,
+    isStorageDebuggerEnabled,
+    isPerformanceMonitorEnabled,
     setActivePanel,
   ]);
 

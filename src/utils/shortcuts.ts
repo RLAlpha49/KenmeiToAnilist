@@ -9,11 +9,11 @@
  * @source
  */
 export enum ShortcutCategory {
-  NAVIGATION = "Navigation",
-  MATCHING = "Matching",
-  SYNC = "Sync",
-  DEBUG = "Debug",
-  GENERAL = "General",
+  NAVIGATION = "NAVIGATION",
+  MATCHING = "MATCHING",
+  SYNC = "SYNC",
+  DEBUG = "DEBUG",
+  GENERAL = "GENERAL",
 }
 
 /**

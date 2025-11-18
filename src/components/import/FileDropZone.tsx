@@ -55,8 +55,8 @@ export function FileDropZone({
    * Handles drag-over event to highlight drop zone.
    * @source
    */
-  const handleDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
-    e.preventDefault();
+  const handleDragOver = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
     setIsDragging(true);
   };
 
@@ -64,8 +64,8 @@ export function FileDropZone({
    * Handles drag-leave event to reset drop zone highlight.
    * @source
    */
-  const handleDragLeave = (e: React.DragEvent<HTMLLabelElement>) => {
-    e.preventDefault();
+  const handleDragLeave = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
     setIsDragging(false);
   };
 
@@ -74,12 +74,12 @@ export function FileDropZone({
    * @param e - Drag event.
    * @source
    */
-  const handleDrop = (e: React.DragEvent<HTMLLabelElement>) => {
-    e.preventDefault();
+  const handleDrop = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
     setIsDragging(false);
 
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
+    if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+      const file = event.dataTransfer.files[0];
       processFile(file);
     }
   };
@@ -89,9 +89,9 @@ export function FileDropZone({
    * @param e - Change event from file input.
    * @source
    */
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files.length > 0) {
+      const file = event.target.files[0];
       // Reset state on new file selection
       resetState();
       processFile(file);
@@ -184,17 +184,17 @@ export function FileDropZone({
 
       const kenmeiData: KenmeiData = {
         version: "1.0.0",
-        exported_at: new Date().toISOString(),
+        exportedAt: new Date().toISOString(),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         manga: manga.map((item: any) => ({
           title: item.title,
           status: item.status,
           score: item.score,
-          chapters_read: item.chapters_read,
-          volumes_read: item.volumes_read,
-          created_at: item.created_at,
-          updated_at: item.updated_at,
-          last_read_at: item.last_read_at,
+          chaptersRead: item.chaptersRead ?? item.chapters_read,
+          volumesRead: item.volumesRead ?? item.volumes_read,
+          createdAt: item.createdAt ?? item.created_at,
+          updatedAt: item.updatedAt ?? item.updated_at,
+          lastReadAt: item.lastReadAt ?? item.last_read_at,
           notes: item.notes,
           url: item.url,
         })),
@@ -203,11 +203,11 @@ export function FileDropZone({
       setLoadingProgress(100);
       setIsLoading(false);
       onFileLoaded(kenmeiData);
-    } catch (err) {
-      console.error("CSV parsing error:", err);
+    } catch (error) {
+      console.error("CSV parsing error:", error);
 
       // Handle cancellation silently without error callback
-      if (err instanceof CancelledError) {
+      if (error instanceof CancelledError) {
         setIsLoading(false);
         return;
       }
@@ -216,12 +216,12 @@ export function FileDropZone({
 
       // Build error based on error type
       let appError: AppError;
-      if (err instanceof Error) {
-        switch (err.message) {
+      if (error instanceof Error) {
+        switch (error.message) {
           case "Invalid file format. Please upload a CSV file.":
             appError = createError(
               ErrorType.VALIDATION,
-              err.message,
+              error.message,
               undefined,
               "INVALID_FORMAT",
               ErrorRecoveryAction.NONE,
@@ -231,7 +231,7 @@ export function FileDropZone({
           case "File is too large. Maximum size is 10MB.":
             appError = createError(
               ErrorType.VALIDATION,
-              err.message,
+              error.message,
               undefined,
               "FILE_TOO_LARGE",
               ErrorRecoveryAction.NONE,
@@ -241,7 +241,7 @@ export function FileDropZone({
           case "No manga entries found in the CSV file. Please check the file format.":
             appError = createError(
               ErrorType.VALIDATION,
-              err.message,
+              error.message,
               undefined,
               "NO_ENTRIES",
               ErrorRecoveryAction.NONE,
@@ -252,7 +252,7 @@ export function FileDropZone({
             appError = createError(
               ErrorType.VALIDATION,
               "Failed to parse CSV file. Please ensure it's a valid Kenmei export file.",
-              err,
+              error,
               "PARSE_FAILED",
               ErrorRecoveryAction.NONE,
               "Ensure the file is UTF-8 encoded and hasn't been modified. Re-export from Kenmei if needed.",
@@ -262,7 +262,7 @@ export function FileDropZone({
         appError = createError(
           ErrorType.VALIDATION,
           "Failed to parse CSV file. Please ensure it's a valid Kenmei export file.",
-          err,
+          error,
           "PARSE_FAILED",
           ErrorRecoveryAction.NONE,
           "Ensure the file is UTF-8 encoded and hasn't been modified. Re-export from Kenmei if needed.",
@@ -361,8 +361,8 @@ export function FileDropZone({
                   size="sm"
                   variant="outline"
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
+                  onClick={(clickEvent) => {
+                    clickEvent.stopPropagation();
                     const workerPool = getCSVWorkerPool({
                       enableWorkers: true,
                       fallbackToMainThread: true,
@@ -394,8 +394,8 @@ export function FileDropZone({
               <Button
                 size="sm"
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
+                onClick={(clickEvent) => {
+                  clickEvent.stopPropagation();
                   if (fileInputRef.current) {
                     fileInputRef.current.value = "";
                     fileInputRef.current.click();
@@ -423,8 +423,8 @@ export function FileDropZone({
               type="button"
               variant="outline"
               className="mt-2"
-              onClick={(e) => {
-                e.preventDefault();
+              onClick={(clickEvent) => {
+                clickEvent.preventDefault();
                 fileInputRef.current?.click();
               }}
             >

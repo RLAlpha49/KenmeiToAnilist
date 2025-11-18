@@ -1,4 +1,4 @@
-import type { OnboardingStep } from "@/contexts/OnboardingContext";
+import type { OnboardingStep } from "@/contexts/onboarding-context";
 import type { ElementSpotlight } from "@/components/onboarding/OnboardingHighlight";
 
 /**

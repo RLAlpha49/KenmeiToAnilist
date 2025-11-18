@@ -41,7 +41,7 @@ const ImportMatchesButtonComponent: React.FC<ImportMatchesButtonProps> = ({
   size = "default",
   onImportComplete,
 }) => {
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const handleImportComplete = useCallback(
     (result: { imported: number; merged: number; skipped: number }) => {
@@ -53,7 +53,7 @@ const ImportMatchesButtonComponent: React.FC<ImportMatchesButtonProps> = ({
   return (
     <>
       <Button
-        onClick={() => setDialogOpen(true)}
+        onClick={() => setIsDialogOpen(true)}
         disabled={disabled}
         variant={variant}
         size={size}
@@ -64,8 +64,8 @@ const ImportMatchesButtonComponent: React.FC<ImportMatchesButtonProps> = ({
       </Button>
 
       <ImportMatchesDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
         onImportComplete={handleImportComplete}
       />
     </>

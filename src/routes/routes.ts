@@ -5,7 +5,7 @@
  */
 
 import { createRoute } from "@tanstack/react-router";
-import { RootRoute } from "./__root";
+import { RootRoute } from "./root";
 import { HomePage } from "../pages/HomePage";
 import { ImportPage } from "../pages/ImportPage";
 import { MatchingPage } from "../pages/MatchingPage";

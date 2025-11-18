@@ -14,7 +14,7 @@ import {
 } from "@tanstack/react-router";
 import { ShortcutsPanel } from "../components/ShortcutsPanel";
 import { SHORTCUTS, matchesShortcut } from "../utils/shortcuts";
-import { useDebugActions } from "../contexts/DebugContext";
+import { useDebugActions } from "../contexts/debug-context";
 import {
   saveSyncConfig,
   getSyncConfig,

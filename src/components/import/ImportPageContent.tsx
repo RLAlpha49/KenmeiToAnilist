@@ -275,7 +275,7 @@ export function FileReadyContent({
   }
 
   const statusEntries = Object.entries(statusCounts).sort(
-    ([, a], [, b]) => b - a,
+    ([, firstCount], [, secondCount]) => secondCount - firstCount,
   );
   const uniqueStatuses = statusEntries.length;
 

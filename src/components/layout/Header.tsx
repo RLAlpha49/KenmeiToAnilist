@@ -41,7 +41,7 @@ import {
 } from "../ui/Tooltip";
 import { motion } from "framer-motion";
 import appIcon from "../../assets/k2a-icon-512x512.png";
-import { useDebugState, useDebugActions } from "../../contexts/DebugContext";
+import { useDebugState, useDebugActions } from "../../contexts/debug-context";
 import { DebugMenu } from "../debug/DebugMenu";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/utils/tailwind";
@@ -81,7 +81,7 @@ export function Header({
 }: Readonly<{
   onOpenShortcutsPanel?: () => void;
 }>) {
-  const { isDebugEnabled, debugMenuOpen } = useDebugState();
+  const { isDebugEnabled, debugMenuOpen: isDebugMenuOpen } = useDebugState();
   const { openDebugMenu, closeDebugMenu } = useDebugActions();
 
   const location = useLocation();
@@ -94,7 +94,7 @@ export function Header({
     y: number;
     size: number;
   } | null>(null);
-  const [showRipple, setShowRipple] = useState(false);
+  const [isRippleVisible, setIsRippleVisible] = useState(false);
 
   const handleShortcutsButtonMouseDown = (
     e: React.MouseEvent<HTMLButtonElement>,
@@ -123,17 +123,17 @@ export function Header({
 
     // Mount ripple with scale-0 first, then trigger entrance animation
     setRippleState({ x, y, size });
-    setShowRipple(false);
+    setIsRippleVisible(false);
 
     // Use requestAnimationFrame to ensure DOM has updated before triggering animation
     requestAnimationFrame(() => {
-      setShowRipple(true);
+      setIsRippleVisible(true);
     });
   };
 
   const handleRippleTransitionEnd = () => {
-    if (!showRipple) {
-      // Only clean up when exiting (showRipple is false)
+    if (!isRippleVisible) {
+      // Only clean up when exiting (isRippleVisible is false)
       if (rippleTimerRef.current) {
         clearTimeout(rippleTimerRef.current);
       }
@@ -143,9 +143,9 @@ export function Header({
 
   // Trigger ripple exit animation after 600ms (entrance + hold time)
   useEffect(() => {
-    if (showRipple && rippleState) {
+    if (isRippleVisible && rippleState) {
       rippleTimerRef.current = setTimeout(() => {
-        setShowRipple(false);
+        setIsRippleVisible(false);
       }, 600);
 
       return () => {
@@ -154,7 +154,7 @@ export function Header({
         }
       };
     }
-  }, [showRipple, rippleState]);
+  }, [isRippleVisible, rippleState]);
 
   // Determine current page pathname for active nav item highlighting
   const pathname = getPathname(location);
@@ -267,7 +267,7 @@ export function Header({
                           ref={rippleRef}
                           onTransitionEnd={handleRippleTransitionEnd}
                           className={`pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-500 ease-out ${
-                            showRipple
+                            isRippleVisible
                               ? "scale-100 opacity-100"
                               : "scale-0 opacity-0"
                           } bg-white/30 dark:bg-white/20`}
@@ -358,7 +358,7 @@ export function Header({
       </header>
 
       {/* Debug Menu */}
-      <DebugMenu isOpen={debugMenuOpen} onClose={() => closeDebugMenu()} />
+      <DebugMenu isOpen={isDebugMenuOpen} onClose={() => closeDebugMenu()} />
     </TooltipProvider>
   );
 }

@@ -30,7 +30,7 @@ interface SettingsHeroProps {
   /** Whether the component is in a loading state. */
   isLoading: boolean;
   /** Whether the login button is disabled. */
-  disableLogin?: boolean;
+  isLoginDisabled?: boolean;
   /** Callback when user clicks login. */
   onLogin: () => void;
   /** Callback to refresh the authentication token. */
@@ -64,7 +64,7 @@ export function SettingsHero({
   avatarUrl,
   statusMessage,
   isLoading,
-  disableLogin = false,
+  isLoginDisabled = false,
   onLogin,
   onRefreshToken,
   onLogout,
@@ -122,7 +122,7 @@ export function SettingsHero({
                 onClick={onLogin}
                 size="lg"
                 className="bg-indigo-600 text-white hover:bg-indigo-500 dark:bg-white dark:text-slate-900 dark:hover:bg-white/90"
-                disabled={isLoading || disableLogin}
+                disabled={isLoading || isLoginDisabled}
                 data-onboarding="auth-button"
               >
                 <LogIn className="mr-2 h-4 w-4" />

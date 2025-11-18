@@ -266,7 +266,7 @@ export class CSVWorkerPool {
       type: "csv" as const,
       resolve: wrappedResolve as (result: Record<string, unknown>) => void,
       reject,
-      cancelled: false,
+      isCancelled: false,
       onProgress: ((message: import("../core/types").WorkerMessage) => {
         // Handle CSV_ROWS batches
         if (message.type === "CSV_ROWS") {

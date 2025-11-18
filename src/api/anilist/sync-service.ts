@@ -1312,7 +1312,7 @@ async function processMediaIdInBatch(
 /**
  * Process a batch of manga updates with rate limiting and progress tracking.
  *
- * @param entries - Array of AniList media entries to sync.
+ * @param mediaEntries - Array of AniList media entries to sync.
  * @param token - The user's authentication token.
  * @param onProgress - Optional callback for progress updates.
  * @param abortSignal - Optional abort signal to cancel the sync.

@@ -15,8 +15,8 @@ import type {
 } from "./types";
 import { getErrorDetails } from "./worker/error-utils";
 import {
-  handleCSVStart,
-  handleCSVChunk,
+  handleCsvStart,
+  handleCsvChunk,
 } from "./worker/operations/csv-operations";
 import { handleMatchBatch } from "./worker/operations/matching-operations";
 import { handleAdvancedFilter } from "./worker/operations/advanced-filter-operations";
@@ -53,11 +53,11 @@ globalThis.onmessage = async (event: MessageEvent<WorkerInboundMessage>) => {
         break;
 
       case "CSV_START":
-        handleCSVStart(message, activeTasks);
+        handleCsvStart(message, activeTasks);
         break;
 
       case "CSV_CHUNK":
-        handleCSVChunk(message, activeTasks);
+        handleCsvChunk(message, activeTasks);
         break;
 
       case "ADVANCED_FILTER":

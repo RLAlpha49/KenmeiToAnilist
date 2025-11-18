@@ -62,7 +62,7 @@ interface ChangesSummaryProps {
  */
 export const ChangesSummary: React.FC<ChangesSummaryProps> = ({
   entriesWithChanges,
-  libraryLoading,
+  libraryLoading: isLibraryLoading,
   libraryError,
   isRateLimited,
   onLibraryRefresh,
@@ -203,7 +203,7 @@ export const ChangesSummary: React.FC<ChangesSummaryProps> = ({
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {(() => {
           let libraryStatusContent: React.ReactNode;
-          if (libraryLoading) {
+          if (isLibraryLoading) {
             libraryStatusContent = (
               <>
                 <Loader2 className="h-3 w-3 animate-spin text-slate-500 dark:text-slate-400" />
@@ -258,14 +258,14 @@ export const ChangesSummary: React.FC<ChangesSummaryProps> = ({
           variant="outline"
           size="sm"
           onClick={onLibraryRefresh}
-          disabled={libraryLoading || isRateLimited}
+          disabled={isLibraryLoading || isRateLimited}
           className="inline-flex items-center gap-2 rounded-full border-slate-300/70 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-blue-300 hover:bg-blue-50/70 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700/70 dark:text-slate-200 dark:hover:border-blue-700 dark:hover:bg-blue-950/30"
         >
           <RefreshCcw
-            className={`h-3 w-3 ${libraryLoading ? "animate-spin" : ""}`}
+            className={`h-3 w-3 ${isLibraryLoading ? "animate-spin" : ""}`}
           />
           {(() => {
-            if (libraryLoading) {
+            if (isLibraryLoading) {
               return "Refreshing...";
             } else if (isRateLimited) {
               return "Rate limit active";

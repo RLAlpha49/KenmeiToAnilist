@@ -44,7 +44,7 @@ export async function handleStatisticsAggregation(
         `[Worker] ⚠️ Statistics aggregation task ${taskId} was cancelled before filtering`,
       );
       globalThis.postMessage({
-        type: "STATS_CANCELLED",
+        type: "STATISTICS_AGGREGATION_CANCELLED",
         payload: {
           taskId,
           stage: "filtering",
@@ -68,7 +68,7 @@ export async function handleStatisticsAggregation(
         `[Worker] ⚠️ Statistics aggregation task ${taskId} was cancelled after filtering`,
       );
       globalThis.postMessage({
-        type: "STATS_CANCELLED",
+        type: "STATISTICS_AGGREGATION_CANCELLED",
         payload: {
           taskId,
           stage: "aggregation",
@@ -114,7 +114,7 @@ export async function handleStatisticsAggregation(
         `[Worker] ⚠️ Statistics aggregation task ${taskId} was cancelled before completion`,
       );
       globalThis.postMessage({
-        type: "STATS_CANCELLED",
+        type: "STATISTICS_AGGREGATION_CANCELLED",
         payload: {
           taskId,
           stage: "completion",
