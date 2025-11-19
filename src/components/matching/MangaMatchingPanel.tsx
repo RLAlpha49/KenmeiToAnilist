@@ -14,17 +14,13 @@ import { KenmeiManga } from "../../api/kenmei/types";
 import { MangaMatchResult, AniListManga } from "../../api/anilist/types";
 import { CollapsibleChevron } from "../ui/CollapsibleChevron";
 import {
+  AlertTriangle,
   ChevronLeft,
   ChevronRight,
-  AlertTriangle,
-  Type,
   ListFilter,
   Sparkles,
-  BookOpen,
-  ArrowUpDown,
   ShieldAlert,
 } from "lucide-react";
-import { cn } from "@/utils/tailwind";
 
 // Import the advanced filter hook for worker-based filtering
 import { useAdvancedFilter } from "@/hooks/use-advanced-filter";
@@ -81,6 +77,7 @@ import {
   MatchFilterControls,
   type StatusFiltersState,
 } from "./MangaMatchingPanel/MatchFilterControls";
+import { MatchSortControls } from "./MangaMatchingPanel/MatchSortControls";
 import { AlternativeSearchSettingsCard } from "./MangaMatchingPanel/AlternativeSearchSettingsCard";
 import { AdvancedFilterPanel } from "./AdvancedFilterPanel";
 import { FilterChips } from "./FilterChips";
@@ -313,7 +310,6 @@ export function MangaMatchingPanel({
 
   // State for collapsible sections
   const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
-  const [isBulkActionsOpen, setIsBulkActionsOpen] = useState(false);
 
   // State for adult content settings and blur management
   const [shouldBlurAdultContent, setShouldBlurAdultContent] = useState(true);
@@ -618,20 +614,22 @@ export function MangaMatchingPanel({
   }, [processedMatches, statusFilters]);
 
   // Apply advanced filters using worker (with debouncing)
-  const { filteredMatches: advancedFilteredMatches } = useAdvancedFilter(
-    statusFilteredMatches,
-    advancedFilters,
-    300, // 300ms debounce
-  );
+  const { filteredMatches: advancedFilteredMatches, isFiltering } =
+    useAdvancedFilter(
+      statusFilteredMatches,
+      advancedFilters,
+      300, // 300ms debounce
+    );
 
   // Prepare search query for fuzzy search (extract text tokens only)
   const fuzzySearchQuery = useMemo(() => {
-    if (!searchTerm || !isFuzzySearchEnabled) {
+    const trimmedSearchTerm = searchTerm.trim();
+    if (!trimmedSearchTerm || !isFuzzySearchEnabled) {
       return "";
     }
 
     // Check if search contains query syntax
-    const tokens = parseQuerySyntax(searchTerm);
+    const tokens = parseQuerySyntax(trimmedSearchTerm);
     const hasFieldTokens = tokens.some((t) => t.type === "field");
     const textTokens = tokens.filter((t) => t.type === "text");
 
@@ -671,19 +669,18 @@ export function MangaMatchingPanel({
         const queryFilters = applyQueryToFilters(tokens, advancedFilters);
         filtered = filterByAdvancedCriteria(filtered, queryFilters);
       }
-    } else if (searchTerm && !isFuzzySearchEnabled) {
+    } else if (searchTerm.trim() && !isFuzzySearchEnabled) {
+      const trimmedTerm = searchTerm.trim().toLowerCase();
       // Fallback to substring search when fuzzy search is disabled
       filtered = filtered.filter(
         (match) =>
-          match.kenmeiManga.title
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
+          match.kenmeiManga.title.toLowerCase().includes(trimmedTerm) ||
           match.selectedMatch?.title?.english
             ?.toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
+            .includes(trimmedTerm) ||
           match.selectedMatch?.title?.romaji
             ?.toLowerCase()
-            .includes(searchTerm.toLowerCase()),
+            .includes(trimmedTerm),
       );
     }
 
@@ -874,35 +871,6 @@ export function MangaMatchingPanel({
       lastExternalSearchQuery.current = searchQuery;
     }
   }, [searchQuery]);
-
-  // Handle sort change
-  const handleSortChange = (field: SortField) => {
-    setSortOption((prev) => {
-      // If clicking the same field, toggle direction
-      if (prev.field === field) {
-        return {
-          ...prev,
-          direction: prev.direction === "asc" ? "desc" : "asc",
-        };
-      }
-      // If clicking a new field, default to ascending for title, descending for others
-      return {
-        field,
-        direction: field === "title" ? "asc" : "desc",
-      };
-    });
-  };
-
-  // Function to render sort indicator
-  const renderSortIndicator = (field: SortField) => {
-    if (sortOption.field !== field) return null;
-
-    return (
-      <span className="ml-1 text-xs">
-        {sortOption.direction === "asc" ? "▲" : "▼"}
-      </span>
-    );
-  };
 
   // Confidence badge extracted to separate component
 
@@ -1103,136 +1071,47 @@ export function MangaMatchingPanel({
         searchTerm={searchTerm}
         onSearchTermChange={(value) => setSearchTerm(value)}
         searchInputRef={searchInputRef}
+        isFiltering={isFiltering}
       />
 
-      {/* PRIMARY CONTROLS - Filters & Sort (side by side on larger screens) */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Status Filters */}
-        <div className="h-full">
-          <MatchFilterControls
-            statusFilters={statusFilters}
-            setStatusFilters={setStatusFilters}
-            matchStats={matchStats}
-          />
-        </div>
+      {/* PRIMARY CONTROLS - Filters, Sort, and Bulk Actions grouped in a centered 3x1 grid */}
+      <div className="flex w-full justify-center">
+        <div className="grid w-full max-w-7xl items-stretch gap-4 lg:grid-cols-3">
+          <div className="h-full w-full">
+            <MatchFilterControls
+              statusFilters={statusFilters}
+              setStatusFilters={setStatusFilters}
+              matchStats={matchStats}
+            />
+          </div>
 
-        <div>
-          <Card className="relative h-full overflow-hidden rounded-3xl border border-white/40 bg-white/75 shadow-xl shadow-slate-900/5 backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/70">
-            <div className="pointer-events-none absolute -left-16 top-0 h-48 w-48 rounded-full bg-indigo-400/15 blur-3xl" />
-            <div className="pointer-events-none absolute -right-20 bottom-0 h-56 w-56 rounded-full bg-blue-400/15 blur-3xl" />
-            <CardHeader className="relative z-10 min-h-[70px] border-b border-white/40 pb-4 dark:border-slate-800/60">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex flex-1 items-center gap-3">
-                  <div className="flex min-h-9 min-w-9 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-500">
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base font-semibold text-slate-900 dark:text-white">
-                      Sort Priorities
-                    </CardTitle>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Tap a mode to focus your review queue.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="relative z-10 p-5">
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  {
-                    field: "title" as const,
-                    label: "Title",
-                    helper: "Alphabetical",
-                    icon: Type,
-                    accent: "from-slate-400/20 via-slate-500/10 to-transparent",
-                  },
-                  {
-                    field: "status" as const,
-                    label: "Status",
-                    helper: "By workflow",
-                    icon: ListFilter,
-                    accent:
-                      "from-emerald-400/20 via-emerald-500/10 to-transparent",
-                  },
-                  {
-                    field: "confidence" as const,
-                    label: "Confidence",
-                    helper: "Highest first",
-                    icon: Sparkles,
-                    accent:
-                      "from-violet-400/20 via-violet-500/10 to-transparent",
-                  },
-                  {
-                    field: "chaptersRead" as const,
-                    label: "Chapters Read",
-                    helper: "Deep progress",
-                    icon: BookOpen,
-                    accent: "from-amber-400/20 via-amber-500/10 to-transparent",
-                  },
-                ].map(({ field, label, helper, icon: Icon, accent }) => {
-                  const isActive = sortOption.field === field;
-                  let directionLabel: string;
-                  if (isActive) {
-                    directionLabel =
-                      sortOption.direction === "asc"
-                        ? "Ascending"
-                        : "Descending";
-                  } else {
-                    directionLabel = "Tap";
-                  }
+          <div className="h-full w-full">
+            <MatchSortControls
+              sortOption={sortOption}
+              setSortOption={setSortOption}
+            />
+          </div>
 
-                  return (
-                    <button
-                      key={field}
-                      type="button"
-                      onClick={() => handleSortChange(field)}
-                      className={cn(
-                        "group relative overflow-hidden rounded-2xl border border-white/40 bg-white/65 p-3 text-left shadow-md transition-all hover:-translate-y-0.5 hover:border-white/60 hover:bg-white/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 dark:border-slate-800/60 dark:bg-slate-900/65 dark:hover:border-slate-700",
-                        isActive &&
-                          "ring-offset-background ring-2 ring-indigo-400 ring-offset-2",
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          "bg-linear-to-br absolute inset-0 opacity-40 transition-opacity duration-300 group-hover:opacity-70",
-                          accent,
-                        )}
-                      />
-                      <div className="relative flex flex-col gap-2">
-                        <div className="flex items-center justify-between gap-1">
-                          <div className="flex min-w-0 items-center gap-1.5">
-                            <span
-                              className={cn(
-                                "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/50 bg-white/70 text-slate-600 dark:border-slate-700 dark:bg-slate-900/70",
-                                isActive &&
-                                  "border-indigo-400/50 text-indigo-500",
-                              )}
-                            >
-                              <Icon className="h-3.5 w-3.5" />
-                            </span>
-                            <span className="truncate text-xs font-semibold text-slate-900 dark:text-white">
-                              {label}
-                            </span>
-                          </div>
-                          <Badge
-                            variant="secondary"
-                            className="flex shrink-0 items-center gap-0.5 rounded-full border border-white/40 bg-white/60 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300"
-                          >
-                            {directionLabel}
-                            {renderSortIndicator(field)}
-                          </Badge>
-                        </div>
-                        <p className="truncate text-[10px] text-slate-500 dark:text-slate-400">
-                          {helper}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+          <div className="h-full w-full">
+            <MatchBulkActions
+              emptyMatchesCount={emptyMatchesCount}
+              onSkipEmptyMatches={handleSkipEmptyMatches}
+              isSkippingEmptyMatches={isSkippingEmptyMatches}
+              noMatchesCount={noMatchesCount}
+              onReSearchNoMatches={handleReSearchNoMatches}
+              isReSearchingNoMatches={isReSearchingNoMatches}
+              skippedMangaCount={skippedMangaCount}
+              onResetSkippedToPending={handleResetSkippedToPending}
+              isResettingSkippedToPending={isResettingSkippedToPending}
+              pendingMatchesCount={pendingMatchesCount}
+              onAcceptAllPendingMatches={handleAcceptAllPendingMatches}
+              isAcceptingAllMatches={isAcceptingAllMatches}
+              onSetMatchedToPending={onSetMatchedToPending}
+              isResettingMatchedToPending={isResettingMatchedToPending}
+              isSetMatchedToPendingDisabled={isSetMatchedToPendingDisabled}
+              matchedCount={matchedCount}
+            />
+          </div>
         </div>
       </div>
 
@@ -1327,86 +1206,6 @@ export function MangaMatchingPanel({
         onRemoveFilter={handleRemoveFilter}
         onClearAll={handleClearAllFilters}
       />
-
-      {/* BULK ACTIONS - Collapsible, only show when there are items to act on */}
-      {(emptyMatchesCount > 0 ||
-        noMatchesCount > 0 ||
-        skippedMangaCount > 0 ||
-        matchedCount > 0 ||
-        pendingMatchesCount > 0) && (
-        <Collapsible
-          open={isBulkActionsOpen}
-          onOpenChange={setIsBulkActionsOpen}
-        >
-          <Card className="relative overflow-hidden rounded-3xl border border-white/40 bg-white/75 shadow-xl shadow-slate-900/5 backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/70">
-            <CardHeader className="relative z-10 transition-colors">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/10 text-amber-500">
-                    <Sparkles className="h-4 w-4" />
-                  </div>
-                  <div className="text-left">
-                    <CardTitle className="text-base font-semibold text-slate-900 dark:text-white">
-                      Bulk Operations
-                    </CardTitle>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Perform actions on multiple items at once
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {(emptyMatchesCount > 0 ||
-                    noMatchesCount > 0 ||
-                    skippedMangaCount > 0 ||
-                    matchedCount > 0 ||
-                    pendingMatchesCount > 0) && (
-                    <Badge className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs text-amber-600 dark:text-amber-300">
-                      {
-                        [
-                          emptyMatchesCount,
-                          noMatchesCount,
-                          skippedMangaCount,
-                          matchedCount,
-                          pendingMatchesCount,
-                        ].filter((c) => c > 0).length
-                      }{" "}
-                      actions available
-                    </Badge>
-                  )}
-                  <CollapsibleTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <CollapsibleChevron isExpanded={isBulkActionsOpen} />
-                    </Button>
-                  </CollapsibleTrigger>
-                </div>
-              </div>
-            </CardHeader>
-
-            <CollapsibleContent>
-              <CardContent className="relative z-10 pb-5">
-                <MatchBulkActions
-                  emptyMatchesCount={emptyMatchesCount}
-                  onSkipEmptyMatches={handleSkipEmptyMatches}
-                  isSkippingEmptyMatches={isSkippingEmptyMatches}
-                  noMatchesCount={noMatchesCount}
-                  onReSearchNoMatches={handleReSearchNoMatches}
-                  isReSearchingNoMatches={isReSearchingNoMatches}
-                  skippedMangaCount={skippedMangaCount}
-                  onResetSkippedToPending={handleResetSkippedToPending}
-                  isResettingSkippedToPending={isResettingSkippedToPending}
-                  pendingMatchesCount={pendingMatchesCount}
-                  onAcceptAllPendingMatches={handleAcceptAllPendingMatches}
-                  isAcceptingAllMatches={isAcceptingAllMatches}
-                  onSetMatchedToPending={onSetMatchedToPending}
-                  isResettingMatchedToPending={isResettingMatchedToPending}
-                  isSetMatchedToPendingDisabled={isSetMatchedToPendingDisabled}
-                  matchedCount={matchedCount}
-                />
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
-      )}
 
       {/* Batch Selection Controls - Contextual, only when feature is available */}
       {onSelectAll && (

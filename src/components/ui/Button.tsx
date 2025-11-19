@@ -7,6 +7,7 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
+import { Loader2 } from "lucide-react";
 
 import { cn } from "@/utils/tailwind";
 
@@ -27,10 +28,10 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
+        default: "h-11 px-4 py-2",
+        sm: "h-10 rounded-md px-3",
+        lg: "h-12 rounded-md px-8",
+        icon: "h-11 w-11",
       },
     },
     defaultVariants: {
@@ -44,6 +45,7 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
+  loading?: boolean;
   /** Accessible label for icon-only buttons or additional context. @source */
   ariaLabel?: string;
   /** ID of element providing additional description. @source */
@@ -64,21 +66,62 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       variant,
       size,
       asChild = false,
+      loading = false,
       ariaLabel,
       ariaDescribedBy,
+      children,
+      disabled,
       ...props
     },
     ref,
   ) => {
     const Comp = asChild ? Slot : "button";
+    const componentProps = {
+      className: cn(buttonVariants({ variant, size, className })),
+      "aria-label": ariaLabel,
+      "aria-describedby": ariaDescribedBy,
+      disabled: disabled || loading,
+      ...props,
+    };
+    const loader = (
+      <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+    );
+
+    if (asChild) {
+      const slotChild = React.Children.only(children);
+      if (!React.isValidElement(slotChild)) {
+        return (
+          <Comp ref={ref} {...componentProps}>
+            {slotChild}
+          </Comp>
+        );
+      }
+      const slotChildElement = slotChild as React.ReactElement<
+        React.PropsWithChildren<unknown>
+      >;
+      const childWithLoader = loading
+        ? React.cloneElement(slotChildElement, {
+            children: (
+              <>
+                {loader}
+                {slotChildElement.props.children}
+              </>
+            ),
+          })
+        : slotChildElement;
+
+      return (
+        <Comp ref={ref} {...componentProps}>
+          {childWithLoader}
+        </Comp>
+      );
+    }
+
     return (
-      <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
-        ref={ref}
-        aria-label={ariaLabel}
-        aria-describedby={ariaDescribedBy}
-        {...props}
-      />
+      <Comp ref={ref} {...componentProps}>
+        {loading && loader}
+        {children}
+      </Comp>
     );
   },
 );

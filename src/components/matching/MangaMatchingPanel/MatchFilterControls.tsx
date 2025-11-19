@@ -125,26 +125,23 @@ function MatchFilterControlsComponent({
   };
 
   return (
-    <Card className="relative flex h-full flex-col overflow-hidden rounded-3xl border border-white/40 bg-white/75 shadow-xl shadow-slate-900/5 backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/70">
+    <Card className="relative flex h-full flex-col overflow-hidden rounded-3xl border border-white/40 bg-white/75 py-0 shadow-xl shadow-slate-900/5 backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/70">
       <div className="pointer-events-none absolute -left-12 top-0 h-48 w-48 rounded-full bg-sky-400/15 blur-3xl" />
       <div className="pointer-events-none absolute -right-16 bottom-0 h-56 w-56 rounded-full bg-purple-500/15 blur-3xl" />
-      <CardHeader className="relative z-10 flex min-h-[70px] border-b border-white/40 pb-4 dark:border-slate-800/60">
+      <CardHeader className="relative z-10 flex min-h-[60px] border-b border-white/40 pb-3 pt-4 dark:border-slate-800/60">
         <div className="flex w-full items-center gap-3">
-          <div className="flex min-h-9 min-w-9 items-center justify-center rounded-full bg-sky-500/10 text-sky-500">
+          <div className="flex min-h-8 min-w-8 items-center justify-center rounded-full bg-sky-500/10 text-sky-500">
             <Filter className="h-4 w-4" />
           </div>
           <div>
             <CardTitle className="text-base font-semibold text-slate-900 dark:text-white">
               Status Filters
             </CardTitle>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Highlight exactly the matches you want to focus on.
-            </p>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="relative z-10 flex-1 p-5">
-        <div className="grid h-full grid-cols-2 gap-3">
+      <CardContent className="relative z-10 flex-1 p-4">
+        <div className="flex flex-col gap-3">
           {statusOptions.map(
             ({ key, label, count, icon: Icon, accent, badgeClass }) => {
               const isActive = statusFilters[key];
@@ -154,40 +151,23 @@ function MatchFilterControlsComponent({
                   type="button"
                   onClick={() => toggleStatus(key)}
                   className={cn(
-                    "group relative overflow-hidden rounded-2xl border border-white/40 bg-white/65 p-3 text-left shadow-md transition-all hover:scale-[1.01] hover:border-white/60 hover:bg-white/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:border-slate-800/60 dark:bg-slate-900/65 dark:hover:border-slate-700",
+                    "group relative flex w-full items-center gap-2 overflow-hidden rounded-xl border border-white/40 bg-white/65 px-3 py-2 text-left shadow-sm transition-all hover:border-white/60 hover:bg-white/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:border-slate-800/60 dark:bg-slate-900/65 dark:hover:border-slate-700",
                     accent,
                     isActive
                       ? "ring-offset-background ring-2 ring-sky-400 ring-offset-2 dark:ring-offset-slate-900"
-                      : "opacity-80",
+                      : "opacity-70 hover:opacity-100",
                   )}
                 >
-                  <div className="bg-linear-to-br absolute inset-0 opacity-40 transition-opacity duration-300 group-hover:opacity-70" />
-                  <div className="relative flex flex-col gap-2">
-                    <div className="flex items-center justify-between gap-1">
-                      <div className="flex min-w-0 items-center gap-1.5">
-                        <span
-                          className={cn(
-                            "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/50 bg-white/70 text-slate-600 dark:border-slate-700 dark:bg-slate-900/70",
-                            isActive && "border-sky-400/40 text-sky-500",
-                          )}
-                        >
-                          <Icon className="h-3.5 w-3.5" />
-                        </span>
-                        <span className="truncate text-xs font-semibold text-slate-900 dark:text-white">
-                          {label}
-                        </span>
-                      </div>
-                      <Badge
-                        variant="secondary"
-                        className={cn(badgeClass, "flex shrink-0")}
-                      >
-                        {count}
-                      </Badge>
-                    </div>
-                    <span className="truncate text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                      {isActive ? "Visible" : "Hidden"}
-                    </span>
-                  </div>
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="flex-1 text-sm font-medium text-slate-900 dark:text-white">
+                    {label}
+                  </span>
+                  <Badge
+                    variant="secondary"
+                    className={cn(badgeClass, "ml-1 h-5 px-1.5 text-[10px]")}
+                  >
+                    {count}
+                  </Badge>
                 </button>
               );
             },

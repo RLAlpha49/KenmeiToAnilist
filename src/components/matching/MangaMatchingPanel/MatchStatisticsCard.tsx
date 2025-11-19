@@ -6,6 +6,7 @@ import {
   Clock3,
   Layers,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../ui/Card";
 import { Input } from "../../ui/Input";
@@ -33,6 +34,7 @@ export interface MatchStatisticsCardProps {
   searchTerm: string;
   onSearchTermChange: (value: string) => void;
   searchInputRef: React.RefObject<HTMLInputElement | null>;
+  isFiltering?: boolean;
 }
 
 /**
@@ -51,6 +53,7 @@ function MatchStatisticsCardComponent({
   searchTerm,
   onSearchTermChange,
   searchInputRef,
+  isFiltering = false,
 }: Readonly<MatchStatisticsCardProps>) {
   const reviewedTotal =
     matchStats.matched + matchStats.manual + matchStats.skipped;
@@ -135,9 +138,19 @@ function MatchStatisticsCardComponent({
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <div className="relative">
-            <Search
-              className={cn("absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2")}
-            />
+            {isFiltering ? (
+              <Loader2
+                className={cn(
+                  "absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-sky-500",
+                )}
+              />
+            ) : (
+              <Search
+                className={cn(
+                  "absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2",
+                )}
+              />
+            )}
             <Input
               ref={searchInputRef}
               type="text"

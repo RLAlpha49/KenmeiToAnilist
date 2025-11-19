@@ -1,6 +1,6 @@
 import React from "react";
-import { ArrowLeft, Check, Info, Loader2, RefreshCw, X } from "lucide-react";
-import { Card } from "../../ui/Card";
+import { ArrowLeft, Check, Loader2, RefreshCw, X } from "lucide-react";
+import { cn } from "../../../utils/tailwind";
 import { Button } from "../../ui/Button";
 import {
   Tooltip,
@@ -8,6 +8,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "../../ui/Tooltip";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 
 /**
  * Props for the MatchBulkActions component.
@@ -49,6 +50,20 @@ export interface MatchBulkActionsProps {
   matchedCount?: number;
 }
 
+type BulkActionDefinition = {
+  key: string;
+  label: string;
+  tooltip: string;
+  placeholder: string;
+  accent: string;
+  icon: React.ComponentType<{ className?: string }>;
+  count: number;
+  isLoading: boolean;
+  onClick?: () => void;
+  disabledReason?: string;
+  ariaLabel: (count: number) => string;
+};
+
 /**
  * Displays bulk action buttons for common match operations.
  *
@@ -77,265 +92,258 @@ function MatchBulkActionsComponent({
   isSetMatchedToPendingDisabled,
   matchedCount,
 }: Readonly<MatchBulkActionsProps>) {
-  const hasMatched = (matchedCount ?? 0) > 0;
+  const resetMatchedCount = matchedCount ?? 0;
+  const isResettingMatched = Boolean(isResettingMatchedToPending);
+  const hasBulkActionButtons =
+    emptyMatchesCount > 0 ||
+    noMatchesCount > 0 ||
+    skippedMangaCount > 0 ||
+    resetMatchedCount > 0 ||
+    pendingMatchesCount > 0 ||
+    isSkippingEmptyMatches ||
+    isReSearchingNoMatches ||
+    isResettingSkippedToPending ||
+    isResettingMatched ||
+    isAcceptingAllMatches;
+
+  let resetMatchedDisabledReason: string | undefined;
+  if (!onSetMatchedToPending) {
+    resetMatchedDisabledReason = "Reset matched action is not configured.";
+  } else if (isSetMatchedToPendingDisabled) {
+    resetMatchedDisabledReason =
+      "Reset matched action is temporarily disabled.";
+  }
+
+  const bulkActionBaseClasses =
+    "group relative flex w-full items-center gap-2 justify-start overflow-hidden rounded-xl border border-white/40 bg-white/65 px-3 py-2 text-left text-sm font-medium text-slate-900 shadow-sm transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:border-slate-800/60 dark:bg-slate-900/65 dark:text-white";
+
+  const bulkActions: BulkActionDefinition[] = [
+    {
+      key: "skip-empty",
+      label: "Skip Empty",
+      tooltip: "Mark all pending manga with no matches as skipped",
+      placeholder: "No pending manga are missing matches right now.",
+      accent: "border-slate-300/70 text-slate-900 dark:text-slate-200",
+      icon: X,
+      count: emptyMatchesCount,
+      isLoading: isSkippingEmptyMatches,
+      onClick: onSkipEmptyMatches,
+      ariaLabel: (count) =>
+        `Skip ${count} empty ${count === 1 ? "match" : "matches"}`,
+    },
+    {
+      key: "re-search",
+      label: "Re-search Empty",
+      tooltip: "Attempt to find matches for all manga without results",
+      placeholder: "All manga already have match candidates.",
+      accent: "border-purple-400/60 text-purple-600 dark:text-purple-300",
+      icon: RefreshCw,
+      count: noMatchesCount,
+      isLoading: isReSearchingNoMatches,
+      onClick: onReSearchNoMatches,
+      ariaLabel: (count) =>
+        `Re-search ${count} ${count === 1 ? "match" : "matches"}`,
+    },
+    {
+      key: "reset-skipped",
+      label: "Reset Skipped",
+      tooltip: "Reset all skipped manga back to pending status",
+      placeholder: "No skipped manga to reset.",
+      accent: "border-orange-400/60 text-orange-600 dark:text-orange-300",
+      icon: ArrowLeft,
+      count: skippedMangaCount,
+      isLoading: isResettingSkippedToPending,
+      onClick: onResetSkippedToPending,
+      ariaLabel: (count) =>
+        `Reset ${count} skipped ${count === 1 ? "item" : "items"} to pending`,
+    },
+    {
+      key: "reset-matched",
+      label: "Reset Matched",
+      tooltip: "Reset all matched manga back to pending status",
+      placeholder: "No matched manga to reset to pending.",
+      accent: "border-indigo-400/60 text-indigo-600 dark:text-indigo-300",
+      icon: ArrowLeft,
+      count: resetMatchedCount,
+      isLoading: isResettingMatched,
+      onClick: onSetMatchedToPending,
+      disabledReason: resetMatchedDisabledReason,
+      ariaLabel: (count) =>
+        `Reset ${count} matched ${count === 1 ? "item" : "items"} to pending`,
+    },
+    {
+      key: "accept-all",
+      label: "Accept All",
+      tooltip: "Accept all pending manga with available matches",
+      placeholder: "No pending matches have valid results.",
+      accent: "border-emerald-400/60 text-emerald-600 dark:text-emerald-300",
+      icon: Check,
+      count: pendingMatchesCount,
+      isLoading: isAcceptingAllMatches,
+      onClick: onAcceptAllPendingMatches,
+      ariaLabel: (count) =>
+        `Accept all ${count} pending ${count === 1 ? "match" : "matches"}`,
+    },
+  ];
 
   return (
-    <div className="mb-4 flex flex-col space-y-4">
-      {/* Live regions announce operation status to screen readers */}
-      {isSkippingEmptyMatches && (
-        <output className="sr-only" aria-live="polite" aria-atomic="true">
-          Skipping {emptyMatchesCount} empty matches...
-        </output>
-      )}
-
-      {/* Live region for re-search operation */}
-      {isReSearchingNoMatches && (
-        <output className="sr-only" aria-live="polite" aria-atomic="true">
-          Re-searching {noMatchesCount} empty matches...
-        </output>
-      )}
-
-      {/* Live region for reset skipped operation */}
-      {isResettingSkippedToPending && (
-        <output className="sr-only" aria-live="polite" aria-atomic="true">
-          Resetting {skippedMangaCount} skipped items to pending...
-        </output>
-      )}
-
-      {/* Live region for reset matched operation */}
-      {isResettingMatchedToPending && (
-        <output className="sr-only" aria-live="polite" aria-atomic="true">
-          Resetting {matchedCount || 0} matched items to pending...
-        </output>
-      )}
-
-      {/* Live region for accept all operation */}
-      {isAcceptingAllMatches && (
-        <output className="sr-only" aria-live="polite" aria-atomic="true">
-          Accepting all {pendingMatchesCount} pending matches...
-        </output>
-      )}
-      {emptyMatchesCount > 0 && (
-        <Card
-          aria-labelledby="skip-empty-label"
-          className="relative overflow-visible rounded-2xl border border-white/40 bg-white/70 p-4 shadow-md shadow-slate-900/5 backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/70"
-        >
-          <div className="pointer-events-none absolute -top-16 right-0 h-32 w-32 rounded-full bg-slate-400/15 blur-3xl" />
-          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-            <Button
-              variant="outline"
-              onClick={onSkipEmptyMatches}
-              disabled={isSkippingEmptyMatches}
-              className="w-full border-slate-300/60 bg-white/60 text-slate-700 backdrop-blur hover:bg-white/90 hover:text-slate-900 sm:w-auto dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-200 dark:hover:bg-slate-900"
-              aria-label={`Skip ${emptyMatchesCount} empty ${emptyMatchesCount === 1 ? "match" : "matches"}`}
-            >
-              {isSkippingEmptyMatches ? (
-                <>
-                  <Loader2
-                    className="mr-2 h-4 w-4 animate-spin"
-                    aria-hidden="true"
-                  />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <X className="mr-2 h-4 w-4" aria-hidden="true" />
-                  Skip Empty Matches ({emptyMatchesCount})
-                </>
-              )}
-            </Button>
-            <span
-              id="skip-empty-label"
-              className="text-muted-foreground text-sm"
-            >
-              Mark all pending manga with no matches as skipped
-            </span>
+    <Card className="relative flex h-full flex-col overflow-hidden rounded-3xl border border-white/40 bg-white/75 py-0 shadow-xl shadow-slate-900/5 backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/70">
+      <div className="pointer-events-none absolute -left-16 top-0 h-48 w-48 rounded-full bg-emerald-400/15 blur-3xl" />
+      <div className="pointer-events-none absolute -right-20 bottom-0 h-56 w-56 rounded-full bg-sky-400/15 blur-3xl" />
+      <CardHeader className="relative z-10 flex min-h-[60px] border-b border-white/40 pb-3 pt-4 dark:border-slate-800/60">
+        <div className="flex w-full items-center gap-3">
+          <div className="flex min-h-8 min-w-8 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
+            <Check className="h-4 w-4" />
           </div>
-        </Card>
-      )}
+          <CardTitle className="text-base font-semibold text-slate-900 dark:text-white">
+            Bulk Actions
+          </CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent className="relative z-10 flex-1 p-4">
+        <div className="flex flex-col gap-3">
+          {/* Live regions announce operation status to screen readers */}
+          {isSkippingEmptyMatches && (
+            <output className="sr-only" aria-live="polite" aria-atomic="true">
+              Skipping {emptyMatchesCount} empty matches...
+            </output>
+          )}
 
-      {noMatchesCount > 0 && (
-        <Card
-          aria-labelledby="research-label"
-          className="bg-linear-to-br relative overflow-visible rounded-2xl border border-purple-400/30 from-purple-100/70 via-white/60 to-white/50 p-4 shadow-lg shadow-purple-500/10 backdrop-blur dark:border-purple-500/30 dark:from-purple-900/20 dark:via-slate-900/60 dark:to-slate-900/50"
-        >
-          <div className="pointer-events-none absolute -bottom-16 left-6 h-40 w-40 rounded-full bg-purple-500/20 blur-3xl" />
-          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-            <Button
-              variant="outline"
-              onClick={onReSearchNoMatches}
-              disabled={isReSearchingNoMatches}
-              className="w-full border-purple-400/40 bg-purple-500/90 text-white shadow-md shadow-purple-500/40 transition hover:border-purple-400/60 hover:bg-purple-500 sm:w-auto"
-              aria-label={`Re-search ${noMatchesCount} ${noMatchesCount === 1 ? "match" : "matches"}`}
-            >
-              {isReSearchingNoMatches ? (
-                <>
-                  <Loader2
-                    className="mr-2 h-4 w-4 animate-spin"
-                    aria-hidden="true"
-                  />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
-                  Re-search Empty Matches ({noMatchesCount})
-                </>
-              )}
-            </Button>
-            <span id="research-label" className="text-muted-foreground text-sm">
-              Attempt to find matches for all manga without results
-            </span>
-          </div>
-        </Card>
-      )}
+          {/* Live region for re-search operation */}
+          {isReSearchingNoMatches && (
+            <output className="sr-only" aria-live="polite" aria-atomic="true">
+              Re-searching {noMatchesCount} empty matches...
+            </output>
+          )}
 
-      {skippedMangaCount > 0 && (
-        <Card
-          aria-labelledby="reset-skipped-label"
-          className="bg-linear-to-br relative overflow-visible rounded-2xl border border-orange-400/30 from-orange-100/70 via-white/60 to-white/50 p-4 shadow-lg shadow-orange-500/10 backdrop-blur dark:border-orange-500/30 dark:from-orange-900/20 dark:via-slate-900/60 dark:to-slate-900/50"
-        >
-          <div className="pointer-events-none absolute -top-12 right-6 h-40 w-40 rounded-full bg-orange-500/20 blur-3xl" />
-          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-            <Button
-              variant="outline"
-              onClick={onResetSkippedToPending}
-              disabled={isResettingSkippedToPending}
-              className="w-full border-orange-400/40 bg-orange-500/90 text-white shadow-md shadow-orange-500/30 transition hover:border-orange-400/60 hover:bg-orange-500 sm:w-auto"
-              aria-label={`Reset ${skippedMangaCount} skipped ${skippedMangaCount === 1 ? "item" : "items"} to pending`}
-            >
-              {isResettingSkippedToPending ? (
-                <>
-                  <Loader2
-                    className="mr-2 h-4 w-4 animate-spin"
-                    aria-hidden="true"
-                  />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
-                  Reset Skipped to Pending ({skippedMangaCount})
-                </>
-              )}
-            </Button>
-            <span
-              id="reset-skipped-label"
-              className="text-muted-foreground text-sm"
-            >
-              Reset all skipped manga back to pending status
-            </span>
-          </div>
-        </Card>
-      )}
+          {/* Live region for reset skipped operation */}
+          {isResettingSkippedToPending && (
+            <output className="sr-only" aria-live="polite" aria-atomic="true">
+              Resetting {skippedMangaCount} skipped items to pending...
+            </output>
+          )}
 
-      {hasMatched && (
-        <Card
-          aria-labelledby="reset-matched-label"
-          className="bg-linear-to-br relative overflow-visible rounded-2xl border border-indigo-400/30 from-indigo-100/70 via-white/60 to-white/45 p-4 shadow-lg shadow-indigo-500/10 backdrop-blur dark:border-indigo-500/30 dark:from-indigo-900/25 dark:via-slate-900/60 dark:to-slate-900/55"
-        >
-          <div className="pointer-events-none absolute -top-14 right-6 h-36 w-36 rounded-full bg-indigo-500/20 blur-3xl" />
-          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-            <Button
-              variant="outline"
-              onClick={onSetMatchedToPending}
-              disabled={
-                isResettingMatchedToPending || isSetMatchedToPendingDisabled
-              }
-              className="w-full border-indigo-400/40 bg-indigo-500/90 text-white shadow-md shadow-indigo-500/40 transition hover:border-indigo-400/60 hover:bg-indigo-500 sm:w-auto"
-              aria-label={`Reset ${matchedCount || 0} matched ${(matchedCount ?? 0) === 1 ? "item" : "items"} to pending`}
-            >
-              {isResettingMatchedToPending ? (
-                <>
-                  <Loader2
-                    className="mr-2 h-4 w-4 animate-spin"
-                    aria-hidden="true"
-                  />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
-                  {typeof matchedCount === "number"
-                    ? `Reset Matched to Pending (${matchedCount})`
-                    : "Reset Matched to Pending"}
-                </>
-              )}
-            </Button>
-            <span
-              id="reset-matched-label"
-              className="text-muted-foreground text-sm"
-            >
-              Reset all matched manga back to pending status
-            </span>
-          </div>
-        </Card>
-      )}
+          {/* Live region for reset matched operation */}
+          {isResettingMatched && (
+            <output className="sr-only" aria-live="polite" aria-atomic="true">
+              Resetting {resetMatchedCount} matched items to pending...
+            </output>
+          )}
 
-      {pendingMatchesCount > 0 && (
-        <Card
-          aria-labelledby="accept-all-label"
-          className="bg-linear-to-br relative overflow-visible rounded-2xl border border-emerald-400/30 from-emerald-100/70 via-white/60 to-white/50 p-4 shadow-lg shadow-emerald-500/10 backdrop-blur dark:border-emerald-500/30 dark:from-emerald-900/20 dark:via-slate-900/60 dark:to-slate-900/50"
-        >
-          <div className="pointer-events-none absolute -bottom-14 left-6 h-40 w-40 rounded-full bg-emerald-500/25 blur-3xl" />
-          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-            <Button
-              variant="outline"
-              onClick={onAcceptAllPendingMatches}
-              disabled={isAcceptingAllMatches}
-              className="w-full border-emerald-400/40 bg-emerald-500/90 text-white shadow-md shadow-emerald-500/40 transition hover:border-emerald-400/60 hover:bg-emerald-500 sm:w-auto"
-              aria-label={`Accept all ${pendingMatchesCount} pending ${pendingMatchesCount === 1 ? "match" : "matches"}`}
-            >
-              {isAcceptingAllMatches ? (
-                <>
-                  <Loader2
-                    className="mr-2 h-4 w-4 animate-spin"
-                    aria-hidden="true"
-                  />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Check className="mr-2 h-4 w-4" aria-hidden="true" />
-                  Accept All Matches ({pendingMatchesCount})
-                </>
-              )}
-            </Button>
-            <div className="flex items-center gap-2">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="text-muted-foreground"
-                      aria-describedby="accept-tooltip"
-                    >
-                      <Info
-                        className="h-4 w-4 cursor-help"
-                        aria-hidden="true"
-                      />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent id="accept-tooltip">
-                    <p>
-                      It&apos;s still a good idea to skim over the matches to
-                      ensure everything is correct before proceeding.
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <span
-                id="accept-all-label"
-                className="text-muted-foreground text-sm"
-              >
-                Accept all pending manga with available matches
-              </span>
+          {/* Live region for accept all operation */}
+          {isAcceptingAllMatches && (
+            <output className="sr-only" aria-live="polite" aria-atomic="true">
+              Accepting all {pendingMatchesCount} pending matches...
+            </output>
+          )}
+
+          {!hasBulkActionButtons && (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300">
+              Bulk actions will become available once manga matches need
+              attention.
             </div>
+          )}
+
+          <div className="flex flex-col gap-3">
+            {bulkActions.map((action) => {
+              const hasItems = action.count > 0;
+              const isReady = hasItems && !action.disabledReason;
+              const isBusy = action.isLoading;
+              const isInteractive = isBusy || isReady;
+              const isDisabled = isBusy || !isReady;
+              const isPlaceholder = action.count === 0;
+              const buttonClassName = cn(
+                bulkActionBaseClasses,
+                action.accent,
+                isInteractive
+                  ? "hover:border-white/70 hover:bg-white/90 focus-visible:ring-slate-200 dark:focus-visible:ring-slate-100"
+                  : "cursor-not-allowed opacity-60",
+              );
+
+              // Use the placeholder or disabledReason first, otherwise the action's tooltip
+              const tooltipText = isPlaceholder
+                ? action.placeholder
+                : (action.disabledReason ?? action.tooltip);
+
+              // Ensure placeholder state uses a not-allowed cursor so the mouse clearly shows it's disabled
+              const triggerWrapperClass = cn("inline-block w-full", {
+                "cursor-not-allowed": isPlaceholder,
+              });
+
+              const Icon = action.icon as React.ComponentType<{
+                className?: string;
+              }>;
+
+              return (
+                <div key={action.key} className="flex flex-col gap-1">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        {isDisabled ? (
+                          <span
+                            className={triggerWrapperClass}
+                            aria-disabled={!isInteractive}
+                          >
+                            <Button
+                              variant="outline"
+                              onClick={action.onClick}
+                              disabled={isDisabled}
+                              className={buttonClassName}
+                              aria-label={action.ariaLabel(action.count)}
+                            >
+                              {isBusy ? (
+                                <Loader2
+                                  className="mr-2 h-4 w-4 animate-spin"
+                                  aria-hidden="true"
+                                />
+                              ) : (
+                                <Icon
+                                  className="mr-2 h-4 w-4"
+                                  aria-hidden="true"
+                                />
+                              )}
+                              <span className="flex-1 text-sm font-medium">
+                                {action.label} ({action.count})
+                              </span>
+                            </Button>
+                          </span>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            onClick={action.onClick}
+                            disabled={isDisabled}
+                            className={buttonClassName}
+                            aria-label={action.ariaLabel(action.count)}
+                          >
+                            {isBusy ? (
+                              <Loader2
+                                className="mr-2 h-4 w-4 animate-spin"
+                                aria-hidden="true"
+                              />
+                            ) : (
+                              <Icon
+                                className="mr-2 h-4 w-4"
+                                aria-hidden="true"
+                              />
+                            )}
+                            <span className="flex-1 text-sm font-medium">
+                              {action.label} ({action.count})
+                            </span>
+                          </Button>
+                        )}
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{tooltipText}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              );
+            })}
           </div>
-        </Card>
-      )}
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

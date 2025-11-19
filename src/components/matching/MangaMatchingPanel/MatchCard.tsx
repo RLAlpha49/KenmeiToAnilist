@@ -1188,6 +1188,8 @@ function MatchCard({
   isUpdating = false,
 }: Readonly<MatchCardProps>) {
   const { isConfidenceTestExporterEnabled } = useDebug();
+  const [isAlternativesExpanded, setIsAlternativesExpanded] =
+    React.useState(false);
 
   const primaryMatchCandidate =
     match.selectedMatch ?? match.anilistMatches?.[0]?.manga;
@@ -1483,7 +1485,7 @@ function MatchCard({
             </h4>
             <div id={`alternatives-list-${uniqueKey}`} className="space-y-3">
               {match.anilistMatches
-                ?.slice(1, 5)
+                ?.slice(1, isAlternativesExpanded ? undefined : 2)
                 .map((alternativeMatch, index) => (
                   <AlternativeMatchItem
                     key={
@@ -1507,6 +1509,22 @@ function MatchCard({
                   />
                 ))}
             </div>
+            {match.anilistMatches && match.anilistMatches.length > 2 && (
+              <div className="mt-3 flex justify-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    setIsAlternativesExpanded(!isAlternativesExpanded)
+                  }
+                  className="text-xs text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+                >
+                  {isAlternativesExpanded
+                    ? "Show Less"
+                    : `Show ${match.anilistMatches.length - 2} More Alternatives`}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>
