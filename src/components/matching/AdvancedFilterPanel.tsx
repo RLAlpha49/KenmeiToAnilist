@@ -9,6 +9,7 @@ import {
   Trash2,
   Save,
 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/Alert";
 import { CollapsibleChevron } from "@/components/ui/CollapsibleChevron";
 import {
   Card,
@@ -418,6 +419,17 @@ export function AdvancedFilterPanel({
 
         <CollapsibleContent>
           <CardContent className="space-y-6 pt-0">
+            <Alert
+              variant="default"
+              className="border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300"
+            >
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Some entries may not appear as they may not have any related
+                data to filter by.
+              </AlertDescription>
+            </Alert>
+
             {/* Confidence Range */}
             <div className="space-y-3">
               <div>

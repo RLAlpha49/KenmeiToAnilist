@@ -10,8 +10,8 @@ import {
   BookOpen,
   TrendingUp,
   CheckCircle,
-  ChevronRight,
 } from "lucide-react";
+import { CollapsibleChevron } from "@/components/ui/CollapsibleChevron";
 import {
   Card,
   CardHeader,
@@ -192,79 +192,64 @@ export function StatisticsFilterPanel({
   };
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card className="overflow-hidden rounded-2xl border-slate-200/50 bg-white/80 shadow-lg backdrop-blur-md dark:border-slate-800/50 dark:bg-slate-900/80">
-        <CardHeader className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-          <div className="flex items-center justify-between">
+    <Card className="bg-linear-to-br from-slate-50 to-slate-100/50 backdrop-blur-sm dark:from-slate-800/50 dark:to-slate-900/30">
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <CardHeader className="pb-4">
+          <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="bg-linear-to-br rounded-full from-blue-500 to-purple-600 p-2">
-                <SlidersHorizontal className="h-5 w-5 text-white" />
-              </div>
+              <SlidersHorizontal className="h-5 w-5 text-slate-600 dark:text-slate-400" />
               <div>
-                <CardTitle className="text-xl font-bold text-slate-900 dark:text-white">
-                  Advanced Filters
-                </CardTitle>
-                <CardDescription className="text-sm text-slate-600 dark:text-slate-400">
-                  Refine your statistics with powerful filters
-                </CardDescription>
+                <CardTitle className="text-lg">Advanced Filters</CardTitle>
+                <CardDescription>Fine-tune your statistics</CardDescription>
               </div>
             </div>
-            <CollapsibleTrigger asChild>
-              <button
-                type="button"
-                aria-label="Toggle advanced filters"
-                className="flex cursor-pointer items-center gap-2 rounded-md p-1 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                {activeFilterCount > 0 && (
-                  <Badge
-                    variant="default"
-                    className="bg-blue-500 text-white hover:bg-blue-600"
+
+            <div className="flex items-center gap-2">
+              {/* Active filter count badge */}
+              {activeFilterCount > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                >
+                  {activeFilterCount} active
+                </Badge>
+              )}
+
+              {/* Collapse toggle */}
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <CollapsibleChevron isExpanded={isOpen} />
+                  <span className="sr-only">Toggle advanced filters</span>
+                </Button>
+              </CollapsibleTrigger>
+            </div>
+          </div>
+
+          {/* Filter presets */}
+          <div className="space-y-3 pt-3">
+            <div className="flex flex-wrap gap-2">
+              {FILTER_PRESETS.map((preset) => {
+                const Icon = preset.icon;
+                return (
+                  <Button
+                    key={preset.id}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePresetClick(preset)}
+                    className="h-7 gap-1.5 text-xs"
+                    title={preset.description}
                   >
-                    {activeFilterCount} active
-                  </Badge>
-                )}
-                <ChevronRight
-                  className={`h-5 w-5 text-slate-500 transition-transform ${
-                    isOpen ? "rotate-90" : ""
-                  }`}
-                />
-              </button>
-            </CollapsibleTrigger>
+                    <Icon className="h-3 w-3" />
+                    {preset.name}
+                  </Button>
+                );
+              })}
+            </div>
           </div>
         </CardHeader>
 
         <CollapsibleContent>
           <CardContent className="space-y-6 pt-0">
-            {/* Filter Presets */}
-            <div className="space-y-3">
-              <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Quick Filters
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {FILTER_PRESETS.map((preset) => {
-                  const Icon = preset.icon;
-                  return (
-                    <Button
-                      key={preset.id}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePresetClick(preset)}
-                      className="h-auto flex-col items-start gap-1 p-3 text-left"
-                      title={preset.description}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Icon className="h-4 w-4" />
-                        <span className="font-medium">{preset.name}</span>
-                      </div>
-                      <span className="text-xs text-slate-500">
-                        {preset.description}
-                      </span>
-                    </Button>
-                  );
-                })}
-              </div>
-            </div>
-
             {/* Confidence Range */}
             <div className="space-y-3">
               <div>
@@ -461,7 +446,7 @@ export function StatisticsFilterPanel({
             </div>
           </CardContent>
         </CollapsibleContent>
-      </Card>
-    </Collapsible>
+      </Collapsible>
+    </Card>
   );
 }
