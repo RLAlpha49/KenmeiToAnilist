@@ -95,6 +95,36 @@ export interface MatchResult {
  */
 export const storageCache: Record<string, string> = {};
 
+const isLocalStorageAvailable = typeof localStorage !== "undefined";
+
+const readLocalStorageValue = (key: string): string | null => {
+  if (!isLocalStorageAvailable) {
+    return null;
+  }
+  return localStorage.getItem(key);
+};
+
+const writeLocalStorageValue = (key: string, value: string): void => {
+  if (!isLocalStorageAvailable) {
+    return;
+  }
+  localStorage.setItem(key, value);
+};
+
+const removeLocalStorageValue = (key: string): void => {
+  if (!isLocalStorageAvailable) {
+    return;
+  }
+  localStorage.removeItem(key);
+};
+
+const clearLocalStorageValues = (): void => {
+  if (!isLocalStorageAvailable) {
+    return;
+  }
+  localStorage.clear();
+};
+
 /**
  * Unified storage abstraction across cache, localStorage, and electron-store.
  * @source
@@ -115,7 +145,7 @@ export const storage = {
 
       // Return from localStorage synchronously
       // NOTE: For most accurate data, use getItemAsync() which checks electron-store first
-      const value = localStorage.getItem(key);
+      const value = readLocalStorageValue(key);
 
       // Cache the value
       if (value !== null) {
@@ -158,7 +188,7 @@ export const storage = {
       storageCache[key] = value;
 
       // Store in localStorage for compatibility
-      localStorage.setItem(key, value);
+      writeLocalStorageValue(key, value);
 
       // Also store in electronStore if available
       if (globalThis.electronStore) {
@@ -194,7 +224,7 @@ export const storage = {
       delete storageCache[key];
 
       // Remove from localStorage for compatibility
-      localStorage.removeItem(key);
+      removeLocalStorageValue(key);
 
       // Also remove from electronStore if available
       if (globalThis.electronStore) {
@@ -232,7 +262,7 @@ export const storage = {
       }
 
       // Clear localStorage for compatibility
-      localStorage.clear();
+      clearLocalStorageValues();
 
       // Also clear electronStore if available
       if (globalThis.electronStore) {
@@ -281,7 +311,7 @@ export const storage = {
       storageCache[key] = value;
 
       // Sync to localStorage
-      localStorage.setItem(key, value);
+      writeLocalStorageValue(key, value);
 
       console.debug(`[Storage] ✅ Async set complete: ${key}`);
     } catch (error) {
@@ -311,7 +341,7 @@ export const storage = {
           console.debug(
             `[Storage] ✅ Found item: ${key} (${value.length} bytes)`,
           );
-          localStorage.setItem(key, value); // keep localStorage in sync
+          writeLocalStorageValue(key, value); // keep localStorage in sync
           storageCache[key] = value;
         }
         return value;
@@ -324,14 +354,14 @@ export const storage = {
         );
         console.debug(`[Storage] 🔍 Falling back to localStorage for: ${key}`);
         // fallback to localStorage
-        return localStorage.getItem(key);
+        return readLocalStorageValue(key);
       }
     }
     // fallback if no electronStore
     console.debug(
       `[Storage] 🔍 No electron-store available, using localStorage for ${key}`,
     );
-    return localStorage.getItem(key);
+    return readLocalStorageValue(key);
   },
 };
 
@@ -384,7 +414,7 @@ async function syncStorageKey(key: string): Promise<number> {
   try {
     const electronValue = await globalThis.electronStore?.getItem(key);
     if (electronValue !== null) {
-      localStorage.setItem(key, electronValue);
+      writeLocalStorageValue(key, electronValue);
       storageCache[key] = electronValue;
       return 1;
     }
@@ -408,7 +438,7 @@ async function syncAuthState(): Promise<number> {
   try {
     const authState = await globalThis.electronStore?.getItem("authState");
     if (authState !== null) {
-      localStorage.setItem("authState", authState);
+      writeLocalStorageValue("authState", authState);
       storageCache["authState"] = authState;
       return 1;
     }
