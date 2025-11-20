@@ -1,5 +1,6 @@
 node_modules/
 .env
+scripts/.baselines/
 .vite/
 out/
 dist/

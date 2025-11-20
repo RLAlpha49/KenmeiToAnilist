@@ -10,7 +10,19 @@
  * @source
  */
 export const getAppVersion = (): string => {
-  return import.meta.env.VITE_APP_VERSION || "1.0.0";
+  const importMeta = import.meta as ImportMeta & {
+    env?: {
+      VITE_APP_VERSION?: string;
+    };
+  };
+
+  const rendererVersion = importMeta.env?.VITE_APP_VERSION;
+  const nodeVersion =
+    typeof process === "undefined"
+      ? undefined
+      : (process.env.VITE_APP_VERSION ?? process.env.npm_package_version);
+
+  return rendererVersion ?? nodeVersion ?? "1.0.0";
 };
 
 /**
@@ -30,8 +42,9 @@ export const getAppVersionElectron = async (): Promise<string> => {
     // Fallback for renderer process
     return getAppVersion();
   } catch {
-    // Fallback if app is not available
-    return process.env.npm_package_version || "1.0.0";
+    return (
+      process.env.VITE_APP_VERSION ?? process.env.npm_package_version ?? "1.0.0"
+    );
   }
 };
 
@@ -65,7 +78,7 @@ export async function checkForUpdates(): Promise<UpdateInfo> {
 
   try {
     const response = await fetch(
-      "https://api.github.com/repos/RLAlpha49/kenmei-to-anilist/releases/latest",
+      "https://api.github.com/repos/RLAlpha49/KenmeiToAnilist/releases/latest",
     );
 
     if (!response.ok) {

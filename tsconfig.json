@@ -22,9 +22,6 @@
     "resolveJsonModule": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules"],
-  "eslintConfig": {
-    "extends": ".eslint.config.mjs"
-  }
+  "include": ["src/**/*", "scripts/**/*"],
+  "exclude": ["node_modules"]
 }

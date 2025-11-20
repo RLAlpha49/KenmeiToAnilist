@@ -1148,6 +1148,22 @@ function checkLegacyMatching(
 
   return bestScore;
 }
+/**
+ * Detailed breakdown of match score components.
+ * @source
+ */
+export interface MatchScoreDetails {
+  /** Final calculated score (0-1). */
+  score: number;
+  /** Type of match that produced the score. */
+  matchType: "direct" | "word" | "legacy" | "none";
+  /** Individual component scores. */
+  components: {
+    directMatch: number;
+    wordMatch: number;
+    legacyMatch: number;
+  };
+}
 
 /**
  * Calculate match score between a manga title and search query.
@@ -1160,17 +1176,21 @@ function checkLegacyMatching(
  * @returns Match score between 0 and 1, or -1 if no match found
  * @source
  */
-export function calculateMatchScore(
+export function calculateMatchScoreDetails(
   manga: AniListManga,
   searchTitle: string,
   options: MatchScoreOptions = {},
-): number {
+): MatchScoreDetails {
   // Handle empty search title
   if (!searchTitle || searchTitle.trim() === "") {
     console.warn(
       `[MangaSearchService] ⚠️ Empty search title provided for manga ID ${manga.id}`,
     );
-    return -1;
+    return {
+      score: -1,
+      matchType: "none",
+      components: { directMatch: 0, wordMatch: 0, legacyMatch: 0 },
+    };
   }
 
   // Log for debugging
@@ -1210,8 +1230,13 @@ export function calculateMatchScore(
     searchTitle,
     manga,
   );
+
   if (directMatch > 0) {
-    return directMatch;
+    return {
+      score: directMatch,
+      matchType: "direct",
+      components: { directMatch, wordMatch: 0, legacyMatch: 0 },
+    };
   }
 
   // Try word-based matching approaches
@@ -1221,8 +1246,13 @@ export function calculateMatchScore(
     searchTitle,
     options,
   );
+
   if (wordMatch > 0) {
-    return wordMatch;
+    return {
+      score: wordMatch,
+      matchType: "word",
+      components: { directMatch: 0, wordMatch, legacyMatch: 0 },
+    };
   }
 
   // Finally try legacy matching approaches for comprehensive coverage
@@ -1236,5 +1266,18 @@ export function calculateMatchScore(
   console.debug(
     `[MangaSearchService] 🔍 Final match score for "${searchTitle}": ${legacyMatch.toFixed(2)}`,
   );
-  return legacyMatch;
+
+  return {
+    score: legacyMatch,
+    matchType: "legacy",
+    components: { directMatch: 0, wordMatch: 0, legacyMatch },
+  };
+}
+
+export function calculateMatchScore(
+  manga: AniListManga,
+  searchTitle: string,
+  options: MatchScoreOptions = {},
+): number {
+  return calculateMatchScoreDetails(manga, searchTitle, options).score;
 }
