@@ -34,7 +34,6 @@ import {
   TimeRangeSelector,
 } from "@/components/statistics";
 import { StatisticsFilterPanel } from "@/components/statistics/StatisticsFilterPanel";
-import { ComparisonToggle } from "@/components/statistics/ComparisonToggle";
 import { DrillDownModal } from "@/components/statistics/DrillDownModal";
 import type { SyncStats } from "@/types/sync";
 import { ExportStatisticsButton } from "@/components/statistics/ExportStatisticsButton";
@@ -62,11 +61,7 @@ import {
   type ExportFormat,
 } from "@/utils/export-utils";
 import type { MatchForExport } from "@/types/matching";
-import type {
-  StatisticsFilters,
-  ComparisonMode,
-  DrillDownData,
-} from "@/types/statistics";
+import type { StatisticsFilters, DrillDownData } from "@/types/statistics";
 import { defaultStatisticsFilters } from "@/types/statistics";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
@@ -271,12 +266,6 @@ export function StatisticsPage() {
   const [statisticsFilters, setStatisticsFilters] = useState<StatisticsFilters>(
     defaultStatisticsFilters,
   );
-  const [comparisonMode, setComparisonMode] = useState<ComparisonMode>({
-    enabled: false,
-    primaryRange: "30d",
-    secondaryRange: "30d",
-    metric: "chapters",
-  });
   const [drillDownData, setDrillDownData] = useState<DrillDownData | null>(
     null,
   );
@@ -357,12 +346,6 @@ export function StatisticsPage() {
    */
   const handleClearFiltersFromBoundary = useCallback(() => {
     setStatisticsFilters(defaultStatisticsFilters);
-    setComparisonMode({
-      enabled: false,
-      primaryRange: "30d",
-      secondaryRange: "30d",
-      metric: "chapters",
-    });
     toast.success("Filters cleared");
   }, []);
 
@@ -385,7 +368,6 @@ export function StatisticsPage() {
     matchResults,
     readingHistory,
     statisticsFilters,
-    comparisonMode,
     selectedTimeRange,
   );
 
@@ -436,7 +418,6 @@ export function StatisticsPage() {
     statuses: [],
     tags: [],
   };
-  const comparisonDatasets = aggregationResult?.comparisonDatasets ?? null;
 
   /**
    * Adapts filtered match results to MatchForExport format for export button.
@@ -455,16 +436,6 @@ export function StatisticsPage() {
   const handleFiltersChange = useCallback((filters: StatisticsFilters) => {
     setStatisticsFilters(filters);
     console.debug("[Statistics] Filters updated:", filters);
-  }, []);
-
-  /**
-   * Handles comparison mode changes.
-   * @param mode - New comparison mode state.
-   * @source
-   */
-  const handleComparisonChange = useCallback((mode: ComparisonMode) => {
-    setComparisonMode(mode);
-    console.debug("[Statistics] Comparison mode updated:", mode);
   }, []);
 
   /**
@@ -811,21 +782,7 @@ export function StatisticsPage() {
               timeRange={selectedTimeRange}
               enableZoom={true}
               matchResults={filteredData.matchResults}
-              onDrillDown={
-                comparisonMode.metric === "chapters"
-                  ? handleDrillDown
-                  : undefined
-              }
-              comparisonData={
-                comparisonMode.enabled && comparisonMode.metric === "chapters"
-                  ? comparisonDatasets?.secondary.trends
-                  : undefined
-              }
-              comparisonLabel={
-                comparisonMode.enabled && comparisonMode.metric === "chapters"
-                  ? comparisonDatasets?.secondaryLabel
-                  : undefined
-              }
+              onDrillDown={handleDrillDown}
             />
           </div>
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -833,32 +790,12 @@ export function StatisticsPage() {
               <ReadingVelocityChart
                 history={filteredData.readingHistory}
                 timeRange={selectedTimeRange}
-                comparisonData={
-                  comparisonMode.enabled && comparisonMode.metric === "velocity"
-                    ? comparisonDatasets?.secondary.velocity
-                    : undefined
-                }
-                comparisonLabel={
-                  comparisonMode.enabled && comparisonMode.metric === "velocity"
-                    ? comparisonDatasets?.secondaryLabel
-                    : undefined
-                }
               />
             </div>
             <div className="w-full">
               <ReadingHabitsChart
                 history={filteredData.readingHistory}
                 timeRange={selectedTimeRange}
-                comparisonData={
-                  comparisonMode.enabled && comparisonMode.metric === "habits"
-                    ? comparisonDatasets?.secondary.habits
-                    : undefined
-                }
-                comparisonLabel={
-                  comparisonMode.enabled && comparisonMode.metric === "habits"
-                    ? comparisonDatasets?.secondaryLabel
-                    : undefined
-                }
               />
             </div>
           </div>
@@ -986,24 +923,16 @@ export function StatisticsPage() {
                   matchResults={adaptedMatchesForExport}
                   disabled={!hasAnyData}
                   appliedFilters={statisticsFilters}
-                  comparisonMode={comparisonMode}
                   isFiltered={areFiltersActive(
                     statisticsFilters,
                     defaultStatisticsFilters,
                   )}
                 />
                 {shouldShowHeaderControls ? (
-                  <>
-                    <TimeRangeSelector
-                      value={selectedTimeRange}
-                      onChange={handleTimeRangeChange}
-                    />
-                    <ComparisonToggle
-                      comparisonMode={comparisonMode}
-                      onComparisonChange={handleComparisonChange}
-                      disabled={!hasAnyData}
-                    />
-                  </>
+                  <TimeRangeSelector
+                    value={selectedTimeRange}
+                    onChange={handleTimeRangeChange}
+                  />
                 ) : null}
               </div>
             </div>

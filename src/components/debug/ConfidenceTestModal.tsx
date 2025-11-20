@@ -142,36 +142,36 @@ export function ConfidenceTestModal({
 
         <div className="mt-4">
           <div className="space-y-3">
-              <div>
-                <div className="mb-3 rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-sm dark:border-slate-700 dark:bg-slate-900">
-                  <code className="break-all text-slate-900 dark:text-slate-100">
-                    {generateConfidenceTestCommand(match).command}
-                  </code>
-                </div>
-                <div className="flex gap-2">
-                  {copiedFormat === "command" ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex-1 gap-1 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-500/10"
-                      disabled
-                    >
-                      <Check className="h-4 w-4" />
-                      Copied!
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleCopy}
-                      className="flex-1 gap-1"
-                    >
-                      <Copy className="h-4 w-4" />
-                      Copy Command
-                    </Button>
-                  )}
-                </div>
+            <div>
+              <div className="mb-3 rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-sm dark:border-slate-700 dark:bg-slate-900">
+                <code className="break-all text-slate-900 dark:text-slate-100">
+                  {generateConfidenceTestCommand(match).command}
+                </code>
               </div>
+              <div className="flex gap-2">
+                {copiedFormat === "command" ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1 gap-1 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-500/10"
+                    disabled
+                  >
+                    <Check className="h-4 w-4" />
+                    Copied!
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopy}
+                    className="flex-1 gap-1"
+                  >
+                    <Copy className="h-4 w-4" />
+                    Copy Command
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 

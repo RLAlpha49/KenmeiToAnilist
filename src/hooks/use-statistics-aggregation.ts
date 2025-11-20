@@ -13,7 +13,7 @@ import type {
   TimeRange,
 } from "@/utils/statistics-adapter";
 import type { ReadingHistory } from "@/utils/storage";
-import type { StatisticsFilters, ComparisonMode } from "@/types/statistics";
+import type { StatisticsFilters } from "@/types/statistics";
 
 /**
  * Hook for aggregating statistics data with worker pool support
@@ -23,7 +23,6 @@ export function useStatisticsAggregation(
   matchResults: NormalizedMatchForStats[],
   readingHistory: ReadingHistory,
   filters: StatisticsFilters,
-  comparisonMode: ComparisonMode,
   selectedTimeRange: TimeRange,
   onProgressChange?: (stage: string, progress: number, message: string) => void,
 ): {
@@ -70,13 +69,12 @@ export function useStatisticsAggregation(
     };
   }, []);
 
-  // Generate cache key based on filters, comparison mode, and time range
+  // Generate cache key based on filters and time range
   const currentCacheKey = useMemo(() => {
     const filterStr = JSON.stringify(filters);
-    const comparisonStr = JSON.stringify(comparisonMode);
     const timeStr = selectedTimeRange;
 
-    const keyStr = `stats:${filterStr}:${comparisonStr}:${timeStr}`;
+    const keyStr = `stats:${filterStr}:${timeStr}`;
     // Simple hash function for browser compatibility
     let hash = 0;
     for (let i = 0; i < keyStr.length; i++) {
@@ -86,7 +84,7 @@ export function useStatisticsAggregation(
       hash = hash & hash; // Convert to 32bit integer
     }
     return `${keyStr}:${Math.abs(hash)}`;
-  }, [filters, comparisonMode, selectedTimeRange]);
+  }, [filters, selectedTimeRange]);
 
   // Main aggregation effect
   useEffect(() => {
@@ -128,7 +126,12 @@ export function useStatisticsAggregation(
           matchResults,
           readingHistory,
           filters,
-          comparisonMode,
+          {
+            enabled: false,
+            primaryRange: selectedTimeRange,
+            secondaryRange: selectedTimeRange,
+            metric: "chapters",
+          },
           selectedTimeRange,
           onProgressChange,
         );
@@ -176,7 +179,6 @@ export function useStatisticsAggregation(
     matchResults,
     readingHistory,
     filters,
-    comparisonMode,
     selectedTimeRange,
     onProgressChange,
   ]);
