@@ -95,34 +95,90 @@ export interface MatchResult {
  */
 export const storageCache: Record<string, string> = {};
 
-const isLocalStorageAvailable = typeof localStorage !== "undefined";
+let localStorageAvailable =
+  globalThis.window !== undefined && globalThis.localStorage !== undefined;
 
-const readLocalStorageValue = (key: string): string | null => {
-  if (!isLocalStorageAvailable) {
+const getLocalStorageRef = (): Storage | null => {
+  if (!localStorageAvailable) {
     return null;
   }
-  return localStorage.getItem(key);
+
+  try {
+    return globalThis.localStorage;
+  } catch (error) {
+    console.debug(
+      "[Storage] ⚠️ LocalStorage access is disabled in this environment",
+      error,
+    );
+    localStorageAvailable = false;
+    return null;
+  }
+};
+
+const readLocalStorageValue = (key: string): string | null => {
+  const localStorageRef = getLocalStorageRef();
+  if (!localStorageRef) {
+    return null;
+  }
+
+  try {
+    return localStorageRef.getItem(key);
+  } catch (error) {
+    console.debug(
+      `[Storage] ⚠️ Failed to read localStorage key: ${key}`,
+      error,
+    );
+    localStorageAvailable = false;
+    return null;
+  }
 };
 
 const writeLocalStorageValue = (key: string, value: string): void => {
-  if (!isLocalStorageAvailable) {
+  const localStorageRef = getLocalStorageRef();
+  if (!localStorageRef) {
     return;
   }
-  localStorage.setItem(key, value);
+
+  try {
+    localStorageRef.setItem(key, value);
+  } catch (error) {
+    console.debug(
+      `[Storage] ⚠️ Failed to write localStorage key: ${key}`,
+      error,
+    );
+    localStorageAvailable = false;
+  }
 };
 
 const removeLocalStorageValue = (key: string): void => {
-  if (!isLocalStorageAvailable) {
+  const localStorageRef = getLocalStorageRef();
+  if (!localStorageRef) {
     return;
   }
-  localStorage.removeItem(key);
+
+  try {
+    localStorageRef.removeItem(key);
+  } catch (error) {
+    console.debug(
+      `[Storage] ⚠️ Failed to remove localStorage key: ${key}`,
+      error,
+    );
+    localStorageAvailable = false;
+  }
 };
 
 const clearLocalStorageValues = (): void => {
-  if (!isLocalStorageAvailable) {
+  const localStorageRef = getLocalStorageRef();
+  if (!localStorageRef) {
     return;
   }
-  localStorage.clear();
+
+  try {
+    localStorageRef.clear();
+  } catch (error) {
+    console.debug("[Storage] ⚠️ Failed to clear localStorage", error);
+    localStorageAvailable = false;
+  }
 };
 
 /**

@@ -10,6 +10,7 @@
 import { KenmeiManga } from "../kenmei/types";
 import { AniListManga, MangaMatchResult } from "../anilist/types";
 import { calculateEnhancedSimilarity } from "../../utils/enhanced-similarity";
+import { calculateConfidence } from "./scoring";
 
 /**
  * Configuration options for manga matching behavior.
@@ -365,9 +366,10 @@ export function findBestMatches(
   const matchResults = anilistMangaList
     .map((manga) => {
       const matchScore = scoreMatch(kenmeiManga, manga, matchConfig);
+      const confidence = calculateConfidence(kenmeiManga.title, manga);
       return {
         manga,
-        confidence: matchScore.confidence,
+        confidence,
         isExactMatch: matchScore.isExactMatch,
         matchedField: matchScore.matchedField,
       } as const;

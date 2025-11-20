@@ -94,7 +94,27 @@ function parseArgs(args: string[]) {
       // Support both -s= and --synonyms= formats
       const prefix = arg.startsWith("-s=") ? "-s=" : "--synonyms=";
       const synonymsStr = arg.substring(prefix.length);
-      params.synonyms = synonymsStr.split(",").map((s) => s.trim());
+      const normalized = synonymsStr.trim();
+      if (normalized.startsWith("[") && normalized.endsWith("]")) {
+        try {
+          const parsed = JSON.parse(normalized);
+          if (Array.isArray(parsed)) {
+            params.synonyms = parsed.map(String);
+            continue;
+          }
+        } catch (error) {
+          console.debug(
+            "[TestConfidence] Failed to parse JSON synonyms flag, falling back to comma split",
+            error,
+          );
+        }
+      }
+      params.synonyms = normalized
+        ? normalized
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : [];
     } else if (!arg.startsWith("-")) {
       if (positionalIndex === 0) {
         params.searchTitle = arg;

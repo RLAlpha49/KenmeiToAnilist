@@ -20,6 +20,19 @@ export interface ConfidenceTestCommand {
   synonyms: string[];
 }
 
+function quoteCommandArgument(value: string): string {
+  if (value === "") {
+    return '""';
+  }
+
+  if (!value.includes("'")) {
+    return `'${value}'`;
+  }
+
+  const escaped = value.split("'").join(`'"'"'`);
+  return `'${escaped}'`;
+}
+
 /**
  * Generates npm test:confidence command from match result for local testing; includes metadata.
  * @param match - The manga match result containing Kenmei and AniList data.
@@ -52,25 +65,30 @@ export function generateConfidenceTestCommand(
   // (npm filters out unrecognized flags like --synonyms)
   const commandParts: string[] = [
     `npx tsx scripts/test-confidence.mts`,
-    `"${searchTitle}"`,
-    `"${candidateTitle}"`,
+    quoteCommandArgument(searchTitle),
+    quoteCommandArgument(candidateTitle),
   ];
 
   // Add romaji if different from English title
   if (candidateRomaji && candidateRomaji !== candidateTitle) {
-    commandParts.push(`"${candidateRomaji}"`);
+    commandParts.push(quoteCommandArgument(candidateRomaji));
     // Add native title if present and different
     if (candidateNative && candidateNative !== candidateTitle) {
-      commandParts.push(`"${candidateNative}"`);
+      commandParts.push(quoteCommandArgument(candidateNative));
     }
   } else if (candidateNative && candidateNative !== candidateTitle) {
     // If no romaji but we have native, add empty string placeholder then native
-    commandParts.push(`""`, `"${candidateNative}"`);
+    commandParts.push(
+      quoteCommandArgument(""),
+      quoteCommandArgument(candidateNative),
+    );
   }
 
   // Add synonyms if present
   if (synonyms.length > 0) {
-    commandParts.push(`--synonyms="${synonyms.join(",")}"`);
+    commandParts.push(
+      `--synonyms=${quoteCommandArgument(JSON.stringify(synonyms))}`,
+    );
   }
 
   const command = commandParts.join(" ");

@@ -1,6 +1,6 @@
 import type { MangaMatchResult } from "@/api/anilist/types";
 import type { MatchEngineConfig } from "@/api/matching/match-engine";
-import { scoreMatch } from "@/api/matching/match-engine";
+import { calculateConfidence } from "@/api/matching/scoring";
 
 export interface ConfidenceRecalculationMatchContext {
   index: number;
@@ -63,7 +63,7 @@ function recordFailure(
 
 export async function recalculateConfidenceForMatches(
   matches: MangaMatchResult[],
-  config: Partial<MatchEngineConfig>,
+  _config: Partial<MatchEngineConfig>,
   options: ConfidenceRecalculationLoopOptions = {},
 ): Promise<ConfidenceRecalculationLoopResult> {
   const total = matches.length;
@@ -95,12 +95,10 @@ export async function recalculateConfidenceForMatches(
       const recalculatedMatches = match.anilistMatches.map((candidate) => {
         let nextConfidence = candidate.confidence;
         try {
-          const { confidence } = scoreMatch(
-            match.kenmeiManga,
+          nextConfidence = calculateConfidence(
+            match.kenmeiManga.title,
             candidate.manga,
-            config,
           );
-          nextConfidence = confidence;
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : String(error);

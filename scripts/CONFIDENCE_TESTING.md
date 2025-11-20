@@ -35,6 +35,14 @@ npx tsx scripts/test-confidence.mts "Attack on Titan" "Shingeki no Kyojin" --syn
 npx tsx scripts/test-confidence.mts "Attack on Titan" "進撃の巨人" "Shingeki no Kyojin" "進撃の巨人" --synonyms="AoT,Attack on Titans"
 ```
 
+The CLI also understands a JSON-formatted `--synonyms` value, which is useful when synonyms include commas or other punctuation. You can pass the array directly as shown by the auto-generated command from the app, for example:
+
+```bash
+npx tsx scripts/test-confidence.mts "Title" "Candidate" --synonyms='["Synonym, With, Commas","Another Synonym"]'
+```
+
+If you copy the test command from the UI, it safely wraps every argument in single quotes and escapes embedded quotes, so you can paste it verbatim into your shell without additional escaping.
+
 ### With JSON Output
 
 For programmatic usage or piping to other tools:
