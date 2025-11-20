@@ -1137,6 +1137,102 @@ const AlternativeMatchItem = React.memo(AlternativeMatchItemComponent);
 AlternativeMatchItem.displayName = "AlternativeMatchItem";
 
 /**
+ * Props for the AlternativeMatches section.
+ */
+interface AlternativeMatchesSectionProps {
+  match: MangaMatchResult;
+  uniqueKey: string;
+  isAdultContent: (manga: AniListManga | undefined | null) => boolean;
+  shouldBlurImage: (mangaId: string) => boolean;
+  toggleImageBlur: (mangaId: string) => void;
+  handleOpenExternal: (url: string) => (e: React.MouseEvent) => void;
+  formatStatusText: (status: string | undefined) => string;
+  onSelectAlternative?: (
+    match: MangaMatchResult,
+    alternativeIndex: number,
+    autoAccept?: boolean,
+    directAccept?: boolean,
+  ) => void;
+  sourceBadgeBaseClasses: string;
+  aniListLinkClasses: string;
+  kenmeiLinkClasses: string;
+  listStatusBadgeBaseClasses: string;
+}
+
+/**
+ * Renders the alternative matches section for a match.
+ */
+const AlternativeMatchesSection: React.FC<AlternativeMatchesSectionProps> = ({
+  match,
+  uniqueKey,
+  isAdultContent,
+  shouldBlurImage,
+  toggleImageBlur,
+  handleOpenExternal,
+  formatStatusText,
+  onSelectAlternative,
+  sourceBadgeBaseClasses,
+  aniListLinkClasses,
+  kenmeiLinkClasses,
+  listStatusBadgeBaseClasses,
+}) => {
+  const [isAlternativesExpanded, setIsAlternativesExpanded] =
+    React.useState(false);
+
+  return (
+    <div
+      id={`alternatives-${uniqueKey}`}
+      className="bg-linear-to-br rounded-2xl border border-white/30 from-white/80 via-white/60 to-white/40 px-5 py-5 shadow-lg shadow-slate-900/10 backdrop-blur-sm dark:border-slate-800/60 dark:from-slate-900/80 dark:via-slate-900/65 dark:to-slate-950/55"
+    >
+      <h4 className="mb-4 flex items-center text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-300">
+        <ChevronRight className="mr-1 h-4 w-4" aria-hidden="true" />
+        Alternative Matches
+      </h4>
+      <div id={`alternatives-list-${uniqueKey}`} className="space-y-3">
+        {match.anilistMatches
+          ?.slice(1, isAlternativesExpanded ? undefined : 2)
+          .map((alternativeMatch, index) => (
+            <AlternativeMatchItem
+              key={
+                alternativeMatch.manga?.id ||
+                alternativeMatch.id ||
+                `alternative-match-${index}`
+              }
+              alternativeMatch={alternativeMatch}
+              index={index}
+              match={match}
+              isAdultContent={isAdultContent}
+              shouldBlurImage={shouldBlurImage}
+              toggleImageBlur={toggleImageBlur}
+              handleOpenExternal={handleOpenExternal}
+              formatStatusText={formatStatusText}
+              onSelectAlternative={onSelectAlternative}
+              sourceBadgeBaseClasses={sourceBadgeBaseClasses}
+              aniListLinkClasses={aniListLinkClasses}
+              kenmeiLinkClasses={kenmeiLinkClasses}
+              listStatusBadgeBaseClasses={listStatusBadgeBaseClasses}
+            />
+          ))}
+      </div>
+      {match.anilistMatches && match.anilistMatches.length > 2 && (
+        <div className="mt-3 flex justify-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsAlternativesExpanded(!isAlternativesExpanded)}
+            className="text-xs text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+          >
+            {isAlternativesExpanded
+              ? "Show Less"
+              : `Show ${match.anilistMatches.length - 2} More Alternatives`}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
  * Computes blur key for primary match based on ID priority.
  * @source
  */
@@ -1188,8 +1284,7 @@ function MatchCard({
   isUpdating = false,
 }: Readonly<MatchCardProps>) {
   const { isConfidenceTestExporterEnabled } = useDebug();
-  const [isAlternativesExpanded, setIsAlternativesExpanded] =
-    React.useState(false);
+  // Alternatives expansion moved to a dedicated component to reduce MatchCard's cognitive complexity
 
   const primaryMatchCandidate =
     match.selectedMatch ?? match.anilistMatches?.[0]?.manga;
@@ -1475,57 +1570,20 @@ function MatchCard({
 
         {/* Alternative matches - only show for non-matched entries */}
         {shouldShowAlternativeMatches(match) && (
-          <div
-            id={`alternatives-${uniqueKey}`}
-            className="bg-linear-to-br rounded-2xl border border-white/30 from-white/80 via-white/60 to-white/40 px-5 py-5 shadow-lg shadow-slate-900/10 backdrop-blur-sm dark:border-slate-800/60 dark:from-slate-900/80 dark:via-slate-900/65 dark:to-slate-950/55"
-          >
-            <h4 className="mb-4 flex items-center text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-300">
-              <ChevronRight className="mr-1 h-4 w-4" aria-hidden="true" />
-              Alternative Matches
-            </h4>
-            <div id={`alternatives-list-${uniqueKey}`} className="space-y-3">
-              {match.anilistMatches
-                ?.slice(1, isAlternativesExpanded ? undefined : 2)
-                .map((alternativeMatch, index) => (
-                  <AlternativeMatchItem
-                    key={
-                      alternativeMatch.manga?.id ||
-                      alternativeMatch.id ||
-                      `alternative-match-${index}`
-                    }
-                    alternativeMatch={alternativeMatch}
-                    index={index}
-                    match={match}
-                    isAdultContent={isAdultContent}
-                    shouldBlurImage={shouldBlurImage}
-                    toggleImageBlur={toggleImageBlur}
-                    handleOpenExternal={handleOpenExternal}
-                    formatStatusText={formatStatusText}
-                    onSelectAlternative={onSelectAlternative}
-                    sourceBadgeBaseClasses={sourceBadgeBaseClasses}
-                    aniListLinkClasses={aniListLinkClasses}
-                    kenmeiLinkClasses={kenmeiLinkClasses}
-                    listStatusBadgeBaseClasses={listStatusBadgeBaseClasses}
-                  />
-                ))}
-            </div>
-            {match.anilistMatches && match.anilistMatches.length > 2 && (
-              <div className="mt-3 flex justify-center">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    setIsAlternativesExpanded(!isAlternativesExpanded)
-                  }
-                  className="text-xs text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
-                >
-                  {isAlternativesExpanded
-                    ? "Show Less"
-                    : `Show ${match.anilistMatches.length - 2} More Alternatives`}
-                </Button>
-              </div>
-            )}
-          </div>
+          <AlternativeMatchesSection
+            match={match}
+            uniqueKey={uniqueKey}
+            isAdultContent={isAdultContent}
+            shouldBlurImage={shouldBlurImage}
+            toggleImageBlur={toggleImageBlur}
+            handleOpenExternal={handleOpenExternal}
+            formatStatusText={formatStatusText}
+            onSelectAlternative={onSelectAlternative}
+            sourceBadgeBaseClasses={sourceBadgeBaseClasses}
+            aniListLinkClasses={aniListLinkClasses}
+            kenmeiLinkClasses={kenmeiLinkClasses}
+            listStatusBadgeBaseClasses={listStatusBadgeBaseClasses}
+          />
         )}
       </div>
     </motion.article>
