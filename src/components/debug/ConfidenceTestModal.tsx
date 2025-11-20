@@ -3,7 +3,6 @@ import { Check, Copy, AlertCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -16,8 +15,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/Tooltip";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
-import { ConfidenceTestResults } from "./ConfidenceTestResults";
 import { generateConfidenceTestCommand } from "@/utils/generate-confidence-test-command";
 import type { MangaMatchResult } from "@/api/anilist/types";
 
@@ -37,7 +34,6 @@ export function ConfidenceTestModal({
   const [copiedFormat, setCopiedFormat] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const searchTitle = match.kenmeiManga.title;
   const firstMatch = match.anilistMatches?.[0];
 
   const handleCopy = async (event: React.MouseEvent) => {
@@ -105,11 +101,6 @@ export function ConfidenceTestModal({
     return null;
   }
 
-  const candidateTitle =
-    firstMatch.manga.title.english || firstMatch.manga.title.romaji || "";
-  const candidateRomaji = firstMatch.manga.title.romaji || "";
-  const candidateNative = firstMatch.manga.title.native || "";
-
   if (error) {
     return (
       <TooltipProvider>
@@ -141,39 +132,17 @@ export function ConfidenceTestModal({
           title="View confidence test details"
         >
           <Copy className="h-4 w-4" />
-          Confidence Details
+          Confidence Test Command
         </Button>
       </DialogTrigger>
       <DialogContent className="lg:min-w-3xl md:min-w-2xl sm:min-w-xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Confidence Test Results</DialogTitle>
-          <DialogDescription>
-            Detailed breakdown of the match confidence calculation
-          </DialogDescription>
+          <DialogTitle>Confidence Test Command</DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="results" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="results">Results</TabsTrigger>
-            <TabsTrigger value="commands">Commands</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="results" className="mt-4">
-            <ConfidenceTestResults
-              match={firstMatch}
-              searchTitle={searchTitle}
-              candidateTitle={candidateTitle}
-              candidateRomaji={candidateRomaji}
-              candidateNative={candidateNative}
-            />
-          </TabsContent>
-
-          <TabsContent value="commands" className="mt-4">
-            <div className="space-y-3">
+        <div className="mt-4">
+          <div className="space-y-3">
               <div>
-                <h3 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                  Test Command
-                </h3>
                 <div className="mb-3 rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-sm dark:border-slate-700 dark:bg-slate-900">
                   <code className="break-all text-slate-900 dark:text-slate-100">
                     {generateConfidenceTestCommand(match).command}
@@ -203,9 +172,8 @@ export function ConfidenceTestModal({
                   )}
                 </div>
               </div>
-            </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => setIsModalOpen(false)}>
