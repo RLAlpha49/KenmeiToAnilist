@@ -3,7 +3,7 @@
  * Replaces multiple useMemo calls with single worker pool dispatch
  */
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import {
   getStatisticsWorkerPool,
   type StatisticsAggregationResult,
@@ -47,12 +47,14 @@ export function useStatisticsAggregation(
     let isMounted = true;
 
     const initPool = async () => {
-      if (!poolRef.current && isMounted) {
-        const pool = getStatisticsWorkerPool();
-        await pool.initialize();
-        if (isMounted) {
-          poolRef.current = pool;
-        }
+      if (!isMounted) {
+        return;
+      }
+
+      const pool = getStatisticsWorkerPool();
+      await pool.initialize();
+      if (isMounted) {
+        poolRef.current = pool;
       }
     };
 
@@ -69,7 +71,7 @@ export function useStatisticsAggregation(
   }, []);
 
   // Generate cache key based on filters, comparison mode, and time range
-  const cacheKey = useCallback(() => {
+  const currentCacheKey = useMemo(() => {
     const filterStr = JSON.stringify(filters);
     const comparisonStr = JSON.stringify(comparisonMode);
     const timeStr = selectedTimeRange;
@@ -85,8 +87,6 @@ export function useStatisticsAggregation(
     }
     return `${keyStr}:${Math.abs(hash)}`;
   }, [filters, comparisonMode, selectedTimeRange]);
-
-  const currentCacheKey = cacheKey();
 
   // Main aggregation effect
   useEffect(() => {
@@ -113,25 +113,18 @@ export function useStatisticsAggregation(
       setError(null);
 
       try {
-        // Wait for pool initialization with timeout
-        let attempts = 0;
-        const maxAttempts = 100; // ~5 seconds with 50ms intervals
-        while (!poolRef.current && attempts < maxAttempts && !signal.aborted) {
-          await new Promise((resolve) => setTimeout(resolve, 50));
-          attempts++;
-        }
+        const pool = poolRef.current ?? getStatisticsWorkerPool();
+
+        // Ensure the underlying worker pool is initialized via public API
+        await pool.initialize();
 
         if (signal.aborted) {
           return;
         }
 
-        if (!poolRef.current) {
-          throw new Error(
-            "Worker pool initialization timeout - unable to initialize worker pool",
-          );
-        }
+        poolRef.current = pool;
 
-        const result = await poolRef.current.aggregateStatistics(
+        const result = await pool.aggregateStatistics(
           matchResults,
           readingHistory,
           filters,

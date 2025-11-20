@@ -1,20 +1,16 @@
 /**
- * Exposes shared Web Worker-based pools and utilities for CPU-intensive operations.
- * Uses a single shared pool to keep the main thread responsive.
+ * Public worker API surface used by renderer components, hooks, and services.
+ * Low-level primitives such as WorkerPool, WorkerMessage, and WorkerTask live in
+ * `./internal.ts` to avoid unnecessary coupling with UI-facing modules.
  * @source
  */
 
-// Core infrastructure
-export { WorkerPool } from "./core/worker-pool";
+// Core utilities that orchestrate worker execution from the renderer
 export {
   executeMatchingWithWorkers,
   executeMatchingOnMainThread,
   areWorkersAvailable,
 } from "./core/utils";
-export { getWorkerPool, workerPool } from "./core/pool";
-export { getGenericWorkerPool } from "./core/worker-pool";
-
-// Worker initialization
 export { initializeWorkerPoolsAsync } from "./init";
 
 // Matching operations
@@ -64,41 +60,18 @@ export {
 } from "./search/fuzzy-search-worker-pool";
 export type { FuzzySearchResult } from "./search/fuzzy-search-worker-pool";
 
-// Type exports
+// Maintenance
+export { recalculateConfidenceScores } from "./maintenance/confidence-recalculation-worker";
 export type {
-  WorkerMessage,
-  MatchBatchMessage,
-  CancelMessage,
-  ProgressMessage,
-  ResultMessage,
-  ErrorMessage,
-  WorkerTask,
-  WorkerPoolConfig,
-  MatchBatchExecution,
-  CSVStartMessage,
-  CSVChunkMessage,
-  CSVCompleteMessage,
-  TitleNormalizationMessage,
-  TitleNormalizationProgressMessage,
-  TitleNormalizationResultMessage,
-  ReadingHistoryFilterMessage,
-  ReadingHistoryFilterProgressMessage,
-  ReadingHistoryFilterResultMessage,
-  JSONSerializeMessage,
-  JSONDeserializeMessage,
-  JSONSerializeResultMessage,
-  JSONDeserializeResultMessage,
-  BatchSyncMessage,
-  BatchSyncProgressMessage,
-  BatchSyncResultMessage,
-  PreparedSyncOperation,
-  FuzzySearchMessage,
-  FuzzySearchResultMessage,
-} from "./core/types";
+  ConfidenceRecalculationExecution,
+  ConfidenceRecalculationMetadata,
+  ConfidenceRecalculationOptions,
+  ConfidenceRecalculationResult,
+} from "./maintenance/confidence-recalculation-worker";
 
+// Type exports for UI-facing result shapes
 export type { StatisticsAggregationResult } from "./statistics/statistics-worker-pool";
 export type { ReadingHistoryFilterResult } from "./statistics/reading-history-worker-pool";
-export type { CancellableExecution } from "./core/utils";
 export type { CSVWorkerPoolConfig } from "./data-processing/csv-worker-pool";
 export type {
   NormalizationCacheResult,
@@ -106,6 +79,3 @@ export type {
 } from "./statistics/title-normalization-worker-pool";
 export type { JSONSerializationWorkerPoolConfig } from "./data-processing/json-serialization-worker-pool";
 export type { DuplicateDetectionResult } from "./statistics/duplicate-worker-pool";
-export type { DataTablePreparationResult } from "./ui/data-table-worker-pool";
-export type { PreparedTableRow } from "./core/types";
-export type { BatchSyncExecution } from "./matching/batch-sync-worker-pool";

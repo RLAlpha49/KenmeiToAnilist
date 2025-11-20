@@ -49,4 +49,19 @@ export default [
     files: ["**/*.test.{ts,tsx}", "**/tests/**/*.{ts,tsx}"],
     rules: { "@typescript-eslint/no-explicit-any": "off" },
   },
+  {
+    files: [
+      "src/components/**/*.{ts,tsx}",
+      "src/pages/**/*.{ts,tsx}",
+      "src/hooks/**/*.{ts,tsx}",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: ["@/workers/internal"],
+        },
+      ],
+    },
+  },
 ];

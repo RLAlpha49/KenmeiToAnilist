@@ -9,6 +9,7 @@ import type {
 } from "../types/matching-filters";
 import { defaultAdvancedFilters } from "../types/matching-filters";
 import { captureError, ErrorType } from "./error-handling";
+import { CustomRuleWarningId } from "./customRuleMessages";
 
 declare global {
   interface Window {
@@ -465,6 +466,7 @@ export const STORAGE_KEYS = {
   KENMEI_DATA: "kenmei_data",
   IMPORT_STATS: "import_stats",
   MATCH_RESULTS: "match_results",
+  CONFIDENCE_RECALC_METADATA: "confidence_recalc_metadata",
   PENDING_MANGA: "pending_manga",
   CACHE_VERSION: "cache_version",
   SYNC_CONFIG: "sync_config",
@@ -754,6 +756,12 @@ export const DEFAULT_READING_HISTORY: ReadingHistory = {
  * @source
  */
 export const MAX_READING_HISTORY_ENTRIES = 365;
+
+/**
+ * Maximum number of ignored duplicates retained locally. Older entries are dropped once this cap is reached.
+ * @source
+ */
+export const MAX_IGNORED_DUPLICATES = 100;
 
 /**
  * Default match configuration.
@@ -1979,9 +1987,10 @@ function validateTargetFields(
  * @internal
  * @source
  */
-function checkRedosVulnerabilities(pattern: string): string | undefined {
-  const redosWarning =
-    "⚠️ This pattern may cause performance issues (ReDoS vulnerability). Consider simplifying: avoid nested quantifiers like (a+)+, overlapping alternations like (a|aa)+, or catastrophic patterns like (.*a)*. See regex documentation for safer alternatives.";
+function checkRedosVulnerabilities(
+  pattern: string,
+): CustomRuleWarningId | undefined {
+  const redosWarning = CustomRuleWarningId.RedosVulnerability;
 
   // Detect nested quantifiers: (a+)+, (\w*)*, etc.
   if (/(\w+[+*?]|\([^)]+\)[+*?])[+*?]/.test(pattern)) {
@@ -2008,7 +2017,7 @@ function checkRedosVulnerabilities(pattern: string): string | undefined {
  * @internal
  * @source
  */
-function checkBroadPatterns(pattern: string): string | undefined {
+function checkBroadPatterns(pattern: string): CustomRuleWarningId | undefined {
   const broadPatterns = [
     /^(\.\*|\^?\.\*\$?|\(\.\*\))$/, // .* or ^.*$ or (.*)
     /^\(\|.*\|?\)$/, // (|...) empty alternations
@@ -2017,22 +2026,21 @@ function checkBroadPatterns(pattern: string): string | undefined {
 
   for (const broadPattern of broadPatterns) {
     if (broadPattern.test(pattern)) {
-      return `⚠️ This pattern matches almost everything. It will ${
-        pattern === ".*" || pattern === "^.*$"
-          ? "likely match all manga titles"
-          : "match very broad sets of titles"
-      }. Make sure this is intentional.`;
+      if (pattern === ".*" || pattern === "^.*$") {
+        return CustomRuleWarningId.BroadMatchesAllTitles;
+      }
+      return CustomRuleWarningId.BroadMatchesBroadSets;
     }
   }
 
   // Check for unbounded repeats without anchors
   if (/^[^$]*[+*].*[+*]/.test(pattern) && !/[\^$]/.test(pattern)) {
-    return "⚠️ Pattern has multiple unbounded repeats without anchors. Consider using ^ or $ to make it more specific, or use bounded quantifiers like {1,100}.";
+    return CustomRuleWarningId.BroadUnanchoredRepeats;
   }
 
   // Check for very long patterns
   if (pattern.length > 200) {
-    return "⚠️ This pattern is very long (>200 characters) and may be difficult to maintain. Consider breaking it into multiple simpler rules.";
+    return CustomRuleWarningId.PatternTooLong;
   }
 
   return undefined;
@@ -2047,7 +2055,7 @@ function checkBroadPatterns(pattern: string): string | undefined {
 export function validateCustomRule(rule: CustomRule): {
   valid: boolean;
   error?: string;
-  warning?: string;
+  warning?: CustomRuleWarningId;
 } {
   // Check basic validation
   const basicError = checkBasicValidation(rule);
@@ -2114,6 +2122,7 @@ export function migrateCustomRule(rule: Partial<CustomRule>): CustomRule {
 
 /**
  * AniList entry marked as ignored duplicate.
+ * The ignored list is expected to stay small per user, persists until manually modified, and is only trimmed when it exceeds `MAX_IGNORED_DUPLICATES`.
  * @source
  */
 export interface IgnoredDuplicate {
@@ -2146,6 +2155,11 @@ export function addIgnoredDuplicate(
       anilistTitle,
       ignoredAt: Date.now(),
     });
+
+    if (ignored.length > MAX_IGNORED_DUPLICATES) {
+      const excess = ignored.length - MAX_IGNORED_DUPLICATES;
+      ignored.splice(0, excess);
+    }
 
     storage.setItem(STORAGE_KEYS.IGNORED_DUPLICATES, JSON.stringify(ignored));
   } catch (error) {

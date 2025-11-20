@@ -30,6 +30,10 @@ import {
   validateCustomRule,
   migrateCustomRule,
 } from "@/utils/storage";
+import {
+  CustomRuleWarningId,
+  getCustomRuleWarningMessage,
+} from "@/utils/customRuleMessages";
 import { clearRegexCache } from "@/api/matching/filtering";
 import { debounce } from "@/utils/debounce";
 import { useDebugActions } from "@/contexts/debug-context";
@@ -139,7 +143,7 @@ function CustomRulesManagerComponent(): React.JSX.Element {
   const [warningConfirmPending, setWarningConfirmPending] = useState<{
     rule: CustomRule;
     type: "skip" | "accept" | null;
-    warning: string;
+    warningId: CustomRuleWarningId;
   } | null>(null);
 
   const [ruleForm, setRuleForm] = useState<RuleFormData>({
@@ -216,21 +220,11 @@ function CustomRulesManagerComponent(): React.JSX.Element {
   /**
    * Validate regex pattern (debounced during input, immediate during save)
    */
-  const validatePattern = useCallback(
-    (pattern: string, immediate: boolean = false): boolean => {
-      if (immediate) {
-        // Immediate validation (used during save)
-        return validatePatternSync(pattern);
-      }
-
-      // Debounced validation (used during input)
-      if (debouncedValidateRef.current) {
-        debouncedValidateRef.current(pattern);
-      }
-      return true; // Always return true for debounced calls as validation happens asynchronously
-    },
-    [validatePatternSync],
-  );
+  const validatePattern = useCallback((pattern: string): void => {
+    if (debouncedValidateRef.current) {
+      debouncedValidateRef.current(pattern);
+    }
+  }, []);
 
   /**
    * Test pattern against sample text
@@ -272,7 +266,7 @@ function CustomRulesManagerComponent(): React.JSX.Element {
       setRuleForm((prev) => ({ ...prev, pattern: value }));
       if (value.trim()) {
         // Use debounced validation (async with 300ms delay)
-        validatePattern(value, false);
+        validatePattern(value);
       } else {
         setValidationError("Pattern cannot be empty");
       }
@@ -368,7 +362,7 @@ function CustomRulesManagerComponent(): React.JSX.Element {
     }
 
     // Use immediate validation (synchronous, no debounce)
-    if (!validatePattern(ruleForm.pattern, true)) {
+    if (!validatePatternSync(ruleForm.pattern)) {
       toast.error("Please fix the pattern errors");
       return;
     }
@@ -401,14 +395,14 @@ function CustomRulesManagerComponent(): React.JSX.Element {
       setWarningConfirmPending({
         rule: ruleToValidate,
         type: editingRule?.type || isAddingRule,
-        warning: validation.warning,
+        warningId: validation.warning,
       });
       return;
     }
 
     // No warning, proceed with save
     proceedWithSave(ruleToValidate);
-  }, [ruleForm, editingRule, isAddingRule, validatePattern]);
+  }, [ruleForm, editingRule, isAddingRule, validatePatternSync]);
 
   /**
    * Proceed with saving the rule (called after validation and warning confirmation)
@@ -1055,7 +1049,9 @@ function CustomRulesManagerComponent(): React.JSX.Element {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Broad Pattern</AlertDialogTitle>
             <AlertDialogDescription>
-              {warningConfirmPending?.warning}
+              {warningConfirmPending
+                ? getCustomRuleWarningMessage(warningConfirmPending.warningId)
+                : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

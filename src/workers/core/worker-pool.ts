@@ -4,6 +4,7 @@
  */
 
 import type { WorkerMessage, WorkerPoolConfig, WorkerTask } from "./types";
+import { createWorkerError } from "./error-utils";
 import Worker from "./worker?worker";
 
 /**
@@ -89,6 +90,19 @@ export class WorkerPool {
         throw error;
       }
     }
+  }
+
+  /**
+   * Ensures the worker pool is initialized and ready, avoiding redundant initialization calls.
+   * @source
+   */
+  async ensureInitialized(): Promise<void> {
+    if (this.isAvailable()) {
+      console.debug("[WorkerPool] ✅ Already initialized and available");
+      return;
+    }
+    console.info("[WorkerPool] 🔁 Ensuring initialization is complete");
+    await this.initialize();
   }
 
   /**
@@ -234,31 +248,12 @@ export class WorkerPool {
         const payload = (message as unknown as Record<string, unknown>)
           .payload as Record<string, unknown>;
         const errorDetails = payload.error as Record<string, unknown>;
-        const error = new Error(errorDetails.message as string);
-        // Attach additional error properties from worker
-        if (errorDetails.name) {
-          error.name = errorDetails.name as string;
-        }
-        if (errorDetails.stack) {
-          error.stack = errorDetails.stack as string;
-        }
-        // Guard Error.cause with feature detection; attach to meta if not supported
-        if (errorDetails.causeMessage) {
-          try {
-            // Try to set native cause if supported (Node 16.9+, modern browsers)
-            (error as Error & { cause?: Error }).cause = new Error(
-              errorDetails.causeMessage as string,
-            );
-          } catch {
-            // Fallback: attach cause message to error object for logging
-            (error as Error & { causeMessage?: string }).causeMessage =
-              errorDetails.causeMessage as string;
-          }
-        }
+        const error = createWorkerError(errorDetails);
         task.reject(error);
         this.completeTask(taskId);
         console.error(
-          `[WorkerPool] ❌ Worker ${workerIndex} error: ${errorDetails.message}`,
+          `[WorkerPool] ❌ Worker ${workerIndex} error: ${error.message}`,
+          error.meta,
         );
         break;
       }
@@ -294,6 +289,7 @@ export class WorkerPool {
       message.type === "DUPLICATE_DETECTION_RESULT" ||
       message.type === "READING_HISTORY_FILTER_RESULT" ||
       message.type === "MATCH_CANCELLED" ||
+      message.type === "CONFIDENCE_RECALC_CANCELLED" ||
       message.type === "STATISTICS_AGGREGATION_CANCELLED" ||
       message.type === "TITLE_NORMALIZATION_CANCELLED" ||
       message.type === "BATCH_SYNC_CANCELLED" ||
@@ -308,6 +304,16 @@ export class WorkerPool {
     }
 
     // Process terminal message
+    if (message.type === "CONFIDENCE_RECALC_CANCELLED") {
+      const payload = this.extractMessageResult(message);
+      task.resolve(this.formatCancellationResult(message.type, payload));
+      console.debug(
+        `[WorkerPool] 📋 Cancelled task ${taskId} acknowledged cancellation payload`,
+      );
+      this.completeTask(taskId);
+      return;
+    }
+
     if (message.type === "ERROR") {
       console.debug(
         `[WorkerPool] 📋 Cancelled task ${taskId} received error, discarding`,
@@ -333,7 +339,20 @@ export class WorkerPool {
   ): Record<string, unknown> {
     return (message as unknown as Record<string, Record<string, unknown>>)
       .payload;
-  } /**
+  }
+
+  private formatCancellationResult(
+    type: WorkerMessage["type"],
+    payload: Record<string, unknown>,
+  ): Record<string, unknown> {
+    return {
+      type,
+      payload,
+      ...payload,
+    };
+  }
+
+  /**
    * Rejects affected tasks and attempts to spawn a replacement worker.
    * @source
    */
@@ -394,14 +413,26 @@ export class WorkerPool {
       const timeoutHandle = setTimeout(() => {
         const stillExistingTask = this.tasks.get(taskId);
         if (stillExistingTask) {
-          stillExistingTask.reject(
-            new Error(
-              `Task ${taskId} cancelled and timed out waiting for worker response`,
-            ),
-          );
+          const timeoutContext = {
+            taskId,
+            processedItems: stillExistingTask.processedItems ?? 0,
+            totalItems: stillExistingTask.totalItems ?? 0,
+          };
+          let resolution: Record<string, unknown>;
+          if (stillExistingTask.buildTimeoutResult) {
+            resolution = stillExistingTask.buildTimeoutResult(timeoutContext);
+          } else if (stillExistingTask.cancellationMessageType) {
+            resolution = this.formatCancellationResult(
+              stillExistingTask.cancellationMessageType,
+              timeoutContext,
+            );
+          } else {
+            resolution = timeoutContext;
+          }
+          stillExistingTask.resolve(resolution);
           this.completeTask(taskId);
           console.warn(
-            `[WorkerPool] ⏱️ Cancelled task ${taskId} timed out after 5s, forcing completion`,
+            `[WorkerPool] ⏱️ Cancelled task ${taskId} timed out after 5s, forcing cancellation completion`,
           );
         }
       }, 5000);

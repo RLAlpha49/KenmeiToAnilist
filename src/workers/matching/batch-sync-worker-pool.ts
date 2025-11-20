@@ -92,9 +92,7 @@ export class BatchSyncWorkerPool {
     const pool = getGenericWorkerPool();
 
     // Ensure pool is initialized
-    if (!pool.isAvailable()) {
-      await pool.initialize();
-    }
+    await pool.ensureInitialized();
 
     const mainTaskId = taskId || generateUUID();
 

@@ -13,6 +13,7 @@ import React, {
 } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { KenmeiManga } from "../api/kenmei/types";
+import { DEFAULT_MATCH_CONFIG } from "../api/matching/match-engine";
 import { useAuthState } from "../hooks/use-auth";
 import {
   getKenmeiData,
@@ -66,11 +67,19 @@ import {
   DuplicateEntry,
 } from "../components/matching/DuplicateWarning";
 import { detectDuplicateAniListIds } from "../components/matching/detect-duplicate-anilist-ids";
-import { getDuplicateDetectionWorkerPool } from "../workers";
+import {
+  getDuplicateDetectionWorkerPool,
+  recalculateConfidenceScores,
+} from "../workers";
+import type {
+  ConfidenceRecalculationExecution,
+  ConfidenceRecalculationMetadata,
+} from "../workers";
 import { LoadingView } from "../components/matching/LoadingView";
 import { SkeletonCard } from "../components/ui/Skeleton";
 import { EmptyState } from "../components/ui/EmptyState";
 import { FileSearch } from "lucide-react";
+import { ConfidenceRecalculationDialog } from "../components/matching/ConfidenceRecalculationDialog";
 
 // Animation variants
 const pageVariants = {
@@ -117,6 +126,41 @@ const itemVariants = {
       duration: 0.2,
     },
   },
+};
+
+type ConfidenceRunStatus =
+  | "idle"
+  | "running"
+  | "completed"
+  | "error"
+  | "cancelled";
+
+interface ConfidenceProgressState {
+  current: number;
+  total: number;
+  currentTitle?: string;
+}
+
+type ConfidenceMetadataSnapshot = ConfidenceRecalculationMetadata & {
+  completedAt?: string;
+};
+
+const isConfidenceMetadataSnapshot = (
+  value: unknown,
+): value is ConfidenceMetadataSnapshot => {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const candidate = value as Partial<ConfidenceMetadataSnapshot>;
+  const hasNumericCounts =
+    typeof candidate.processed === "number" &&
+    typeof candidate.totalItems === "number";
+  const hasCompletedAt =
+    candidate.completedAt === undefined ||
+    typeof candidate.completedAt === "string";
+
+  return hasNumericCounts && hasCompletedAt;
 };
 
 /**
@@ -187,6 +231,66 @@ export function MatchingPage() {
     [],
   );
   const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
+
+  // Confidence recalculation state
+  const [isConfidenceDialogOpen, setIsConfidenceDialogOpen] = useState(false);
+  const [confidenceStatus, setConfidenceStatus] =
+    useState<ConfidenceRunStatus>("idle");
+  const [confidenceProgress, setConfidenceProgress] =
+    useState<ConfidenceProgressState | null>(null);
+  const [confidenceError, setConfidenceError] = useState<string | null>(null);
+  const [confidenceMetadata, setConfidenceMetadata] =
+    useState<ConfidenceMetadataSnapshot | null>(null);
+  const persistConfidenceMetadataSnapshot = useCallback(
+    (metadata: ConfidenceMetadataSnapshot) => {
+      try {
+        storage.setItem(
+          STORAGE_KEYS.CONFIDENCE_RECALC_METADATA,
+          JSON.stringify(metadata),
+        );
+      } catch (error) {
+        captureError(
+          ErrorType.STORAGE,
+          "Failed to persist confidence metadata",
+          error instanceof Error ? error : new Error(String(error)),
+          {},
+        );
+      }
+    },
+    [],
+  );
+  const clearPersistedConfidenceMetadata = useCallback(() => {
+    storage.removeItem(STORAGE_KEYS.CONFIDENCE_RECALC_METADATA);
+  }, []);
+
+  useEffect(() => {
+    const storedMetadata = storage.getItem(
+      STORAGE_KEYS.CONFIDENCE_RECALC_METADATA,
+    );
+    if (!storedMetadata) {
+      return;
+    }
+    try {
+      const parsed = JSON.parse(storedMetadata);
+      if (isConfidenceMetadataSnapshot(parsed)) {
+        setConfidenceMetadata(parsed);
+      } else {
+        clearPersistedConfidenceMetadata();
+      }
+    } catch (error) {
+      captureError(
+        ErrorType.STORAGE,
+        "Failed to read stored confidence metadata",
+        error instanceof Error ? error : new Error(String(error)),
+        {},
+      );
+      clearPersistedConfidenceMetadata();
+    }
+  }, [clearPersistedConfidenceMetadata]);
+  const confidenceTaskRef = useRef<ConfidenceRecalculationExecution | null>(
+    null,
+  );
+  const confidenceTaskIdRef = useRef<string | null>(null);
 
   // State for search query (to be passed to MangaMatchingPanel)
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -338,6 +442,35 @@ export function MatchingPage() {
     undoRedoManager,
   );
 
+  const persistMatchResults = useCallback((updated: MangaMatchResult[]) => {
+    queueMicrotask(() => {
+      try {
+        const serialized = JSON.stringify(updated);
+        if (typeof storage.setItemAsync === "function") {
+          storage
+            .setItemAsync(STORAGE_KEYS.MATCH_RESULTS, serialized)
+            .catch((error) => {
+              captureError(
+                ErrorType.STORAGE,
+                "Failed to persist match results asynchronously",
+                error instanceof Error ? error : new Error(String(error)),
+                { size: serialized.length },
+              );
+            });
+        } else {
+          storage.setItem(STORAGE_KEYS.MATCH_RESULTS, serialized);
+        }
+      } catch (error) {
+        captureError(
+          ErrorType.STORAGE,
+          "Failed to persist match results",
+          error instanceof Error ? error : new Error(String(error)),
+          {},
+        );
+      }
+    });
+  }, []);
+
   // Error boundary handlers
   const handleMatchingReset = useCallback(() => {
     setMatchResults([]);
@@ -347,6 +480,8 @@ export function MatchingPage() {
     setCanUndo(false);
     setCanRedo(false);
     matchingProcess.setError?.(null);
+    setConfidenceMetadata(null);
+    clearPersistedConfidenceMetadata();
 
     // Reload from storage
     try {
@@ -400,6 +535,163 @@ export function MatchingPage() {
   const handleClearSelection = useCallback(() => {
     setSelectedMatchIds(new Set());
   }, []);
+
+  const handleConfidenceDialogChange = useCallback((nextOpen: boolean) => {
+    setIsConfidenceDialogOpen(nextOpen);
+  }, []);
+
+  const cancelConfidenceRecalculation = useCallback(() => {
+    const activeTask = confidenceTaskRef.current;
+    if (!activeTask) {
+      return;
+    }
+
+    activeTask.cancel();
+    confidenceTaskRef.current = null;
+    confidenceTaskIdRef.current = null;
+    setConfidenceStatus("cancelled");
+    toast.info("Confidence recalculation cancelled");
+    recordEvent({
+      type: "confidence.recalc.cancelled",
+      message: "Confidence recalculation cancelled by user",
+      level: "info",
+    });
+  }, [recordEvent]);
+
+  const startConfidenceRecalculation = useCallback(
+    (autoOpenDialog = false) => {
+      if (autoOpenDialog) {
+        setIsConfidenceDialogOpen(true);
+      }
+
+      if (confidenceTaskIdRef.current || confidenceStatus === "running") {
+        return;
+      }
+
+      if (matchResults.length === 0) {
+        toast.info("No matches available to update yet.");
+        return;
+      }
+
+      if (matchingProcess.isLoading) {
+        toast.info("Please wait for the current matching run to finish.");
+        return;
+      }
+
+      if (rateLimitState.isRateLimited) {
+        toast.info("Cannot recalculate while AniList rate limit is active.");
+        return;
+      }
+
+      setConfidenceStatus("running");
+      setConfidenceError(null);
+      setConfidenceProgress({ current: 0, total: matchResults.length });
+      setConfidenceMetadata(null);
+      clearPersistedConfidenceMetadata();
+
+      const execution = recalculateConfidenceScores(
+        matchResults,
+        DEFAULT_MATCH_CONFIG,
+        {
+          onProgress: (current, total, currentTitle) => {
+            setConfidenceProgress({ current, total, currentTitle });
+          },
+        },
+      );
+
+      confidenceTaskRef.current = execution;
+      confidenceTaskIdRef.current = execution.taskId;
+
+      recordEvent({
+        type: "confidence.recalc.start",
+        message: "Confidence recalculation started",
+        level: "info",
+        metadata: { total: matchResults.length },
+      });
+
+      execution.promise
+        .then(({ results, metadata }) => {
+          const previousTotal = matchResults.length;
+          const finalProcessed = metadata?.processed ?? results.length;
+          const finalTotal =
+            metadata?.totalItems ?? previousTotal ?? results.length;
+          const normalizedMetadata: ConfidenceMetadataSnapshot = {
+            ...metadata,
+            processed: finalProcessed,
+            totalItems: finalTotal,
+            cancelled: Boolean(metadata?.cancelled),
+            completedAt: new Date().toISOString(),
+          };
+
+          setConfidenceMetadata(normalizedMetadata);
+          persistConfidenceMetadataSnapshot(normalizedMetadata);
+          setConfidenceProgress({ current: finalProcessed, total: finalTotal });
+
+          if (confidenceTaskIdRef.current !== execution.taskId) {
+            return;
+          }
+
+          if (!normalizedMetadata.cancelled) {
+            setMatchResults(results);
+            persistMatchResults(results);
+          }
+          const finalStatus: ConfidenceRunStatus = normalizedMetadata.cancelled
+            ? "cancelled"
+            : "completed";
+          setConfidenceStatus(finalStatus);
+
+          if (!normalizedMetadata.cancelled) {
+            toast.success("Confidence scores refreshed for all entries.");
+            recordEvent({
+              type: "confidence.recalc.complete",
+              message: "Confidence recalculation completed",
+              level: "info",
+              metadata: {
+                durationMs: normalizedMetadata.durationMs,
+                processed: normalizedMetadata.processed,
+              },
+            });
+          }
+        })
+        .catch((error) => {
+          if (confidenceTaskIdRef.current !== execution.taskId) {
+            return;
+          }
+
+          const message =
+            error instanceof Error ? error.message : String(error);
+          setConfidenceStatus("error");
+          setConfidenceError(message);
+          toast.error("Confidence recalculation failed", {
+            description: message,
+          });
+          recordEvent({
+            type: "confidence.recalc.error",
+            message,
+            level: "error",
+          });
+        })
+        .finally(() => {
+          if (confidenceTaskIdRef.current === execution.taskId) {
+            confidenceTaskRef.current = null;
+            confidenceTaskIdRef.current = null;
+          }
+        });
+    },
+    [
+      confidenceStatus,
+      matchResults,
+      matchingProcess,
+      persistMatchResults,
+      rateLimitState.isRateLimited,
+      recordEvent,
+      toast,
+    ],
+  );
+
+  const handleRecalculateConfidenceClick = useCallback(() => {
+    startConfidenceRecalculation(true);
+  }, [startConfidenceRecalculation]);
 
   const handleBatchAccept = useCallback(async () => {
     const selectedMatches = matchResults.filter((match) =>
@@ -885,6 +1177,7 @@ export function MatchingPage() {
 
       // Refresh duplicates using worker
       const pool = getDuplicateDetectionWorkerPool();
+      // Ensure the wrapper pool is initialized using its public API
       await pool.initialize();
       const result = await pool.detectDuplicates(matchResults);
 
@@ -1316,6 +1609,8 @@ export function MatchingPage() {
       canUndo: false,
       canRedo: false,
       matchResults: [],
+      onRecalculateConfidence: () => {},
+      isConfidenceRecalcRunning: false,
     };
 
     const headerProps = { ...defaultHeaderProps, ...headerPropsOverride };
@@ -1991,6 +2286,8 @@ export function MatchingPage() {
             canRedo={canRedo}
             matchResults={matchResults}
             onImportComplete={handleImportComplete}
+            onRecalculateConfidence={handleRecalculateConfidenceClick}
+            isConfidenceRecalcRunning={confidenceStatus === "running"}
           />
 
           {/* Rematch by status options */}
@@ -2115,6 +2412,26 @@ export function MatchingPage() {
               </AnimatePresence>
             )}
           </motion.div>
+
+          <ConfidenceRecalculationDialog
+            open={isConfidenceDialogOpen}
+            onOpenChange={handleConfidenceDialogChange}
+            progress={confidenceProgress}
+            status={confidenceStatus}
+            matchCount={matchResults.length}
+            metadata={confidenceMetadata}
+            lastDurationMs={confidenceMetadata?.durationMs}
+            lastCompletedAt={confidenceMetadata?.completedAt}
+            errorMessage={confidenceError}
+            canStart={
+              matchResults.length > 0 &&
+              !matchingProcess.isLoading &&
+              !rateLimitState.isRateLimited &&
+              confidenceStatus !== "running"
+            }
+            onStart={() => startConfidenceRecalculation()}
+            onCancel={cancelConfidenceRecalculation}
+          />
 
           {/* Search Modal */}
           <SearchModal

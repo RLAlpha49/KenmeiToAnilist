@@ -67,6 +67,21 @@ export interface ResultMessage {
   payload: {
     taskId: string;
     results: MangaMatchResult[];
+    metadata?: Record<string, unknown>;
+  };
+}
+
+/**
+ * Inbound request to recalculate confidence scores for existing matches.
+ * @source
+ */
+export interface ConfidenceRecalculationMessage {
+  type: "CONFIDENCE_RECALC";
+  payload: {
+    taskId: string;
+    matches: MangaMatchResult[];
+    config: Partial<MatchEngineConfig>;
+    yieldEvery?: number;
   };
 }
 
@@ -513,6 +528,19 @@ export interface MatchCancelledMessage {
 }
 
 /**
+ * Outbound terminal cancellation message for confidence recalculation tasks.
+ * @source
+ */
+export interface ConfidenceRecalculationCancelledMessage {
+  type: "CONFIDENCE_RECALC_CANCELLED";
+  payload: {
+    taskId: string;
+    itemsProcessed: number;
+    totalItems: number;
+  };
+}
+
+/**
  * Outbound terminal cancellation message for statistics operations.
  * Includes stage information indicating at which processing stage cancellation occurred.
  * @source
@@ -617,47 +645,6 @@ export interface FuzzySearchResultMessage {
     };
   };
 }
-
-/**
- * Discriminated union of all supported worker message variants.
- * @source
- */
-export type WorkerMessage =
-  | MatchBatchMessage
-  | CancelMessage
-  | ProgressMessage
-  | ResultMessage
-  | ErrorMessage
-  | CSVStartMessage
-  | CSVChunkMessage
-  | CSVCompleteMessage
-  | CSVRowsMessage
-  | CSVCancelledMessage
-  | AdvancedFilterMessage
-  | AdvancedFilterResultMessage
-  | TitleNormalizationProgressMessage
-  | TitleNormalizationResultMessage
-  | StatisticsAggregationProgressMessage
-  | StatisticsAggregationResultMessage
-  | ReadingHistoryFilterProgressMessage
-  | ReadingHistoryFilterResultMessage
-  | JSONSerializeResultMessage
-  | JSONDeserializeResultMessage
-  | DuplicateDetectionProgressMessage
-  | DuplicateDetectionResultMessage
-  | DataTablePreparationProgressMessage
-  | DataTablePreparationResultMessage
-  | BatchSyncProgressMessage
-  | BatchSyncResultMessage
-  | FuzzySearchMessage
-  | FuzzySearchResultMessage
-  | MatchCancelledMessage
-  | StatisticsAggregationCancelledMessage
-  | TitleNormalizationCancelledMessage
-  | BatchSyncCancelledMessage
-  | DuplicateDetectionCancelledMessage
-  | DataTableCancelledMessage
-  | ReadingHistoryCancelledMessage;
 
 /**
  * Inbound request to filter and aggregate reading history.
@@ -1044,11 +1031,54 @@ export interface DataTablePreparationResultMessage {
 }
 
 /**
+ * Discriminated union of all supported worker message variants.
+ * @source
+ */
+export type WorkerMessage =
+  | MatchBatchMessage
+  | ConfidenceRecalculationMessage
+  | CancelMessage
+  | ProgressMessage
+  | ResultMessage
+  | ErrorMessage
+  | MatchCancelledMessage
+  | ConfidenceRecalculationCancelledMessage
+  | CSVStartMessage
+  | CSVChunkMessage
+  | CSVRowsMessage
+  | CSVCompleteMessage
+  | CSVCancelledMessage
+  | AdvancedFilterMessage
+  | AdvancedFilterResultMessage
+  | TitleNormalizationProgressMessage
+  | TitleNormalizationResultMessage
+  | TitleNormalizationCancelledMessage
+  | StatisticsAggregationProgressMessage
+  | StatisticsAggregationResultMessage
+  | StatisticsAggregationCancelledMessage
+  | ReadingHistoryFilterProgressMessage
+  | ReadingHistoryFilterResultMessage
+  | ReadingHistoryCancelledMessage
+  | JSONSerializeResultMessage
+  | JSONDeserializeResultMessage
+  | DuplicateDetectionProgressMessage
+  | DuplicateDetectionResultMessage
+  | DuplicateDetectionCancelledMessage
+  | DataTablePreparationProgressMessage
+  | DataTablePreparationResultMessage
+  | DataTableCancelledMessage
+  | BatchSyncProgressMessage
+  | BatchSyncResultMessage
+  | BatchSyncCancelledMessage
+  | FuzzySearchResultMessage;
+
+/**
  * Discriminated union of all messages accepted by the worker.
  * @source
  */
 export type WorkerInboundMessage =
   | MatchBatchMessage
+  | ConfidenceRecalculationMessage
   | CancelMessage
   | CSVStartMessage
   | CSVChunkMessage
@@ -1107,7 +1137,13 @@ export interface WorkerTask {
 
   // Progress and cancellation handling
   onProgress?: (message: WorkerMessage) => void;
+  cancellationMessageType?: WorkerMessage["type"];
   cancelTimeoutHandle?: NodeJS.Timeout;
+  buildTimeoutResult?: (context: {
+    taskId: string;
+    processedItems: number;
+    totalItems: number;
+  }) => Record<string, unknown>;
 
   // Matching-specific fields (optional for other pools)
   kenmeiManga?: KenmeiManga[];

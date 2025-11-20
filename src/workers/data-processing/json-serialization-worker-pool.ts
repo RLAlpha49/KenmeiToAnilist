@@ -141,37 +141,27 @@ export class JSONSerializationWorkerPool {
     return new Promise<SerializationResult>((resolve, reject) => {
       const pool = getGenericWorkerPool();
 
-      // Ensure pool is initialized before checking availability
-      if (!pool.isAvailable()) {
-        pool
-          .initialize()
-          .then(() => {
-            this.dispatchToWorker(
-              pool,
-              taskId,
-              "serialize",
-              data,
-              options,
-              resolve,
-              reject,
-            );
-          })
-          .catch(() => {
-            // Fallback to main thread if pool init fails
+      pool
+        .ensureInitialized()
+        .then(() => {
+          if (!pool.isAvailable()) {
             this.serializeMainThread(data, options).then(resolve).catch(reject);
-          });
-        return;
-      }
+            return;
+          }
 
-      this.dispatchToWorker(
-        pool,
-        taskId,
-        "serialize",
-        data,
-        options,
-        resolve,
-        reject,
-      );
+          this.dispatchToWorker(
+            pool,
+            taskId,
+            "serialize",
+            data,
+            options,
+            resolve,
+            reject,
+          );
+        })
+        .catch(() => {
+          this.serializeMainThread(data, options).then(resolve).catch(reject);
+        });
     });
   }
 
@@ -223,38 +213,29 @@ export class JSONSerializationWorkerPool {
       const pool = getGenericWorkerPool();
 
       // Ensure pool is initialized before checking availability
-      if (!pool.isAvailable()) {
-        pool
-          .initialize()
-          .then(() => {
-            this.dispatchToWorker(
-              pool,
-              taskId,
-              "deserialize",
-              json,
-              options,
-              resolve,
-              reject,
-            );
-          })
-          .catch(() => {
-            // Fallback to main thread if pool init fails
+      pool
+        .ensureInitialized()
+        .then(() => {
+          if (!pool.isAvailable()) {
             this.deserializeMainThread(json, options)
               .then(resolve)
               .catch(reject);
-          });
-        return;
-      }
+            return;
+          }
 
-      this.dispatchToWorker(
-        pool,
-        taskId,
-        "deserialize",
-        json,
-        options,
-        resolve,
-        reject,
-      );
+          this.dispatchToWorker(
+            pool,
+            taskId,
+            "deserialize",
+            json,
+            options,
+            resolve,
+            reject,
+          );
+        })
+        .catch(() => {
+          this.deserializeMainThread(json, options).then(resolve).catch(reject);
+        });
     });
   }
 

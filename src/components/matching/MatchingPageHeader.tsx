@@ -10,6 +10,7 @@ import {
   RotateCcw,
   Undo2,
   Redo2,
+  Gauge,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Badge } from "../ui/Badge";
@@ -83,6 +84,8 @@ interface MatchingPageHeaderProps {
     merged: number;
     skipped: number;
   }) => void;
+  onRecalculateConfidence?: () => void;
+  isConfidenceRecalcRunning?: boolean;
 }
 
 /**
@@ -108,6 +111,8 @@ export function MatchingPageHeader({
   canRedo = false,
   matchResults,
   onImportComplete,
+  onRecalculateConfidence,
+  isConfidenceRecalcRunning = false,
 }: Readonly<MatchingPageHeaderProps>) {
   const { matched, manual, pending, reviewed, total, completionPercent } =
     statusSummary;
@@ -208,7 +213,16 @@ export function MatchingPageHeader({
                 {reviewed} of {total} reviewed
               </span>
             </div>
-            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800/80">
+            <progress
+              className="sr-only"
+              max={Math.max(total, 1)}
+              value={reviewed}
+              aria-label={`Review progress: ${reviewed} of ${total} titles reviewed`}
+            />
+            <div
+              className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-800/80"
+              aria-hidden="true"
+            >
               <div
                 className="bg-linear-to-r h-full rounded-full from-blue-500 via-indigo-500 to-purple-500 transition-all duration-500"
                 style={{ width: `${progressPercent}%` }}
@@ -309,6 +323,24 @@ export function MatchingPageHeader({
 
                 {/* Right group: Data and matching controls */}
                 <div className="flex flex-wrap items-center gap-2">
+                  {matchResultsLength > 0 && onRecalculateConfidence && (
+                    <Button
+                      variant="outline"
+                      size="default"
+                      disabled={
+                        isMatchingProcessLoading ||
+                        isConfidenceRecalcRunning ||
+                        isRateLimited
+                      }
+                      onClick={onRecalculateConfidence}
+                      className="flex items-center gap-2"
+                    >
+                      <Gauge className="h-4 w-4" />
+                      {isConfidenceRecalcRunning
+                        ? "Refreshing..."
+                        : "Refresh Confidence"}
+                    </Button>
+                  )}
                   {/* Import Button - Data import action */}
                   {matchResultsLength > 0 && onImportComplete && (
                     <ImportMatchesButton

@@ -123,7 +123,7 @@ export function DebugToolsSection({
                 {renderHighlightedText("Confidence test exporter", searchQuery)}
               </h4>
               <Badge className="bg-orange-100 text-xs text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
-                Debug Tool
+                {renderHighlightedText("Debug Tool", searchQuery)}
               </Badge>
             </div>
             <p className="text-muted-foreground text-xs">
@@ -169,7 +169,7 @@ export function DebugToolsSection({
         </div>
         <div className="flex items-center gap-2">
           <label className="text-sm" htmlFor="debug-enabled">
-            Enable debug menu
+            {renderHighlightedText("Enable debug menu", searchQuery)}
           </label>
           <Switch
             id="debug-enabled"
@@ -225,7 +225,9 @@ export function DebugToolsSection({
                       </p>
                       <p className="text-muted-foreground text-xs">
                         {renderHighlightedText(
-                          "Automatically redact and sanitize tokens, API keys, and credentials in logs.",
+                          isLogViewerEnabled
+                            ? "Automatically redact and sanitize tokens, API keys, and credentials in logs while you inspect them."
+                            : "Global log redaction sanitizes stored logs and exports even when the viewer panel is closed.",
                           searchQuery,
                         )}
                       </p>
@@ -240,7 +242,6 @@ export function DebugToolsSection({
                         onCheckedChange={(checked) =>
                           onLogRedactionChange(Boolean(checked))
                         }
-                        disabled={!isLogViewerEnabled}
                       />
                     </div>
                   </div>
@@ -347,7 +348,10 @@ export function DebugToolsSection({
         </div>
       ) : (
         <p className="text-muted-foreground text-xs">
-          Turn on the debug menu to manage individual tools.
+          {renderHighlightedText(
+            "Turn on the debug menu to manage individual tools.",
+            searchQuery,
+          )}
         </p>
       )}
     </motion.div>

@@ -32,6 +32,7 @@ import { handleDuplicateDetection } from "./worker/operations/duplicate-detectio
 import { handleDataTablePreparation } from "./worker/operations/data-table-operations";
 import { handleBatchSync } from "./worker/operations/batch-sync-operations";
 import { handleFuzzySearch } from "./worker/operations/fuzzy-search-operations";
+import { handleConfidenceRecalculation } from "./worker/operations/confidence-recalculation-operations";
 
 const activeTasks = new Set<string>();
 
@@ -46,6 +47,10 @@ globalThis.onmessage = async (event: MessageEvent<WorkerInboundMessage>) => {
     switch (message.type) {
       case "MATCH_BATCH":
         await handleMatchBatch(message, activeTasks);
+        break;
+
+      case "CONFIDENCE_RECALC":
+        await handleConfidenceRecalculation(message, activeTasks);
         break;
 
       case "BATCH_SYNC":

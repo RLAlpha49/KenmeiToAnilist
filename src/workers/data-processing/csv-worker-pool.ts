@@ -162,38 +162,31 @@ export class CSVWorkerPool {
       });
 
       // Ensure pool is initialized before checking availability
-      if (!pool.isAvailable()) {
-        pool
-          .initialize()
-          .then(() => {
-            this.dispatchToWorker(
-              pool,
-              taskId,
-              fileContent,
-              onProgress,
-              resolve,
-              reject,
-              options,
-            );
-          })
-          .catch(() => {
-            // Fallback to main thread if pool init fails
+      pool
+        .ensureInitialized()
+        .then(() => {
+          if (!pool.isAvailable()) {
             this.parseCSVMainThread(fileContent, options)
               .then(resolve)
               .catch(reject);
-          });
-        return;
-      }
+            return;
+          }
 
-      this.dispatchToWorker(
-        pool,
-        taskId,
-        fileContent,
-        onProgress,
-        resolve,
-        reject,
-        options,
-      );
+          this.dispatchToWorker(
+            pool,
+            taskId,
+            fileContent,
+            onProgress,
+            resolve,
+            reject,
+            options,
+          );
+        })
+        .catch(() => {
+          this.parseCSVMainThread(fileContent, options)
+            .then(resolve)
+            .catch(reject);
+        });
     });
   }
 

@@ -4,6 +4,7 @@
  */
 
 import type { ReadingHistory, ReadingHistoryEntry } from "@/utils/storage";
+import type { WorkerMessage, WorkerTask } from "@/workers/core/types";
 import { getGenericWorkerPool } from "../core/worker-pool";
 
 /**
@@ -152,9 +153,7 @@ export class ReadingHistoryWorkerPool {
     });
 
     // Ensure pool is initialized
-    if (!pool.isAvailable()) {
-      await pool.initialize();
-    }
+    await pool.ensureInitialized();
 
     // Normalize date range to timestamps
     const startMs =
@@ -208,37 +207,42 @@ export class ReadingHistoryWorkerPool {
       }
 
       // Register task with pool
-      const task = {
+      const task: WorkerTask = {
         taskId: mainTaskId,
-        type: "reading-history" as const,
-        resolve: (result: ReadingHistoryFilterResult) => {
+        resolve: (result: Record<string, unknown>) => {
+          const typedResult = result as unknown as ReadingHistoryFilterResult;
           resolve({
-            filteredEntries: result.filteredEntries,
-            stats: result.stats,
-            aggregatedData: result.aggregatedData,
-            timing: result.timing,
+            filteredEntries: typedResult.filteredEntries,
+            stats: typedResult.stats,
+            aggregatedData: typedResult.aggregatedData,
+            timing: typedResult.timing,
           });
         },
         reject,
         isCancelled: false,
-        progressCallback,
-        onProgress: (message: MessageEvent) => {
-          // Adapt READING_HISTORY_FILTER_PROGRESS message to typed callback
-          const data = message.data || message;
+        workerIndex,
+        onProgress: (message: WorkerMessage) => {
           if (
-            data.type === "READING_HISTORY_FILTER_PROGRESS" &&
+            message.type === "READING_HISTORY_FILTER_PROGRESS" &&
             progressCallback &&
-            data.payload
+            typeof message.payload === "object" &&
+            message.payload !== null
           ) {
-            const { stage, progress, message: progressMessage } = data.payload;
-            progressCallback(stage, progress, progressMessage);
+            const payload = message.payload as {
+              stage?: string;
+              progress?: number;
+              message?: string;
+            };
+            progressCallback(
+              payload.stage ?? "progress",
+              typeof payload.progress === "number" ? payload.progress : 0,
+              payload.message ?? "",
+            );
           }
         },
-        workerIndex,
       };
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (pool as any).registerTask?.(mainTaskId, task);
+      pool.registerTask(mainTaskId, task);
 
       // Dispatch task to worker
       worker.postMessage({
