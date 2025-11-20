@@ -510,7 +510,7 @@ export function enhancedNormalize(text: string): string {
 
   // Handle common abbreviations
   for (const [abbrev, expansion] of ABBREVIATION_MAP) {
-    const regex = new RegExp(`\\b${abbrev}\\b`, "gi");
+    const regex = new RegExp(String.raw`\b${abbrev}\b`, "gi");
     normalized = normalized.replaceAll(regex, expansion);
   }
 
