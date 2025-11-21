@@ -16,6 +16,7 @@ import {
   Cpu,
 } from "lucide-react";
 import { ErrorType } from "../../utils/error-handling";
+import { Button } from "./Button";
 
 /**
  * Props for the ErrorMessage component.
@@ -138,20 +139,24 @@ export function ErrorMessage({
         {(onRetry || onDismiss) && (
           <div className="mt-2 flex gap-3">
             {onRetry && (
-              <button
+              <Button
                 onClick={onRetry}
-                className="rounded bg-white px-2 py-1 text-xs font-medium shadow-sm ring-1 ring-black/10 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:ring-white/10 dark:hover:bg-gray-700"
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs"
               >
                 Try Again
-              </button>
+              </Button>
             )}
             {onDismiss && (
-              <button
+              <Button
                 onClick={onDismiss}
-                className="rounded px-2 py-1 text-xs font-medium hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:hover:bg-black/20"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs hover:bg-black/5 dark:hover:bg-white/10"
               >
                 Dismiss
-              </button>
+              </Button>
             )}
           </div>
         )}

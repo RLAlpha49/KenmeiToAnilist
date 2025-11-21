@@ -90,6 +90,46 @@ import { Button } from "../ui/Button";
 import { openExternalSafe } from "@/helpers/external/open-external";
 
 /**
+ * Helper to get styles for a match card based on status and confidence.
+ * @param match - The match result to style.
+ * @returns Object containing style classes.
+ */
+const getMatchCardStyles = (match: MangaMatchResult) => {
+  const confidence = match.anilistMatches?.[0]?.confidence ?? 0;
+  const isLowConfidence = confidence < 60;
+
+  let borderColorClass = "";
+  let statusBgColorClass = "";
+  let glowClass = "";
+
+  if (match.status === "matched") {
+    borderColorClass = isLowConfidence
+      ? "border-amber-300/70 dark:border-amber-500/60"
+      : "border-emerald-300/70 dark:border-emerald-500/60";
+    statusBgColorClass = isLowConfidence
+      ? "bg-gradient-to-b from-amber-400 to-amber-600"
+      : "bg-gradient-to-b from-emerald-400 to-emerald-600";
+    glowClass = isLowConfidence
+      ? "hover:shadow-amber-500/30 hover:ring-amber-400/60"
+      : "hover:shadow-emerald-500/30 hover:ring-emerald-400/60";
+  } else if (match.status === "manual") {
+    borderColorClass = "border-sky-300/70 dark:border-sky-500/60";
+    statusBgColorClass = "bg-gradient-to-b from-sky-400 to-sky-600";
+    glowClass = "hover:shadow-sky-500/30 hover:ring-sky-400/60";
+  } else if (match.status === "skipped") {
+    borderColorClass = "border-rose-300/70 dark:border-rose-500/60";
+    statusBgColorClass = "bg-gradient-to-b from-rose-400 to-rose-600";
+    glowClass = "hover:shadow-rose-500/25 hover:ring-rose-400/60";
+  } else {
+    borderColorClass = "border-slate-200/80 dark:border-slate-700/70";
+    statusBgColorClass = "bg-gradient-to-b from-slate-300 to-slate-500";
+    glowClass = "hover:shadow-slate-500/20 hover:ring-slate-300/60";
+  }
+
+  return { borderColorClass, statusBgColorClass, glowClass };
+};
+
+/**
  * Props for the MangaMatchingPanel component.
  * @property matches - List of manga match results to review and manage.
  * @property onManualSearch - Optional callback to trigger manual search for a Kenmei manga.
@@ -1327,51 +1367,9 @@ export function MangaMatchingPanel({
                     ? `${match.kenmeiManga.id}-${match.status}`
                     : `index-${index}-${match.status}-${match.kenmeiManga.title?.replaceAll(" ", "_") || "unknown"}`;
 
-                  // Extract border color class for clarity
-                  let borderColorClass = "";
-                  if (match.status === "matched") {
-                    borderColorClass =
-                      "border-emerald-300/70 dark:border-emerald-500/60";
-                  } else if (match.status === "manual") {
-                    borderColorClass =
-                      "border-sky-300/70 dark:border-sky-500/60";
-                  } else if (match.status === "skipped") {
-                    borderColorClass =
-                      "border-rose-300/70 dark:border-rose-500/60";
-                  } else {
-                    borderColorClass =
-                      "border-slate-200/80 dark:border-slate-700/70";
-                  }
-
-                  // Extract status color for the indicator
-                  let statusBgColorClass = "";
-                  if (match.status === "matched") {
-                    statusBgColorClass =
-                      "bg-gradient-to-b from-emerald-400 to-emerald-600";
-                  } else if (match.status === "manual") {
-                    statusBgColorClass =
-                      "bg-gradient-to-b from-sky-400 to-sky-600";
-                  } else if (match.status === "skipped") {
-                    statusBgColorClass =
-                      "bg-gradient-to-b from-rose-400 to-rose-600";
-                  } else {
-                    statusBgColorClass =
-                      "bg-gradient-to-b from-slate-300 to-slate-500";
-                  }
-
-                  let glowClass = "";
-                  if (match.status === "matched") {
-                    glowClass =
-                      "hover:shadow-emerald-500/30 hover:ring-emerald-400/60";
-                  } else if (match.status === "manual") {
-                    glowClass = "hover:shadow-sky-500/30 hover:ring-sky-400/60";
-                  } else if (match.status === "skipped") {
-                    glowClass =
-                      "hover:shadow-rose-500/25 hover:ring-rose-400/60";
-                  } else {
-                    glowClass =
-                      "hover:shadow-slate-500/20 hover:ring-slate-300/60";
-                  }
+                  // Extract styles using the helper function
+                  const { borderColorClass, statusBgColorClass, glowClass } =
+                    getMatchCardStyles(match);
 
                   return (
                     <MatchCard

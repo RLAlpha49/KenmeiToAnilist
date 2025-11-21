@@ -20,6 +20,7 @@ import { AnimatePresence } from "framer-motion";
 import { UpdateNotification } from "./components/UpdateNotification";
 import { OnboardingOverlay } from "./components/onboarding/OnboardingOverlay";
 import { useAutoUpdater } from "./hooks/use-auto-updater";
+import { TooltipProvider } from "./components/ui/Tooltip";
 
 /**
  * Main application content with all providers and UI layers.
@@ -47,32 +48,34 @@ function AppContent() {
           <AuthProvider>
             <RateLimitProvider>
               <OnboardingProvider>
-                <RouterProvider router={router} />
-                <SonnerProvider />
-                <OnboardingOverlay
-                  position="bottom-left"
-                  shouldShowProgress={true}
-                />
+                <TooltipProvider>
+                  <RouterProvider router={router} />
+                  <SonnerProvider />
+                  <OnboardingOverlay
+                    position="bottom-left"
+                    shouldShowProgress={true}
+                  />
 
-                {/* Display update notification when available */}
-                <AnimatePresence>
-                  {updateAvailable && updateInfo && (
-                    <div className="fixed bottom-4 right-4 z-50 max-w-md">
-                      <UpdateNotification
-                        version={updateInfo.version}
-                        releaseNotes={updateInfo.releaseNotes}
-                        releaseDate={updateInfo.releaseDate}
-                        downloadProgress={downloadProgress}
-                        isDownloading={isDownloading}
-                        isDownloaded={isDownloaded}
-                        error={error ?? undefined}
-                        onDownload={downloadUpdate}
-                        onInstall={installUpdate}
-                        onDismiss={dismissUpdate}
-                      />
-                    </div>
-                  )}
-                </AnimatePresence>
+                  {/* Display update notification when available */}
+                  <AnimatePresence>
+                    {updateAvailable && updateInfo && (
+                      <div className="fixed bottom-4 right-4 z-50 max-w-md">
+                        <UpdateNotification
+                          version={updateInfo.version}
+                          releaseNotes={updateInfo.releaseNotes}
+                          releaseDate={updateInfo.releaseDate}
+                          downloadProgress={downloadProgress}
+                          isDownloading={isDownloading}
+                          isDownloaded={isDownloaded}
+                          error={error ?? undefined}
+                          onDownload={downloadUpdate}
+                          onInstall={installUpdate}
+                          onDismiss={dismissUpdate}
+                        />
+                      </div>
+                    )}
+                  </AnimatePresence>
+                </TooltipProvider>
               </OnboardingProvider>
             </RateLimitProvider>
           </AuthProvider>

@@ -76,7 +76,6 @@ export function EmptyState({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ delay: 0.2, duration: 0.3 }}
-      role="output"
       aria-label={title}
     >
       <motion.div

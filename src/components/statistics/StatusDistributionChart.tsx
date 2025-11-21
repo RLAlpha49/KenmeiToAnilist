@@ -251,7 +251,7 @@ export const StatusDistributionChart: FC<StatusDistributionChartProps> =
                         }}
                         label={(props: PieLabelPayload) =>
                           // eslint-disable-next-line react/prop-types
-                          `${Math.round(((props.percent ?? 0) * 100))}%`
+                          `${Math.round((props.percent ?? 0) * 100)}%`
                         }
                       >
                         {chartData.map((entry) => (

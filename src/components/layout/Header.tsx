@@ -227,6 +227,7 @@ export function Header({
                                   to={to}
                                   className="flex items-center gap-2"
                                   aria-current={isActive ? "page" : undefined}
+                                  aria-label={label}
                                 >
                                   <Icon className="h-4 w-4" />
                                   <span className="max-lg:hidden">{label}</span>

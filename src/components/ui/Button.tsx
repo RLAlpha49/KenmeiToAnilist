@@ -84,7 +84,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       ...props,
     };
     const loader = (
-      <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+      </div>
     );
 
     if (asChild) {
@@ -104,7 +106,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             children: (
               <>
                 {loader}
-                {slotChildElement.props.children}
+                <span className="invisible">
+                  {slotChildElement.props.children}
+                </span>
               </>
             ),
           })
@@ -120,7 +124,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <Comp ref={ref} {...componentProps}>
         {loading && loader}
-        {children}
+        {loading ? <span className="invisible">{children}</span> : children}
       </Comp>
     );
   },

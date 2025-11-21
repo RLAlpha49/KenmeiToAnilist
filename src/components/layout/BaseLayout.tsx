@@ -42,7 +42,7 @@ export default function BaseLayout({
         aria-label="Main content"
       >
         <div className="container mx-auto">
-          <div className="bg-background/70 rounded-3xl border border-white/20 p-0 shadow-[0_20px_80px_-50px_rgba(59,130,246,0.6)] backdrop-blur-xl transition-colors dark:border-white/5 dark:bg-slate-950/70">
+          <div className="bg-background/90 rounded-3xl border border-white/20 p-0 shadow-[0_20px_80px_-50px_rgba(59,130,246,0.6)] backdrop-blur-xl transition-colors dark:border-white/5 dark:bg-slate-950/80">
             {children}
           </div>
         </div>

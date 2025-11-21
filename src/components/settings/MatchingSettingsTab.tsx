@@ -91,9 +91,10 @@ export function MatchingSettingsTab({
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-3">
             <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
+              <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{" "}
                 Content filters
-              </p>
+              </div>
               <p className="text-muted-foreground text-xs">
                 Decide which titles enter the matching queue before scoring
                 begins.
@@ -118,9 +119,10 @@ export function MatchingSettingsTab({
           </div>
           <div className="space-y-3">
             <div className="space-y-1">
-              <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+              <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-slate-500" />{" "}
                 Discovery fallbacks
-              </p>
+              </div>
               <p className="text-muted-foreground text-xs">
                 Control which secondary sources supplement AniList searches when
                 results are limited.

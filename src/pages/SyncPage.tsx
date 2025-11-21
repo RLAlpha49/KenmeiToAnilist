@@ -1233,7 +1233,7 @@ export function SyncPage() {
     isCompleted: boolean,
   ) => {
     return (
-      <div className="relative flex h-[200px] shrink-0 items-center justify-center pl-3">
+      <div className="relative flex h-[200px] w-full shrink-0 items-center justify-center bg-slate-50 pl-3 sm:w-auto sm:bg-transparent dark:bg-slate-900/50 sm:dark:bg-transparent">
         {anilist?.coverImage?.large || anilist?.coverImage?.medium ? (
           <motion.div
             layout="position"
@@ -1872,7 +1872,7 @@ export function SyncPage() {
         layoutId={undefined}
       >
         <Card className="group overflow-hidden border border-slate-200/70 bg-white/80 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-200/70 hover:shadow-xl dark:border-slate-800/60 dark:bg-slate-950/60">
-          <div className="flex">
+          <div className="flex flex-col sm:flex-row">
             {renderMangaCover(anilist, isNewEntry, isCompleted)}
             <div className="flex-1 p-4">
               <div className="flex items-start justify-between">

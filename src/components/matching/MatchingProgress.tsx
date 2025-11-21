@@ -678,6 +678,19 @@ export const MatchingProgressPanel: React.FC<MatchingProgressProps> = ({
           </motion.div>
         )}
 
+        {!progress.currentTitle && progress.total > 0 && (
+          <div
+            className="relative overflow-hidden rounded-2xl border border-slate-200/40 bg-slate-50/50 p-4 dark:border-slate-800/40 dark:bg-slate-900/30"
+            style={{ minHeight: 80 }}
+          >
+            <div className="mb-2 flex items-center gap-2">
+              <div className="h-4 w-4 animate-pulse rounded-full bg-slate-200 dark:bg-slate-700" />
+              <div className="h-4 w-32 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+            </div>
+            <div className="h-6 w-3/4 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+          </div>
+        )}
+
         {(bypassCache || isFreshSearch) && (
           <motion.div
             initial={{ opacity: 0, y: 4 }}
