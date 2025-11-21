@@ -20,9 +20,33 @@ export interface ConfidenceTestCommand {
   synonyms: string[];
 }
 
+const WINDOWS_PLATFORM_REGEX = /Win32|Win64|Windows/i;
+
+const isRunningOnWindowsShell = (() => {
+  if (typeof process !== "undefined" && process.platform) {
+    return process.platform === "win32";
+  }
+
+  if (typeof navigator !== "undefined") {
+    const userAgent = navigator.userAgent ?? "";
+    return WINDOWS_PLATFORM_REGEX.test(userAgent);
+  }
+
+  return false;
+})();
+
 function quoteCommandArgument(value: string): string {
   if (value === "") {
     return '""';
+  }
+
+  if (isRunningOnWindowsShell) {
+    const WINDOWS_SINGLE_QUOTES = ["’", "'"] as const;
+    let escaped = value;
+    for (const quote of WINDOWS_SINGLE_QUOTES) {
+      escaped = escaped.replaceAll(quote, `${quote}${quote}`);
+    }
+    return `'${escaped}'`;
   }
 
   if (!value.includes("'")) {

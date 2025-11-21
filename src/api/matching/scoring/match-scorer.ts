@@ -737,6 +737,57 @@ function checkInitialismMatch(
 }
 
 /**
+ * Detects if the search and candidate share a strong prefix (first few words) to boost the score.
+ * Useful when titles share the same series/subtitle prefix but diverge after the first few words.
+ */
+function checkPrefixMatch(
+  normalizedTitles: NormalizedTitleEntry[],
+  normalizedSearchTitle: string,
+  searchTitle: string,
+): number {
+  const searchTokens = normalizedSearchTitle
+    .split(/\s+/)
+    .filter((token) => token.length > 0);
+  if (searchTokens.length < 2) return -1;
+
+  let bestScore = -1;
+
+  for (const { text, original, source } of normalizedTitles) {
+    const titleTokens = text.split(/\s+/).filter((token) => token.length > 0);
+    if (titleTokens.length === 0) continue;
+
+    let prefixMatchCount = 0;
+    while (
+      prefixMatchCount < searchTokens.length &&
+      prefixMatchCount < titleTokens.length &&
+      searchTokens[prefixMatchCount] === titleTokens[prefixMatchCount]
+    ) {
+      prefixMatchCount++;
+    }
+
+    if (prefixMatchCount < 2) continue;
+
+    const longestLength = Math.max(searchTokens.length, titleTokens.length);
+    const coverageRatio = prefixMatchCount / longestLength;
+
+    const matchBonus = Math.min(0.25, prefixMatchCount * 0.04);
+    const coverageBonus = Math.min(0.15, coverageRatio * 0.3);
+    const prefixScore = Math.min(0.92, 0.62 + matchBonus + coverageBonus);
+
+    console.debug(
+      `[MangaSearchService] 📌 Prefix match detected between "${searchTitle}" and "${original}" (${source}) - shared words: ${prefixMatchCount}, score: ${prefixScore.toFixed(2)}`,
+    );
+
+    bestScore = Math.max(bestScore, prefixScore);
+    if (bestScore >= 0.9) {
+      break;
+    }
+  }
+
+  return bestScore;
+}
+
+/**
  * Check word-based matching approaches including word match, similarity, and overlap.
  * Tries enhanced similarity and meaningful word overlap unless disabled via options.
  *
@@ -757,6 +808,15 @@ function checkWordMatching(
   const searchWords = normalizedSearchTitle
     .split(/\s+/)
     .filter((word) => word.length > 0);
+
+  const prefixScore = checkPrefixMatch(
+    normalizedTitles,
+    normalizedSearchTitle,
+    searchTitle,
+  );
+  if (prefixScore > bestScore) {
+    bestScore = prefixScore;
+  }
 
   for (const { text, source } of normalizedTitles) {
     const titleWords = text.split(/\s+/);
@@ -1146,7 +1206,7 @@ function checkLegacyMatching(
     }
   }
 
-  return bestScore;
+  return Math.max(0, bestScore);
 }
 /**
  * Detailed breakdown of match score components.

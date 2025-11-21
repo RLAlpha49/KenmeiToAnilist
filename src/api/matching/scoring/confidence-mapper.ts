@@ -1,11 +1,25 @@
 /**
  * @packageDocumentation
  * @module Matching/Scoring/ConfidenceMapper
- * @description Converts normalized match scores (0-1) to confidence percentages (0-100) using adaptive thresholds.
+ * @description Converts normalized match scores (0-1) to confidence percentages (0-100) using a logistic curve and match-type adjustments.
  */
 
 import { AniListManga } from "../../anilist/types";
-import { calculateMatchScore } from "./match-scorer";
+import { calculateMatchScoreDetails } from "./match-scorer";
+import type { MatchScoreDetails } from "./match-scorer";
+
+const MAX_CONFIDENCE = 99;
+const CONFIDENCE_FLOOR = 15;
+const CONFIDENCE_RANGE = 85;
+const LOGISTIC_STEEPNESS = 9;
+const LOGISTIC_MIDPOINT = 0.7;
+
+const MATCH_TYPE_BIAS: Record<MatchScoreDetails["matchType"], number> = {
+  direct: 4,
+  word: 2,
+  legacy: -2,
+  none: -4,
+};
 
 /**
  * Convert match score to confidence percentage using conservative adaptive scaling.
@@ -20,39 +34,24 @@ export function calculateConfidence(
   searchTitle: string,
   manga: AniListManga,
 ): number {
-  // Calculate the match score first - always use original search title, not manga's own title
-  const score = calculateMatchScore(manga, searchTitle);
+  const matchDetails = calculateMatchScoreDetails(manga, searchTitle);
+  const { score, matchType } = matchDetails;
 
   console.debug(
-    `[MangaSearchService] Calculating confidence for match score: ${score.toFixed(3)} between "${searchTitle}" and "${manga.title.english || manga.title.romaji}"`,
+    `[MangaSearchService] Calculating confidence for match score: ${score.toFixed(3)} (${matchType}) between "${searchTitle}" and "${manga.title.english || manga.title.romaji}"`,
   );
 
   if (score <= 0) {
-    // No match found
     return 0;
-  } else if (score >= 0.97) {
-    // Near-perfect match - cap at 99% to avoid overconfidence
-    return 99;
-  } else if (score >= 0.94) {
-    // Almost perfect match - very high confidence
-    return Math.round(90 + (score - 0.94) * 125); // 90-96% range
-  } else if (score >= 0.87) {
-    // Strong match - high confidence (80-90%)
-    return Math.round(80 + (score - 0.87) * 143);
-  } else if (score >= 0.75) {
-    // Good match - medium-high confidence (65-80%)
-    return Math.round(65 + (score - 0.75) * 125);
-  } else if (score >= 0.6) {
-    // Reasonable match - medium confidence (50-65%)
-    return Math.round(50 + (score - 0.6) * 100);
-  } else if (score >= 0.4) {
-    // Weak match - low confidence (30-50%)
-    return Math.round(30 + (score - 0.4) * 100);
-  } else if (score >= 0.2) {
-    // Very weak match - very low confidence (15-30%)
-    return Math.round(15 + (score - 0.2) * 75);
-  } else {
-    // Extremely weak match - minimal confidence (1-15%)
-    return Math.max(1, Math.round(score * 75));
   }
+
+  const logisticValue =
+    1 / (1 + Math.exp(-LOGISTIC_STEEPNESS * (score - LOGISTIC_MIDPOINT)));
+  const baseConfidence = CONFIDENCE_FLOOR + logisticValue * CONFIDENCE_RANGE;
+  const adjustment = MATCH_TYPE_BIAS[matchType] ?? 0;
+  const adjustedConfidence = Math.min(
+    MAX_CONFIDENCE,
+    Math.max(CONFIDENCE_FLOOR, baseConfidence + adjustment),
+  );
+  return Math.round(adjustedConfidence);
 }

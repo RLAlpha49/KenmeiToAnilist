@@ -8,7 +8,6 @@ import Table from "cli-table3";
 import cliProgress from "cli-progress";
 import type { AniListManga } from "../src/api/anilist/types";
 import type { AppError } from "../src/utils/error-handling";
-import * as errorHandling from "../src/utils/error-handling";
 import type { ExportFormat } from "../src/utils/export-utils";
 
 /** Absolute path to the script as provided by process.argv. @source */
@@ -20,13 +19,13 @@ const __filename = scriptPath ? path.resolve(scriptPath) : path.resolve(".");
 const __dirname = path.dirname(__filename);
 
 /** Minimum length (post-normalization) for title fields. @source */
-const TITLE_MIN_LENGTH = 3;
+const TITLE_MIN_LENGTH = 2;
 /** Maximum length (post-normalization) for title fields. @source */
-const TITLE_MAX_LENGTH = 200;
+const TITLE_MAX_LENGTH = 500;
 /** Minimum length (post-normalization) for synonyms. @source */
-const SYNONYM_MIN_LENGTH = 3;
+const SYNONYM_MIN_LENGTH = 2;
 /** Maximum length (post-normalization) for synonyms. @source */
-const SYNONYM_MAX_LENGTH = 120;
+const SYNONYM_MAX_LENGTH = 500;
 /** Maximum number of synonyms allowed in input. @source */
 const MAX_SYNONYMS = 12;
 /** Directory where baseline files are stored. @source */
@@ -80,6 +79,14 @@ const rawAppVersionModule = (await import(
 const appVersionModule = rawAppVersionModule.default ?? rawAppVersionModule;
 /** Function returning the current application version. @source */
 const { getAppVersion } = appVersionModule;
+type ErrorHandlingModule = typeof import("../src/utils/error-handling");
+const rawErrorHandlingModule = (await import(
+  "../src/utils/error-handling",
+)) as ErrorHandlingModule & {
+  default?: ErrorHandlingModule;
+};
+const errorHandling =
+  rawErrorHandlingModule.default ?? rawErrorHandlingModule;
 
 /** Parsed CLI arguments passed to this utility. @source */
 interface TestConfidenceArgs {
