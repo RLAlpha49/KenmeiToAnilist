@@ -706,6 +706,7 @@ export const useMatchingProcess = ({
           cancelPredicate,
           abortController.signal,
         );
+        console.debug(results);
 
         // If the run was cancelled, preserve partial results and inform user
         if (cancelMatchingRef.current) {

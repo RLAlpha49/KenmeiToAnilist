@@ -64,7 +64,7 @@ export function executeMatchingWithWorkers(
         const execution = await pool.executeMatchBatch(
           kenmeiMangaList,
           anilistCandidatesMap,
-          config as MatchEngineConfig,
+          config,
           progressCallback,
           taskId,
         );

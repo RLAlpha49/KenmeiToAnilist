@@ -18,6 +18,7 @@ import { CancelledError } from "@/utils/error-handling";
 import { ANILIST_RATE_LIMIT_PER_MINUTE } from "@/config/anilist";
 import { executeComickFallback, executeMangaDexFallback } from "../sources";
 import type { SearchServiceConfig as OrchestratorSearchServiceConfig } from "../orchestration/types";
+import { filterOutBlacklistedManga } from "../filtering/blacklist";
 
 /**
  * Batch size for parallel manga searches (10 = AniList 30 req/min official limit; tuned to safe parallelism)
@@ -129,9 +130,12 @@ function storeAniListResults(
   index: number,
   media: AniListManga[],
   storage: CachedResultsStorage,
-): void {
-  storage.cachedResults[index] = media;
+): AniListManga[] {
+  const sanitizedMedia = filterOutBlacklistedManga(media);
+  storage.cachedResults[index] = sanitizedMedia;
+  storage.cachedFallbackIndices.delete(index);
   initializeSourceMaps(index, storage);
+  return sanitizedMedia;
 }
 
 /**
@@ -212,14 +216,21 @@ async function performFallbackSearches(
               finalResults = mangaDexFallback.results;
 
               // Store combined results from alternative sources
-              storage.cachedResults[index] = finalResults;
+              const sanitizedFallbackResults =
+                filterOutBlacklistedManga(finalResults);
+              storage.cachedResults[index] = sanitizedFallbackResults;
               storage.cachedComickSources[index] =
                 comickFallback.comickSourceMap;
               storage.cachedMangaDexSources[index] =
                 mangaDexFallback.mangaDexSourceMap;
+              if (sanitizedFallbackResults.length > 0) {
+                storage.cachedFallbackIndices.add(index);
+              } else {
+                storage.cachedFallbackIndices.delete(index);
+              }
 
               console.debug(
-                `[MangaSearchService] 🔁 Alternative sources found ${finalResults.length} matches for "${manga.title}" (Comick: ${comickFallback.comickSourceMap.size}, MangaDex: ${mangaDexFallback.mangaDexSourceMap.size})`,
+                `[MangaSearchService] 🔁 Alternative sources found ${sanitizedFallbackResults.length} matches for "${manga.title}" (Comick: ${comickFallback.comickSourceMap.size}, MangaDex: ${mangaDexFallback.mangaDexSourceMap.size})`,
               );
             } catch (error) {
               console.error(
@@ -311,10 +322,23 @@ async function processBatch(
           const result = batchResults.get(alias);
 
           if (result?.media?.length) {
-            storeAniListResults(index, result.media, storage);
+            const sanitizedMatches = storeAniListResults(
+              index,
+              result.media,
+              storage,
+            );
+
+            if (sanitizedMatches.length === 0) {
+              fallbackCandidates.push({ manga, index });
+              console.debug(
+                `[MangaSearchService] ⚠️ Batch search filtered out all ${result.media.length} AniList matches for "${manga.title}" due to blacklist`,
+              );
+              continue;
+            }
+
             updateProgress(index, manga.title);
             console.debug(
-              `[MangaSearchService] ✅ Batch search found ${result.media.length} matches for "${manga.title}"`,
+              `[MangaSearchService] ✅ Batch search found ${sanitizedMatches.length} matches for "${manga.title}"`,
             );
           } else {
             fallbackCandidates.push({ manga, index });
@@ -337,6 +361,7 @@ async function processBatch(
         console.info(
           `[MangaSearchService] ✅ Batch ${batchNumber}/${totalBatches} processed`,
         );
+        console.debug(fallbackCandidates);
 
         if (hasMoreBatches) {
           // Track requests in this batch: 1 main batched query + fallback searches

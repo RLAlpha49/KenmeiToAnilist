@@ -120,8 +120,11 @@ export function handleNoResultsFallback(
   filteredResults: AniListManga[],
   originalResults: AniListManga[],
   searchConfig: SearchServiceConfig,
+  hadAnyApiResults: boolean,
 ): AniListManga[] {
-  if (filteredResults.length === 0 && originalResults.length > 0) {
+  const hasOriginalResults = originalResults.length > 0 || hadAnyApiResults;
+
+  if (filteredResults.length === 0 && hasOriginalResults) {
     console.warn(
       `[MangaSearchService] ⚠️ No matches passed filtering, but including raw API results anyway`,
     );
@@ -147,7 +150,7 @@ export function handleNoResultsFallback(
   if (
     searchConfig.bypassCache &&
     filteredResults.length === 0 &&
-    originalResults.length > 0
+    hasOriginalResults
   ) {
     console.warn(
       `[MangaSearchService] ⚠️ MANUAL SEARCH with no ranked results - forcing inclusion of API results`,

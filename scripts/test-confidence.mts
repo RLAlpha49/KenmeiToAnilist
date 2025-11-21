@@ -81,12 +81,11 @@ const appVersionModule = rawAppVersionModule.default ?? rawAppVersionModule;
 const { getAppVersion } = appVersionModule;
 type ErrorHandlingModule = typeof import("../src/utils/error-handling");
 const rawErrorHandlingModule = (await import(
-  "../src/utils/error-handling",
+  "../src/utils/error-handling"
 )) as ErrorHandlingModule & {
   default?: ErrorHandlingModule;
 };
-const errorHandling =
-  rawErrorHandlingModule.default ?? rawErrorHandlingModule;
+const errorHandling = rawErrorHandlingModule.default ?? rawErrorHandlingModule;
 
 /** Parsed CLI arguments passed to this utility. @source */
 interface TestConfidenceArgs {

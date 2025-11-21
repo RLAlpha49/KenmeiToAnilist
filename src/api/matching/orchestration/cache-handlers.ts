@@ -6,6 +6,9 @@
 import type { AniListManga } from "@/api/anilist/types";
 import type { KenmeiManga } from "@/api/kenmei/types";
 import type { MangaSearchResponse, SearchServiceConfig } from "./types";
+import type { ComickSourceMap, MangaDexSourceMap } from "../sources/types";
+import { getSourceInfo } from "../sources";
+import type { MangaCacheSourceMetadata } from "../cache/types";
 import {
   generateCacheKey,
   isCacheValid,
@@ -20,6 +23,7 @@ import {
   ACCEPT_RULE_CONFIDENCE_FLOOR_REGULAR,
 } from "../filtering/custom-rules";
 import { applySystemContentFilters } from "../filtering/system-filters";
+import { filterOutBlacklistedManga } from "../filtering/blacklist";
 
 /**
  * Clear existing cache entry when bypassing cache.
@@ -79,8 +83,10 @@ export function processCachedResults(
   if (!isCacheValid(cacheKey)) return null;
 
   console.debug(`[MangaSearchService] Using cache for ${title}`);
-  let filteredResults = mangaCache[cacheKey].manga.filter(
-    (manga) => manga.format !== "NOVEL" && manga.format !== "LIGHT_NOVEL",
+  let filteredResults = filterOutBlacklistedManga(
+    mangaCache[cacheKey].manga.filter(
+      (manga) => manga.format !== "NOVEL" && manga.format !== "LIGHT_NOVEL",
+    ),
   );
 
   const matchConfig = getMatchConfig();
@@ -93,8 +99,25 @@ export function processCachedResults(
     title,
   );
 
+  if (filteredResults.length === 0) {
+    console.warn(
+      `[MangaSearchService] ⚠️ Cached results for "${title}" were fully filtered out (blacklisted/filtered). Invalidating cache entry and re-running search`,
+    );
+    delete mangaCache[cacheKey];
+    saveCache();
+    return null;
+  }
+
   console.debug(
     `[MangaSearchService] ⚖️ Calculating fresh confidence scores for ${filteredResults.length} cached matches`,
+  );
+
+  const cacheEntry = mangaCache[cacheKey];
+  const comickSourceMap = recordToSourceMap(
+    cacheEntry?.sourceMetadata?.comickSources,
+  );
+  const mangaDexSourceMap = recordToSourceMap(
+    cacheEntry?.sourceMetadata?.mangaDexSources,
   );
 
   const matches = filteredResults.map((manga) => {
@@ -143,7 +166,9 @@ export function processCachedResults(
   const finalMatches = matches.map(({ manga, confidence }) => ({
     manga,
     confidence,
-    comickSource: undefined,
+    comickSource: comickSourceMap.get(manga.id),
+    mangaDexSource: mangaDexSourceMap.get(manga.id),
+    sourceInfo: getSourceInfo(manga.id, comickSourceMap, mangaDexSourceMap),
   }));
 
   return {
@@ -175,9 +200,81 @@ export function cacheSearchResults(
   }
 
   const cacheKey = generateCacheKey(title);
+  const sanitizedResults = filterOutBlacklistedManga(results);
   mangaCache[cacheKey] = {
-    manga: results,
+    manga: sanitizedResults,
     timestamp: Date.now(),
+    sourceMetadata: undefined,
   };
+  saveCache();
+}
+
+function recordToSourceMap<T>(record?: Record<string, T>): Map<number, T> {
+  const map = new Map<number, T>();
+  if (!record) {
+    return map;
+  }
+
+  for (const key of Object.keys(record)) {
+    const id = Number(key);
+    if (Number.isNaN(id)) {
+      continue;
+    }
+    map.set(id, record[key]);
+  }
+
+  return map;
+}
+
+function mapToSourceRecord<T>(
+  map: Map<number, T>,
+): Record<string, T> | undefined {
+  if (!map || map.size === 0) {
+    return undefined;
+  }
+
+  const record: Record<string, T> = {};
+  for (const [id, value] of map.entries()) {
+    record[id.toString()] = value;
+  }
+
+  return record;
+}
+
+export function storeFallbackSourceMetadata(
+  title: string,
+  comickSourceMap: ComickSourceMap,
+  mangaDexSourceMap: MangaDexSourceMap,
+  searchConfig: SearchServiceConfig,
+): void {
+  if (searchConfig.bypassCache) {
+    return;
+  }
+
+  const cacheKey = generateCacheKey(title);
+  const cacheEntry = mangaCache[cacheKey];
+  if (!cacheEntry) {
+    return;
+  }
+
+  if (!comickSourceMap.size && !mangaDexSourceMap.size) {
+    return;
+  }
+
+  const metadata: MangaCacheSourceMetadata = {};
+  const comickRecord = mapToSourceRecord(comickSourceMap);
+  if (comickRecord) {
+    metadata.comickSources = comickRecord;
+  }
+  const mangaDexRecord = mapToSourceRecord(mangaDexSourceMap);
+  if (mangaDexRecord) {
+    metadata.mangaDexSources = mangaDexRecord;
+  }
+
+  if (!metadata.comickSources && !metadata.mangaDexSources) {
+    return;
+  }
+
+  cacheEntry.sourceMetadata = metadata;
   saveCache();
 }

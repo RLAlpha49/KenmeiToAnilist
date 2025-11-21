@@ -1034,6 +1034,7 @@ export function mergeMatchResults(newResults: MatchResult[]): MatchResult[] {
     console.info(
       `[Storage] 🔄 Merging ${newResults.length} new match results...`,
     );
+    console.debug(newResults);
 
     // Get existing results
     const existingResults = getSavedMatchResults();

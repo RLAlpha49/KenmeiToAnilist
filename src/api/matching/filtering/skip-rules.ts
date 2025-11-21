@@ -7,17 +7,8 @@
 
 import type { AniListManga } from "../../anilist/types";
 import type { KenmeiManga } from "@/api/kenmei/types";
+import { isBlacklistedManga } from "./blacklist";
 import { shouldSkipByCustomRules } from "./custom-rules";
-
-/**
- * Titles to ignore during automatic matching operations.
- * Excluded from automatic matching but may be included in manual searches.
- * @constant
- * @source
- */
-const IGNORED_AUTOMATIC_MATCH_TITLES = new Set([
-  "watashi, isekai de dorei ni sarechaimashita (naki) shikamo goshujinsama wa seikaku no warui elf no joousama (demo chou bijin ← koko daiji) munou sugite nonoshiraremakuru kedo douryou no orc ga iyashi-kei da shi sato no elf wa kawaii shi",
-]);
 
 /**
  * Checks if a manga should be ignored for automatic matching.
@@ -27,18 +18,7 @@ const IGNORED_AUTOMATIC_MATCH_TITLES = new Set([
  * @source
  */
 export function shouldIgnoreForAutomaticMatching(manga: AniListManga): boolean {
-  // Get all titles to check (main titles + synonyms)
-  const titlesToCheck = [
-    manga.title?.romaji,
-    manga.title?.english,
-    manga.title?.native,
-    ...(manga.synonyms || []),
-  ].filter(Boolean) as string[];
-
-  // Check if any title matches ignored titles (case-insensitive)
-  return titlesToCheck.some((title) =>
-    IGNORED_AUTOMATIC_MATCH_TITLES.has(title.toLowerCase()),
-  );
+  return isBlacklistedManga(manga);
 }
 
 /**
@@ -63,10 +43,9 @@ export function shouldSkipManga(
     return true;
   }
 
-  // Skip ignored titles for automatic matching (but allow for manual searches)
-  if (!isManualSearch && shouldIgnoreForAutomaticMatching(manga)) {
+  if (isBlacklistedManga(manga)) {
     console.debug(
-      `[MangaSearchService] ⏭️ Skipping ignored title for automatic matching: ${manga.title?.romaji || manga.title?.english || "unknown"}`,
+      `[MangaSearchService] ⏭️ Skipping blacklisted title: ${manga.title?.romaji || manga.title?.english || "unknown"}`,
     );
     return true;
   }

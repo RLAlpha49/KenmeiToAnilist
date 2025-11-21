@@ -8,7 +8,11 @@ import type { KenmeiManga } from "@/api/kenmei/types";
 import type { ComickSourceMap, MangaDexSourceMap } from "../sources/types";
 import type { AniListManga } from "@/api/anilist/types";
 import { DEFAULT_SEARCH_CONFIG } from "./types";
-import { handleCacheBypass, processCachedResults } from "./cache-handlers";
+import {
+  handleCacheBypass,
+  processCachedResults,
+  storeFallbackSourceMetadata,
+} from "./cache-handlers";
 import { executeSearchLoop } from "./search-execution";
 import {
   processSearchResults,
@@ -23,6 +27,7 @@ import {
   executeMangaDexFallback,
   mergeSourceResults,
 } from "../sources";
+import { filterOutBlacklistedManga } from "../filtering/blacklist";
 import { executeMatchingWithWorkers } from "@/workers";
 
 /**
@@ -237,9 +242,12 @@ export async function searchMangaByTitle(
     specificPage,
   );
 
+  const hadAnyApiResults = results.length > 0;
+  const sanitizedResults = filterOutBlacklistedManga(results);
+
   // Process and filter results
   const rankedResults = processSearchResults(
-    results,
+    sanitizedResults,
     title,
     searchConfig,
     kenmeiManga,
@@ -259,13 +267,21 @@ export async function searchMangaByTitle(
   );
   filteredResults = handleNoResultsFallback(
     filteredResults,
-    results,
+    sanitizedResults,
     searchConfig,
+    hadAnyApiResults,
   );
 
   // Handle fallback sources
   const { finalResults, comickSourceMap, mangaDexSourceMap } =
     await handleFallbackSources(filteredResults, title, token, searchConfig);
+
+  storeFallbackSourceMetadata(
+    title,
+    comickSourceMap,
+    mangaDexSourceMap,
+    searchConfig,
+  );
 
   // Build and return final response
   return buildFinalResponse(

@@ -12,6 +12,7 @@ import type {
   CachedResultsStorage,
 } from "./types";
 import { generateCacheKey, mangaCache } from "../cache";
+import { filterOutBlacklistedManga } from "../filtering/blacklist";
 
 /**
  * Fetch manga with known AniList IDs in batches.
@@ -60,8 +61,9 @@ export async function processKnownMangaIds(
   );
 
   // Create a map of ID to manga for easier lookup
+  const sanitizedBatchedManga = filterOutBlacklistedManga(batchedManga);
   const mangaMap = new Map<number, AniListManga>();
-  for (const manga of batchedManga) {
+  for (const manga of sanitizedBatchedManga) {
     mangaMap.set(manga.id, manga);
   }
 

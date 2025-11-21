@@ -51,6 +51,8 @@ export interface CachedResultsStorage {
   cachedComickSources: ComickSourceStorage;
   /** MangaDex sources indexed by position. */
   cachedMangaDexSources: MangaDexSourceStorage;
+  /** Tracks manga indices whose results came from fallback sources. */
+  cachedFallbackIndices: Set<number>;
 }
 
 /**

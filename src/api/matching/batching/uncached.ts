@@ -14,6 +14,7 @@ import type {
   SearchServiceConfig,
 } from "./types";
 import { generateCacheKey, isCacheValid, mangaCache } from "../cache";
+import { filterOutBlacklistedManga } from "../filtering/blacklist";
 
 /**
  * Maximum concurrent manga searches (1 = sequential for rate limit compliance).
@@ -153,7 +154,10 @@ export async function processUncachedManga(
     );
 
     // Store the results, preserving both manga and Comick source info
-    cachedResults[index] = searchResponse.matches.map((match) => match.manga);
+    const sanitizedMangas = filterOutBlacklistedManga(
+      searchResponse.matches.map((match) => match.manga),
+    );
+    cachedResults[index] = sanitizedMangas;
 
     // Store alternative source information separately
     const comickSourceMap = new Map<
@@ -174,7 +178,12 @@ export async function processUncachedManga(
         isFoundViaMangaDex: boolean;
       }
     >();
-    for (const match of searchResponse.matches) {
+    const sanitizedMatchIds = new Set(sanitizedMangas.map((manga) => manga.id));
+    const sanitizedMatches = searchResponse.matches.filter((match) =>
+      sanitizedMatchIds.has(match.manga.id),
+    );
+
+    for (const match of sanitizedMatches) {
       if (match.comickSource) {
         comickSourceMap.set(match.manga.id, match.comickSource);
       }

@@ -4,17 +4,26 @@
  */
 
 import type { AniListManga } from "../../anilist/types";
+import type { ComickSourceInfo, MangaDexSourceInfo } from "../sources/types";
 
 /**
  * Manga search result cache structure.
- * Maps cache keys to arrays of manga with associated timestamp.
+ * Maps cache keys to entries with manga data, timestamps, and optional alternative source metadata.
  * @source
  */
+export interface MangaCacheSourceMetadata {
+  comickSources?: Record<string, ComickSourceInfo>;
+  mangaDexSources?: Record<string, MangaDexSourceInfo>;
+}
+
+export interface MangaCacheEntry {
+  manga: AniListManga[];
+  timestamp: number;
+  sourceMetadata?: MangaCacheSourceMetadata;
+}
+
 export interface MangaCache {
-  [key: string]: {
-    manga: AniListManga[];
-    timestamp: number;
-  };
+  [key: string]: MangaCacheEntry;
 }
 
 /**

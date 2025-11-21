@@ -14,8 +14,7 @@ import type {
   MangaMatch,
 } from "./orchestration/types";
 import type {
-  ComickSourceStorage,
-  MangaDexSourceStorage,
+  CachedResultsStorage,
   UncachedMangaConfig,
   UncachedMangaControl,
 } from "./batching/types";
@@ -121,7 +120,7 @@ async function waitForRateLimitClear(
  * @param config - Search and token configuration
  * @param cancellation - Abort signal and cancellation function
  * @param progress - Progress callback
- * @param cache - Cached results storage
+ * @param storage - Cached results storage
  */
 async function processMangaWithRateLimit(
   params: {
@@ -134,11 +133,7 @@ async function processMangaWithRateLimit(
   progress: {
     updateProgress: (index: number, title?: string) => void;
   },
-  cache: {
-    cachedResults: Record<number, AniListManga[]>;
-    cachedComickSources: ComickSourceStorage;
-    cachedMangaDexSources: MangaDexSourceStorage;
-  },
+  storage: CachedResultsStorage,
 ): Promise<void> {
   const MAX_RATE_LIMIT_RETRIES = 3;
   let rateLimitRetryCount = 0;
@@ -154,7 +149,7 @@ async function processMangaWithRateLimit(
         config,
         cancellation,
         progress,
-        cache,
+        storage,
       );
       break; // Success, exit retry loop
     } catch (error) {
@@ -392,9 +387,6 @@ export async function batchMatchManga(
       const reportedIndices = new Set<number>();
 
       // Declare cache variables in outer scope for access in catch block
-      let cachedResults: Record<number, AniListManga[]> = {};
-      let cachedComickSources: ComickSourceStorage = {};
-      let cachedMangaDexSources: MangaDexSourceStorage = {};
 
       // Update progress with deduplication
       const updateProgress = (index: number, title?: string) => {
@@ -409,10 +401,19 @@ export async function batchMatchManga(
         checkCancellationState(abortSignal, shouldCancel, "Batch matching");
       };
 
+      let storage: CachedResultsStorage | undefined;
+
       try {
         console.info(
           `[MangaSearchService] 🚀 Starting batch matching for ${mangaList.length} manga entries`,
         );
+
+        storage = {
+          cachedResults: {},
+          cachedComickSources: {},
+          cachedMangaDexSources: {},
+          cachedFallbackIndices: new Set<number>(),
+        };
 
         // Categorize manga based on cache status
         const result = categorizeMangaForBatching(
@@ -420,13 +421,13 @@ export async function batchMatchManga(
           searchConfig,
           updateProgress,
         );
-        cachedResults = result.cachedResults;
-        cachedComickSources = result.cachedComickSources;
-        cachedMangaDexSources = result.cachedMangaDexSources;
+        storage.cachedResults = result.cachedResults;
+        storage.cachedComickSources = result.cachedComickSources;
+        storage.cachedMangaDexSources = result.cachedMangaDexSources;
         const { uncachedManga, knownMangaIds } = result;
 
         console.debug(
-          `[MangaSearchService] 🔍 Categorization: ${Object.keys(cachedResults).length} cached, ${uncachedManga.length} uncached, ${knownMangaIds.length} known IDs`,
+          `[MangaSearchService] 🔍 Categorization: ${Object.keys(storage.cachedResults).length} cached, ${uncachedManga.length} uncached, ${knownMangaIds.length} known IDs`,
         );
 
         // Check for cancellation
@@ -438,7 +439,7 @@ export async function batchMatchManga(
           { searchConfig, token },
           { shouldCancel, abortSignal },
           { updateProgress },
-          { cachedResults, cachedComickSources, cachedMangaDexSources },
+          storage,
         );
 
         // Check for cancellation
@@ -450,7 +451,7 @@ export async function batchMatchManga(
           { token, searchConfig },
           { abortSignal, checkCancellation },
           { updateProgress },
-          { cachedResults, cachedComickSources, cachedMangaDexSources },
+          storage,
         );
 
         // Check for cancellation after the batch completes
@@ -463,9 +464,7 @@ export async function batchMatchManga(
         // Compile final results
         const finalResults = await compileMatchResults(
           mangaList,
-          cachedResults,
-          cachedComickSources,
-          cachedMangaDexSources,
+          storage,
           checkCancellation,
           updateProgress,
           searchConfig.shouldUseWorkers,
@@ -496,7 +495,10 @@ export async function batchMatchManga(
               // Silently ignore Sentry import errors
             });
           // Return partial results we've gathered so far
-          return handleCancellationResults(mangaList, cachedResults);
+          return handleCancellationResults(
+            mangaList,
+            storage?.cachedResults ?? {},
+          );
         }
 
         // For non-cancellation errors, capture to Sentry
