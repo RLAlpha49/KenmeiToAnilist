@@ -156,6 +156,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
             ref={dialogRef}
             aria-labelledby="search-modal-title"
             aria-describedby="search-description"
+            open={isOpen}
             className="rounded-4xl bg-linear-to-br relative z-50 m-4 max-h-[85vh] w-full max-w-6xl overflow-visible border border-white/15 from-blue-400/25 via-white/15 to-purple-500/20 p-[1.5px] shadow-[0_40px_160px_-60px_rgba(30,64,175,0.7)] backdrop-blur-2xl dark:border-slate-700/40"
             initial={{ opacity: 0, y: 20, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
