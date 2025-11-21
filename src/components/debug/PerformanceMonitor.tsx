@@ -344,8 +344,7 @@ export const PerformanceMonitor = React.memo(function PerformanceMonitor() {
   const recentApiSamples = useMemo(() => {
     const last100 = filteredSamples.slice(-100);
 
-    return last100
-      .map((sample, index) => {
+    return last100.map((sample, index) => {
         const delta =
           Number.isFinite(sample.duration) &&
           Number.isFinite(averageLatencyNumber)
@@ -360,8 +359,7 @@ export const PerformanceMonitor = React.memo(function PerformanceMonitor() {
           endpoint: sample.endpoint || "unknown",
           status: determineLatencyStatus(sample.duration),
         };
-      })
-      .reverse();
+      });
   }, [filteredSamples, averageLatencyNumber]);
 
   const latencyStatus = getApiLatencyStatus();
@@ -501,7 +499,7 @@ export const PerformanceMonitor = React.memo(function PerformanceMonitor() {
             />
           </div>
 
-          <Card className="border-border/50">
+          <Card className="border-border/50 overscroll-contain">
             <CardHeader className="pb-3">
               <div className="flex flex-col gap-3">
                 <div>
@@ -537,7 +535,7 @@ export const PerformanceMonitor = React.memo(function PerformanceMonitor() {
             </CardHeader>
             <CardContent>
               {recentApiSamples.length ? (
-                <div className="max-h-96 space-y-2 overflow-y-auto">
+                <div className="max-h-96 flex flex-col-reverse gap-2 overflow-y-auto">
                   {recentApiSamples.map((sample) => {
                     let deltaClass = "text-muted-foreground";
                     if (Number.isFinite(sample.delta)) {
