@@ -337,16 +337,20 @@ export function DataManagementTab({
   const debugBadgeLabel = isDebugEnabled ? "Enabled" : "Disabled";
   const debugBadgeClass = getDebugBadgeClass(pillBaseClass, isDebugEnabled);
 
-  const activeDebugTools = [
+  const debugMenuToolFlags = [
     isStorageDebuggerEnabled,
     isLogViewerEnabled,
-    isLogRedactionEnabled,
     isStateInspectorEnabled,
     isIpcViewerEnabled,
     isEventLoggerEnabled,
-    isConfidenceTestExporterEnabled,
     isPerformanceMonitorEnabled,
-  ].filter(Boolean).length;
+  ];
+
+  const activeMenuToolsCount = isDebugEnabled
+    ? debugMenuToolFlags.filter(Boolean).length
+    : 0;
+
+  const activeDebugTools = activeMenuToolsCount;
 
   const debugDescription = isDebugEnabled
     ? "Developer instrumentation is visible this session."

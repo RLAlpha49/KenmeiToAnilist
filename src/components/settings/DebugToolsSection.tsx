@@ -239,6 +239,7 @@ export function DebugToolsSection({
                       <Switch
                         id="log-redaction-enabled"
                         checked={isLogRedactionEnabled}
+                        disabled={!isLogViewerEnabled}
                         onCheckedChange={(checked) =>
                           onLogRedactionChange(Boolean(checked))
                         }
