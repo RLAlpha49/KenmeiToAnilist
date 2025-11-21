@@ -6,7 +6,15 @@
 
 import React from "react";
 import { motion } from "framer-motion";
+import { ArrowUpFromLine } from "lucide-react";
 import { Switch } from "@/components/ui/Switch";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/Card";
 import { highlightText } from "@/utils/text-highlight";
 import { cn } from "@/utils/tailwind";
 import type { SyncConfig } from "@/utils/storage";
@@ -46,107 +54,151 @@ export function SyncStatusPrioritySection({
     <motion.div
       id="sync-status-priority"
       className={cn(
-        "bg-muted/40 rounded-xl border p-4",
         highlightedSectionId === "sync-status-priority" &&
-          "ring-2 ring-blue-500 ring-offset-2 ring-offset-white dark:ring-blue-400 dark:ring-offset-slate-950",
+          "rounded-xl ring-2 ring-blue-500 ring-offset-2 ring-offset-white dark:ring-blue-400 dark:ring-offset-slate-950",
       )}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="mb-4">
-        <h3 className="text-sm font-medium">
-          {searchQuery
-            ? highlightText("Status priority", searchQuery)
-            : "Status priority"}
-        </h3>
-        <p className="text-muted-foreground text-xs">
-          {searchQuery
-            ? highlightText(
-                "Control which source takes priority: AniList or Kenmei data during sync operations.",
-                searchQuery,
-              )
-            : "Control which source takes priority: AniList or Kenmei data during sync operations."}
-        </p>
-      </div>
-      <div className="space-y-3">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-          <label className="text-sm" htmlFor="preserve-completed">
-            {searchQuery
-              ? highlightText("Preserve completed status", searchQuery)
-              : "Preserve completed status"}
-          </label>
-          <Switch
-            id="preserve-completed"
-            checked={syncConfig.preserveCompletedStatus}
-            onCheckedChange={(checked) => {
-              const updatedConfig = {
-                ...syncConfig,
-                preserveCompletedStatus: checked,
-              };
-              setSyncConfig(updatedConfig);
-              onSyncConfigChange(updatedConfig, "preserveCompletedStatus");
-            }}
-          />
-        </div>
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-          <label className="text-sm" htmlFor="prioritize-anilist-status">
-            {searchQuery
-              ? highlightText("Prioritize AniList status", searchQuery)
-              : "Prioritize AniList status"}
-          </label>
-          <Switch
-            id="prioritize-anilist-status"
-            checked={syncConfig.prioritizeAniListStatus}
-            onCheckedChange={(checked) => {
-              const updatedConfig = {
-                ...syncConfig,
-                prioritizeAniListStatus: checked,
-              };
-              setSyncConfig(updatedConfig);
-              onSyncConfigChange(updatedConfig, "prioritizeAniListStatus");
-            }}
-          />
-        </div>
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-          <label className="text-sm" htmlFor="prioritize-anilist-progress">
-            {searchQuery
-              ? highlightText("Prioritize AniList progress", searchQuery)
-              : "Prioritize AniList progress"}
-          </label>
-          <Switch
-            id="prioritize-anilist-progress"
-            checked={syncConfig.prioritizeAniListProgress}
-            onCheckedChange={(checked) => {
-              const updatedConfig = {
-                ...syncConfig,
-                prioritizeAniListProgress: checked,
-              };
-              setSyncConfig(updatedConfig);
-              onSyncConfigChange(updatedConfig, "prioritizeAniListProgress");
-            }}
-          />
-        </div>
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-          <label className="text-sm" htmlFor="prioritize-anilist-score">
-            {searchQuery
-              ? highlightText("Prioritize AniList score", searchQuery)
-              : "Prioritize AniList score"}
-          </label>
-          <Switch
-            id="prioritize-anilist-score"
-            checked={syncConfig.prioritizeAniListScore}
-            onCheckedChange={(checked) => {
-              const updatedConfig = {
-                ...syncConfig,
-                prioritizeAniListScore: checked,
-              };
-              setSyncConfig(updatedConfig);
-              onSyncConfigChange(updatedConfig, "prioritizeAniListScore");
-            }}
-          />
-        </div>
-      </div>
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <ArrowUpFromLine className="h-4 w-4 text-slate-500" />
+              {searchQuery
+                ? highlightText("Status priority", searchQuery)
+                : "Status priority"}
+            </CardTitle>
+            <CardDescription>
+              {searchQuery
+                ? highlightText(
+                    "Control which source takes priority: AniList or Kenmei data during sync operations.",
+                    searchQuery,
+                  )
+                : "Control which source takes priority: AniList or Kenmei data during sync operations."}
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-3">
+            <div className="shadow-xs flex items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <label
+                  className="text-sm font-medium"
+                  htmlFor="preserve-completed"
+                >
+                  {searchQuery
+                    ? highlightText("Preserve completed status", searchQuery)
+                    : "Preserve completed status"}
+                </label>
+                <p className="text-muted-foreground text-xs">
+                  Prevent overwriting &apos;Completed&apos; status on AniList
+                </p>
+              </div>
+              <Switch
+                id="preserve-completed"
+                checked={syncConfig.preserveCompletedStatus}
+                onCheckedChange={(checked) => {
+                  const updatedConfig = {
+                    ...syncConfig,
+                    preserveCompletedStatus: checked,
+                  };
+                  setSyncConfig(updatedConfig);
+                  onSyncConfigChange(updatedConfig, "preserveCompletedStatus");
+                }}
+              />
+            </div>
+
+            <div className="shadow-xs flex items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <label
+                  className="text-sm font-medium"
+                  htmlFor="prioritize-anilist-status"
+                >
+                  {searchQuery
+                    ? highlightText("Prioritize AniList status", searchQuery)
+                    : "Prioritize AniList status"}
+                </label>
+                <p className="text-muted-foreground text-xs">
+                  Use AniList status if it differs from Kenmei
+                </p>
+              </div>
+              <Switch
+                id="prioritize-anilist-status"
+                checked={syncConfig.prioritizeAniListStatus}
+                onCheckedChange={(checked) => {
+                  const updatedConfig = {
+                    ...syncConfig,
+                    prioritizeAniListStatus: checked,
+                  };
+                  setSyncConfig(updatedConfig);
+                  onSyncConfigChange(updatedConfig, "prioritizeAniListStatus");
+                }}
+              />
+            </div>
+
+            <div className="shadow-xs flex items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <label
+                  className="text-sm font-medium"
+                  htmlFor="prioritize-anilist-progress"
+                >
+                  {searchQuery
+                    ? highlightText("Prioritize AniList progress", searchQuery)
+                    : "Prioritize AniList progress"}
+                </label>
+                <p className="text-muted-foreground text-xs">
+                  Use AniList chapter progress if higher
+                </p>
+              </div>
+              <Switch
+                id="prioritize-anilist-progress"
+                checked={syncConfig.prioritizeAniListProgress}
+                onCheckedChange={(checked) => {
+                  const updatedConfig = {
+                    ...syncConfig,
+                    prioritizeAniListProgress: checked,
+                  };
+                  setSyncConfig(updatedConfig);
+                  onSyncConfigChange(
+                    updatedConfig,
+                    "prioritizeAniListProgress",
+                  );
+                }}
+              />
+            </div>
+
+            <div className="shadow-xs flex items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <label
+                  className="text-sm font-medium"
+                  htmlFor="prioritize-anilist-score"
+                >
+                  {searchQuery
+                    ? highlightText("Prioritize AniList score", searchQuery)
+                    : "Prioritize AniList score"}
+                </label>
+                <p className="text-muted-foreground text-xs">
+                  Use AniList score if available
+                </p>
+              </div>
+              <Switch
+                id="prioritize-anilist-score"
+                checked={syncConfig.prioritizeAniListScore}
+                onCheckedChange={(checked) => {
+                  const updatedConfig = {
+                    ...syncConfig,
+                    prioritizeAniListScore: checked,
+                  };
+                  setSyncConfig(updatedConfig);
+                  onSyncConfigChange(updatedConfig, "prioritizeAniListScore");
+                }}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </motion.div>
   );
 }

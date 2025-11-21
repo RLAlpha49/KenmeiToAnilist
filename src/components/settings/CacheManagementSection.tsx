@@ -6,7 +6,20 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Trash2, RefreshCw, CheckCircle } from "lucide-react";
+import {
+  Trash2,
+  RefreshCw,
+  CheckCircle,
+  Lock,
+  Settings,
+  ArrowLeftRight,
+  Download,
+  FileText,
+  BookOpen,
+  Search,
+  Database,
+  Check,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Separator } from "@/components/ui/Separator";
 import { highlightText } from "@/utils/text-highlight";
@@ -65,11 +78,103 @@ export function CacheManagementSection({
   onCachesToClearChange,
   onClearCaches,
 }: Readonly<CacheManagementSectionProps>) {
+  const cacheTypes = [
+    {
+      id: "shouldClearAuthCache",
+      label: "Auth cache",
+      description: "Authentication tokens and login state",
+      icon: Lock,
+      color: "text-amber-500",
+      bg: "bg-amber-500/10",
+    },
+    {
+      id: "shouldClearSettingsCache",
+      label: "Settings cache",
+      description: "User settings and sync configuration",
+      icon: Settings,
+      color: "text-slate-500",
+      bg: "bg-slate-500/10",
+    },
+    {
+      id: "shouldClearSyncCache",
+      label: "Sync cache",
+      description: "Synchronization history and operation records",
+      icon: ArrowLeftRight,
+      color: "text-blue-500",
+      bg: "bg-blue-500/10",
+    },
+    {
+      id: "shouldClearImportCache",
+      label: "Import cache",
+      description: "Import operation history and results",
+      icon: Download,
+      color: "text-green-500",
+      bg: "bg-green-500/10",
+    },
+    {
+      id: "shouldClearReviewCache",
+      label: "Review cache",
+      description: "Matching results and review data",
+      icon: FileText,
+      color: "text-purple-500",
+      bg: "bg-purple-500/10",
+    },
+    {
+      id: "shouldClearMangaCache",
+      label: "Manga cache",
+      description: "Cached manga titles, details, and metadata",
+      icon: BookOpen,
+      color: "text-pink-500",
+      bg: "bg-pink-500/10",
+    },
+    {
+      id: "shouldClearSearchCache",
+      label: "Search cache",
+      description: "Cached search queries and API results",
+      icon: Search,
+      color: "text-cyan-500",
+      bg: "bg-cyan-500/10",
+    },
+    {
+      id: "shouldClearOtherCache",
+      label: "Other caches",
+      description: "Miscellaneous cache data and temporary storage",
+      icon: Database,
+      color: "text-orange-500",
+      bg: "bg-orange-500/10",
+    },
+  ] as const;
+
+  const handleToggle = (id: keyof CachesToClear) => {
+    onCachesToClearChange({
+      ...cachesToClear,
+      [id]: !cachesToClear[id],
+    });
+  };
+
+  const handleSelectAll = () => {
+    const allSelected = Object.keys(cachesToClear).reduce(
+      (acc, key) => ({ ...acc, [key]: true }),
+      {} as CachesToClear,
+    );
+    onCachesToClearChange(allSelected);
+  };
+
+  const handleDeselectAll = () => {
+    const noneSelected = Object.keys(cachesToClear).reduce(
+      (acc, key) => ({ ...acc, [key]: false }),
+      {} as CachesToClear,
+    );
+    onCachesToClearChange(noneSelected);
+  };
+
+  const selectedCount = Object.values(cachesToClear).filter(Boolean).length;
+
   return (
     <motion.div
       id="data-cache"
       className={cn(
-        "bg-muted/40 space-y-4 rounded-xl border p-4",
+        "bg-muted/40 space-y-6 rounded-xl border p-6",
         highlightedSectionId === "data-cache" &&
           "ring-2 ring-blue-500 ring-offset-2 ring-offset-white dark:ring-blue-400 dark:ring-offset-slate-950",
       )}
@@ -77,341 +182,135 @@ export function CacheManagementSection({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2, duration: 0.4 }}
     >
-      <div>
-        <h3 className="flex items-center gap-2 text-sm font-medium">
-          <Trash2 className="h-4 w-4 text-blue-500" />
-          {renderHighlightedText("Clear local cache", searchQuery)}
-        </h3>
-        <p className="text-muted-foreground text-xs">
-          {renderHighlightedText(
-            "Select which cached data types to clear and reset. Cache types include authentication, settings, sync, and more.",
-            searchQuery,
-          )}
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 className="flex items-center gap-2 text-sm font-medium">
+            <Trash2 className="h-4 w-4 text-blue-500" />
+            {renderHighlightedText("Clear local cache", searchQuery)}
+          </h3>
+          <p className="text-muted-foreground mt-1 text-xs">
+            {renderHighlightedText(
+              "Select which cached data types to clear and reset.",
+              searchQuery,
+            )}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleSelectAll}
+            className="h-8 text-xs"
+          >
+            Select all
+          </Button>
+          <Separator orientation="vertical" className="h-4" />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleDeselectAll}
+            className="h-8 text-xs"
+          >
+            Deselect all
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {cacheTypes.map((type) => {
+          const isSelected = cachesToClear[type.id];
+          return (
+            <button
+              key={type.id}
+              onClick={() => handleToggle(type.id)}
+              className={cn(
+                "group relative flex flex-col items-start gap-3 rounded-xl border p-4 text-left transition-all duration-200 hover:shadow-md",
+                isSelected
+                  ? "border-blue-500/50 bg-blue-50/50 dark:border-blue-400/30 dark:bg-blue-900/10"
+                  : "border-slate-200 bg-white hover:border-blue-300/50 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700 dark:hover:bg-slate-900",
+              )}
+            >
+              <div className="flex w-full items-start justify-between">
+                <div
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
+                    isSelected
+                      ? "bg-blue-500 text-white dark:bg-blue-400 dark:text-slate-900"
+                      : cn(type.bg, type.color),
+                  )}
+                >
+                  <type.icon className="h-4 w-4" />
+                </div>
+                <div
+                  className={cn(
+                    "flex h-5 w-5 items-center justify-center rounded-full border transition-all",
+                    isSelected
+                      ? "border-blue-500 bg-blue-500 text-white dark:border-blue-400 dark:bg-blue-400 dark:text-slate-900"
+                      : "border-slate-300 bg-transparent dark:border-slate-600",
+                  )}
+                >
+                  {isSelected && <Check className="h-3 w-3" />}
+                </div>
+              </div>
+              <div>
+                <span className="block text-sm font-medium text-slate-900 dark:text-slate-100">
+                  {renderHighlightedText(type.label, searchQuery)}
+                </span>
+                <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                  {renderHighlightedText(type.description, searchQuery)}
+                </p>
+              </div>
+            </button>
+          );
+        })}
       </div>
 
       <Separator />
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <label
-            className="hover:bg-muted flex items-center gap-2 rounded-md p-2"
-            htmlFor="auth-cache"
-            aria-label="Auth Cache - Authentication state"
-          >
-            <input
-              id="auth-cache"
-              type="checkbox"
-              className="border-primary text-primary h-4 w-4 rounded"
-              checked={cachesToClear.shouldClearAuthCache}
-              onChange={(e) =>
-                onCachesToClearChange({
-                  ...cachesToClear,
-                  shouldClearAuthCache: e.target.checked,
-                })
-              }
-            />
-            <div>
-              <span className="text-sm font-medium">
-                {renderHighlightedText("Auth cache", searchQuery)}
-              </span>
-              <p className="text-muted-foreground text-xs">
-                {renderHighlightedText(
-                  "Authentication tokens and login state",
-                  searchQuery,
-                )}
-              </p>
-            </div>
-          </label>
-          <label
-            className="hover:bg-muted flex items-center gap-2 rounded-md p-2"
-            htmlFor="settings-cache"
-            aria-label="Settings Cache - Sync preferences"
-          >
-            <input
-              id="settings-cache"
-              type="checkbox"
-              className="border-primary text-primary h-4 w-4 rounded"
-              checked={cachesToClear.shouldClearSettingsCache}
-              onChange={(e) =>
-                onCachesToClearChange({
-                  ...cachesToClear,
-                  shouldClearSettingsCache: e.target.checked,
-                })
-              }
-            />
-            <div>
-              <span className="text-sm font-medium">
-                {renderHighlightedText("Settings cache", searchQuery)}
-              </span>
-              <p className="text-muted-foreground text-xs">
-                {renderHighlightedText(
-                  "User settings and sync configuration",
-                  searchQuery,
-                )}
-              </p>
-            </div>
-          </label>
-          <label
-            className="hover:bg-muted flex items-center gap-2 rounded-md p-2"
-            htmlFor="sync-cache"
-            aria-label="Sync Cache - Sync history"
-          >
-            <input
-              id="sync-cache"
-              type="checkbox"
-              className="border-primary text-primary h-4 w-4 rounded"
-              checked={cachesToClear.shouldClearSyncCache}
-              onChange={(e) =>
-                onCachesToClearChange({
-                  ...cachesToClear,
-                  shouldClearSyncCache: e.target.checked,
-                })
-              }
-            />
-            <div>
-              <span className="text-sm font-medium">
-                {renderHighlightedText("Sync cache", searchQuery)}
-              </span>
-              <p className="text-muted-foreground text-xs">
-                {renderHighlightedText(
-                  "Synchronization history and operation records",
-                  searchQuery,
-                )}
-              </p>
-            </div>
-          </label>
-          <label
-            className="hover:bg-muted flex items-center gap-2 rounded-md p-2"
-            htmlFor="import-cache"
-            aria-label="Import Cache - Import history"
-          >
-            <input
-              id="import-cache"
-              type="checkbox"
-              className="border-primary text-primary h-4 w-4 rounded"
-              checked={cachesToClear.shouldClearImportCache}
-              onChange={(e) =>
-                onCachesToClearChange({
-                  ...cachesToClear,
-                  shouldClearImportCache: e.target.checked,
-                })
-              }
-            />
-            <div>
-              <span className="text-sm font-medium">
-                {renderHighlightedText("Import cache", searchQuery)}
-              </span>
-              <p className="text-muted-foreground text-xs">
-                {renderHighlightedText(
-                  "Import operation history and results",
-                  searchQuery,
-                )}
-              </p>
-            </div>
-          </label>
-        </div>
-
-        <div className="space-y-2">
-          <label
-            className="hover:bg-muted flex items-center gap-2 rounded-md p-2"
-            htmlFor="review-cache"
-            aria-label="Review Cache - Match results"
-          >
-            <input
-              id="review-cache"
-              type="checkbox"
-              className="border-primary text-primary h-4 w-4 rounded"
-              checked={cachesToClear.shouldClearReviewCache}
-              onChange={(e) =>
-                onCachesToClearChange({
-                  ...cachesToClear,
-                  shouldClearReviewCache: e.target.checked,
-                })
-              }
-            />
-            <div>
-              <span className="text-sm font-medium">
-                {renderHighlightedText("Review cache", searchQuery)}
-              </span>
-              <p className="text-muted-foreground text-xs">
-                {renderHighlightedText(
-                  "Matching results and review data",
-                  searchQuery,
-                )}
-              </p>
-            </div>
-          </label>
-          <label
-            className="hover:bg-muted flex items-center gap-2 rounded-md p-2"
-            htmlFor="manga-cache"
-            aria-label="Manga Cache - Manga metadata"
-          >
-            <input
-              id="manga-cache"
-              type="checkbox"
-              className="border-primary text-primary h-4 w-4 rounded"
-              checked={cachesToClear.shouldClearMangaCache}
-              onChange={(e) =>
-                onCachesToClearChange({
-                  ...cachesToClear,
-                  shouldClearMangaCache: e.target.checked,
-                })
-              }
-            />
-            <div>
-              <span className="text-sm font-medium">
-                {renderHighlightedText("Manga cache", searchQuery)}
-              </span>
-              <p className="text-muted-foreground text-xs">
-                {renderHighlightedText(
-                  "Cached manga titles, details, and metadata",
-                  searchQuery,
-                )}
-              </p>
-            </div>
-          </label>
-          <label
-            className="hover:bg-muted flex items-center gap-2 rounded-md p-2"
-            htmlFor="search-cache"
-            aria-label="Search Cache - Search results"
-          >
-            <input
-              id="search-cache"
-              type="checkbox"
-              className="border-primary text-primary h-4 w-4 rounded"
-              checked={cachesToClear.shouldClearSearchCache}
-              onChange={(e) =>
-                onCachesToClearChange({
-                  ...cachesToClear,
-                  shouldClearSearchCache: e.target.checked,
-                })
-              }
-            />
-            <div>
-              <span className="text-sm font-medium">
-                {renderHighlightedText("Search cache", searchQuery)}
-              </span>
-              <p className="text-muted-foreground text-xs">
-                {renderHighlightedText(
-                  "Cached search queries and API results",
-                  searchQuery,
-                )}
-              </p>
-            </div>
-          </label>
-          <label
-            className="hover:bg-muted flex items-center gap-2 rounded-md p-2"
-            htmlFor="other-caches"
-            aria-label="Other Caches - Miscellaneous cache data"
-          >
-            <input
-              id="other-caches"
-              type="checkbox"
-              className="border-primary text-primary h-4 w-4 rounded"
-              checked={cachesToClear.shouldClearOtherCache}
-              onChange={(e) =>
-                onCachesToClearChange({
-                  ...cachesToClear,
-                  shouldClearOtherCache: e.target.checked,
-                })
-              }
-            />
-            <div>
-              <span className="text-sm font-medium">
-                {renderHighlightedText("Other caches", searchQuery)}
-              </span>
-              <p className="text-muted-foreground text-xs">
-                {renderHighlightedText(
-                  "Miscellaneous cache data and temporary storage",
-                  searchQuery,
-                )}
-              </p>
-            </div>
-          </label>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-4">
+        <p className="text-muted-foreground text-xs">
+          {(() => {
+            if (selectedCount === 0) return "No caches selected";
+            const plural = selectedCount === 1 ? "" : "s";
+            return `${selectedCount} cache type${plural} selected`;
+          })()}
+        </p>
         <Button
-          variant="link"
-          size="sm"
-          className="h-auto p-0 text-xs text-blue-600 dark:text-blue-400"
-          onClick={() =>
-            onCachesToClearChange({
-              shouldClearAuthCache: true,
-              shouldClearSettingsCache: true,
-              shouldClearSyncCache: true,
-              shouldClearImportCache: true,
-              shouldClearReviewCache: true,
-              shouldClearMangaCache: true,
-              shouldClearSearchCache: true,
-              shouldClearOtherCache: true,
-            })
-          }
+          onClick={onClearCaches}
+          variant={isCacheCleared ? "outline" : "default"}
+          disabled={isClearing || selectedCount === 0}
+          className={cn(
+            "min-w-[180px] transition-all",
+            isCacheCleared &&
+              "border-green-200 bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/30",
+          )}
         >
-          Select all
-        </Button>
-        <Button
-          variant="link"
-          size="sm"
-          className="h-auto p-0 text-xs text-blue-600 dark:text-blue-400"
-          onClick={() =>
-            onCachesToClearChange({
-              shouldClearAuthCache: false,
-              shouldClearSettingsCache: false,
-              shouldClearSyncCache: false,
-              shouldClearImportCache: false,
-              shouldClearReviewCache: false,
-              shouldClearMangaCache: false,
-              shouldClearSearchCache: false,
-              shouldClearOtherCache: false,
-            })
-          }
-        >
-          Deselect all
+          {(() => {
+            if (isClearing) {
+              return (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Clearing...
+                </>
+              );
+            }
+            if (isCacheCleared) {
+              return (
+                <>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Cleared!
+                </>
+              );
+            }
+            return (
+              <>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Clear Selected
+              </>
+            );
+          })()}
         </Button>
       </div>
-
-      {(() => {
-        let buttonContent;
-        if (isClearing) {
-          buttonContent = (
-            <>
-              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-              Clearing cache...
-            </>
-          );
-        } else if (isCacheCleared) {
-          buttonContent = (
-            <>
-              <CheckCircle className="mr-2 h-4 w-4" />
-              Cache cleared successfully
-            </>
-          );
-        } else {
-          buttonContent = (
-            <>
-              <Trash2 className="mr-2 h-4 w-4" />
-              Clear selected caches
-            </>
-          );
-        }
-        return (
-          <Button
-            onClick={onClearCaches}
-            variant={isCacheCleared ? "outline" : "default"}
-            disabled={isClearing || !Object.values(cachesToClear).some(Boolean)}
-            className={`w-full disabled:cursor-not-allowed disabled:opacity-60 ${
-              isCacheCleared
-                ? "bg-green-50 text-green-600 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/40"
-                : ""
-            }`}
-          >
-            {buttonContent}
-          </Button>
-        );
-      })()}
     </motion.div>
   );
 }

@@ -17,6 +17,12 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Switch } from "@/components/ui/Switch";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/Card";
 import { CustomRulesManager } from "./CustomRulesManager";
 import { highlightText } from "@/utils/text-highlight";
 import { cn } from "@/utils/tailwind";
@@ -114,30 +120,31 @@ export function MatchingSettingsSection({
   }) => (
     <motion.div
       id={opts.id}
-      className={cn(
-        "group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 p-5 shadow-[0_24px_70px_-55px_rgba(15,23,42,0.4)] transition-colors duration-200 hover:border-slate-200 hover:shadow-[0_28px_90px_-60px_rgba(15,23,42,0.45)] dark:border-white/10 dark:bg-slate-950/45 dark:hover:border-white/15",
-        highlightedSectionId === opts.id &&
-          "ring-2 ring-blue-500 ring-offset-2 ring-offset-white dark:ring-blue-400 dark:ring-offset-slate-950",
-      )}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      {opts.accentBarClass ? (
-        <span
-          aria-hidden="true"
-          className={cn(
-            "bg-linear-to-r pointer-events-none absolute inset-x-0 top-0 h-1 opacity-80",
-            opts.accentBarClass,
-          )}
-        />
-      ) : null}
-      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 items-start gap-4">
+      <Card
+        className={cn(
+          "relative overflow-hidden transition-all duration-200 hover:shadow-md",
+          highlightedSectionId === opts.id &&
+            "ring-2 ring-blue-500 ring-offset-2 ring-offset-white dark:ring-blue-400 dark:ring-offset-slate-950",
+        )}
+      >
+        {opts.accentBarClass ? (
+          <span
+            aria-hidden="true"
+            className={cn(
+              "bg-linear-to-r pointer-events-none absolute inset-x-0 top-0 h-1 opacity-80",
+              opts.accentBarClass,
+            )}
+          />
+        ) : null}
+        <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-6">
           {opts.icon ? (
             <div
               className={cn(
-                "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl",
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
                 "shadow-inner shadow-black/5 dark:shadow-black/40",
                 opts.iconWrapperClass,
               )}
@@ -145,44 +152,43 @@ export function MatchingSettingsSection({
               <opts.icon className="h-5 w-5" />
             </div>
           ) : null}
-          <div className="space-y-1">
-            <label
-              htmlFor={opts.id}
-              className="text-sm font-semibold leading-tight text-slate-900 dark:text-white"
-            >
-              {searchQuery
-                ? highlightText(opts.title, searchQuery)
-                : opts.title}
-            </label>
-            <p className="text-xs text-slate-600 dark:text-slate-300">
+          <div className="flex-1 space-y-1">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">
+                {searchQuery
+                  ? highlightText(opts.title, searchQuery)
+                  : opts.title}
+              </CardTitle>
+              <Switch
+                id={opts.id}
+                checked={!!opts.checked}
+                disabled={!!opts.disabled}
+                onCheckedChange={(checked) => {
+                  if (!opts.field || opts.disabled) return;
+                  const updated = {
+                    ...matchConfig,
+                    ...(opts.field ? { [opts.field]: checked } : {}),
+                  } as MatchConfig;
+                  onMatchConfigChange(updated, opts.field);
+                }}
+              />
+            </div>
+            <CardDescription>
               {searchQuery
                 ? highlightText(opts.description, searchQuery)
                 : opts.description}
-            </p>
+            </CardDescription>
             {opts.badge ? (
               <Badge
                 variant="secondary"
-                className="mt-1 inline-flex items-center gap-1 rounded-full bg-slate-900/5 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:bg-white/10 dark:text-slate-200"
+                className="mt-2 inline-flex items-center gap-1 rounded-full bg-slate-900/5 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:bg-white/10 dark:text-slate-200"
               >
                 {opts.badge}
               </Badge>
             ) : null}
           </div>
-        </div>
-        <Switch
-          id={opts.id}
-          checked={!!opts.checked}
-          disabled={!!opts.disabled}
-          onCheckedChange={(checked) => {
-            if (!opts.field || opts.disabled) return;
-            const updated = {
-              ...matchConfig,
-              ...(opts.field ? { [opts.field]: checked } : {}),
-            } as MatchConfig;
-            onMatchConfigChange(updated, opts.field);
-          }}
-        />
-      </div>
+        </CardHeader>
+      </Card>
     </motion.div>
   );
 

@@ -5,10 +5,27 @@
  */
 
 import React from "react";
-import { RefreshCw, Loader2, Download, Check } from "lucide-react";
+import {
+  RefreshCw,
+  Loader2,
+  Download,
+  Check,
+  AlertCircle,
+  Zap,
+  Shield,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/RadioGroup";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/Card";
+import { Label } from "@/components/ui/Label";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/Alert";
 import { SettingsSectionShell } from "./SettingsSectionShell";
 import { getAppVersion, compareVersions } from "@/utils/app-version";
 import { cn } from "@/utils/tailwind";
@@ -92,154 +109,236 @@ export function UpdateManagementSection({
         description="Stay current with the latest Kenmei → AniList improvements."
         accent="from-sky-500/15 via-blue-500/10 to-transparent"
         className="mt-6"
-        contentClassName="space-y-5"
+        contentClassName="space-y-6"
       >
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <RadioGroup
-            value={updateChannel}
-            onValueChange={(v) => onUpdateChannelChange(v as "stable" | "beta")}
-            className="flex flex-row gap-4"
-            aria-label="Update Channel"
-          >
-            <div className="flex items-center gap-2">
-              <RadioGroupItem value="stable" id="update-stable" />
-              <label htmlFor="update-stable" className="text-sm font-medium">
-                Stable
-              </label>
-            </div>
-            <div className="flex items-center gap-2">
-              <RadioGroupItem value="beta" id="update-beta" />
-              <label htmlFor="update-beta" className="text-sm font-medium">
-                Beta/Early Access
-              </label>
-            </div>
-          </RadioGroup>
-          <Button
-            onClick={onCheckForUpdates}
-            disabled={isCheckingUpdate}
-            aria-label="Check for updates"
-            className="w-full md:w-auto"
-          >
-            {isCheckingUpdate ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Checking...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Check for Updates
-              </>
-            )}
-          </Button>
-        </div>
-        {updateError && (
-          <div className="rounded-2xl border border-rose-400/40 bg-rose-500/10 px-4 py-2 text-sm text-rose-100">
-            {updateError}
-          </div>
-        )}
-        {updateInfo && (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <div className="mb-3 flex flex-wrap items-center gap-3">
-              <Badge
-                className={
-                  updateInfo.isBeta
-                    ? "bg-yellow-50 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
-                    : "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+        <div className="grid gap-6">
+          {/* Update Channel Card */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <CardTitle className="text-base">Update Channel</CardTitle>
+                  <CardDescription>
+                    Select which version of the app you want to receive updates
+                    for.
+                  </CardDescription>
+                </div>
+                <Badge variant="outline" className="capitalize">
+                  {updateChannel}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <RadioGroup
+                value={updateChannel}
+                onValueChange={(v) =>
+                  onUpdateChannelChange(v as "stable" | "beta")
                 }
+                className="grid gap-4 sm:grid-cols-2"
               >
-                {updateInfo.isBeta ? "Beta/Early Access" : "Stable"}
-              </Badge>
-              <span className="font-mono text-xs text-slate-200">
-                Latest: {updateInfo.version}
-              </span>
-              <button
-                type="button"
-                aria-label="View release on GitHub"
-                className="text-blue-300 underline transition hover:text-blue-200"
-                onClick={onOpenExternal(updateInfo.url)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    const openHandler = onOpenExternal(updateInfo.url);
-                    openHandler(e);
-                  }
-                }}
-              >
-                View release notes
-              </button>
-            </div>
-            <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-slate-200">
-              <span className="font-mono">Current: {getAppVersion()}</span>
-              {(() => {
-                const current = getAppVersion().replace(/^v/, "");
-                const latest = updateInfo.version.replace(/^v/, "");
-                if (current === latest) {
-                  return (
-                    <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
-                      Up to date
-                    </Badge>
-                  );
-                }
-                if (compareVersions(current, latest) < 0) {
-                  return (
-                    <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                      Update available
-                    </Badge>
-                  );
-                }
-                return (
-                  <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                    Development build
-                  </Badge>
-                );
-              })()}
-            </div>
+                <div
+                  className={cn(
+                    "flex items-start space-x-3 rounded-lg border p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50",
+                    updateChannel === "stable" &&
+                      "border-blue-500 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-950/20",
+                  )}
+                >
+                  <RadioGroupItem
+                    value="stable"
+                    id="update-stable"
+                    className="mt-1"
+                  />
+                  <Label
+                    htmlFor="update-stable"
+                    className="cursor-pointer space-y-1"
+                  >
+                    <div className="flex items-center gap-2 font-medium">
+                      <Shield className="h-4 w-4 text-blue-500" />
+                      Stable
+                    </div>
+                    <div className="text-muted-foreground text-xs">
+                      Tested and reliable versions. Recommended for most users.
+                    </div>
+                  </Label>
+                </div>
+                <div
+                  className={cn(
+                    "flex items-start space-x-3 rounded-lg border p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50",
+                    updateChannel === "beta" &&
+                      "border-amber-500 bg-amber-50/50 dark:border-amber-500/50 dark:bg-amber-950/20",
+                  )}
+                >
+                  <RadioGroupItem
+                    value="beta"
+                    id="update-beta"
+                    className="mt-1"
+                  />
+                  <Label
+                    htmlFor="update-beta"
+                    className="cursor-pointer space-y-1"
+                  >
+                    <div className="flex items-center gap-2 font-medium">
+                      <Zap className="h-4 w-4 text-amber-500" />
+                      Beta
+                    </div>
+                    <div className="text-muted-foreground text-xs">
+                      Early access to new features. May contain bugs.
+                    </div>
+                  </Label>
+                </div>
+              </RadioGroup>
+            </CardContent>
+          </Card>
 
-            {/* Download/Install Actions */}
-            <div className="space-y-3">
-              {/* Download Progress Bar */}
-              {(isDownloading || downloadProgress > 0) && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs text-slate-300">
-                    <span>Downloading...</span>
-                    <span>{Math.round(downloadProgress * 100)}%</span>
+          {/* Update Status Card */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <CardTitle className="text-base">Update Status</CardTitle>
+                  <CardDescription>
+                    Current version:{" "}
+                    <span className="text-foreground font-mono font-medium">
+                      {getAppVersion()}
+                    </span>
+                  </CardDescription>
+                </div>
+                <Button
+                  onClick={onCheckForUpdates}
+                  disabled={isCheckingUpdate}
+                  aria-label="Check for updates"
+                  size="sm"
+                >
+                  {isCheckingUpdate ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Checking...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Check for Updates
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {updateError && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Update Check Failed</AlertTitle>
+                  <AlertDescription>{updateError}</AlertDescription>
+                </Alert>
+              )}
+
+              {updateInfo ? (
+                <div className="space-y-4">
+                  <div className="bg-muted/50 rounded-lg border p-4">
+                    <div className="mb-3 flex flex-wrap items-center gap-3">
+                      <Badge
+                        className={
+                          updateInfo.isBeta
+                            ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                            : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                        }
+                      >
+                        {updateInfo.isBeta ? "Beta Release" : "Stable Release"}
+                      </Badge>
+                      <span className="font-mono text-sm font-medium">
+                        v{updateInfo.version.replace(/^v/, "")}
+                      </span>
+                      <button
+                        type="button"
+                        className="text-xs text-blue-500 underline hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+                        onClick={onOpenExternal(updateInfo.url)}
+                      >
+                        Release Notes
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-sm">
+                      {(() => {
+                        const current = getAppVersion().replace(/^v/, "");
+                        const latest = updateInfo.version.replace(/^v/, "");
+                        if (current === latest) {
+                          return (
+                            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                              <Check className="h-4 w-4" />
+                              <span>You are on the latest version.</span>
+                            </div>
+                          );
+                        }
+                        if (compareVersions(current, latest) < 0) {
+                          return (
+                            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                              <Download className="h-4 w-4" />
+                              <span>A new version is available!</span>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                            <Zap className="h-4 w-4" />
+                            <span>You are on a development build.</span>
+                          </div>
+                        );
+                      })()}
+                    </div>
                   </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-slate-700/50">
-                    <div
-                      className="bg-linear-to-r h-full from-blue-500 to-cyan-500 transition-all duration-300"
-                      style={{ width: `${downloadProgress * 100}%` }}
-                    />
+
+                  {/* Download/Install Actions */}
+                  {(isDownloading || downloadProgress > 0) && (
+                    <div className="space-y-2">
+                      <div className="text-muted-foreground flex items-center justify-between text-xs">
+                        <span>Downloading update...</span>
+                        <span>{Math.round(downloadProgress * 100)}%</span>
+                      </div>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                        <div
+                          className="h-full bg-blue-500 transition-all duration-300"
+                          style={{ width: `${downloadProgress * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3">
+                    {!isDownloading && !isDownloaded && (
+                      <Button
+                        onClick={onDownloadUpdate}
+                        disabled={isCheckingUpdate}
+                        className="flex-1"
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Download Update
+                      </Button>
+                    )}
+
+                    {isDownloaded && !isDownloading && (
+                      <Button
+                        onClick={onInstallUpdate}
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                      >
+                        <Check className="mr-2 h-4 w-4" />
+                        Install & Restart
+                      </Button>
+                    )}
                   </div>
                 </div>
+              ) : (
+                <div className="text-muted-foreground flex flex-col items-center justify-center py-6 text-center">
+                  <RefreshCw className="mb-2 h-8 w-8 opacity-20" />
+                  <p className="text-sm">
+                    {isCheckingUpdate
+                      ? "Checking for updates..."
+                      : "Check for updates to see what's new."}
+                  </p>
+                </div>
               )}
-
-              {/* Download Button */}
-              {!isDownloading && !isDownloaded && (
-                <Button
-                  onClick={onDownloadUpdate}
-                  disabled={isCheckingUpdate}
-                  className="w-full"
-                  variant="default"
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Download Update
-                </Button>
-              )}
-
-              {/* Install Button */}
-              {isDownloaded && !isDownloading && (
-                <Button
-                  onClick={onInstallUpdate}
-                  className="w-full bg-green-600 hover:bg-green-700"
-                >
-                  <Check className="mr-2 h-4 w-4" />
-                  Install Update
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
+            </CardContent>
+          </Card>
+        </div>
       </SettingsSectionShell>
     </div>
   );

@@ -124,23 +124,25 @@ export function SyncSettingsTab({
                 your comfort thresholds.
               </p>
             </div>
-            <SyncAutoPauseSection
-              syncConfig={syncConfig}
-              isCustomThresholdEnabled={isCustomThresholdEnabled}
-              searchQuery={searchQuery}
-              highlightedSectionId={highlightedSectionId}
-              onSyncConfigChange={onSyncConfigChange}
-              onCustomThresholdToggle={onCustomThresholdToggle}
-              setSyncConfig={setSyncConfig}
-            />
+            <div className="grid gap-6 lg:grid-cols-2">
+              <SyncAutoPauseSection
+                syncConfig={syncConfig}
+                isCustomThresholdEnabled={isCustomThresholdEnabled}
+                searchQuery={searchQuery}
+                highlightedSectionId={highlightedSectionId}
+                onSyncConfigChange={onSyncConfigChange}
+                onCustomThresholdToggle={onCustomThresholdToggle}
+                setSyncConfig={setSyncConfig}
+              />
 
-            <SyncStatusPrioritySection
-              syncConfig={syncConfig}
-              searchQuery={searchQuery}
-              highlightedSectionId={highlightedSectionId}
-              onSyncConfigChange={onSyncConfigChange}
-              setSyncConfig={setSyncConfig}
-            />
+              <SyncStatusPrioritySection
+                syncConfig={syncConfig}
+                searchQuery={searchQuery}
+                highlightedSectionId={highlightedSectionId}
+                onSyncConfigChange={onSyncConfigChange}
+                setSyncConfig={setSyncConfig}
+              />
+            </div>
           </div>
 
           <div className="space-y-3">

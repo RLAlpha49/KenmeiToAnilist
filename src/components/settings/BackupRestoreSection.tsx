@@ -7,18 +7,30 @@
 import React, { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import {
-  Download,
   Upload,
   Folder,
   Trash2,
   Loader2,
   AlertTriangle,
   FolderOpen,
+  Clock,
+  FileJson,
+  History,
+  Save,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
-import { Separator } from "@/components/ui/Separator";
 import { Badge } from "@/components/ui/Badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/Card";
+import { Label } from "@/components/ui/Label";
+import { Input } from "@/components/ui/Input";
 import { highlightText, truncateToastMessage } from "@/utils/text-highlight";
 import { cn } from "@/utils/tailwind";
 import type { BackupScheduleConfig } from "@/utils/storage";
@@ -36,10 +48,6 @@ function parseBackupCount(input: string): number {
 function parseBackupSize(input: string): number {
   const value = input ? Number.parseInt(input, 10) : 100;
   return clampValue(value, 10, 1000);
-}
-
-function formatBackupCountText(count: number): string {
-  return `${count} backup file${count === 1 ? "" : "s"}`;
 }
 
 function formatMoreBackupsLabel(count: number): string {
@@ -83,66 +91,73 @@ function BackupList({
 }: Readonly<BackupListProps>) {
   return (
     <div className="space-y-2">
-      {backups.slice(0, isShowingAllBackups ? undefined : 2).map((backup) => (
+      {backups.slice(0, isShowingAllBackups ? undefined : 4).map((backup) => (
         <div
           key={backup.name}
-          className="hover:bg-muted/60 flex items-center justify-between rounded-md p-3 transition-colors"
+          className="hover:bg-muted/60 group flex items-center justify-between rounded-lg border border-transparent p-3 transition-all hover:border-slate-200 dark:hover:border-slate-800"
         >
           <div className="min-w-0 flex-1 space-y-1">
-            <p className="truncate text-sm font-medium">
-              {new Date(backup.timestamp).toLocaleString()}
-            </p>
-            <div className="flex gap-2">
-              <Badge variant="outline" className="text-xs">
+            <div className="flex items-center gap-2">
+              <FileJson className="text-muted-foreground h-4 w-4" />
+              <p className="truncate text-sm font-medium">
+                {new Date(backup.timestamp).toLocaleString()}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 pl-6">
+              <Badge
+                variant="secondary"
+                className="h-5 px-1.5 text-[10px] font-normal"
+              >
                 {(backup.size / 1024 / 1024).toFixed(2)} MB
               </Badge>
-              <span className="text-muted-foreground text-xs">
+              <span className="text-muted-foreground truncate text-xs opacity-60">
                 {backup.name}
               </span>
             </div>
           </div>
-          <div className="ml-2 flex gap-2">
+          <div className="ml-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
             <Button
               onClick={() => onRestore(backup)}
               disabled={isRestoringFromList === backup.name}
               variant="outline"
-              size="sm"
+              size="icon"
+              className="h-8 w-8"
               title="Restore from this backup"
             >
               {isRestoringFromList === backup.name ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <Upload className="h-4 w-4" />
+                <Upload className="h-3.5 w-3.5" />
               )}
             </Button>
             <Button
               onClick={() => onDelete(backup.name)}
               disabled={isDeletingBackup === backup.name}
               variant="ghost"
-              size="sm"
-              className="ml-2"
+              size="icon"
+              className="h-8 w-8 text-rose-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-900/20"
               title="Delete this backup"
             >
               {isDeletingBackup === backup.name ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-3.5 w-3.5" />
               )}
             </Button>
           </div>
         </div>
       ))}
 
-      {backups.length > 2 && (
+      {backups.length > 3 && (
         <Button
           onClick={onToggleShowAll}
           variant="ghost"
-          className="w-full"
+          className="w-full text-xs"
           size="sm"
         >
           {isShowingAllBackups
             ? "Show Less"
-            : formatMoreBackupsLabel(backups.length - 2)}
+            : formatMoreBackupsLabel(backups.length - 4)}
         </Button>
       )}
     </div>
@@ -183,9 +198,13 @@ function BackupListContent({
 
   if (backups.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm">
-        No backups available yet. Create one to get started.
-      </p>
+      <div className="flex flex-col items-center justify-center py-8 text-center">
+        <History className="text-muted-foreground/30 mb-3 h-10 w-10" />
+        <p className="text-muted-foreground text-sm">No backups available</p>
+        <p className="text-muted-foreground text-xs">
+          Create a backup to get started
+        </p>
+      </div>
     );
   }
 
@@ -199,6 +218,542 @@ function BackupListContent({
       onDelete={onDelete}
       onToggleShowAll={onToggleShowAll}
     />
+  );
+}
+
+interface BackupScheduleCardProps {
+  searchQuery: string;
+  scheduleConfig: BackupScheduleConfig;
+  onScheduleConfigChange: (config: BackupScheduleConfig) => void;
+  lastScheduledBackup: number | null;
+  nextScheduledBackup: number | null;
+  isTriggeringBackup: boolean;
+  onTriggerBackup: () => void;
+}
+
+function BackupScheduleCard({
+  searchQuery,
+  scheduleConfig,
+  onScheduleConfigChange,
+  lastScheduledBackup,
+  nextScheduledBackup,
+  isTriggeringBackup,
+  onTriggerBackup,
+}: Readonly<BackupScheduleCardProps>) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.2, duration: 0.4 }}
+    >
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Clock className="h-4 w-4 text-violet-500" />
+              {searchQuery
+                ? highlightText("Backup Schedule", searchQuery)
+                : "Backup Schedule"}
+            </CardTitle>
+            <CardDescription>
+              {searchQuery
+                ? highlightText(
+                    "Configure automatic backups and retention",
+                    searchQuery,
+                  )
+                : "Configure automatic backups and retention"}
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Enable Schedule Toggle */}
+          <div className="shadow-xs flex items-center justify-between rounded-lg border p-3">
+            <div className="space-y-0.5">
+              <Label htmlFor="schedule-enabled" className="text-sm font-medium">
+                Enable automatic scheduled backups
+              </Label>
+              <p className="text-muted-foreground text-xs">
+                Create backups automatically at regular intervals
+              </p>
+            </div>
+            <input
+              id="schedule-enabled"
+              type="checkbox"
+              className="border-primary text-primary focus:ring-ring h-4 w-4 rounded focus:ring-2"
+              checked={scheduleConfig.enabled}
+              onChange={(e) =>
+                onScheduleConfigChange({
+                  ...scheduleConfig,
+                  enabled: e.target.checked,
+                })
+              }
+            />
+          </div>
+
+          {/* Auto-backup before operations */}
+          <div className="space-y-3 pl-1">
+            <div className="flex items-center gap-2">
+              <input
+                id="auto-backup-sync"
+                type="checkbox"
+                className="border-primary text-primary focus:ring-ring h-4 w-4 rounded focus:ring-2"
+                checked={scheduleConfig.autoBackupBeforeSync}
+                onChange={(e) =>
+                  onScheduleConfigChange({
+                    ...scheduleConfig,
+                    autoBackupBeforeSync: e.target.checked,
+                  })
+                }
+              />
+              <Label htmlFor="auto-backup-sync" className="text-sm font-normal">
+                Backup before sync operations
+              </Label>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                id="auto-backup-match"
+                type="checkbox"
+                className="border-primary text-primary focus:ring-ring h-4 w-4 rounded focus:ring-2"
+                checked={scheduleConfig.autoBackupBeforeMatch}
+                onChange={(e) =>
+                  onScheduleConfigChange({
+                    ...scheduleConfig,
+                    autoBackupBeforeMatch: e.target.checked,
+                  })
+                }
+              />
+              <Label
+                htmlFor="auto-backup-match"
+                className="text-sm font-normal"
+              >
+                Backup before matching operations
+              </Label>
+            </div>
+          </div>
+
+          {/* Interval Selector */}
+          {scheduleConfig.enabled && (
+            <div className="animate-in slide-in-from-top-2 space-y-4 rounded-lg border border-slate-200 bg-slate-50/50 p-4 duration-200 dark:border-slate-800 dark:bg-slate-900/20">
+              <div className="space-y-2">
+                <Label
+                  htmlFor="backup-interval"
+                  className="text-xs font-medium uppercase tracking-wider text-slate-500"
+                >
+                  Frequency
+                </Label>
+                <select
+                  id="backup-interval"
+                  aria-describedby="backup-interval-desc"
+                  value={scheduleConfig.interval}
+                  onChange={(e) =>
+                    onScheduleConfigChange({
+                      ...scheduleConfig,
+                      interval: e.target.value as
+                        | "daily"
+                        | "weekly"
+                        | "monthly",
+                    })
+                  }
+                  className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:ring-ring flex h-9 w-full items-center justify-between rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </div>
+
+              {/* Retention Settings */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="max-backup-count"
+                    className="text-xs font-medium uppercase tracking-wider text-slate-500"
+                  >
+                    Retention
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="max-backup-count"
+                      type="number"
+                      min="1"
+                      max="50"
+                      value={scheduleConfig.maxBackupCount}
+                      onChange={(e) => {
+                        const clamped = parseBackupCount(e.target.value);
+                        onScheduleConfigChange({
+                          ...scheduleConfig,
+                          maxBackupCount: clamped,
+                        });
+                      }}
+                      className="pr-12"
+                    />
+                    <span className="text-muted-foreground pointer-events-none absolute right-3 top-2.5 text-xs">
+                      files
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="max-backup-size"
+                    className="text-xs font-medium uppercase tracking-wider text-slate-500"
+                  >
+                    Size Limit
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="max-backup-size"
+                      type="number"
+                      min="10"
+                      max="1000"
+                      value={scheduleConfig.maxBackupSizeMB}
+                      onChange={(e) => {
+                        const clamped = parseBackupSize(e.target.value);
+                        onScheduleConfigChange({
+                          ...scheduleConfig,
+                          maxBackupSizeMB: clamped,
+                        });
+                      }}
+                      className="pr-10"
+                    />
+                    <span className="text-muted-foreground pointer-events-none absolute right-3 top-2.5 text-xs">
+                      MB
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Schedule Status Display */}
+              {(lastScheduledBackup || nextScheduledBackup) && (
+                <div className="mt-2 rounded border border-slate-100 bg-white p-2 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
+                  {lastScheduledBackup && (
+                    <div className="flex justify-between">
+                      <span>Last backup:</span>
+                      <span className="font-medium">
+                        {new Date(lastScheduledBackup).toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                  {nextScheduledBackup && (
+                    <div className="flex justify-between">
+                      <span>Next backup:</span>
+                      <span className="font-medium">
+                        {new Date(nextScheduledBackup).toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Manual Trigger Button */}
+          <Button
+            onClick={onTriggerBackup}
+            disabled={isTriggeringBackup}
+            aria-busy={isTriggeringBackup}
+            aria-disabled={isTriggeringBackup}
+            variant="outline"
+            className="w-full"
+            size="sm"
+          >
+            {isTriggeringBackup ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating backup...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Run Backup Now
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
+interface BackupLocationCardProps {
+  searchQuery: string;
+  backupLocation: string;
+  resolvedDefaultBackupLocation: string;
+  onBackupLocationChange: (newLocation: string) => void;
+  onOpenBackupLocation: () => void;
+}
+
+function BackupLocationCard({
+  searchQuery,
+  backupLocation,
+  resolvedDefaultBackupLocation,
+  onBackupLocationChange,
+  onOpenBackupLocation,
+}: Readonly<BackupLocationCardProps>) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.25, duration: 0.4 }}
+    >
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Folder className="h-4 w-4 text-blue-500" />
+              {searchQuery
+                ? highlightText("Backup Location", searchQuery)
+                : "Backup Location"}
+            </CardTitle>
+            <CardDescription>
+              {searchQuery
+                ? highlightText("Where to save your backup files", searchQuery)
+                : "Where to save your backup files"}
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex gap-2">
+            <Input
+              id="backup-location"
+              type="text"
+              aria-describedby="backup-location-desc"
+              value={backupLocation}
+              onChange={(e) => onBackupLocationChange(e.target.value)}
+              placeholder="Enter backup directory path..."
+              className="flex-1"
+            />
+            <Button
+              onClick={onOpenBackupLocation}
+              variant="outline"
+              size="icon"
+              title="Open backup location in file browser"
+            >
+              <FolderOpen className="h-4 w-4" />
+            </Button>
+          </div>
+          <p
+            id="backup-location-desc"
+            className="text-muted-foreground truncate text-xs"
+          >
+            {backupLocation ||
+              `Default: ${resolvedDefaultBackupLocation || "Loading..."}`}
+          </p>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
+interface RestoreFromFileCardProps {
+  searchQuery: string;
+  selectedBackupFile: File | null;
+  isRestoringBackup: boolean;
+  backupValidationError: string | null;
+  onFileSelect: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onRestoreBackup: () => void;
+}
+
+function RestoreFromFileCard({
+  searchQuery,
+  selectedBackupFile,
+  isRestoringBackup,
+  backupValidationError,
+  onFileSelect,
+  onRestoreBackup,
+}: Readonly<RestoreFromFileCardProps>) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.4, duration: 0.4 }}
+    >
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Upload className="h-4 w-4 text-purple-500" />
+              {searchQuery
+                ? highlightText("Restore from Backup", searchQuery)
+                : "Restore from Backup"}
+            </CardTitle>
+            <CardDescription>
+              {searchQuery
+                ? highlightText(
+                    "Import and restore all data from a backup file",
+                    searchQuery,
+                  )
+                : "Import and restore all data from a backup file"}
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <input
+              type="file"
+              id="backup-file-input"
+              accept=".json"
+              onChange={onFileSelect}
+              className="hidden"
+              aria-describedby="backup-file-desc"
+            />
+            <label
+              htmlFor="backup-file-input"
+              className={cn(
+                "hover:bg-muted/60 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-all",
+                selectedBackupFile
+                  ? "border-purple-500/50 bg-purple-50/50 dark:border-purple-400/30 dark:bg-purple-900/10"
+                  : "border-slate-200 hover:border-purple-400/50 dark:border-slate-700",
+              )}
+            >
+              <Upload
+                className={cn(
+                  "mb-2 h-8 w-8 transition-colors",
+                  selectedBackupFile
+                    ? "text-purple-500"
+                    : "text-muted-foreground",
+                )}
+              />
+              <span className="text-sm font-medium">
+                {selectedBackupFile
+                  ? selectedBackupFile.name
+                  : "Choose backup file or drag and drop"}
+              </span>
+              <span className="text-muted-foreground mt-1 text-xs">
+                Supports .json backup files
+              </span>
+            </label>
+          </div>
+
+          {selectedBackupFile && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+            >
+              <Button
+                onClick={onRestoreBackup}
+                disabled={isRestoringBackup}
+                aria-busy={isRestoringBackup}
+                className="w-full"
+              >
+                {isRestoringBackup ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Restoring...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Restore Selected File
+                  </>
+                )}
+              </Button>
+            </motion.div>
+          )}
+
+          {backupValidationError && (
+            <div className="rounded-md bg-red-50 p-3 dark:bg-red-900/20">
+              <div className="flex gap-3">
+                <AlertTriangle className="mt-0.5 h-4 w-4 text-red-400" />
+                <p className="text-sm text-red-800 dark:text-red-200">
+                  {backupValidationError}
+                </p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
+interface AvailableBackupsCardProps {
+  searchQuery: string;
+  localBackups: BackupFile[];
+  isLoadingBackups: boolean;
+  isRefreshCooldownActive: boolean;
+  isShowingAllBackups: boolean;
+  isRestoringFromList: string | null;
+  isDeletingBackup: string | null;
+  onRefreshBackups: () => void;
+  onToggleShowAll: () => void;
+  onRestoreFromList: (backup: BackupFile) => Promise<void>;
+  onDeleteBackup: (filename: string) => Promise<void>;
+}
+
+function AvailableBackupsCard({
+  searchQuery,
+  localBackups,
+  isLoadingBackups,
+  isRefreshCooldownActive,
+  isShowingAllBackups,
+  isRestoringFromList,
+  isDeletingBackup,
+  onRefreshBackups,
+  onToggleShowAll,
+  onRestoreFromList,
+  onDeleteBackup,
+}: Readonly<AvailableBackupsCardProps>) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.5, duration: 0.4 }}
+    >
+      <Card className="flex h-full flex-col">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <History className="h-4 w-4 text-blue-500" />
+                {searchQuery
+                  ? highlightText("Available Backups", searchQuery)
+                  : "Available Backups"}
+              </CardTitle>
+              <CardDescription>
+                {searchQuery
+                  ? highlightText(
+                      "Manage and restore from previous backups",
+                      searchQuery,
+                    )
+                  : "Manage and restore from previous backups"}
+              </CardDescription>
+            </div>
+            <Button
+              onClick={onRefreshBackups}
+              disabled={isLoadingBackups || isRefreshCooldownActive}
+              aria-busy={isLoadingBackups}
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              title="Refresh backup list"
+            >
+              <RefreshCw
+                className={cn(
+                  "h-4 w-4",
+                  isLoadingBackups && "animate-spin",
+                  !isLoadingBackups && "text-muted-foreground",
+                )}
+              />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="flex-1">
+          <div className="max-h-[400px] overflow-y-auto pr-1">
+            <BackupListContent
+              isLoading={isLoadingBackups}
+              backups={localBackups}
+              isShowingAllBackups={isShowingAllBackups}
+              isRestoringFromList={isRestoringFromList}
+              isDeletingBackup={isDeletingBackup}
+              onRestore={onRestoreFromList}
+              onDelete={onDeleteBackup}
+              onToggleShowAll={onToggleShowAll}
+            />
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }
 
@@ -505,7 +1060,7 @@ export function BackupRestoreSection({
   };
 
   return (
-    <div id="data-backup" className="space-y-4" aria-busy={isLoadingBackups}>
+    <div id="data-backup" className="space-y-6" aria-busy={isLoadingBackups}>
       {/* Context Missing Warning */}
       {isContextMissing && (
         <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950">
@@ -522,488 +1077,54 @@ export function BackupRestoreSection({
         </div>
       )}
 
-      {/* Backup Schedule Section */}
-      <motion.div
-        className={cn("bg-muted/40 space-y-4 rounded-xl border p-4")}
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2, duration: 0.4 }}
-      >
-        <div>
-          <h3 className="flex items-center gap-2 text-sm font-medium">
-            <Download className="h-4 w-4 text-violet-500" />
-            {searchQuery
-              ? highlightText("Backup Schedule", searchQuery)
-              : "Backup Schedule"}
-          </h3>
-          <p className="text-muted-foreground text-xs">
-            {searchQuery
-              ? highlightText(
-                  "Configure automatic backups and backup location",
-                  searchQuery,
-                )
-              : "Configure automatic backups and backup location"}
-          </p>
-        </div>
-
-        <Separator />
-
-        {/* Enable Schedule Toggle */}
-        <label
-          className="hover:bg-muted flex items-center gap-2 rounded-md p-2"
-          htmlFor="schedule-enabled"
-          aria-label="Enable scheduled backups"
-        >
-          <input
-            id="schedule-enabled"
-            type="checkbox"
-            className="border-primary text-primary h-4 w-4 rounded"
-            checked={scheduleConfig.enabled}
-            onChange={(e) =>
-              onScheduleConfigChange({
-                ...scheduleConfig,
-                enabled: e.target.checked,
-              })
-            }
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Left Column: Configuration & Actions */}
+        <div className="space-y-6">
+          <BackupScheduleCard
+            searchQuery={searchQuery}
+            scheduleConfig={scheduleConfig}
+            onScheduleConfigChange={onScheduleConfigChange}
+            lastScheduledBackup={lastScheduledBackup}
+            nextScheduledBackup={nextScheduledBackup}
+            isTriggeringBackup={isTriggeringBackup}
+            onTriggerBackup={onTriggerBackup}
           />
-          <div>
-            <span className="text-sm font-medium">
-              Enable automatic scheduled backups
-            </span>
-            <p className="text-muted-foreground text-xs">
-              Create backups automatically at regular intervals
-            </p>
-          </div>
-        </label>
 
-        {/* Auto-backup before operations */}
-        <label
-          className="hover:bg-muted flex items-center gap-2 rounded-md p-2"
-          htmlFor="auto-backup-sync"
-          aria-label="Auto-backup before sync"
-        >
-          <input
-            id="auto-backup-sync"
-            type="checkbox"
-            className="border-primary text-primary h-4 w-4 rounded"
-            checked={scheduleConfig.autoBackupBeforeSync}
-            onChange={(e) =>
-              onScheduleConfigChange({
-                ...scheduleConfig,
-                autoBackupBeforeSync: e.target.checked,
-              })
-            }
+          <BackupLocationCard
+            searchQuery={searchQuery}
+            backupLocation={scheduleConfig.backupLocation}
+            resolvedDefaultBackupLocation={resolvedDefaultBackupLocation}
+            onBackupLocationChange={handleBackupLocationChange}
+            onOpenBackupLocation={handleOpenBackupLocation}
           />
-          <div>
-            <span className="text-sm font-medium">
-              Auto-backup before sync operations
-            </span>
-            <p className="text-muted-foreground text-xs">
-              Automatically create a backup before starting sync
-            </p>
-          </div>
-        </label>
+        </div>
 
-        <label
-          className="hover:bg-muted flex items-center gap-2 rounded-md p-2"
-          htmlFor="auto-backup-match"
-          aria-label="Auto-backup before matching"
-        >
-          <input
-            id="auto-backup-match"
-            type="checkbox"
-            className="border-primary text-primary h-4 w-4 rounded"
-            checked={scheduleConfig.autoBackupBeforeMatch}
-            onChange={(e) =>
-              onScheduleConfigChange({
-                ...scheduleConfig,
-                autoBackupBeforeMatch: e.target.checked,
-              })
-            }
+        {/* Right Column: Restore & History */}
+        <div className="space-y-6">
+          <RestoreFromFileCard
+            searchQuery={searchQuery}
+            selectedBackupFile={selectedBackupFile}
+            isRestoringBackup={isRestoringBackup}
+            backupValidationError={backupValidationError}
+            onFileSelect={onFileSelect}
+            onRestoreBackup={onRestoreBackup}
           />
-          <div>
-            <span className="text-sm font-medium">
-              Auto-backup before matching operations
-            </span>
-            <p className="text-muted-foreground text-xs">
-              Automatically create a backup before starting match
-            </p>
-          </div>
-        </label>
 
-        {/* Interval Selector */}
-        {scheduleConfig.enabled && (
-          <div className="space-y-3">
-            <div>
-              <label htmlFor="backup-interval" className="text-sm font-medium">
-                Backup Interval
-              </label>
-              <select
-                id="backup-interval"
-                aria-describedby="backup-interval-desc"
-                value={scheduleConfig.interval}
-                onChange={(e) =>
-                  onScheduleConfigChange({
-                    ...scheduleConfig,
-                    interval: e.target.value as "daily" | "weekly" | "monthly",
-                  })
-                }
-                className="border-input bg-background text-foreground mt-1 w-full rounded-md border px-3 py-2 text-sm"
-              >
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-              </select>
-              <p
-                id="backup-interval-desc"
-                className="text-muted-foreground mt-1 text-xs"
-              >
-                How often to automatically create backups
-              </p>
-            </div>
-
-            {/* Retention Settings */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label
-                  htmlFor="max-backup-count"
-                  className="text-sm font-medium"
-                >
-                  Max Backups to Keep
-                </label>
-                <input
-                  id="max-backup-count"
-                  aria-describedby="max-backup-count-desc"
-                  aria-invalid={
-                    scheduleConfig.maxBackupCount < 1 ||
-                    scheduleConfig.maxBackupCount > 50
-                  }
-                  type="number"
-                  inputMode="numeric"
-                  min="1"
-                  max="50"
-                  value={scheduleConfig.maxBackupCount}
-                  onChange={(e) => {
-                    const clamped = parseBackupCount(e.target.value);
-                    onScheduleConfigChange({
-                      ...scheduleConfig,
-                      maxBackupCount: clamped,
-                    });
-                  }}
-                  className="border-input bg-background text-foreground aria-invalid:border-red-500 aria-invalid:ring-1 aria-invalid:ring-red-500 mt-1 w-full rounded-md border px-3 py-2 text-sm"
-                />
-                <p
-                  id="max-backup-count-desc"
-                  className="text-muted-foreground mt-1 text-xs"
-                >
-                  Number of backups to retain (1-50)
-                </p>
-              </div>
-              <div>
-                <label
-                  htmlFor="max-backup-size"
-                  className="text-sm font-medium"
-                >
-                  Max Size (MB)
-                </label>
-                <input
-                  id="max-backup-size"
-                  aria-describedby="max-backup-size-desc"
-                  aria-invalid={
-                    scheduleConfig.maxBackupSizeMB < 10 ||
-                    scheduleConfig.maxBackupSizeMB > 1000
-                  }
-                  type="number"
-                  inputMode="numeric"
-                  min="10"
-                  max="1000"
-                  value={scheduleConfig.maxBackupSizeMB}
-                  onChange={(e) => {
-                    const clamped = parseBackupSize(e.target.value);
-                    onScheduleConfigChange({
-                      ...scheduleConfig,
-                      maxBackupSizeMB: clamped,
-                    });
-                  }}
-                  className="border-input bg-background text-foreground aria-invalid:border-red-500 aria-invalid:ring-1 aria-invalid:ring-red-500 mt-1 w-full rounded-md border px-3 py-2 text-sm"
-                />
-                <p
-                  id="max-backup-size-desc"
-                  className="text-muted-foreground mt-1 text-xs"
-                >
-                  Maximum backup file size to retain (10-1000 MB)
-                </p>
-              </div>
-            </div>
-
-            {/* Schedule Status Display */}
-            {(lastScheduledBackup || nextScheduledBackup) && (
-              <output className="block space-y-2" aria-live="polite">
-                {lastScheduledBackup && (
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Last backup:</span>
-                    <span className="ml-2 font-medium">
-                      {new Date(lastScheduledBackup).toLocaleString()}
-                    </span>
-                  </div>
-                )}
-                {nextScheduledBackup && (
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Next backup:</span>
-                    <span className="ml-2 font-medium">
-                      {new Date(nextScheduledBackup).toLocaleString()}
-                    </span>
-                  </div>
-                )}
-              </output>
-            )}
-
-            {/* Manual Trigger Button */}
-            <Button
-              onClick={onTriggerBackup}
-              disabled={isTriggeringBackup}
-              aria-busy={isTriggeringBackup}
-              aria-disabled={isTriggeringBackup}
-              variant="outline"
-              className="w-full"
-              size="sm"
-            >
-              {isTriggeringBackup ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating backup...
-                </>
-              ) : (
-                <>
-                  <Download className="mr-2 h-4 w-4" />
-                  Run Backup Now
-                </>
-              )}
-            </Button>
-          </div>
-        )}
-      </motion.div>
-
-      {/* Backup Location Section */}
-      <motion.div
-        className="bg-muted/40 space-y-4 rounded-xl border p-4"
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25, duration: 0.4 }}
-      >
-        <div>
-          <h3 className="flex items-center gap-2 text-sm font-medium">
-            <Folder className="h-4 w-4 text-blue-500" />
-            {searchQuery
-              ? highlightText("Backup Location", searchQuery)
-              : "Backup Location"}
-          </h3>
-          <p className="text-muted-foreground text-xs">
-            {searchQuery
-              ? highlightText("Where to save your backup files", searchQuery)
-              : "Where to save your backup files"}
-          </p>
-        </div>
-
-        <Separator />
-
-        <div className="space-y-2">
-          <label htmlFor="backup-location" className="text-sm font-medium">
-            Backup Directory
-          </label>
-          <div className="flex gap-2">
-            <input
-              id="backup-location"
-              type="text"
-              aria-describedby="backup-location-desc"
-              value={scheduleConfig.backupLocation}
-              onChange={(e) => handleBackupLocationChange(e.target.value)}
-              placeholder="Enter backup directory path..."
-              className="border-input bg-background text-foreground flex-1 rounded-md border px-3 py-2 text-sm"
-            />
-            <Button
-              onClick={handleOpenBackupLocation}
-              variant="outline"
-              size="sm"
-              title="Open backup location in file browser"
-            >
-              <FolderOpen className="h-4 w-4" />
-            </Button>
-          </div>
-          <p
-            id="backup-location-desc"
-            className="text-muted-foreground text-xs"
-          >
-            {scheduleConfig.backupLocation
-              ? scheduleConfig.backupLocation
-              : `Default: ${resolvedDefaultBackupLocation || "Loading..."}`}
-          </p>
-        </div>
-      </motion.div>
-
-      {/* Available Backups Section */}
-      <motion.div
-        className="bg-muted/40 space-y-4 rounded-xl border p-4"
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3, duration: 0.4 }}
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="flex items-center gap-2 text-sm font-medium">
-              <Download className="h-4 w-4 text-indigo-500" />
-              {searchQuery
-                ? highlightText("Available Backups", searchQuery)
-                : "Available Backups"}
-            </h3>
-            <p className="text-muted-foreground text-xs">
-              {searchQuery
-                ? highlightText(
-                    `${formatBackupCountText(localBackups.length)} available`,
-                    searchQuery,
-                  )
-                : `${formatBackupCountText(localBackups.length)} available`}
-            </p>
-          </div>
-          <Button
-            onClick={handleRefreshBackups}
-            disabled={isLoadingBackups || isRefreshCooldownActive}
-            aria-busy={isLoadingBackups}
-            aria-disabled={isLoadingBackups || isRefreshCooldownActive}
-            variant="ghost"
-            size="sm"
-            title={
-              isRefreshCooldownActive
-                ? "Please wait before refreshing again"
-                : "Refresh backup list"
-            }
-          >
-            {isLoadingBackups ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              "Refresh"
-            )}
-          </Button>
-        </div>
-
-        <Separator />
-
-        <BackupListContent
-          isLoading={isLoadingBackups}
-          backups={localBackups}
-          isShowingAllBackups={isShowingAllBackups}
-          isRestoringFromList={isRestoringFromList}
-          isDeletingBackup={isDeletingBackup}
-          onRestore={handleRestoreFromList}
-          onDelete={handleDeleteBackup}
-          onToggleShowAll={() => setIsShowingAllBackups(!isShowingAllBackups)}
-        />
-      </motion.div>
-
-      {/* Restore from Backup Section */}
-      <motion.div
-        className="bg-muted/40 space-y-4 rounded-xl border p-4"
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4, duration: 0.4 }}
-      >
-        <div>
-          <h3 className="flex items-center gap-2 text-sm font-medium">
-            <Upload className="h-4 w-4 text-purple-500" />
-            {searchQuery
-              ? highlightText("Restore from Backup", searchQuery)
-              : "Restore from Backup"}
-          </h3>
-          <p className="text-muted-foreground text-xs">
-            {searchQuery
-              ? highlightText(
-                  "Import and restore all data from a backup file",
-                  searchQuery,
-                )
-              : "Import and restore all data from a backup file"}
-          </p>
-        </div>
-
-        <Separator />
-
-        <div className="rounded-md bg-blue-50 p-3 dark:bg-blue-900/20">
-          <p className="text-sm text-blue-800 dark:text-blue-200">
-            <strong>Note:</strong> Match results are merged when restoring
-            (newer and unprocessed results are preserved), while other data is
-            completely replaced.
-          </p>
-        </div>
-
-        <div className="rounded-md bg-yellow-50 p-3 dark:bg-yellow-900/20">
-          <div className="flex gap-3">
-            <AlertTriangle className="mt-0.5 h-4 w-4 text-yellow-400" />
-            <p className="text-sm text-yellow-800 dark:text-yellow-200">
-              <strong>Warning:</strong> Restoring from backup will overwrite
-              your current data. Create a backup first if needed.
-            </p>
-          </div>
-        </div>
-
-        <div>
-          <input
-            type="file"
-            id="backup-file-input"
-            accept=".json"
-            onChange={onFileSelect}
-            className="hidden"
-            aria-describedby="backup-file-desc"
+          <AvailableBackupsCard
+            searchQuery={searchQuery}
+            localBackups={localBackups}
+            isLoadingBackups={isLoadingBackups}
+            isRefreshCooldownActive={isRefreshCooldownActive}
+            isShowingAllBackups={isShowingAllBackups}
+            isRestoringFromList={isRestoringFromList}
+            isDeletingBackup={isDeletingBackup}
+            onRefreshBackups={handleRefreshBackups}
+            onToggleShowAll={() => setIsShowingAllBackups(!isShowingAllBackups)}
+            onRestoreFromList={handleRestoreFromList}
+            onDeleteBackup={handleDeleteBackup}
           />
-          <label
-            htmlFor="backup-file-input"
-            className="hover:bg-muted/60 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-          >
-            <Upload className="text-muted-foreground mb-2 h-8 w-8" />
-            <span className="text-sm font-medium">
-              {selectedBackupFile
-                ? selectedBackupFile.name
-                : "Choose backup file or drag and drop"}
-            </span>
-            <span className="text-muted-foreground mt-1 text-xs">
-              Supports .json backup files
-            </span>
-          </label>
-          <p id="backup-file-desc" className="sr-only">
-            Click to browse or press Enter/Space to select a backup file to
-            restore.
-          </p>
         </div>
-
-        <Button
-          onClick={onRestoreBackup}
-          disabled={isRestoringBackup || !selectedBackupFile}
-          aria-busy={isRestoringBackup}
-          aria-disabled={isRestoringBackup || !selectedBackupFile}
-          className="w-full"
-        >
-          {isRestoringBackup ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Restoring...
-            </>
-          ) : (
-            <>
-              <Upload className="mr-2 h-4 w-4" />
-              Restore Backup
-            </>
-          )}
-        </Button>
-
-        {backupValidationError && (
-          <div className="rounded-md bg-red-50 p-3 dark:bg-red-900/20">
-            <div className="flex gap-3">
-              <AlertTriangle className="mt-0.5 h-4 w-4 text-red-400" />
-              <p className="text-sm text-red-800 dark:text-red-200">
-                {backupValidationError}
-              </p>
-            </div>
-          </div>
-        )}
-      </motion.div>
+      </div>
     </div>
   );
 }

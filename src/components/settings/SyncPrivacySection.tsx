@@ -6,7 +6,14 @@
 
 import React from "react";
 import { motion } from "framer-motion";
+import { Lock } from "lucide-react";
 import { Switch } from "@/components/ui/Switch";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/Card";
 import { highlightText } from "@/utils/text-highlight";
 import { cn } from "@/utils/tailwind";
 import type { SyncConfig } from "@/utils/storage";
@@ -46,50 +53,47 @@ export function SyncPrivacySection({
     <motion.div
       id="sync-privacy"
       className={cn(
-        "bg-muted/40 rounded-xl border p-4",
         highlightedSectionId === "sync-privacy" &&
-          "ring-2 ring-blue-500 ring-offset-2 ring-offset-white dark:ring-blue-400 dark:ring-offset-slate-950",
+          "rounded-xl ring-2 ring-blue-500 ring-offset-2 ring-offset-white dark:ring-blue-400 dark:ring-offset-slate-950",
       )}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-0.5">
-          <h3 className="text-sm font-medium">
-            {searchQuery
-              ? highlightText("Privacy settings", searchQuery)
-              : "Privacy settings"}
-          </h3>
-          <p className="text-muted-foreground text-xs">
-            {searchQuery
-              ? highlightText(
-                  "Set AniList entries as private to control visibility and sharing of your synced manga.",
-                  searchQuery,
-                )
-              : "Set AniList entries as private to control visibility and sharing of your synced manga."}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-sm" htmlFor="set-private">
-            {searchQuery
-              ? highlightText("Set entries as private", searchQuery)
-              : "Set entries as private"}
-          </label>
-          <Switch
-            id="set-private"
-            checked={syncConfig.setPrivate}
-            onCheckedChange={(checked) => {
-              const updatedConfig = {
-                ...syncConfig,
-                setPrivate: checked,
-              };
-              setSyncConfig(updatedConfig);
-              onSyncConfigChange(updatedConfig, "setPrivate");
-            }}
-          />
-        </div>
-      </div>
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Lock className="h-4 w-4 text-slate-500" />
+                {searchQuery
+                  ? highlightText("Privacy settings", searchQuery)
+                  : "Privacy settings"}
+              </CardTitle>
+              <CardDescription>
+                {searchQuery
+                  ? highlightText(
+                      "Set AniList entries as private to control visibility and sharing of your synced manga.",
+                      searchQuery,
+                    )
+                  : "Set AniList entries as private to control visibility and sharing of your synced manga."}
+              </CardDescription>
+            </div>
+            <Switch
+              id="set-private"
+              checked={syncConfig.setPrivate}
+              onCheckedChange={(checked) => {
+                const updatedConfig = {
+                  ...syncConfig,
+                  setPrivate: checked,
+                };
+                setSyncConfig(updatedConfig);
+                onSyncConfigChange(updatedConfig, "setPrivate");
+              }}
+            />
+          </div>
+        </CardHeader>
+      </Card>
     </motion.div>
   );
 }

@@ -9,7 +9,13 @@ import { motion } from "framer-motion";
 import { Filter, Info } from "lucide-react";
 import { SettingsSectionShell } from "./SettingsSectionShell";
 import { MatchingSettingsSection } from "./MatchingSettingsSection";
-import { Alert, AlertDescription } from "@/components/ui/Alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/Alert";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/Card";
 import type { MatchConfig } from "@/utils/storage";
 
 const itemVariants = {
@@ -48,32 +54,27 @@ export function MatchingSettingsTab({
       initial="hidden"
       animate="show"
       data-onboarding="matching-settings"
-      className="space-y-8"
+      className="space-y-6"
     >
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, delay: 0.06 }}
-        className="bg-linear-to-br from-emerald-500/12 relative overflow-hidden rounded-3xl border border-emerald-500/20 via-emerald-500/5 to-transparent p-6 shadow-[0_35px_110px_-70px_rgba(16,38,61,0.45)] dark:border-emerald-500/25 dark:from-emerald-500/20 dark:via-slate-950/70 dark:to-slate-950/40"
       >
-        <div className="absolute -right-24 -top-24 h-48 w-48 rounded-full bg-emerald-500/10 blur-3xl" />
-        <div className="bg-linear-to-b absolute inset-y-0 left-0 w-px from-transparent via-emerald-500/30 to-transparent" />
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/85 text-emerald-600 shadow-md backdrop-blur dark:bg-white/10 dark:text-emerald-200">
-              <Filter className="h-5 w-5" />
+        <Card className="border-emerald-100 bg-emerald-50/50 dark:border-emerald-900/50 dark:bg-emerald-950/10">
+          <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
+              <Filter className="h-6 w-6" />
             </div>
             <div className="space-y-1">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-                Matching automation
-              </h2>
-              <p className="max-w-xl text-sm text-slate-600 dark:text-slate-300">
+              <CardTitle className="text-xl">Matching Automation</CardTitle>
+              <CardDescription className="text-base">
                 Fine-tune which titles move through the matching pipeline and
                 how extra sources supplement AniList lookups.
-              </p>
+              </CardDescription>
             </div>
-          </div>
-        </div>
+          </CardHeader>
+        </Card>
       </motion.div>
 
       <SettingsSectionShell
@@ -90,10 +91,10 @@ export function MatchingSettingsTab({
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-3">
             <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-300">
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
                 Content filters
               </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-muted-foreground text-xs">
                 Decide which titles enter the matching queue before scoring
                 begins.
               </p>
@@ -117,10 +118,10 @@ export function MatchingSettingsTab({
           </div>
           <div className="space-y-3">
             <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+              <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
                 Discovery fallbacks
               </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-muted-foreground text-xs">
                 Control which secondary sources supplement AniList searches when
                 results are limited.
               </p>
@@ -142,7 +143,8 @@ export function MatchingSettingsTab({
 
         <Alert className="rounded-2xl border border-emerald-200/60 bg-emerald-50/70 text-emerald-700 shadow-sm dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-100">
           <Info className="h-4 w-4" />
-          <AlertDescription className="text-xs">
+          <AlertTitle>Note</AlertTitle>
+          <AlertDescription>
             Matching settings only affect automatic processing. Manual searches
             and overrides remain available regardless of these filters.
           </AlertDescription>

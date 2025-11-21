@@ -77,6 +77,17 @@ type ChartDatum = {
 };
 
 /**
+ * Strongly typed Recharts label payload for the pie chart label renderer.
+ * Ensures the `percent` and `value` fields are available with correct types.
+ */
+type PieLabelPayload = {
+  readonly value?: number;
+  readonly percent?: number;
+  readonly name?: string;
+  readonly index?: number;
+};
+
+/**
  * StatusDistributionChart renders a donut chart summarizing library status counts.
  * Filters out zero-value categories and presents totals with accessible labels.
  * @param props - Component props including raw status counts and optional className.
@@ -238,9 +249,9 @@ export const StatusDistributionChart: FC<StatusDistributionChartProps> =
                             });
                           }
                         }}
-                        label={(props: Record<string, unknown>) =>
+                        label={(props: PieLabelPayload) =>
                           // eslint-disable-next-line react/prop-types
-                          `${Math.round(((props.percent as number) ?? 0) * 100)}%`
+                          `${Math.round(((props.percent ?? 0) * 100))}%`
                         }
                       >
                         {chartData.map((entry) => (
