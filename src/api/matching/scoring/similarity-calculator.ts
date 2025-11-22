@@ -121,6 +121,57 @@ export function containsCompleteTitle(
   return 0;
 }
 
+const MATCH_STOP_WORDS = new Set([
+  "the",
+  "a",
+  "an",
+  "and",
+  "or",
+  "but",
+  "for",
+  "with",
+  "by",
+  "of",
+  "in",
+  "on",
+  "at",
+  "to",
+  "from",
+  "after",
+  "before",
+  "while",
+  "during",
+  "through",
+  "around",
+  "among",
+  "against",
+  "over",
+  "under",
+  "between",
+  "about",
+  "per",
+  "via",
+  "since",
+  "until",
+]);
+
+const MATCHABLE_WORD_MIN_LENGTH = 3;
+
+const isMatchableWord = (word: string): boolean => {
+  if (!word) return false;
+  const normalized = word.toLowerCase();
+  return (
+    normalized.length >= MATCHABLE_WORD_MIN_LENGTH &&
+    !MATCH_STOP_WORDS.has(normalized)
+  );
+};
+
+const filterMatchableWords = (words: string[]): string[] => {
+  return words
+    .map((word) => word.trim().toLowerCase())
+    .filter((word) => isMatchableWord(word));
+};
+
 /**
  * Calculate word matching score between title and search words.
  * Counts exact word matches and partial matches (prefix/suffix) of length >= 4.
@@ -135,28 +186,42 @@ export function calculateWordMatchScore(
   titleWords: string[],
   searchWords: string[],
 ): number {
+  const matchableTitleWords = filterMatchableWords(titleWords);
+  const matchableSearchWords = filterMatchableWords(searchWords);
+
+  if (matchableTitleWords.length === 0 || matchableSearchWords.length === 0) {
+    return -1;
+  }
+
   let matchingWords = 0;
+  const matchedSearchWords = new Set<string>();
 
-  for (const word of titleWords) {
-    if (word.length <= 2) continue;
+  for (const word of matchableTitleWords) {
+    for (const searchWord of matchableSearchWords) {
+      if (matchedSearchWords.has(searchWord)) continue;
 
-    if (searchWords.includes(word)) {
-      matchingWords++;
-    } else {
-      for (const searchWord of searchWords) {
-        if (
-          (word.startsWith(searchWord) || searchWord.startsWith(word)) &&
-          Math.min(word.length, searchWord.length) >= 4
-        ) {
-          matchingWords += 0.5;
-          break;
-        }
+      if (word === searchWord) {
+        matchingWords += 1;
+        matchedSearchWords.add(searchWord);
+        break;
+      }
+
+      const minLength = Math.min(word.length, searchWord.length);
+      if (
+        minLength >= 4 &&
+        (word.startsWith(searchWord) || searchWord.startsWith(word))
+      ) {
+        matchingWords += 0.5;
+        matchedSearchWords.add(searchWord);
+        break;
       }
     }
   }
 
-  const matchRatio =
-    matchingWords /
-    Math.max(2, Math.min(titleWords.length, searchWords.length));
+  const denominator = Math.max(
+    2,
+    Math.min(matchableTitleWords.length, matchableSearchWords.length),
+  );
+  const matchRatio = matchingWords / denominator;
   return matchRatio >= 0.75 ? 0.75 + (matchRatio - 0.75) * 0.6 : -1;
 }
