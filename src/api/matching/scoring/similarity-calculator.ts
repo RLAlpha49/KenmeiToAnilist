@@ -160,6 +160,12 @@ const WORD_MATCH_BASE_RATIO = 0.75;
 const WORD_MATCH_COVERAGE_PENALTY_SCALE = 0.5;
 const WORD_MATCH_SEARCH_RATIO_THRESHOLD = 0.6;
 const WORD_MATCH_SEARCH_RATIO_PENALTY_SCALE = 0.2;
+const WORD_MATCH_FALLBACK_MIN_RATIO = 0.55;
+const WORD_MATCH_FALLBACK_MIN_COVERAGE = 0.6;
+const WORD_MATCH_FALLBACK_MIN_MATCHED_WORDS = 2;
+const WORD_MATCH_FALLBACK_SEARCH_DENSITY_THRESHOLD = 1.1;
+const WORD_MATCH_FALLBACK_SCORE_BASE = 0.65;
+const WORD_MATCH_FALLBACK_SCORE_SCALE = 0.25;
 
 const isMatchableWord = (word: string): boolean => {
   if (!word) return false;
@@ -242,9 +248,80 @@ export function calculateWordMatchScore(
     matchableSearchWords.length,
   );
 
-  return adjustedMatchRatio >= WORD_MATCH_BASE_RATIO
-    ? WORD_MATCH_BASE_RATIO + (adjustedMatchRatio - WORD_MATCH_BASE_RATIO) * 0.6
-    : -1;
+  if (adjustedMatchRatio >= WORD_MATCH_BASE_RATIO) {
+    return (
+      WORD_MATCH_BASE_RATIO + (adjustedMatchRatio - WORD_MATCH_BASE_RATIO) * 0.6
+    );
+  }
+
+  const fallbackScore = getWordMatchFallbackScore(
+    adjustedMatchRatio,
+    matchableTitleWords.length,
+    matchableSearchWords.length,
+    matchingWords,
+  );
+
+  if (fallbackScore !== null) {
+    return fallbackScore;
+  }
+
+  return -1;
+}
+
+function getWordMatchFallbackScore(
+  adjustedMatchRatio: number,
+  titleWordCount: number,
+  searchWordCount: number,
+  matchingWords: number,
+): number | null {
+  const coverageRatio =
+    titleWordCount === 0 ? 0 : matchingWords / titleWordCount;
+  const searchDensity =
+    titleWordCount === 0 ? 0 : searchWordCount / titleWordCount;
+
+  if (
+    !shouldTriggerWordMatchFallback(
+      adjustedMatchRatio,
+      coverageRatio,
+      matchingWords,
+      searchDensity,
+    )
+  ) {
+    return null;
+  }
+
+  const fallbackScore = calculateWordMatchFallbackScore(adjustedMatchRatio);
+  console.debug(
+    `[MangaSearchService] ⚙️ Word match fallback triggered: ratio=${adjustedMatchRatio.toFixed(
+      2,
+    )}, coverage=${coverageRatio.toFixed(2)}, density=${searchDensity.toFixed(
+      2,
+    )} → score=${fallbackScore.toFixed(2)}`,
+  );
+
+  return fallbackScore;
+}
+
+function shouldTriggerWordMatchFallback(
+  adjustedMatchRatio: number,
+  coverageRatio: number,
+  matchingWords: number,
+  searchDensity: number,
+): boolean {
+  if (matchingWords < WORD_MATCH_FALLBACK_MIN_MATCHED_WORDS) return false;
+  if (coverageRatio < WORD_MATCH_FALLBACK_MIN_COVERAGE) return false;
+  if (searchDensity < WORD_MATCH_FALLBACK_SEARCH_DENSITY_THRESHOLD)
+    return false;
+  return adjustedMatchRatio >= WORD_MATCH_FALLBACK_MIN_RATIO;
+}
+
+function calculateWordMatchFallbackScore(adjustedMatchRatio: number): number {
+  const delta = adjustedMatchRatio - WORD_MATCH_FALLBACK_MIN_RATIO;
+  const rawScore = Math.max(
+    WORD_MATCH_FALLBACK_SCORE_BASE,
+    WORD_MATCH_FALLBACK_SCORE_BASE + delta * WORD_MATCH_FALLBACK_SCORE_SCALE,
+  );
+  return Math.min(WORD_MATCH_BASE_RATIO - 0.01, rawScore);
 }
 
 function applyDensityPenalty(
@@ -277,9 +354,7 @@ function applyDensityPenalty(
       );
     }
     if (searchRatioPenalty > 0) {
-      reasons.push(
-        `search/title token density is ${searchDensity.toFixed(2)}`,
-      );
+      reasons.push(`search/title token density is ${searchDensity.toFixed(2)}`);
     }
     console.debug(
       `[MangaSearchService] Word match density penalty (${totalPenalty.toFixed(2)}) reduced ratio ${matchRatio.toFixed(

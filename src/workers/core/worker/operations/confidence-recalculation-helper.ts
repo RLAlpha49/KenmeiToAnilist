@@ -130,10 +130,7 @@ export async function recalculateConfidenceForMatches(
       };
     }
 
-    if (
-      !updatedMatch.anilistMatches?.length &&
-      match.selectedMatch
-    ) {
+    if (!updatedMatch.anilistMatches?.length && match.selectedMatch) {
       const selectedConfidence = calculateConfidence(
         match.kenmeiManga.title,
         match.selectedMatch,

@@ -19,6 +19,7 @@ You are the expert engineer responsible for tightening up how the matching pipel
 6. **Document rationale** – when you change weights, thresholds, or introduce new helpers, add brief comments describing why the change matters and how it prevents the previous misscore.
 
 ## Checklist
+
 - [ ] Investigate the failure case and log the matching pipeline inputs/outputs.
 - [ ] Adjust normalization, scoring, or confidence mapping to penalize overconfident matches while retaining true positives.
 - [ ] Run the required test and lint commands before finishing.
