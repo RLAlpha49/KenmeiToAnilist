@@ -639,6 +639,9 @@ function checkMeaningfulWordOverlap(
       ? searchTokenData.normalized
       : normalizedSearchTitle.split(/\s+/).filter((word) => word.length > 0);
 
+  const OVERLAP_DENSITY_THRESHOLD = 0.45;
+  const OVERLAP_DENSITY_PENALTY_SCALE = 0.35;
+
   let bestScore = -1;
 
   for (const { original, source } of normalizedTitles) {
@@ -666,21 +669,62 @@ function checkMeaningfulWordOverlap(
       searchTokenData,
       searchOrderTokens,
     );
+    const { density, penalty } = calculateOverlapDensityPenalty(
+      titleTokenData,
+      searchTokenData,
+      OVERLAP_DENSITY_THRESHOLD,
+      OVERLAP_DENSITY_PENALTY_SCALE,
+    );
+    const penalizedScore = Math.max(0, finalScore - penalty);
+
+    if (penalty > 0) {
+      console.debug(
+        `[MangaSearchService] Word overlap density penalty (${penalty.toFixed(2)}) lowered meaningful overlap between "${original}" and "${searchTitle}" (source: ${source}) from ${finalScore.toFixed(
+          2,
+        )} to ${penalizedScore.toFixed(2)} due to search/title density ${density.toFixed(
+          2,
+        )}.`,
+      );
+    }
 
     logMeaningfulOverlapResult(
       original,
       searchTitle,
       source,
-      finalScore,
+      penalizedScore,
       metrics.coverageRatio,
       metrics.jaccardScore,
       metrics.orderSimilarity,
     );
 
-    bestScore = Math.max(bestScore, finalScore);
+    bestScore = Math.max(bestScore, penalizedScore);
   }
 
   return bestScore;
+}
+
+function calculateOverlapDensityPenalty(
+  titleTokenData: TokenData,
+  searchTokenData: TokenData,
+  densityThreshold: number,
+  penaltyScale: number,
+): { density: number; penalty: number } {
+  const titleCount = titleTokenData.primaryTokens.length;
+  if (titleCount === 0) {
+    return { density: 0, penalty: 0 };
+  }
+
+  const density = Math.min(
+    1,
+    searchTokenData.primaryTokens.length / titleCount,
+  );
+
+  if (density >= densityThreshold) {
+    return { density, penalty: 0 };
+  }
+
+  const penalty = (densityThreshold - density) * penaltyScale;
+  return { density, penalty };
 }
 
 /**

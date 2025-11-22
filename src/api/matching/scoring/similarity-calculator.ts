@@ -156,6 +156,10 @@ const MATCH_STOP_WORDS = new Set([
 ]);
 
 const MATCHABLE_WORD_MIN_LENGTH = 3;
+const WORD_MATCH_BASE_RATIO = 0.75;
+const WORD_MATCH_COVERAGE_PENALTY_SCALE = 0.5;
+const WORD_MATCH_SEARCH_RATIO_THRESHOLD = 0.6;
+const WORD_MATCH_SEARCH_RATIO_PENALTY_SCALE = 0.2;
 
 const isMatchableWord = (word: string): boolean => {
   if (!word) return false;
@@ -231,5 +235,58 @@ export function calculateWordMatchScore(
     Math.min(matchableTitleWords.length, matchableSearchWords.length),
   );
   const matchRatio = matchingWords / denominator;
-  return matchRatio >= 0.75 ? 0.75 + (matchRatio - 0.75) * 0.6 : -1;
+  const adjustedMatchRatio = applyDensityPenalty(
+    matchRatio,
+    matchingWords,
+    matchableTitleWords.length,
+    matchableSearchWords.length,
+  );
+
+  return adjustedMatchRatio >= WORD_MATCH_BASE_RATIO
+    ? WORD_MATCH_BASE_RATIO + (adjustedMatchRatio - WORD_MATCH_BASE_RATIO) * 0.6
+    : -1;
+}
+
+function applyDensityPenalty(
+  matchRatio: number,
+  matchingWords: number,
+  titleWordCount: number,
+  searchWordCount: number,
+): number {
+  const titleCoverage =
+    titleWordCount === 0 ? 0 : matchingWords / titleWordCount;
+  const coveragePenalty = Math.max(0, WORD_MATCH_BASE_RATIO - titleCoverage);
+
+  const searchDensity =
+    titleWordCount === 0 ? 0 : searchWordCount / titleWordCount;
+  const searchRatioPenalty = Math.max(
+    0,
+    WORD_MATCH_SEARCH_RATIO_THRESHOLD - searchDensity,
+  );
+
+  const totalPenalty =
+    coveragePenalty * WORD_MATCH_COVERAGE_PENALTY_SCALE +
+    searchRatioPenalty * WORD_MATCH_SEARCH_RATIO_PENALTY_SCALE;
+  const adjustedMatchRatio = Math.max(0, matchRatio - totalPenalty);
+
+  if (totalPenalty > 0 && adjustedMatchRatio < WORD_MATCH_BASE_RATIO) {
+    const reasons = [] as string[];
+    if (coveragePenalty > 0) {
+      reasons.push(
+        `only ${titleCoverage.toFixed(2)} of the title tokens contributed to the match`,
+      );
+    }
+    if (searchRatioPenalty > 0) {
+      reasons.push(
+        `search/title token density is ${searchDensity.toFixed(2)}`,
+      );
+    }
+    console.debug(
+      `[MangaSearchService] Word match density penalty (${totalPenalty.toFixed(2)}) reduced ratio ${matchRatio.toFixed(
+        2,
+      )}: ${reasons.join(" and ")}.`,
+    );
+  }
+
+  return adjustedMatchRatio;
 }
