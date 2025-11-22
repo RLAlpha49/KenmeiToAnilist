@@ -171,6 +171,139 @@ export function createMangaMatchResult(
   };
 }
 
+type WorkerCandidatePayloads = {
+  candidatesMap: Map<string, AniListManga[]>;
+  filteredMatchesByIndex: Map<
+    string,
+    Array<AniListManga & { matchedAcceptRule?: CustomRule }>
+  >;
+  acceptRuleMatchIdsByIndex: Map<string, Set<number>>;
+};
+
+function buildWorkerCandidatePayloads(
+  mangaList: KenmeiManga[],
+  cachedResults: Record<number, AniListManga[]>,
+  matchConfig: ReturnType<typeof getMatchConfig>,
+  fallbackIndices?: Set<number>,
+): WorkerCandidatePayloads {
+  const candidatesMap = new Map<string, AniListManga[]>();
+  const filteredMatchesByIndex = new Map<
+    string,
+    Array<AniListManga & { matchedAcceptRule?: CustomRule }>
+  >();
+  const acceptRuleMatchIdsByIndex = new Map<string, Set<number>>();
+
+  for (let i = 0; i < mangaList.length; i++) {
+    const manga = mangaList[i];
+    let potentialMatches = cachedResults[i] || [];
+
+    const isFallback = fallbackIndices?.has(i);
+    potentialMatches = applyMatchFiltering(
+      potentialMatches,
+      manga.title,
+      matchConfig,
+      manga,
+      { skipSystemFilters: isFallback },
+    );
+
+    filteredMatchesByIndex.set(String(i), potentialMatches);
+
+    const acceptRuleMatchIds = new Set<number>();
+    for (const match of potentialMatches) {
+      if (
+        (match as AniListManga & { matchedAcceptRule?: CustomRule })
+          .matchedAcceptRule
+      ) {
+        acceptRuleMatchIds.add(match.id);
+      }
+    }
+    if (acceptRuleMatchIds.size > 0) {
+      acceptRuleMatchIdsByIndex.set(String(i), acceptRuleMatchIds);
+    }
+
+    const cleanedMatches = potentialMatches.map((match) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { matchedAcceptRule, ...rest } = match as AniListManga & {
+        matchedAcceptRule?: CustomRule;
+      };
+      return rest as AniListManga;
+    });
+
+    candidatesMap.set(String(i), cleanedMatches);
+  }
+
+  return {
+    candidatesMap,
+    filteredMatchesByIndex,
+    acceptRuleMatchIdsByIndex,
+  };
+}
+
+function mergeWorkerResultWithSources(
+  workerResult: MangaMatchResult,
+  manga: KenmeiManga,
+  comickSourceMap: ComickSourceStorage[number],
+  mangaDexSourceMap: MangaDexSourceStorage[number],
+  filteredMatches: Array<AniListManga & { matchedAcceptRule?: CustomRule }>,
+): MangaMatchResult {
+  if (workerResult.anilistMatches?.length) {
+    return {
+      ...workerResult,
+      anilistMatches: (workerResult.anilistMatches || []).map((match) => {
+        const matchId = match.id;
+        return {
+          ...match,
+          comickSource:
+            matchId === undefined ? undefined : comickSourceMap.get(matchId),
+          mangaDexSource:
+            matchId === undefined ? undefined : mangaDexSourceMap.get(matchId),
+        };
+      }),
+    };
+  }
+
+  return createMangaMatchResult(
+    manga,
+    filteredMatches,
+    comickSourceMap,
+    mangaDexSourceMap,
+  );
+}
+
+function applyAcceptRuleConfidenceBoost(
+  matches: MangaMatchResult["anilistMatches"] | undefined,
+  acceptRuleIds: Set<number>,
+  mangaTitle: string,
+): MangaMatchResult["anilistMatches"] | undefined {
+  if (!matches) {
+    return matches;
+  }
+
+  const normalizedTitle = mangaTitle.toLowerCase();
+
+  return matches.map((match) => {
+    if (match.id !== undefined && acceptRuleIds.has(match.id)) {
+      const isExactMatch =
+        normalizedTitle === match.manga?.title?.romaji?.toLowerCase() ||
+        normalizedTitle === match.manga?.title?.english?.toLowerCase();
+      const minConfidence = isExactMatch
+        ? ACCEPT_RULE_CONFIDENCE_FLOOR_EXACT
+        : ACCEPT_RULE_CONFIDENCE_FLOOR_REGULAR;
+
+      if (match.confidence < minConfidence) {
+        console.debug(
+          `[ProcessWithWorkers] ⭐ Boosting confidence from ${(match.confidence * 100).toFixed(0)}% to ${(minConfidence * 100).toFixed(0)}% for "${match.manga?.title?.romaji || match.manga?.title?.english}" (accept rule match)`,
+        );
+        return {
+          ...match,
+          confidence: minConfidence,
+        };
+      }
+    }
+    return match;
+  });
+}
+
 /**
  * Process matching using Web Workers for parallel execution.
  * Returns null if workers are unavailable or fail.
@@ -191,61 +324,15 @@ async function processWithWorkers(
     fallbackIndices?: Set<number>;
   },
 ): Promise<MangaMatchResult[] | null> {
-  const filteredMatchesByIndex = new Map<
-    string,
-    Array<AniListManga & { matchedAcceptRule?: CustomRule }>
-  >();
-
   try {
     const { executeMatchingWithWorkers } = await import("@/workers");
-
-    // Build candidates map for worker execution and track accept rule matches
-    // Use index-based keys to avoid collision when manga.id is undefined
-    const candidatesMap = new Map<string, AniListManga[]>();
-    const acceptRuleMatchIdsByIndex = new Map<string, Set<number>>(); // index -> Set of AniList IDs with accept rule
-
-    for (let i = 0; i < mangaList.length; i++) {
-      const manga = mangaList[i];
-      let potentialMatches = cachedResults[i] || [];
-
-      // Apply filtering rules
-      const isFallback = options.fallbackIndices?.has(i);
-      potentialMatches = applyMatchFiltering(
-        potentialMatches,
-        manga.title,
+    const { candidatesMap, filteredMatchesByIndex, acceptRuleMatchIdsByIndex } =
+      buildWorkerCandidatePayloads(
+        mangaList,
+        cachedResults,
         matchConfig,
-        manga,
-        { skipSystemFilters: isFallback },
+        options.fallbackIndices,
       );
-
-      filteredMatchesByIndex.set(String(i), potentialMatches);
-
-      // Track which candidates had accept rule matches for this manga
-      const acceptRuleMatchIds = new Set<number>();
-      for (const match of potentialMatches) {
-        // Access the matchedAcceptRule marker if present
-        if (
-          (match as AniListManga & { matchedAcceptRule?: CustomRule })
-            .matchedAcceptRule
-        ) {
-          acceptRuleMatchIds.add(match.id);
-        }
-      }
-      if (acceptRuleMatchIds.size > 0) {
-        acceptRuleMatchIdsByIndex.set(String(i), acceptRuleMatchIds);
-      }
-
-      // Strip off the matchedAcceptRule marker before sending to worker
-      const cleanedMatches = potentialMatches.map((match) => {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { matchedAcceptRule, ...rest } = match as AniListManga & {
-          matchedAcceptRule?: CustomRule;
-        };
-        return rest as AniListManga;
-      });
-      // Use index as key instead of manga.id
-      candidatesMap.set(String(i), cleanedMatches);
-    }
 
     // Execute matching in parallel using workers
     // Cast MatchConfig to Partial<MatchEngineConfig> for worker execution
@@ -280,69 +367,25 @@ async function processWithWorkers(
       const mangaDexSourceMap = options.cachedMangaDexSources[i] || new Map();
       const filteredMatches = filteredMatchesByIndex.get(String(i)) || [];
 
-      // Add source information to the result
-      let enrichedResult: MangaMatchResult;
+      let enrichedResult = mergeWorkerResultWithSources(
+        workerResult,
+        manga,
+        comickSourceMap,
+        mangaDexSourceMap,
+        filteredMatches,
+      );
 
       if (workerResult.anilistMatches?.length) {
-        enrichedResult = {
-          ...workerResult,
-          anilistMatches: (workerResult.anilistMatches || []).map((match) => {
-            const matchId = match.id;
-            return {
-              ...match,
-              comickSource:
-                matchId === undefined
-                  ? undefined
-                  : comickSourceMap.get(matchId),
-              mangaDexSource:
-                matchId === undefined
-                  ? undefined
-                  : mangaDexSourceMap.get(matchId),
-            };
-          }),
-        };
-      } else {
-        enrichedResult = createMangaMatchResult(
-          manga,
-          filteredMatches,
-          comickSourceMap,
-          mangaDexSourceMap,
-        );
-      }
-
-      if (workerResult.anilistMatches?.length) {
-        // Apply accept rule confidence floor boost if applicable
-        // Use index-based key to match acceptRuleMatchIdsByIndex
         const acceptRuleIds = acceptRuleMatchIdsByIndex.get(String(i));
         if (acceptRuleIds && acceptRuleIds.size > 0) {
           enrichedResult = {
             ...enrichedResult,
             anilistMatches:
-              enrichedResult.anilistMatches?.map((match) => {
-                if (match.id !== undefined && acceptRuleIds.has(match.id)) {
-                  // Determine if this is an exact match
-                  const isExactMatch =
-                    manga.title.toLowerCase() ===
-                      match.manga?.title?.romaji?.toLowerCase() ||
-                    manga.title.toLowerCase() ===
-                      match.manga?.title?.english?.toLowerCase();
-
-                  const minConfidence = isExactMatch
-                    ? ACCEPT_RULE_CONFIDENCE_FLOOR_EXACT
-                    : ACCEPT_RULE_CONFIDENCE_FLOOR_REGULAR;
-
-                  if (match.confidence < minConfidence) {
-                    console.debug(
-                      `[ProcessWithWorkers] ⭐ Boosting confidence from ${(match.confidence * 100).toFixed(0)}% to ${(minConfidence * 100).toFixed(0)}% for "${match.manga?.title?.romaji || match.manga?.title?.english}" (accept rule match)`,
-                    );
-                    return {
-                      ...match,
-                      confidence: minConfidence,
-                    };
-                  }
-                }
-                return match;
-              }) || [],
+              applyAcceptRuleConfidenceBoost(
+                enrichedResult.anilistMatches,
+                acceptRuleIds,
+                manga.title,
+              ) || [],
           };
         }
       }

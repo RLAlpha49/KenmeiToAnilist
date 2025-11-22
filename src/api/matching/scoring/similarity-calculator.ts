@@ -164,6 +164,7 @@ const WORD_MATCH_FALLBACK_MIN_RATIO = 0.55;
 const WORD_MATCH_FALLBACK_MIN_COVERAGE = 0.6;
 const WORD_MATCH_FALLBACK_MIN_MATCHED_WORDS = 2;
 const WORD_MATCH_FALLBACK_SEARCH_DENSITY_THRESHOLD = 1.1;
+const WORD_MATCH_FALLBACK_SEARCH_COVERAGE_THRESHOLD = 0.35;
 const WORD_MATCH_FALLBACK_SCORE_BASE = 0.65;
 const WORD_MATCH_FALLBACK_SCORE_SCALE = 0.25;
 
@@ -278,6 +279,8 @@ function getWordMatchFallbackScore(
     titleWordCount === 0 ? 0 : matchingWords / titleWordCount;
   const searchDensity =
     titleWordCount === 0 ? 0 : searchWordCount / titleWordCount;
+  const searchCoverage =
+    searchWordCount === 0 ? 0 : matchingWords / searchWordCount;
 
   if (
     !shouldTriggerWordMatchFallback(
@@ -285,6 +288,7 @@ function getWordMatchFallbackScore(
       coverageRatio,
       matchingWords,
       searchDensity,
+      searchCoverage,
     )
   ) {
     return null;
@@ -296,7 +300,7 @@ function getWordMatchFallbackScore(
       2,
     )}, coverage=${coverageRatio.toFixed(2)}, density=${searchDensity.toFixed(
       2,
-    )} → score=${fallbackScore.toFixed(2)}`,
+    )}, searchCoverage=${searchCoverage.toFixed(2)} → score=${fallbackScore.toFixed(2)}`,
   );
 
   return fallbackScore;
@@ -307,11 +311,22 @@ function shouldTriggerWordMatchFallback(
   coverageRatio: number,
   matchingWords: number,
   searchDensity: number,
+  searchCoverage: number,
 ): boolean {
   if (matchingWords < WORD_MATCH_FALLBACK_MIN_MATCHED_WORDS) return false;
   if (coverageRatio < WORD_MATCH_FALLBACK_MIN_COVERAGE) return false;
   if (searchDensity < WORD_MATCH_FALLBACK_SEARCH_DENSITY_THRESHOLD)
     return false;
+  if (searchCoverage < WORD_MATCH_FALLBACK_SEARCH_COVERAGE_THRESHOLD) {
+    console.debug(
+      `[MangaSearchService] ⚠️ Word match fallback suppressed: search coverage ${(
+        searchCoverage * 100
+      ).toFixed(1)}% is below the ${(
+        WORD_MATCH_FALLBACK_SEARCH_COVERAGE_THRESHOLD * 100
+      ).toFixed(0)}% threshold`,
+    );
+    return false;
+  }
   return adjustedMatchRatio >= WORD_MATCH_FALLBACK_MIN_RATIO;
 }
 
