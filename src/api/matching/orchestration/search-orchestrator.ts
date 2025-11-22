@@ -31,6 +31,65 @@ import { filterOutBlacklistedManga } from "../filtering/blacklist";
 import { executeMatchingWithWorkers } from "@/workers";
 
 /**
+ * Generates extra search queries by splitting the title on a wider set of punctuation markers.
+ * @param title - Original title
+ * @returns Array of unique extra queries
+ */
+function generateExtraSearchQueries(title: string): string[] {
+  const queries = new Set<string>();
+
+  const addParts = (separator: string) => {
+    if (!title.includes(separator)) return;
+    const parts = title
+      .split(separator)
+      .map((part) => part.trim())
+      .filter((part) => part.length > 0);
+    if (parts.length <= 1) return;
+
+    for (const part of parts) {
+      queries.add(part);
+    }
+  };
+
+  const separators = [
+    "...",
+    "..",
+    ":",
+    " - ",
+    " – ",
+    "—",
+    ";",
+    "|",
+    "/",
+    "? ",
+    "! ",
+    "~",
+  ];
+
+  for (const separator of separators) {
+    addParts(separator);
+  }
+
+  const parenRegex = /\(([^)]+)\)/g;
+  let parenMatch: RegExpExecArray | null = null;
+  while ((parenMatch = parenRegex.exec(title)) !== null) {
+    const inner = parenMatch[1]?.trim();
+    if (inner) {
+      queries.add(inner);
+    }
+  }
+
+  const strippedTitle = title.replaceAll(/\s*\([^)]*\)/g, "").trim();
+  if (strippedTitle && strippedTitle.length > 5) {
+    queries.add(strippedTitle);
+  }
+
+  return Array.from(queries).filter(
+    (query) => query.length > 5 && query !== title,
+  );
+}
+
+/**
  * Handle cache checking and return cached result if available.
  * @param title - Manga title to search for
  * @param cacheKey - Cache key for the search
@@ -108,6 +167,74 @@ async function applyWorkerScoring(
 }
 
 /**
+ * Execute extra searches if enabled and no results found.
+ * @param title - Original title
+ * @param searchConfig - Search configuration
+ * @param token - Auth token
+ * @param abortSignal - Abort signal
+ * @param specificPage - Specific page number
+ * @param kenmeiManga - Kenmei manga context
+ * @param currentResults - Current filtered results
+ * @returns Updated results with extra matches
+ */
+export async function performExtraSearches(
+  title: string,
+  searchConfig: SearchServiceConfig,
+  token: string | undefined,
+  abortSignal: AbortSignal | undefined,
+  specificPage: number | undefined,
+  kenmeiManga: KenmeiManga | undefined,
+  currentResults: AniListManga[],
+): Promise<AniListManga[]> {
+  if (
+    currentResults.length > 0 ||
+    !searchConfig.matchConfig?.enableExtraTitleSearches
+  ) {
+    return currentResults;
+  }
+
+  const extraQueries = generateExtraSearchQueries(title);
+  if (extraQueries.length === 0) return currentResults;
+
+  console.info(
+    `[MangaSearchService] 🔄 No results found. Trying extra searches: ${extraQueries.join(", ")}`,
+  );
+
+  const newResults = [...currentResults];
+  const existingIds = new Set(newResults.map((m) => m.id));
+
+  for (const query of extraQueries) {
+    await acquireRateLimit();
+
+    const { results: extraResults } = await executeSearchLoop(
+      query,
+      searchConfig,
+      token,
+      abortSignal,
+      specificPage,
+    );
+
+    if (extraResults.length > 0) {
+      const sanitizedExtra = filterOutBlacklistedManga(extraResults);
+      const rankedExtra = processSearchResults(
+        sanitizedExtra,
+        title,
+        searchConfig,
+        kenmeiManga,
+      );
+
+      for (const res of rankedExtra) {
+        if (!existingIds.has(res.id)) {
+          newResults.push(res);
+          existingIds.add(res.id);
+        }
+      }
+    }
+  }
+  return newResults;
+}
+
+/**
  * Handle fallback sources when no AniList results are found.
  * @param filteredResults - Filtered results from AniList
  * @param title - Manga title being searched
@@ -172,6 +299,75 @@ async function handleFallbackSources(
 }
 
 /**
+ * Executes the search loop and processes the results.
+ * @param title - Title to search for
+ * @param searchConfig - Search configuration
+ * @param token - Auth token
+ * @param abortSignal - Abort signal
+ * @param specificPage - Specific page number
+ * @param kenmeiManga - Kenmei manga context
+ * @returns Processed results and page info
+ */
+async function executeAndProcessSearch(
+  title: string,
+  searchConfig: SearchServiceConfig,
+  token: string | undefined,
+  abortSignal: AbortSignal | undefined,
+  specificPage: number | undefined,
+  kenmeiManga: KenmeiManga | undefined,
+) {
+  await acquireRateLimit();
+
+  if (typeof globalThis.dispatchEvent === "function") {
+    globalThis.dispatchEvent(
+      new CustomEvent("matching:cache-miss", {
+        detail: { title, cacheKey: generateCacheKey(title) },
+      }),
+    );
+  }
+
+  const { results, lastPageInfo } = await executeSearchLoop(
+    title,
+    searchConfig,
+    token,
+    abortSignal,
+    specificPage,
+  );
+
+  const hadAnyApiResults = results.length > 0;
+  const sanitizedResults = filterOutBlacklistedManga(results);
+
+  // Process and filter results
+  const rankedResults = processSearchResults(
+    sanitizedResults,
+    title,
+    searchConfig,
+    kenmeiManga,
+  );
+
+  // Apply worker-based scoring if enabled
+  const scoredResults = await applyWorkerScoring(
+    rankedResults,
+    kenmeiManga,
+    searchConfig,
+  );
+
+  let filteredResults = applyContentFiltering(
+    scoredResults,
+    title,
+    searchConfig,
+  );
+  filteredResults = handleNoResultsFallback(
+    filteredResults,
+    sanitizedResults,
+    searchConfig,
+    hadAnyApiResults,
+  );
+
+  return { filteredResults, lastPageInfo };
+}
+
+/**
  * Search for manga by title with rate limiting and caching.
  *
  * Main entry point coordinating cache checking, AniList API search with pagination,
@@ -222,59 +418,29 @@ export async function searchMangaByTitle(
   }
 
   // Execute the search
-  const searchQuery = title;
-  await acquireRateLimit();
-
-  // Dispatch cache miss event for performance tracking
-  if (typeof globalThis.dispatchEvent === "function") {
-    globalThis.dispatchEvent(
-      new CustomEvent("matching:cache-miss", {
-        detail: { title, cacheKey },
-      }),
-    );
-  }
-
-  const { results, lastPageInfo } = await executeSearchLoop(
-    searchQuery,
+  const { filteredResults, lastPageInfo } = await executeAndProcessSearch(
+    title,
     searchConfig,
     token,
     abortSignal,
     specificPage,
-  );
-
-  const hadAnyApiResults = results.length > 0;
-  const sanitizedResults = filterOutBlacklistedManga(results);
-
-  // Process and filter results
-  const rankedResults = processSearchResults(
-    sanitizedResults,
-    title,
-    searchConfig,
     kenmeiManga,
   );
 
-  // Apply worker-based scoring if enabled
-  const scoredResults = await applyWorkerScoring(
-    rankedResults,
-    kenmeiManga,
-    searchConfig,
-  );
-
-  let filteredResults = applyContentFiltering(
-    scoredResults,
+  // Extra searches logic
+  const extraResults = await performExtraSearches(
     title,
     searchConfig,
-  );
-  filteredResults = handleNoResultsFallback(
+    token,
+    abortSignal,
+    specificPage,
+    kenmeiManga,
     filteredResults,
-    sanitizedResults,
-    searchConfig,
-    hadAnyApiResults,
   );
 
   // Handle fallback sources
   const { finalResults, comickSourceMap, mangaDexSourceMap } =
-    await handleFallbackSources(filteredResults, title, token, searchConfig);
+    await handleFallbackSources(extraResults, title, token, searchConfig);
 
   storeFallbackSourceMetadata(
     title,

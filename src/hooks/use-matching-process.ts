@@ -19,6 +19,7 @@ import {
   storage,
   mergeMatchResults,
   MatchResult,
+  getMatchConfig,
 } from "../utils/storage";
 import { ApiError, MatchingProgress } from "../types/matching";
 import { captureError, ErrorType } from "../utils/error-handling";
@@ -688,6 +689,8 @@ export const useMatchingProcess = ({
         );
         const cancelPredicate = createCancellationPredicate(abortController);
 
+        const storedMatchConfig = getMatchConfig();
+
         const results = await batchMatchManga(
           mangaList,
           accessToken || "",
@@ -699,6 +702,8 @@ export const useMatchingProcess = ({
               confidenceThreshold: 75,
               shouldPreferEnglishTitles: true,
               shouldUseAlternativeTitles: true,
+              enableExtraTitleSearches:
+                storedMatchConfig.enableExtraTitleSearches,
             },
             bypassCache: forceSearch,
           },

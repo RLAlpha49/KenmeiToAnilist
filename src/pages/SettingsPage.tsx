@@ -304,6 +304,13 @@ export function SettingsPage() {
           keywords: ["fallback", "alternative", "source", "mangadex"],
         },
         {
+          id: "matching-extra-searches",
+          title: "Enable extra title searches",
+          description:
+            "Perform additional searches using parts of the title (e.g. subtitle)",
+          keywords: ["extra", "search", "subtitle", "punctuation", "fuzzy"],
+        },
+        {
           id: "matching-custom-rules",
           title: "Custom Matching Rules",
           description:

@@ -18,6 +18,7 @@ import { CancelledError } from "@/utils/error-handling";
 import { ANILIST_RATE_LIMIT_PER_MINUTE } from "@/config/anilist";
 import { executeComickFallback, executeMangaDexFallback } from "../sources";
 import type { SearchServiceConfig as OrchestratorSearchServiceConfig } from "../orchestration/types";
+import { performExtraSearches } from "../orchestration/search-orchestrator";
 import { filterOutBlacklistedManga } from "../filtering/blacklist";
 
 /**
@@ -320,6 +321,7 @@ async function processBatch(
 
           const alias = generateMangaAlias(index);
           const result = batchResults.get(alias);
+          let foundMatches = false;
 
           if (result?.media?.length) {
             const sanitizedMatches = storeAniListResults(
@@ -328,24 +330,65 @@ async function processBatch(
               storage,
             );
 
-            if (sanitizedMatches.length === 0) {
-              fallbackCandidates.push({ manga, index });
+            if (sanitizedMatches.length > 0) {
+              foundMatches = true;
+              updateProgress(index, manga.title);
+              console.debug(
+                `[MangaSearchService] ✅ Batch search found ${sanitizedMatches.length} matches for "${manga.title}"`,
+              );
+            } else {
               console.debug(
                 `[MangaSearchService] ⚠️ Batch search filtered out all ${result.media.length} AniList matches for "${manga.title}" due to blacklist`,
               );
-              continue;
             }
-
-            updateProgress(index, manga.title);
-            console.debug(
-              `[MangaSearchService] ✅ Batch search found ${sanitizedMatches.length} matches for "${manga.title}"`,
-            );
           } else {
-            fallbackCandidates.push({ manga, index });
-            storeAniListResults(index, [], storage);
             console.debug(
               `[MangaSearchService] ⚠️ Batch search returned no results for "${manga.title}"`,
             );
+          }
+
+          // Try extra searches if enabled and no matches found yet
+          if (
+            !foundMatches &&
+            searchConfig.matchConfig?.enableExtraTitleSearches
+          ) {
+            try {
+              const extraResults = await performExtraSearches(
+                manga.title,
+                searchConfig,
+                token,
+                abortSignal,
+                undefined,
+                manga,
+                [],
+              );
+
+              if (extraResults.length > 0) {
+                const sanitizedMatches = storeAniListResults(
+                  index,
+                  extraResults,
+                  storage,
+                );
+
+                if (sanitizedMatches.length > 0) {
+                  foundMatches = true;
+                  updateProgress(index, manga.title);
+                  console.debug(
+                    `[MangaSearchService] ✅ Extra search found ${sanitizedMatches.length} matches for "${manga.title}"`,
+                  );
+                }
+              }
+            } catch (error) {
+              console.warn(
+                `[MangaSearchService] ⚠️ Extra search failed for "${manga.title}":`,
+                error,
+              );
+            }
+          }
+
+          if (!foundMatches) {
+            fallbackCandidates.push({ manga, index });
+            storeAniListResults(index, [], storage);
           }
         }
 

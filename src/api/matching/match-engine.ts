@@ -27,6 +27,9 @@ export interface MatchEngineConfig {
   /** Include AniList synonyms and alternative titles in scoring. */
   shouldUseAlternativeTitles: boolean;
 
+  /** Enable extra searches for titles with punctuation or subtitles if no match is found. */
+  enableExtraTitleSearches: boolean;
+
   /** Preserve case in title comparison. */
   isCaseSensitive: boolean;
 
@@ -46,6 +49,7 @@ export const DEFAULT_MATCH_CONFIG: MatchEngineConfig = {
   shouldPreferEnglishTitles: true,
   shouldPreferRomajiTitles: false,
   shouldUseAlternativeTitles: true,
+  enableExtraTitleSearches: false,
   isCaseSensitive: false,
   minTitleLength: 3,
   maxMatches: 5,

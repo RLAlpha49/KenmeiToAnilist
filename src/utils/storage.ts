@@ -706,6 +706,7 @@ export interface MatchConfig {
   blurAdultContent: boolean;
   enableComickSearch: boolean;
   enableMangaDexSearch: boolean;
+  enableExtraTitleSearches: boolean;
   customRules?: CustomRulesConfig;
   blacklist?: BlacklistConfig;
 }
@@ -869,6 +870,7 @@ export const DEFAULT_MATCH_CONFIG: MatchConfig = {
   blurAdultContent: true,
   enableComickSearch: false, // Temporarily disabled - Comick unavailable
   enableMangaDexSearch: true,
+  enableExtraTitleSearches: false,
   customRules: {
     skipRules: [],
     acceptRules: [],

@@ -129,7 +129,11 @@ export function MatchingSettingsTab({
               </p>
             </div>
             <div className="space-y-4">
-              {["matching-mangadex", "matching-comick"].map((section) => (
+              {[
+                "matching-mangadex",
+                "matching-comick",
+                "matching-extra-searches",
+              ].map((section) => (
                 <MatchingSettingsSection
                   key={section}
                   sectionId={section}

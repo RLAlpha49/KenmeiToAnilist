@@ -11,6 +11,7 @@ import {
   Compass,
   EyeOff,
   Globe2,
+  Search,
   ShieldBan,
   Sparkles,
   Wand2,
@@ -92,6 +93,12 @@ export function MatchingSettingsSection({
       iconWrapperClass:
         "bg-sky-500/15 text-sky-600 shadow-inner shadow-sky-500/20 dark:bg-sky-500/15 dark:text-sky-200",
       accentBarClass: "from-sky-400/80 via-sky-500/70 to-sky-400/80",
+    },
+    "matching-extra-searches": {
+      icon: Search,
+      iconWrapperClass:
+        "bg-orange-500/15 text-orange-600 shadow-inner shadow-orange-500/20 dark:bg-orange-500/15 dark:text-orange-200",
+      accentBarClass: "from-orange-400/80 via-orange-500/70 to-orange-400/80",
     },
     "matching-comick": {
       icon: Globe2,
@@ -240,6 +247,14 @@ export function MatchingSettingsSection({
         "Use MangaDex as a fallback search source when AniList doesn't have enough results.",
       field: "enableMangaDexSearch",
       checked: matchConfig.enableMangaDexSearch,
+    },
+    "matching-extra-searches": {
+      id: "matching-extra-searches",
+      title: "Enable extra title searches",
+      description:
+        "Perform additional searches using title segments split on subtitles, colons, ellipses, dashes, slashes, parentheses, and other punctuation when the main query returns no results.",
+      field: "enableExtraTitleSearches",
+      checked: matchConfig.enableExtraTitleSearches,
     },
     "matching-comick": {
       id: "matching-comick",
