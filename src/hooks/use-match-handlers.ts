@@ -7,6 +7,7 @@
 import { useCallback } from "react";
 import { KenmeiManga } from "../api/kenmei/types";
 import { AniListManga, MangaMatchResult } from "../api/anilist/types";
+import { calculateConfidence } from "../api/matching/scoring";
 import { STORAGE_KEYS, storage } from "../utils/storage";
 import { useDebugActions } from "../contexts/debug-context";
 import type { UndoRedoManager } from "../utils/undo-redo";
@@ -1118,11 +1119,22 @@ export const useMatchHandlers = (
         };
       } else {
         // It's a new match not in the alternatives, create a manual match
+        const manualConfidence = calculateConfidence(
+          existingMatch.kenmeiManga.title,
+          manga,
+        );
+        const manualMatchEntry = { manga, confidence: manualConfidence };
+        const remainingAlternatives =
+          existingMatch.anilistMatches?.filter(
+            (entry) => entry.manga.id !== manga.id,
+          ) ?? [];
+
         updatedMatch = {
           ...existingMatch, // Keep all existing properties
           status: "manual" as const, // Change status to manual
           selectedMatch: manga, // Update with the new selected match
           matchDate: new Date().toISOString(),
+          anilistMatches: [manualMatchEntry, ...remainingAlternatives],
         };
       }
 
