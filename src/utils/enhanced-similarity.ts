@@ -390,13 +390,13 @@ export interface SimilarityConfig {
  * @source
  */
 export const DEFAULT_SIMILARITY_CONFIG: SimilarityConfig = {
-  exactMatchWeight: 0.35,
-  substringMatchWeight: 0.12,
+  exactMatchWeight: 0.25,
+  substringMatchWeight: 0.1,
   wordOrderWeight: 0.08,
-  characterSimilarityWeight: 0.18,
+  characterSimilarityWeight: 0.25,
   semanticWeight: 0.1,
-  jaroWinklerWeight: 0.1,
-  ngramWeight: 0.07,
+  jaroWinklerWeight: 0.12,
+  ngramWeight: 0.1,
   lengthDifferenceThreshold: 0.7,
   debug: false,
 };
