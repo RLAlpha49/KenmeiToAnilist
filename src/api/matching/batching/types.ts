@@ -5,6 +5,7 @@
 
 import type { AniListManga } from "@/api/anilist/types";
 import type { KenmeiManga } from "@/api/kenmei/types";
+import type { SearchServiceConfig as OrchestratorSearchServiceConfig } from "../orchestration/types";
 
 /**
  * Storage for Comick source information indexed by manga position.
@@ -138,13 +139,7 @@ export interface UncachedMangaControl {
  * Search service configuration options.
  * @source
  */
-export interface SearchServiceConfig {
-  /** Ignore cache and perform fresh searches. */
-  bypassCache?: boolean;
-  /** Enable Comick source searches. */
-  enableComickSearch?: boolean;
-  /** Enable MangaDex source searches. */
-  enableMangaDexSearch?: boolean;
+export interface SearchServiceConfig extends OrchestratorSearchServiceConfig {
   /** Wait for rate limit reset if needed. */
   waitForRateLimit?: boolean;
   /** Check cache before performing searches. */

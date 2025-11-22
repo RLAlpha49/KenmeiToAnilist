@@ -253,6 +253,130 @@ async function performFallbackSearches(
   );
 }
 
+type BatchSearchResultEntry = {
+  media: AniListManga[];
+  index: number;
+  title: string;
+};
+
+type BatchItemProcessingContext = {
+  token?: string;
+  searchConfig: UncachedMangaConfig["searchConfig"];
+  abortSignal?: AbortSignal;
+  checkCancellation: () => void;
+  storage: CachedResultsStorage;
+  updateProgress: (index: number, title?: string) => void;
+};
+
+function handleBatchSearchMatches(
+  index: number,
+  title: string,
+  media: AniListManga[],
+  storage: CachedResultsStorage,
+  updateProgress: (index: number, title?: string) => void,
+): boolean {
+  const sanitizedMatches = storeAniListResults(index, media, storage);
+
+  if (sanitizedMatches.length > 0) {
+    updateProgress(index, title);
+    console.debug(
+      `[MangaSearchService] ✅ Batch search found ${sanitizedMatches.length} matches for "${title}"`,
+    );
+    return true;
+  }
+
+  console.debug(
+    `[MangaSearchService] ⚠️ Batch search filtered out all ${media.length} AniList matches for "${title}" due to blacklist`,
+  );
+  return false;
+}
+
+async function attemptExtraTitleSearches(
+  item: BatchItem,
+  context: BatchItemProcessingContext,
+): Promise<boolean> {
+  if (!context.searchConfig.matchConfig?.enableExtraTitleSearches) {
+    return false;
+  }
+
+  const { manga, index } = item;
+  const {
+    abortSignal,
+    checkCancellation,
+    storage,
+    updateProgress,
+    searchConfig,
+    token,
+  } = context;
+
+  try {
+    ensureNotCancelled(abortSignal, checkCancellation);
+
+    const extraResults = await performExtraSearches(
+      manga.title,
+      searchConfig,
+      token,
+      abortSignal,
+      undefined,
+      manga,
+      [],
+    );
+
+    if (extraResults.length === 0) {
+      return false;
+    }
+
+    const sanitizedMatches = storeAniListResults(index, extraResults, storage);
+
+    if (sanitizedMatches.length > 0) {
+      updateProgress(index, manga.title);
+      console.debug(
+        `[MangaSearchService] ✅ Extra search found ${sanitizedMatches.length} matches for "${manga.title}"`,
+      );
+      return true;
+    }
+  } catch (error) {
+    console.warn(
+      `[MangaSearchService] ⚠️ Extra search failed for "${manga.title}":`,
+      error,
+    );
+  }
+
+  return false;
+}
+
+async function processBatchItem(
+  item: BatchItem,
+  batchResults: Map<string, BatchSearchResultEntry>,
+  context: BatchItemProcessingContext,
+): Promise<boolean> {
+  ensureNotCancelled(context.abortSignal, context.checkCancellation);
+
+  const { manga, index } = item;
+  const alias = generateMangaAlias(index);
+  const result = batchResults.get(alias);
+
+  if (result?.media?.length) {
+    const hasMatches = handleBatchSearchMatches(
+      index,
+      manga.title,
+      result.media,
+      context.storage,
+      context.updateProgress,
+    );
+
+    if (hasMatches) {
+      return true;
+    }
+  } else {
+    console.debug(
+      `[MangaSearchService] ⚠️ Batch search returned no results for "${manga.title}"`,
+    );
+  }
+
+  return attemptExtraTitleSearches(item, context);
+}
+
 /**
  * Context object for batch processing operations.
  * @source
@@ -315,80 +439,25 @@ async function processBatch(
         );
 
         const fallbackCandidates: BatchItem[] = [];
+        const batchItemContext: BatchItemProcessingContext = {
+          token,
+          searchConfig,
+          abortSignal,
+          checkCancellation,
+          storage,
+          updateProgress,
+        };
 
-        for (const { manga, index } of batch) {
-          ensureNotCancelled(abortSignal, checkCancellation);
-
-          const alias = generateMangaAlias(index);
-          const result = batchResults.get(alias);
-          let foundMatches = false;
-
-          if (result?.media?.length) {
-            const sanitizedMatches = storeAniListResults(
-              index,
-              result.media,
-              storage,
-            );
-
-            if (sanitizedMatches.length > 0) {
-              foundMatches = true;
-              updateProgress(index, manga.title);
-              console.debug(
-                `[MangaSearchService] ✅ Batch search found ${sanitizedMatches.length} matches for "${manga.title}"`,
-              );
-            } else {
-              console.debug(
-                `[MangaSearchService] ⚠️ Batch search filtered out all ${result.media.length} AniList matches for "${manga.title}" due to blacklist`,
-              );
-            }
-          } else {
-            console.debug(
-              `[MangaSearchService] ⚠️ Batch search returned no results for "${manga.title}"`,
-            );
-          }
-
-          // Try extra searches if enabled and no matches found yet
-          if (
-            !foundMatches &&
-            searchConfig.matchConfig?.enableExtraTitleSearches
-          ) {
-            try {
-              const extraResults = await performExtraSearches(
-                manga.title,
-                searchConfig,
-                token,
-                abortSignal,
-                undefined,
-                manga,
-                [],
-              );
-
-              if (extraResults.length > 0) {
-                const sanitizedMatches = storeAniListResults(
-                  index,
-                  extraResults,
-                  storage,
-                );
-
-                if (sanitizedMatches.length > 0) {
-                  foundMatches = true;
-                  updateProgress(index, manga.title);
-                  console.debug(
-                    `[MangaSearchService] ✅ Extra search found ${sanitizedMatches.length} matches for "${manga.title}"`,
-                  );
-                }
-              }
-            } catch (error) {
-              console.warn(
-                `[MangaSearchService] ⚠️ Extra search failed for "${manga.title}":`,
-                error,
-              );
-            }
-          }
+        for (const item of batch) {
+          const foundMatches = await processBatchItem(
+            item,
+            batchResults,
+            batchItemContext,
+          );
 
           if (!foundMatches) {
-            fallbackCandidates.push({ manga, index });
-            storeAniListResults(index, [], storage);
+            fallbackCandidates.push(item);
+            storeAniListResults(item.index, [], storage);
           }
         }
 
