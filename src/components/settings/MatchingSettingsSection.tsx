@@ -24,6 +24,7 @@ import {
   CardTitle,
 } from "@/components/ui/Card";
 import { CustomRulesManager } from "./CustomRulesManager";
+import { BlacklistManager } from "./BlacklistManager";
 import { highlightText } from "@/utils/text-highlight";
 import { cn } from "@/utils/tailwind";
 import type { MatchConfig } from "@/utils/storage";
@@ -265,6 +266,24 @@ export function MatchingSettingsSection({
         transition={{ duration: 0.3 }}
       >
         <CustomRulesManager />
+      </motion.div>
+    );
+  }
+
+  if (sectionId === "matching-blacklist") {
+    return (
+      <motion.div
+        id="matching-blacklist"
+        className={cn(
+          "group relative overflow-hidden rounded-lg border border-slate-200/70 bg-white/95 p-0 shadow-[0_28px_90px_-60px_rgba(15,23,42,0.45)] dark:border-white/10 dark:bg-slate-950/45 dark:shadow-[0_40px_110px_-65px_rgba(15,23,42,0.85)]",
+          highlightedSectionId === "matching-blacklist" &&
+            "ring-2 ring-blue-500 ring-offset-2 ring-offset-white dark:ring-blue-400 dark:ring-offset-slate-950",
+        )}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <BlacklistManager />
       </motion.div>
     );
   }

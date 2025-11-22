@@ -148,13 +148,20 @@ export function MatchingSettingsTab({
           <AlertTitle>Note</AlertTitle>
           <AlertDescription>
             Matching settings only affect automatic processing. Manual searches
-            and overrides remain available regardless of these filters.
+            and overrides remain available regardless of these filters above.
           </AlertDescription>
         </Alert>
 
-        <div className="pt-1">
+        <div className="space-y-4 pt-1">
           <MatchingSettingsSection
             sectionId="matching-custom-rules"
+            matchConfig={matchConfig}
+            searchQuery={searchQuery}
+            highlightedSectionId={highlightedSectionId}
+            onMatchConfigChange={onMatchConfigChange}
+          />
+          <MatchingSettingsSection
+            sectionId="matching-blacklist"
             matchConfig={matchConfig}
             searchQuery={searchQuery}
             highlightedSectionId={highlightedSectionId}

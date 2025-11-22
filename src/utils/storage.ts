@@ -660,6 +660,15 @@ export interface CustomRulesConfig {
 }
 
 /**
+ * Configuration for the blacklist feature.
+ * @source
+ */
+export interface BlacklistConfig {
+  enabled: boolean;
+  items: { title: string; enabled: boolean }[];
+}
+
+/**
  * Title normalization cache storing per-algorithm normalized forms.
  * Maps original titles to their normalized versions for each algorithm.
  * @source
@@ -698,6 +707,7 @@ export interface MatchConfig {
   enableComickSearch: boolean;
   enableMangaDexSearch: boolean;
   customRules?: CustomRulesConfig;
+  blacklist?: BlacklistConfig;
 }
 
 /**
@@ -862,6 +872,21 @@ export const DEFAULT_MATCH_CONFIG: MatchConfig = {
   customRules: {
     skipRules: [],
     acceptRules: [],
+  },
+  blacklist: {
+    enabled: true,
+    items: [
+      {
+        title:
+          "watashi, isekai de dorei ni sarechaimashita (naki) shikamo goshujinsama wa seikaku no warui elf no joousama (demo chou bijin ← koko daiji) munou sugite nonoshiraremakuru kedo douryou no orc ga iyashi-kei da shi sato no elf wa kawaii shi",
+        enabled: true,
+      },
+      {
+        title:
+          "Maoudou: Sen-nen Mae no Maou ga Fukkatsushitara Saijaku Mamono no Kobold Datta ga, Chishiki Keiken ni Otoroenashi. Kami to Seigi no Na no Shita ni Yaritai Houdaishiteiru Ningendomo wo Shitsuke Keteyaru to Shiyou",
+        enabled: true,
+      },
+    ],
   },
 };
 

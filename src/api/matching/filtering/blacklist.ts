@@ -4,15 +4,7 @@
  */
 
 import type { AniListManga } from "@/api/anilist/types";
-
-const BLACKLISTED_MANGA_TITLES = [
-  "watashi, isekai de dorei ni sarechaimashita (naki) shikamo goshujinsama wa seikaku no warui elf no joousama (demo chou bijin ← koko daiji) munou sugite nonoshiraremakuru kedo douryou no orc ga iyashi-kei da shi sato no elf wa kawaii shi",
-  "Maoudou: Sen-nen Mae no Maou ga Fukkatsushitara Saijaku Mamono no Kobold Datta ga, Chishiki Keiken ni Otoroenashi. Kami to Seigi no Na no Shita ni Yaritai Houdaishiteiru Ningendomo wo Shitsuke Keteyaru to Shiyou",
-];
-
-const NORMALIZED_BLACKLISTED_TITLES = new Set(
-  BLACKLISTED_MANGA_TITLES.map((title) => title.trim().toLowerCase()),
-);
+import { getMatchConfig } from "@/utils/storage";
 
 function getMangaTitles(manga: AniListManga): string[] {
   return [
@@ -29,10 +21,19 @@ function getMangaTitles(manga: AniListManga): string[] {
  * @returns True if the manga matches any of the blacklisted titles.
  */
 export function isBlacklistedManga(manga: AniListManga): boolean {
-  const titlesToCheck = getMangaTitles(manga);
-  return titlesToCheck.some((title) =>
-    NORMALIZED_BLACKLISTED_TITLES.has(title),
+  const config = getMatchConfig();
+  if (!config.blacklist?.enabled) {
+    return false;
+  }
+
+  const normalizedBlacklist = new Set(
+    config.blacklist.items
+      .filter((item) => item.enabled)
+      .map((item) => item.title.trim().toLowerCase()),
   );
+
+  const titlesToCheck = getMangaTitles(manga);
+  return titlesToCheck.some((title) => normalizedBlacklist.has(title));
 }
 
 /**
