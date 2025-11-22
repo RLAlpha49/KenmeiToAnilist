@@ -172,6 +172,18 @@ const filterMatchableWords = (words: string[]): string[] => {
     .filter((word) => isMatchableWord(word));
 };
 
+const isPartialWordMatch = (word: string, searchWord: string): boolean => {
+  const minLength = Math.min(word.length, searchWord.length);
+  if (minLength < 4) return false;
+
+  return (
+    word.startsWith(searchWord) ||
+    searchWord.startsWith(word) ||
+    word.endsWith(searchWord) ||
+    searchWord.endsWith(word)
+  );
+};
+
 /**
  * Calculate word matching score between title and search words.
  * Counts exact word matches and partial matches (prefix/suffix) of length >= 4.
@@ -206,11 +218,7 @@ export function calculateWordMatchScore(
         break;
       }
 
-      const minLength = Math.min(word.length, searchWord.length);
-      if (
-        minLength >= 4 &&
-        (word.startsWith(searchWord) || searchWord.startsWith(word))
-      ) {
+      if (isPartialWordMatch(word, searchWord)) {
         matchingWords += 0.5;
         matchedSearchWords.add(searchWord);
         break;
